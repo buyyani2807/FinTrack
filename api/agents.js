@@ -25,15 +25,13 @@ export default async function handler(req, res) {
     if (req.method === "PATCH") {
       const { id, name, email, phone = "", active, password } = req.body || {};
       if (!id || !name?.trim() || !email?.trim()) return json(res, 400, { error: "Name and email are required" });
+      if (password && password.length < 8) return json(res, 400, { error: "New password must be at least 8 characters" });
       const existing = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${id}&organization_id=eq.${profile.organization_id}&role=eq.staff&select=id`, { headers: headers(serviceKey) });
       if (!(await existing.json()).length) return json(res, 404, { error: "Collection staff member not found" });
+      const authChanges = await fetch(`${supabaseUrl}/auth/v1/admin/users/${id}`, { method: "PUT", headers: headers(serviceKey), body: JSON.stringify({ email: email.trim().toLowerCase(), email_confirm: true, ...(password ? { password } : {}) }) });
+      if (!authChanges.ok) return json(res, 500, { error: "Could not save the staff login details" });
       const updated = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${id}`, { method: "PATCH", headers: { ...headers(serviceKey), Prefer: "return=representation" }, body: JSON.stringify({ full_name: name.trim(), email: email.trim().toLowerCase(), phone: phone.trim(), is_active: Boolean(active) }) });
       if (!updated.ok) return json(res, 500, { error: "Could not save staff changes" });
-      if (password) {
-        if (password.length < 8) return json(res, 400, { error: "New password must be at least 8 characters" });
-        const reset = await fetch(`${supabaseUrl}/auth/v1/admin/users/${id}`, { method: "PUT", headers: headers(serviceKey), body: JSON.stringify({ password }) });
-        if (!reset.ok) return json(res, 500, { error: "Staff details saved, but password could not be reset" });
-      }
       return json(res, 200, (await updated.json())[0]);
     }
     const { name, email, phone = "", password, active = true } = req.body || {};
