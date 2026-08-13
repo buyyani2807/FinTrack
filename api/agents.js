@@ -23,12 +23,17 @@ export default async function handler(req, res) {
       return json(res, agents.ok ? 200 : 500, agents.ok ? await agents.json() : { error: "Could not load collection agents" });
     }
     if (req.method === "PATCH") {
-      const { id, name, email, phone = "", active } = req.body || {};
+      const { id, name, email, phone = "", active, password } = req.body || {};
       if (!id || !name?.trim() || !email?.trim()) return json(res, 400, { error: "Name and email are required" });
       const existing = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${id}&organization_id=eq.${profile.organization_id}&role=eq.staff&select=id`, { headers: headers(serviceKey) });
       if (!(await existing.json()).length) return json(res, 404, { error: "Collection staff member not found" });
       const updated = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${id}`, { method: "PATCH", headers: { ...headers(serviceKey), Prefer: "return=representation" }, body: JSON.stringify({ full_name: name.trim(), email: email.trim().toLowerCase(), phone: phone.trim(), is_active: Boolean(active) }) });
       if (!updated.ok) return json(res, 500, { error: "Could not save staff changes" });
+      if (password) {
+        if (password.length < 8) return json(res, 400, { error: "New password must be at least 8 characters" });
+        const reset = await fetch(`${supabaseUrl}/auth/v1/admin/users/${id}`, { method: "PUT", headers: headers(serviceKey), body: JSON.stringify({ password }) });
+        if (!reset.ok) return json(res, 500, { error: "Staff details saved, but password could not be reset" });
+      }
       return json(res, 200, (await updated.json())[0]);
     }
     const { name, email, phone = "", password, active = true } = req.body || {};
