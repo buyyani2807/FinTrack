@@ -6,7 +6,7 @@ export async function loadWorkspace(token) {
   const rows = await supabase.query("/rest/v1/profiles?select=id,full_name,role,organizations(name)&limit=1", token);
   const profile = rows[0];
   const organization = Array.isArray(profile?.organizations) ? profile.organizations[0] : profile?.organizations;
-  return { businessName: organization?.name || "My Finance Business", fullName: profile?.full_name || "", role: profile?.role || "owner", id: profile?.id || "" };
+  return { businessName: organization?.name || "My Finance Business", fullName: profile?.full_name || "", role: profile?.role || "owner", active: profile?.is_active !== false, id: profile?.id || "" };
 }
 
 export async function loadFinanceAccounts(token) {
@@ -94,5 +94,11 @@ export const saveCustomerKyc = (token, accountId, aadhaar, pan) => supabase.rpc(
 export const updatePaymentNotes = (token, paymentId, notes) => supabase.rpc("update_payment_notes", { payment_id: paymentId, payment_notes: notes }, token);
 export const setAccountStatus = (token, accountId, status, note) => supabase.rpc("set_finance_account_status", { account_id: accountId, new_status: status, action_note: note || "" }, token);
 export const saveCollectionOrder = (token, accountIds) => supabase.rpc("set_collection_order", { account_ids: accountIds }, token);
+export const createCollectionAgent = async (token, details) => {
+  const response = await fetch("/api/agents", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify(details) });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || "Could not create collection agent");
+  return body;
+};
 export const loadCollectionAgents = token => supabase.query("/rest/v1/profiles?select=id,full_name,role&role=eq.staff&order=full_name.asc", token);
 export const assignCollectionAgent = (token, accountId, agentId) => supabase.rpc("assign_collection_agent", { account_id: accountId, agent_id: agentId || null }, token);

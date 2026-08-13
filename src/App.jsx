@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
-import { createFinanceAccount, customerPortalLogin, deleteFinanceAccount, enableCustomerPortal, loadCustomerKyc, loadFinanceAccounts, loadWorkspace, recordPayment, resetCustomerPortalPin, saveCustomerKyc, setAccountStatus, saveCollectionOrder, updateFinanceAccount, updatePaymentNotes } from "./lib/financeRepository";
+import { createCollectionAgent, createFinanceAccount, customerPortalLogin, deleteFinanceAccount, enableCustomerPortal, loadCustomerKyc, loadFinanceAccounts, loadWorkspace, recordPayment, resetCustomerPortalPin, saveCustomerKyc, setAccountStatus, saveCollectionOrder, updateFinanceAccount, updatePaymentNotes } from "./lib/financeRepository";
 
 // FinTrack MVP. This browser-only build is for testing; add a secure backend,
 // authentication, audit trails, and local compliance review before production.
@@ -171,6 +171,7 @@ function FinancierAuth({ onLogin, onCustomerLogin }) {
   const signInAndEnter = async () => {
     const result = await supabase.auth.signIn(email, password);
     const profile = await loadWorkspace(result.access_token);
+    if (!profile.active) { supabase.auth.clearSession(); throw new Error("This account has been disabled. Contact your financier."); }
     if (mode === "agent" && profile.role !== "staff") throw new Error("This account is not a Collection Agent. Use Financier sign in.");
     if (mode === "signIn" && profile.role === "staff") throw new Error("Use Collection Agent sign in for this account.");
     onLogin({ role: profile.role === "staff" ? "agent" : "financier", authToken: result.access_token, name: profile.fullName });
@@ -214,9 +215,15 @@ const downloadCsv = (filename, rows) => {
 };
 const paymentValue = (loan, transaction) => loan.kind === "daily" ? Number(transaction.amount || 0) : Number(transaction.interestAmount || 0) + Number(transaction.principalAmount || 0) + Number(transaction.penaltyAmount || 0);
 const downloadDailyReport = (loans, reportDate) => {
-  const payments = loans.flatMap(loan => loan.transactions.filter(transaction => transaction.date === reportDate).map(transaction => [loan.id, loan.customerName, loan.phone, loan.kind, transaction.date, paymentValue(loan, transaction), transaction.mode, transaction.ref || "", transaction.notes || ""]));
-  const total = payments.reduce((sum, row) => sum + Number(row[5]), 0);
-  downloadCsv(`fintrack-daily-report-${reportDate}.csv`, [["FinTrack Daily Collection Report"], ["Report date", reportDate], ["Total collected", total], [], ["Finance ID", "Customer", "Phone", "Finance type", "Payment date", "Amount", "Mode", "Reference", "Notes"], ...payments, [], ["Total", "", "", "", "", total]]);
+  const rows = loans.filter(loan => loan.status === "active" || loan.transactions.some(t => t.date === reportDate)).map(loan => {
+    const transactions = loan.transactions.filter(t => t.date === reportDate);
+    const actual = transactions.reduce((sum, t) => sum + paymentValue(loan, t), 0);
+    const expected = loan.kind === "daily" ? loan.dailyCollection : Math.round(monthlyBalance(loan, reportDate) * annualRate(loan, reportDate) / 100);
+    return [loan.customerName, loan.phone, loan.id, loan.kind === "daily" ? "Daily" : "Monthly", expected, actual, loanBalance(loan), actual ? "Collected" : "Not collected", reportDate, transactions.map(t => t.collectorName || "Financier/Admin").join("; ") || "—", transactions.map(t => t.notes).filter(Boolean).join("; ") || "—", loanStatus(loan)];
+  });
+  if (!rows.some(row => Number(row[5]) > 0)) throw new Error(`No collections were recorded on ${reportDate}.`);
+  const total = rows.reduce((sum, row) => sum + Number(row[5]), 0);
+  downloadCsv(`fintrack-collection-report-${reportDate}.csv`, [["FinTrack Collection Report"], ["Report date", reportDate], ["Total collected", total], [], ["Customer", "Phone", "Account ID", "Collection type", "Expected collection", "Actual collected", "Outstanding", "Collection status", "Collection date", "Collected by", "Notes/comments", "Account status"], ...rows, [], ["Total", "", "", "", "", total]]);
 };
 const downloadCustomerReport = loan => {
   const monthly = loan.kind === "monthly";
@@ -440,7 +447,7 @@ function PaymentNoteEditor({ transaction, close, save }) {
 }
 function ProfitLoss({ loan }) {
   const outstanding = loan.status === "bankrupt" ? 0 : loanBalance(loan);
-  return <div className="card spacer"><strong>Profit &amp; loss</strong><p className="small">Live position based on collections, payout/principal and account status.</p><div className="grid metrics"><Metric label="Paid / invested" value={money(investedAmount(loan))} color="gold" /><Metric label="Total collected" value={money(loanPaid(loan))} color="green" /><Metric label="Outstanding" value={money(outstanding)} color="red" /><Metric label="Realized profit" value={money(realizedProfit(loan))} color="green" /><Metric label="Loss" value={money(realizedLoss(loan))} color={realizedLoss(loan) ? "red" : ""} /><Metric label="Net cash position" value={money(netPosition(loan))} color={netPosition(loan) < 0 ? "red" : "green"} /></div>{loan.status === "bankrupt" && <p className="notice">This account is BANKRUPT. Its unrecovered amount is treated as a loss and is no longer counted as normal receivable.</p>}</div>;
+  return <div className="card spacer"><strong>Profit &amp; loss</strong><p className="small">Live position based on collections, payout/principal and account status.</p><div className="grid metrics"><Metric label="Paid / invested" value={money(investedAmount(loan))} color="gold" /><Metric label="Total collected" value={money(loanPaid(loan))} color="green" /><Metric label="Outstanding" value={money(outstanding)} color="red" /><Metric label="Realized profit" value={money(realizedProfit(loan))} color="green" /><Metric label="Loss" value={money(realizedLoss(loan))} color={realizedLoss(loan) ? "red" : ""} /><Metric label="Net cash position" value={money(netPosition(loan))} color={netPosition(loan) < 0 ? "red" : "green"} /></div>{loan.status === "bankrupt" && <p className="notice"><strong>BANKRUPT</strong> · Loss amount {money(loan.lossAmount)} · Recorded {loan.statusChangedAt ? new Date(loan.statusChangedAt).toLocaleDateString("en-IN") : "—"}<br /><strong>Bankruptcy reason:</strong> {loan.statusNote || "No reason recorded."}</p>}{loan.status === "closed" && <p className="notice"><strong>Closed account</strong> · {loan.statusNote || "No closure note recorded."}</p>}</div>;
 }
 function OperationsDetail({ loan, back, collect, edit, remove, portal, kyc, editKyc, isOwner, changeStatus, editPaymentNote }) {
   const monthly = loan.kind === "monthly";
@@ -546,17 +553,23 @@ function PortfolioReport({ loans, close }) {
   const total = key => filtered.reduce((sum, loan) => sum + key(loan), 0);
   return <Modal><h2 className="title">Profit &amp; loss report</h2><div className="form spacer"><Field label="Finance type"><select value={kind} onChange={e => setKind(e.target.value)}><option value="all">Daily + Monthly</option><option value="daily">Daily finance</option><option value="monthly">Monthly finance</option></select></Field><Field label="Account status"><select value={status} onChange={e => setStatus(e.target.value)}><option value="all">All statuses</option><option value="active">Active</option><option value="closed">Closed</option><option value="bankrupt">Bankrupt</option></select></Field><Field className="span" label="Customer"><input placeholder="Filter by customer name" value={customer} onChange={e => setCustomer(e.target.value)} /></Field></div><div className="grid metrics"><Metric label="Paid / invested" value={money(total(investedAmount))} color="gold" /><Metric label="Collected" value={money(total(loanPaid))} color="green" /><Metric label="Outstanding" value={money(total(loanBalance))} color="red" /><Metric label="Realized profit" value={money(total(realizedProfit))} color="green" /><Metric label="Bankrupt loss" value={money(total(realizedLoss))} color="red" /><Metric label="Net profit / loss" value={money(total(netPosition))} color={total(netPosition) < 0 ? "red" : "green"} /><Metric label="Active / Closed" value={`${filtered.filter(l => loanStatus(l) === "active").length} / ${filtered.filter(l => loanStatus(l) === "closed").length}`} color="blue" /><Metric label="Bankrupt accounts" value={filtered.filter(l => loanStatus(l) === "bankrupt").length} color="red" /></div><p className="notice">Outstanding remains a receivable until an account is explicitly marked bankrupt. Only bankrupt outstanding is included as loss.</p><div className="row spacer"><Button onClick={close}>Close</Button><Button className="primary" onClick={() => downloadDailyReport(filtered, today())}>Download today’s collections</Button></div></Modal>;
 }
-function FinancierTools({ loans, adminPin, setAdminPin }) {
+function CreateAgent({ close, save }) {
+  const [name, setName] = useState(""), [email, setEmail] = useState(""), [phone, setPhone] = useState(""), [password, setPassword] = useState(""), [error, setError] = useState(""), [busy, setBusy] = useState(false);
+  const submit = async () => { setBusy(true); setError(""); try { await save({ name, email, phone, password, active: true }); close(); } catch (e) { setError(e.message || "Could not create agent."); } finally { setBusy(false); } };
+  return <Modal><h2 className="title">Add collection agent</h2><p className="copy">Agents get only assigned accounts and can record their own collections.</p><div className="form spacer"><Field label="Agent name"><input value={name} onChange={e => setName(e.target.value)} /></Field><Field label="Email"><input type="email" value={email} onChange={e => setEmail(e.target.value)} /></Field><Field label="Mobile number"><input value={phone} onChange={e => setPhone(e.target.value)} /></Field><Field label="Temporary password"><input type="password" minLength="8" value={password} onChange={e => setPassword(e.target.value)} /></Field></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button onClick={close}>Cancel</Button><Button className="primary" disabled={busy} onClick={submit}>{busy ? "Creating…" : "Create agent"}</Button></div></Modal>;
+}
+function FinancierTools({ loans, onCreateAgent }) {
   const [panel, setPanel] = useState(null);
-  const [reportDate, setReportDate] = useState(today());
   return <div className="financier-tools">
     <aside className="financier-nav">
       <div className="nav-title">FinTrack</div>
       <Button className={panel === null ? "tab active" : ""} onClick={() => { setPanel(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}>▦ Dashboard</Button>
       <Button className={panel === "reports" ? "tab active" : ""} onClick={() => setPanel("reports")}>↧ Reports</Button>
+      <Button className={panel === "agents" ? "tab active" : ""} onClick={() => setPanel("agents")}>◉ Collection agents</Button>
       <div className="nav-footer">Financier workspace</div>
     </aside>
     {panel === "reports" && <PortfolioReport loans={loans} close={() => setPanel(null)} />}
+    {panel === "agents" && <CreateAgent close={() => setPanel(null)} save={onCreateAgent} />}
   </div>;
 }
 function CustomerReportDownload({ loan, onResetPin }) {
@@ -608,6 +621,7 @@ export default function App() {
   };
   const changePaymentNotes = async (payment, notes) => { await updatePaymentNotes(user.authToken, payment.id, notes); await refreshLoans(); };
   const changeCollectionOrder = async ids => { await saveCollectionOrder(user.authToken, ids); await refreshLoans(); };
+  const addCollectionAgent = details => createCollectionAgent(user.authToken, details);
   const staffRole = user?.role === "agent";
-  return <div className="app"><style>{styles + enhancements + homeReportHide + visualRefresh + mobileCollections + `.phone-link{color:${C.blue};text-decoration:none}.phone-link:hover{text-decoration:underline}`}</style>{!user ? <FinancierAuth onLogin={setUser} onCustomerLogin={loan => setUser({ role: "customer", loan })} /> : user.role === "financier" || staffRole ? <>{dataError && <div className="notice" style={{ position: "fixed", top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 20 }}>{dataError}</div>}<Financier loans={loans} businessName={workspace?.businessName} setLoans={setLoans} onCreateLoan={createLoan} onRecordPayment={savePayment} onUpdateLoan={updateLoan} onDeleteLoan={removeLoan} onSaveCustomerPortal={saveCustomerPortal} onLoadKyc={getKyc} onSaveKyc={updateKyc} onStatusChange={changeStatus} onPaymentNoteChange={changePaymentNotes} onCollectionOrderChange={changeCollectionOrder} role={staffRole ? "staff" : "owner"} logout={logout} />{!staffRole && <FinancierTools loans={loans} adminPin={adminPin} setAdminPin={setAdminPin} />}</> : <><Customer loan={customerLoan} logout={logout} /><CustomerReportDownload loan={customerLoan} /></>}</div>;
+  return <div className="app"><style>{styles + enhancements + homeReportHide + visualRefresh + mobileCollections + `.phone-link{color:${C.blue};text-decoration:none}.phone-link:hover{text-decoration:underline}`}</style>{!user ? <FinancierAuth onLogin={setUser} onCustomerLogin={loan => setUser({ role: "customer", loan })} /> : user.role === "financier" || staffRole ? <>{dataError && <div className="notice" style={{ position: "fixed", top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 20 }}>{dataError}</div>}<Financier loans={loans} businessName={workspace?.businessName} setLoans={setLoans} onCreateLoan={createLoan} onRecordPayment={savePayment} onUpdateLoan={updateLoan} onDeleteLoan={removeLoan} onSaveCustomerPortal={saveCustomerPortal} onLoadKyc={getKyc} onSaveKyc={updateKyc} onStatusChange={changeStatus} onPaymentNoteChange={changePaymentNotes} onCollectionOrderChange={changeCollectionOrder} role={staffRole ? "staff" : "owner"} logout={logout} />{!staffRole && <FinancierTools loans={loans} onCreateAgent={addCollectionAgent} />}</> : <><Customer loan={customerLoan} logout={logout} /><CustomerReportDownload loan={customerLoan} /></>}</div>;
 }
