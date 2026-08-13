@@ -53,6 +53,8 @@ export const supabase = {
   auth: {
     signUp: async (email, password) => { const session = await request("/auth/v1/signup", { method: "POST", body: JSON.stringify({ email, password }) }); saveSession(session); return session; },
     signIn: async (email, password) => { const session = await request("/auth/v1/token?grant_type=password", { method: "POST", body: JSON.stringify({ email, password }) }); saveSession(session); return session; },
+    resetPasswordForEmail: (email) => request("/auth/v1/recover", { method: "POST", body: JSON.stringify({ email, redirect_to: `${window.location.origin}?reset-password=1` }) }),
+    updatePassword: (password, accessToken) => request("/auth/v1/user", { method: "PUT", body: JSON.stringify({ password }) }, accessToken),
     signOut: (token) => request("/auth/v1/logout", { method: "POST" }, token),
     getAccessToken: () => localStorage.getItem(ACCESS_TOKEN_KEY),
     clearSession: () => { localStorage.removeItem(ACCESS_TOKEN_KEY); localStorage.removeItem(REFRESH_TOKEN_KEY); },
