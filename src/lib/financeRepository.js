@@ -107,5 +107,11 @@ export const loadManagedAgents = async token => {
   if (!response.ok) throw new Error(body.error || "Could not load collection agents");
   return body;
 };
+export const updateCollectionAgent = async (token, details) => {
+  const response = await fetch("/api/agents", { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify(details) });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || "Could not update collection staff");
+  return body;
+};
 export const loadCollectionAgents = token => supabase.query("/rest/v1/profiles?select=id,full_name,role&role=eq.staff&order=full_name.asc", token);
 export const assignCollectionAgent = (token, accountId, agentId) => supabase.rpc("assign_collection_agent", { account_id: accountId, agent_id: agentId || null }, token);
