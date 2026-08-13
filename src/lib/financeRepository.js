@@ -3,7 +3,8 @@ import { supabase } from "./supabase";
 const asNumber = value => Number(value || 0);
 
 export async function loadWorkspace(token) {
-  const rows = await supabase.query("/rest/v1/profiles?select=id,full_name,role,is_active,organizations(name)&limit=1", token);
+  const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+  const rows = await supabase.query(`/rest/v1/profiles?id=eq.${payload.sub}&select=id,full_name,role,is_active,organizations(name)&limit=1`, token);
   const profile = rows[0];
   const organization = Array.isArray(profile?.organizations) ? profile.organizations[0] : profile?.organizations;
   return { businessName: organization?.name || "My Finance Business", fullName: profile?.full_name || "", role: profile?.role || "owner", active: profile?.is_active !== false, id: profile?.id || "" };

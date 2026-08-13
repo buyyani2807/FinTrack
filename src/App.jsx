@@ -566,7 +566,7 @@ function FinancierTools({ loans, onCreateAgent }) {
       <div className="nav-title">FinTrack</div>
       <Button className={panel === null ? "tab active" : ""} onClick={() => { setPanel(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}>▦ Dashboard</Button>
       <Button className={panel === "reports" ? "tab active" : ""} onClick={() => setPanel("reports")}>↧ Reports</Button>
-      <Button className={panel === "agents" ? "tab active" : ""} onClick={() => setPanel("agents")}>◉ Collection agents</Button>
+      <Button className={panel === "agents" ? "tab active" : ""} onClick={() => setPanel("agents")}>◉ Collection staff</Button>
       <div className="nav-footer">Financier workspace</div>
     </aside>
     {panel === "reports" && <PortfolioReport loans={loans} close={() => setPanel(null)} />}
