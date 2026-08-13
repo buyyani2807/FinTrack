@@ -3,7 +3,7 @@ import { supabase } from "./supabase";
 const asNumber = value => Number(value || 0);
 
 export async function loadWorkspace(token) {
-  const rows = await supabase.query("/rest/v1/profiles?select=id,full_name,role,organizations(name)&limit=1", token);
+  const rows = await supabase.query("/rest/v1/profiles?select=id,full_name,role,is_active,organizations(name)&limit=1", token);
   const profile = rows[0];
   const organization = Array.isArray(profile?.organizations) ? profile.organizations[0] : profile?.organizations;
   return { businessName: organization?.name || "My Finance Business", fullName: profile?.full_name || "", role: profile?.role || "owner", active: profile?.is_active !== false, id: profile?.id || "" };
@@ -98,6 +98,12 @@ export const createCollectionAgent = async (token, details) => {
   const response = await fetch("/api/agents", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify(details) });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(body.error || "Could not create collection agent");
+  return body;
+};
+export const loadManagedAgents = async token => {
+  const response = await fetch("/api/agents", { headers: { Authorization: `Bearer ${token}` } });
+  const body = await response.json().catch(() => []);
+  if (!response.ok) throw new Error(body.error || "Could not load collection agents");
   return body;
 };
 export const loadCollectionAgents = token => supabase.query("/rest/v1/profiles?select=id,full_name,role&role=eq.staff&order=full_name.asc", token);
