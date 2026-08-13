@@ -3,15 +3,15 @@ import { supabase } from "./supabase";
 const asNumber = value => Number(value || 0);
 
 export async function loadWorkspace(token) {
-  const rows = await supabase.query("/rest/v1/profiles?select=full_name,organizations(name)&limit=1", token);
+  const rows = await supabase.query("/rest/v1/profiles?select=id,full_name,role,organizations(name)&limit=1", token);
   const profile = rows[0];
   const organization = Array.isArray(profile?.organizations) ? profile.organizations[0] : profile?.organizations;
-  return { businessName: organization?.name || "My Finance Business", fullName: profile?.full_name || "" };
+  return { businessName: organization?.name || "My Finance Business", fullName: profile?.full_name || "", role: profile?.role || "owner", id: profile?.id || "" };
 }
 
 export async function loadFinanceAccounts(token) {
   const rows = await supabase.query(
-    "/rest/v1/finance_accounts?select=*,customers(*),payments(*),rate_changes(*),customer_portal_credentials(portal_id)&order=created_at.desc",
+    "/rest/v1/finance_accounts?select=*,customers(*),payments(*,profiles!payments_collected_by_fkey(full_name)),rate_changes(*),customer_portal_credentials(portal_id)&order=collection_order.asc,created_at.asc",
     token,
   );
   return rows.map(account => {
@@ -30,12 +30,17 @@ export async function loadFinanceAccounts(token) {
     principal: asNumber(account.principal),
     annualRate: asNumber(account.monthly_interest_rate),
     penaltyRate: asNumber(account.penalty_rate),
+    status: account.status || "active",
+    lossAmount: asNumber(account.loss_amount),
+    collectionOrder: Number(account.collection_order || 999999),
+    collectionAgentId: account.collection_agent_id || "",
     portalId: credential?.portal_id || "",
     rateChanges: (account.rate_changes || []).map(rate => ({ effectiveDate: rate.effective_date, annualRate: asNumber(rate.monthly_interest_rate) })),
     transactions: (account.payments || []).map(payment => ({
       id: payment.id, date: payment.paid_on, mode: payment.mode, amount: asNumber(payment.total_amount),
       interestAmount: asNumber(payment.interest_amount), principalAmount: asNumber(payment.principal_amount),
       penaltyAmount: asNumber(payment.penalty_amount), ref: payment.payment_reference || "", notes: payment.notes || "",
+      collectedBy: payment.collected_by || "", collectorName: (Array.isArray(payment.profiles) ? payment.profiles[0] : payment.profiles)?.full_name || "Financier/Admin",
     })),
     });
   });
@@ -84,3 +89,8 @@ export const enableCustomerPortal = (token, accountId, pin) => supabase.rpc("ena
 export const customerPortalLogin = (portalId, pin) => supabase.rpc("customer_portal_login", { input_portal_id: portalId, input_pin: pin });
 export const loadCustomerKyc = (token, accountId) => supabase.rpc("get_customer_kyc", { account_id: accountId }, token);
 export const saveCustomerKyc = (token, accountId, aadhaar, pan) => supabase.rpc("save_customer_kyc", { account_id: accountId, aadhaar, pan }, token);
+export const updatePaymentNotes = (token, paymentId, notes) => supabase.rpc("update_payment_notes", { payment_id: paymentId, payment_notes: notes }, token);
+export const setAccountStatus = (token, accountId, status) => supabase.rpc("set_finance_account_status", { account_id: accountId, new_status: status }, token);
+export const saveCollectionOrder = (token, accountIds) => supabase.rpc("set_collection_order", { account_ids: accountIds }, token);
+export const loadCollectionAgents = token => supabase.query("/rest/v1/profiles?select=id,full_name,role&role=eq.staff&order=full_name.asc", token);
+export const assignCollectionAgent = (token, accountId, agentId) => supabase.rpc("assign_collection_agent", { account_id: accountId, agent_id: agentId || null }, token);
