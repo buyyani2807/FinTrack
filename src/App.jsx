@@ -171,6 +171,8 @@ function FinancierAuth({ onLogin, onCustomerLogin }) {
   const signInAndEnter = async () => {
     const result = await supabase.auth.signIn(email, password);
     const profile = await loadWorkspace(result.access_token);
+    if (mode === "agent" && profile.role !== "staff") throw new Error("This account is not a Collection Agent. Use Financier sign in.");
+    if (mode === "signIn" && profile.role === "staff") throw new Error("Use Collection Agent sign in for this account.");
     onLogin({ role: profile.role === "staff" ? "agent" : "financier", authToken: result.access_token, name: profile.fullName });
   };
   const submit = async () => {
@@ -194,8 +196,8 @@ function FinancierAuth({ onLogin, onCustomerLogin }) {
     } catch (error) { setMessage(error.message || "Unable to sign in."); }
     finally { setBusy(false); }
   };
-  const isCustomer = mode === "customer";
-  return <div className="login"><div className="brand" style={{ textAlign: "center" }}>FinTrack</div><p className="sub" style={{ textAlign: "center", marginBottom: 22 }}>{isCustomer ? "View your finance balance and payment history" : "Secure workspace for finance businesses"}</p><div className="card"><div className="tabs" style={{ marginBottom: 18 }}><Button className={`tab ${mode === "signIn" ? "active" : ""}`} onClick={() => setMode("signIn")}>Financier sign in</Button><Button className={`tab ${mode === "customer" ? "active" : ""}`} onClick={() => setMode("customer")}>Customer login</Button><Button className={`tab ${mode === "signUp" ? "active" : ""}`} onClick={() => setMode("signUp")}>Create business account</Button></div>{isCustomer ? <><Field label="Customer portal ID"><input placeholder="e.g. FT-1A2B3C4D" value={portalId} onChange={event => setPortalId(event.target.value.toUpperCase())} /></Field><div className="spacer"><Field label="6-digit PIN"><input type="password" inputMode="numeric" minLength="6" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} /></Field></div></> : <>{mode === "signUp" && <><Field label="Business name"><input placeholder="e.g. Vivek Finance" value={businessName} onChange={event => setBusinessName(event.target.value)} /></Field><div className="spacer"><Field label="Your full name"><input value={fullName} onChange={event => setFullName(event.target.value)} /></Field></div></>}<div className="spacer"><Field label="Business email"><input type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} /></Field></div><div className="spacer"><Field label="Password"><input type="password" minLength="8" autoComplete={mode === "signIn" ? "current-password" : "new-password"} value={password} onChange={event => setPassword(event.target.value)} /></Field></div></>}{message && <p className="small" style={{ color: message.includes("created") ? C.green : C.red }}>{message}</p>}<Button className="primary spacer" style={{ width: "100%" }} disabled={busy} onClick={submit}>{busy ? "Please wait…" : isCustomer ? "Open my dashboard" : mode === "signIn" ? "Sign in" : "Create business account"}</Button></div></div>;
+  const isCustomer = mode === "customer", isAgent = mode === "agent";
+  return <div className="login"><div className="brand" style={{ textAlign: "center" }}>FinTrack</div><p className="sub" style={{ textAlign: "center", marginBottom: 22 }}>{isCustomer ? "View your finance balance and payment history" : isAgent ? "Collection Agent workspace" : "Secure workspace for finance businesses"}</p><div className="card"><div className="tabs" style={{ marginBottom: 18 }}><Button className={`tab ${mode === "signIn" ? "active" : ""}`} onClick={() => setMode("signIn")}>Financier sign in</Button><Button className={`tab ${mode === "agent" ? "active" : ""}`} onClick={() => setMode("agent")}>Agent login</Button><Button className={`tab ${mode === "customer" ? "active" : ""}`} onClick={() => setMode("customer")}>Customer login</Button><Button className={`tab ${mode === "signUp" ? "active" : ""}`} onClick={() => setMode("signUp")}>Create business account</Button></div>{isCustomer ? <><Field label="Customer portal ID"><input placeholder="e.g. FT-1A2B3C4D" value={portalId} onChange={event => setPortalId(event.target.value.toUpperCase())} /></Field><div className="spacer"><Field label="6-digit PIN"><input type="password" inputMode="numeric" minLength="6" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} /></Field></div></> : <>{mode === "signUp" && <><Field label="Business name"><input placeholder="e.g. Vivek Finance" value={businessName} onChange={event => setBusinessName(event.target.value)} /></Field><div className="spacer"><Field label="Your full name"><input value={fullName} onChange={event => setFullName(event.target.value)} /></Field></div></>}<div className="spacer"><Field label={isAgent ? "Agent email" : "Business email"}><input type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} /></Field></div><div className="spacer"><Field label="Password"><input type="password" minLength="8" autoComplete={mode === "signIn" || isAgent ? "current-password" : "new-password"} value={password} onChange={event => setPassword(event.target.value)} /></Field></div></>}{message && <p className="small" style={{ color: message.includes("created") ? C.green : C.red }}>{message}</p>}<Button className="primary spacer" style={{ width: "100%" }} disabled={busy} onClick={submit}>{busy ? "Please wait…" : isCustomer ? "Open my dashboard" : mode === "signUp" ? "Create business account" : "Sign in"}</Button></div></div>;
 }
 const csvCell = value => {
   const text = String(value ?? "");
@@ -538,6 +540,12 @@ function PinResetModal({ title, currentPin, onSave, close }) {
   };
   return <Modal><h2 className="title">Reset {title} PIN</h2><p className="copy">Choose a secure numeric PIN with at least four digits.</p><div className="tool-stack spacer"><Field label="Current PIN"><input type="password" value={oldPin} onChange={event => setOldPin(event.target.value)} /></Field><Field label="New PIN"><input type="password" value={newPin} onChange={event => setNewPin(event.target.value)} /></Field><Field label="Confirm new PIN"><input type="password" value={confirmPin} onChange={event => setConfirmPin(event.target.value)} /></Field></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button onClick={close}>Cancel</Button><Button className="primary" onClick={save}>Save new PIN</Button></div></Modal>;
 }
+function PortfolioReport({ loans, close }) {
+  const [kind, setKind] = useState("all"), [status, setStatus] = useState("all"), [customer, setCustomer] = useState("");
+  const filtered = loans.filter(loan => (kind === "all" || loan.kind === kind) && (status === "all" || loanStatus(loan) === status) && loan.customerName.toLowerCase().includes(customer.toLowerCase()));
+  const total = key => filtered.reduce((sum, loan) => sum + key(loan), 0);
+  return <Modal><h2 className="title">Profit &amp; loss report</h2><div className="form spacer"><Field label="Finance type"><select value={kind} onChange={e => setKind(e.target.value)}><option value="all">Daily + Monthly</option><option value="daily">Daily finance</option><option value="monthly">Monthly finance</option></select></Field><Field label="Account status"><select value={status} onChange={e => setStatus(e.target.value)}><option value="all">All statuses</option><option value="active">Active</option><option value="closed">Closed</option><option value="bankrupt">Bankrupt</option></select></Field><Field className="span" label="Customer"><input placeholder="Filter by customer name" value={customer} onChange={e => setCustomer(e.target.value)} /></Field></div><div className="grid metrics"><Metric label="Paid / invested" value={money(total(investedAmount))} color="gold" /><Metric label="Collected" value={money(total(loanPaid))} color="green" /><Metric label="Outstanding" value={money(total(loanBalance))} color="red" /><Metric label="Realized profit" value={money(total(realizedProfit))} color="green" /><Metric label="Bankrupt loss" value={money(total(realizedLoss))} color="red" /><Metric label="Net profit / loss" value={money(total(netPosition))} color={total(netPosition) < 0 ? "red" : "green"} /><Metric label="Active / Closed" value={`${filtered.filter(l => loanStatus(l) === "active").length} / ${filtered.filter(l => loanStatus(l) === "closed").length}`} color="blue" /><Metric label="Bankrupt accounts" value={filtered.filter(l => loanStatus(l) === "bankrupt").length} color="red" /></div><p className="notice">Outstanding remains a receivable until an account is explicitly marked bankrupt. Only bankrupt outstanding is included as loss.</p><div className="row spacer"><Button onClick={close}>Close</Button><Button className="primary" onClick={() => downloadDailyReport(filtered, today())}>Download today’s collections</Button></div></Modal>;
+}
 function FinancierTools({ loans, adminPin, setAdminPin }) {
   const [panel, setPanel] = useState(null);
   const [reportDate, setReportDate] = useState(today());
@@ -546,11 +554,9 @@ function FinancierTools({ loans, adminPin, setAdminPin }) {
       <div className="nav-title">FinTrack</div>
       <Button className={panel === null ? "tab active" : ""} onClick={() => { setPanel(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}>▦ Dashboard</Button>
       <Button className={panel === "reports" ? "tab active" : ""} onClick={() => setPanel("reports")}>↧ Reports</Button>
-      <Button className={panel === "security" ? "tab active" : ""} onClick={() => setPanel("security")}>⌁ Security</Button>
       <div className="nav-footer">Financier workspace</div>
     </aside>
-    {panel === "reports" && <Modal><h2 className="title">Daily collection report</h2><div className="spacer"><Field label="Report date"><input type="date" value={reportDate} onChange={event => setReportDate(event.target.value)} /></Field></div><div className="row spacer"><Button onClick={() => setPanel(null)}>Close</Button><Button className="primary" onClick={() => downloadDailyReport(loans, reportDate)}>Download CSV</Button></div></Modal>}
-    {panel === "security" && <PinResetModal title="financier" currentPin={adminPin} onSave={setAdminPin} close={() => setPanel(null)} />}
+    {panel === "reports" && <PortfolioReport loans={loans} close={() => setPanel(null)} />}
   </div>;
 }
 function CustomerReportDownload({ loan, onResetPin }) {
@@ -594,7 +600,12 @@ export default function App() {
   const saveCustomerPortal = async (loan, pin) => { const portalId = loan.portalId ? (await resetCustomerPortalPin(user.authToken, loan.id, pin), "") : await enableCustomerPortal(user.authToken, loan.id, pin); await refreshLoans(); return portalId; };
   const getKyc = loan => loadCustomerKyc(user.authToken, loan.id);
   const updateKyc = (loan, aadhaar, pan) => saveCustomerKyc(user.authToken, loan.id, aadhaar, pan);
-  const changeStatus = async (loan, status) => { await setAccountStatus(user.authToken, loan.id, status); await refreshLoans(); };
+  const changeStatus = async (loan, status) => {
+    const isClosing = status === "closed", isBankrupt = status === "bankrupt";
+    const note = (isClosing || isBankrupt) ? window.prompt(isClosing ? "Closure note (required). Close only after full repayment:" : "Bankruptcy reason (required). The outstanding balance will be recorded as loss:") : "Account reopened by financier";
+    if ((isClosing || isBankrupt) && !note?.trim()) return;
+    await setAccountStatus(user.authToken, loan.id, status, note); await refreshLoans();
+  };
   const changePaymentNotes = async (payment, notes) => { await updatePaymentNotes(user.authToken, payment.id, notes); await refreshLoans(); };
   const changeCollectionOrder = async ids => { await saveCollectionOrder(user.authToken, ids); await refreshLoans(); };
   const staffRole = user?.role === "agent";

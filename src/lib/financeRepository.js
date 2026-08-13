@@ -32,6 +32,8 @@ export async function loadFinanceAccounts(token) {
     penaltyRate: asNumber(account.penalty_rate),
     status: account.status || "active",
     lossAmount: asNumber(account.loss_amount),
+    statusNote: account.status_note || "",
+    statusChangedAt: account.status_changed_at || "",
     collectionOrder: Number(account.collection_order || 999999),
     collectionAgentId: account.collection_agent_id || "",
     portalId: credential?.portal_id || "",
@@ -90,7 +92,7 @@ export const customerPortalLogin = (portalId, pin) => supabase.rpc("customer_por
 export const loadCustomerKyc = (token, accountId) => supabase.rpc("get_customer_kyc", { account_id: accountId }, token);
 export const saveCustomerKyc = (token, accountId, aadhaar, pan) => supabase.rpc("save_customer_kyc", { account_id: accountId, aadhaar, pan }, token);
 export const updatePaymentNotes = (token, paymentId, notes) => supabase.rpc("update_payment_notes", { payment_id: paymentId, payment_notes: notes }, token);
-export const setAccountStatus = (token, accountId, status) => supabase.rpc("set_finance_account_status", { account_id: accountId, new_status: status }, token);
+export const setAccountStatus = (token, accountId, status, note) => supabase.rpc("set_finance_account_status", { account_id: accountId, new_status: status, action_note: note || "" }, token);
 export const saveCollectionOrder = (token, accountIds) => supabase.rpc("set_collection_order", { account_ids: accountIds }, token);
 export const loadCollectionAgents = token => supabase.query("/rest/v1/profiles?select=id,full_name,role&role=eq.staff&order=full_name.asc", token);
 export const assignCollectionAgent = (token, accountId, agentId) => supabase.rpc("assign_collection_agent", { account_id: accountId, agent_id: agentId || null }, token);
