@@ -253,8 +253,7 @@ const downloadDailyReport = (loans, reportDate) => {
     const expected = loan.kind === "daily" ? loan.dailyCollection : Math.round(monthlyBalance(loan, reportDate) * annualRate(loan, reportDate) / 100);
     return [loan.customerName, loan.kind === "daily" ? "Daily" : "Monthly", expected, actual, loanBalance(loan), actual ? "Collected" : "Not collected", reportDate, transactions.map(t => t.collectorName || "Financier/Admin").join("; ") || "—", transactions.map(t => t.notes).filter(Boolean).join("; ") || "—"];
   });
-  if (!rows.some(row => Number(row[5]) > 0)) throw new Error(`No collections were recorded on ${reportDate}.`);
-  const total = rows.reduce((sum, row) => sum + Number(row[5]), 0);
+  const total = rows.reduce((sum, row) => sum + Number(row[3] || 0), 0);
   downloadCsv(`fintrack-collection-report-${reportDate}.csv`, [["FinTrack Collection Report"], ["Report date", reportDate], ["Total collected", total], [], ["Customer", "Collection type", "Expected collection", "Actual collected", "Outstanding", "Collection status", "Collection date", "Collected by", "Notes/comments"], ...rows, [], ["Total", "", "", total]]);
 };
 const downloadCustomerReport = loan => {
