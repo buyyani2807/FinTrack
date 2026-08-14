@@ -308,7 +308,7 @@ function NewFinance({
     pan: "",
     startDate: today(),
     collectionAmount: "10000",
-    disbursedAmount: "8500",
+    disbursedAmount: "",
     principal: "100000",
     annualRate: "3",
     penaltyRate: "5"
@@ -319,31 +319,31 @@ function NewFinance({
     [k]: v
   }));
   const submit = async () => {
-    if (!f.customerName || !f.phone || f.kind === "daily" && !f.collectionAmount || f.kind === "monthly" && !f.principal) return setErr("Complete the customer details and amount.");
+    const daily = f.kind === "daily";
+    if (!f.customerName || !f.phone || daily && (+f.collectionAmount <= 0 || +f.disbursedAmount <= 0) || !daily && +f.principal <= 0) return setErr(daily ? "Enter customer details, the financed amount, and the actual positive amount paid to the customer." : "Complete the customer details and amount.");
     const stamp = Date.now().toString().slice(-6),
-      daily = f.kind === "daily";
+      isDaily = f.kind === "daily";
     try {
       await save({
       ...f,
       aadhaar: f.aadhaar.trim(),
       pan: f.pan.trim().toUpperCase(),
-      id: `${daily ? "D" : "M"}${stamp}`,
+      id: `${isDaily ? "D" : "M"}${stamp}`,
       customerId: `C${stamp}`,
       pin: "0000",
       collectionAmount: +f.collectionAmount,
-      // Daily-finance payout is always 85% of the 100-day collection amount.
-      disbursedAmount: daily ? Math.round(+f.collectionAmount * 0.85) : +f.disbursedAmount,
+      // This is the actual amount entered by the financier; never calculate a default percentage.
+      disbursedAmount: isDaily ? +f.disbursedAmount : +f.disbursedAmount,
       principal: +f.principal,
       annualRate: +f.annualRate,
       penaltyRate: +f.penaltyRate,
-      dailyCollection: daily ? Math.ceil(+f.collectionAmount / 100) : 0,
+      dailyCollection: isDaily ? Math.ceil(+f.collectionAmount / 100) : 0,
       rateChanges: [],
       transactions: []
       });
     } catch (error) { setErr(error.message || "Could not create the finance account."); }
   };
-  const dailyPayout = Math.round((+f.collectionAmount || 0) * 0.85);
-  return <Modal close={close}><h2 className="title">New finance account</h2><div className="tabs spacer"><Button className={`tab ${f.kind === "daily" ? "active" : ""}`} onClick={() => set("kind", "daily")}>Daily Finance</Button><Button className={`tab ${f.kind === "monthly" ? "active" : ""}`} onClick={() => set("kind", "monthly")}>Monthly Finance</Button></div><div className="form spacer"><Field label="Customer name *"><input value={f.customerName} onChange={e => set("customerName", e.target.value)} /></Field><Field label="Phone *"><input value={f.phone} onChange={e => set("phone", e.target.value)} /></Field><Field label="Start date"><input type="date" value={f.startDate} onChange={e => set("startDate", e.target.value)} /></Field><Field label="Address"><input value={f.address} onChange={e => set("address", e.target.value)} /></Field><div className="notice span"><strong>KYC details</strong> — store these only with customer consent.</div><Field label="Aadhaar number"><input inputMode="numeric" maxLength="12" placeholder="12-digit Aadhaar" value={f.aadhaar} onChange={e => set("aadhaar", e.target.value.replace(/\D/g, ""))} /></Field><Field label="PAN number"><input maxLength="10" placeholder="ABCDE1234F" value={f.pan} onChange={e => set("pan", e.target.value.toUpperCase())} /></Field>{f.kind === "daily" ? <><Field label="Customer repays in 100 days (₹) *"><input type="number" value={f.collectionAmount} onChange={e => set("collectionAmount", e.target.value)} /></Field><div className="card"><div className="metric-label">Paid to customer (85%)</div><div className="metric-value gold">{money(dailyPayout)}</div></div></> : <><Field label="Principal (₹) *"><input type="number" value={f.principal} onChange={e => set("principal", e.target.value)} /></Field><Field label="Monthly interest rate (%)"><input type="number" value={f.annualRate} onChange={e => set("annualRate", e.target.value)} /></Field><Field label="Missed-interest penalty (%)"><input type="number" value={f.penaltyRate} onChange={e => set("penaltyRate", e.target.value)} /></Field></>}</div>{err && <p className="red small">{err}</p>}<div className="row spacer"><Button onClick={close}>Cancel</Button><Button className="primary" onClick={submit}>Create account</Button></div></Modal>;
+  return <Modal close={close}><h2 className="title">New finance account</h2><div className="tabs spacer"><Button className={`tab ${f.kind === "daily" ? "active" : ""}`} onClick={() => set("kind", "daily")}>Daily Finance</Button><Button className={`tab ${f.kind === "monthly" ? "active" : ""}`} onClick={() => set("kind", "monthly")}>Monthly Finance</Button></div><div className="form spacer"><Field label="Customer name *"><input value={f.customerName} onChange={e => set("customerName", e.target.value)} /></Field><Field label="Phone *"><input value={f.phone} onChange={e => set("phone", e.target.value)} /></Field><Field label="Start date"><input type="date" value={f.startDate} onChange={e => set("startDate", e.target.value)} /></Field><Field label="Address"><input value={f.address} onChange={e => set("address", e.target.value)} /></Field><div className="notice span"><strong>KYC details</strong> — store these only with customer consent.</div><Field label="Aadhaar number"><input inputMode="numeric" maxLength="12" placeholder="12-digit Aadhaar" value={f.aadhaar} onChange={e => set("aadhaar", e.target.value.replace(/\D/g, ""))} /></Field><Field label="PAN number"><input maxLength="10" placeholder="ABCDE1234F" value={f.pan} onChange={e => set("pan", e.target.value.toUpperCase())} /></Field>{f.kind === "daily" ? <><Field label="Amount financed — repaid in 100 days (₹) *"><input type="number" min="1" value={f.collectionAmount} onChange={e => set("collectionAmount", e.target.value)} /></Field><Field label="Actual paid to customer (₹) *"><input type="number" min="1" placeholder="Enter the actual amount paid" value={f.disbursedAmount} onChange={e => set("disbursedAmount", e.target.value)} /></Field><div className="notice span">Enter the actual amount paid to the customer. It is not calculated automatically and will be used in Profit &amp; Loss. The repayment schedule remains 100 days: {money(Math.ceil(+f.collectionAmount / 100 || 0))} per day.</div></> : <><Field label="Principal (₹) *"><input type="number" value={f.principal} onChange={e => set("principal", e.target.value)} /></Field><Field label="Monthly interest rate (%)"><input type="number" value={f.annualRate} onChange={e => set("annualRate", e.target.value)} /></Field><Field label="Missed-interest penalty (%)"><input type="number" value={f.penaltyRate} onChange={e => set("penaltyRate", e.target.value)} /></Field></>}</div>{err && <p className="red small">{err}</p>}<div className="row spacer"><Button onClick={close}>Cancel</Button><Button className="primary" onClick={submit}>Create account</Button></div></Modal>;
   return <Modal close={close}><h2 className="title">New finance account</h2><p className="copy">Customer PIN defaults to 0000; change it in a production account system.</p><div className="tabs spacer"><Button className={`tab ${f.kind === "daily" ? "active" : ""}`} onClick={() => set("kind", "daily")}>Daily Finance</Button><Button className={`tab ${f.kind === "monthly" ? "active" : ""}`} onClick={() => set("kind", "monthly")}>Monthly Finance</Button></div><div className="form spacer"><Field label="Start date"><input type="date" value={f.startDate} onChange={e => set("startDate", e.target.value)} /></Field><Field label="Customer name *"><input value={f.customerName} onChange={e => set("customerName", e.target.value)} /></Field><Field label="Phone *"><input value={f.phone} onChange={e => set("phone", e.target.value)} /></Field><Field className="span" label="Address"><input value={f.address} onChange={e => set("address", e.target.value)} /></Field>{f.kind === "daily" ? <><Field label="Customer repays in 100 days (₹) *"><input type="number" min="1" value={f.collectionAmount} onChange={e => set("collectionAmount", e.target.value)} /></Field><div className="card"><div className="metric-label">Amount paid to customer (85%)</div><div className="metric-value gold">{money(dailyPayout)}</div><div className="small">Calculated automatically</div></div><div className="notice span">The customer receives {money(dailyPayout)} and repays {money(f.collectionAmount)} over 100 days: {money(Math.ceil(+f.collectionAmount / 100 || 0))} per day.</div></> : <><Field label="Principal given to customer (₹) *"><input type="number" value={f.principal} onChange={e => set("principal", e.target.value)} /></Field><Field label="Monthly interest rate (%)"><input type="number" min="0" step=".01" value={f.annualRate} onChange={e => set("annualRate", e.target.value)} /></Field><Field label="Penalty on missed interest (%)"><input type="number" min="0" step=".01" value={f.penaltyRate} onChange={e => set("penaltyRate", e.target.value)} /></Field><div className="card"><div className="metric-label">Current monthly interest</div><div className="metric-value gold">{money(+f.principal * (+f.annualRate || 0) / 100)}</div><div className="small">No fixed repayment tenure. Principal can be repaid anytime.</div></div><div className="notice span">The customer pays monthly interest on the outstanding principal. Principal repayments reduce future monthly interest; missed interest can attract the configured penalty.</div></>}</div>{err && <p className="red small">{err}</p>}<div className="row spacer"><Button onClick={close}>Cancel</Button><Button className="primary" onClick={submit}>Create finance account</Button></div></Modal>;
 }
 function Payment({
