@@ -33,6 +33,8 @@ const addMonths = (s, n) => {
   return d.toISOString().slice(0, 10);
 };
 const elapsedDays = (s, e = today()) => Math.max(0, Math.floor((new Date(`${e}T12:00:00`) - new Date(`${s}T12:00:00`)) / 86400000));
+const dailyProgress = loan => { const completed = Math.min(100, elapsedDays(loan.startDate) + 1); return { completed, remaining: Math.max(0, 100 - completed) }; };
+const collectedOn = (loan, date = today()) => loan.transactions.some(transaction => transaction.date === date && paymentValue(loan, transaction) > 0);
 const annualRate = (loan, date) => Number([...loan.rateChanges].sort((a, b) => a.effectiveDate.localeCompare(b.effectiveDate)).filter(r => r.effectiveDate <= date).at(-1)?.annualRate || loan.annualRate || 0);
 const txTotal = (loan, key) => loan.transactions.reduce((s, t) => s + Number(t[key] || 0), 0);
 const dailyPaid = loan => txTotal(loan, "amount");
@@ -70,7 +72,7 @@ const missedMonths = loan => {
 const estimatedPenalty = loan => Math.round(monthlyInterestPending(loan) * Number(loan.penaltyRate || 0) / 100);
 const loanBalance = loan => loan.status === "bankrupt" ? 0 : loan.kind === "daily" ? dailyBalance(loan) : monthlyBalance(loan);
 const loanPaid = loan => loan.kind === "daily" ? dailyPaid(loan) : txTotal(loan, "principalAmount") + monthlyInterestPaid(loan) + monthlyPenaltyPaid(loan);
-const loanStatus = loan => loan.status === "bankrupt" || loan.status === "closed" ? loan.status : loanBalance(loan) <= 0 ? "completed" : loan.kind === "daily" ? dailyPaid(loan) < Math.min(100, elapsedDays(loan.startDate)) * loan.dailyCollection ? "overdue" : "active" : monthlyInterestPending(loan) > 0 ? "overdue" : "active";
+const loanStatus = loan => loan.status === "bankrupt" || loan.status === "closed" ? loan.status : loanBalance(loan) <= 0 ? "completed" : loan.kind === "daily" ? elapsedDays(loan.startDate) >= 100 ? "overdue" : "active" : monthlyInterestPending(loan) > 0 ? "overdue" : "active";
 const investedAmount = loan => loan.kind === "daily" ? Number(loan.disbursedAmount || 0) : Number(loan.principal || 0);
 const realizedProfit = loan => loan.kind === "daily" ? Math.max(0, dailyPaid(loan) - investedAmount(loan)) : monthlyInterestPaid(loan) + monthlyPenaltyPaid(loan);
 const realizedLoss = loan => loan.status === "bankrupt" ? Math.max(Number(loan.lossAmount || 0), investedAmount(loan) - loanPaid(loan)) : 0;
@@ -245,15 +247,15 @@ const downloadCsv = (filename, rows) => {
 };
 const paymentValue = (loan, transaction) => loan.kind === "daily" ? Number(transaction.amount || 0) : Number(transaction.interestAmount || 0) + Number(transaction.principalAmount || 0) + Number(transaction.penaltyAmount || 0);
 const downloadDailyReport = (loans, reportDate) => {
-  const rows = loans.filter(loan => loan.status === "active" || loan.transactions.some(t => t.date === reportDate)).map(loan => {
+  const rows = loans.filter(loan => loan.status === "active").map(loan => {
     const transactions = loan.transactions.filter(t => t.date === reportDate);
     const actual = transactions.reduce((sum, t) => sum + paymentValue(loan, t), 0);
     const expected = loan.kind === "daily" ? loan.dailyCollection : Math.round(monthlyBalance(loan, reportDate) * annualRate(loan, reportDate) / 100);
-    return [loan.customerName, loan.phone, loan.id, loan.kind === "daily" ? "Daily" : "Monthly", expected, actual, loanBalance(loan), actual ? "Collected" : "Not collected", reportDate, transactions.map(t => t.collectorName || "Financier/Admin").join("; ") || "—", transactions.map(t => t.notes).filter(Boolean).join("; ") || "—", loanStatus(loan)];
+    return [loan.customerName, loan.kind === "daily" ? "Daily" : "Monthly", expected, actual, loanBalance(loan), actual ? "Collected" : "Not collected", reportDate, transactions.map(t => t.collectorName || "Financier/Admin").join("; ") || "—", transactions.map(t => t.notes).filter(Boolean).join("; ") || "—"];
   });
   if (!rows.some(row => Number(row[5]) > 0)) throw new Error(`No collections were recorded on ${reportDate}.`);
   const total = rows.reduce((sum, row) => sum + Number(row[5]), 0);
-  downloadCsv(`fintrack-collection-report-${reportDate}.csv`, [["FinTrack Collection Report"], ["Report date", reportDate], ["Total collected", total], [], ["Customer", "Phone", "Account ID", "Collection type", "Expected collection", "Actual collected", "Outstanding", "Collection status", "Collection date", "Collected by", "Notes/comments", "Account status"], ...rows, [], ["Total", "", "", "", "", total]]);
+  downloadCsv(`fintrack-collection-report-${reportDate}.csv`, [["FinTrack Collection Report"], ["Report date", reportDate], ["Total collected", total], [], ["Customer", "Collection type", "Expected collection", "Actual collected", "Outstanding", "Collection status", "Collection date", "Collected by", "Notes/comments"], ...rows, [], ["Total", "", "", total]]);
 };
 const downloadCustomerReport = loan => {
   const monthly = loan.kind === "monthly";
@@ -530,7 +532,8 @@ function Financier({
   const isOwner = role === "owner";
   const [draggedId, setDraggedId] = useState(null);
   const touchTargetId = useRef(null);
-  const shown = (filter === "all" ? loans : loans.filter(l => l.kind === filter)).filter(loan => `${loan.customerName} ${loan.phone} ${loan.address || ""}`.toLowerCase().includes(search.trim().toLowerCase())).sort((a, b) => a.collectionOrder - b.collectionOrder);
+  const activeLoans = loans.filter(loan => loan.status === "active");
+  const shown = (filter === "all" ? activeLoans : activeLoans.filter(l => l.kind === filter)).filter(loan => `${loan.customerName} ${loan.phone} ${loan.address || ""}`.toLowerCase().includes(search.trim().toLowerCase())).sort((a, b) => a.collectionOrder - b.collectionOrder);
   const reorder = async targetId => {
     if (!isOwner || !draggedId || draggedId === targetId) return;
     const ordered = [...loans].sort((a, b) => a.collectionOrder - b.collectionOrder);
