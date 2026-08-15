@@ -533,7 +533,7 @@ function Financier({
   const isOwner = role === "owner";
   const [draggedId, setDraggedId] = useState(null);
   const touchTargetId = useRef(null);
-  const activeLoans = loans.filter(loan => loan.status === "active");
+  const activeLoans = loans.filter(loan => loanStatus(loan) === "active");
   useEffect(() => {
     const openCustomers = () => { setCustomerMode(true); setStatusFilter("all"); };
     window.addEventListener("fintrack-open-customers", openCustomers);
