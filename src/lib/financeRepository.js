@@ -93,6 +93,8 @@ export const customerPortalLogin = (portalId, pin) => supabase.rpc("customer_por
 export const loadCustomerKyc = (token, accountId) => supabase.rpc("get_customer_kyc", { account_id: accountId }, token);
 export const saveCustomerKyc = (token, accountId, aadhaar, pan) => supabase.rpc("save_customer_kyc", { account_id: accountId, aadhaar, pan }, token);
 export const updatePaymentNotes = (token, paymentId, notes) => supabase.rpc("update_payment_notes", { payment_id: paymentId, payment_notes: notes }, token);
+export const updateFinancePayment = (token, payment) => supabase.rpc("update_finance_payment", { payment_id: payment.id, payment_date: payment.date, payment_mode: payment.mode, amount_total: payment.amount, amount_interest: payment.interestAmount || 0, amount_principal: payment.principalAmount || 0, amount_penalty: payment.penaltyAmount || 0, payment_ref: payment.ref || "", payment_notes: payment.notes || "" }, token);
+export const deleteFinancePayment = (token, paymentId) => supabase.rpc("delete_finance_payment", { payment_id: paymentId }, token);
 export const setAccountStatus = (token, accountId, status, note) => supabase.rpc("set_finance_account_status", { account_id: accountId, new_status: status, action_note: note || "" }, token);
 export const saveCollectionOrder = (token, accountIds) => supabase.rpc("set_collection_order", { account_ids: accountIds }, token);
 export const createCollectionAgent = async (token, details) => {
