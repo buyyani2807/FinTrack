@@ -19,8 +19,14 @@ export default async function handler(req, res) {
     const [profile] = await profileResponse.json();
     if (!profile || profile.role !== "owner" || !profile.is_active) return json(res, 403, { error: "Only an active financier can manage agents" });
     if (req.method === "GET") {
-      const agents = await fetch(`${supabaseUrl}/rest/v1/profiles?organization_id=eq.${profile.organization_id}&role=eq.staff&select=id,full_name,email,phone,is_active,created_at&order=created_at.desc`, { headers: headers(serviceKey) });
-      return json(res, agents.ok ? 200 : 500, agents.ok ? await agents.json() : { error: "Could not load collection agents" });
+      const [agentsResponse, assignmentsResponse] = await Promise.all([
+        fetch(`${supabaseUrl}/rest/v1/profiles?organization_id=eq.${profile.organization_id}&role=eq.staff&select=id,full_name,email,phone,is_active,created_at&order=created_at.desc`, { headers: headers(serviceKey) }),
+        fetch(`${supabaseUrl}/rest/v1/finance_accounts?organization_id=eq.${profile.organization_id}&select=collection_agent_id`, { headers: headers(serviceKey) }),
+      ]);
+      if (!agentsResponse.ok || !assignmentsResponse.ok) return json(res, 500, { error: "Could not load collection agents" });
+      const [agents, assignments] = await Promise.all([agentsResponse.json(), assignmentsResponse.json()]);
+      const assignedCounts = assignments.reduce((counts, account) => { if (account.collection_agent_id) counts[account.collection_agent_id] = (counts[account.collection_agent_id] || 0) + 1; return counts; }, {});
+      return json(res, 200, agents.map(agent => ({ ...agent, assigned_customer_count: assignedCounts[agent.id] || 0 })));
     }
     if (req.method === "PATCH") {
       const { id, name, email, phone = "", active, password } = req.body || {};

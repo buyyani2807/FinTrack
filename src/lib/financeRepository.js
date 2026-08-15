@@ -43,6 +43,7 @@ export async function loadFinanceAccounts(token) {
       id: payment.id, date: payment.paid_on, mode: payment.mode, amount: asNumber(payment.total_amount),
       interestAmount: asNumber(payment.interest_amount), principalAmount: asNumber(payment.principal_amount),
       penaltyAmount: asNumber(payment.penalty_amount), ref: payment.payment_reference || "", notes: payment.notes || "",
+      cashAmount: asNumber(payment.cash_amount), upiAmount: asNumber(payment.upi_amount),
       collectedBy: payment.collected_by || "", collectorName: (Array.isArray(payment.profiles) ? payment.profiles[0] : payment.profiles)?.full_name || "Financier/Admin",
     })),
     });
@@ -68,6 +69,7 @@ export async function recordPayment(token, loan, payment) {
     amount_total: payment.amount,
     amount_interest: payment.interestAmount || 0, amount_principal: payment.principalAmount || 0,
     amount_penalty: payment.penaltyAmount || 0, payment_ref: payment.ref || "", payment_notes: payment.notes || "",
+    payment_cash_amount: payment.cashAmount || 0, payment_upi_amount: payment.upiAmount || 0,
   }, token);
 }
 
@@ -93,7 +95,7 @@ export const customerPortalLogin = (portalId, pin) => supabase.rpc("customer_por
 export const loadCustomerKyc = (token, accountId) => supabase.rpc("get_customer_kyc", { account_id: accountId }, token);
 export const saveCustomerKyc = (token, accountId, aadhaar, pan) => supabase.rpc("save_customer_kyc", { account_id: accountId, aadhaar, pan }, token);
 export const updatePaymentNotes = (token, paymentId, notes) => supabase.rpc("update_payment_notes", { payment_id: paymentId, payment_notes: notes }, token);
-export const updateFinancePayment = (token, payment) => supabase.rpc("update_finance_payment", { payment_id: payment.id, payment_date: payment.date, payment_mode: payment.mode, amount_total: payment.amount, amount_interest: payment.interestAmount || 0, amount_principal: payment.principalAmount || 0, amount_penalty: payment.penaltyAmount || 0, payment_ref: payment.ref || "", payment_notes: payment.notes || "" }, token);
+export const updateFinancePayment = (token, payment) => supabase.rpc("update_finance_payment", { payment_id: payment.id, payment_date: payment.date, payment_mode: payment.mode, amount_total: payment.amount, amount_interest: payment.interestAmount || 0, amount_principal: payment.principalAmount || 0, amount_penalty: payment.penaltyAmount || 0, payment_ref: payment.ref || "", payment_notes: payment.notes || "", payment_cash_amount: payment.cashAmount || 0, payment_upi_amount: payment.upiAmount || 0 }, token);
 export const deleteFinancePayment = (token, paymentId) => supabase.rpc("delete_finance_payment", { payment_id: paymentId }, token);
 export const setAccountStatus = (token, accountId, status, note) => supabase.rpc("set_finance_account_status", { account_id: accountId, new_status: status, action_note: note || "" }, token);
 export const saveCollectionOrder = (token, accountIds) => supabase.rpc("set_collection_order", { account_ids: accountIds }, token);
