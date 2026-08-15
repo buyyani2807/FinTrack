@@ -16,7 +16,12 @@ const C = {
   red: "#ff7373",
   blue: "#72aaff"
 };
-const today = () => new Date().toISOString().slice(0, 10);
+const indiaCalendarDate = date => {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
+  const value = Object.fromEntries(parts.filter(part => part.type !== "literal").map(part => [part.type, part.value]));
+  return `${value.year}-${value.month}-${value.day}`;
+};
+const today = () => indiaCalendarDate(new Date());
 const money = n => `₹${Number(n || 0).toLocaleString("en-IN", {
   maximumFractionDigits: 0
 })}`;
