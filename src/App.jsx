@@ -534,6 +534,11 @@ function Financier({
   const [draggedId, setDraggedId] = useState(null);
   const touchTargetId = useRef(null);
   const activeLoans = loans.filter(loan => loan.status === "active");
+  useEffect(() => {
+    const openCustomers = () => { setCustomerMode(true); setStatusFilter("all"); };
+    window.addEventListener("fintrack-open-customers", openCustomers);
+    return () => window.removeEventListener("fintrack-open-customers", openCustomers);
+  }, []);
   const customerPool = customerMode ? loans.filter(loan => statusFilter === "all" || loanStatus(loan) === statusFilter) : activeLoans;
   const shown = (filter === "all" ? customerPool : customerPool.filter(l => l.kind === filter)).filter(loan => `${loan.customerName} ${loan.phone} ${loan.address || ""}`.toLowerCase().includes(search.trim().toLowerCase())).sort((a, b) => a.collectionOrder - b.collectionOrder);
   const reorder = async targetId => {
@@ -641,6 +646,7 @@ function FinancierTools({ loans, onCreateAgent, onLoadAgents, onAssignAgent, onU
       <Button className={panel === null ? "tab active" : ""} onClick={() => { setPanel(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}>▦ Dashboard</Button>
       <Button className={panel === "reports" ? "tab active" : ""} onClick={() => setPanel("reports")}>↧ Reports</Button>
       <Button className={panel === "agents" ? "tab active" : ""} onClick={() => setPanel("agents")}>◉ Collection staff</Button>
+      <Button onClick={() => window.dispatchEvent(new Event("fintrack-open-customers"))}>◫ Customers</Button>
       <div className="nav-footer">Financier workspace</div>
     </aside>
     {panel === "reports" && <PortfolioReport loans={loans} close={() => setPanel(null)} />}
