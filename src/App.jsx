@@ -261,7 +261,7 @@ const downloadCsv = (filename, rows) => {
 const paymentValue = (loan, transaction) => loan.kind === "daily" ? Number(transaction.amount || 0) : Number(transaction.interestAmount || 0) + Number(transaction.principalAmount || 0) + Number(transaction.penaltyAmount || 0);
 const paymentModeLabel = transaction => transaction.mode === "cash_upi" ? `Cash + UPI (Cash ${money(transaction.cashAmount)} · UPI ${money(transaction.upiAmount)})` : transaction.mode === "upi" ? "UPI" : transaction.mode === "cash" ? "Cash" : "Bank transfer";
 const downloadDailyReport = (loans, reportDate) => {
-  const rows = loans.filter(loan => loan.status === "active").map(loan => {
+  const rows = loans.filter(loan => loanStatus(loan) === "active").map(loan => {
     const transactions = loan.transactions.filter(t => t.date === reportDate);
     const actual = transactions.reduce((sum, t) => sum + paymentValue(loan, t), 0);
     const expected = loan.kind === "daily" ? loan.dailyCollection : Math.round(monthlyBalance(loan, reportDate) * annualRate(loan, reportDate) / 100);
