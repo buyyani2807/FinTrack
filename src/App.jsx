@@ -264,11 +264,10 @@ const downloadDailyReport = (loans, reportDate) => {
   const rows = loans.filter(loan => loanStatus(loan) === "active").map(loan => {
     const transactions = loan.transactions.filter(t => t.date === reportDate);
     const actual = transactions.reduce((sum, t) => sum + paymentValue(loan, t), 0);
-    const expected = loan.kind === "daily" ? loan.dailyCollection : Math.round(monthlyBalance(loan, reportDate) * annualRate(loan, reportDate) / 100);
-    return [loan.customerName, loan.kind === "daily" ? "Daily" : "Monthly", expected, actual, loanBalance(loan), actual ? "Collected" : "Not collected", reportDate, transactions.map(paymentModeLabel).join("; ") || "—", transactions.reduce((sum, t) => sum + Number(t.cashAmount || 0), 0), transactions.reduce((sum, t) => sum + Number(t.upiAmount || 0), 0), transactions.map(t => t.collectorName || "Financier/Admin").join("; ") || "—", transactions.map(t => t.notes).filter(Boolean).join("; ") || "—"];
+    return [loan.customerName, actual, loanBalance(loan), actual ? "Collected" : "Not collected", transactions.map(paymentModeLabel).join("; ") || "—", transactions.reduce((sum, t) => sum + Number(t.cashAmount || 0), 0), transactions.reduce((sum, t) => sum + Number(t.upiAmount || 0), 0), transactions.map(t => t.collectorName || "Financier/Admin").join("; ") || "—", transactions.map(t => t.notes).filter(Boolean).join("; ") || "—"];
   });
-  const total = rows.reduce((sum, row) => sum + Number(row[3] || 0), 0);
-  downloadCsv(`fintrack-collection-report-${reportDate}.csv`, [["FinTrack Collection Report"], ["Report date", reportDate], ["Total collected", total], [], ["Customer", "Collection type", "Expected collection", "Actual collected", "Outstanding", "Collection status", "Collection date", "Payment mode", "Cash amount", "UPI amount", "Collected by", "Notes/comments"], ...rows, [], ["Total", "", "", total]]);
+  const total = rows.reduce((sum, row) => sum + Number(row[1] || 0), 0);
+  downloadCsv(`fintrack-collection-report-${reportDate}.csv`, [["FinTrack Collection Report"], ["Report date", reportDate], ["Total collected", total], [], ["Customer", "Actual collected", "Outstanding", "Collection status", "Payment mode", "Cash amount", "UPI amount", "Collected by", "Notes/comments"], ...rows, [], ["Total", total]]);
 };
 const downloadCustomerReport = loan => {
   const monthly = loan.kind === "monthly";
