@@ -138,3 +138,9 @@ export const enrollChitMember = (token, enrollment) => supabase.rpc("chit_enroll
   input_guarantor_address: enrollment.guarantorAddress || null, input_security_deposit: Number(enrollment.securityDeposit || 0),
 }, token);
 export const activateChitScheme = (token, schemeId) => supabase.rpc("chit_activate_scheme", { input_scheme_id: schemeId }, token);
+export const updateChitScheme = (token, scheme) => supabase.rpc("chit_update_scheme", {
+  input_scheme_id: scheme.id, scheme_name: scheme.name, scheme_start_date: scheme.startDate,
+  scheme_commission_percent: Number(scheme.commissionPercent), scheme_min_bid_percent: Number(scheme.minBidPercent),
+  scheme_max_bid_percent: Number(scheme.maxBidPercent), scheme_late_penalty_amount: Number(scheme.latePenaltyAmount || 0),
+  scheme_security_deposit_amount: Number(scheme.securityDepositAmount || 0),
+}, token);
