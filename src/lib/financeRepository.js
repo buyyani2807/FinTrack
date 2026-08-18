@@ -145,11 +145,16 @@ export const updateChitScheme = (token, scheme) => supabase.rpc("chit_update_sch
   scheme_security_deposit_amount: Number(scheme.securityDepositAmount || 0),
 }, token);
 export const loadChitSchemeDetails = async (token, schemeId) => {
-  const [enrollments, cycles, bids, installments] = await Promise.all([
+  const [enrollments, cycles] = await Promise.all([
     supabase.query(`/rest/v1/chit_enrollments?scheme_id=eq.${schemeId}&select=*,chit_members(full_name,phone,address)&order=ticket_number.asc`, token),
     supabase.query(`/rest/v1/chit_cycles?scheme_id=eq.${schemeId}&select=*&order=cycle_number.asc`, token),
-    supabase.query(`/rest/v1/chit_bids?cycle_id=in.(select%20id%20from%20chit_cycles%20where%20scheme_id=eq.${schemeId})&select=*`, token).catch(() => []),
-    supabase.query(`/rest/v1/chit_installments?cycle_id=in.(select%20id%20from%20chit_cycles%20where%20scheme_id=eq.${schemeId})&select=*&order=due_date.desc`, token).catch(() => []),
+  ]);
+  const cycleIds = cycles.map(cycle => cycle.id);
+  if (!cycleIds.length) return { enrollments, cycles, bids: [], installments: [] };
+  const cycleFilter = cycleIds.join(",");
+  const [bids, installments] = await Promise.all([
+    supabase.query(`/rest/v1/chit_bids?cycle_id=in.(${cycleFilter})&select=*`, token),
+    supabase.query(`/rest/v1/chit_installments?cycle_id=in.(${cycleFilter})&select=*&order=due_date.desc`, token),
   ]);
   return { enrollments, cycles, bids, installments };
 };
