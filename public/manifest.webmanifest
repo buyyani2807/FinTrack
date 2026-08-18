@@ -8,15 +8,9 @@
   "theme_color": "#0e1118",
   "icons": [
     {
-      "src": "/icons/fintrack-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icons/fintrack-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
+      "src": "/icons/fintrack-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     }
   ]
