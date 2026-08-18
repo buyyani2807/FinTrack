@@ -119,3 +119,22 @@ export const updateCollectionAgent = async (token, details) => {
 };
 export const loadCollectionAgents = token => supabase.query("/rest/v1/profiles?select=id,full_name,role&role=eq.staff&order=full_name.asc", token);
 export const assignCollectionAgent = (token, accountId, agentId) => supabase.rpc("assign_collection_agent", { account_id: accountId, agent_id: agentId || null }, token);
+export const loadChitSchemes = token => supabase.query("/rest/v1/chit_schemes?select=*&order=start_date.desc", token);
+export const loadChitMembers = token => supabase.query("/rest/v1/chit_members?select=*&order=full_name.asc", token);
+export const createChitScheme = (token, scheme) => supabase.rpc("chit_create_scheme", {
+  scheme_name: scheme.name, scheme_chit_value: Number(scheme.chitValue), scheme_duration_months: Number(scheme.durationMonths),
+  scheme_member_count: Number(scheme.memberCount), scheme_installment_amount: Number(scheme.installmentAmount),
+  scheme_commission_percent: Number(scheme.commissionPercent), scheme_start_date: scheme.startDate,
+  scheme_min_bid_percent: Number(scheme.minBidPercent), scheme_max_bid_percent: Number(scheme.maxBidPercent),
+  scheme_late_penalty_amount: Number(scheme.latePenaltyAmount || 0), scheme_security_deposit_amount: Number(scheme.securityDepositAmount || 0),
+}, token);
+export const createChitMember = (token, member) => supabase.rpc("chit_create_member", {
+  member_name: member.name, member_phone: member.phone, member_address: member.address || null,
+  member_aadhaar_ciphertext: member.aadhaar || null, member_pan_ciphertext: member.pan || null,
+}, token);
+export const enrollChitMember = (token, enrollment) => supabase.rpc("chit_enroll_member", {
+  input_scheme_id: enrollment.schemeId, input_member_id: enrollment.memberId, input_ticket_number: Number(enrollment.ticketNumber),
+  input_guarantor_name: enrollment.guarantorName, input_guarantor_phone: enrollment.guarantorPhone,
+  input_guarantor_address: enrollment.guarantorAddress || null, input_security_deposit: Number(enrollment.securityDeposit || 0),
+}, token);
+export const activateChitScheme = (token, schemeId) => supabase.rpc("chit_activate_scheme", { input_scheme_id: schemeId }, token);
