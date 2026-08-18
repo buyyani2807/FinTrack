@@ -1,3 +1,4 @@
+/* global process */
 // Secure Vercel endpoint. Add SUPABASE_SERVICE_ROLE_KEY to Vercel only; never put it in the browser.
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -48,7 +49,12 @@ export default async function handler(req, res) {
     const agentId = newUser.id || newUser.user?.id;
     if (!agentId) return json(res, 500, { error: "Agent authentication account was created but its ID was unavailable" });
     const saved = await fetch(`${supabaseUrl}/rest/v1/profiles`, { method: "POST", headers: { ...headers(serviceKey), Prefer: "return=representation" }, body: JSON.stringify({ id: agentId, organization_id: profile.organization_id, full_name: name.trim(), email: email.trim().toLowerCase(), role: "staff", phone: phone.trim(), is_active: Boolean(active) }) });
-    if (!saved.ok) return json(res, 500, { error: "Agent login was created but its profile could not be saved" });
+    if (!saved.ok) {
+      // Compensate for the Auth user creation so failed requests do not leave
+      // an unusable/orphaned login behind.
+      await fetch(`${supabaseUrl}/auth/v1/admin/users/${agentId}`, { method: "DELETE", headers: headers(serviceKey) });
+      return json(res, 500, { error: "Agent login was created but its profile could not be saved" });
+    }
     return json(res, 201, { id: agentId, name: name.trim(), email: email.trim().toLowerCase() });
   } catch (error) { return json(res, 500, { error: error.message || "Could not create agent" }); }
 }

@@ -7,7 +7,10 @@ self.addEventListener("install", event => {
 });
 self.addEventListener("activate", event => event.waitUntil(self.clients.claim()));
 self.addEventListener("fetch", event => {
-  if (event.request.method !== "GET" || new URL(event.request.url).origin !== location.origin) return;
+  const requestUrl = new URL(event.request.url);
+  // Never cache authenticated/API responses. Caching these can expose stale staff
+  // data after logout and can make permission changes appear not to take effect.
+  if (event.request.method !== "GET" || requestUrl.origin !== location.origin || requestUrl.pathname.startsWith("/api/")) return;
   event.respondWith(fetch(event.request).then(response => {
     const copy = response.clone();
     caches.open(CACHE).then(cache => cache.put(event.request, copy));

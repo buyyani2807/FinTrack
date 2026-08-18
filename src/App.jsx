@@ -379,18 +379,21 @@ function Payment({
     notes: ""
   });
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
   const set = (k, v) => setF(x => ({
     ...x,
     [k]: v
   }));
   const total = isDaily ? Number(f.amount || 0) : Number(f.interestAmount || 0) + Number(f.principalAmount || 0) + Number(f.penaltyAmount || 0);
   const splitTotal = Number(f.cashAmount || 0) + Number(f.upiAmount || 0);
-  const submit = () => {
+  const submit = async () => {
+    if (busy) return;
     if (!(total > 0)) return setError("Enter a valid collection amount.");
     const isSplit = f.mode === "cash_upi";
     if (isSplit && (!(Number(f.cashAmount) > 0) || !(Number(f.upiAmount) > 0) || Math.abs(splitTotal - total) > 0.001)) return setError("Cash and UPI amounts must both be positive and equal the total collected.");
     setError("");
-    save({
+    setBusy(true);
+    try { await save({
       ...f,
       id: `P${Date.now()}`,
       amount: total,
@@ -399,9 +402,9 @@ function Payment({
       penaltyAmount: Number(f.penaltyAmount || 0),
       cashAmount: isSplit ? Number(f.cashAmount) : f.mode === "cash" ? total : 0,
       upiAmount: isSplit ? Number(f.upiAmount) : f.mode === "upi" ? total : 0
-    });
+    }); } catch (err) { setError(err?.message || "Could not save payment. Please try again."); } finally { setBusy(false); }
   };
-  return <Modal close={close}><h2 className="title">Record payment</h2><p className="copy">{loan.customerName} · Current balance {money(loanBalance(loan))}</p><div className="form spacer"><Field label="Payment date"><input type="date" value={f.date} onChange={e => set("date", e.target.value)} /></Field><Field label="Payment mode"><select value={f.mode} onChange={e => set("mode", e.target.value)}><option value="upi">UPI</option><option value="cash">Cash</option><option value="cash_upi">Cash + UPI</option><option value="bank">Bank transfer</option></select></Field>{isDaily ? <Field className="span" label="Collection amount (₹)"><input type="number" value={f.amount} onChange={e => set("amount", e.target.value)} /></Field> : <><Field label="Interest paid (₹)"><input type="number" value={f.interestAmount} onChange={e => set("interestAmount", e.target.value)} /></Field><Field label="Principal repaid (₹)"><input type="number" value={f.principalAmount} onChange={e => set("principalAmount", e.target.value)} /></Field><Field label="Penalty paid (₹)"><input type="number" value={f.penaltyAmount} onChange={e => set("penaltyAmount", e.target.value)} /></Field><div className="card"><div className="metric-label">Total received</div><div className="metric-value green">{money((+f.interestAmount || 0) + (+f.principalAmount || 0) + (+f.penaltyAmount || 0))}</div></div></>}{f.mode === "cash_upi" && <><Field label="Cash amount (₹)"><input type="number" min="0" value={f.cashAmount} onChange={e => set("cashAmount", e.target.value)} /></Field><Field label="UPI amount (₹)"><input type="number" min="0" value={f.upiAmount} onChange={e => set("upiAmount", e.target.value)} /></Field><div className="card span"><div className="metric-label">Total collected</div><div className="metric-value green">{money(total)}</div><div className="small">Cash {money(f.cashAmount)} + UPI {money(f.upiAmount)} = {money(splitTotal)}</div></div></>}<Field label="UPI / bank reference"><input value={f.ref} onChange={e => set("ref", e.target.value)} /></Field><Field label="Notes"><input value={f.notes} onChange={e => set("notes", e.target.value)} /></Field></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button onClick={close}>Cancel</Button><Button className="primary" onClick={submit}>Save payment</Button></div></Modal>;
+  return <Modal close={close}><h2 className="title">Record payment</h2><p className="copy">{loan.customerName} · Current balance {money(loanBalance(loan))}</p><div className="form spacer"><Field label="Payment date"><input type="date" value={f.date} onChange={e => set("date", e.target.value)} /></Field><Field label="Payment mode"><select value={f.mode} onChange={e => set("mode", e.target.value)}><option value="upi">UPI</option><option value="cash">Cash</option><option value="cash_upi">Cash + UPI</option><option value="bank">Bank transfer</option></select></Field>{isDaily ? <Field className="span" label="Collection amount (₹)"><input type="number" value={f.amount} onChange={e => set("amount", e.target.value)} /></Field> : <><Field label="Interest paid (₹)"><input type="number" value={f.interestAmount} onChange={e => set("interestAmount", e.target.value)} /></Field><Field label="Principal repaid (₹)"><input type="number" value={f.principalAmount} onChange={e => set("principalAmount", e.target.value)} /></Field><Field label="Penalty paid (₹)"><input type="number" value={f.penaltyAmount} onChange={e => set("penaltyAmount", e.target.value)} /></Field><div className="card"><div className="metric-label">Total received</div><div className="metric-value green">{money((+f.interestAmount || 0) + (+f.principalAmount || 0) + (+f.penaltyAmount || 0))}</div></div></>}{f.mode === "cash_upi" && <><Field label="Cash amount (₹)"><input type="number" min="0" value={f.cashAmount} onChange={e => set("cashAmount", e.target.value)} /></Field><Field label="UPI amount (₹)"><input type="number" min="0" value={f.upiAmount} onChange={e => set("upiAmount", e.target.value)} /></Field><div className="card span"><div className="metric-label">Total collected</div><div className="metric-value green">{money(total)}</div><div className="small">Cash {money(f.cashAmount)} + UPI {money(f.upiAmount)} = {money(splitTotal)}</div></div></>}<Field label="UPI / bank reference"><input value={f.ref} onChange={e => set("ref", e.target.value)} /></Field><Field label="Notes"><input value={f.notes} onChange={e => set("notes", e.target.value)} /></Field></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button onClick={close}>Cancel</Button><Button className="primary" disabled={busy} onClick={submit}>{busy ? "Saving…" : "Save payment"}</Button></div></Modal>;
 }
 function EditAccount({ loan, close, save }) {
   const [form, setForm] = useState({ ...loan });
