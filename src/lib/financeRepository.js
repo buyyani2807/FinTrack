@@ -166,7 +166,7 @@ export const loadChitSchemeDetails = async (token, schemeId) => {
 export const updateChitInstallmentPayment = (token, payment) => supabase.rpc("chit_update_installment_payment", {
   input_installment_id: payment.id, input_amount_paid: Number(payment.amountPaid), input_paid_date: payment.paidDate || null,
   input_payment_mode: payment.paymentMode || null, input_payment_reference: payment.paymentReference || null,
-  input_cash_amount: Number(payment.cashAmount || 0), input_upi_amount: Number(payment.upiAmount || 0),
+  input_cash_amount: Number(payment.cashAmount || 0), input_upi_amount: Number(payment.upiAmount || 0), input_notes: payment.notes || null,
 }, token);
 export const recordChitInstallmentPayment = updateChitInstallmentPayment;
 export const deleteChitInstallmentPayment = (token, paymentId) => supabase.rpc("chit_delete_installment_payment", { input_installment_id: paymentId }, token);
