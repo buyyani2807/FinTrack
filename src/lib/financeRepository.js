@@ -170,3 +170,23 @@ export const updateChitInstallmentPayment = (token, payment) => supabase.rpc("ch
 }, token);
 export const recordChitInstallmentPayment = updateChitInstallmentPayment;
 export const deleteChitInstallmentPayment = (token, paymentId) => supabase.rpc("chit_delete_installment_payment", { input_installment_id: paymentId }, token);
+export const loadChitDashboard = async token => {
+  const [schemes, cycles, enrollments] = await Promise.all([
+    loadChitSchemes(token),
+    supabase.query("/rest/v1/chit_cycles?select=id,scheme_id,cycle_number,cycle_date,winning_bid_amount,winning_enrollment_id,status,discount_amount,commission_amount,distributable_amount,dividend_per_member&order=cycle_number.asc", token),
+    supabase.query("/rest/v1/chit_enrollments?select=id,scheme_id,ticket_number,status,chit_members(full_name)&order=ticket_number.asc", token),
+  ]);
+  return { schemes, cycles, enrollments };
+};
+export const loadChitLiveAuction = (token, schemeId) => supabase.rpc("chit_live_auction_snapshot", { input_scheme_id: schemeId }, token);
+export const startChitLiveAuction = (token, schemeId, cycleNumber, cycleDate) => {
+  const args = { input_scheme_id: schemeId };
+  if (cycleNumber != null && cycleNumber !== "") args.input_cycle_number = Number(cycleNumber);
+  if (cycleDate) args.input_cycle_date = cycleDate;
+  return supabase.rpc("chit_start_live_auction", args, token);
+};
+export const pauseChitLiveAuction = (token, schemeId) => supabase.rpc("chit_pause_live_auction", { input_scheme_id: schemeId }, token);
+export const placeChitLiveBid = (token, auctionId, enrollmentId, bidAmount, clientNonce) => supabase.rpc("chit_place_live_bid", {
+  input_auction_id: auctionId, input_enrollment_id: enrollmentId, input_bid_amount: Number(bidAmount), input_client_nonce: clientNonce,
+}, token);
+export const endChitLiveAuction = (token, auctionId) => supabase.rpc("chit_end_live_auction", { input_auction_id: auctionId }, token);
