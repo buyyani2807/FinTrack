@@ -579,6 +579,7 @@ function Financier({
     [collectionMode, setCollectionMode] = useState(false),
     [editKycLoan, setEditKycLoan] = useState(null),
     [kyc, setKyc] = useState(null),
+    [filter, setFilter] = useState("all"),
     [module, setModule] = useState("daily"),
     [customerMode, setCustomerMode] = useState(false),
     [statusFilter, setStatusFilter] = useState("all"),
@@ -594,6 +595,7 @@ function Financier({
     const openModule = event => {
       const nextModule = event.detail === "monthly" ? "monthly" : "daily";
       setModule(nextModule);
+      setFilter(nextModule);
       setCustomerMode(false);
       setStatusFilter("all");
     };
@@ -609,7 +611,7 @@ function Financier({
   const customerPool = customerMode
     ? loans.filter(loan => (statusFilter === "all" || loanStatus(loan) === statusFilter) && loan.kind === module)
     : activeLoans.filter(loan => loan.kind === module);
-  const shown = customerPool.filter(loan => `${loan.customerName} ${loan.phone} ${loan.address || ""}`.toLowerCase().includes(search.trim().toLowerCase())).sort((a, b) => a.collectionOrder - b.collectionOrder);
+  const shown = (filter === "all" ? customerPool : customerPool.filter(l => l.kind === filter)).filter(loan => `${loan.customerName} ${loan.phone} ${loan.address || ""}`.toLowerCase().includes(search.trim().toLowerCase())).sort((a, b) => a.collectionOrder - b.collectionOrder);
   const reorder = async targetId => {
     if (!isOwner || !draggedId || draggedId === targetId) return;
     const ordered = [...loans].sort((a, b) => a.collectionOrder - b.collectionOrder);
