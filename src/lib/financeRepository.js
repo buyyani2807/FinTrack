@@ -120,7 +120,7 @@ export const updateCollectionAgent = async (token, details) => {
 export const loadCollectionAgents = token => supabase.query("/rest/v1/profiles?select=id,full_name,role&role=eq.staff&order=full_name.asc", token);
 export const assignCollectionAgent = (token, accountId, agentId) => supabase.rpc("assign_collection_agent", { account_id: accountId, agent_id: agentId || null }, token);
 export const loadChitSchemes = token => supabase.query("/rest/v1/chit_schemes?select=*&order=start_date.desc", token);
-export const loadChitMembers = token => supabase.query("/rest/v1/chit_members?select=*&order=full_name.asc", token);
+export const loadChitMembers = token => supabase.query("/rest/v1/chit_members?select=id,full_name,phone,address,created_at,updated_at&order=full_name.asc", token);
 export const createChitScheme = (token, scheme) => supabase.rpc("chit_create_scheme", {
   scheme_name: scheme.name, scheme_chit_value: Number(scheme.chitValue), scheme_duration_months: Number(scheme.durationMonths),
   scheme_member_count: Number(scheme.memberCount), scheme_installment_amount: Number(scheme.installmentAmount),
