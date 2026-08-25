@@ -1,22 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   activateChitScheme,
+  chitCustomerLiveState,
+  chitCustomerPlaceLiveBid,
   createChitMember,
   createChitScheme,
   deleteChitInstallmentPayment,
+  enableChitMemberPortal,
   endChitLiveAuction,
   enrollChitMember,
   loadChitDashboard,
   loadChitLiveAuction,
   loadChitSchemeDetails,
   pauseChitLiveAuction,
-  placeChitLiveBid,
   recordChitMonthlyBid,
+  resetChitMemberPortalPin,
   startChitLiveAuction,
   updateChitInstallmentPayment,
   updateChitScheme,
 } from "../../lib/financeRepository";
-import { LIVE_BID_MODEL, validateLiveBid, winsForEnrollment } from "./liveBidding";
+import { LIVE_BID_MODEL, enrollmentPortalId, validateLiveBid, winsForEnrollment } from "./liveBidding";
 
 const indiaCalendarDate = date => {
   const parts = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
@@ -47,7 +50,7 @@ const latestCycle = cycles => cycles.length ? [...cycles].sort((a, b) => a.cycle
 
 function ChitSchemeForm({ title, form, setForm, busy, error, onClose, onSubmit, submitLabel }) {
   const set = (key, value) => setForm(current => ({ ...current, [key]: value }));
-  return <Modal><h2 className="title">{title}</h2><form onSubmit={onSubmit}><div className="form spacer"><Field label="Scheme name *"><input required value={form.name} onChange={e => set("name", e.target.value)} /></Field><Field label="Start date *"><input required type="date" value={form.startDate} onChange={e => set("startDate", e.target.value)} /></Field><Field label="Chit value (₹) *"><input required type="number" min="1" value={form.chitValue} onChange={e => set("chitValue", e.target.value)} /></Field><Field label="Duration (months) *"><input required type="number" min="1" value={form.durationMonths} onChange={e => set("durationMonths", e.target.value)} /></Field><Field label="Member count *"><input required type="number" min="1" value={form.memberCount} onChange={e => set("memberCount", e.target.value)} /></Field><Field label="Installment amount (₹) *"><input required type="number" min="1" value={form.installmentAmount} onChange={e => set("installmentAmount", e.target.value)} /></Field><Field label="Commission (%) *"><input required type="number" min="0" max="7" step=".01" value={form.commissionPercent} onChange={e => set("commissionPercent", e.target.value)} /></Field><Field label="Min payout (%)"><input type="number" min="0" max="100" value={form.minBidPercent} onChange={e => set("minBidPercent", e.target.value)} /></Field><Field label="Max payout (%)"><input type="number" min="0" max="100" value={form.maxBidPercent} onChange={e => set("maxBidPercent", e.target.value)} /></Field><Field label="Late penalty per installment (₹)"><input type="number" min="0" value={form.latePenaltyAmount} onChange={e => set("latePenaltyAmount", e.target.value)} /></Field><Field label="Security deposit per member (₹)"><input type="number" min="0" value={form.securityDepositAmount} onChange={e => set("securityDepositAmount", e.target.value)} /></Field></div><p className="notice">Installment × member count must equal the chit value. Commission is capped at 7%. Live bidding uses the lowest payout as the winning bid.</p>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button type="button" onClick={onClose}>Cancel</Button><Button className="primary" disabled={busy} type="submit">{busy ? "Saving…" : submitLabel}</Button></div></form></Modal>;
+  return <Modal><h2 className="title">{title}</h2><form onSubmit={onSubmit}><div className="form spacer"><Field label="Scheme name *"><input required value={form.name} onChange={e => set("name", e.target.value)} /></Field><Field label="Start date *"><input required type="date" value={form.startDate} onChange={e => set("startDate", e.target.value)} /></Field><Field label="Chit value (₹) *"><input required type="number" min="1" value={form.chitValue} onChange={e => set("chitValue", e.target.value)} /></Field><Field label="Duration (months) *"><input required type="number" min="1" value={form.durationMonths} onChange={e => set("durationMonths", e.target.value)} /></Field><Field label="Member count *"><input required type="number" min="1" value={form.memberCount} onChange={e => set("memberCount", e.target.value)} /></Field><Field label="Installment amount (₹) *"><input required type="number" min="1" value={form.installmentAmount} onChange={e => set("installmentAmount", e.target.value)} /></Field><Field label="Commission (%) *"><input required type="number" min="0" max="7" step=".01" value={form.commissionPercent} onChange={e => set("commissionPercent", e.target.value)} /></Field><Field label="Min payout (%)"><input type="number" min="0" max="100" value={form.minBidPercent} onChange={e => set("minBidPercent", e.target.value)} /></Field><Field label="Max payout (%)"><input type="number" min="0" max="100" value={form.maxBidPercent} onChange={e => set("maxBidPercent", e.target.value)} /></Field><Field label="Late penalty per installment (₹)"><input type="number" min="0" value={form.latePenaltyAmount} onChange={e => set("latePenaltyAmount", e.target.value)} /></Field><Field label="Security deposit per member (₹)"><input type="number" min="0" value={form.securityDepositAmount} onChange={e => set("securityDepositAmount", e.target.value)} /></Field></div><p className="notice">Installment × member count must equal the chit value. Commission is capped at 7%. On live bidding day, members sign in with Chit customer login and post their own bids. The highest valid bid wins.</p>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button type="button" onClick={onClose}>Cancel</Button><Button className="primary" disabled={busy} type="submit">{busy ? "Saving…" : submitLabel}</Button></div></form></Modal>;
 }
 
 function ChitAddMemberModal({ token, scheme, nextTicket, close, done }) {
@@ -112,17 +115,46 @@ function ChitPaymentModal({ token, installment, close, done }) {
   return <Modal><h2 className="title">{installment.amount_paid ? "Edit payment" : "Record payment"}</h2><div className="form spacer"><Field label="Payment date"><input type="date" value={f.date} onChange={e => set("date", e.target.value)} /></Field><Field label="Payment mode"><select value={f.mode} onChange={e => set("mode", e.target.value)}><option value="upi">UPI</option><option value="cash">Cash</option><option value="cash_upi">Cash + UPI</option></select></Field><Field className="span" label="Amount paid (₹)"><input type="number" min="0.01" step="0.01" value={f.amount} onChange={e => set("amount", e.target.value)} /></Field>{f.mode === "cash_upi" && <><Field label="Cash amount (₹)"><input type="number" min="0" value={f.cash} onChange={e => set("cash", e.target.value)} /></Field><Field label="UPI amount (₹)"><input type="number" min="0" value={f.upi} onChange={e => set("upi", e.target.value)} /></Field></>}<Field label="UPI / bank reference"><input value={f.ref} onChange={e => set("ref", e.target.value)} /></Field><Field label="Notes"><input value={f.notes} onChange={e => set("notes", e.target.value)} /></Field></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button onClick={close}>Cancel</Button><Button className="primary" disabled={busy} onClick={submit}>{busy ? "Saving…" : "Save payment"}</Button></div></Modal>;
 }
 
-function ChitMemberDetails({ scheme, enrollment, cycles, bids, back }) {
+function ChitMemberPortalSetup({ enrollment, close, save }) {
+  const [pin, setPin] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [createdPortalId, setCreatedPortalId] = useState("");
+  const existingId = enrollmentPortalId(enrollment);
+  const submit = async event => {
+    event.preventDefault();
+    if (!/^\d{6,}$/.test(pin)) return setError("Use a PIN with at least 6 digits.");
+    if (pin !== confirm) return setError("The two PINs do not match.");
+    setBusy(true); setError("");
+    try {
+      const portalId = await save(pin);
+      if (portalId) { setCreatedPortalId(portalId); setPin(""); setConfirm(""); }
+      else close();
+    } catch (err) { setError(err.message || "Could not save the Chit customer portal PIN."); }
+    finally { setBusy(false); }
+  };
+  const portalId = createdPortalId || existingId;
+  return <Modal><h2 className="title">Chit customer portal</h2>{portalId ? <><p className="copy">Portal ID: <strong className="gold">{portalId}</strong></p><p className="notice">Give this portal ID and PIN to {enrollmentName(enrollment)} privately. They sign in with Chit customer on the FinTrack login page and post their own live bids.</p>{createdPortalId ? <div className="row spacer"><span className="small">Portal enabled successfully.</span><Button className="primary" onClick={close}>Done</Button></div> : <form onSubmit={submit}><div className="tool-stack spacer"><Field label="New Chit customer PIN"><input type="password" inputMode="numeric" minLength="6" value={pin} onChange={event => setPin(event.target.value.replace(/\D/g, ""))} /></Field><Field label="Confirm PIN"><input type="password" inputMode="numeric" minLength="6" value={confirm} onChange={event => setConfirm(event.target.value.replace(/\D/g, ""))} /></Field></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button type="button" onClick={close}>Cancel</Button><Button className="primary" disabled={busy} type="submit">{busy ? "Saving…" : "Reset PIN"}</Button></div></form>}</> : <form onSubmit={submit}><p className="copy">Enable private Chit dashboard access for {enrollmentName(enrollment)}.</p><p className="notice">Choose a unique PIN and share it privately. FinTrack will create a CF- portal ID for this member.</p><div className="tool-stack spacer"><Field label="New Chit customer PIN"><input type="password" inputMode="numeric" minLength="6" value={pin} onChange={event => setPin(event.target.value.replace(/\D/g, ""))} /></Field><Field label="Confirm PIN"><input type="password" inputMode="numeric" minLength="6" value={confirm} onChange={event => setConfirm(event.target.value.replace(/\D/g, ""))} /></Field></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button type="button" onClick={close}>Cancel</Button><Button className="primary" disabled={busy} type="submit">{busy ? "Saving…" : "Enable Chit portal"}</Button></div></form>}</Modal>;
+}
+
+function ChitMemberDetails({ token, scheme, enrollment, cycles, bids, back, onPortalChange }) {
+  const [portalOpen, setPortalOpen] = useState(false);
   const wins = winsForEnrollment(cycles, bids, enrollment.id);
-  return <main className="shell"><div className="toolbar"><div><Button onClick={back}>← Members</Button><h1 className="title spacer">{enrollmentName(enrollment)}</h1><p className="copy">{scheme.name} · Ticket {enrollment.ticket_number}</p></div></div><div className="grid metrics"><Metric label="Ticket" value={enrollment.ticket_number} color="blue" /><Metric label="Phone" value={enrollment.chit_members?.phone || "—"} /><Metric label="Bid winner" value={wins.length ? "Yes" : "No"} color={wins.length ? "green" : ""} /></div>{wins.length ? <><div className="grid metrics"><Metric label="Winning month" value={`Month ${wins[0].month}`} color="gold" /><Metric label="Winning bid amount" value={money(wins[0].bidAmount)} color="gold" /><Metric label="Bid date" value={formatChitDate(wins[0].bidDate)} /></div><div className="card spacer"><strong>Bid history</strong><div className="table spacer"><table><thead><tr><th>Month</th><th>Bid amount</th><th>Bid date</th><th>Status</th></tr></thead><tbody>{wins.map(win => <tr key={win.month}><td>Month {win.month}</td><td>{money(win.bidAmount)}</td><td>{formatChitDate(win.bidDate)}</td><td>{win.status}</td></tr>)}</tbody></table></div></div></> : <p className="notice">Bid Winner: No. This member has not won a monthly bid in this scheme.</p>}<div className="card spacer"><strong>Member details</strong><p className="small spacer">{enrollment.chit_members?.address || "Address not added"}</p><p className="small">Guarantor: {enrollment.guarantor_name} · {enrollment.guarantor_phone}</p></div></main>;
+  const portalId = enrollmentPortalId(enrollment);
+  const savePortal = async pin => {
+    if (portalId) { await resetChitMemberPortalPin(token, enrollment.id, pin); await onPortalChange(); return ""; }
+    const created = await enableChitMemberPortal(token, enrollment.id, pin);
+    await onPortalChange();
+    return created;
+  };
+  return <main className="shell"><div className="toolbar"><div><Button onClick={back}>← Members</Button><h1 className="title spacer">{enrollmentName(enrollment)}</h1><p className="copy">{scheme.name} · Ticket {enrollment.ticket_number}</p></div><Button onClick={() => setPortalOpen(true)}>{portalId ? "Reset Chit portal PIN" : "Enable Chit portal"}</Button></div><div className="grid metrics"><Metric label="Ticket" value={enrollment.ticket_number} color="blue" /><Metric label="Phone" value={enrollment.chit_members?.phone || "—"} /><Metric label="Bid winner" value={wins.length ? "Yes" : "No"} color={wins.length ? "green" : ""} /><Metric label="Chit portal ID" value={portalId || "Not enabled"} color={portalId ? "gold" : ""} /></div>{wins.length ? <><div className="grid metrics"><Metric label="Winning month" value={`Month ${wins[0].month}`} color="gold" /><Metric label="Winning bid amount" value={money(wins[0].bidAmount)} color="gold" /><Metric label="Bid date" value={formatChitDate(wins[0].bidDate)} /></div><div className="card spacer"><strong>Bid history</strong><div className="table spacer"><table><thead><tr><th>Month</th><th>Bid amount</th><th>Bid date</th><th>Status</th></tr></thead><tbody>{wins.map(win => <tr key={win.month}><td>Month {win.month}</td><td>{money(win.bidAmount)}</td><td>{formatChitDate(win.bidDate)}</td><td>{win.status}</td></tr>)}</tbody></table></div></div></> : <p className="notice">Bid Winner: No. This member has not won a monthly bid in this scheme.</p>}<div className="card spacer"><strong>Member details</strong><p className="small spacer">{enrollment.chit_members?.address || "Address not added"}</p><p className="small">Guarantor: {enrollment.guarantor_name} · {enrollment.guarantor_phone}</p></div>{portalOpen && <ChitMemberPortalSetup enrollment={enrollment} close={() => setPortalOpen(false)} save={savePortal} />}</main>;
 }
 
 function ChitLiveBidding({ token, scheme, data, onFinalized }) {
   const [live, setLive] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [amount, setAmount] = useState("");
-  const [bidder, setBidder] = useState("");
   const [confirmEnd, setConfirmEnd] = useState(false);
   const refresh = () => loadChitLiveAuction(token, scheme.id).then(payload => { setLive(payload); setError(""); }).catch(err => setError(err.message || "Could not load live bidding."));
   useEffect(() => {
@@ -157,19 +189,6 @@ function ChitLiveBidding({ token, scheme, data, onFinalized }) {
   };
   const start = () => run(() => startChitLiveAuction(token, scheme.id, live?.next_cycle_number, today()));
   const stop = () => run(() => pauseChitLiveAuction(token, scheme.id));
-  const submitBid = async event => {
-    event.preventDefault();
-    if (!auction || auction.status !== "open") return;
-    try {
-      validateLiveBid({
-        bidAmount: amount, chitValue: scheme.chit_value, minBidPercent: scheme.min_bid_percent,
-        maxBidPercent: scheme.max_bid_percent, leadingBidAmount: leading?.bid_amount,
-      });
-    } catch (err) { setError(err.message); return; }
-    const nonce = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
-    const ok = await run(() => placeChitLiveBid(token, auction.id, bidder, amount, nonce));
-    if (ok) setAmount("");
-  };
   const endAuction = () => run(async () => {
     const result = await endChitLiveAuction(token, auction.id);
     setConfirmEnd(false);
@@ -178,7 +197,7 @@ function ChitLiveBidding({ token, scheme, data, onFinalized }) {
   });
   return <>
     {scheme.status !== "active" && <p className="notice">Live bidding is available after the scheme is activated.</p>}
-    <p className="copy">This scheme uses <strong>lowest payout wins</strong>. A member bids the amount they will receive. The lowest valid bid within {scheme.min_bid_percent}%–{scheme.max_bid_percent}% of the chit value leads.</p>
+    <p className="copy">Start live bidding on the auction date (for example the 25th of each month). Members sign in with <strong>Chit customer</strong> and post their own bids. This scheme uses <strong>highest bid wins</strong>. A new bid must be higher than the leader and stay within {scheme.min_bid_percent}%–{scheme.max_bid_percent}% of the chit value.</p>
     {error && <p className="red small">{error}</p>}
     <div className="grid metrics">
       <Metric label="Scheme" value={scheme.name} />
@@ -186,7 +205,7 @@ function ChitLiveBidding({ token, scheme, data, onFinalized }) {
       <Metric label="Current month" value={auction ? `Month ${auction.cycle_number}` : `Month ${live?.next_cycle_number || data.cycles.length + 1}`} color="blue" />
       <Metric label="Total members" value={`${data.enrollments.length}/${scheme.member_count}`} />
       <Metric label="Eligible members" value={eligible.length} color="green" />
-      <Metric label="Leading bid (lowest)" value={leading ? money(leading.bid_amount) : "—"} color="gold" />
+      <Metric label="Leading bid (highest)" value={leading ? money(leading.bid_amount) : "—"} color="gold" />
       <Metric label="Current bidder" value={latestMember?.full_name || "—"} />
       <Metric label="Current bid amount" value={latest ? money(latest.bid_amount) : "—"} />
       <Metric label="Status" value={auction ? auction.status : "Not started"} color={auction?.status === "open" ? "green" : ""} />
@@ -197,13 +216,13 @@ function ChitLiveBidding({ token, scheme, data, onFinalized }) {
       {auction?.status === "open" && <Button disabled={busy} onClick={stop}>Stop bidding</Button>}
       {auction && ["open", "paused"].includes(auction.status) && <Button className="danger" disabled={busy || !leading} onClick={() => setConfirmEnd(true)}>End bidding</Button>}
     </div>
-    {LIVE_BID_MODEL === "lowest_payout_wins" && leadingMember && <p className="notice">Leading: Ticket {leadingMember.ticket_number} · {leadingMember.full_name} · {money(leading.bid_amount)}</p>}
-    {auction?.status === "open" && <form className="card spacer" onSubmit={submitBid}><strong>Place a bid</strong><div className="form spacer"><Field className="span" label="Eligible member"><select required value={bidder} onChange={e => setBidder(e.target.value)}><option value="">Select member</option>{eligible.map(member => <option key={member.enrollment_id} value={member.enrollment_id}>Ticket {member.ticket_number} — {member.full_name}</option>)}</select></Field><Field label="Bid / payout amount (₹)"><input required type="number" min="0.01" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} /></Field></div><Button className="primary" disabled={busy || !bidder} type="submit">{busy ? "Saving…" : "Submit bid"}</Button></form>}
+    {LIVE_BID_MODEL === "highest_bid_wins" && leadingMember && <p className="notice">Leading: Ticket {leadingMember.ticket_number} · {leadingMember.full_name} · {money(leading.bid_amount)}</p>}
+    {auction?.status === "open" && <p className="notice">Waiting for members to post bids from Chit customer login. You monitor here and end bidding when ready. The highest bid is recorded as that month’s winner.</p>}
     <div className="grid two spacer">
-      <div className="card"><strong>Participants</strong><div className="table spacer"><table><thead><tr><th>Ticket</th><th>Member</th><th>Status</th></tr></thead><tbody>{(live?.members || []).map(member => <tr key={member.enrollment_id}><td>{member.ticket_number}</td><td>{member.full_name}</td><td>{member.status === "eligible" ? "Eligible" : member.status === "already_won" ? "Already won" : member.status}</td></tr>)}</tbody></table>{!(live?.members || []).length && <p className="small">No members in this scheme.</p>}</div></div>
+      <div className="card"><strong>Participants</strong><div className="table spacer"><table><thead><tr><th>Ticket</th><th>Member</th><th>Status</th><th>Portal</th></tr></thead><tbody>{(live?.members || []).map(member => { const enrolled = data.enrollments.find(item => item.id === member.enrollment_id); return <tr key={member.enrollment_id}><td>{member.ticket_number}</td><td>{member.full_name}</td><td>{member.status === "eligible" ? "Eligible" : member.status === "already_won" ? "Already won" : member.status}</td><td>{enrollmentPortalId(enrolled) || "Not enabled"}</td></tr>; })}</tbody></table>{!(live?.members || []).length && <p className="small">No members in this scheme.</p>}</div></div>
       <div className="card"><strong>Bid history</strong><div className="table spacer"><table><thead><tr><th>Time</th><th>Member</th><th>Amount</th><th>Status</th></tr></thead><tbody>{(live?.bids || []).map(bid => <tr key={bid.id}><td>{formatTime(bid.submitted_at)}</td><td>Ticket {bid.ticket_number} · {bid.member_name}</td><td>{money(bid.bid_amount)}</td><td>{bid.status === "winner" ? "Winner" : bid.status === "not_selected" ? "Not selected" : "Valid"}</td></tr>)}</tbody></table>{!(live?.bids || []).length && <p className="small">No live bids yet.</p>}</div></div>
     </div>
-    {confirmEnd && <Modal><h2 className="title">End live bidding?</h2><p className="copy">This will finalize Month {auction.cycle_number} and create the monthly bid, dividend, and installment records. Previous months will not change.</p><div className="notice">Winning member: Ticket {leadingMember?.ticket_number} · {leadingMember?.full_name}<br />Winning bid: {money(leading?.bid_amount)}</div><div className="row spacer"><Button onClick={() => setConfirmEnd(false)}>Cancel</Button><Button className="primary" disabled={busy} onClick={endAuction}>{busy ? "Finalizing…" : "Confirm and finalize"}</Button></div></Modal>}
+    {confirmEnd && <Modal><h2 className="title">End live bidding?</h2><p className="copy">This will finalize Month {auction.cycle_number} using the highest bid, then create the monthly bid, dividend, and installment records. Previous months will not change.</p><div className="notice">Winning member: Ticket {leadingMember?.ticket_number} · {leadingMember?.full_name}<br />Winning bid: {money(leading?.bid_amount)}</div><div className="row spacer"><Button onClick={() => setConfirmEnd(false)}>Cancel</Button><Button className="primary" disabled={busy} onClick={endAuction}>{busy ? "Finalizing…" : "Confirm and finalize"}</Button></div></Modal>}
   </>;
 }
 
@@ -239,7 +258,7 @@ function ChitSchemeDetails({ token, scheme, back }) {
     try { await deleteChitInstallmentPayment(token, id); await refresh(); }
     catch (err) { setError(err.message || "Could not delete payment."); }
   };
-  if (member) return <ChitMemberDetails scheme={scheme} enrollment={member} cycles={data.cycles} bids={data.bids} back={() => setMember(null)} />;
+  if (member) return <ChitMemberDetails token={token} scheme={scheme} enrollment={member} cycles={data.cycles} bids={data.bids} back={() => setMember(null)} onPortalChange={async () => { const details = await loadChitSchemeDetails(token, scheme.id); setData(details); setMember(details.enrollments.find(item => item.id === member.id) || member); }} />;
   return <main className="shell">
     <div className="toolbar"><div><Button onClick={back}>← Schemes</Button><h1 className="title spacer">{scheme.name}</h1><p className="copy">{scheme.duration_months} months · {data.enrollments.length}/{scheme.member_count} members · {schemeStatusLabel(scheme.status)}</p></div>
       {scheme.status === "draft" && <Button onClick={() => setMemberOpen(true)}>+ Add member</Button>}
@@ -251,7 +270,7 @@ function ChitSchemeDetails({ token, scheme, back }) {
     {error && <p className="red small">{error}</p>}
     {busy ? <p className="small spacer">Loading scheme details…</p> : <>
       {tab === "overview" && <><div className="grid metrics"><Metric label="Chit value" value={money(scheme.chit_value)} color="gold" /><Metric label="Monthly installment" value={money(scheme.installment_amount)} /><Metric label="Current month" value={current ? `Month ${current.cycle_number}` : "Not started"} color="blue" /><Metric label="Latest bid" value={current ? money(current.winning_bid_amount) : "—"} color="gold" /><Metric label="Latest winner" value={winner ? enrollmentName(winner) : "—"} color="green" /></div>{calc && <div className="grid metrics"><Metric label="Winning bid" value={money(calc.winningBid)} color="gold" /><Metric label="Discount" value={money(calc.discount)} color="blue" /><Metric label="Commission" value={money(calc.commission)} /><Metric label="Distributable" value={money(calc.distributable)} /><Metric label="Dividend / member" value={money(calc.dividend)} color="green" /></div>}</>}
-      {tab === "members" && <div className="card"><div className="toolbar"><strong>Members</strong>{scheme.status === "draft" && <Button className="primary" onClick={() => setMemberOpen(true)}>+ Add member</Button>}</div><div className="table spacer"><table><thead><tr><th>Ticket</th><th>Member</th><th>Phone</th><th>Bid winner</th><th></th></tr></thead><tbody>{data.enrollments.map(item => { const wins = winsForEnrollment(data.cycles, data.bids, item.id); return <tr key={item.id}><td>{item.ticket_number}</td><td>{enrollmentName(item)}</td><td>{item.chit_members?.phone || "—"}</td><td>{wins.length ? `Yes · Month ${wins.map(win => win.month).join(", ")}` : "No"}</td><td><Button onClick={() => setMember(item)}>View details</Button></td></tr>; })}</tbody></table>{!data.enrollments.length && <p className="small">No members in this scheme yet.</p>}</div></div>}
+      {tab === "members" && <div className="card"><div className="toolbar"><strong>Members</strong>{scheme.status === "draft" && <Button className="primary" onClick={() => setMemberOpen(true)}>+ Add member</Button>}</div><div className="table spacer"><table><thead><tr><th>Ticket</th><th>Member</th><th>Phone</th><th>Bid winner</th><th>Portal</th><th></th></tr></thead><tbody>{data.enrollments.map(item => { const wins = winsForEnrollment(data.cycles, data.bids, item.id); return <tr key={item.id}><td>{item.ticket_number}</td><td>{enrollmentName(item)}</td><td>{item.chit_members?.phone || "—"}</td><td>{wins.length ? `Yes · Month ${wins.map(win => win.month).join(", ")}` : "No"}</td><td>{enrollmentPortalId(item) || "Not enabled"}</td><td><Button onClick={() => setMember(item)}>View details</Button></td></tr>; })}</tbody></table>{!data.enrollments.length && <p className="small">No members in this scheme yet.</p>}</div></div>}
       {tab === "bids" && <div className="card"><div className="toolbar"><strong>Monthly bids</strong>{scheme.status === "active" && <Button onClick={() => setBidOpen(true)}>+ Record monthly bid</Button>}</div><p className="small">Each month is stored separately. Recording a new month does not change previous months.</p><div className="table spacer"><table><thead><tr><th>Month</th><th>Bid date</th><th>Winner</th><th>Winning bid</th><th>Discount</th><th>Commission</th><th>Dividend / member</th></tr></thead><tbody>{data.cycles.map(cycle => { const won = data.enrollments.find(item => item.id === cycle.winning_enrollment_id); return <tr key={cycle.id}><td>Month {cycle.cycle_number}</td><td>{formatChitDate(cycle.cycle_date)}</td><td>{won ? `Ticket ${won.ticket_number} · ${enrollmentName(won)}` : "—"}</td><td>{money(cycle.winning_bid_amount)}</td><td>{money(cycle.discount_amount)}</td><td>{money(cycle.commission_amount)}</td><td>{money(cycle.dividend_per_member)}</td></tr>; })}</tbody></table>{!data.cycles.length && <p className="small">No monthly bids recorded yet.</p>}</div></div>}
       {tab === "payments" && <div className="card"><strong>Payments</strong><div className="table spacer"><table><thead><tr><th>Member</th><th>Ticket</th><th>Month due</th><th>Expected</th><th>Paid</th><th>Status</th><th></th></tr></thead><tbody>{data.installments.map(item => { const owner = data.enrollments.find(row => row.id === item.enrollment_id); const cycle = data.cycles.find(row => row.id === item.cycle_id); return <tr key={item.id}><td>{enrollmentName(owner)}</td><td>{owner?.ticket_number || "—"}</td><td>{cycle ? `Month ${cycle.cycle_number}` : "—"}</td><td>{money(item.net_amount_due)}</td><td>{money(item.amount_paid)} {item.payment_mode || ""}</td><td>{item.status}</td><td><Button onClick={() => setPayment(item)}>{item.amount_paid ? "Edit payment" : "Record payment"}</Button>{item.amount_paid > 0 && <Button className="danger" onClick={() => remove(item.id)}>Delete</Button>}</td></tr>; })}</tbody></table>{!data.installments.length && <p className="small">Record a monthly bid first to create member installments.</p>}</div></div>}
       {tab === "dividends" && <div className="card"><strong>Dividends</strong><p className="small">discount = chit value − winning bid · commission = chit value × commission % · distributable = discount − commission · dividend = distributable ÷ members</p><div className="table spacer"><table><thead><tr><th>Month</th><th>Winning bid</th><th>Discount</th><th>Commission</th><th>Distributable</th><th>Dividend / member</th></tr></thead><tbody>{data.cycles.map(cycle => <tr key={cycle.id}><td>Month {cycle.cycle_number}</td><td>{money(cycle.winning_bid_amount)}</td><td>{money(cycle.discount_amount)}</td><td>{money(cycle.commission_amount)}</td><td>{money(cycle.distributable_amount)}</td><td>{money(cycle.dividend_per_member)}</td></tr>)}</tbody></table>{!data.cycles.length && <p className="small">No dividend records yet.</p>}</div></div>}
@@ -330,7 +349,7 @@ export function ChitFundPage({ token, close }) {
   };
   if (selected) return <ChitSchemeDetails token={token} scheme={selected} back={() => { setSelected(null); refresh(); }} />;
   return <main className="shell">
-    <div className="toolbar"><div><Button onClick={close}>← Dashboard</Button><h1 className="title spacer">Chit Fund</h1><p className="copy">Schemes only. Open a scheme to manage members, monthly bids, payments, and live bidding.</p></div><Button className="primary" onClick={() => { setSchemeForm(emptySchemeForm()); setModal("scheme"); }}>+ New scheme</Button></div>
+    <div className="toolbar"><div><Button onClick={close}>← Dashboard</Button><h1 className="title spacer">Chit Fund</h1><p className="copy">Schemes only. Open a scheme to manage members, monthly bids, payments, and live bidding. Enable each member’s Chit customer portal so they can post bids when you start the auction.</p></div><Button className="primary" onClick={() => { setSchemeForm(emptySchemeForm()); setModal("scheme"); }}>+ New scheme</Button></div>
     {error && <p className="red small">{error}</p>}
     {notice && <p className="green small">{notice}</p>}
     {busy && <p className="small spacer">Loading Chit Fund schemes…</p>}
@@ -339,5 +358,67 @@ export function ChitFundPage({ token, close }) {
       {!schemes.length && !busy && <p className="small">No Chit Fund schemes yet.</p>}
     </div>
     {(modal === "scheme" || modal === "edit-scheme") && <ChitSchemeForm title={modal === "edit-scheme" ? "Edit Chit Fund scheme" : "Create Chit Fund scheme"} form={schemeForm} setForm={setSchemeForm} busy={busy} error={error} onClose={() => setModal(null)} onSubmit={submitScheme} submitLabel={modal === "edit-scheme" ? "Save changes" : "Create draft"} />}
+  </main>;
+}
+
+export function ChitCustomerPortal({ session, logout }) {
+  const [state, setState] = useState(session || {});
+  const [amount, setAmount] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const token = session?.sessionToken;
+  useEffect(() => {
+    if (!token) return undefined;
+    const timer = setInterval(() => {
+      chitCustomerLiveState(token).then(payload => setState({ ...payload, sessionToken: token })).catch(() => {});
+    }, 2000);
+    return () => clearInterval(timer);
+  }, [token]);
+  const scheme = state.scheme || {};
+  const auction = state.auction;
+  const leading = state.leadingBid || state.leading_bid;
+  const bids = state.bids || [];
+  const wins = state.wins || [];
+  const eligible = state.eligible === true;
+  const chitValue = Number(scheme.chit_value || 0);
+  const minPercent = Number(scheme.min_bid_percent || 0);
+  const maxPercent = Number(scheme.max_bid_percent || 100);
+  const submit = async event => {
+    event.preventDefault();
+    if (!auction || auction.status !== "open") return;
+    try {
+      validateLiveBid({
+        bidAmount: amount, chitValue, minBidPercent: minPercent, maxBidPercent: maxPercent,
+        leadingBidAmount: leading?.bid_amount,
+      });
+    } catch (err) { setError(err.message); return; }
+    setBusy(true); setError("");
+    try {
+      const nonce = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+      const next = await chitCustomerPlaceLiveBid(token, amount, nonce);
+      setState({ ...next, sessionToken: token });
+      setAmount("");
+    } catch (err) { setError(err.message || "Could not submit your bid."); }
+    finally { setBusy(false); }
+  };
+  const statusLabel = !auction ? "Not started" : auction.status;
+  return <main className="shell" style={{ maxWidth: 760 }}>
+    <header className="top"><div><div className="brand">FinTrack</div><div className="sub">Chit customer dashboard</div></div><Button onClick={logout}>Log out</Button></header>
+    <h1 className="title">Hello, {state.memberName || "Member"}</h1>
+    <p className="copy">{scheme.name || "Chit scheme"} · Ticket {state.ticketNumber} · Portal {state.portalId}</p>
+    {auction?.status === "open" ? <p className="notice">Live bidding is open for month {auction.cycle_number}. Highest valid bid wins. Your bid must be higher than the current leader and between {minPercent}% and {maxPercent}% of the chit value ({money(chitValue * minPercent / 100)}–{money(chitValue * maxPercent / 100)}).</p> : auction?.status === "paused" ? <p className="notice">Live bidding is paused. Wait for your financier to resume, then post a higher bid.</p> : <p className="notice">Your financier has not started this month’s live bidding yet. Bidding is usually opened on the auction date, for example the 25th. Sign in again that day to post your bid.</p>}
+    {error && <p className="red small">{error}</p>}
+    <div className="grid metrics">
+      <Metric label="Chit value" value={money(chitValue)} color="gold" />
+      <Metric label="Monthly installment" value={money(scheme.installment_amount)} />
+      <Metric label="Your ticket" value={state.ticketNumber || "—"} color="blue" />
+      <Metric label="Auction status" value={statusLabel} color={auction?.status === "open" ? "green" : ""} />
+      <Metric label="Leading bid" value={leading ? money(leading.bid_amount) : "—"} color="gold" />
+      <Metric label="You can bid" value={eligible && auction?.status === "open" ? "Yes" : "No"} color={eligible && auction?.status === "open" ? "green" : "red"} />
+    </div>
+    {auction?.status === "open" && eligible && <form className="card spacer" onSubmit={submit}><strong>Post your bid</strong><p className="small">Enter the amount you are bidding. A new bid must be higher than {leading ? money(leading.bid_amount) : "any previous bid"}.</p><div className="form spacer"><Field className="span" label="Your bid amount (₹)"><input required type="number" min="0.01" step="0.01" value={amount} onChange={event => setAmount(event.target.value)} /></Field></div><Button className="primary" disabled={busy} type="submit">{busy ? "Submitting…" : "Submit bid"}</Button></form>}
+    {auction?.status === "open" && !eligible && <p className="notice">You are not eligible to bid this month. Members who already won a month cannot bid again.</p>}
+    <div className="card spacer"><strong>Live bids</strong><div className="table spacer"><table><thead><tr><th>Time</th><th>Member</th><th>Amount</th></tr></thead><tbody>{bids.map(bid => <tr key={bid.id}><td>{formatTime(bid.submitted_at)}</td><td>Ticket {bid.ticket_number} · {bid.member_name}</td><td>{money(bid.bid_amount)}</td></tr>)}</tbody></table>{!bids.length && <p className="small">No live bids yet.</p>}</div></div>
+    <div className="card spacer"><strong>Your winning months</strong>{wins.length ? <div className="table spacer"><table><thead><tr><th>Month</th><th>Winning bid</th><th>Bid date</th><th>Status</th></tr></thead><tbody>{wins.map(win => <tr key={win.month}><td>Month {win.month}</td><td>{money(win.bidAmount)}</td><td>{formatChitDate(win.bidDate)}</td><td>{win.status}</td></tr>)}</tbody></table></div> : <p className="small spacer">You have not won a monthly bid in this scheme yet.</p>}</div>
   </main>;
 }

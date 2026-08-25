@@ -150,8 +150,9 @@ export const updateChitScheme = (token, scheme) => supabase.rpc("chit_update_sch
   scheme_security_deposit_amount: Number(scheme.securityDepositAmount || 0),
 }, token);
 export const loadChitSchemeDetails = async (token, schemeId) => {
+  const enrollmentSelect = async extra => supabase.query(`/rest/v1/chit_enrollments?scheme_id=eq.${schemeId}&select=*,chit_members(full_name,phone,address)${extra}&order=ticket_number.asc`, token);
   const [enrollments, cycles] = await Promise.all([
-    supabase.query(`/rest/v1/chit_enrollments?scheme_id=eq.${schemeId}&select=*,chit_members(full_name,phone,address)&order=ticket_number.asc`, token),
+    enrollmentSelect(",chit_member_portal_credentials(portal_id)").catch(() => enrollmentSelect("")),
     supabase.query(`/rest/v1/chit_cycles?scheme_id=eq.${schemeId}&select=*&order=cycle_number.asc`, token),
   ]);
   const cycleIds = cycles.map(cycle => cycle.id);
@@ -190,3 +191,10 @@ export const placeChitLiveBid = (token, auctionId, enrollmentId, bidAmount, clie
   input_auction_id: auctionId, input_enrollment_id: enrollmentId, input_bid_amount: Number(bidAmount), input_client_nonce: clientNonce,
 }, token);
 export const endChitLiveAuction = (token, auctionId) => supabase.rpc("chit_end_live_auction", { input_auction_id: auctionId }, token);
+export const enableChitMemberPortal = (token, enrollmentId, pin) => supabase.rpc("enable_chit_member_portal", { input_enrollment_id: enrollmentId, new_pin: pin }, token);
+export const resetChitMemberPortalPin = (token, enrollmentId, pin) => supabase.rpc("reset_chit_member_portal_pin", { input_enrollment_id: enrollmentId, new_pin: pin }, token);
+export const chitCustomerPortalLogin = (portalId, pin) => supabase.rpc("chit_customer_portal_login", { input_portal_id: portalId, input_pin: pin });
+export const chitCustomerLiveState = sessionToken => supabase.rpc("chit_customer_live_state", { input_session_token: sessionToken });
+export const chitCustomerPlaceLiveBid = (sessionToken, bidAmount, clientNonce) => supabase.rpc("chit_customer_place_live_bid", {
+  input_session_token: sessionToken, input_bid_amount: Number(bidAmount), input_client_nonce: clientNonce,
+});

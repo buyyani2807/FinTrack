@@ -2,22 +2,30 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { leadingLiveBid, validateLiveBid, winsForEnrollment } from "../src/features/chitFund/liveBidding.js";
 
-test("live bidding follows lowest payout wins", () => {
+test("live bidding follows highest bid wins", () => {
   const leader = leadingLiveBid([
     { enrollmentId: "b", bidAmount: 85000, submittedAt: "2026-08-25T10:00:00Z" },
     { enrollmentId: "a", bidAmount: 82000, submittedAt: "2026-08-25T10:01:00Z" },
   ]);
+  assert.equal(leader.enrollmentId, "b");
+});
+
+test("earlier bid wins a tie at the same amount", () => {
+  const leader = leadingLiveBid([
+    { enrollmentId: "a", bidAmount: 90000, submittedAt: "2026-08-25T10:00:00Z" },
+    { enrollmentId: "b", bidAmount: 90000, submittedAt: "2026-08-25T10:01:00Z" },
+  ]);
   assert.equal(leader.enrollmentId, "a");
 });
 
-test("rejects a live bid that is not lower than the leader", () => {
+test("rejects a live bid that is not higher than the leader", () => {
   assert.throws(
-    () => validateLiveBid({ bidAmount: 82000, chitValue: 100000, minBidPercent: 70, maxBidPercent: 95, leadingBidAmount: 82000 }),
-    /lower/
+    () => validateLiveBid({ bidAmount: 85000, chitValue: 100000, minBidPercent: 70, maxBidPercent: 95, leadingBidAmount: 85000 }),
+    /higher/
   );
   assert.deepEqual(
-    validateLiveBid({ bidAmount: 81000, chitValue: 100000, minBidPercent: 70, maxBidPercent: 95, leadingBidAmount: 82000 }),
-    { bidAmount: 81000, bidPercent: 81 }
+    validateLiveBid({ bidAmount: 86000, chitValue: 100000, minBidPercent: 70, maxBidPercent: 95, leadingBidAmount: 85000 }),
+    { bidAmount: 86000, bidPercent: 86 }
   );
 });
 

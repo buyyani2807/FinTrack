@@ -1,6 +1,7 @@
 -- Live Chit Fund auction. Isolated from Daily/Monthly finance.
 -- Does not alter chit_record_monthly_bid formulas. Ending an auction calls that RPC.
 -- Run after 024_chit_rpc_only_writes_and_kyc.sql.
+-- Then run 026_chit_customer_live_bidding.sql so members bid from Chit customer login (highest bid wins).
 
 create table if not exists public.chit_live_auctions (
   id uuid primary key default gen_random_uuid(),
