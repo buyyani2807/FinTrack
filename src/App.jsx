@@ -580,6 +580,7 @@ function Financier({
     [editKycLoan, setEditKycLoan] = useState(null),
     [kyc, setKyc] = useState(null),
     [filter, setFilter] = useState("all"),
+    [module, setModule] = useState("daily"),
     [customerMode, setCustomerMode] = useState(false),
     [statusFilter, setStatusFilter] = useState("all"),
     [search, setSearch] = useState(""),
@@ -591,11 +592,25 @@ function Financier({
   useEffect(() => {
     const openCustomers = () => { setCustomerMode(true); setStatusFilter("all"); };
     const openDashboard = () => { setCustomerMode(false); setStatusFilter("all"); };
+    const openModule = event => {
+      const nextModule = event.detail === "monthly" ? "monthly" : "daily";
+      setModule(nextModule);
+      setFilter(nextModule);
+      setCustomerMode(false);
+      setStatusFilter("all");
+    };
     window.addEventListener("fintrack-open-customers", openCustomers);
     window.addEventListener("fintrack-open-dashboard", openDashboard);
-    return () => { window.removeEventListener("fintrack-open-customers", openCustomers); window.removeEventListener("fintrack-open-dashboard", openDashboard); };
+    window.addEventListener("fintrack-open-module", openModule);
+    return () => {
+      window.removeEventListener("fintrack-open-customers", openCustomers);
+      window.removeEventListener("fintrack-open-dashboard", openDashboard);
+      window.removeEventListener("fintrack-open-module", openModule);
+    };
   }, []);
-  const customerPool = customerMode ? loans.filter(loan => statusFilter === "all" || loanStatus(loan) === statusFilter) : activeLoans;
+  const customerPool = customerMode
+    ? loans.filter(loan => (statusFilter === "all" || loanStatus(loan) === statusFilter) && loan.kind === module)
+    : activeLoans.filter(loan => loan.kind === module);
   const shown = (filter === "all" ? customerPool : customerPool.filter(l => l.kind === filter)).filter(loan => `${loan.customerName} ${loan.phone} ${loan.address || ""}`.toLowerCase().includes(search.trim().toLowerCase())).sort((a, b) => a.collectionOrder - b.collectionOrder);
   const reorder = async targetId => {
     if (!isOwner || !draggedId || draggedId === targetId) return;
@@ -696,6 +711,7 @@ function CreateAgent({ close, save }) {
 }
 function FinancierTools({ loans, token, onCreateAgent, onLoadAgents, onAssignAgent, onUpdateAgent }) {
   const [panel, setPanel] = useState(null);
+  const [selectedModule, setSelectedModule] = useState("daily");
   useEffect(() => {
     const showCustomers = () => setPanel("customers");
     const showDashboard = () => setPanel(null);
@@ -706,7 +722,10 @@ function FinancierTools({ loans, token, onCreateAgent, onLoadAgents, onAssignAge
   return <div className="financier-tools">
     <aside className="financier-nav">
       <div className="nav-title">FinTrack</div>
-      <Button className={panel === null ? "tab active" : ""} onClick={() => { setPanel(null); window.dispatchEvent(new Event("fintrack-open-dashboard")); window.scrollTo({ top: 0, behavior: "smooth" }); }}>▦ Dashboard</Button>
+      <Button className={panel === "dashboard" ? "tab active" : ""} onClick={() => { setPanel("dashboard"); window.dispatchEvent(new Event("fintrack-open-dashboard")); window.scrollTo({ top: 0, behavior: "smooth" }); }}>▦ Dashboard</Button>
+      <div className="nav-title" style={{ fontSize: 11, paddingBottom: 4 }}>Finance modules</div>
+      <Button className={panel === null && selectedModule === "daily" ? "tab active" : ""} onClick={() => { setSelectedModule("daily"); setPanel(null); window.dispatchEvent(new CustomEvent("fintrack-open-module", { detail: "daily" })); }}>▣ Daily Finance</Button>
+      <Button className={panel === null && selectedModule === "monthly" ? "tab active" : ""} onClick={() => { setSelectedModule("monthly"); setPanel(null); window.dispatchEvent(new CustomEvent("fintrack-open-module", { detail: "monthly" })); }}>◫ Monthly Finance</Button>
       <Button className={panel === "reports" ? "tab active" : ""} onClick={() => setPanel("reports")}>↧ Reports</Button>
       <Button className={panel === "agents" ? "tab active" : ""} onClick={() => setPanel("agents")}>◉ Collection staff</Button>
       <Button className={panel === "customers" ? "tab active" : ""} onClick={() => { setPanel("customers"); window.dispatchEvent(new Event("fintrack-open-customers")); }}>◫ Customers</Button>
