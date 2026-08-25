@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { leadingLiveBid, validateLiveBid, winsForEnrollment } from "../src/features/chitFund/liveBidding.js";
+import { leadingLiveBid, liveAuctionLimits, liveBidPayout, validateLiveBid, winsForEnrollment } from "../src/features/chitFund/liveBidding.js";
 
 test("live bidding follows highest bid wins", () => {
   const leader = leadingLiveBid([
@@ -18,15 +18,26 @@ test("earlier bid wins a tie at the same amount", () => {
   assert.equal(leader.enrollmentId, "a");
 });
 
-test("rejects a live bid that is not higher than the leader", () => {
-  assert.throws(
-    () => validateLiveBid({ bidAmount: 85000, chitValue: 100000, minBidPercent: 70, maxBidPercent: 95, leadingBidAmount: 85000 }),
-    /higher/
+test("live bidding starts above commission and caps at 30 percent of chit value", () => {
+  const base = { chitValue: 1000000, commissionPercent: 5 };
+  assert.deepEqual(liveAuctionLimits(base), { commission: 50000, maxBid: 300000, maxPercent: 30 });
+  assert.throws(() => validateLiveBid({ ...base, bidAmount: 50000 }), /commission/);
+  assert.throws(() => validateLiveBid({ ...base, bidAmount: 300001 }), /30%/);
+  assert.deepEqual(
+    validateLiveBid({ ...base, bidAmount: 50000.01 }),
+    { bidAmount: 50000.01, bidPercent: 5, payoutAmount: 949999.99 }
   );
   assert.deepEqual(
-    validateLiveBid({ bidAmount: 86000, chitValue: 100000, minBidPercent: 70, maxBidPercent: 95, leadingBidAmount: 85000 }),
-    { bidAmount: 86000, bidPercent: 86 }
+    validateLiveBid({ ...base, bidAmount: 200000 }),
+    { bidAmount: 200000, bidPercent: 20, payoutAmount: 800000 }
   );
+  assert.equal(liveBidPayout({ chitValue: 1000000, bidAmount: 300000 }), 700000);
+});
+
+test("rejects a live bid that is not higher than the leader", () => {
+  const base = { chitValue: 1000000, commissionPercent: 5, leadingBidAmount: 200000 };
+  assert.throws(() => validateLiveBid({ ...base, bidAmount: 200000 }), /higher/);
+  assert.equal(validateLiveBid({ ...base, bidAmount: 200001 }).bidAmount, 200001);
 });
 
 test("member win history is joined by enrollment id, not name", () => {

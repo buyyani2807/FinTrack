@@ -1,6 +1,22 @@
-import { validateBid } from "./calculations.js";
+import { roundMoney } from "./calculations.js";
 
 export const LIVE_BID_MODEL = "highest_bid_wins";
+export const LIVE_MAX_DISCOUNT_PERCENT = 30;
+
+export function liveAuctionLimits({ chitValue, commissionPercent, commissionAmount, liveMaxBidAmount } = {}) {
+  const value = Number(chitValue);
+  const commission = Number.isFinite(Number(commissionAmount))
+    ? roundMoney(Number(commissionAmount))
+    : roundMoney(value * Number(commissionPercent || 0) / 100);
+  const maxBid = Number.isFinite(Number(liveMaxBidAmount))
+    ? roundMoney(Number(liveMaxBidAmount))
+    : roundMoney(value * LIVE_MAX_DISCOUNT_PERCENT / 100);
+  return { commission, maxBid, maxPercent: LIVE_MAX_DISCOUNT_PERCENT };
+}
+
+export function liveBidPayout({ chitValue, bidAmount }) {
+  return roundMoney(Number(chitValue) - Number(bidAmount));
+}
 
 export function leadingLiveBid(bids = []) {
   if (!Array.isArray(bids) || bids.length === 0) return null;
@@ -11,12 +27,17 @@ export function leadingLiveBid(bids = []) {
   })[0];
 }
 
-export function validateLiveBid({ bidAmount, chitValue, minBidPercent, maxBidPercent, leadingBidAmount }) {
-  const validated = validateBid({ bidAmount, chitValue, minBidPercent, maxBidPercent });
-  if (leadingBidAmount != null && Number.isFinite(Number(leadingBidAmount)) && validated.bidAmount <= Number(leadingBidAmount)) {
+export function validateLiveBid({ bidAmount, chitValue, commissionPercent, commissionAmount, liveMaxBidAmount, leadingBidAmount }) {
+  const value = Number(chitValue);
+  const amount = roundMoney(Number(bidAmount));
+  const { commission, maxBid } = liveAuctionLimits({ chitValue: value, commissionPercent, commissionAmount, liveMaxBidAmount });
+  if (![amount, value, commission, maxBid].every(Number.isFinite) || value <= 0) throw new Error("Invalid bid values");
+  if (amount <= commission) throw new Error("Bid must start above the fund manager commission");
+  if (amount > maxBid) throw new Error("Bid cannot exceed 30% of the chit value");
+  if (leadingBidAmount != null && Number.isFinite(Number(leadingBidAmount)) && amount <= Number(leadingBidAmount)) {
     throw new Error("A new bid must be higher than the current leading bid");
   }
-  return validated;
+  return { bidAmount: amount, bidPercent: roundMoney(amount / value * 100), payoutAmount: liveBidPayout({ chitValue: value, bidAmount: amount }) };
 }
 
 export function winsForEnrollment(cycles = [], bids = [], enrollmentId) {

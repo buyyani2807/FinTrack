@@ -2,6 +2,7 @@
 -- Does not alter chit_record_monthly_bid formulas. Ending an auction calls that RPC.
 -- Run after 024_chit_rpc_only_writes_and_kyc.sql.
 -- Then run 026_chit_customer_live_bidding.sql so members bid from Chit customer login (highest bid wins).
+-- Then run 027_chit_live_bid_after_commission.sql so bidding starts above manager commission and caps at 30%.
 
 create table if not exists public.chit_live_auctions (
   id uuid primary key default gen_random_uuid(),
