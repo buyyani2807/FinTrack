@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./lib/supabase";
 import { monthlyInterestOnBalance } from "./features/finance/calculations";
 import { ChitCustomerPortal, ChitFundPage } from "./features/chitFund/ChitFundModule";
-import { assignCollectionAgent, chitCustomerPortalLogin, createCollectionAgent, createFinanceAccount, customerPortalLogin, deleteFinanceAccount, deleteFinancePayment, enableCustomerPortal, loadCustomerKyc, loadFinanceAccounts, loadManagedAgents, loadWorkspace, recordPayment, resetCustomerPortalPin, saveCustomerKyc, setAccountStatus, saveCollectionOrder, updateCollectionAgent, updateFinanceAccount, updateFinancePayment, updatePaymentNotes } from "./lib/financeRepository";
+import { assignCollectionAgent, chitCustomerPortalLogin, createCollectionAgent, createFinanceAccount, customerPortalLogin, deleteFinanceAccount, deleteFinancePayment, enableCustomerPortal, loadChitDashboard, loadCustomerKyc, loadFinanceAccounts, loadManagedAgents, loadWorkspace, recordPayment, resetCustomerPortalPin, saveCustomerKyc, setAccountStatus, saveCollectionOrder, updateCollectionAgent, updateFinanceAccount, updateFinancePayment, updatePaymentNotes } from "./lib/financeRepository";
 
 // FinTrack MVP. This browser-only build is for testing; add a secure backend,
 // authentication, audit trails, and local compliance review before production.
@@ -569,7 +569,7 @@ function Financier({
   onDeleteLoan,
   onSaveCustomerPortal,
   onLoadKyc,
-  onSaveKyc
+  onSaveKyc, activeChitSchemes = []
   , role = "owner", onStatusChange, onPaymentNoteChange, onPaymentCorrect, onPaymentDelete, onCollectionOrderChange
 }) {
   const [modal, setModal] = useState(null),
@@ -580,7 +580,7 @@ function Financier({
     [editKycLoan, setEditKycLoan] = useState(null),
     [kyc, setKyc] = useState(null),
     [filter, setFilter] = useState("all"),
-    [module, setModule] = useState("daily"),
+    [module, setModule] = useState("all"),
     [customerMode, setCustomerMode] = useState(false),
     [statusFilter, setStatusFilter] = useState("all"),
     [search, setSearch] = useState(""),
@@ -591,7 +591,7 @@ function Financier({
   const activeLoans = loans.filter(loan => ["active", "overdue"].includes(loanStatus(loan)));
   useEffect(() => {
     const openCustomers = () => { setCustomerMode(true); setStatusFilter("all"); };
-    const openDashboard = () => { setCustomerMode(false); setStatusFilter("all"); };
+    const openDashboard = () => { setModule("all"); setFilter("all"); setCustomerMode(false); setStatusFilter("all"); };
     const openModule = event => {
       const nextModule = event.detail === "monthly" ? "monthly" : "daily";
       setModule(nextModule);
@@ -609,8 +609,8 @@ function Financier({
     };
   }, []);
   const customerPool = customerMode
-    ? loans.filter(loan => (statusFilter === "all" || loanStatus(loan) === statusFilter) && loan.kind === module)
-    : activeLoans.filter(loan => loan.kind === module);
+    ? loans.filter(loan => (statusFilter === "all" || loanStatus(loan) === statusFilter) && (module === "all" || loan.kind === module))
+    : activeLoans.filter(loan => module === "all" || loan.kind === module);
   const shown = (filter === "all" ? customerPool : customerPool.filter(l => l.kind === filter)).filter(loan => `${loan.customerName} ${loan.phone} ${loan.address || ""}`.toLowerCase().includes(search.trim().toLowerCase())).sort((a, b) => a.collectionOrder - b.collectionOrder);
   const reorder = async targetId => {
     if (!isOwner || !draggedId || draggedId === targetId) return;
@@ -709,9 +709,19 @@ function CreateAgent({ close, save }) {
   const submit = async () => { setBusy(true); setError(""); try { await save({ name, email, phone, password, active: true }); close(); } catch (e) { setError(e.message || "Could not create agent."); } finally { setBusy(false); } };
   return <Modal><h2 className="title">Add collection staff</h2><p className="copy">Staff get only assigned accounts and can record their own collections.</p><div className="form spacer"><Field label="Staff name"><input value={name} onChange={e => setName(e.target.value)} /></Field><Field label="Email address"><input type="email" value={email} onChange={e => setEmail(e.target.value)} /></Field><Field label="Mobile number"><input inputMode="tel" value={phone} onChange={e => setPhone(e.target.value)} /></Field><Field label="Password"><input type="password" minLength="8" value={password} onChange={e => setPassword(e.target.value)} /></Field></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button onClick={close}>Cancel</Button><Button className="primary" disabled={busy} onClick={submit}>{busy ? "Creating…" : "Create staff"}</Button></div></Modal>;
 }
-function FinancierTools({ loans, token, onCreateAgent, onLoadAgents, onAssignAgent, onUpdateAgent }) {
+function ActiveChitSchemes({ schemes = [] }) {
+  return <section className="card spacer"><div className="toolbar"><strong>Active Chit Fund schemes</strong><span className="small">{schemes.length} active</span></div>{schemes.length ? <div className="table spacer"><table><thead><tr><th>Scheme</th><th>Chit value</th><th>Members</th><th>Duration</th></tr></thead><tbody>{schemes.map(scheme => <tr key={scheme.id}><td>{scheme.name}</td><td>{money(scheme.chit_value)}</td><td>{scheme.member_count}</td><td>{scheme.duration_months} months</td></tr>)}</tbody></table></div> : <p className="small spacer">No active Chit Fund schemes yet.</p>}</section>;
+}
+
+function FinancierTools({ loans, token, activeChitSchemes = [], onCreateAgent, onLoadAgents, onAssignAgent, onUpdateAgent }) {
   const [panel, setPanel] = useState(null);
-  const [selectedModule, setSelectedModule] = useState("daily");
+  const [selectedModule, setSelectedModule] = useState("all");
+  const [dashboardChitSchemes, setDashboardChitSchemes] = useState(activeChitSchemes);
+  useEffect(() => {
+    loadChitDashboard(token)
+      .then(payload => setDashboardChitSchemes((payload.schemes || []).filter(scheme => scheme.status === "active")))
+      .catch(() => setDashboardChitSchemes([]));
+  }, [token]);
   useEffect(() => {
     const showCustomers = () => setPanel("customers");
     const showDashboard = () => setPanel(null);
@@ -722,7 +732,7 @@ function FinancierTools({ loans, token, onCreateAgent, onLoadAgents, onAssignAge
   return <div className="financier-tools">
     <aside className="financier-nav">
       <div className="nav-title">FinTrack</div>
-      <Button className={panel === "dashboard" ? "tab active" : ""} onClick={() => { setPanel("dashboard"); window.dispatchEvent(new Event("fintrack-open-dashboard")); window.scrollTo({ top: 0, behavior: "smooth" }); }}>▦ Dashboard</Button>
+      <Button className={panel === "dashboard" || (panel === null && selectedModule === "all") ? "tab active" : ""} onClick={() => { setSelectedModule("all"); setPanel("dashboard"); window.dispatchEvent(new Event("fintrack-open-dashboard")); window.scrollTo({ top: 0, behavior: "smooth" }); }}>▦ Dashboard</Button>
       <div className="nav-title" style={{ fontSize: 11, paddingBottom: 4 }}>Finance modules</div>
       <Button className={panel === null && selectedModule === "daily" ? "tab active" : ""} onClick={() => { setSelectedModule("daily"); setPanel(null); window.dispatchEvent(new CustomEvent("fintrack-open-module", { detail: "daily" })); }}>▣ Daily Finance</Button>
       <Button className={panel === null && selectedModule === "monthly" ? "tab active" : ""} onClick={() => { setSelectedModule("monthly"); setPanel(null); window.dispatchEvent(new CustomEvent("fintrack-open-module", { detail: "monthly" })); }}>◫ Monthly Finance</Button>
@@ -735,6 +745,7 @@ function FinancierTools({ loans, token, onCreateAgent, onLoadAgents, onAssignAge
     {panel === "reports" && <PortfolioReport loans={loans} close={() => setPanel(null)} />}
     {panel === "agents" && <CollectionStaffPage loans={loans} close={() => setPanel(null)} loadAgents={onLoadAgents} createAgent={onCreateAgent} assignAgent={onAssignAgent} updateAgent={onUpdateAgent} />}
     {panel === "chit" && <div className="chit-dashboard" style={{ position: "fixed", inset: 0, zIndex: 5, overflow: "auto", background: C.bg }}><ChitFundPage token={token} close={() => setPanel(null)} /></div>}
+    {(panel === null || panel === "dashboard") && selectedModule === "all" && <ActiveChitSchemes schemes={dashboardChitSchemes} />}
   </div>;
 }
 function CustomerReportDownload({ loan, onResetPin }) {
