@@ -610,12 +610,19 @@ function Financier({
     };
   }, []);
   useEffect(() => {
-    if (!customerMode || detail) return undefined;
+    if (detail) return undefined;
+    const hiddenLabels = customerMode
+      ? ["Daily", "Monthly"]
+      : module === "daily"
+        ? ["Monthly"]
+        : module === "monthly"
+          ? ["Daily"]
+          : [];
     const financeTypeButtons = [...document.querySelectorAll(".shell .card .toolbar .tabs .btn")]
-      .filter(button => ["Daily", "Monthly"].includes(button.textContent.trim()));
+      .filter(button => hiddenLabels.includes(button.textContent.trim()));
     financeTypeButtons.forEach(button => { button.hidden = true; });
     return () => financeTypeButtons.forEach(button => { button.hidden = false; });
-  }, [customerMode, detail]);
+  }, [customerMode, detail, module]);
   const customerPool = customerMode
     ? loans.filter(loan => (statusFilter === "all" || loanStatus(loan) === statusFilter) && (module === "all" || loan.kind === module))
     : activeLoans.filter(loan => module === "all" || loan.kind === module);
