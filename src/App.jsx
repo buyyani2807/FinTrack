@@ -671,7 +671,12 @@ function Customer({
 }
 
 function DashboardFinanceSection({ title, loans, onView }) {
-  return <section className="card"><div className="toolbar"><strong>{title}</strong><span className="small">{loans.length} active customers</span></div>{loans.length ? <div className="table"><table><thead><tr><th>Customer</th><th>Phone</th><th>Amount financed</th><th>Balance</th><th></th></tr></thead><tbody>{loans.map(loan => <tr key={loan.id}><td><strong>{loan.customerName}</strong></td><td><a className="small phone-link" href={`tel:${loan.phone}`}>{loan.phone}</a></td><td>{money(loan.kind === "daily" ? loan.collectionAmount : loan.principal)}</td><td className="red">{money(loanBalance(loan))}</td><td><Button onClick={() => onView(loan)}>View</Button></td></tr>)}</tbody></table></div> : <p className="small spacer">No active customers.</p>}</section>;
+  const financed = loans.reduce((sum, loan) => sum + (loan.kind === "daily" ? loan.collectionAmount : loan.principal), 0);
+  const received = loans.reduce((sum, loan) => sum + loanPaid(loan), 0);
+  const outstanding = loans.reduce((sum, loan) => sum + loanBalance(loan), 0);
+  const profit = loans.reduce((sum, loan) => sum + realizedProfit(loan), 0);
+  const loss = loans.reduce((sum, loan) => sum + realizedLoss(loan), 0);
+  return <section className="card"><div className="toolbar"><strong>{title}</strong><span className="small">{loans.length} active customers</span></div><div className="grid metrics"><Metric label="Amount financed" value={money(financed)} color="gold" /><Metric label="Amounts received" value={money(received)} color="green" /><Metric label="Outstanding" value={money(outstanding)} color="red" /><Metric label="Profit / loss" value={`${money(profit)} / ${money(loss)}`} color={loss ? "red" : "green"} /></div>{loans.length ? <div className="table"><table><thead><tr><th>Customer</th><th>Phone</th><th>Amount financed</th><th>Balance</th><th></th></tr></thead><tbody>{loans.map(loan => <tr key={loan.id}><td><strong>{loan.customerName}</strong></td><td><a className="small phone-link" href={`tel:${loan.phone}`}>{loan.phone}</a></td><td>{money(loan.kind === "daily" ? loan.collectionAmount : loan.principal)}</td><td className="red">{money(loanBalance(loan))}</td><td><Button onClick={() => onView(loan)}>View</Button></td></tr>)}</tbody></table></div> : <p className="small spacer">No active customers.</p>}</section>;
 }
 function PinResetModal({ title, currentPin, onSave, close }) {
   const [oldPin, setOldPin] = useState("");
