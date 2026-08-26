@@ -591,7 +591,7 @@ function Financier({
   const touchTargetId = useRef(null);
   const activeLoans = loans.filter(loan => ["active", "overdue"].includes(loanStatus(loan)));
   useEffect(() => {
-    const openCustomers = () => { setCustomerMode(true); setStatusFilter("all"); };
+    const openCustomers = event => { setModule(event.detail === "monthly" ? "monthly" : "daily"); setFilter("all"); setCustomerMode(true); setStatusFilter("all"); };
     const openDashboard = () => { setModule("all"); setFilter("all"); setCustomerMode(false); setStatusFilter("all"); };
     const openModule = event => {
       const nextModule = event.detail === "monthly" ? "monthly" : "daily";
@@ -756,9 +756,10 @@ function FinancierTools({ loans, token, activeChitSchemes = [], onCreateAgent, o
       <Button className={panel === "dashboard" || (panel === null && selectedModule === "all") ? "tab active" : ""} onClick={() => { setSelectedModule("all"); setPanel("dashboard"); window.dispatchEvent(new Event("fintrack-open-dashboard")); window.scrollTo({ top: 0, behavior: "smooth" }); }}>▦ Dashboard</Button>
       <div className="nav-title" style={{ fontSize: 11, paddingBottom: 4 }}>Finance modules</div>
       <Button className={panel === null && selectedModule === "daily" ? "tab active" : ""} onClick={() => { setSelectedModule("daily"); setPanel(null); window.dispatchEvent(new CustomEvent("fintrack-open-module", { detail: "daily" })); }}>▣ Daily Finance</Button>
+      <div style={{ marginLeft: 12 }}><Button className={panel === "customers" && selectedModule === "daily" ? "tab active" : ""} onClick={() => { setSelectedModule("daily"); setPanel("customers"); window.dispatchEvent(new CustomEvent("fintrack-open-customers", { detail: "daily" })); }}>◫ Customers</Button></div>
       <Button className={panel === null && selectedModule === "monthly" ? "tab active" : ""} onClick={() => { setSelectedModule("monthly"); setPanel(null); window.dispatchEvent(new CustomEvent("fintrack-open-module", { detail: "monthly" })); }}>◫ Monthly Finance</Button>
+      <div style={{ marginLeft: 12 }}><Button className={panel === "customers" && selectedModule === "monthly" ? "tab active" : ""} onClick={() => { setSelectedModule("monthly"); setPanel("customers"); window.dispatchEvent(new CustomEvent("fintrack-open-customers", { detail: "monthly" })); }}>◫ Customers</Button></div>
       <Button className={panel === "reports" ? "tab active" : ""} onClick={() => setPanel("reports")}>↧ Reports</Button>
-      <Button className={panel === "customers" ? "tab active" : ""} onClick={() => { setPanel("customers"); window.dispatchEvent(new Event("fintrack-open-customers")); }}>◫ Customers</Button>
       <Button className={panel === "chit" ? "tab active" : ""} onClick={() => setPanel("chit")}>◎ Chit Fund</Button>
       <div className="nav-footer">Financier workspace</div>
     </aside>
