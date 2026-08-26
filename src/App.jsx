@@ -719,7 +719,12 @@ function CollectionStaffPage({ loans, close, loadAgents, createAgent, assignAgen
   const refresh = async () => { setLoading(true); setError(""); try { setAgents(await loadAgents()); } catch (e) { setError(e.message || "Could not load staff."); } finally { setLoading(false); } };
   useEffect(() => { refresh(); }, []);
   const assigned = loan => draftIds.includes(loan.id);
-  const visibleLoans = loans.filter(loan => `${loan.customerName} ${loan.phone}`.toLowerCase().includes(search.toLowerCase()));
+  const visibleLoans = loans.filter(loan =>
+    loan.kind === "daily"
+    && loanStatus(loan) === "active"
+    && (!loan.collectionAgentId || loan.collectionAgentId === selected?.id)
+    && `${loan.customerName} ${loan.phone}`.toLowerCase().includes(search.toLowerCase())
+  );
   const choose = agent => { setSelected(agent); setDraftIds(loans.filter(loan => loan.collectionAgentId === agent.id).map(loan => loan.id)); setSearch(""); setSaved(""); };
   const toggle = id => setDraftIds(ids => ids.includes(id) ? ids.filter(value => value !== id) : [...ids, id]);
   const saveStaff = async details => { try { const updated = await updateAgent({ id: selected.id, ...details }); setSelected(updated); setAgents(current => current.map(agent => agent.id === updated.id ? updated : agent)); setShowEdit(false); setSaved("Staff details saved successfully."); } catch (e) { setError(e.message || "Could not save staff details."); } };
