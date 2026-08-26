@@ -613,10 +613,8 @@ function Financier({
     if (detail) return undefined;
     const hiddenLabels = customerMode
       ? ["Daily", "Monthly"]
-      : module === "daily"
-        ? ["Monthly"]
-        : module === "monthly"
-          ? ["Daily"]
+      : ["daily", "monthly"].includes(module)
+        ? ["All", "Daily", "Monthly"]
           : [];
     const financeTypeButtons = [...document.querySelectorAll(".shell .card .toolbar .tabs .btn")]
       .filter(button => hiddenLabels.includes(button.textContent.trim()));
