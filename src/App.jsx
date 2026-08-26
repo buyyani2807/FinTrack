@@ -743,7 +743,7 @@ function FinancierTools({ loans, token, activeChitSchemes = [], onCreateAgent, o
     window.addEventListener("fintrack-open-dashboard", showDashboard);
     return () => { window.removeEventListener("fintrack-open-customers", showCustomers); window.removeEventListener("fintrack-open-dashboard", showDashboard); };
   }, []);
-  return <div className="financier-tools"><style>{`.agents-shortcut{position:fixed;top:110px;right:44px;z-index:4}@media(max-width:680px){.agents-shortcut{position:static;margin:0 16px 16px;display:block}}`}</style>
+  return <div className="financier-tools"><style>{`.agents-shortcut{position:fixed;top:124px;right:-30px;z-index:4}@media(max-width:680px){.agents-shortcut{position:static;margin:0 16px 16px;display:block}}`}</style>
     <aside className="financier-nav">
       <div className="nav-title">FinTrack</div>
       <Button className={panel === "dashboard" || (panel === null && selectedModule === "all") ? "tab active" : ""} onClick={() => { setSelectedModule("all"); setPanel("dashboard"); window.dispatchEvent(new Event("fintrack-open-dashboard")); window.scrollTo({ top: 0, behavior: "smooth" }); }}>▦ Dashboard</Button>
