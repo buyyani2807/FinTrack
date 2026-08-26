@@ -6,12 +6,15 @@ import {
   createChitMember,
   createChitScheme,
   createFixedChitScheme,
+  createPredefinedBidChitScheme,
   deleteChitInstallmentPayment,
   deleteFixedChitPayment,
+  deletePredefinedChitPayment,
   enableChitMemberPortal,
   endChitLiveAuction,
   enrollChitMember,
   finalizeFixedChitLift,
+  finalizePredefinedChitMonth,
   loadChitDashboard,
   loadChitLiveAuction,
   loadChitSchemeDetails,
@@ -22,10 +25,13 @@ import {
   updateChitInstallmentPayment,
   updateFixedChitPayment,
   updateFixedChitScheme,
+  updatePredefinedChitPayment,
+  updatePredefinedChitScheduleMonth,
   updateChitScheme,
 } from "../../lib/financeRepository";
 import { LIVE_BID_MODEL, enrollmentPortalId, liveAuctionLimits, liveBidPayout, validateLiveBid, winsForEnrollment } from "./liveBidding";
 import { CHIT_TYPES, validateFixedChit } from "./fixedChit";
+import { validatePredefinedBidChit } from "./predefinedBidChit";
 
 const indiaCalendarDate = date => {
   const parts = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
@@ -60,13 +66,19 @@ function ChitSchemeForm({ title, form, setForm, busy, error, onClose, onSubmit, 
 }
 
 function ChitTypeChooser({ close, choose }) {
-  return <Modal><h2 className="title">Choose Chit type</h2><p className="copy">Auction keeps the existing bidding workflow. Fixed uses a predetermined monthly lift schedule without bidding.</p><div className="grid two spacer"><button className="card" onClick={() => choose(CHIT_TYPES.AUCTION)}><strong>Auction Chit</strong><p className="small spacer">Existing auction, discount, dividend, and live-bidding model.</p></button><button className="card" onClick={() => choose(CHIT_TYPES.FIXED)}><strong>Fixed Chit</strong><p className="small spacer">Predetermined lift amounts that increase each month.</p></button></div><div className="row spacer"><Button onClick={close}>Cancel</Button></div></Modal>;
+  return <Modal><h2 className="title">Choose Chit type</h2><p className="copy">Each Chit type uses an independent calculation and monthly workflow.</p><div className="grid spacer"><button className="card" onClick={() => choose(CHIT_TYPES.AUCTION)}><strong>Auction Chit</strong><p className="small spacer">Existing auction, discount, dividend, and live-bidding model.</p></button><button className="card" onClick={() => choose(CHIT_TYPES.FIXED)}><strong>Fixed Chit</strong><p className="small spacer">Predetermined lift amounts that increase each month.</p></button><button className="card" onClick={() => choose(CHIT_TYPES.FIXED_PREDEFINED_BID)}><strong>Fixed Predefined Bid Chit</strong><p className="small spacer">Generated EMI, COMM, auction amount, bid amount, commission, and net-receivable schedule without live bidding.</p></button></div><div className="row spacer"><Button onClick={close}>Cancel</Button></div></Modal>;
 }
 
 function FixedChitSchemeForm({ title, form, setForm, busy, error, onClose, onSubmit, submitLabel }) {
   const set = (key, value) => setForm(current => ({ ...current, [key]: value }));
   const derivedInitial = Number(form.chitValue || 0) - Number(form.fixedCommissionAmount || 0);
   return <Modal><h2 className="title">{title}</h2><form onSubmit={onSubmit}><div className="form spacer"><Field label="Scheme name *"><input required value={form.name} onChange={e => set("name", e.target.value)} /></Field><Field label="Chit type"><input value="Fixed" disabled /></Field><Field label="Start date *"><input required type="date" value={form.startDate} onChange={e => set("startDate", e.target.value)} /></Field><Field label="Chit value (₹) *"><input required type="number" min="1" value={form.chitValue} onChange={e => set("chitValue", e.target.value)} /></Field><Field label="Duration (months) *"><input required type="number" min="1" value={form.durationMonths} onChange={e => set("durationMonths", e.target.value)} /></Field><Field label="Member count *"><input required type="number" min="1" value={form.memberCount} onChange={e => set("memberCount", e.target.value)} /></Field><Field label="Base monthly contribution (₹) *"><input required type="number" min="0.01" step="0.01" value={form.installmentAmount} onChange={e => set("installmentAmount", e.target.value)} /></Field><Field label="Manager commission (₹) *"><input required type="number" min="0" step="0.01" value={form.fixedCommissionAmount} onChange={e => set("fixedCommissionAmount", e.target.value)} /></Field><Field label="Initial lift amount (₹) *"><input required type="number" min="0" step="0.01" value={form.fixedInitialLiftAmount === "" && derivedInitial >= 0 ? derivedInitial : form.fixedInitialLiftAmount} onChange={e => set("fixedInitialLiftAmount", e.target.value)} /></Field><Field label="Monthly lift increment (₹) *"><input required type="number" min="0" step="0.01" value={form.fixedMonthlyIncrement} onChange={e => set("fixedMonthlyIncrement", e.target.value)} /></Field><Field label="Post-lift monthly payment"><input disabled value={money(Number(form.installmentAmount || 0) + Number(form.fixedMonthlyIncrement || 0))} /></Field><Field label="Late penalty per payment (₹)"><input type="number" min="0" value={form.latePenaltyAmount} onChange={e => set("latePenaltyAmount", e.target.value)} /></Field><Field label="Security deposit per member (₹)"><input type="number" min="0" value={form.securityDepositAmount} onChange={e => set("securityDepositAmount", e.target.value)} /></Field></div><p className="notice">Initial lift defaults to chit value minus manager commission, but remains configurable. Each later month adds the configured increment. Post-lift monthly payment is base contribution plus that increment.</p>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button type="button" onClick={onClose}>Cancel</Button><Button className="primary" disabled={busy} type="submit">{busy ? "Saving…" : submitLabel}</Button></div></form></Modal>;
+}
+
+function PredefinedBidSchemeForm({ form, setForm, busy, error, onClose, onSubmit }) {
+  const set = (key, value) => setForm(current => ({ ...current, [key]: value }));
+  const managerFee = Number(form.chitValue || 0) * Number(form.predefinedManagerCommissionPercent || 0) / 100;
+  return <Modal><h2 className="title">Create Fixed Predefined Bid Chit</h2><form onSubmit={onSubmit}><div className="form spacer"><Field label="Scheme name *"><input required value={form.name} onChange={e => set("name", e.target.value)} /></Field><Field label="Chit type"><input value="Fixed Predefined Bid" disabled /></Field><Field label="Start date *"><input required type="date" value={form.startDate} onChange={e => set("startDate", e.target.value)} /></Field><Field label="Chit value (₹) *"><input required type="number" min="1" value={form.chitValue} onChange={e => set("chitValue", e.target.value)} /></Field><Field label="Duration (months) *"><input required type="number" min="1" value={form.durationMonths} onChange={e => set("durationMonths", e.target.value)} /></Field><Field label="Member count *"><input required type="number" min="1" value={form.memberCount} onChange={e => set("memberCount", e.target.value)} /></Field><Field label="Starting EMI (₹) *"><input required type="number" min="0" value={form.predefinedStartingEmi} onChange={e => set("predefinedStartingEmi", e.target.value)} /></Field><Field label="EMI increment (₹) *"><input required type="number" min="0" value={form.predefinedEmiIncrement} onChange={e => set("predefinedEmiIncrement", e.target.value)} /></Field><Field label="Starting COMM (₹) *"><input required type="number" min="0" value={form.predefinedStartingComm} onChange={e => set("predefinedStartingComm", e.target.value)} /></Field><Field label="COMM decrement (₹) *"><input required type="number" min="0" value={form.predefinedCommDecrement} onChange={e => set("predefinedCommDecrement", e.target.value)} /></Field><Field label="Starting auction amount (₹) *"><input required type="number" min="0" value={form.predefinedStartingAuctionAmount} onChange={e => set("predefinedStartingAuctionAmount", e.target.value)} /></Field><Field label="Auction decrement (₹) *"><input required type="number" min="0" value={form.predefinedAuctionDecrement} onChange={e => set("predefinedAuctionDecrement", e.target.value)} /></Field><Field label="Starting bid amount (₹) *"><input required type="number" min="0" value={form.predefinedStartingBidAmount} onChange={e => set("predefinedStartingBidAmount", e.target.value)} /></Field><Field label="Bid increment (₹) *"><input required type="number" min="0" value={form.predefinedBidIncrement} onChange={e => set("predefinedBidIncrement", e.target.value)} /></Field><Field label="Manager commission (%) *"><input required type="number" min="0" max="100" step=".01" value={form.predefinedManagerCommissionPercent} onChange={e => set("predefinedManagerCommissionPercent", e.target.value)} /></Field><Field label="Calculated manager fee"><input disabled value={money(managerFee)} /></Field><Field label="Late penalty (₹)"><input type="number" min="0" value={form.latePenaltyAmount} onChange={e => set("latePenaltyAmount", e.target.value)} /></Field><Field label="Security deposit (₹)"><input type="number" min="0" value={form.securityDepositAmount} onChange={e => set("securityDepositAmount", e.target.value)} /></Field></div><p className="notice">FinTrack generates every month from these values. Net receivable is always calculated as bid amount minus manager commission and cannot be entered manually. Pending months can be edited before finalization.</p>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button type="button" onClick={onClose}>Cancel</Button><Button className="primary" disabled={busy} type="submit">{busy ? "Saving…" : "Create draft"}</Button></div></form></Modal>;
 }
 
 function ChitAddMemberModal({ token, scheme, nextTicket, close, done }) {
@@ -335,6 +347,77 @@ function FixedChitSchemeDetails({ token, scheme, back }) {
   return <main className="shell"><div className="toolbar"><div><Button onClick={back}>← Schemes</Button><h1 className="title spacer">{scheme.name}</h1><p className="copy">Fixed Chit · {scheme.duration_months} months · {data.enrollments.length}/{scheme.member_count} members · {schemeStatusLabel(scheme.status)}</p></div>{scheme.status === "draft" && <Button onClick={() => setMemberOpen(true)}>+ Add member</Button>}</div><div className="tabs spacer">{[["overview", "Overview"], ["schedule", "Fixed Schedule"], ["members", "Members"], ["payments", "Payments"]].map(([id, label]) => <Button key={id} className={`tab ${tab === id ? "active" : ""}`} onClick={() => setTab(id)}>{label}</Button>)}</div>{error && <p className="red small">{error}</p>}{busy ? <p className="small spacer">Loading Fixed Chit…</p> : <>{tab === "overview" && <><div className="grid metrics"><Metric label="Chit type" value="Fixed" color="blue" /><Metric label="Chit value" value={money(scheme.chit_value)} color="gold" /><Metric label="Members" value={`${data.enrollments.length}/${scheme.member_count}`} /><Metric label="Monthly contribution" value={money(scheme.installment_amount)} /><Metric label="Manager commission" value={money(scheme.fixed_commission_amount)} /><Metric label="Monthly lift increment" value={money(scheme.fixed_monthly_increment)} /><Metric label="Current month" value={pending ? `Month ${pending.month_number}` : "Completed"} color="blue" /><Metric label="Remaining months" value={data.fixedLifts.filter(item => item.status === "pending").length} /></div>{pending && <div className="notice">Current lift amount: <strong>{money(pending.lift_amount)}</strong></div>}</>}{tab === "schedule" && <div className="card"><div className="toolbar"><strong>Fixed Chit Schedule</strong><span className="small">{completed.length}/{scheme.duration_months} completed</span></div><div className="table spacer"><table><thead><tr><th>Month</th><th>Lift amount</th><th>Commission</th><th>Monthly payment</th><th>Member</th><th>Status</th><th></th></tr></thead><tbody>{data.fixedLifts.map(item => { const owner = data.enrollments.find(row => row.id === item.enrollment_id); return <tr key={item.id}><td>Month {item.month_number}</td><td>{money(item.lift_amount)}</td><td>{money(item.manager_commission)}</td><td>{money(item.monthly_payment)}</td><td>{owner ? enrollmentName(owner) : "—"}</td><td>{item.status}</td><td>{item.status === "pending" && scheme.status === "active" && <Button className="primary" onClick={() => setLift(item)}>Lift Chit</Button>}</td></tr>; })}</tbody></table></div></div>}{tab === "members" && <div className="card"><div className="toolbar"><strong>Members</strong>{scheme.status === "draft" && <Button className="primary" onClick={() => setMemberOpen(true)}>+ Add member</Button>}</div><div className="table spacer"><table><thead><tr><th>Ticket</th><th>Member</th><th>Lift month</th><th>Lift amount</th><th>Monthly payment</th><th>Remaining</th><th>Payment status</th><th></th></tr></thead><tbody>{data.enrollments.map(item => { const memberLift = completed.find(row => row.enrollment_id === item.id); const payments = data.fixedPayments.filter(row => row.enrollment_id === item.id); const outstanding = payments.reduce((sum, row) => sum + Number(row.amount_due) - Number(row.amount_paid), 0); return <tr key={item.id}><td>{item.ticket_number}</td><td>{enrollmentName(item)}</td><td>{memberLift ? `Month ${memberLift.month_number}` : "—"}</td><td>{memberLift ? money(memberLift.lift_amount) : "—"}</td><td>{memberLift ? money(memberLift.monthly_payment) : "—"}</td><td>{memberLift?.remaining_months ?? "—"}</td><td>{memberLift ? (outstanding > 0 ? `${money(outstanding)} due` : "Paid") : "Not lifted"}</td><td><Button onClick={() => setMember(item)}>View details</Button>{!memberLift && scheme.status === "active" && pending && <Button onClick={() => setLift(pending)}>Lift Chit</Button>}</td></tr>; })}</tbody></table></div></div>}{tab === "payments" && <div className="card"><strong>Fixed Chit Payments</strong><div className="table spacer"><table><thead><tr><th>Member</th><th>Month</th><th>Due date</th><th>Expected</th><th>Paid</th><th>Status</th><th></th></tr></thead><tbody>{data.fixedPayments.map(item => { const owner = data.enrollments.find(row => row.id === item.enrollment_id); return <tr key={item.id}><td>{enrollmentName(owner)}</td><td>Month {item.payment_month}</td><td>{formatChitDate(item.due_date)}</td><td>{money(item.amount_due)}</td><td>{money(item.amount_paid)}</td><td>{item.status}</td><td><Button onClick={() => setPayment(item)}>{item.amount_paid ? "Edit payment" : "Record payment"}</Button>{Number(item.amount_paid) > 0 && <Button className="danger" onClick={() => removePayment(item.id)}>Delete</Button>}</td></tr>; })}</tbody></table>{!data.fixedPayments.length && <p className="small spacer">Payment schedules are created when members lift the chit.</p>}</div></div>}</>}{memberOpen && <ChitAddMemberModal token={token} scheme={scheme} nextTicket={nextTicket} close={() => setMemberOpen(false)} done={async () => { setMemberOpen(false); await refresh(); }} />}{lift && <FixedChitLiftModal token={token} scheme={scheme} lift={lift} enrollments={data.enrollments} usedEnrollmentIds={usedEnrollmentIds} close={() => setLift(null)} done={async () => { setLift(null); await refresh(); }} />}{payment && <FixedChitPaymentModal token={token} payment={payment} close={() => setPayment(null)} done={async () => { setPayment(null); await refresh(); }} />}</main>;
 }
 
+function PredefinedAssignModal({ token, item, enrollments, usedEnrollmentIds, close, done }) {
+  const [enrollmentId, setEnrollmentId] = useState("");
+  const [assignedDate, setAssignedDate] = useState(today());
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const eligible = enrollments.filter(row => row.status === "active" && !usedEnrollmentIds.has(row.id));
+  const submit = async event => {
+    event.preventDefault(); setBusy(true); setError("");
+    try { await finalizePredefinedChitMonth(token, { id: item.id, enrollmentId, assignedDate }); done(); }
+    catch (err) { setError(err.message || "Could not finalize this predefined month."); }
+    finally { setBusy(false); }
+  };
+  return <Modal><h2 className="title">Assign Member — Month {item.month_number}</h2><div className="grid metrics"><Metric label="EMI" value={money(item.emi)} /><Metric label="Bid amount" value={money(item.bid_amount)} color="gold" /><Metric label="Manager commission" value={money(item.manager_commission)} /><Metric label="Net receivable" value={money(item.net_receivable)} color="green" /></div><form onSubmit={submit}><div className="form spacer"><Field className="span" label="Member"><select required value={enrollmentId} onChange={event => setEnrollmentId(event.target.value)}><option value="">Select member</option>{eligible.map(row => <option key={row.id} value={row.id}>Ticket {row.ticket_number} — {enrollmentName(row)}</option>)}</select></Field><Field label="Finalized date"><input required type="date" value={assignedDate} onChange={event => setAssignedDate(event.target.value)} /></Field></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button type="button" onClick={close}>Cancel</Button><Button className="primary" disabled={busy || !eligible.length} type="submit">{busy ? "Finalizing…" : "Finalize assignment"}</Button></div></form></Modal>;
+}
+
+function PredefinedScheduleEditModal({ token, item, close, done }) {
+  const [form, setForm] = useState({ emi: item.emi, commAmount: item.comm_amount, auctionAmount: item.auction_amount, bidAmount: item.bid_amount, managerCommissionPercent: item.manager_commission_percent });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const set = (key, value) => setForm(current => ({ ...current, [key]: value }));
+  const submit = async event => {
+    event.preventDefault(); setBusy(true); setError("");
+    try { await updatePredefinedChitScheduleMonth(token, { id: item.id, ...form }); done(); }
+    catch (err) { setError(err.message || "Could not update this schedule month."); }
+    finally { setBusy(false); }
+  };
+  return <Modal><h2 className="title">Edit Month {item.month_number}</h2><form onSubmit={submit}><div className="form spacer"><Field label="EMI (₹)"><input required type="number" min="0" value={form.emi} onChange={e => set("emi", e.target.value)} /></Field><Field label="COMM (₹)"><input required type="number" min="0" value={form.commAmount} onChange={e => set("commAmount", e.target.value)} /></Field><Field label="Auction amount (₹)"><input required type="number" min="0" value={form.auctionAmount} onChange={e => set("auctionAmount", e.target.value)} /></Field><Field label="Bid amount (₹)"><input required type="number" min="0" value={form.bidAmount} onChange={e => set("bidAmount", e.target.value)} /></Field><Field label="Manager commission (%)"><input required type="number" min="0" max="100" step=".01" value={form.managerCommissionPercent} onChange={e => set("managerCommissionPercent", e.target.value)} /></Field></div><p className="notice">Manager commission and net receivable are recalculated by the backend. Finalized months cannot be edited.</p>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button type="button" onClick={close}>Cancel</Button><Button className="primary" disabled={busy} type="submit">{busy ? "Saving…" : "Save month"}</Button></div></form></Modal>;
+}
+
+function PredefinedPaymentModal({ token, payment, close, done }) {
+  const [form, setForm] = useState({ amountPaid: payment.amount_paid || payment.amount_due, paidDate: payment.paid_date || today(), paymentMode: payment.payment_mode || "upi", paymentReference: payment.payment_reference || "", notes: payment.notes || "" });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const set = (key, value) => setForm(current => ({ ...current, [key]: value }));
+  const submit = async event => {
+    event.preventDefault(); setBusy(true); setError("");
+    try { await updatePredefinedChitPayment(token, { id: payment.id, ...form }); done(); }
+    catch (err) { setError(err.message || "Could not save this payment."); }
+    finally { setBusy(false); }
+  };
+  return <Modal><h2 className="title">{payment.amount_paid ? "Edit" : "Record"} EMI payment</h2><form onSubmit={submit}><div className="form spacer"><Field label="Expected EMI"><input disabled value={money(payment.amount_due)} /></Field><Field label="Amount paid (₹)"><input required type="number" min="0.01" max={payment.amount_due} value={form.amountPaid} onChange={e => set("amountPaid", e.target.value)} /></Field><Field label="Payment date"><input required type="date" value={form.paidDate} onChange={e => set("paidDate", e.target.value)} /></Field><Field label="Payment mode"><select value={form.paymentMode} onChange={e => set("paymentMode", e.target.value)}><option value="cash">Cash</option><option value="upi">UPI</option><option value="cash_upi">Cash + UPI</option></select></Field><Field label="Reference"><input value={form.paymentReference} onChange={e => set("paymentReference", e.target.value)} /></Field><Field label="Notes"><input value={form.notes} onChange={e => set("notes", e.target.value)} /></Field></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button type="button" onClick={close}>Cancel</Button><Button className="primary" disabled={busy} type="submit">{busy ? "Saving…" : "Save payment"}</Button></div></form></Modal>;
+}
+
+function PredefinedBidSchemeDetails({ token, scheme, back }) {
+  const [data, setData] = useState({ enrollments: [], predefinedSchedule: [], predefinedPayments: [] });
+  const [tab, setTab] = useState("overview");
+  const [memberOpen, setMemberOpen] = useState(false);
+  const [assignItem, setAssignItem] = useState(null);
+  const [editItem, setEditItem] = useState(null);
+  const [payment, setPayment] = useState(null);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(true);
+  const refresh = () => loadChitSchemeDetails(token, scheme.id).then(payload => { setData(payload); setBusy(false); setError(""); }).catch(err => { setError(err.message || "Could not load predefined-bid details."); setBusy(false); });
+  useEffect(() => {
+    let ignore = false;
+    loadChitSchemeDetails(token, scheme.id).then(payload => { if (!ignore) { setData(payload); setBusy(false); } }).catch(err => { if (!ignore) { setError(err.message || "Could not load predefined-bid details."); setBusy(false); } });
+    return () => { ignore = true; };
+  }, [scheme.id, token]);
+  const schedule = data.predefinedSchedule || [];
+  const completed = schedule.filter(item => item.status === "completed");
+  const current = schedule.find(item => item.status === "pending");
+  const usedEnrollmentIds = new Set(completed.map(item => item.enrollment_id));
+  const nextTicket = Math.max(0, ...data.enrollments.map(item => Number(item.ticket_number) || 0)) + 1;
+  const removePayment = async id => {
+    if (!window.confirm("Delete this payment?")) return;
+    try { await deletePredefinedChitPayment(token, id); await refresh(); }
+    catch (err) { setError(err.message || "Could not delete payment."); }
+  };
+  return <main className="shell"><div className="toolbar"><div><Button onClick={back}>← Schemes</Button><h1 className="title spacer">{scheme.name}</h1><p className="copy">Fixed Predefined Bid · {scheme.duration_months} months · {data.enrollments.length}/{scheme.member_count} members · {schemeStatusLabel(scheme.status)}</p></div>{scheme.status === "draft" && <Button onClick={() => setMemberOpen(true)}>+ Add member</Button>}</div><div className="tabs spacer">{[["overview", "Overview"], ["schedule", "Monthly Schedule"], ["members", "Members"], ["payments", "Payments"]].map(([id, label]) => <Button key={id} className={`tab ${tab === id ? "active" : ""}`} onClick={() => setTab(id)}>{label}</Button>)}</div>{error && <p className="red small">{error}</p>}{busy ? <p className="small spacer">Loading schedule…</p> : <>{tab === "overview" && <div className="grid metrics"><Metric label="Chit type" value="Fixed Predefined Bid" color="blue" /><Metric label="Chit value" value={money(scheme.chit_value)} color="gold" /><Metric label="Members" value={`${data.enrollments.length}/${scheme.member_count}`} /><Metric label="Duration" value={`${scheme.duration_months} months`} /><Metric label="Commission" value={`${scheme.predefined_manager_commission_percent}%`} /><Metric label="Current month" value={current ? `Month ${current.month_number}` : "Completed"} color="blue" /><Metric label="Current bid" value={current ? money(current.bid_amount) : "—"} color="gold" /><Metric label="Net receivable" value={current ? money(current.net_receivable) : "—"} color="green" /></div>}{tab === "schedule" && <div className="card"><div className="toolbar"><strong>Monthly Schedule</strong><span className="small">{completed.length}/{schedule.length} finalized</span></div><div className="table spacer"><table><thead><tr><th>Month</th><th>EMI</th><th>COMM</th><th>Auction Amount</th><th>Bid Amount</th><th>Manager Commission</th><th>Net Receivable</th><th>Member</th><th>Status</th><th></th></tr></thead><tbody>{schedule.map(item => { const owner = data.enrollments.find(row => row.id === item.enrollment_id); return <tr key={item.id}><td>{item.month_number}</td><td>{money(item.emi)}</td><td>{money(item.comm_amount)}</td><td>{money(item.auction_amount)}</td><td>{money(item.bid_amount)}</td><td>{money(item.manager_commission)} ({item.manager_commission_percent}%)</td><td>{money(item.net_receivable)}</td><td>{owner ? `Ticket ${owner.ticket_number} · ${enrollmentName(owner)}` : "—"}</td><td>{item.status}</td><td>{item.status === "pending" && <Button onClick={() => setEditItem(item)}>Edit</Button>}{item.status === "pending" && scheme.status === "active" && <Button className="primary" onClick={() => setAssignItem(item)}>Assign Member</Button>}</td></tr>; })}</tbody></table></div></div>}{tab === "members" && <div className="card"><div className="toolbar"><strong>Members</strong>{scheme.status === "draft" && <Button className="primary" onClick={() => setMemberOpen(true)}>+ Add member</Button>}</div><div className="table spacer"><table><thead><tr><th>Ticket</th><th>Member</th><th>Lift Month</th><th>EMI</th><th>Bid Amount</th><th>Net Receivable</th><th>Payment Status</th></tr></thead><tbody>{data.enrollments.map(owner => { const item = completed.find(row => row.enrollment_id === owner.id); const payments = data.predefinedPayments.filter(row => row.enrollment_id === owner.id); const balance = payments.reduce((sum, row) => sum + Number(row.amount_due) - Number(row.amount_paid), 0); return <tr key={owner.id}><td>{owner.ticket_number}</td><td>{enrollmentName(owner)}</td><td>{item ? `Month ${item.month_number}` : "—"}</td><td>{item ? money(item.emi) : "—"}</td><td>{item ? money(item.bid_amount) : "—"}</td><td>{item ? money(item.net_receivable) : "—"}</td><td>{item ? (balance > 0 ? `${money(balance)} due` : "Paid") : "Not assigned"}</td></tr>; })}</tbody></table></div></div>}{tab === "payments" && <div className="card"><strong>Member EMI Payments</strong><div className="table spacer"><table><thead><tr><th>Member</th><th>Month</th><th>Expected EMI</th><th>Paid</th><th>Balance</th><th>Date</th><th>Mode</th><th>Status</th><th></th></tr></thead><tbody>{data.predefinedPayments.map(item => { const owner = data.enrollments.find(row => row.id === item.enrollment_id); return <tr key={item.id}><td>{enrollmentName(owner)}</td><td>{item.payment_month}</td><td>{money(item.amount_due)}</td><td>{money(item.amount_paid)}</td><td>{money(Number(item.amount_due) - Number(item.amount_paid))}</td><td>{formatChitDate(item.paid_date || item.due_date)}</td><td>{item.payment_mode || "—"}</td><td>{item.status}</td><td><Button onClick={() => setPayment(item)}>{item.amount_paid ? "Edit" : "Record"} Payment</Button>{Number(item.amount_paid) > 0 && <Button className="danger" onClick={() => removePayment(item.id)}>Delete</Button>}</td></tr>; })}</tbody></table>{!data.predefinedPayments.length && <p className="small spacer">Payment schedules appear after a member is assigned to a finalized month.</p>}</div></div>}</>}{memberOpen && <ChitAddMemberModal token={token} scheme={scheme} nextTicket={nextTicket} close={() => setMemberOpen(false)} done={async () => { setMemberOpen(false); await refresh(); }} />}{assignItem && <PredefinedAssignModal token={token} item={assignItem} enrollments={data.enrollments} usedEnrollmentIds={usedEnrollmentIds} close={() => setAssignItem(null)} done={async () => { setAssignItem(null); await refresh(); }} />}{editItem && <PredefinedScheduleEditModal token={token} item={editItem} close={() => setEditItem(null)} done={async () => { setEditItem(null); await refresh(); }} />}{payment && <PredefinedPaymentModal token={token} payment={payment} close={() => setPayment(null)} done={async () => { setPayment(null); await refresh(); }} />}</main>;
+}
+
 function AuctionChitSchemeDetails({ token, scheme, back }) {
   const [data, setData] = useState({ enrollments: [], cycles: [], bids: [], installments: [] });
   const [busy, setBusy] = useState(true);
@@ -393,18 +476,19 @@ function AuctionChitSchemeDetails({ token, scheme, back }) {
 }
 
 function ChitSchemeDetails(props) {
-  return props.scheme.chit_type === CHIT_TYPES.FIXED
-    ? <FixedChitSchemeDetails {...props} />
-    : <AuctionChitSchemeDetails {...props} />;
+  if (props.scheme.chit_type === CHIT_TYPES.FIXED) return <FixedChitSchemeDetails {...props} />;
+  if (props.scheme.chit_type === CHIT_TYPES.FIXED_PREDEFINED_BID) return <PredefinedBidSchemeDetails {...props} />;
+  return <AuctionChitSchemeDetails {...props} />;
 }
 
-const emptySchemeForm = (chitType = CHIT_TYPES.AUCTION) => ({ chitType, name: "", chitValue: "", durationMonths: "", memberCount: "", installmentAmount: "", commissionPercent: "", fixedCommissionAmount: "", fixedInitialLiftAmount: "", fixedMonthlyIncrement: "", startDate: today(), minBidPercent: "70", maxBidPercent: "95", latePenaltyAmount: "0", securityDepositAmount: "0" });
+const emptySchemeForm = (chitType = CHIT_TYPES.AUCTION) => ({ chitType, name: "", chitValue: "", durationMonths: "", memberCount: "", installmentAmount: "", commissionPercent: "", fixedCommissionAmount: "", fixedInitialLiftAmount: "", fixedMonthlyIncrement: "", predefinedStartingEmi: "", predefinedEmiIncrement: "", predefinedStartingComm: "", predefinedCommDecrement: "", predefinedStartingAuctionAmount: "", predefinedAuctionDecrement: "", predefinedStartingBidAmount: "", predefinedBidIncrement: "", predefinedManagerCommissionPercent: "", startDate: today(), minBidPercent: "70", maxBidPercent: "95", latePenaltyAmount: "0", securityDepositAmount: "0" });
 
 export function ChitFundPage({ token, close }) {
   const [schemes, setSchemes] = useState([]);
   const [cycles, setCycles] = useState([]);
   const [enrollments, setEnrollments] = useState([]);
   const [fixedLifts, setFixedLifts] = useState([]);
+  const [predefinedSchedule, setPredefinedSchedule] = useState([]);
   const [selected, setSelected] = useState(null);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState("");
@@ -416,6 +500,7 @@ export function ChitFundPage({ token, close }) {
     setCycles(payload.cycles);
     setEnrollments(payload.enrollments);
     setFixedLifts(payload.fixedLifts || []);
+    setPredefinedSchedule(payload.predefinedSchedule || []);
     setError("");
     setBusy(false);
   }).catch(err => { setError(err.message || "Could not load Chit Fund schemes."); setBusy(false); });
@@ -427,6 +512,7 @@ export function ChitFundPage({ token, close }) {
       setCycles(payload.cycles);
       setEnrollments(payload.enrollments);
       setFixedLifts(payload.fixedLifts || []);
+      setPredefinedSchedule(payload.predefinedSchedule || []);
       setError("");
       setBusy(false);
     }).catch(err => { if (!ignore) { setError(err.message || "Could not load Chit Fund schemes."); setBusy(false); } });
@@ -440,13 +526,29 @@ export function ChitFundPage({ token, close }) {
     const schemeFixedLifts = fixedLifts.filter(item => item.scheme_id === scheme.id);
     const fixedCurrent = schemeFixedLifts.find(item => item.status === "pending") || schemeFixedLifts.at(-1);
     const fixedWinner = members.find(item => item.id === fixedCurrent?.enrollment_id);
-    return { scheme, current, members, winner, fixedCurrent, fixedWinner };
-  }), [schemes, cycles, enrollments, fixedLifts]);
+    const schemePredefined = predefinedSchedule.filter(item => item.scheme_id === scheme.id);
+    const predefinedCurrent = schemePredefined.find(item => item.status === "pending") || schemePredefined.at(-1);
+    const predefinedWinner = members.find(item => item.id === predefinedCurrent?.enrollment_id);
+    return { scheme, current, members, winner, fixedCurrent, fixedWinner, predefinedCurrent, predefinedWinner };
+  }), [schemes, cycles, enrollments, fixedLifts, predefinedSchedule]);
   const submitScheme = async event => {
     event.preventDefault();
     setBusy(true); setError("");
     try {
-      if (schemeForm.chitType === CHIT_TYPES.FIXED) {
+      if (schemeForm.chitType === CHIT_TYPES.FIXED_PREDEFINED_BID) {
+        validatePredefinedBidChit({
+          chitValue: Number(schemeForm.chitValue), memberCount: Number(schemeForm.memberCount),
+          durationMonths: Number(schemeForm.durationMonths), startingEmi: Number(schemeForm.predefinedStartingEmi),
+          emiIncrement: Number(schemeForm.predefinedEmiIncrement), startingComm: Number(schemeForm.predefinedStartingComm),
+          commDecrement: Number(schemeForm.predefinedCommDecrement),
+          startingAuctionAmount: Number(schemeForm.predefinedStartingAuctionAmount),
+          auctionAmountDecrement: Number(schemeForm.predefinedAuctionDecrement),
+          startingBidAmount: Number(schemeForm.predefinedStartingBidAmount),
+          bidAmountIncrement: Number(schemeForm.predefinedBidIncrement),
+          managerCommissionPercent: Number(schemeForm.predefinedManagerCommissionPercent),
+        });
+        await createPredefinedBidChitScheme(token, schemeForm);
+      } else if (schemeForm.chitType === CHIT_TYPES.FIXED) {
         const fixedForm = {
           ...schemeForm,
           fixedInitialLiftAmount: schemeForm.fixedInitialLiftAmount === ""
@@ -490,18 +592,20 @@ export function ChitFundPage({ token, close }) {
   };
   if (selected) return <ChitSchemeDetails token={token} scheme={selected} back={() => { setSelected(null); refresh(); }} />;
   return <main className="shell">
-    <div className="toolbar"><div><Button onClick={close}>← Dashboard</Button><h1 className="title spacer">Chit Fund</h1><p className="copy">Schemes only. Auction Chits retain bidding and live bidding. Fixed Chits use a predetermined monthly lift schedule.</p></div><Button className="primary" onClick={() => setModal("choose-type")}>+ New scheme</Button></div>
+    <div className="toolbar"><div><Button onClick={close}>← Dashboard</Button><h1 className="title spacer">Chit Fund</h1><p className="copy">Schemes only. Auction Chits use live bidding, Fixed Chits use fixed lifts, and Fixed Predefined Bid Chits use an editable generated schedule.</p></div><Button className="primary" onClick={() => setModal("choose-type")}>+ New scheme</Button></div>
     {error && <p className="red small">{error}</p>}
     {notice && <p className="green small">{notice}</p>}
     {busy && <p className="small spacer">Loading Chit Fund schemes…</p>}
     <div className="card spacer"><div className="toolbar"><strong>Schemes</strong><span className="small">{schemes.length} schemes</span></div>
-      <div className="table spacer"><table><thead><tr><th>Scheme</th><th>Chit type</th><th>Chit value</th><th>Monthly contribution</th><th>Members</th><th>Current month</th><th>Current amount</th><th>Current member</th><th>Status</th><th></th></tr></thead><tbody>{rows.map(({ scheme, current, members, winner, fixedCurrent, fixedWinner }) => { const fixed = scheme.chit_type === CHIT_TYPES.FIXED; return <tr key={scheme.id}><td><button className="link-button" onClick={() => setSelected(scheme)}>{scheme.name}</button></td><td>{fixed ? "Fixed" : "Auction"}</td><td>{money(scheme.chit_value)}</td><td>{money(scheme.installment_amount)}</td><td>{members.length}/{scheme.member_count}</td><td>{fixed ? (fixedCurrent ? `Month ${fixedCurrent.month_number}` : "—") : (current ? `Month ${current.cycle_number}` : "—")}</td><td>{fixed ? (fixedCurrent ? money(fixedCurrent.lift_amount) : "—") : (current ? money(current.winning_bid_amount) : "—")}</td><td>{fixed ? (fixedWinner ? enrollmentName(fixedWinner) : "—") : (winner ? enrollmentName(winner) : "—")}</td><td><Badge status={schemeStatusLabel(scheme.status)} /></td><td>{scheme.status === "draft" && <><Button onClick={() => editScheme(scheme)}>Edit</Button><Button className="primary" onClick={() => activate(scheme)}>Activate</Button></>}</td></tr>; })}</tbody></table></div>
+      <div className="table spacer"><table><thead><tr><th>Scheme</th><th>Chit type</th><th>Chit value</th><th>Members</th><th>Duration</th><th>Current month</th><th>Current bid / lift</th><th>Current member</th><th>Net receivable</th><th>Status</th><th></th></tr></thead><tbody>{rows.map(({ scheme, current, members, winner, fixedCurrent, fixedWinner, predefinedCurrent, predefinedWinner }) => { const fixed = scheme.chit_type === CHIT_TYPES.FIXED; const predefined = scheme.chit_type === CHIT_TYPES.FIXED_PREDEFINED_BID; const activeRow = predefined ? predefinedCurrent : fixed ? fixedCurrent : current; const activeMember = predefined ? predefinedWinner : fixed ? fixedWinner : winner; return <tr key={scheme.id}><td><button className="link-button" onClick={() => setSelected(scheme)}>{scheme.name}</button></td><td>{predefined ? "Fixed Predefined Bid" : fixed ? "Fixed" : "Auction"}</td><td>{money(scheme.chit_value)}</td><td>{members.length}/{scheme.member_count}</td><td>{scheme.duration_months} months</td><td>{activeRow ? `Month ${activeRow.month_number || activeRow.cycle_number}` : "—"}</td><td>{activeRow ? money(predefined ? activeRow.bid_amount : fixed ? activeRow.lift_amount : activeRow.winning_bid_amount) : "—"}</td><td>{activeMember ? enrollmentName(activeMember) : "—"}</td><td>{predefined && activeRow ? money(activeRow.net_receivable) : "—"}</td><td><Badge status={schemeStatusLabel(scheme.status)} /></td><td>{scheme.status === "draft" && <>{!predefined && <Button onClick={() => editScheme(scheme)}>Edit</Button>}<Button className="primary" onClick={() => activate(scheme)}>Activate</Button></>}</td></tr>; })}</tbody></table></div>
       {!schemes.length && !busy && <p className="small">No Chit Fund schemes yet.</p>}
     </div>
     {modal === "choose-type" && <ChitTypeChooser close={() => setModal(null)} choose={type => { setSchemeForm(emptySchemeForm(type)); setModal("scheme"); }} />}
-    {(modal === "scheme" || modal === "edit-scheme") && (schemeForm.chitType === CHIT_TYPES.FIXED
-      ? <FixedChitSchemeForm title={modal === "edit-scheme" ? "Edit Fixed Chit scheme" : "Create Fixed Chit scheme"} form={schemeForm} setForm={setSchemeForm} busy={busy} error={error} onClose={() => setModal(null)} onSubmit={submitScheme} submitLabel={modal === "edit-scheme" ? "Save changes" : "Create draft"} />
-      : <ChitSchemeForm title={modal === "edit-scheme" ? "Edit Auction Chit scheme" : "Create Auction Chit scheme"} form={schemeForm} setForm={setSchemeForm} busy={busy} error={error} onClose={() => setModal(null)} onSubmit={submitScheme} submitLabel={modal === "edit-scheme" ? "Save changes" : "Create draft"} />)}
+    {(modal === "scheme" || modal === "edit-scheme") && (schemeForm.chitType === CHIT_TYPES.FIXED_PREDEFINED_BID
+      ? <PredefinedBidSchemeForm form={schemeForm} setForm={setSchemeForm} busy={busy} error={error} onClose={() => setModal(null)} onSubmit={submitScheme} />
+      : schemeForm.chitType === CHIT_TYPES.FIXED
+        ? <FixedChitSchemeForm title={modal === "edit-scheme" ? "Edit Fixed Chit scheme" : "Create Fixed Chit scheme"} form={schemeForm} setForm={setSchemeForm} busy={busy} error={error} onClose={() => setModal(null)} onSubmit={submitScheme} submitLabel={modal === "edit-scheme" ? "Save changes" : "Create draft"} />
+        : <ChitSchemeForm title={modal === "edit-scheme" ? "Edit Auction Chit scheme" : "Create Auction Chit scheme"} form={schemeForm} setForm={setSchemeForm} busy={busy} error={error} onClose={() => setModal(null)} onSubmit={submitScheme} submitLabel={modal === "edit-scheme" ? "Save changes" : "Create draft"} />)}
   </main>;
 }
 
@@ -512,6 +616,14 @@ function FixedChitCustomerPortal({ state, logout }) {
   const paid = payments.reduce((sum, item) => sum + Number(item.amount_paid || 0), 0);
   const due = payments.reduce((sum, item) => sum + Number(item.amount_due || 0), 0);
   return <main className="shell" style={{ maxWidth: 760 }}><header className="top"><div><div className="brand">FinTrack</div><div className="sub">Fixed Chit customer dashboard</div></div><Button onClick={logout}>Log out</Button></header><h1 className="title">Hello, {state.memberName || "Member"}</h1><p className="copy">{scheme.name || "Fixed Chit"} · Ticket {state.ticketNumber} · Portal {state.portalId}</p><p className="notice">This is a Fixed Chit. Lift amounts follow the predetermined schedule; live bidding is not used.</p><div className="grid metrics"><Metric label="Chit value" value={money(scheme.chit_value)} color="gold" /><Metric label="Monthly contribution" value={money(scheme.installment_amount)} /><Metric label="Your lift month" value={lift ? `Month ${lift.month_number}` : "Not assigned"} color="blue" /><Metric label="Your lift amount" value={lift ? money(lift.lift_amount) : "—"} color="gold" /><Metric label="Monthly payment" value={lift ? money(lift.monthly_payment) : "—"} /><Metric label="Remaining payments" value={lift?.remaining_months ?? "—"} /><Metric label="Outstanding" value={money(Math.max(0, due - paid))} color="red" /></div><div className="card spacer"><strong>Your Fixed Chit payment schedule</strong><div className="table spacer"><table><thead><tr><th>Month</th><th>Due date</th><th>Expected</th><th>Paid</th><th>Status</th></tr></thead><tbody>{payments.map(item => <tr key={item.id}><td>Month {item.payment_month}</td><td>{formatChitDate(item.due_date)}</td><td>{money(item.amount_due)}</td><td>{money(item.amount_paid)}</td><td>{item.status}</td></tr>)}</tbody></table>{!payments.length && <p className="small spacer">{lift ? "No remaining payments." : "Your payment schedule will appear after your lift is finalized."}</p>}</div></div></main>;
+}
+
+function PredefinedBidCustomerPortal({ state, logout }) {
+  const scheme = state.scheme || {};
+  const item = state.predefinedMonth;
+  const payments = state.predefinedPayments || [];
+  const balance = payments.reduce((sum, row) => sum + Number(row.amount_due) - Number(row.amount_paid), 0);
+  return <main className="shell" style={{ maxWidth: 800 }}><header className="top"><div><div className="brand">FinTrack</div><div className="sub">Fixed Predefined Bid customer dashboard</div></div><Button onClick={logout}>Log out</Button></header><h1 className="title">Hello, {state.memberName || "Member"}</h1><p className="copy">{scheme.name} · Ticket {state.ticketNumber}</p><p className="notice">This Chit uses a predefined monthly schedule. Live bidding is not used.</p><div className="grid metrics"><Metric label="Lift month" value={item ? `Month ${item.month_number}` : "Not assigned"} color="blue" /><Metric label="EMI" value={item ? money(item.emi) : "—"} /><Metric label="COMM" value={item ? money(item.comm_amount) : "—"} /><Metric label="Auction amount" value={item ? money(item.auction_amount) : "—"} /><Metric label="Bid amount" value={item ? money(item.bid_amount) : "—"} color="gold" /><Metric label="Manager commission" value={item ? money(item.manager_commission) : "—"} /><Metric label="Net receivable" value={item ? money(item.net_receivable) : "—"} color="green" /><Metric label="Payment balance" value={money(balance)} color="red" /></div><div className="card spacer"><strong>Payment history</strong><div className="table spacer"><table><thead><tr><th>Month</th><th>Expected EMI</th><th>Paid</th><th>Balance</th><th>Date</th><th>Mode</th><th>Status</th></tr></thead><tbody>{payments.map(row => <tr key={row.id}><td>{row.payment_month}</td><td>{money(row.amount_due)}</td><td>{money(row.amount_paid)}</td><td>{money(Number(row.amount_due) - Number(row.amount_paid))}</td><td>{formatChitDate(row.paid_date || row.due_date)}</td><td>{row.payment_mode || "—"}</td><td>{row.status}</td></tr>)}</tbody></table>{!payments.length && <p className="small spacer">No payment schedule is available yet.</p>}</div></div></main>;
 }
 
 export function ChitCustomerPortal({ session, logout }) {
@@ -529,6 +641,7 @@ export function ChitCustomerPortal({ session, logout }) {
   }, [token]);
   const scheme = state.scheme || {};
   if (scheme.chit_type === CHIT_TYPES.FIXED) return <FixedChitCustomerPortal state={state} logout={logout} />;
+  if (scheme.chit_type === CHIT_TYPES.FIXED_PREDEFINED_BID) return <PredefinedBidCustomerPortal state={state} logout={logout} />;
   const auction = state.auction;
   const leading = state.leadingBid || state.leading_bid;
   const bids = state.bids || [];

@@ -1,6 +1,10 @@
 import { roundMoney } from "./calculations.js";
 
-export const CHIT_TYPES = Object.freeze({ AUCTION: "auction", FIXED: "fixed" });
+export const CHIT_TYPES = Object.freeze({
+  AUCTION: "auction",
+  FIXED: "fixed",
+  FIXED_PREDEFINED_BID: "fixed_predefined_bid",
+});
 
 export function fixedChitMonth({
   month,
