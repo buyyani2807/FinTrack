@@ -163,6 +163,17 @@ export const enrollChitMember = (token, enrollment) => supabase.rpc("chit_enroll
   input_guarantor_name: enrollment.guarantorName, input_guarantor_phone: enrollment.guarantorPhone,
   input_guarantor_address: enrollment.guarantorAddress || null, input_security_deposit: Number(enrollment.securityDeposit || 0),
 }, token);
+export const updateEnrolledChitMember = (token, enrollment) => supabase.rpc("chit_update_enrolled_member", {
+  input_enrollment_id: enrollment.id, input_member_name: enrollment.name,
+  input_member_phone: enrollment.phone, input_member_address: enrollment.address || null,
+  input_guarantor_name: enrollment.guarantorName,
+  input_guarantor_phone: enrollment.guarantorPhone,
+  input_guarantor_address: enrollment.guarantorAddress || null,
+  input_security_deposit: Number(enrollment.securityDeposit || 0),
+}, token);
+export const deleteEnrolledChitMember = (token, enrollmentId) => supabase.rpc("chit_delete_enrolled_member", {
+  input_enrollment_id: enrollmentId,
+}, token);
 export const activateChitScheme = (token, schemeId) => supabase.rpc("chit_activate_scheme", { input_scheme_id: schemeId }, token);
 export const recordChitMonthlyBid = (token, bid) => supabase.rpc("chit_record_monthly_bid", {
   input_scheme_id: bid.schemeId, input_cycle_number: Number(bid.cycleNumber), input_cycle_date: bid.cycleDate,

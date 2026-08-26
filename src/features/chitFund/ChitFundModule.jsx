@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { createRoot } from "react-dom/client";
 import {
   activateChitScheme,
   chitCustomerLiveState,
@@ -7,6 +8,7 @@ import {
   createChitScheme,
   createFixedChitScheme,
   createPredefinedBidChitScheme,
+  deleteEnrolledChitMember,
   deleteChitInstallmentPayment,
   deleteFixedChitPayment,
   deletePredefinedChitPayment,
@@ -25,6 +27,7 @@ import {
   updateChitInstallmentPayment,
   updateFixedChitPayment,
   updateFixedChitScheme,
+  updateEnrolledChitMember,
   updatePredefinedChitPayment,
   updatePredefinedChitScheduleMonth,
   updateChitScheme,
@@ -102,6 +105,56 @@ function ChitAddMemberModal({ token, scheme, nextTicket, close, done }) {
     finally { setBusy(false); }
   };
   return <Modal><h2 className="title">Add member to {scheme.name}</h2><p className="copy">This member will be stored against this scheme only.</p><form onSubmit={submit}><div className="form spacer"><Field label="Member name"><input required value={f.name} onChange={e => set("name", e.target.value)} /></Field><Field label="Mobile number"><input required value={f.phone} onChange={e => set("phone", e.target.value)} /></Field><Field className="span" label="Address"><input value={f.address} onChange={e => set("address", e.target.value)} /></Field><Field label="Ticket number"><input required type="number" min="1" value={f.ticket} onChange={e => set("ticket", e.target.value)} /></Field><Field label="Guarantor name"><input required value={f.guarantorName} onChange={e => set("guarantorName", e.target.value)} /></Field><Field label="Guarantor phone"><input required value={f.guarantorPhone} onChange={e => set("guarantorPhone", e.target.value)} /></Field><Field className="span" label="Guarantor address"><input value={f.guarantorAddress} onChange={e => set("guarantorAddress", e.target.value)} /></Field><Field label="Security deposit (₹)"><input type="number" min="0" value={f.deposit} onChange={e => set("deposit", e.target.value)} /></Field></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button type="button" onClick={close}>Cancel</Button><Button className="primary" disabled={busy} type="submit">{busy ? "Saving…" : "Add member"}</Button></div></form></Modal>;
+}
+
+function ChitEditMemberModal({ token, enrollment, close, done }) {
+  const [form, setForm] = useState({
+    name: enrollmentName(enrollment), phone: enrollment.chit_members?.phone || "",
+    address: enrollment.chit_members?.address || "", guarantorName: enrollment.guarantor_name || "",
+    guarantorPhone: enrollment.guarantor_phone || "", guarantorAddress: enrollment.guarantor_address || "",
+    securityDeposit: String(enrollment.security_deposit_amount || 0),
+  });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const set = (key, value) => setForm(current => ({ ...current, [key]: value }));
+  const submit = async event => {
+    event.preventDefault(); setBusy(true); setError("");
+    try { await updateEnrolledChitMember(token, { id: enrollment.id, ...form }); done(); }
+    catch (err) { setError(err.message || "Could not update this member."); }
+    finally { setBusy(false); }
+  };
+  return <Modal><h2 className="title">Edit Chit member</h2><form onSubmit={submit}><div className="form spacer"><Field label="Member name"><input required value={form.name} onChange={e => set("name", e.target.value)} /></Field><Field label="Mobile number"><input required value={form.phone} onChange={e => set("phone", e.target.value)} /></Field><Field className="span" label="Address"><input value={form.address} onChange={e => set("address", e.target.value)} /></Field><Field label="Guarantor name"><input required value={form.guarantorName} onChange={e => set("guarantorName", e.target.value)} /></Field><Field label="Guarantor phone"><input required value={form.guarantorPhone} onChange={e => set("guarantorPhone", e.target.value)} /></Field><Field className="span" label="Guarantor address"><input value={form.guarantorAddress} onChange={e => set("guarantorAddress", e.target.value)} /></Field><Field label="Security deposit (₹)"><input type="number" min="0" value={form.securityDeposit} onChange={e => set("securityDeposit", e.target.value)} /></Field></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button type="button" onClick={close}>Cancel</Button><Button className="primary" disabled={busy} type="submit">{busy ? "Saving…" : "Save member"}</Button></div></form></Modal>;
+}
+
+function ChitMemberActions({ scheme, enrollment, edit, remove }) {
+  const canDelete = scheme.status === "draft";
+  return <><Button onClick={() => edit(enrollment)}>Edit</Button><Button className="danger" disabled={!canDelete} title={canDelete ? "Delete member" : "Members with active or historical schemes cannot be deleted"} onClick={() => canDelete && remove(enrollment)}>Delete</Button></>;
+}
+
+function ChitMemberManager({ token, scheme, enrollments, changed }) {
+  const [open, setOpen] = useState(false);
+  const [editMember, setEditMember] = useState(null);
+  const [error, setError] = useState("");
+  const remove = async enrollment => {
+    if (!window.confirm(`Delete ${enrollmentName(enrollment)} from this draft scheme?`)) return;
+    try { await deleteEnrolledChitMember(token, enrollment.id); await changed(); }
+    catch (err) { setError(err.message || "Could not delete this member."); }
+  };
+  return <><Button onClick={() => setOpen(true)}>Manage members</Button>{open && <Modal><div className="toolbar"><h2 className="title">Manage members</h2><Button onClick={() => setOpen(false)}>Close</Button></div>{error && <p className="red small">{error}</p>}<div className="table spacer"><table><thead><tr><th>Ticket</th><th>Member</th><th>Phone</th><th>Guarantor</th><th></th></tr></thead><tbody>{enrollments.map(enrollment => <tr key={enrollment.id}><td>{enrollment.ticket_number}</td><td>{enrollmentName(enrollment)}</td><td>{enrollment.chit_members?.phone || "—"}</td><td>{enrollment.guarantor_name || "—"}</td><td><ChitMemberActions scheme={scheme} enrollment={enrollment} edit={setEditMember} remove={remove} /></td></tr>)}</tbody></table></div>{!enrollments.length && <p className="small spacer">No members in this scheme.</p>}</Modal>}{editMember && <ChitEditMemberModal token={token} enrollment={editMember} close={() => setEditMember(null)} done={async () => { setEditMember(null); await changed(); }} />}</>;
+}
+
+function useChitMemberManagerPortal({ enabled, token, scheme, enrollments, changed }) {
+  useEffect(() => {
+    if (!enabled) return undefined;
+    const toolbar = [...document.querySelectorAll(".shell .card .toolbar")]
+      .find(node => node.querySelector("strong")?.textContent.trim() === "Members");
+    if (!toolbar) return undefined;
+    const host = document.createElement("div");
+    toolbar.appendChild(host);
+    const root = createRoot(host);
+    root.render(<ChitMemberManager token={token} scheme={scheme} enrollments={enrollments} changed={changed} />);
+    return () => { root.unmount(); host.remove(); };
+  }, [enabled, token, scheme, enrollments, changed]);
 }
 
 function ChitBidModal({ token, scheme, enrollments, nextMonth, close, done }) {
@@ -331,6 +384,7 @@ function FixedChitSchemeDetails({ token, scheme, back }) {
       .catch(err => { if (!ignore) { setError(err.message || "Could not load Fixed Chit details."); setBusy(false); } });
     return () => { ignore = true; };
   }, [scheme.id, token]);
+  useChitMemberManagerPortal({ enabled: tab === "members" && !member, token, scheme, enrollments: data.enrollments, changed: refresh });
   const nextTicket = Math.max(0, ...data.enrollments.map(item => Number(item.ticket_number) || 0)) + 1;
   const completed = data.fixedLifts.filter(item => item.status === "completed");
   const pending = data.fixedLifts.find(item => item.status === "pending");
@@ -405,6 +459,7 @@ function PredefinedBidSchemeDetails({ token, scheme, back }) {
     loadChitSchemeDetails(token, scheme.id).then(payload => { if (!ignore) { setData(payload); setBusy(false); } }).catch(err => { if (!ignore) { setError(err.message || "Could not load predefined-bid details."); setBusy(false); } });
     return () => { ignore = true; };
   }, [scheme.id, token]);
+  useChitMemberManagerPortal({ enabled: tab === "members", token, scheme, enrollments: data.enrollments, changed: refresh });
   const schedule = data.predefinedSchedule || [];
   const completed = schedule.filter(item => item.status === "completed");
   const current = schedule.find(item => item.status === "pending");
@@ -434,6 +489,7 @@ function AuctionChitSchemeDetails({ token, scheme, back }) {
     loadChitSchemeDetails(token, scheme.id).then(payload => { if (!ignore) { setData(payload); setError(""); setBusy(false); } }).catch(err => { if (!ignore) { setError(err.message || "Could not load scheme details."); setBusy(false); } });
     return () => { ignore = true; };
   }, [scheme.id, token]);
+  useChitMemberManagerPortal({ enabled: tab === "members" && !member, token, scheme, enrollments: data.enrollments, changed: refresh });
   const current = latestCycle(data.cycles);
   const winner = data.enrollments.find(item => item.id === current?.winning_enrollment_id);
   const eligibleForManualBid = data.enrollments.filter(item => !data.bids.some(bid => bid.enrollment_id === item.id && bid.status === "winner"));
