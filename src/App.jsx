@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "./lib/supabase";
 import { monthlyInterestOnBalance } from "./features/finance/calculations";
 import { ChitCustomerPortal, ChitFundPage } from "./features/chitFund/ChitFundModule";
@@ -730,6 +731,7 @@ function ActiveChitSchemes({ schemes = [] }) {
 function FinancierTools({ loans, token, activeChitSchemes = [], onCreateAgent, onLoadAgents, onAssignAgent, onUpdateAgent }) {
   const [panel, setPanel] = useState(null);
   const [selectedModule, setSelectedModule] = useState("all");
+  const [actionHost, setActionHost] = useState(null);
   const [dashboardChitSchemes, setDashboardChitSchemes] = useState(activeChitSchemes);
   useEffect(() => {
     loadChitDashboard(token)
@@ -743,7 +745,12 @@ function FinancierTools({ loans, token, activeChitSchemes = [], onCreateAgent, o
     window.addEventListener("fintrack-open-dashboard", showDashboard);
     return () => { window.removeEventListener("fintrack-open-customers", showCustomers); window.removeEventListener("fintrack-open-dashboard", showDashboard); };
   }, []);
-  return <div className="financier-tools"><style>{`.agents-shortcut{position:fixed;top:124px;right:-30px;z-index:4}@media(max-width:680px){.agents-shortcut{position:static;margin:0 16px 16px;display:block}}`}</style>
+  useEffect(() => {
+    setActionHost(panel === null && selectedModule === "daily"
+      ? document.querySelector(".shell > .toolbar > .tabs")
+      : null);
+  }, [panel, selectedModule]);
+  return <div className="financier-tools">
     <aside className="financier-nav">
       <div className="nav-title">FinTrack</div>
       <Button className={panel === "dashboard" || (panel === null && selectedModule === "all") ? "tab active" : ""} onClick={() => { setSelectedModule("all"); setPanel("dashboard"); window.dispatchEvent(new Event("fintrack-open-dashboard")); window.scrollTo({ top: 0, behavior: "smooth" }); }}>▦ Dashboard</Button>
@@ -755,7 +762,7 @@ function FinancierTools({ loans, token, activeChitSchemes = [], onCreateAgent, o
       <Button className={panel === "chit" ? "tab active" : ""} onClick={() => setPanel("chit")}>◎ Chit Fund</Button>
       <div className="nav-footer">Financier workspace</div>
     </aside>
-    {panel === null && selectedModule === "daily" && <Button className="agents-shortcut" onClick={() => setPanel("agents")}>◉ Agents</Button>}
+    {actionHost && createPortal(<Button onClick={() => setPanel("agents")}>Agents</Button>, actionHost)}
     {panel === "reports" && <PortfolioReport loans={loans} close={() => setPanel(null)} />}
     {panel === "agents" && <CollectionStaffPage loans={loans} close={() => setPanel(null)} loadAgents={onLoadAgents} createAgent={onCreateAgent} assignAgent={onAssignAgent} updateAgent={onUpdateAgent} />}
     {panel === "chit" && <div className="chit-dashboard" style={{ position: "fixed", inset: 0, zIndex: 5, overflow: "auto", background: C.bg }}><ChitFundPage token={token} close={() => setPanel(null)} /></div>}
