@@ -743,19 +743,19 @@ function FinancierTools({ loans, token, activeChitSchemes = [], onCreateAgent, o
     window.addEventListener("fintrack-open-dashboard", showDashboard);
     return () => { window.removeEventListener("fintrack-open-customers", showCustomers); window.removeEventListener("fintrack-open-dashboard", showDashboard); };
   }, []);
-  return <div className="financier-tools">
+  return <div className="financier-tools"><style>{`.agents-shortcut{position:fixed;top:82px;right:44px;z-index:4}@media(max-width:680px){.agents-shortcut{position:static;margin:0 16px 16px;display:block}}`}</style>
     <aside className="financier-nav">
       <div className="nav-title">FinTrack</div>
       <Button className={panel === "dashboard" || (panel === null && selectedModule === "all") ? "tab active" : ""} onClick={() => { setSelectedModule("all"); setPanel("dashboard"); window.dispatchEvent(new Event("fintrack-open-dashboard")); window.scrollTo({ top: 0, behavior: "smooth" }); }}>▦ Dashboard</Button>
       <div className="nav-title" style={{ fontSize: 11, paddingBottom: 4 }}>Finance modules</div>
       <Button className={panel === null && selectedModule === "daily" ? "tab active" : ""} onClick={() => { setSelectedModule("daily"); setPanel(null); window.dispatchEvent(new CustomEvent("fintrack-open-module", { detail: "daily" })); }}>▣ Daily Finance</Button>
-      <div style={{ marginLeft: 12 }}><Button className={panel === "agents" ? "tab active" : ""} onClick={() => { setSelectedModule("daily"); setPanel("agents"); }}>◉ Agents</Button></div>
       <Button className={panel === null && selectedModule === "monthly" ? "tab active" : ""} onClick={() => { setSelectedModule("monthly"); setPanel(null); window.dispatchEvent(new CustomEvent("fintrack-open-module", { detail: "monthly" })); }}>◫ Monthly Finance</Button>
       <Button className={panel === "reports" ? "tab active" : ""} onClick={() => setPanel("reports")}>↧ Reports</Button>
       <Button className={panel === "customers" ? "tab active" : ""} onClick={() => { setPanel("customers"); window.dispatchEvent(new Event("fintrack-open-customers")); }}>◫ Customers</Button>
       <Button className={panel === "chit" ? "tab active" : ""} onClick={() => setPanel("chit")}>◎ Chit Fund</Button>
       <div className="nav-footer">Financier workspace</div>
     </aside>
+    {panel === null && selectedModule === "daily" && <Button className="agents-shortcut" onClick={() => setPanel("agents")}>◉ Agents</Button>}
     {panel === "reports" && <PortfolioReport loans={loans} close={() => setPanel(null)} />}
     {panel === "agents" && <CollectionStaffPage loans={loans} close={() => setPanel(null)} loadAgents={onLoadAgents} createAgent={onCreateAgent} assignAgent={onAssignAgent} updateAgent={onUpdateAgent} />}
     {panel === "chit" && <div className="chit-dashboard" style={{ position: "fixed", inset: 0, zIndex: 5, overflow: "auto", background: C.bg }}><ChitFundPage token={token} close={() => setPanel(null)} /></div>}
