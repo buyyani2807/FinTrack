@@ -618,8 +618,16 @@ function Financier({
           : [];
     const financeTypeButtons = [...document.querySelectorAll(".shell .card .toolbar .tabs .btn")]
       .filter(button => hiddenLabels.includes(button.textContent.trim()));
+    const bankruptFilter = customerMode
+      ? [...document.querySelectorAll(".shell .card .toolbar .tabs .btn")]
+          .find(button => button.textContent.trim() === "Bankrupt")
+      : null;
     financeTypeButtons.forEach(button => { button.hidden = true; });
-    return () => financeTypeButtons.forEach(button => { button.hidden = false; });
+    if (bankruptFilter) bankruptFilter.textContent = "Defaulters";
+    return () => {
+      financeTypeButtons.forEach(button => { button.hidden = false; });
+      if (bankruptFilter) bankruptFilter.textContent = "Bankrupt";
+    };
   }, [customerMode, detail, module]);
   const customerPool = customerMode
     ? loans.filter(loan => (statusFilter === "all" || loanStatus(loan) === statusFilter) && (module === "all" || loan.kind === module))
