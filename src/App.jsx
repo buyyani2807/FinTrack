@@ -667,7 +667,8 @@ function Financier({
     touchTargetId.current = null;
     if (targetId) await reorder(targetId); else setDraggedId(null);
   };
-  const total = loans.reduce((s, l) => s + (l.kind === "daily" ? l.collectionAmount : l.principal), 0);
+  const moduleLoans = module === "all" ? loans : loans.filter(loan => loan.kind === module);
+  const total = moduleLoans.reduce((s, l) => s + (l.kind === "daily" ? l.collectionAmount : l.principal), 0);
   const addPayment = async t => {
     await onRecordPayment(modal, t);
     setModal(null);
