@@ -1,0 +1,41 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { fixedChitMonth, fixedChitSchedule, validateFixedChit } from "../src/features/chitFund/fixedChit.js";
+
+const example = {
+  chitValue: 100000,
+  memberCount: 20,
+  durationMonths: 20,
+  monthlyContribution: 5000,
+  commissionAmount: 5000,
+  initialLiftAmount: 95000,
+  monthlyLiftIncrement: 1000,
+};
+
+test("generates the required 20-month Fixed Chit lift sequence", () => {
+  assert.deepEqual(
+    fixedChitSchedule(example).map(row => row.liftAmount),
+    [95000, 96000, 97000, 98000, 99000, 100000, 101000, 102000, 103000, 104000, 105000, 106000, 107000, 108000, 109000, 110000, 111000, 112000, 113000, 114000],
+  );
+});
+
+test("calculates Fixed Chit payment obligations from the lift month", () => {
+  assert.equal(fixedChitMonth({ ...example, month: 1 }).totalRemainingPayment, 114000);
+  assert.deepEqual(fixedChitMonth({ ...example, month: 5 }), {
+    month: 5,
+    liftAmount: 99000,
+    monthlyPayment: 6000,
+    remainingMonths: 15,
+    totalRemainingPayment: 90000,
+  });
+  assert.equal(fixedChitMonth({ ...example, month: 20 }).totalRemainingPayment, 0);
+});
+
+test("validates configuration without using Auction Chit calculations", () => {
+  assert.equal(validateFixedChit(example).schedule.length, 20);
+  assert.throws(() => fixedChitMonth({ ...example, month: 0 }), /Invalid Fixed Chit month/);
+  assert.throws(() => fixedChitMonth({ ...example, month: 21 }), /Invalid Fixed Chit month/);
+  assert.throws(() => validateFixedChit({ ...example, monthlyContribution: 5001 }), /must equal chit value/);
+  assert.throws(() => validateFixedChit({ ...example, monthlyLiftIncrement: -1 }), /increment/);
+  assert.throws(() => validateFixedChit({ ...example, durationMonths: 21 }), /Duration/);
+});
