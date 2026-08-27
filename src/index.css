@@ -124,6 +124,10 @@ body {
   padding: 18px 0;
 }
 
+.dashboard-chit-card {
+  cursor: pointer;
+}
+
 @media (max-width: 680px) {
   .dashboard-finance-section {
     margin-bottom: 20px;

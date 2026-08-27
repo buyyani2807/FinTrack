@@ -762,8 +762,17 @@ function CreateAgent({ close, save }) {
   const submit = async () => { setBusy(true); setError(""); try { await save({ name, email, phone, password, active: true }); close(); } catch (e) { setError(e.message || "Could not create agent."); } finally { setBusy(false); } };
   return <Modal><h2 className="title">Add collection staff</h2><p className="copy">Staff get only assigned accounts and can record their own collections.</p><div className="form spacer"><Field label="Staff name"><input value={name} onChange={e => setName(e.target.value)} /></Field><Field label="Email address"><input type="email" value={email} onChange={e => setEmail(e.target.value)} /></Field><Field label="Mobile number"><input inputMode="tel" value={phone} onChange={e => setPhone(e.target.value)} /></Field><Field label="Password"><input type="password" minLength="8" value={password} onChange={e => setPassword(e.target.value)} /></Field></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button onClick={close}>Cancel</Button><Button className="primary" disabled={busy} onClick={submit}>{busy ? "Creating…" : "Create staff"}</Button></div></Modal>;
 }
-function ActiveChitSchemes({ schemes = [] }) {
+function ActiveChitSchemes({ schemes = [], onOpen }) {
   const typeLabel = type => type === "fixed" ? "Fixed" : type === "fixed_predefined_bid" ? "Fixed Predefined Bid" : "Auction";
+  useEffect(() => {
+    const cards = [...document.querySelectorAll(".dashboard-chit-card")];
+    const open = event => onOpen(event.currentTarget.dataset.schemeId);
+    cards.forEach((card, index) => {
+      card.dataset.schemeId = schemes[index]?.id || "";
+      card.addEventListener("click", open);
+    });
+    return () => cards.forEach(card => card.removeEventListener("click", open));
+  }, [onOpen, schemes]);
   return <><style>{`.dashboard-chit{margin-left:240px;max-width:calc(1420px + 240px);padding:0 44px 36px}.dashboard-chit-panel{padding:22px;background:linear-gradient(145deg,#202a3b,#1b2230)}.dashboard-chit-heading{display:flex;align-items:center;gap:12px}.dashboard-chit-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;background:#f4b94218;border:1px solid #f4b94255;color:#f4b942;font-size:20px}.dashboard-chit-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin-top:20px}.dashboard-chit-card{position:relative;padding:18px;border-radius:14px;background:#171d29;border:1px solid #303a4d;overflow:hidden}.dashboard-chit-card:before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:#f4b942}.dashboard-chit-card:hover{border-color:#526078;transform:translateY(-1px)}.dashboard-chit-type{display:inline-flex;padding:4px 8px;border-radius:999px;background:#72aaff16;color:#8eb9ff;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}.dashboard-chit-name{margin:12px 0 4px;font:700 17px Syne;color:#f4f6fb}.dashboard-chit-value{font:700 24px Syne;color:#f4b942;margin:14px 0}.dashboard-chit-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-top:13px;border-top:1px solid #303a4d}.dashboard-chit-stats span{display:block;color:#9ba9bd;font-size:10px;text-transform:uppercase;letter-spacing:.06em}.dashboard-chit-stats strong{display:block;margin-top:3px;font-size:13px;color:#e4e9f2}@media(max-width:1050px){.dashboard-chit{margin-left:0;padding:0 24px 86px}}@media(max-width:680px){.dashboard-chit{padding:0 16px 98px}.dashboard-chit-panel{padding:17px}.dashboard-chit-grid{grid-template-columns:1fr}}`}</style><section className="dashboard-chit"><div className="card spacer dashboard-chit-panel"><div className="toolbar"><div className="dashboard-chit-heading"><div className="dashboard-chit-icon">◎</div><div><strong>Active Chit Fund Schemes</strong><p className="small">Current schemes across all Chit types</p></div></div><span className="badge active">{schemes.length} active</span></div>{schemes.length ? <div className="dashboard-chit-grid">{schemes.map(scheme => <article className="dashboard-chit-card" key={scheme.id}><span className="dashboard-chit-type">{typeLabel(scheme.chit_type)}</span><div className="dashboard-chit-name">{scheme.name}</div><div className="dashboard-chit-value">{money(scheme.chit_value)}</div><div className="dashboard-chit-stats"><div><span>Members</span><strong>{scheme.member_count}</strong></div><div><span>Duration</span><strong>{scheme.duration_months} months</strong></div></div></article>)}</div> : <p className="small spacer">No active Chit Fund schemes yet.</p>}</div></section></>;
 }
 
@@ -772,6 +781,7 @@ function FinancierTools({ loans, token, activeChitSchemes = [], onCreateAgent, o
   const [selectedModule, setSelectedModule] = useState("all");
   const [actionHost, setActionHost] = useState(null);
   const [dashboardChitSchemes, setDashboardChitSchemes] = useState(activeChitSchemes);
+  const [openChitSchemeId, setOpenChitSchemeId] = useState(null);
   useEffect(() => {
     loadChitDashboard(token)
       .then(payload => setDashboardChitSchemes((payload.schemes || []).filter(scheme => scheme.status === "active")))
@@ -802,8 +812,8 @@ function FinancierTools({ loans, token, activeChitSchemes = [], onCreateAgent, o
     {actionHost && createPortal(<>{selectedModule === "daily" && <Button onClick={() => setPanel("agents")}>Agents</Button>}<Button onClick={() => { setPanel("customers"); window.dispatchEvent(new CustomEvent("fintrack-open-customers", { detail: selectedModule })); }}>Customers</Button></>, actionHost)}
     {panel === "reports" && <PortfolioReport loans={loans} close={() => setPanel(null)} />}
     {panel === "agents" && <CollectionStaffPage loans={loans} close={() => setPanel(null)} loadAgents={onLoadAgents} createAgent={onCreateAgent} assignAgent={onAssignAgent} updateAgent={onUpdateAgent} />}
-    {panel === "chit" && <div className="chit-dashboard" style={{ position: "fixed", inset: 0, zIndex: 5, overflow: "auto", background: C.bg }}><ChitFundPage token={token} close={() => setPanel(null)} /></div>}
-    {(panel === null || panel === "dashboard") && selectedModule === "all" && <ActiveChitSchemes schemes={dashboardChitSchemes} />}
+    {panel === "chit" && <div className="chit-dashboard" style={{ position: "fixed", inset: 0, zIndex: 5, overflow: "auto", background: C.bg }}><ChitFundPage token={token} openSchemeId={openChitSchemeId} close={() => { setOpenChitSchemeId(null); setPanel("dashboard"); }} /></div>}
+    {(panel === null || panel === "dashboard") && selectedModule === "all" && <ActiveChitSchemes schemes={dashboardChitSchemes} onOpen={schemeId => { setOpenChitSchemeId(schemeId); setPanel("chit"); }} />}
   </div>;
 }
 function CustomerReportDownload({ loan, onResetPin }) {

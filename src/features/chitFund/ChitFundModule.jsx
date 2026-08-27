@@ -574,7 +574,7 @@ function ChitSchemeDashboardSection({ title, rows, busy, open, edit, activate })
   return <div className="card spacer"><div className="toolbar"><strong>{title}</strong><span className="small">{rows.length} schemes</span></div><div className="table spacer"><table><thead><tr><th>Scheme</th><th>Chit value</th><th>Members</th><th>Duration</th><th>Current month</th><th>Current bid / lift</th><th>Current member</th><th>Net receivable</th><th>Status</th><th></th></tr></thead><tbody>{rows.map(({ scheme, current, members, winner, fixedCurrent, fixedWinner, predefinedCurrent, predefinedWinner }) => { const fixed = scheme.chit_type === CHIT_TYPES.FIXED; const predefined = scheme.chit_type === CHIT_TYPES.FIXED_PREDEFINED_BID; const activeRow = predefined ? predefinedCurrent : fixed ? fixedCurrent : current; const activeMember = predefined ? predefinedWinner : fixed ? fixedWinner : winner; return <tr key={scheme.id}><td><button className="link-button" onClick={() => open(scheme)}>{scheme.name}</button></td><td>{money(scheme.chit_value)}</td><td>{members.length}/{scheme.member_count}</td><td>{scheme.duration_months} months</td><td>{activeRow ? `Month ${activeRow.month_number || activeRow.cycle_number}` : "—"}</td><td>{activeRow ? money(predefined ? activeRow.bid_amount : fixed ? activeRow.lift_amount : activeRow.winning_bid_amount) : "—"}</td><td>{activeMember ? enrollmentName(activeMember) : "—"}</td><td>{predefined && activeRow ? money(activeRow.net_receivable) : "—"}</td><td><Badge status={schemeStatusLabel(scheme.status)} /></td><td>{scheme.status === "draft" && <>{!predefined && <Button onClick={() => edit(scheme)}>Edit</Button>}<Button className="primary" onClick={() => activate(scheme)}>Activate</Button></>}</td></tr>; })}</tbody></table></div>{!rows.length && !busy && <p className="small">No {title} schemes yet.</p>}</div>;
 }
 
-export function ChitFundPage({ token, close }) {
+export function ChitFundPage({ token, close, openSchemeId = null }) {
   const [schemes, setSchemes] = useState([]);
   const [cycles, setCycles] = useState([]);
   const [enrollments, setEnrollments] = useState([]);
@@ -609,6 +609,11 @@ export function ChitFundPage({ token, close }) {
     }).catch(err => { if (!ignore) { setError(err.message || "Could not load Chit Fund schemes."); setBusy(false); } });
     return () => { ignore = true; };
   }, [token]);
+  useEffect(() => {
+    if (openSchemeId && schemes.length) {
+      setSelected(schemes.find(scheme => scheme.id === openSchemeId) || null);
+    }
+  }, [openSchemeId, schemes]);
   const rows = useMemo(() => schemes.map(scheme => {
     const schemeCycles = cycles.filter(cycle => cycle.scheme_id === scheme.id).sort((a, b) => a.cycle_number - b.cycle_number);
     const current = schemeCycles.at(-1);
@@ -681,7 +686,7 @@ export function ChitFundPage({ token, close }) {
     });
     setModal("edit-scheme");
   };
-  if (selected) return <ChitSchemeDetails token={token} scheme={selected} back={() => { setSelected(null); refresh(); }} />;
+  if (selected) return <ChitSchemeDetails token={token} scheme={selected} back={() => { setSelected(null); close(); refresh(); }} />;
   return <main className="shell">
     <div className="toolbar"><div><Button onClick={close}>← Dashboard</Button><h1 className="title spacer">Chit Fund</h1><p className="copy">Schemes only. Auction Chits use live bidding, Fixed Chits use fixed lifts, and Fixed Predefined Bid Chits use an editable generated schedule.</p></div><Button className="primary" onClick={() => setModal("choose-type")}>+ New scheme</Button></div>
     {error && <p className="red small">{error}</p>}
