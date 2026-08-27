@@ -1,4 +1,4 @@
-const CACHE = "fintrack-shell-v4";
+const CACHE = "fintrack-shell-v5";
 const APP_SHELL = ["/", "/manifest.webmanifest"];
 
 self.addEventListener("install", event => {

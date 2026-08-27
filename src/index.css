@@ -125,6 +125,20 @@ body {
   padding: 18px 0;
 }
 
+.dashboard-reorder-hint {
+  margin: 0 0 12px;
+  color: #9ba9bd;
+}
+
+.dashboard-drag-handle {
+  white-space: nowrap;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .dashboard-chit-card {
   cursor: pointer;
 }

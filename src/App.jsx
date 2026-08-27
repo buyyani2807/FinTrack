@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "./lib/supabase";
 import { monthlyInterestOnBalance } from "./features/finance/calculations";
+import { byCollectionOrderThenName, mergeAccountOrder, reorderIds } from "./features/finance/collectionOrder";
 import { ChitCustomerPortal, ChitFundPage } from "./features/chitFund/ChitFundModule";
 import { assignCollectionAgent, chitCustomerPortalLogin, createCollectionAgent, createFinanceAccount, customerPortalLogin, deleteFinanceAccount, deleteFinancePayment, enableCustomerPortal, loadChitDashboard, loadChitSchemeDetails, loadCustomerKyc, loadFinanceAccounts, loadManagedAgents, loadWorkspace, recordPayment, resetCustomerPortalPin, saveCustomerKyc, setAccountStatus, saveCollectionOrder, updateCollectionAgent, updateFinanceAccount, updateFinancePayment, updatePaymentNotes } from "./lib/financeRepository";
 import { buildChitMonthStatement, currentSchemeMonth, monthLabel as chitMonthLabel } from "./features/chitFund/monthStatement";
@@ -160,7 +161,7 @@ const styles = `@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wg
 const enhancements = `.financier-nav{position:fixed;z-index:6;left:20px;top:50%;transform:translateY(-50%);width:194px;padding:14px;background:#151b27eF;border:1px solid ${C.line};border-radius:16px;box-shadow:0 20px 50px #0007;backdrop-filter:blur(12px)}.financier-nav .nav-title{font:700 16px Syne;color:${C.gold};padding:6px 8px 15px}.financier-nav button{width:100%;text-align:left;margin:3px 0}.financier-nav .nav-footer{border-top:1px solid ${C.line};margin-top:12px;padding-top:12px;color:${C.muted};font-size:11px}.tool-stack{display:flex;gap:8px;flex-direction:column;align-items:stretch}@media(max-width:1050px){.financier-nav{top:auto;bottom:14px;left:14px;right:14px;transform:none;width:auto;display:flex;gap:8px;padding:9px}.financier-nav .nav-title,.financier-nav .nav-footer{display:none}.financier-nav button{margin:0;text-align:center;font-size:12px}}`;
 const homeReportHide = `.shell > .toolbar > .tabs > .field,.shell > .toolbar > .tabs > .field + .btn{display:none}`;
 const visualRefresh = `
-:root{font:16px/1.45 DM Sans,system-ui,sans-serif!important;color-scheme:dark!important;background:#0e1118!important}#root{width:100%!important;max-width:none!important;min-height:100svh!important;margin:0!important;border:0!important;display:block!important;text-align:left!important}.app{min-height:100svh;background:radial-gradient(700px 480px at 4% -10%,#202b41 0%,transparent 65%),#0e1118;color:#f4f6fb}.shell{max-width:1420px;padding:36px 44px 74px}.top{margin-bottom:34px}.brand{font-family:Syne,DM Sans,sans-serif;font-size:27px;letter-spacing:-.8px;color:#f4b942}.sub{margin-top:6px;color:#9ba9bd;font-size:12px;letter-spacing:.02em}.title{font-family:Syne,DM Sans,sans-serif;font-size:28px;letter-spacing:-.7px;color:#f4f6fb!important}.shell .title,.shell .title *{color:#f4f6fb!important}.copy{color:#9ba9bd;font-size:13px}.toolbar{gap:18px}.tabs{gap:7px}.btn{min-height:38px;padding:8px 13px;border:1px solid #303a4d;background:#171c27;color:#f4f6fb;border-radius:10px;font-size:13px;font-weight:700;transition:background .18s,border-color .18s,transform .18s,box-shadow .18s}.btn:hover{transform:translateY(-1px);background:#242c3b;border-color:#4a586f;box-shadow:0 6px 16px #0005}.btn:focus-visible{outline:3px solid #f4b94255;outline-offset:2px}.btn.primary{background:#f4b942;color:#211907;border-color:#f4b942;box-shadow:0 6px 14px #0004}.btn.primary:hover{background:#ffd062;border-color:#ffd062}.btn.danger{border-color:#ff737355;color:#ff9898;background:#3c1b221f}.btn.danger:hover{background:#492027}.tab{background:transparent;color:#9ba9bd;border-color:transparent;box-shadow:none}.tab:hover{background:#ffffff0c;border-color:transparent}.tab.active{background:#f4b94218;color:#f4b942;border-color:#f4b94270;box-shadow:none}.card{background:#202737;border:1px solid #303a4d;border-radius:16px;box-shadow:0 8px 24px #0003}.card:hover{border-color:#46536a}.metrics{gap:16px;margin:22px 0 26px}.metrics .card{position:relative;overflow:hidden;padding:18px 19px;background:linear-gradient(145deg,#222c3e,#1b2230)}.metrics .card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:#f4b942}.metric-label{font-size:10px;font-weight:700;color:#9ba9bd;letter-spacing:.09em}.metric-value{font-family:Syne,DM Sans,sans-serif;font-size:24px;letter-spacing:-.65px;margin-top:9px}.gold{color:#f4b942}.green{color:#4fd08d}.red{color:#ff7373}.blue{color:#72aaff}.field{gap:7px}.field label{font-size:11px;letter-spacing:.035em;color:#aab7ca}.field input,.field select{min-height:41px;padding:9px 11px;border-radius:10px;border-color:#303a4d;background:#171c27;color:#f4f6fb;outline:none;transition:border-color .15s,box-shadow .15s}.field input:focus,.field select:focus{border-color:#f4b942;box-shadow:0 0 0 3px #f4b9421c}.table{border:1px solid #303a4d;border-radius:12px}.table table{font-size:13px}.table th{padding:12px 13px;background:#171c27;color:#9ba9bd;font-size:10px;letter-spacing:.08em}.table td{padding:13px;border-color:#303a4d;color:#e4e9f2}.table tbody tr{transition:background .15s}.table tbody tr:hover{background:#ffffff08}.badge{padding:5px 9px;border-radius:999px;font-size:9px;letter-spacing:.06em}.notice{border:1px solid #f4b94255;border-left:3px solid #f4b942;background:#f4b94216;color:#f7dc99;border-radius:10px;padding:11px 13px}.modal-bg{padding:24px;background:#000b;backdrop-filter:blur(5px)}.modal{width:min(760px,100%);padding:28px;border-radius:19px;background:#202737;border-color:#46536a;box-shadow:0 25px 80px #000a}.login{max-width:450px;margin:10vh auto}.login>.brand{font-size:34px;color:#f4b942;text-align:center}.login>.sub{font-size:13px;text-align:center}.login .card{padding:26px;background:#202737;border-color:#3c475c;box-shadow:0 22px 70px #0008}.login .tabs{display:grid;grid-template-columns:1fr 1fr}.login .tabs .btn:last-child{grid-column:1/-1}.login .tab{min-height:42px;border:1px solid #303a4d}.login .tab.active{border-color:#f4b94270}.financier-nav{background:#202737!important;border-color:#3a465a!important;border-radius:16px!important;box-shadow:0 12px 34px #0008!important}.financier-nav .nav-title{color:#f4b942!important;font-family:Syne,DM Sans,sans-serif!important}.financier-nav button{border-color:transparent!important}.financier-nav button.tab.active{background:#f4b94218!important;border-color:#f4b94270!important}.financier-nav .nav-footer{color:#9ba9bd!important;border-color:#303a4d!important}.customer-actions{right:28px!important;bottom:auto!important;top:20px!important;background:#202737!important;padding:8px!important;border:1px solid #3a465a!important;border-radius:14px!important;box-shadow:0 12px 30px #0008!important}@media(min-width:1051px){.shell{margin-left:240px;max-width:calc(1420px + 240px)}.financier-nav{left:24px!important;top:28px!important;transform:none!important;width:192px!important}}@media(max-width:1050px){.shell{padding:28px 24px 86px}.financier-nav{background:#202737f2!important}}@media(max-width:680px){.shell{padding:22px 16px 98px}.top,.toolbar{align-items:flex-start}.toolbar{flex-direction:column}.title{font-size:24px}.metrics{grid-template-columns:1fr 1fr}.metrics .card{padding:15px}.metric-value{font-size:20px}.login{margin:5vh 16px}.modal{padding:21px}.customer-actions{top:auto!important;bottom:12px!important;left:12px!important;right:12px!important}.customer-actions .tabs{justify-content:center}.form{gap:11px}}`;
+:root{font:16px/1.45 DM Sans,system-ui,sans-serif!important;color-scheme:dark!important;background:#0e1118!important}#root{width:100%!important;max-width:none!important;min-height:100svh!important;margin:0!important;border:0!important;display:block!important;text-align:left!important}.app{min-height:100svh;background:radial-gradient(700px 480px at 4% -10%,#202b41 0%,transparent 65%),#0e1118;color:#f4f6fb}.shell{max-width:1420px;padding:36px 44px 74px}.top{margin-bottom:34px}.brand{font-family:Syne,DM Sans,sans-serif;font-size:27px;letter-spacing:-.8px;color:#f4b942}.sub{margin-top:6px;color:#9ba9bd;font-size:12px;letter-spacing:.02em}.title{font-family:Syne,DM Sans,sans-serif;font-size:28px;letter-spacing:-.7px;color:#f4f6fb!important}.shell .title,.shell .title *{color:#f4f6fb!important}.copy{color:#9ba9bd;font-size:13px}.toolbar{gap:18px}.tabs{gap:7px}.btn{min-height:38px;padding:8px 13px;border:1px solid #303a4d;background:#171c27;color:#f4f6fb;border-radius:10px;font-size:13px;font-weight:700;transition:background .18s,border-color .18s,transform .18s,box-shadow .18s}.btn:hover{transform:translateY(-1px);background:#242c3b;border-color:#4a586f;box-shadow:0 6px 16px #0005}.btn:focus-visible{outline:3px solid #f4b94255;outline-offset:2px}.btn.primary{background:#f4b942;color:#211907;border-color:#f4b942;box-shadow:0 6px 14px #0004}.btn.primary:hover{background:#ffd062;border-color:#ffd062}.btn.danger{border-color:#ff737355;color:#ff9898;background:#3c1b221f}.btn.danger:hover{background:#492027}.btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}.tab{background:transparent;color:#9ba9bd;border-color:transparent;box-shadow:none}.tab:hover{background:#ffffff0c;border-color:transparent}.tab.active{background:#f4b94218;color:#f4b942;border-color:#f4b94270;box-shadow:none}.card{background:#202737;border:1px solid #303a4d;border-radius:16px;box-shadow:0 8px 24px #0003}.card:hover{border-color:#46536a}.metrics{gap:16px;margin:22px 0 26px}.metrics .card{position:relative;overflow:hidden;padding:18px 19px;background:linear-gradient(145deg,#222c3e,#1b2230)}.metrics .card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:#f4b942}.metric-label{font-size:10px;font-weight:700;color:#9ba9bd;letter-spacing:.09em}.metric-value{font-family:Syne,DM Sans,sans-serif;font-size:24px;letter-spacing:-.65px;margin-top:9px}.gold{color:#f4b942}.green{color:#4fd08d}.red{color:#ff7373}.blue{color:#72aaff}.field{gap:7px}.field label{font-size:11px;letter-spacing:.035em;color:#aab7ca}.field input,.field select{min-height:41px;padding:9px 11px;border-radius:10px;border-color:#303a4d;background:#171c27;color:#f4f6fb;outline:none;transition:border-color .15s,box-shadow .15s}.field input:focus,.field select:focus{border-color:#f4b942;box-shadow:0 0 0 3px #f4b9421c}.table{border:1px solid #303a4d;border-radius:12px}.table table{font-size:13px}.table th{padding:12px 13px;background:#171c27;color:#9ba9bd;font-size:10px;letter-spacing:.08em}.table td{padding:13px;border-color:#303a4d;color:#e4e9f2}.table tbody tr{transition:background .15s}.table tbody tr:hover{background:#ffffff08}.badge{padding:5px 9px;border-radius:999px;font-size:9px;letter-spacing:.06em}.notice{border:1px solid #f4b94255;border-left:3px solid #f4b942;background:#f4b94216;color:#f7dc99;border-radius:10px;padding:11px 13px}.modal-bg{padding:24px;background:#000b;backdrop-filter:blur(5px)}.modal{width:min(760px,100%);padding:28px;border-radius:19px;background:#202737;border-color:#46536a;box-shadow:0 25px 80px #000a}.login{max-width:450px;margin:10vh auto}.login>.brand{font-size:34px;color:#f4b942;text-align:center}.login>.sub{font-size:13px;text-align:center}.login .card{padding:26px;background:#202737;border-color:#3c475c;box-shadow:0 22px 70px #0008}.login .tabs{display:grid;grid-template-columns:1fr 1fr}.login .tabs .btn:last-child{grid-column:1/-1}.login .tab{min-height:42px;border:1px solid #303a4d}.login .tab.active{border-color:#f4b94270}.financier-nav{background:#202737!important;border-color:#3a465a!important;border-radius:16px!important;box-shadow:0 12px 34px #0008!important}.financier-nav .nav-title{color:#f4b942!important;font-family:Syne,DM Sans,sans-serif!important}.financier-nav button{border-color:transparent!important}.financier-nav button.tab.active{background:#f4b94218!important;border-color:#f4b94270!important}.financier-nav .nav-footer{color:#9ba9bd!important;border-color:#303a4d!important}.customer-actions{right:28px!important;bottom:auto!important;top:20px!important;background:#202737!important;padding:8px!important;border:1px solid #3a465a!important;border-radius:14px!important;box-shadow:0 12px 30px #0008!important}@media(min-width:1051px){.shell{margin-left:240px;max-width:calc(1420px + 240px)}.financier-nav{left:24px!important;top:28px!important;transform:none!important;width:192px!important}}@media(max-width:1050px){.shell{padding:28px 24px 86px}.financier-nav{background:#202737f2!important}}@media(max-width:680px){.shell{padding:22px 16px 98px}.top,.toolbar{align-items:flex-start}.toolbar{flex-direction:column}.title{font-size:24px}.metrics{grid-template-columns:1fr 1fr}.metrics .card{padding:15px}.metric-value{font-size:20px}.login{margin:5vh 16px}.modal{padding:21px}.customer-actions{top:auto!important;bottom:12px!important;left:12px!important;right:12px!important}.customer-actions .tabs{justify-content:center}.form{gap:11px}}`;
 const mobileCollections = `.customer-search,.collection-search{display:flex;gap:8px;align-items:center;margin:14px 0}.customer-search input,.collection-search input{width:min(460px,100%);min-height:42px;padding:10px 12px;border:1px solid #303a4d;border-radius:10px;background:#171c27;color:#f4f6fb;outline:none}.customer-search input:focus,.collection-search input:focus{border-color:#f4b942;box-shadow:0 0 0 3px #f4b9421c}.collection-shell{max-width:970px}.collection-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:20px 0}.collection-summary>div{padding:15px 17px;border-radius:14px;background:#202737;border:1px solid #303a4d}.collection-summary span,.collection-amount span{display:block;color:#9ba9bd;font-size:11px;text-transform:uppercase;letter-spacing:.07em}.collection-summary strong{display:block;margin-top:7px;font:700 22px Syne}.collection-section{margin-top:28px}.collection-section h2{font:700 18px Syne;margin:0 0 6px;color:#f4f6fb}.collection-section h2 span{font:600 11px DM Sans;color:#9ba9bd;margin-left:7px;letter-spacing:.04em;text-transform:uppercase}.collection-list{display:grid;gap:10px;margin-top:12px}.collection-card{display:grid;grid-template-columns:46px minmax(160px,1fr) 130px auto;gap:14px;align-items:center;padding:15px;background:#202737;border:1px solid #303a4d;border-radius:15px}.monthly-card{border-left:3px solid #72aaff}.daily-card{border-left:3px solid #f4b942}.collection-card.collected{opacity:.72;border-color:#4fd08d55}.collection-avatar{display:grid;place-items:center;width:46px;height:46px;border-radius:50%;background:#72aaff1c;color:#72aaff;font-weight:800}.collection-info{display:grid;gap:2px}.collection-info strong{font-size:15px}.collection-info span,.collection-amount small{font-size:12px;color:#9ba9bd}.collection-amount{text-align:right}.collection-amount strong{display:block;margin:3px 0;font-size:16px}.collection-actions{display:flex;gap:7px}.route-handle{user-select:none;-webkit-user-select:none;touch-action:none;cursor:grab;font-weight:700;color:#f4b942}.route-handle:active{cursor:grabbing}.route-row-dragging{opacity:.55;background:#f4b94212}.link-button{display:inline-flex;align-items:center;margin-top:12px;padding:0;border:0;background:none;color:#f4b942;font:600 13px DM Sans,system-ui;cursor:pointer}.link-button:hover{text-decoration:underline}.link-button:disabled{opacity:.55;cursor:wait}@media(max-width:680px){.collection-shell{margin-left:0!important;padding-bottom:28px}.customer-search,.collection-search{width:100%}.customer-search input,.collection-search input{flex:1}.collection-summary{grid-template-columns:1fr 1fr}.collection-summary>div:last-child{grid-column:1/-1}.collection-card{grid-template-columns:42px 1fr auto;gap:10px;padding:13px}.collection-avatar{width:42px;height:42px}.collection-info span:last-child{display:none}.collection-amount{grid-column:2;text-align:left}.collection-actions{grid-column:3;grid-row:1 / span 2;flex-direction:column}.collection-actions .btn{min-width:74px}.collection-actions .btn:first-child{display:none}}`;
 const mobileLayout = `
 .nav-short,.label-short{display:none}
@@ -212,6 +213,13 @@ const mobileLayout = `
   .dashboard-finance-table td:nth-child(4){grid-area:view}
   .dashboard-finance-table td[data-label]:before{content:attr(data-label);display:block;color:#9ba9bd;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
   .dashboard-finance-table .btn{min-height:34px;padding:6px 10px;font-size:12px}
+  .dashboard-finance-table.can-reorder tr{grid-template-columns:32px minmax(0,1fr) auto auto;grid-template-areas:"handle cust amt view" "handle cust bal view"}
+  .dashboard-finance-table.can-reorder td:nth-child(1){grid-area:handle;align-self:center}
+  .dashboard-finance-table.can-reorder td:nth-child(2){grid-area:cust;min-width:0}
+  .dashboard-finance-table.can-reorder td:nth-child(3){grid-area:amt;text-align:right}
+  .dashboard-finance-table.can-reorder td:nth-child(4){grid-area:bal;text-align:right}
+  .dashboard-finance-table.can-reorder td:nth-child(5){grid-area:view}
+  .dashboard-drag-handle{display:grid;place-items:center;min-width:32px;min-height:44px;padding:0 4px;border-radius:8px;background:#f4b94214;color:#f4b942}
 }
 @media(max-width:1050px) and (max-height:500px){
   .shell{padding:10px 14px calc(72px + env(safe-area-inset-bottom,0px))!important}
@@ -731,7 +739,7 @@ function Financier({
   const moveTouchDrag = event => {
     if (!touchTargetId.current) return;
     const touch = event.touches?.[0];
-    const target = touch && document.elementFromPoint(touch.clientX, touch.clientY)?.closest("tr[data-account-id]");
+    const target = touch && document.elementFromPoint(touch.clientX, touch.clientY)?.closest("[data-account-id]");
     if (target) {
       touchTargetId.current = target.dataset.accountId;
       event.preventDefault();
@@ -740,7 +748,24 @@ function Financier({
   const finishTouchDrag = async () => {
     const targetId = touchTargetId.current;
     touchTargetId.current = null;
-    if (targetId) await reorder(targetId); else setDraggedId(null);
+    if (!targetId) { setDraggedId(null); return; }
+    if (!customerMode && module === "all") {
+      const kind = loans.find(loan => loan.id === targetId)?.kind;
+      if (kind) await reorderDashboard(kind, targetId);
+      else setDraggedId(null);
+      return;
+    }
+    await reorder(targetId);
+  };
+  const reorderDashboard = async (kind, targetId) => {
+    if (!isOwner || !draggedId || draggedId === targetId) { setDraggedId(null); return; }
+    const source = loans.find(loan => loan.id === draggedId);
+    const target = loans.find(loan => loan.id === targetId);
+    if (!source || !target || source.kind !== kind || target.kind !== kind) { setDraggedId(null); return; }
+    const moving = loans.filter(loan => loan.kind === kind && loanStatus(loan) === "active").sort(byCollectionOrderThenName);
+    const nextMoving = reorderIds(moving.map(loan => loan.id), draggedId, targetId);
+    setDraggedId(null);
+    await onCollectionOrderChange(mergeAccountOrder(loans, nextMoving, nextMoving));
   };
   const moduleLoans = module === "all" ? loans : loans.filter(loan => loan.kind === module);
   const total = moduleLoans.reduce((s, l) => s + (l.kind === "daily" ? l.collectionAmount : l.principal), 0);
@@ -758,9 +783,9 @@ function Financier({
     return <main className="shell"><OperationsDetail loan={loan} back={() => setDetail(null)} collect={setModal} edit={setEditLoan} remove={async account => { if (window.confirm(`Delete ${account.customerName}'s finance account and all its payments? This cannot be undone.`)) { await onDeleteLoan(account); setDetail(null); } }} portal={setPortalLoan} kyc={kyc} editKyc={setEditKycLoan} isOwner={isOwner} changeStatus={async (account, status) => { if (window.confirm(`${status === "bankrupt" ? "Mark this account bankrupt and record its unpaid balance as a loss?" : status === "closed" ? "Close this account and disable new collections?" : "Reopen this account for collections?"}`)) await onStatusChange(account, status); }} editPaymentNote={onPaymentNoteChange} correctPayment={onPaymentCorrect} deletePayment={onPaymentDelete} />{modal && <Payment loan={modal} close={() => setModal(null)} save={addPayment} />}{isOwner && editLoan && <EditAccount loan={loan} close={() => setEditLoan(null)} save={onUpdateLoan} />}{isOwner && portalLoan && <CustomerPortalSetup loan={loan} close={() => setPortalLoan(null)} save={onSaveCustomerPortal} />}{isOwner && editKycLoan && <KycEditor loan={loan} current={kyc} close={() => setEditKycLoan(null)} save={async (account, aadhaar, pan) => { await onSaveKyc(account, aadhaar, pan); setKyc(await onLoadKyc(account)); }} />}</main>;
   }
   if (!customerMode && module === "all") {
-    const dailyCustomers = loans.filter(loan => loan.kind === "daily" && loanStatus(loan) === "active").sort(byCustomerName);
-    const monthlyCustomers = loans.filter(loan => loan.kind === "monthly" && loanStatus(loan) === "active").sort(byCustomerName);
-    return <main className="shell dashboard-home"><header className="top"><div><div className="brand">{businessName || "My Finance Business"}</div><div className="sub">{isOwner ? "Financier dashboard" : "Collection agent dashboard"}</div></div><div className="top-actions"><Button onClick={logout}>Log out</Button>{isOwner && <Button className="primary" onClick={() => setModal("new")}>New Account</Button>}</div></header><div className="toolbar"><div><h1 className="title">Dashboard</h1><p className="copy">Overview of your active finance customers and Chit Fund schemes.</p></div></div><DashboardFinanceSection title="Daily Finance" loans={dailyCustomers} onView={setDetail} /><DashboardFinanceSection title="Monthly Finance" loans={monthlyCustomers} onView={setDetail} />{isOwner && modal === "new" && <NewFinance close={() => setModal(null)} save={async loan => { await onCreateLoan(loan); setModal(null); }} />}</main>;
+    const dailyCustomers = loans.filter(loan => loan.kind === "daily" && loanStatus(loan) === "active").sort(byCollectionOrderThenName);
+    const monthlyCustomers = loans.filter(loan => loan.kind === "monthly" && loanStatus(loan) === "active").sort(byCollectionOrderThenName);
+    return <main className="shell dashboard-home"><header className="top"><div><div className="brand">{businessName || "My Finance Business"}</div><div className="sub">{isOwner ? "Financier dashboard" : "Collection agent dashboard"}</div></div><div className="top-actions"><Button onClick={logout}>Log out</Button>{isOwner && <Button className="primary" onClick={() => setModal("new")}>New Account</Button>}</div></header><div className="toolbar"><div><h1 className="title">Dashboard</h1><p className="copy">Overview of your active finance customers and Chit Fund schemes.</p></div></div><DashboardFinanceSection title="Daily Finance" customerLabel="Active Daily Customers" kind="daily" loans={dailyCustomers} onView={setDetail} canReorder={isOwner} draggedId={draggedId} setDraggedId={setDraggedId} onReorder={id => reorderDashboard("daily", id)} startTouchDrag={startTouchDrag} moveTouchDrag={moveTouchDrag} finishTouchDrag={finishTouchDrag} cancelTouchDrag={() => { touchTargetId.current = null; setDraggedId(null); }} /><DashboardFinanceSection title="Monthly Finance" customerLabel="Active Monthly Customers" kind="monthly" loans={monthlyCustomers} onView={setDetail} canReorder={isOwner} draggedId={draggedId} setDraggedId={setDraggedId} onReorder={id => reorderDashboard("monthly", id)} startTouchDrag={startTouchDrag} moveTouchDrag={moveTouchDrag} finishTouchDrag={finishTouchDrag} cancelTouchDrag={() => { touchTargetId.current = null; setDraggedId(null); }} />{isOwner && modal === "new" && <NewFinance close={() => setModal(null)} save={async loan => { await onCreateLoan(loan); setModal(null); }} />}</main>;
   }
   {
     const loans = moduleLoans;
@@ -778,15 +803,101 @@ function Customer({
   }}><header className="top"><div><div className="brand">FinTrack</div><div className="sub">Customer dashboard</div></div><Button onClick={logout}>Log out</Button></header><h1 className="title">Hello, {loan.customerName}</h1><p className="copy">Your finance ID: {loan.id}</p>{monthly ? <><div className="notice">You have taken {money(loan.principal)} on interest. Pay your monthly interest on time; you may repay the principal whenever you choose.</div><div className="grid metrics"><Metric label="Principal taken" value={money(loan.principal)} color="gold" /><Metric label="Principal remaining" value={money(monthlyBalance(loan))} color="red" /><Metric label="Monthly interest rate" value={`${annualRate(loan, today())}%`} color="blue" /><Metric label="Interest pending" value={money(monthlyInterestPending(loan))} color={monthlyInterestPending(loan) ? "red" : "green"} /><Metric label="Paid so far" value={money(loanPaid(loan))} color="green" /></div><div className="card"><strong>What you need to pay</strong><div className="row spacer"><span className="small">Current monthly interest on balance</span><strong className="gold">{money(Math.round(monthlyBalance(loan) * annualRate(loan, today()) / 100))}</strong></div><div className="row spacer"><span className="small">Estimated missed-payment penalty</span><strong className="red">{money(estimatedPenalty(loan))}</strong></div><p className="notice">Payment can be made via UPI, cash, or bank transfer. Contact your financier to record the payment.</p></div></> : <><div className="notice">You received {money(loan.disbursedAmount)}. Your daily collection plan is {money(loan.collectionAmount)} over 100 days.</div><div className="grid metrics"><Metric label="Amount received" value={money(loan.disbursedAmount)} color="gold" /><Metric label="Total to repay" value={money(loan.collectionAmount)} color="blue" /><Metric label="Daily collection" value={money(loan.dailyCollection)} color="gold" /><Metric label="Paid so far" value={money(dailyPaid(loan))} color="green" /><Metric label="Remaining" value={money(dailyBalance(loan))} color="red" /></div>{loanStatus(loan) === "active" && <div className="card"><strong>Repayment progress</strong><p className="small spacer">{Math.round(dailyPaid(loan) / loan.collectionAmount * 100)}% paid · {dailyProgress(loan).remaining} collection days remaining</p></div>}</>}<div className="card spacer"><strong>Your payment history</strong><div className="table spacer"><table><thead><tr><th>Date</th><th>Amount paid</th><th>Mode</th><th>Reference</th></tr></thead><tbody>{[...loan.transactions].sort((a, b) => b.date.localeCompare(a.date)).map(t => <tr key={t.id}><td>{t.date}</td><td className="green">{money(monthly ? (+t.interestAmount || 0) + (+t.principalAmount || 0) + (+t.penaltyAmount || 0) : t.amount)}</td><td>{paymentModeLabel(t)}</td><td>{t.ref || "—"}</td></tr>)}</tbody></table></div></div></main>;
 }
 
-function DashboardFinanceSection({ title, loans, onView }) {
+function DashboardFinanceSection({
+  title,
+  customerLabel,
+  kind,
+  loans,
+  onView,
+  canReorder = false,
+  draggedId,
+  setDraggedId,
+  onReorder,
+  startTouchDrag,
+  moveTouchDrag,
+  finishTouchDrag,
+  cancelTouchDrag,
+}) {
   const financed = loans.reduce((sum, loan) => sum + (loan.kind === "daily" ? loan.collectionAmount : loan.principal), 0);
   const received = loans.reduce((sum, loan) => sum + loanPaid(loan), 0);
   const outstanding = loans.reduce((sum, loan) => sum + loanBalance(loan), 0);
   const profit = loans.reduce((sum, loan) => sum + realizedProfit(loan), 0);
   const loss = loans.reduce((sum, loan) => sum + realizedLoss(loan), 0);
   const icon = title === "Daily Finance" ? "◷" : "◫";
-  const rows = [...loans].sort(byCustomerName);
-  return <section className="card dashboard-finance-section"><div className="toolbar dashboard-finance-heading"><div className="dashboard-finance-title"><div className="dashboard-finance-icon">{icon}</div><div><strong>{title}</strong><p className="small">Active customer portfolio</p></div></div><span className="badge active">{loans.length} active customers</span></div><div className="grid metrics dashboard-finance-metrics"><Metric label="Amount financed" value={money(financed)} color="gold" /><Metric label="Amounts received" value={money(received)} color="green" /><Metric label="Outstanding" value={money(outstanding)} color="red" /><Metric label="Profit / loss" value={`${money(profit)} / ${money(loss)}`} color={loss ? "red" : "green"} /></div>{rows.length ? <div className="table dashboard-finance-table"><table><thead><tr><th>Customer</th><th>Financed</th><th>Balance</th><th></th></tr></thead><tbody>{rows.map(loan => <tr key={loan.id}><td><strong>{loan.customerName}</strong><br /><a className="small phone-link" href={`tel:${loan.phone}`}>{loan.phone}</a></td><td data-label="Financed">{money(loan.kind === "daily" ? loan.collectionAmount : loan.principal)}</td><td className="red" data-label="Balance">{money(loanBalance(loan))}</td><td><Button onClick={() => onView(loan)}>View</Button></td></tr>)}</tbody></table></div> : <p className="small spacer dashboard-finance-empty">No active customers.</p>}</section>;
+  const rows = [...loans].sort(byCollectionOrderThenName);
+  const beginDrag = (event, loanId) => {
+    if (!canReorder) return;
+    if (event.target.closest("a,button")) {
+      event.preventDefault();
+      return;
+    }
+    event.dataTransfer?.setData("text/plain", loanId);
+    if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+    setDraggedId(loanId);
+  };
+  return <section className="card dashboard-finance-section">
+    <div className="toolbar dashboard-finance-heading">
+      <div className="dashboard-finance-title">
+        <div className="dashboard-finance-icon">{icon}</div>
+        <div>
+          <strong>{title}</strong>
+          <p className="small">{customerLabel || "Active customer portfolio"}</p>
+        </div>
+      </div>
+      <span className="badge active">{loans.length} active customers</span>
+    </div>
+    <div className="grid metrics dashboard-finance-metrics">
+      <Metric label="Amount financed" value={money(financed)} color="gold" />
+      <Metric label="Amounts received" value={money(received)} color="green" />
+      <Metric label="Outstanding" value={money(outstanding)} color="red" />
+      <Metric label="Profit / loss" value={`${money(profit)} / ${money(loss)}`} color={loss ? "red" : "green"} />
+    </div>
+    {canReorder && rows.length > 1 && <p className="small dashboard-reorder-hint">Drag the handle to save your {kind} collection order. It is restored after refresh and sign-in.</p>}
+    {rows.length ? <div className={`table dashboard-finance-table${canReorder ? " can-reorder" : ""}`}>
+      <table>
+        <thead>
+          <tr>
+            {canReorder && <th>Order</th>}
+            <th>Customer</th>
+            <th>Financed</th>
+            <th>Balance</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((loan, index) => <tr
+            key={loan.id}
+            data-account-id={loan.id}
+            className={draggedId === loan.id ? "route-row-dragging" : ""}
+            draggable={canReorder}
+            aria-grabbed={canReorder ? draggedId === loan.id : undefined}
+            onDragStart={event => beginDrag(event, loan.id)}
+            onDragEnd={() => setDraggedId(null)}
+            onDragOver={event => canReorder && event.preventDefault()}
+            onDrop={event => {
+              if (!canReorder) return;
+              event.preventDefault();
+              onReorder?.(loan.id);
+            }}
+          >
+            {canReorder && <td
+              className="small route-handle dashboard-drag-handle"
+              title={`Drag to reorder ${loan.customerName}`}
+              aria-label={`Drag to reorder ${loan.customerName}`}
+              onTouchStart={event => startTouchDrag(event, loan.id)}
+              onTouchMove={moveTouchDrag}
+              onTouchEnd={finishTouchDrag}
+              onTouchCancel={cancelTouchDrag}
+            >↕ {index + 1}</td>}
+            <td><strong>{loan.customerName}</strong><br /><a className="small phone-link" href={`tel:${loan.phone}`}>{loan.phone}</a></td>
+            <td data-label="Financed">{money(loan.kind === "daily" ? loan.collectionAmount : loan.principal)}</td>
+            <td className="red" data-label="Balance">{money(loanBalance(loan))}</td>
+            <td><Button onClick={() => onView(loan)}>View</Button></td>
+          </tr>)}
+        </tbody>
+      </table>
+    </div> : <p className="small spacer dashboard-finance-empty">No active customers.</p>}
+  </section>;
 }
 function PinResetModal({ title, currentPin, onSave, close }) {
   const [oldPin, setOldPin] = useState("");
@@ -927,10 +1038,11 @@ function FinancierTools({ loans, token, activeChitSchemes = [], onCreateAgent, o
   const [actionHost, setActionHost] = useState(null);
   const [dashboardChitSchemes, setDashboardChitSchemes] = useState(activeChitSchemes);
   const [openChitSchemeId, setOpenChitSchemeId] = useState(null);
+  const reloadDashboardChit = () => loadChitDashboard(token)
+    .then(payload => setDashboardChitSchemes((payload.schemes || []).filter(scheme => scheme.status === "active")))
+    .catch(() => setDashboardChitSchemes([]));
   useEffect(() => {
-    loadChitDashboard(token)
-      .then(payload => setDashboardChitSchemes((payload.schemes || []).filter(scheme => scheme.status === "active")))
-      .catch(() => setDashboardChitSchemes([]));
+    reloadDashboardChit();
   }, [token]);
   useEffect(() => {
     const showCustomers = () => setPanel("customers");
@@ -957,7 +1069,7 @@ function FinancierTools({ loans, token, activeChitSchemes = [], onCreateAgent, o
     {actionHost && createPortal(<>{selectedModule === "daily" && <Button onClick={() => setPanel("agents")}>Agents</Button>}<Button onClick={() => { setPanel("customers"); window.dispatchEvent(new CustomEvent("fintrack-open-customers", { detail: selectedModule })); }}>Customers</Button></>, actionHost)}
     {panel === "reports" && <PortfolioReport loans={loans} token={token} close={() => setPanel(null)} />}
     {panel === "agents" && <CollectionStaffPage loans={loans} close={() => setPanel(null)} loadAgents={onLoadAgents} createAgent={onCreateAgent} assignAgent={onAssignAgent} updateAgent={onUpdateAgent} />}
-    {panel === "chit" && <div className="chit-dashboard" style={{ position: "fixed", inset: 0, zIndex: 5, overflow: "auto", background: C.bg }}><ChitFundPage token={token} openSchemeId={openChitSchemeId} onOpenSchemeConsumed={() => setOpenChitSchemeId(null)} close={() => { setOpenChitSchemeId(null); setPanel("dashboard"); }} /></div>}
+    {panel === "chit" && <div className="chit-dashboard" style={{ position: "fixed", inset: 0, zIndex: 5, overflow: "auto", background: C.bg }}><ChitFundPage token={token} openSchemeId={openChitSchemeId} onOpenSchemeConsumed={() => setOpenChitSchemeId(null)} onSchemesChanged={schemes => setDashboardChitSchemes((schemes || []).filter(scheme => scheme.status === "active"))} close={() => { setOpenChitSchemeId(null); setPanel("dashboard"); reloadDashboardChit(); }} /></div>}
     {(panel === null || panel === "dashboard") && selectedModule === "all" && <ActiveChitSchemes schemes={dashboardChitSchemes} onOpen={schemeId => { setOpenChitSchemeId(schemeId); setPanel("chit"); }} />}
   </div>;
 }

@@ -176,6 +176,9 @@ export const updateEnrolledChitMember = (token, enrollment) => supabase.rpc("chi
 export const deleteEnrolledChitMember = (token, enrollmentId) => supabase.rpc("chit_delete_enrolled_member", {
   input_enrollment_id: enrollmentId,
 }, token);
+export const deleteChitScheme = (token, schemeId) => supabase.rpc("chit_delete_scheme", {
+  input_scheme_id: schemeId,
+}, token);
 export const activateChitScheme = (token, schemeId) => supabase.rpc("chit_activate_scheme", { input_scheme_id: schemeId }, token);
 export const recordChitMonthlyBid = (token, bid) => supabase.rpc("chit_record_monthly_bid", {
   input_scheme_id: bid.schemeId, input_cycle_number: Number(bid.cycleNumber), input_cycle_date: bid.cycleDate,
