@@ -30,6 +30,7 @@ const today = () => indiaCalendarDate(new Date());
 const money = n => `₹${Number(n || 0).toLocaleString("en-IN", {
   maximumFractionDigits: 0
 })}`;
+const byCustomerName = (a, b) => String(a.customerName || "").localeCompare(String(b.customerName || ""), undefined, { sensitivity: "base" });
 const addDays = (s, n) => {
   const d = new Date(`${s}T12:00:00`);
   d.setDate(d.getDate() + n);
@@ -554,8 +555,8 @@ function TodayCollections({ loans, kind, back, collect, view }) {
   const expectedToday = dailyLoans.reduce((sum, loan) => sum + loan.dailyCollection, 0) + monthlyLoans.reduce((sum, loan) => sum + Math.round(monthlyBalance(loan) * annualRate(loan, today()) / 100), 0);
   const receivedToday = activeLoans.reduce((sum, loan) => sum + loan.transactions.filter(transaction => transaction.date === today()).reduce((total, transaction) => total + paymentValue(loan, transaction), 0), 0);
   const matchesSearch = loan => `${loan.customerName} ${loan.phone} ${loan.address || ""}`.toLowerCase().includes(search.trim().toLowerCase());
-  const shownDailyLoans = dailyLoans.filter(matchesSearch);
-  const shownMonthlyLoans = monthlyLoans.filter(matchesSearch);
+  const shownDailyLoans = dailyLoans.filter(matchesSearch).sort(byCustomerName);
+  const shownMonthlyLoans = monthlyLoans.filter(matchesSearch).sort(byCustomerName);
   useEffect(() => {
     const sections = document.querySelectorAll(".collection-shell .collection-section");
     const unrelatedSection = kind === "daily" ? sections[1] : sections[0];
@@ -685,8 +686,8 @@ function Financier({
     return <main className="shell"><OperationsDetail loan={loan} back={() => setDetail(null)} collect={setModal} edit={setEditLoan} remove={async account => { if (window.confirm(`Delete ${account.customerName}'s finance account and all its payments? This cannot be undone.`)) { await onDeleteLoan(account); setDetail(null); } }} portal={setPortalLoan} kyc={kyc} editKyc={setEditKycLoan} isOwner={isOwner} changeStatus={async (account, status) => { if (window.confirm(`${status === "bankrupt" ? "Mark this account bankrupt and record its unpaid balance as a loss?" : status === "closed" ? "Close this account and disable new collections?" : "Reopen this account for collections?"}`)) await onStatusChange(account, status); }} editPaymentNote={onPaymentNoteChange} correctPayment={onPaymentCorrect} deletePayment={onPaymentDelete} />{modal && <Payment loan={modal} close={() => setModal(null)} save={addPayment} />}{isOwner && editLoan && <EditAccount loan={loan} close={() => setEditLoan(null)} save={onUpdateLoan} />}{isOwner && portalLoan && <CustomerPortalSetup loan={loan} close={() => setPortalLoan(null)} save={onSaveCustomerPortal} />}{isOwner && editKycLoan && <KycEditor loan={loan} current={kyc} close={() => setEditKycLoan(null)} save={async (account, aadhaar, pan) => { await onSaveKyc(account, aadhaar, pan); setKyc(await onLoadKyc(account)); }} />}</main>;
   }
   if (!customerMode && module === "all") {
-    const dailyCustomers = loans.filter(loan => loan.kind === "daily" && loanStatus(loan) === "active");
-    const monthlyCustomers = loans.filter(loan => loan.kind === "monthly" && loanStatus(loan) === "active");
+    const dailyCustomers = loans.filter(loan => loan.kind === "daily" && loanStatus(loan) === "active").sort(byCustomerName);
+    const monthlyCustomers = loans.filter(loan => loan.kind === "monthly" && loanStatus(loan) === "active").sort(byCustomerName);
     return <main className="shell"><header className="top"><div><div className="brand">{businessName || "My Finance Business"}</div><div className="sub">{isOwner ? "Financier dashboard" : "Collection agent dashboard"}</div></div><Button onClick={logout}>Log out</Button></header><div className="toolbar"><div><h1 className="title">Dashboard</h1><p className="copy">Overview of your active finance customers and Chit Fund schemes.</p></div><div className="tabs">{isOwner && <Button className="primary" onClick={() => setModal("new")}>+ New finance account</Button>}</div></div><DashboardFinanceSection title="Daily Finance" loans={dailyCustomers} onView={setDetail} /><DashboardFinanceSection title="Monthly Finance" loans={monthlyCustomers} onView={setDetail} />{isOwner && modal === "new" && <NewFinance close={() => setModal(null)} save={async loan => { await onCreateLoan(loan); setModal(null); }} />}</main>;
   }
   {
@@ -712,7 +713,8 @@ function DashboardFinanceSection({ title, loans, onView }) {
   const profit = loans.reduce((sum, loan) => sum + realizedProfit(loan), 0);
   const loss = loans.reduce((sum, loan) => sum + realizedLoss(loan), 0);
   const icon = title === "Daily Finance" ? "◷" : "◫";
-  return <section className="card dashboard-finance-section"><div className="toolbar dashboard-finance-heading"><div className="dashboard-finance-title"><div className="dashboard-finance-icon">{icon}</div><div><strong>{title}</strong><p className="small">Active customer portfolio</p></div></div><span className="badge active">{loans.length} active customers</span></div><div className="grid metrics dashboard-finance-metrics"><Metric label="Amount financed" value={money(financed)} color="gold" /><Metric label="Amounts received" value={money(received)} color="green" /><Metric label="Outstanding" value={money(outstanding)} color="red" /><Metric label="Profit / loss" value={`${money(profit)} / ${money(loss)}`} color={loss ? "red" : "green"} /></div>{loans.length ? <div className="table dashboard-finance-table"><table><thead><tr><th>Customer</th><th>Phone</th><th>Amount financed</th><th>Balance</th><th></th></tr></thead><tbody>{loans.map(loan => <tr key={loan.id}><td><strong>{loan.customerName}</strong></td><td><a className="small phone-link" href={`tel:${loan.phone}`}>{loan.phone}</a></td><td>{money(loan.kind === "daily" ? loan.collectionAmount : loan.principal)}</td><td className="red">{money(loanBalance(loan))}</td><td><Button onClick={() => onView(loan)}>View</Button></td></tr>)}</tbody></table></div> : <p className="small spacer dashboard-finance-empty">No active customers.</p>}</section>;
+  const rows = [...loans].sort(byCustomerName);
+  return <section className="card dashboard-finance-section"><div className="toolbar dashboard-finance-heading"><div className="dashboard-finance-title"><div className="dashboard-finance-icon">{icon}</div><div><strong>{title}</strong><p className="small">Active customer portfolio</p></div></div><span className="badge active">{loans.length} active customers</span></div><div className="grid metrics dashboard-finance-metrics"><Metric label="Amount financed" value={money(financed)} color="gold" /><Metric label="Amounts received" value={money(received)} color="green" /><Metric label="Outstanding" value={money(outstanding)} color="red" /><Metric label="Profit / loss" value={`${money(profit)} / ${money(loss)}`} color={loss ? "red" : "green"} /></div>{rows.length ? <div className="table dashboard-finance-table"><table><thead><tr><th>Customer</th><th>Phone</th><th>Amount financed</th><th>Balance</th><th></th></tr></thead><tbody>{rows.map(loan => <tr key={loan.id}><td><strong>{loan.customerName}</strong></td><td><a className="small phone-link" href={`tel:${loan.phone}`}>{loan.phone}</a></td><td>{money(loan.kind === "daily" ? loan.collectionAmount : loan.principal)}</td><td className="red">{money(loanBalance(loan))}</td><td><Button onClick={() => onView(loan)}>View</Button></td></tr>)}</tbody></table></div> : <p className="small spacer dashboard-finance-empty">No active customers.</p>}</section>;
 }
 function PinResetModal({ title, currentPin, onSave, close }) {
   const [oldPin, setOldPin] = useState("");
@@ -816,7 +818,7 @@ function CollectionStaffPage({ loans, close, loadAgents, createAgent, assignAgen
     && loanStatus(loan) === "active"
     && (!loan.collectionAgentId || loan.collectionAgentId === selected?.id)
     && `${loan.customerName} ${loan.phone}`.toLowerCase().includes(search.toLowerCase())
-  );
+  ).sort(byCustomerName);
   const choose = agent => { setSelected(agent); setDraftIds(loans.filter(loan => loan.collectionAgentId === agent.id).map(loan => loan.id)); setSearch(""); setSaved(""); };
   const toggle = id => setDraftIds(ids => ids.includes(id) ? ids.filter(value => value !== id) : [...ids, id]);
   const saveStaff = async details => { try { const updated = await updateAgent({ id: selected.id, ...details }); setSelected(updated); setAgents(current => current.map(agent => agent.id === updated.id ? updated : agent)); setShowEdit(false); setSaved("Staff details saved successfully."); } catch (e) { setError(e.message || "Could not save staff details."); } };

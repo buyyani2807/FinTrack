@@ -1,6 +1,8 @@
 import { supabase } from "./supabase";
 
 const asNumber = value => Number(value || 0);
+const memberDisplayName = row => row?.chit_members?.full_name || row?.full_name || "";
+const sortMembersByName = rows => [...(rows || [])].sort((a, b) => memberDisplayName(a).localeCompare(memberDisplayName(b), undefined, { sensitivity: "base" }));
 
 export async function loadWorkspace(token) {
   const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
@@ -212,13 +214,14 @@ export const loadChitSchemeDetails = async (token, schemeId) => {
     supabase.query(`/rest/v1/predefined_chit_schedule?scheme_id=eq.${schemeId}&select=*&order=month_number.asc`, token).catch(() => []),
     supabase.query(`/rest/v1/predefined_chit_payments?scheme_id=eq.${schemeId}&select=*&order=payment_month.asc`, token).catch(() => []),
   ]);
-  if (!cycleIds.length) return { enrollments, cycles, bids: [], installments: [], fixedLifts, fixedPayments, predefinedSchedule, predefinedPayments };
+  const members = sortMembersByName(enrollments);
+  if (!cycleIds.length) return { enrollments: members, cycles, bids: [], installments: [], fixedLifts, fixedPayments, predefinedSchedule, predefinedPayments };
   const cycleFilter = cycleIds.join(",");
   const [bids, installments] = await Promise.all([
     supabase.query(`/rest/v1/chit_bids?cycle_id=in.(${cycleFilter})&select=*`, token),
     supabase.query(`/rest/v1/chit_installments?cycle_id=in.(${cycleFilter})&select=*&order=due_date.desc`, token),
   ]);
-  return { enrollments, cycles, bids, installments, fixedLifts, fixedPayments, predefinedSchedule, predefinedPayments };
+  return { enrollments: members, cycles, bids, installments, fixedLifts, fixedPayments, predefinedSchedule, predefinedPayments };
 };
 export const updateChitInstallmentPayment = (token, payment) => supabase.rpc("chit_update_installment_payment", {
   input_installment_id: payment.id, input_amount_paid: Number(payment.amountPaid), input_paid_date: payment.paidDate || null,
@@ -263,7 +266,7 @@ export const loadChitDashboard = async token => {
     supabase.query("/rest/v1/fixed_chit_lifts?select=*&order=month_number.asc", token).catch(() => []),
     supabase.query("/rest/v1/predefined_chit_schedule?select=*&order=month_number.asc", token).catch(() => []),
   ]);
-  return { schemes, cycles, enrollments, fixedLifts, predefinedSchedule };
+  return { schemes, cycles, enrollments: sortMembersByName(enrollments), fixedLifts, predefinedSchedule };
 };
 export const loadChitLiveAuction = (token, schemeId) => supabase.rpc("chit_live_auction_snapshot", { input_scheme_id: schemeId }, token);
 export const startChitLiveAuction = (token, schemeId, cycleNumber, cycleDate) => {
