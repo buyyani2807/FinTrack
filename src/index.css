@@ -66,6 +66,10 @@ body {
   margin-bottom: 0;
 }
 
+.dashboard-finance-section:has(+ style + .dashboard-chit) {
+  margin-bottom: 0;
+}
+
 .dashboard-finance-heading {
   margin-bottom: 20px;
 }
