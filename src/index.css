@@ -82,6 +82,7 @@ body {
 
 .dashboard-finance-heading {
   margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
 .dashboard-finance-title {
