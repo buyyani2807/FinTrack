@@ -166,6 +166,7 @@ const mobileLayout = `
 .nav-short,.label-short{display:none}
 .nav-label{display:inline-flex;align-items:center;gap:7px}
 .dashboard-finance-table td:first-child{white-space:normal}
+.top-actions{display:flex;flex-direction:row;align-items:center;gap:8px;flex-shrink:0}
 @media(max-width:1050px){
   html{scroll-padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
   .shell{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))!important}
@@ -185,7 +186,9 @@ const mobileLayout = `
   .dashboard-finance-metrics{grid-template-columns:1fr 1fr!important;gap:10px!important;margin:14px 0 16px!important}
 }
 @media(max-width:680px){
-  .top{flex-direction:row!important;align-items:center!important;margin-bottom:12px!important;gap:10px!important}
+  .top{flex-direction:row!important;align-items:flex-start!important;margin-bottom:12px!important;gap:10px!important}
+  .top-actions{flex-direction:column;align-items:stretch}
+  .top-actions .btn{min-width:118px;justify-content:center;text-align:center}
   .brand{font-size:20px!important;letter-spacing:-.4px}
   .sub{margin-top:2px!important;font-size:11px!important}
   .shell>.toolbar{gap:10px!important;align-items:flex-start}
@@ -757,7 +760,7 @@ function Financier({
   if (!customerMode && module === "all") {
     const dailyCustomers = loans.filter(loan => loan.kind === "daily" && loanStatus(loan) === "active").sort(byCustomerName);
     const monthlyCustomers = loans.filter(loan => loan.kind === "monthly" && loanStatus(loan) === "active").sort(byCustomerName);
-    return <main className="shell dashboard-home"><header className="top"><div><div className="brand">{businessName || "My Finance Business"}</div><div className="sub">{isOwner ? "Financier dashboard" : "Collection agent dashboard"}</div></div><Button onClick={logout}>Log out</Button></header><div className="toolbar"><div><h1 className="title">Dashboard</h1><p className="copy">Overview of your active finance customers and Chit Fund schemes.</p></div><div className="tabs">{isOwner && <Button className="primary" onClick={() => setModal("new")}><span className="label-full">+ New finance account</span><span className="label-short">+ New account</span></Button>}</div></div><DashboardFinanceSection title="Daily Finance" loans={dailyCustomers} onView={setDetail} /><DashboardFinanceSection title="Monthly Finance" loans={monthlyCustomers} onView={setDetail} />{isOwner && modal === "new" && <NewFinance close={() => setModal(null)} save={async loan => { await onCreateLoan(loan); setModal(null); }} />}</main>;
+    return <main className="shell dashboard-home"><header className="top"><div><div className="brand">{businessName || "My Finance Business"}</div><div className="sub">{isOwner ? "Financier dashboard" : "Collection agent dashboard"}</div></div><div className="top-actions"><Button onClick={logout}>Log out</Button>{isOwner && <Button className="primary" onClick={() => setModal("new")}>New Account</Button>}</div></header><div className="toolbar"><div><h1 className="title">Dashboard</h1><p className="copy">Overview of your active finance customers and Chit Fund schemes.</p></div></div><DashboardFinanceSection title="Daily Finance" loans={dailyCustomers} onView={setDetail} /><DashboardFinanceSection title="Monthly Finance" loans={monthlyCustomers} onView={setDetail} />{isOwner && modal === "new" && <NewFinance close={() => setModal(null)} save={async loan => { await onCreateLoan(loan); setModal(null); }} />}</main>;
   }
   {
     const loans = moduleLoans;
