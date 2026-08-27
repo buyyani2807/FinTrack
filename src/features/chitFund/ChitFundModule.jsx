@@ -643,7 +643,7 @@ function ChitSchemeDashboardSection({ kind, rows, busy, open, edit, activate }) 
   </section>;
 }
 
-export function ChitFundPage({ token, close, openSchemeId = null }) {
+export function ChitFundPage({ token, close, openSchemeId = null, onOpenSchemeConsumed }) {
   const [schemes, setSchemes] = useState([]);
   const [cycles, setCycles] = useState([]);
   const [enrollments, setEnrollments] = useState([]);
@@ -679,9 +679,9 @@ export function ChitFundPage({ token, close, openSchemeId = null }) {
     return () => { ignore = true; };
   }, [token]);
   useEffect(() => {
-    if (openSchemeId && schemes.length) {
-      setSelected(schemes.find(scheme => scheme.id === openSchemeId) || null);
-    }
+    if (!openSchemeId || !schemes.length) return;
+    setSelected(schemes.find(scheme => scheme.id === openSchemeId) || null);
+    onOpenSchemeConsumed?.();
   }, [openSchemeId, schemes]);
   const rows = useMemo(() => schemes.map(scheme => {
     const schemeCycles = cycles.filter(cycle => cycle.scheme_id === scheme.id).sort((a, b) => a.cycle_number - b.cycle_number);
@@ -761,7 +761,7 @@ export function ChitFundPage({ token, close, openSchemeId = null }) {
     });
     setModal("edit-scheme");
   };
-  if (selected) return <ChitSchemeDetails token={token} scheme={selected} back={() => { setSelected(null); close(); refresh(); }} />;
+  if (selected) return <ChitSchemeDetails token={token} scheme={selected} back={() => { setSelected(null); refresh(); }} />;
   return <main className="shell chit-fund-page">
     <div className="toolbar"><div><Button onClick={close}>← Dashboard</Button><h1 className="title spacer">Chit Fund</h1><p className="copy chit-fund-intro">Auction Chits use live bidding, Fixed Chits use scheduled lifts, and Fixed Predefined Bid Chits use an editable generated schedule.</p></div><Button className="primary" onClick={() => setModal("choose-type")}>+ New scheme</Button></div>
     {error && <p className="red small">{error}</p>}

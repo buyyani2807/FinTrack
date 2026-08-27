@@ -885,7 +885,7 @@ function FinancierTools({ loans, token, activeChitSchemes = [], onCreateAgent, o
     {actionHost && createPortal(<>{selectedModule === "daily" && <Button onClick={() => setPanel("agents")}>Agents</Button>}<Button onClick={() => { setPanel("customers"); window.dispatchEvent(new CustomEvent("fintrack-open-customers", { detail: selectedModule })); }}>Customers</Button></>, actionHost)}
     {panel === "reports" && <PortfolioReport loans={loans} token={token} close={() => setPanel(null)} />}
     {panel === "agents" && <CollectionStaffPage loans={loans} close={() => setPanel(null)} loadAgents={onLoadAgents} createAgent={onCreateAgent} assignAgent={onAssignAgent} updateAgent={onUpdateAgent} />}
-    {panel === "chit" && <div className="chit-dashboard" style={{ position: "fixed", inset: 0, zIndex: 5, overflow: "auto", background: C.bg }}><ChitFundPage token={token} openSchemeId={openChitSchemeId} close={() => { setOpenChitSchemeId(null); setPanel("dashboard"); }} /></div>}
+    {panel === "chit" && <div className="chit-dashboard" style={{ position: "fixed", inset: 0, zIndex: 5, overflow: "auto", background: C.bg }}><ChitFundPage token={token} openSchemeId={openChitSchemeId} onOpenSchemeConsumed={() => setOpenChitSchemeId(null)} close={() => { setOpenChitSchemeId(null); setPanel("dashboard"); }} /></div>}
     {(panel === null || panel === "dashboard") && selectedModule === "all" && <ActiveChitSchemes schemes={dashboardChitSchemes} onOpen={schemeId => { setOpenChitSchemeId(schemeId); setPanel("chit"); }} />}
   </div>;
 }
