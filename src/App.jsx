@@ -3,7 +3,9 @@ import { createPortal } from "react-dom";
 import { supabase } from "./lib/supabase";
 import { monthlyInterestOnBalance } from "./features/finance/calculations";
 import { ChitCustomerPortal, ChitFundPage } from "./features/chitFund/ChitFundModule";
-import { assignCollectionAgent, chitCustomerPortalLogin, createCollectionAgent, createFinanceAccount, customerPortalLogin, deleteFinanceAccount, deleteFinancePayment, enableCustomerPortal, loadChitDashboard, loadCustomerKyc, loadFinanceAccounts, loadManagedAgents, loadWorkspace, recordPayment, resetCustomerPortalPin, saveCustomerKyc, setAccountStatus, saveCollectionOrder, updateCollectionAgent, updateFinanceAccount, updateFinancePayment, updatePaymentNotes } from "./lib/financeRepository";
+import { assignCollectionAgent, chitCustomerPortalLogin, createCollectionAgent, createFinanceAccount, customerPortalLogin, deleteFinanceAccount, deleteFinancePayment, enableCustomerPortal, loadChitDashboard, loadChitSchemeDetails, loadCustomerKyc, loadFinanceAccounts, loadManagedAgents, loadWorkspace, recordPayment, resetCustomerPortalPin, saveCustomerKyc, setAccountStatus, saveCollectionOrder, updateCollectionAgent, updateFinanceAccount, updateFinancePayment, updatePaymentNotes } from "./lib/financeRepository";
+import { buildChitMonthStatement, currentSchemeMonth, monthLabel as chitMonthLabel } from "./features/chitFund/monthStatement";
+import { downloadChitMonthStatementPdf } from "./features/chitFund/monthStatementPdf";
 
 // FinTrack MVP. This browser-only build is for testing; add a secure backend,
 // authentication, audit trails, and local compliance review before production.
@@ -726,14 +728,83 @@ function PinResetModal({ title, currentPin, onSave, close }) {
   };
   return <Modal><h2 className="title">Reset {title} PIN</h2><p className="copy">Choose a secure numeric PIN with at least four digits.</p><div className="tool-stack spacer"><Field label="Current PIN"><input type="password" value={oldPin} onChange={event => setOldPin(event.target.value)} /></Field><Field label="New PIN"><input type="password" value={newPin} onChange={event => setNewPin(event.target.value)} /></Field><Field label="Confirm new PIN"><input type="password" value={confirmPin} onChange={event => setConfirmPin(event.target.value)} /></Field></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button onClick={close}>Cancel</Button><Button className="primary" onClick={save}>Save new PIN</Button></div></Modal>;
 }
-function PortfolioReport({ loans, close }) {
+function ChitFundMonthReport({ token }) {
+  const [schemes, setSchemes] = useState([]);
+  const [schemeId, setSchemeId] = useState("");
+  const [monthNumber, setMonthNumber] = useState(1);
+  const [details, setDetails] = useState(null);
+  const [busy, setBusy] = useState(true);
+  const [error, setError] = useState("");
+  const scheme = schemes.find(item => item.id === schemeId);
+  useEffect(() => {
+    let ignore = false;
+    loadChitDashboard(token).then(payload => {
+      if (ignore) return;
+      const list = payload.schemes || [];
+      setSchemes(list);
+      const first = list[0];
+      if (first) {
+        setSchemeId(first.id);
+        setMonthNumber(currentSchemeMonth(first));
+      } else {
+        setBusy(false);
+      }
+    }).catch(err => { if (!ignore) { setError(err.message || "Could not load Chit Fund schemes."); setBusy(false); } });
+    return () => { ignore = true; };
+  }, [token]);
+  useEffect(() => {
+    if (!schemeId) { setDetails(null); return; }
+    let ignore = false;
+    setBusy(true);
+    loadChitSchemeDetails(token, schemeId).then(payload => {
+      if (ignore) return;
+      setDetails(payload);
+      setError("");
+      setBusy(false);
+    }).catch(err => { if (!ignore) { setError(err.message || "Could not load scheme details."); setBusy(false); } });
+    return () => { ignore = true; };
+  }, [token, schemeId]);
+  const statement = scheme && details ? buildChitMonthStatement({ scheme, details, monthNumber }) : null;
+  const months = Array.from({ length: Number(scheme?.duration_months || 0) }, (_, index) => index + 1);
+  const download = () => {
+    try {
+      setError("");
+      downloadChitMonthStatementPdf({ scheme, details, monthNumber });
+    } catch (err) {
+      setError(err.message || "Could not download statement.");
+    }
+  };
+  return <>
+    <p className="copy spacer">Download a month statement for any Chit Fund scheme. Daily and Monthly reports are unchanged.</p>
+    <div className="form spacer">
+      <Field label="Scheme"><select value={schemeId} onChange={event => { const next = schemes.find(item => item.id === event.target.value); setSchemeId(event.target.value); if (next) setMonthNumber(currentSchemeMonth(next)); }}>{schemes.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
+      <Field label="Month"><select value={monthNumber} onChange={event => setMonthNumber(Number(event.target.value))}>{months.map(month => <option key={month} value={month}>{chitMonthLabel(scheme.start_date, month)}</option>)}</select></Field>
+    </div>
+    {error && <p className="red small">{error}</p>}
+    {busy && <p className="small spacer">Loading Chit Fund statement…</p>}
+    {statement && !busy && <>
+      <div className="grid metrics">
+        <Metric label="Expected" value={money(statement.expected)} color="gold" />
+        <Metric label="Collected" value={money(statement.collected)} color="green" />
+        <Metric label="Pending" value={money(statement.pending)} color="red" />
+        <Metric label="Collection progress" value={`${statement.progress}%`} color="blue" />
+      </div>
+      <div className="row spacer">
+        <span className="small">PDF includes auction/prize, member collections, and outstanding dues for {statement.monthLabel}.</span>
+        <Button className="primary" onClick={download}>Download PDF</Button>
+      </div>
+    </>}
+    {!busy && !schemes.length && <p className="small spacer">No Chit Fund schemes yet.</p>}
+  </>;
+}
+function PortfolioReport({ loans, token, close }) {
   const [tab, setTab] = useState("collections"), [kind, setKind] = useState("all"), [status, setStatus] = useState("all"), [customer, setCustomer] = useState(""), [reportDate, setReportDate] = useState(today()), [error, setError] = useState("");
   const filtered = loans.filter(loan => (kind === "all" || loan.kind === kind) && (status === "all" || loanStatus(loan) === status) && loan.customerName.toLowerCase().includes(customer.toLowerCase()));
   const total = key => filtered.reduce((sum, loan) => sum + key(loan), 0);
   const daily = filtered.filter(loan => loan.kind === "daily"), monthly = filtered.filter(loan => loan.kind === "monthly");
   const netPosition = total(realizedProfit) - total(realizedLoss);
   const download = () => { try { setError(""); downloadDailyReport(filtered, reportDate); } catch (e) { setError(e.message); } };
-  return <Modal><div className="row"><h2 className="title">Reports</h2><Button onClick={close}>Close</Button></div><div className="tabs spacer"><Button className={`tab ${tab === "collections" ? "active" : ""}`} onClick={() => setTab("collections")}>Daily Collection Reports</Button><Button className={`tab ${tab === "profit" ? "active" : ""}`} onClick={() => setTab("profit")}>Profit &amp; Loss Report</Button></div>{tab === "collections" ? <><p className="copy spacer">Review and download Daily and Monthly collection activity for a selected date.</p><div className="form spacer"><Field label="Collection report date"><input type="date" value={reportDate} onChange={e => setReportDate(e.target.value)} /></Field><Field label="Finance type"><select value={kind} onChange={e => setKind(e.target.value)}><option value="all">Daily + Monthly</option><option value="daily">Daily finance</option><option value="monthly">Monthly finance</option></select></Field><Field label="Account status"><select value={status} onChange={e => setStatus(e.target.value)}><option value="all">All statuses</option><option value="active">Active</option><option value="closed">Closed</option><option value="bankrupt">Bankrupt</option></select></Field><Field className="span" label="Customer"><input placeholder="Filter by customer name" value={customer} onChange={e => setCustomer(e.target.value)} /></Field></div><div className="grid metrics"><Metric label="Accounts in report" value={filtered.length} color="blue" /><Metric label="Expected collection" value={money(filtered.reduce((sum, loan) => sum + (loan.kind === "daily" ? loan.dailyCollection : Math.round(monthlyBalance(loan, reportDate) * annualRate(loan, reportDate) / 100)), 0))} color="gold" /><Metric label="Collected on selected date" value={money(filtered.reduce((sum, loan) => sum + loan.transactions.filter(t => t.date === reportDate).reduce((value, t) => value + paymentValue(loan, t), 0), 0))} color="green" /><Metric label="Outstanding" value={money(total(loanBalance))} color="red" /></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><span className="small">The download includes customer details, expected and actual collection, notes, and Collected By.</span><Button className="primary" onClick={download}>Download collection report</Button></div></> : <><p className="copy spacer">Financial position based on the saved Daily and Monthly finance transactions. Outstanding amounts are receivables, not losses.</p><div className="form spacer"><Field label="Finance type"><select value={kind} onChange={e => setKind(e.target.value)}><option value="all">Daily + Monthly</option><option value="daily">Daily finance</option><option value="monthly">Monthly finance</option></select></Field><Field label="Account status"><select value={status} onChange={e => setStatus(e.target.value)}><option value="all">All statuses</option><option value="active">Active</option><option value="closed">Closed</option><option value="bankrupt">Bankrupt</option></select></Field><Field label="Customer"><input placeholder="Filter by customer name" value={customer} onChange={e => setCustomer(e.target.value)} /></Field></div><div className="grid metrics"><Metric label="Paid to customers" value={money(total(investedAmount))} color="gold" /><Metric label="Total collected" value={money(total(loanPaid))} color="green" /><Metric label="Outstanding / receivable" value={money(total(loanBalance))} color="red" /><Metric label="Realized profit" value={money(total(realizedProfit))} color="green" /><Metric label="Loss / bankrupt" value={money(total(realizedLoss))} color="red" /><Metric label="Net profit / loss" value={money(netPosition)} color={netPosition < 0 ? "red" : "green"} /></div><div className="grid two spacer"><div className="card"><strong>Daily finance</strong><p className="small">Paid to customers: {money(daily.reduce((sum, loan) => sum + investedAmount(loan), 0))} · Collected: {money(daily.reduce((sum, loan) => sum + loanPaid(loan), 0))}</p><p className="small">Profit: {money(daily.reduce((sum, loan) => sum + realizedProfit(loan), 0))} · Loss: {money(daily.reduce((sum, loan) => sum + realizedLoss(loan), 0))} · Outstanding: {money(daily.reduce((sum, loan) => sum + loanBalance(loan), 0))}</p></div><div className="card"><strong>Monthly finance</strong><p className="small">Paid to customers: {money(monthly.reduce((sum, loan) => sum + investedAmount(loan), 0))} · Collected: {money(monthly.reduce((sum, loan) => sum + loanPaid(loan), 0))}</p><p className="small">Profit: {money(monthly.reduce((sum, loan) => sum + realizedProfit(loan), 0))} · Loss: {money(monthly.reduce((sum, loan) => sum + realizedLoss(loan), 0))} · Outstanding: {money(monthly.reduce((sum, loan) => sum + loanBalance(loan), 0))}</p></div></div></>}</Modal>;
+  return <Modal><div className="row"><h2 className="title">Reports</h2><Button onClick={close}>Close</Button></div><div className="tabs spacer"><Button className={`tab ${tab === "collections" ? "active" : ""}`} onClick={() => setTab("collections")}>Daily Collection Reports</Button><Button className={`tab ${tab === "profit" ? "active" : ""}`} onClick={() => setTab("profit")}>Profit &amp; Loss Report</Button><Button className={`tab ${tab === "chit" ? "active" : ""}`} onClick={() => setTab("chit")}>Chit Fund</Button></div>{tab === "collections" ? <><p className="copy spacer">Review and download Daily and Monthly collection activity for a selected date.</p><div className="form spacer"><Field label="Collection report date"><input type="date" value={reportDate} onChange={e => setReportDate(e.target.value)} /></Field><Field label="Finance type"><select value={kind} onChange={e => setKind(e.target.value)}><option value="all">Daily + Monthly</option><option value="daily">Daily finance</option><option value="monthly">Monthly finance</option></select></Field><Field label="Account status"><select value={status} onChange={e => setStatus(e.target.value)}><option value="all">All statuses</option><option value="active">Active</option><option value="closed">Closed</option><option value="bankrupt">Bankrupt</option></select></Field><Field className="span" label="Customer"><input placeholder="Filter by customer name" value={customer} onChange={e => setCustomer(e.target.value)} /></Field></div><div className="grid metrics"><Metric label="Accounts in report" value={filtered.length} color="blue" /><Metric label="Expected collection" value={money(filtered.reduce((sum, loan) => sum + (loan.kind === "daily" ? loan.dailyCollection : Math.round(monthlyBalance(loan, reportDate) * annualRate(loan, reportDate) / 100)), 0))} color="gold" /><Metric label="Collected on selected date" value={money(filtered.reduce((sum, loan) => sum + loan.transactions.filter(t => t.date === reportDate).reduce((value, t) => value + paymentValue(loan, t), 0), 0))} color="green" /><Metric label="Outstanding" value={money(total(loanBalance))} color="red" /></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><span className="small">The download includes customer details, expected and actual collection, notes, and Collected By.</span><Button className="primary" onClick={download}>Download collection report</Button></div></> : tab === "profit" ? <><p className="copy spacer">Financial position based on the saved Daily and Monthly finance transactions. Outstanding amounts are receivables, not losses.</p><div className="form spacer"><Field label="Finance type"><select value={kind} onChange={e => setKind(e.target.value)}><option value="all">Daily + Monthly</option><option value="daily">Daily finance</option><option value="monthly">Monthly finance</option></select></Field><Field label="Account status"><select value={status} onChange={e => setStatus(e.target.value)}><option value="all">All statuses</option><option value="active">Active</option><option value="closed">Closed</option><option value="bankrupt">Bankrupt</option></select></Field><Field label="Customer"><input placeholder="Filter by customer name" value={customer} onChange={e => setCustomer(e.target.value)} /></Field></div><div className="grid metrics"><Metric label="Paid to customers" value={money(total(investedAmount))} color="gold" /><Metric label="Total collected" value={money(total(loanPaid))} color="green" /><Metric label="Outstanding / receivable" value={money(total(loanBalance))} color="red" /><Metric label="Realized profit" value={money(total(realizedProfit))} color="green" /><Metric label="Loss / bankrupt" value={money(total(realizedLoss))} color="red" /><Metric label="Net profit / loss" value={money(netPosition)} color={netPosition < 0 ? "red" : "green"} /></div><div className="grid two spacer"><div className="card"><strong>Daily finance</strong><p className="small">Paid to customers: {money(daily.reduce((sum, loan) => sum + investedAmount(loan), 0))} · Collected: {money(daily.reduce((sum, loan) => sum + loanPaid(loan), 0))}</p><p className="small">Profit: {money(daily.reduce((sum, loan) => sum + realizedProfit(loan), 0))} · Loss: {money(daily.reduce((sum, loan) => sum + realizedLoss(loan), 0))} · Outstanding: {money(daily.reduce((sum, loan) => sum + loanBalance(loan), 0))}</p></div><div className="card"><strong>Monthly finance</strong><p className="small">Paid to customers: {money(monthly.reduce((sum, loan) => sum + investedAmount(loan), 0))} · Collected: {money(monthly.reduce((sum, loan) => sum + loanPaid(loan), 0))}</p><p className="small">Profit: {money(monthly.reduce((sum, loan) => sum + realizedProfit(loan), 0))} · Loss: {money(monthly.reduce((sum, loan) => sum + realizedLoss(loan), 0))} · Outstanding: {money(monthly.reduce((sum, loan) => sum + loanBalance(loan), 0))}</p></div></div></> : <ChitFundMonthReport token={token} />}</Modal>;
 }
 function CollectionStaffPage({ loans, close, loadAgents, createAgent, assignAgent, updateAgent }) {
   const [agents, setAgents] = useState([]), [selected, setSelected] = useState(null), [search, setSearch] = useState(""), [showCreate, setShowCreate] = useState(false), [showEdit, setShowEdit] = useState(false), [error, setError] = useState(""), [draftIds, setDraftIds] = useState([]), [saved, setSaved] = useState(""), [loading, setLoading] = useState(true);
@@ -810,7 +881,7 @@ function FinancierTools({ loans, token, activeChitSchemes = [], onCreateAgent, o
       <div className="nav-footer">Financier workspace</div>
     </aside>
     {actionHost && createPortal(<>{selectedModule === "daily" && <Button onClick={() => setPanel("agents")}>Agents</Button>}<Button onClick={() => { setPanel("customers"); window.dispatchEvent(new CustomEvent("fintrack-open-customers", { detail: selectedModule })); }}>Customers</Button></>, actionHost)}
-    {panel === "reports" && <PortfolioReport loans={loans} close={() => setPanel(null)} />}
+    {panel === "reports" && <PortfolioReport loans={loans} token={token} close={() => setPanel(null)} />}
     {panel === "agents" && <CollectionStaffPage loans={loans} close={() => setPanel(null)} loadAgents={onLoadAgents} createAgent={onCreateAgent} assignAgent={onAssignAgent} updateAgent={onUpdateAgent} />}
     {panel === "chit" && <div className="chit-dashboard" style={{ position: "fixed", inset: 0, zIndex: 5, overflow: "auto", background: C.bg }}><ChitFundPage token={token} openSchemeId={openChitSchemeId} close={() => { setOpenChitSchemeId(null); setPanel("dashboard"); }} /></div>}
     {(panel === null || panel === "dashboard") && selectedModule === "all" && <ActiveChitSchemes schemes={dashboardChitSchemes} onOpen={schemeId => { setOpenChitSchemeId(schemeId); setPanel("chit"); }} />}
