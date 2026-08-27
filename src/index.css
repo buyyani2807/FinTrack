@@ -84,6 +84,24 @@ body {
   margin-bottom: 20px;
 }
 
+.dashboard-finance-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dashboard-finance-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #f4b94218;
+  border: 1px solid #f4b94255;
+  color: #f4b942;
+  font-size: 20px;
+}
+
 .dashboard-finance-heading strong {
   color: #f4f6fb;
   font: 700 17px Syne;
