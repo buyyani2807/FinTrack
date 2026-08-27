@@ -74,9 +74,9 @@ body {
   margin-top: -74px !important;
 }
 
-@media (max-width: 680px) {
+@media (max-width: 1050px) {
   .dashboard-chit {
-    margin-top: -48px !important;
+    margin-top: 16px !important;
   }
 }
 
