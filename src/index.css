@@ -394,6 +394,14 @@ body {
   }
 }
 
+.chit-member-payments {
+  overflow-x: auto;
+}
+
+.chit-member-payments table {
+  min-width: 720px;
+}
+
 @media (max-width: 680px) {
   .dashboard-finance-section {
     margin-bottom: 20px;
