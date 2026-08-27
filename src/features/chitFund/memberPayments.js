@@ -62,3 +62,11 @@ export function filterPaymentsForMonth(rows = [], month, cycles = []) {
 export function memberPaymentsForEnrollment(rows = [], enrollmentId) {
   return (rows || []).filter(row => row.enrollment_id === enrollmentId);
 }
+
+export function portalPaymentRows(state = {}) {
+  if (Array.isArray(state.installments) && state.installments.length) return state.installments;
+  if (Array.isArray(state.payments) && state.payments.length) return state.payments;
+  if (Array.isArray(state.fixedPayments) && state.fixedPayments.length) return state.fixedPayments;
+  if (Array.isArray(state.predefinedPayments) && state.predefinedPayments.length) return state.predefinedPayments;
+  return [];
+}

@@ -7,6 +7,7 @@ import {
   filterPaymentsForMonth,
   memberPaymentsForEnrollment,
   normalizeMemberPayment,
+  portalPaymentRows,
 } from "../src/features/chitFund/memberPayments.js";
 
 test("auction and fixed payment rows share expected/paid/balance fields", () => {
@@ -63,4 +64,12 @@ test("month filters keep only that installment month for members and administrat
   assert.deepEqual(filterPaymentsForMonth(rows, 1, cycles).map(row => row.id), ["a", "c"]);
   assert.deepEqual(filterPaymentsForMonth(rows, 2, cycles).map(row => row.id), ["b"]);
   assert.deepEqual(memberPaymentsForEnrollment(rows, "m1").map(row => row.id), ["a", "b"]);
+});
+
+test("member portal prefers auction installments, then fixed or predefined payment rows", () => {
+  assert.deepEqual(portalPaymentRows({ installments: [{ id: "a" }], fixedPayments: [{ id: "b" }] }).map(row => row.id), ["a"]);
+  assert.deepEqual(portalPaymentRows({ installments: [], payments: [{ id: "p" }] }).map(row => row.id), ["p"]);
+  assert.deepEqual(portalPaymentRows({ fixedPayments: [{ id: "f" }] }).map(row => row.id), ["f"]);
+  assert.deepEqual(portalPaymentRows({ predefinedPayments: [{ id: "d" }] }).map(row => row.id), ["d"]);
+  assert.deepEqual(portalPaymentRows({}), []);
 });

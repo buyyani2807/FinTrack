@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import {
   activateChitScheme,
   chitCustomerLiveState,
+  chitCustomerPaymentHistory,
   chitCustomerPlaceLiveBid,
   createChitMember,
   createChitScheme,
@@ -36,7 +37,7 @@ import { LIVE_BID_MODEL, enrollmentPortalId, liveAuctionLimits, liveBidPayout, v
 import { CHIT_TYPES, fixedCommissionFromPercent, fixedCommissionPercentFromAmount, validateFixedChit } from "./fixedChit";
 import { validatePredefinedBidChit } from "./predefinedBidChit";
 import { roundMoney } from "./calculations";
-import { chitPaymentDisplayStatus, chitPaymentOutstanding, filterPaymentsForMonth, memberPaymentsForEnrollment, normalizeMemberPayment } from "./memberPayments";
+import { chitPaymentDisplayStatus, chitPaymentOutstanding, filterPaymentsForMonth, memberPaymentsForEnrollment, normalizeMemberPayment, portalPaymentRows } from "./memberPayments";
 
 const indiaCalendarDate = date => {
   const parts = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
@@ -81,7 +82,7 @@ const ChitPaymentStatus = ({ row, asOfDate = today() }) => {
   return <span className={`badge ${paymentStatusClass(status)}`}>{status}</span>;
 };
 const ChitMemberPaymentHistory = ({ title, rows, empty }) => {
-  const payments = (rows || []).map(normalizeMemberPayment);
+  const payments = (rows || []).map(normalizeMemberPayment).sort((a, b) => a.month - b.month);
   return <div className="card spacer"><strong>{title}</strong><div className="table spacer chit-member-payments"><table><thead><tr><th>Month</th><th>Due date</th><th>Payment date</th><th>Expected</th><th>Paid</th><th>Balance</th><th>Late fee</th><th>Reference</th><th>Status</th></tr></thead><tbody>{payments.map(item => <tr key={item.id}><td>Month {item.month}</td><td>{formatChitDate(item.dueDate)}</td><td>{formatChitDate(item.paidDate)}</td><td>{money(item.expected)}</td><td>{money(item.paid)}</td><td className="red">{money(item.balance)}</td><td>{item.lateFee ? money(item.lateFee) : "—"}</td><td>{item.reference || "—"}</td><td><ChitPaymentStatus row={{ ...item, amount_due: item.expected, amount_paid: item.paid, due_date: item.dueDate, status: item.storedStatus }} /></td></tr>)}</tbody></table>{!payments.length && <p className="small spacer">{empty}</p>}</div></div>;
 };
 const ChitPortalAccess = ({ token, enrollment, onChange, liveBidding }) => {
@@ -815,7 +816,7 @@ export function ChitFundPage({ token, close, openSchemeId = null, onOpenSchemeCo
 function FixedChitCustomerPortal({ state, logout, loadError }) {
   const scheme = state.scheme || {};
   const lift = state.fixedLift;
-  const payments = state.fixedPayments || [];
+  const payments = portalPaymentRows(state);
   const outstanding = chitPaymentOutstanding(payments);
   return <main className="shell" style={{ maxWidth: 960 }}><header className="top"><div><div className="brand">FinTrack</div><div className="sub">Fixed Chit customer dashboard</div></div><Button onClick={logout}>Log out</Button></header><h1 className="title">Hello, {state.memberName || "Member"}</h1><p className="copy">{scheme.name || "Fixed Chit"} · Ticket {state.ticketNumber} · Portal {state.portalId}</p>{loadError && <p className="red small">{loadError}</p>}{!scheme.name && !loadError && <p className="small">Loading your chit dashboard…</p>}<p className="notice">This is a Fixed Chit. Lift amounts follow the predetermined schedule; live bidding is not used.</p><div className="grid metrics"><Metric label="Chit value" value={money(scheme.chit_value)} color="gold" /><Metric label="Monthly contribution" value={money(scheme.installment_amount)} /><Metric label="Your lift month" value={lift ? `Month ${lift.month_number}` : "Not assigned"} color="blue" /><Metric label="Your lift amount" value={lift ? money(lift.lift_amount) : "—"} color="gold" /><Metric label="Monthly payment" value={lift ? money(lift.monthly_payment) : "—"} /><Metric label="Remaining payments" value={lift?.remaining_months ?? "—"} /><Metric label="Outstanding" value={money(outstanding)} color="red" /></div><ChitMemberPaymentHistory title="Your payment history" rows={payments} empty="Your month-wise payment schedule will appear after this scheme is activated." /></main>;
 }
@@ -823,7 +824,7 @@ function FixedChitCustomerPortal({ state, logout, loadError }) {
 function PredefinedBidCustomerPortal({ state, logout, loadError }) {
   const scheme = state.scheme || {};
   const item = state.predefinedMonth;
-  const payments = state.predefinedPayments || [];
+  const payments = portalPaymentRows(state);
   const outstanding = chitPaymentOutstanding(payments);
   return <main className="shell" style={{ maxWidth: 960 }}><header className="top"><div><div className="brand">FinTrack</div><div className="sub">Fixed Predefined Bid customer dashboard</div></div><Button onClick={logout}>Log out</Button></header><h1 className="title">Hello, {state.memberName || "Member"}</h1><p className="copy">{scheme.name || "Fixed Predefined Bid"} · Ticket {state.ticketNumber} · Portal {state.portalId}</p>{loadError && <p className="red small">{loadError}</p>}{!scheme.name && !loadError && <p className="small">Loading your chit dashboard…</p>}<p className="notice">This Chit uses a predefined monthly schedule. Live bidding is not used.</p><div className="grid metrics"><Metric label="Lift month" value={item ? `Month ${item.month_number}` : "Not assigned"} color="blue" /><Metric label="EMI" value={item ? money(item.emi) : "—"} /><Metric label="COMM" value={item ? money(item.comm_amount) : "—"} /><Metric label="Auction amount" value={item ? money(item.auction_amount) : "—"} /><Metric label="Bid amount" value={item ? money(item.bid_amount) : "—"} color="gold" /><Metric label="Manager commission" value={item ? money(item.manager_commission) : "—"} /><Metric label="Net receivable" value={item ? money(item.net_receivable) : "—"} color="green" /><Metric label="Outstanding" value={money(outstanding)} color="red" /></div><ChitMemberPaymentHistory title="Your payment history" rows={payments} empty="Your month-wise payment schedule will appear after this scheme is activated." /></main>;
 }
@@ -838,10 +839,23 @@ export function ChitCustomerPortal({ session, logout }) {
   useEffect(() => {
     if (!token) return undefined;
     let ignore = false;
+    const merge = payload => {
+      if (ignore || !payload) return;
+      setState(current => ({
+        ...current,
+        ...payload,
+        sessionToken: token,
+        installments: payload.installments ?? current.installments ?? [],
+        payments: payload.payments ?? current.payments ?? [],
+        fixedPayments: payload.fixedPayments ?? current.fixedPayments ?? [],
+        predefinedPayments: payload.predefinedPayments ?? current.predefinedPayments ?? [],
+      }));
+    };
     const load = isPoll => chitCustomerLiveState(token)
-      .then(payload => { if (!ignore) { setState({ ...payload, sessionToken: token }); if (!isPoll) setLoadError(""); } })
+      .then(payload => { merge(payload); if (!isPoll) setLoadError(""); })
       .catch(err => { if (!ignore && !isPoll) setLoadError(err.message || "Could not load your chit dashboard."); });
     load(false);
+    chitCustomerPaymentHistory(token).then(merge).catch(() => {});
     const timer = setInterval(() => load(true), 2000);
     return () => { ignore = true; clearInterval(timer); };
   }, [token]);
@@ -855,7 +869,7 @@ export function ChitCustomerPortal({ session, logout }) {
   const leading = state.leadingBid || state.leading_bid;
   const bids = state.bids || [];
   const wins = state.wins || [];
-  const installments = state.installments || [];
+  const installments = portalPaymentRows(state);
   const eligible = state.eligible === true;
   const chitValue = Number(scheme.chit_value || 0);
   const limits = liveAuctionLimits({
@@ -878,7 +892,13 @@ export function ChitCustomerPortal({ session, logout }) {
     try {
       const nonce = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
       const next = await chitCustomerPlaceLiveBid(token, amount, nonce);
-      setState({ ...next, sessionToken: token });
+      setState(current => ({
+        ...current,
+        ...next,
+        sessionToken: token,
+        installments: next.installments ?? current.installments ?? [],
+        payments: next.payments ?? current.payments ?? [],
+      }));
       setAmount("");
     } catch (err) { setError(err.message || "Could not submit your bid."); }
     finally { setBusy(false); }
@@ -904,10 +924,10 @@ export function ChitCustomerPortal({ session, logout }) {
       <Metric label="Outstanding" value={money(chitPaymentOutstanding(installments))} color="red" />
       <Metric label="You can bid" value={eligible && auction?.status === "open" ? "Yes" : "No"} color={eligible && auction?.status === "open" ? "green" : "red"} />
     </div>
+    <ChitMemberPaymentHistory title="Your payment history" rows={installments} empty="Month-wise installments appear after your financier records a monthly bid." />
     {auction?.status === "open" && eligible && <form className="card spacer" onSubmit={submit}><strong>Post your bid</strong><p className="small">Enter an amount above {money(limits.commission)} and at most {money(limits.maxBid)}. A new bid must be higher than {leading ? money(leading.bid_amount) : "any previous bid"}.{amount && Number(amount) > limits.commission ? ` If you win at ${money(amount)}, you receive ${money(liveBidPayout({ chitValue, bidAmount: amount }))}.` : ""}</p><div className="form spacer"><Field className="span" label="Your bid amount (₹)"><input required type="number" min={limits.commission + 0.01} max={limits.maxBid} step="0.01" value={amount} onChange={event => setAmount(event.target.value)} /></Field></div><Button className="primary" disabled={busy} type="submit">{busy ? "Submitting…" : "Submit bid"}</Button></form>}
     {auction?.status === "open" && !eligible && <p className="notice">You are not eligible to bid this month. Members who already won a month cannot bid again.</p>}
     <div className="card spacer"><strong>Live bids</strong><div className="table spacer"><table><thead><tr><th>Time</th><th>Member</th><th>Amount</th></tr></thead><tbody>{bids.map(bid => <tr key={bid.id}><td>{formatTime(bid.submitted_at)}</td><td>Ticket {bid.ticket_number} · {bid.member_name}</td><td>{money(bid.bid_amount)}</td></tr>)}</tbody></table>{!bids.length && <p className="small">No live bids yet.</p>}</div></div>
     <div className="card spacer"><strong>Your winning months</strong>{wins.length ? <div className="table spacer"><table><thead><tr><th>Month</th><th>Winning bid</th><th>Bid date</th><th>Status</th></tr></thead><tbody>{wins.map(win => <tr key={win.month}><td>Month {win.month}</td><td>{money(win.bidAmount)}</td><td>{formatChitDate(win.bidDate)}</td><td>{win.status}</td></tr>)}</tbody></table></div> : <p className="small spacer">You have not won a monthly bid in this scheme yet.</p>}</div>
-    <ChitMemberPaymentHistory title="Your payment history" rows={installments} empty="Month-wise installments appear after your financier records a monthly bid." />
   </main>;
 }

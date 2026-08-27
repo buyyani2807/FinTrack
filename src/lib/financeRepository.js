@@ -284,6 +284,7 @@ export const enableChitMemberPortal = (token, enrollmentId, pin) => supabase.rpc
 export const resetChitMemberPortalPin = (token, enrollmentId, pin) => supabase.rpc("reset_chit_member_portal_pin", { input_enrollment_id: enrollmentId, new_pin: pin }, token);
 export const chitCustomerPortalLogin = (portalId, pin) => supabase.rpc("chit_customer_portal_login", { input_portal_id: portalId, input_pin: pin });
 export const chitCustomerLiveState = sessionToken => supabase.rpc("chit_customer_live_state", { input_session_token: sessionToken });
+export const chitCustomerPaymentHistory = sessionToken => supabase.rpc("chit_customer_payment_history", { input_session_token: sessionToken });
 export const chitCustomerPlaceLiveBid = (sessionToken, bidAmount, clientNonce) => supabase.rpc("chit_customer_place_live_bid", {
   input_session_token: sessionToken, input_bid_amount: Number(bidAmount), input_client_nonce: clientNonce,
 });
