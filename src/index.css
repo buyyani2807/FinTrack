@@ -402,6 +402,11 @@ body {
   min-width: 720px;
 }
 
+.chit-scheme-switch .tab {
+  text-align: left;
+  white-space: normal;
+}
+
 @media (max-width: 680px) {
   .dashboard-finance-section {
     margin-bottom: 20px;

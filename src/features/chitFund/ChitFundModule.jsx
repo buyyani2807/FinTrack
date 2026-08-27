@@ -5,6 +5,7 @@ import {
   chitCustomerLiveState,
   chitCustomerPaymentHistory,
   chitCustomerPlaceLiveBid,
+  chitCustomerSelectMembership,
   createChitMember,
   createChitScheme,
   createFixedChitScheme,
@@ -38,6 +39,7 @@ import { CHIT_TYPES, fixedCommissionFromPercent, fixedCommissionPercentFromAmoun
 import { validatePredefinedBidChit } from "./predefinedBidChit";
 import { roundMoney } from "./calculations";
 import { chitPaymentDisplayStatus, chitPaymentOutstanding, filterPaymentsForMonth, memberPaymentsForEnrollment, normalizeMemberPayment, portalPaymentRows } from "./memberPayments";
+import { chitTypeLabel, membershipEnrollmentId, portalMemberships } from "./memberPortal";
 
 const indiaCalendarDate = date => {
   const parts = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
@@ -84,6 +86,11 @@ const ChitPaymentStatus = ({ row, asOfDate = today() }) => {
 const ChitMemberPaymentHistory = ({ title, rows, empty }) => {
   const payments = (rows || []).map(normalizeMemberPayment).sort((a, b) => a.month - b.month);
   return <div className="card spacer"><strong>{title}</strong><div className="table spacer chit-member-payments"><table><thead><tr><th>Month</th><th>Due date</th><th>Payment date</th><th>Expected</th><th>Paid</th><th>Balance</th><th>Late fee</th><th>Reference</th><th>Status</th></tr></thead><tbody>{payments.map(item => <tr key={item.id}><td>Month {item.month}</td><td>{formatChitDate(item.dueDate)}</td><td>{formatChitDate(item.paidDate)}</td><td>{money(item.expected)}</td><td>{money(item.paid)}</td><td className="red">{money(item.balance)}</td><td>{item.lateFee ? money(item.lateFee) : "—"}</td><td>{item.reference || "—"}</td><td><ChitPaymentStatus row={{ ...item, amount_due: item.expected, amount_paid: item.paid, due_date: item.dueDate, status: item.storedStatus }} /></td></tr>)}</tbody></table>{!payments.length && <p className="small spacer">{empty}</p>}</div></div>;
+};
+const ChitMembershipSwitcher = ({ memberships, selectedId, onSelect, disabled }) => {
+  const rows = portalMemberships({ memberships });
+  if (rows.length < 2) return null;
+  return <div className="card spacer chit-scheme-switch"><strong>Your schemes</strong><p className="small">You are enrolled in {rows.length} schemes. Open one to see its payments and bids.</p><div className="tabs spacer">{rows.map(row => { const id = membershipEnrollmentId(row); return <Button key={id} className={`tab ${id === selectedId ? "active" : ""}`} disabled={disabled || id === selectedId} onClick={() => onSelect(id)}>{row.schemeName || "Chit scheme"}<span className="small"> · {chitTypeLabel(row.chitType || row.chit_type)} · Ticket {row.ticketNumber || row.ticket_number}</span></Button>; })}</div></div>;
 };
 const ChitPortalAccess = ({ token, enrollment, onChange, liveBidding }) => {
   const [open, setOpen] = useState(false);
@@ -139,7 +146,7 @@ function ChitAddMemberModal({ token, scheme, nextTicket, close, done }) {
     } catch (err) { setError(err.message || "Could not add member to this scheme."); }
     finally { setBusy(false); }
   };
-  return <Modal><h2 className="title">Add member to {scheme.name}</h2><p className="copy">This member will be stored against this scheme only.</p><form onSubmit={submit}><div className="form spacer"><Field label="Member name"><input required value={f.name} onChange={e => set("name", e.target.value)} /></Field><Field label="Mobile number"><input required value={f.phone} onChange={e => set("phone", e.target.value)} /></Field><Field className="span" label="Address"><input value={f.address} onChange={e => set("address", e.target.value)} /></Field><Field label="Ticket number"><input required type="number" min="1" value={f.ticket} onChange={e => set("ticket", e.target.value)} /></Field><Field label="Guarantor name"><input required value={f.guarantorName} onChange={e => set("guarantorName", e.target.value)} /></Field><Field label="Guarantor phone"><input required value={f.guarantorPhone} onChange={e => set("guarantorPhone", e.target.value)} /></Field><Field className="span" label="Guarantor address"><input value={f.guarantorAddress} onChange={e => set("guarantorAddress", e.target.value)} /></Field><Field label="Security deposit (₹)"><input type="number" min="0" value={f.deposit} onChange={e => set("deposit", e.target.value)} /></Field></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button type="button" onClick={close}>Cancel</Button><Button className="primary" disabled={busy} type="submit">{busy ? "Saving…" : "Add member"}</Button></div></form></Modal>;
+  return <Modal><h2 className="title">Add member to {scheme.name}</h2><p className="copy">If this mobile number already belongs to a Chit member, they are enrolled in this scheme with their existing profile and can use the same portal login.</p><form onSubmit={submit}><div className="form spacer"><Field label="Member name"><input required value={f.name} onChange={e => set("name", e.target.value)} /></Field><Field label="Mobile number"><input required value={f.phone} onChange={e => set("phone", e.target.value)} /></Field><Field className="span" label="Address"><input value={f.address} onChange={e => set("address", e.target.value)} /></Field><Field label="Ticket number"><input required type="number" min="1" value={f.ticket} onChange={e => set("ticket", e.target.value)} /></Field><Field label="Guarantor name"><input required value={f.guarantorName} onChange={e => set("guarantorName", e.target.value)} /></Field><Field label="Guarantor phone"><input required value={f.guarantorPhone} onChange={e => set("guarantorPhone", e.target.value)} /></Field><Field className="span" label="Guarantor address"><input value={f.guarantorAddress} onChange={e => set("guarantorAddress", e.target.value)} /></Field><Field label="Security deposit (₹)"><input type="number" min="0" value={f.deposit} onChange={e => set("deposit", e.target.value)} /></Field></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button type="button" onClick={close}>Cancel</Button><Button className="primary" disabled={busy} type="submit">{busy ? "Saving…" : "Add member"}</Button></div></form></Modal>;
 }
 
 function ChitEditMemberModal({ token, enrollment, close, done }) {
@@ -813,20 +820,20 @@ export function ChitFundPage({ token, close, openSchemeId = null, onOpenSchemeCo
   </main>;
 }
 
-function FixedChitCustomerPortal({ state, logout, loadError }) {
+function FixedChitCustomerPortal({ state, logout, loadError, switcher }) {
   const scheme = state.scheme || {};
   const lift = state.fixedLift;
   const payments = portalPaymentRows(state);
   const outstanding = chitPaymentOutstanding(payments);
-  return <main className="shell" style={{ maxWidth: 960 }}><header className="top"><div><div className="brand">FinTrack</div><div className="sub">Fixed Chit customer dashboard</div></div><Button onClick={logout}>Log out</Button></header><h1 className="title">Hello, {state.memberName || "Member"}</h1><p className="copy">{scheme.name || "Fixed Chit"} · Ticket {state.ticketNumber} · Portal {state.portalId}</p>{loadError && <p className="red small">{loadError}</p>}{!scheme.name && !loadError && <p className="small">Loading your chit dashboard…</p>}<p className="notice">This is a Fixed Chit. Lift amounts follow the predetermined schedule; live bidding is not used.</p><div className="grid metrics"><Metric label="Chit value" value={money(scheme.chit_value)} color="gold" /><Metric label="Monthly contribution" value={money(scheme.installment_amount)} /><Metric label="Your lift month" value={lift ? `Month ${lift.month_number}` : "Not assigned"} color="blue" /><Metric label="Your lift amount" value={lift ? money(lift.lift_amount) : "—"} color="gold" /><Metric label="Monthly payment" value={lift ? money(lift.monthly_payment) : "—"} /><Metric label="Remaining payments" value={lift?.remaining_months ?? "—"} /><Metric label="Outstanding" value={money(outstanding)} color="red" /></div><ChitMemberPaymentHistory title="Your payment history" rows={payments} empty="Your month-wise payment schedule will appear after this scheme is activated." /></main>;
+  return <main className="shell" style={{ maxWidth: 960 }}><header className="top"><div><div className="brand">FinTrack</div><div className="sub">Fixed Chit customer dashboard</div></div><Button onClick={logout}>Log out</Button></header><h1 className="title">Hello, {state.memberName || "Member"}</h1><p className="copy">{scheme.name || "Fixed Chit"} · Ticket {state.ticketNumber} · Portal {state.portalId}</p>{switcher}{loadError && <p className="red small">{loadError}</p>}{!scheme.name && !loadError && <p className="small">Loading your chit dashboard…</p>}<p className="notice">This is a Fixed Chit. Lift amounts follow the predetermined schedule; live bidding is not used.</p><div className="grid metrics"><Metric label="Chit value" value={money(scheme.chit_value)} color="gold" /><Metric label="Monthly contribution" value={money(scheme.installment_amount)} /><Metric label="Your lift month" value={lift ? `Month ${lift.month_number}` : "Not assigned"} color="blue" /><Metric label="Your lift amount" value={lift ? money(lift.lift_amount) : "—"} color="gold" /><Metric label="Monthly payment" value={lift ? money(lift.monthly_payment) : "—"} /><Metric label="Remaining payments" value={lift?.remaining_months ?? "—"} /><Metric label="Outstanding" value={money(outstanding)} color="red" /></div><ChitMemberPaymentHistory title="Your payment history" rows={payments} empty="Your month-wise payment schedule will appear after this scheme is activated." /></main>;
 }
 
-function PredefinedBidCustomerPortal({ state, logout, loadError }) {
+function PredefinedBidCustomerPortal({ state, logout, loadError, switcher }) {
   const scheme = state.scheme || {};
   const item = state.predefinedMonth;
   const payments = portalPaymentRows(state);
   const outstanding = chitPaymentOutstanding(payments);
-  return <main className="shell" style={{ maxWidth: 960 }}><header className="top"><div><div className="brand">FinTrack</div><div className="sub">Fixed Predefined Bid customer dashboard</div></div><Button onClick={logout}>Log out</Button></header><h1 className="title">Hello, {state.memberName || "Member"}</h1><p className="copy">{scheme.name || "Fixed Predefined Bid"} · Ticket {state.ticketNumber} · Portal {state.portalId}</p>{loadError && <p className="red small">{loadError}</p>}{!scheme.name && !loadError && <p className="small">Loading your chit dashboard…</p>}<p className="notice">This Chit uses a predefined monthly schedule. Live bidding is not used.</p><div className="grid metrics"><Metric label="Lift month" value={item ? `Month ${item.month_number}` : "Not assigned"} color="blue" /><Metric label="EMI" value={item ? money(item.emi) : "—"} /><Metric label="COMM" value={item ? money(item.comm_amount) : "—"} /><Metric label="Auction amount" value={item ? money(item.auction_amount) : "—"} /><Metric label="Bid amount" value={item ? money(item.bid_amount) : "—"} color="gold" /><Metric label="Manager commission" value={item ? money(item.manager_commission) : "—"} /><Metric label="Net receivable" value={item ? money(item.net_receivable) : "—"} color="green" /><Metric label="Outstanding" value={money(outstanding)} color="red" /></div><ChitMemberPaymentHistory title="Your payment history" rows={payments} empty="Your month-wise payment schedule will appear after this scheme is activated." /></main>;
+  return <main className="shell" style={{ maxWidth: 960 }}><header className="top"><div><div className="brand">FinTrack</div><div className="sub">Fixed Predefined Bid customer dashboard</div></div><Button onClick={logout}>Log out</Button></header><h1 className="title">Hello, {state.memberName || "Member"}</h1><p className="copy">{scheme.name || "Fixed Predefined Bid"} · Ticket {state.ticketNumber} · Portal {state.portalId}</p>{switcher}{loadError && <p className="red small">{loadError}</p>}{!scheme.name && !loadError && <p className="small">Loading your chit dashboard…</p>}<p className="notice">This Chit uses a predefined monthly schedule. Live bidding is not used.</p><div className="grid metrics"><Metric label="Lift month" value={item ? `Month ${item.month_number}` : "Not assigned"} color="blue" /><Metric label="EMI" value={item ? money(item.emi) : "—"} /><Metric label="COMM" value={item ? money(item.comm_amount) : "—"} /><Metric label="Auction amount" value={item ? money(item.auction_amount) : "—"} /><Metric label="Bid amount" value={item ? money(item.bid_amount) : "—"} color="gold" /><Metric label="Manager commission" value={item ? money(item.manager_commission) : "—"} /><Metric label="Net receivable" value={item ? money(item.net_receivable) : "—"} color="green" /><Metric label="Outstanding" value={money(outstanding)} color="red" /></div><ChitMemberPaymentHistory title="Your payment history" rows={payments} empty="Your month-wise payment schedule will appear after this scheme is activated." /></main>;
 }
 
 export function ChitCustomerPortal({ session, logout }) {
@@ -841,15 +848,23 @@ export function ChitCustomerPortal({ session, logout }) {
     let ignore = false;
     const merge = payload => {
       if (ignore || !payload) return;
-      setState(current => ({
-        ...current,
-        ...payload,
-        sessionToken: token,
-        installments: payload.installments ?? current.installments ?? [],
-        payments: payload.payments ?? current.payments ?? [],
-        fixedPayments: payload.fixedPayments ?? current.fixedPayments ?? [],
-        predefinedPayments: payload.predefinedPayments ?? current.predefinedPayments ?? [],
-      }));
+      setState(current => {
+        const nextEnrollment = payload.enrollmentId || payload.enrollment_id;
+        const currentEnrollment = current.enrollmentId || current.enrollment_id;
+        if (nextEnrollment && currentEnrollment && nextEnrollment !== currentEnrollment) {
+          return { ...payload, sessionToken: token };
+        }
+        return {
+          ...current,
+          ...payload,
+          sessionToken: token,
+          memberships: payload.memberships ?? current.memberships ?? [],
+          installments: payload.installments ?? current.installments ?? [],
+          payments: payload.payments ?? current.payments ?? [],
+          fixedPayments: payload.fixedPayments ?? current.fixedPayments ?? [],
+          predefinedPayments: payload.predefinedPayments ?? current.predefinedPayments ?? [],
+        };
+      });
     };
     const load = isPoll => chitCustomerLiveState(token)
       .then(payload => { merge(payload); if (!isPoll) setLoadError(""); })
@@ -859,12 +874,26 @@ export function ChitCustomerPortal({ session, logout }) {
     const timer = setInterval(() => load(true), 2000);
     return () => { ignore = true; clearInterval(timer); };
   }, [token]);
+  const openMembership = async enrollmentId => {
+    if (!token || enrollmentId === (state.enrollmentId || state.enrollment_id)) return;
+    setBusy(true); setError("");
+    try {
+      const next = await chitCustomerSelectMembership(token, enrollmentId);
+      setState({ ...next, sessionToken: token });
+      setAmount("");
+    } catch (err) { setError(err.message || "Could not open that scheme."); }
+    finally { setBusy(false); }
+  };
   const scheme = state.scheme || {};
+  const switcher = <>
+    <ChitMembershipSwitcher memberships={state.memberships} selectedId={state.enrollmentId || state.enrollment_id} onSelect={openMembership} disabled={busy} />
+    {error && scheme.chit_type && scheme.chit_type !== CHIT_TYPES.AUCTION && <p className="red small">{error}</p>}
+  </>;
   if (!scheme.chit_type && !scheme.name) {
     return <main className="shell" style={{ maxWidth: 960 }}><header className="top"><div><div className="brand">FinTrack</div><div className="sub">Chit customer dashboard</div></div><Button onClick={logout}>Log out</Button></header>{loadError ? <p className="red small">{loadError}</p> : <p className="small">Loading your chit dashboard…</p>}</main>;
   }
-  if (scheme.chit_type === CHIT_TYPES.FIXED) return <FixedChitCustomerPortal state={state} logout={logout} loadError={loadError} />;
-  if (scheme.chit_type === CHIT_TYPES.FIXED_PREDEFINED_BID) return <PredefinedBidCustomerPortal state={state} logout={logout} loadError={loadError} />;
+  if (scheme.chit_type === CHIT_TYPES.FIXED) return <FixedChitCustomerPortal state={state} logout={logout} loadError={loadError} switcher={switcher} />;
+  if (scheme.chit_type === CHIT_TYPES.FIXED_PREDEFINED_BID) return <PredefinedBidCustomerPortal state={state} logout={logout} loadError={loadError} switcher={switcher} />;
   const auction = state.auction;
   const leading = state.leadingBid || state.leading_bid;
   const bids = state.bids || [];
@@ -908,6 +937,7 @@ export function ChitCustomerPortal({ session, logout }) {
     <header className="top"><div><div className="brand">FinTrack</div><div className="sub">Chit customer dashboard</div></div><Button onClick={logout}>Log out</Button></header>
     <h1 className="title">Hello, {state.memberName || "Member"}</h1>
     <p className="copy">{scheme.name || "Chit scheme"} · Ticket {state.ticketNumber} · Portal {state.portalId}</p>
+    {switcher}
     {loadError && <p className="red small">{loadError}</p>}
     {!scheme.name && !loadError && <p className="small">Loading your chit dashboard…</p>}
     {auction?.status === "open" ? <p className="notice">Live bidding is open for month {auction.cycle_number}. Fund manager commission of {money(limits.commission)} is already deducted. Bid above {money(limits.commission)}, up to {money(limits.maxBid)} (30% of the chit value). Highest bid wins.</p> : auction?.status === "paused" ? <p className="notice">Live bidding is paused. Wait for your financier to resume, then post a higher bid.</p> : <p className="notice">Your financier has not started this month’s live bidding yet. Bidding is usually opened on the auction date, for example the 25th. Sign in again that day to post your bid.</p>}
