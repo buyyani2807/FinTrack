@@ -693,7 +693,7 @@ const CHIT_BOARD = {
   predefined: { title: "Fixed Predefined Bid Chits", bidType: "Predefined bid", icon: "◈", currentLabel: "Current bid" },
 };
 
-function ChitSchemeCard({ kind, row, open, edit, activate, token, onDeleted }) {
+function ChitSchemeCard({ kind, row, open, edit, activate }) {
   const { scheme, current, members, winner, fixedCurrent, fixedWinner, predefinedCurrent, predefinedWinner } = row;
   const fixed = kind === "fixed";
   const predefined = kind === "predefined";
@@ -726,15 +726,11 @@ function ChitSchemeCard({ kind, row, open, edit, activate, token, onDeleted }) {
     {scheme.status === "draft" && <div className="chit-scheme-actions" onClick={event => event.stopPropagation()}>
       {!predefined && <Button onClick={() => edit(scheme)}>Edit</Button>}
       <Button className="primary" onClick={() => activate(scheme)}>Activate</Button>
-      <ChitDeleteSchemeControl token={token} scheme={scheme} memberCount={members.length} onDeleted={onDeleted} />
-    </div>}
-    {scheme.status !== "draft" && <div className="chit-scheme-actions" onClick={event => event.stopPropagation()}>
-      <ChitDeleteSchemeControl token={token} scheme={scheme} memberCount={members.length} onDeleted={onDeleted} />
     </div>}
   </article>;
 }
 
-function ChitSchemeDashboardSection({ kind, rows, busy, open, edit, activate, token, onDeleted }) {
+function ChitSchemeDashboardSection({ kind, rows, busy, open, edit, activate }) {
   const meta = CHIT_BOARD[kind];
   return <section className={`chit-board chit-board-${kind}`}>
     <div className="chit-board-head">
@@ -747,7 +743,7 @@ function ChitSchemeDashboardSection({ kind, rows, busy, open, edit, activate, to
       </div>
       <span className="chit-board-count">{rows.length} {rows.length === 1 ? "scheme" : "schemes"}</span>
     </div>
-    {rows.length ? <div className="chit-board-grid">{rows.map(row => <ChitSchemeCard key={row.scheme.id} kind={kind} row={row} open={open} edit={edit} activate={activate} token={token} onDeleted={onDeleted} />)}</div> : !busy && <p className="small chit-board-empty">No {meta.title} yet.</p>}
+    {rows.length ? <div className="chit-board-grid">{rows.map(row => <ChitSchemeCard key={row.scheme.id} kind={kind} row={row} open={open} edit={edit} activate={activate} />)}</div> : !busy && <p className="small chit-board-empty">No {meta.title} yet.</p>}
   </section>;
 }
 
@@ -881,9 +877,9 @@ export function ChitFundPage({ token, close, openSchemeId = null, onOpenSchemeCo
     {error && <p className="red small">{error}</p>}
     {notice && <p className="green small">{notice}</p>}
     {busy && <p className="small spacer">Loading Chit Fund schemes…</p>}
-    <ChitSchemeDashboardSection kind="auction" rows={rows.filter(row => (row.scheme.chit_type || CHIT_TYPES.AUCTION) === CHIT_TYPES.AUCTION)} busy={busy} open={setSelected} edit={editScheme} activate={activate} token={token} onDeleted={schemeDeleted} />
-    <ChitSchemeDashboardSection kind="fixed" rows={rows.filter(row => row.scheme.chit_type === CHIT_TYPES.FIXED)} busy={busy} open={setSelected} edit={editScheme} activate={activate} token={token} onDeleted={schemeDeleted} />
-    <ChitSchemeDashboardSection kind="predefined" rows={rows.filter(row => row.scheme.chit_type === CHIT_TYPES.FIXED_PREDEFINED_BID)} busy={busy} open={setSelected} edit={editScheme} activate={activate} token={token} onDeleted={schemeDeleted} />
+    <ChitSchemeDashboardSection kind="auction" rows={rows.filter(row => (row.scheme.chit_type || CHIT_TYPES.AUCTION) === CHIT_TYPES.AUCTION)} busy={busy} open={setSelected} edit={editScheme} activate={activate} />
+    <ChitSchemeDashboardSection kind="fixed" rows={rows.filter(row => row.scheme.chit_type === CHIT_TYPES.FIXED)} busy={busy} open={setSelected} edit={editScheme} activate={activate} />
+    <ChitSchemeDashboardSection kind="predefined" rows={rows.filter(row => row.scheme.chit_type === CHIT_TYPES.FIXED_PREDEFINED_BID)} busy={busy} open={setSelected} edit={editScheme} activate={activate} />
     {modal === "choose-type" && <ChitTypeChooser close={() => setModal(null)} choose={type => { setSchemeForm(emptySchemeForm(type)); setModal("scheme"); }} />}
     {(modal === "scheme" || modal === "edit-scheme") && (schemeForm.chitType === CHIT_TYPES.FIXED_PREDEFINED_BID
       ? <PredefinedBidSchemeForm form={schemeForm} setForm={setSchemeForm} busy={busy} error={error} onClose={() => setModal(null)} onSubmit={submitScheme} />
