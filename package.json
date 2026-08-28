@@ -8,6 +8,7 @@
     "build": "vite build",
     "test": "node --test",
     "smoke": "node scripts/prelaunch-smoke.mjs",
+    "env:audit": "node scripts/vercel-env-audit.mjs",
     "test:e2e": "playwright test",
     "test:ci": "npm test && npm run smoke && npm run test:e2e",
     "lint": "eslint .",

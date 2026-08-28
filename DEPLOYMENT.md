@@ -11,6 +11,8 @@
    - `SUPABASE_SERVICE_ROLE_KEY` (required for collection agents and secure financier auth cookies)
 5. Redeploy after saving the variables.
 
+See **`VERCEL_DEPLOY_CHECKLIST.md`** for the full pre/post deploy checklist and `npm run env:audit` to validate local env shape.
+
 Financier refresh tokens are stored in HttpOnly cookies via `/api/auth/*` on Vercel. Local `vite` dev falls back to in-memory tokens when those routes are unavailable; use `vercel dev` to test cookie auth locally.
 
 ## Add FinTrack to a phone
