@@ -40,6 +40,7 @@ Run these in the Supabase SQL Editor **in order**. Each file is idempotent where
 | 034 | `034_chit_scheme_and_member_delete.sql` | Safe delete |
 | 035 | `035_fix_fixed_chit_commission.sql` | Fixed chit commission |
 | 036 | `036_prelaunch_hardening.sql` | **Pre-launch security hardening** |
+| 037 | `037_fix_portal_id_random_bytes.sql` | Fix portal ID generation (`extensions.gen_random_bytes`) |
 
 After running 036, verify in Supabase SQL Editor:
 
@@ -48,6 +49,8 @@ After running 036, verify in Supabase SQL Editor:
 ```
 
 Each query should return `ok = 1`. If any check fails, re-run `036_prelaunch_hardening.sql`.
+
+After running 037, verify with `scripts/verify-migration-037.sql` (each row should show `ok = 1`).
 
 ## Verify RLS after migrations
 

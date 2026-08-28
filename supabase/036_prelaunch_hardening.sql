@@ -72,7 +72,7 @@ as $$ select public.is_financier_owner() $$;
 -- ---------------------------------------------------------------------------
 create or replace function public.fintrack_random_portal_id(prefix text)
 returns text
-language plpgsql volatile set search_path = public
+language plpgsql volatile set search_path = public, extensions
 as $$
 declare
   candidate text;
@@ -86,7 +86,7 @@ begin
     if attempt > 30 then
       raise exception 'Could not generate a unique portal ID';
     end if;
-    candidate := prefix || '-' || upper(encode(gen_random_bytes(4), 'hex'));
+    candidate := prefix || '-' || upper(encode(extensions.gen_random_bytes(4), 'hex'));
     if prefix = 'FT' then
       exit when not exists (
         select 1 from public.customer_portal_credentials where portal_id = candidate
