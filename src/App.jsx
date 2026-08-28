@@ -4,7 +4,7 @@ import { supabase } from "./lib/supabase";
 import { monthlyInterestOnBalance } from "./features/finance/calculations";
 import { byCollectionOrderThenName, mergeAccountOrder, reorderIds } from "./features/finance/collectionOrder";
 import { ChitCustomerPortal, ChitFundPage } from "./features/chitFund/ChitFundModule";
-import { assignCollectionAgent, chitCustomerPortalLogin, createCollectionAgent, createFinanceAccount, customerPortalLogin, deleteFinanceAccount, deleteFinancePayment, enableCustomerPortal, loadChitDashboard, loadChitSchemeDetails, loadCustomerKyc, loadFinanceAccounts, loadManagedAgents, loadWorkspace, recordPayment, resetCustomerPortalPin, saveCustomerKyc, setAccountStatus, saveCollectionOrder, updateCollectionAgent, updateFinanceAccount, updateFinancePayment, updatePaymentNotes } from "./lib/financeRepository";
+import { assignCollectionAgent, chitCustomerPortalLogin, createCollectionAgent, createFinanceAccount, customerPortalLogin, deleteFinanceAccount, deleteFinancePayment, enableCustomerPortal, loadActiveChitSchemes, loadChitSchemeDetails, loadChitSchemes, loadCustomerKyc, loadFinanceAccounts, loadManagedAgents, loadWorkspace, recordPayment, resetCustomerPortalPin, saveCustomerKyc, setAccountStatus, saveCollectionOrder, updateCollectionAgent, updateFinanceAccount, updateFinancePayment, updatePaymentNotes } from "./lib/financeRepository";
 import { buildChitMonthStatement, currentSchemeMonth, monthLabel as chitMonthLabel } from "./features/chitFund/monthStatement";
 import { downloadChitMonthStatementPdf } from "./features/chitFund/monthStatementPdf";
 
@@ -923,11 +923,10 @@ function ChitFundMonthReport({ token }) {
   const scheme = schemes.find(item => item.id === schemeId);
   useEffect(() => {
     let ignore = false;
-    loadChitDashboard(token).then(payload => {
+    loadChitSchemes(token).then(list => {
       if (ignore) return;
-      const list = payload.schemes || [];
-      setSchemes(list);
-      const first = list[0];
+      setSchemes(list || []);
+      const first = list?.[0];
       if (first) {
         setSchemeId(first.id);
         setMonthNumber(currentSchemeMonth(first));
@@ -1038,8 +1037,8 @@ function FinancierTools({ loans, token, activeChitSchemes = [], onCreateAgent, o
   const [actionHost, setActionHost] = useState(null);
   const [dashboardChitSchemes, setDashboardChitSchemes] = useState(activeChitSchemes);
   const [openChitSchemeId, setOpenChitSchemeId] = useState(null);
-  const reloadDashboardChit = () => loadChitDashboard(token)
-    .then(payload => setDashboardChitSchemes((payload.schemes || []).filter(scheme => scheme.status === "active")))
+  const reloadDashboardChit = () => loadActiveChitSchemes(token)
+    .then(schemes => setDashboardChitSchemes(schemes || []))
     .catch(() => setDashboardChitSchemes([]));
   useEffect(() => {
     reloadDashboardChit();
@@ -1069,7 +1068,7 @@ function FinancierTools({ loans, token, activeChitSchemes = [], onCreateAgent, o
     {actionHost && createPortal(<>{selectedModule === "daily" && <Button onClick={() => setPanel("agents")}>Agents</Button>}<Button onClick={() => { setPanel("customers"); window.dispatchEvent(new CustomEvent("fintrack-open-customers", { detail: selectedModule })); }}>Customers</Button></>, actionHost)}
     {panel === "reports" && <PortfolioReport loans={loans} token={token} close={() => setPanel(null)} />}
     {panel === "agents" && <CollectionStaffPage loans={loans} close={() => setPanel(null)} loadAgents={onLoadAgents} createAgent={onCreateAgent} assignAgent={onAssignAgent} updateAgent={onUpdateAgent} />}
-    {panel === "chit" && <div className="chit-dashboard" style={{ position: "fixed", inset: 0, zIndex: 5, overflow: "auto", background: C.bg }}><ChitFundPage token={token} openSchemeId={openChitSchemeId} onOpenSchemeConsumed={() => setOpenChitSchemeId(null)} onSchemesChanged={schemes => setDashboardChitSchemes((schemes || []).filter(scheme => scheme.status === "active"))} close={() => { setOpenChitSchemeId(null); setPanel("dashboard"); reloadDashboardChit(); }} /></div>}
+    {panel === "chit" && <div className="chit-dashboard" style={{ position: "fixed", inset: 0, zIndex: 5, overflow: "auto", background: C.bg }}><ChitFundPage token={token} openSchemeId={openChitSchemeId} onOpenSchemeConsumed={() => setOpenChitSchemeId(null)} onSchemesChanged={schemes => setDashboardChitSchemes((schemes || []).filter(scheme => scheme.status === "active"))} close={() => { setOpenChitSchemeId(null); setPanel("dashboard"); }} /></div>}
     {(panel === null || panel === "dashboard") && selectedModule === "all" && <ActiveChitSchemes schemes={dashboardChitSchemes} onOpen={schemeId => { setOpenChitSchemeId(schemeId); setPanel("chit"); }} />}
   </div>;
 }

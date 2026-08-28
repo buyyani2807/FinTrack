@@ -4,6 +4,51 @@ const asNumber = value => Number(value || 0);
 const memberDisplayName = row => row?.chit_members?.full_name || row?.full_name || "";
 const sortMembersByName = rows => [...(rows || [])].sort((a, b) => memberDisplayName(a).localeCompare(memberDisplayName(b), undefined, { sensitivity: "base" }));
 
+const CHIT_SCHEME_LIST_COLUMNS = [
+  "id", "name", "chit_type", "chit_value", "duration_months", "member_count", "installment_amount",
+  "commission_percent", "fixed_commission_amount", "fixed_initial_lift_amount", "fixed_monthly_increment",
+  "predefined_manager_commission_percent", "start_date", "min_bid_percent", "max_bid_percent",
+  "late_penalty_amount", "security_deposit_amount", "status",
+].join(",");
+const CHIT_ACTIVE_SCHEME_COLUMNS = "id,name,chit_type,chit_value,member_count,duration_months,status,start_date";
+const CHIT_CYCLE_BOARD_COLUMNS = "id,scheme_id,cycle_number,cycle_date,winning_bid_amount,winning_enrollment_id,status";
+const CHIT_ENROLLMENT_BOARD_COLUMNS = "id,scheme_id,ticket_number,status,chit_members(full_name)";
+const FIXED_LIFT_BOARD_COLUMNS = "id,scheme_id,month_number,status,enrollment_id,lift_amount";
+const PREDEFINED_SCHEDULE_BOARD_COLUMNS = "id,scheme_id,month_number,status,enrollment_id,bid_amount,net_receivable,emi";
+
+let chitDashboardCache = { token: "", at: 0, payload: null };
+const CHIT_DASHBOARD_CACHE_MS = 30_000;
+
+export const invalidateChitDashboardCache = () => {
+  chitDashboardCache = { token: "", at: 0, payload: null };
+};
+
+export const seedChitDashboardCache = (token, payload) => {
+  writeChitDashboardCache(token, payload);
+};
+
+const readChitDashboardCache = token => {
+  if (chitDashboardCache.token !== token || !chitDashboardCache.payload) return null;
+  if (Date.now() - chitDashboardCache.at > CHIT_DASHBOARD_CACHE_MS) return null;
+  return chitDashboardCache.payload;
+};
+
+const writeChitDashboardCache = (token, payload) => {
+  chitDashboardCache = { token, at: Date.now(), payload };
+};
+
+export const loadChitBoardRelated = token => Promise.all([
+  supabase.query(`/rest/v1/chit_cycles?select=${CHIT_CYCLE_BOARD_COLUMNS}&order=cycle_number.asc`, token),
+  supabase.query(`/rest/v1/chit_enrollments?select=${CHIT_ENROLLMENT_BOARD_COLUMNS}&order=scheme_id.asc,ticket_number.asc`, token),
+  supabase.query(`/rest/v1/fixed_chit_lifts?select=${FIXED_LIFT_BOARD_COLUMNS}&order=month_number.asc`, token).catch(() => []),
+  supabase.query(`/rest/v1/predefined_chit_schedule?select=${PREDEFINED_SCHEDULE_BOARD_COLUMNS}&order=month_number.asc`, token).catch(() => []),
+]).then(([cycles, enrollments, fixedLifts, predefinedSchedule]) => ({
+  cycles,
+  enrollments,
+  fixedLifts,
+  predefinedSchedule,
+}));
+
 export async function loadWorkspace(token) {
   const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
   const rows = await supabase.query(`/rest/v1/profiles?id=eq.${payload.sub}&select=id,full_name,role,is_active,organizations(name)&limit=1`, token);
@@ -121,7 +166,8 @@ export const updateCollectionAgent = async (token, details) => {
 };
 export const loadCollectionAgents = token => supabase.query("/rest/v1/profiles?select=id,full_name,role&role=eq.staff&order=full_name.asc", token);
 export const assignCollectionAgent = (token, accountId, agentId) => supabase.rpc("assign_collection_agent", { account_id: accountId, agent_id: agentId || null }, token);
-export const loadChitSchemes = token => supabase.query("/rest/v1/chit_schemes?select=*&order=start_date.desc", token);
+export const loadChitSchemes = token => supabase.query(`/rest/v1/chit_schemes?select=${CHIT_SCHEME_LIST_COLUMNS}&order=start_date.desc`, token);
+export const loadActiveChitSchemes = token => supabase.query(`/rest/v1/chit_schemes?select=${CHIT_ACTIVE_SCHEME_COLUMNS}&status=eq.active&order=start_date.desc`, token);
 export const loadChitMembers = token => supabase.query("/rest/v1/chit_members?select=id,full_name,phone,address,created_at,updated_at&order=full_name.asc", token);
 export const createChitScheme = (token, scheme) => supabase.rpc("chit_create_scheme", {
   scheme_name: scheme.name, scheme_chit_value: Number(scheme.chitValue), scheme_duration_months: Number(scheme.durationMonths),
@@ -204,21 +250,20 @@ export const updateFixedChitScheme = (token, scheme) => supabase.rpc("chit_updat
 }, token);
 export const loadChitSchemeDetails = async (token, schemeId) => {
   const enrollmentSelect = async extra => supabase.query(`/rest/v1/chit_enrollments?scheme_id=eq.${schemeId}&select=*,chit_members(full_name,phone,address)${extra}&order=ticket_number.asc`, token);
-  const [enrollments, cycles] = await Promise.all([
-    enrollmentSelect(",chit_member_portal_credentials(portal_id)").catch(() => enrollmentSelect("")),
+  const enrollmentPromise = enrollmentSelect(",chit_member_portal_credentials(portal_id)").catch(() => enrollmentSelect(""));
+  const [enrollments, cycles, fixedLifts, fixedPayments, predefinedSchedule, predefinedPayments] = await Promise.all([
+    enrollmentPromise,
     supabase.query(`/rest/v1/chit_cycles?scheme_id=eq.${schemeId}&select=*&order=cycle_number.asc`, token),
-  ]);
-  const cycleIds = cycles.map(cycle => cycle.id);
-  const [fixedLifts, fixedPayments] = await Promise.all([
     supabase.query(`/rest/v1/fixed_chit_lifts?scheme_id=eq.${schemeId}&select=*&order=month_number.asc`, token).catch(() => []),
     supabase.query(`/rest/v1/fixed_chit_payments?scheme_id=eq.${schemeId}&select=*&order=payment_month.asc`, token).catch(() => []),
-  ]);
-  const [predefinedSchedule, predefinedPayments] = await Promise.all([
     supabase.query(`/rest/v1/predefined_chit_schedule?scheme_id=eq.${schemeId}&select=*&order=month_number.asc`, token).catch(() => []),
     supabase.query(`/rest/v1/predefined_chit_payments?scheme_id=eq.${schemeId}&select=*&order=payment_month.asc`, token).catch(() => []),
   ]);
   const members = sortMembersByName(enrollments);
-  if (!cycleIds.length) return { enrollments: members, cycles, bids: [], installments: [], fixedLifts, fixedPayments, predefinedSchedule, predefinedPayments };
+  const cycleIds = cycles.map(cycle => cycle.id);
+  if (!cycleIds.length) {
+    return { enrollments: members, cycles, bids: [], installments: [], fixedLifts, fixedPayments, predefinedSchedule, predefinedPayments };
+  }
   const cycleFilter = cycleIds.join(",");
   const [bids, installments] = await Promise.all([
     supabase.query(`/rest/v1/chit_bids?cycle_id=in.(${cycleFilter})&select=*`, token),
@@ -261,15 +306,18 @@ export const updatePredefinedChitPayment = (token, payment) => supabase.rpc("chi
 export const deletePredefinedChitPayment = (token, paymentId) => supabase.rpc("chit_delete_predefined_payment", {
   input_payment_id: paymentId,
 }, token);
-export const loadChitDashboard = async token => {
-  const [schemes, cycles, enrollments, fixedLifts, predefinedSchedule] = await Promise.all([
+export const loadChitDashboard = async (token, { force = false } = {}) => {
+  if (!force) {
+    const cached = readChitDashboardCache(token);
+    if (cached) return cached;
+  }
+  const [schemes, related] = await Promise.all([
     loadChitSchemes(token),
-    supabase.query("/rest/v1/chit_cycles?select=id,scheme_id,cycle_number,cycle_date,winning_bid_amount,winning_enrollment_id,status,discount_amount,commission_amount,distributable_amount,dividend_per_member&order=cycle_number.asc", token),
-    supabase.query("/rest/v1/chit_enrollments?select=id,scheme_id,ticket_number,status,chit_members(full_name)&order=ticket_number.asc", token),
-    supabase.query("/rest/v1/fixed_chit_lifts?select=*&order=month_number.asc", token).catch(() => []),
-    supabase.query("/rest/v1/predefined_chit_schedule?select=*&order=month_number.asc", token).catch(() => []),
+    loadChitBoardRelated(token),
   ]);
-  return { schemes, cycles, enrollments: sortMembersByName(enrollments), fixedLifts, predefinedSchedule };
+  const payload = { schemes, ...related };
+  writeChitDashboardCache(token, payload);
+  return payload;
 };
 export const loadChitLiveAuction = (token, schemeId) => supabase.rpc("chit_live_auction_snapshot", { input_scheme_id: schemeId }, token);
 export const startChitLiveAuction = (token, schemeId, cycleNumber, cycleDate) => {

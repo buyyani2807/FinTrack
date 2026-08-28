@@ -20,9 +20,13 @@ import {
   enrollChitMember,
   finalizeFixedChitLift,
   finalizePredefinedChitMonth,
+  invalidateChitDashboardCache,
+  loadChitBoardRelated,
   loadChitDashboard,
   loadChitLiveAuction,
   loadChitSchemeDetails,
+  loadChitSchemes,
+  seedChitDashboardCache,
   pauseChitLiveAuction,
   recordChitMonthlyBid,
   resetChitMemberPortalPin,
@@ -693,6 +697,16 @@ const CHIT_BOARD = {
   predefined: { title: "Fixed Predefined Bid Chits", bidType: "Predefined bid", icon: "◈", currentLabel: "Current bid" },
 };
 
+function groupRowsBySchemeId(rows) {
+  const grouped = new Map();
+  for (const row of rows || []) {
+    const key = row.scheme_id;
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(row);
+  }
+  return grouped;
+}
+
 function ChitSchemeCard({ kind, row, open, edit, activate }) {
   const { scheme, current, members, winner, fixedCurrent, fixedWinner, predefinedCurrent, predefinedWinner } = row;
   const fixed = kind === "fixed";
@@ -759,28 +773,66 @@ export function ChitFundPage({ token, close, openSchemeId = null, onOpenSchemeCo
   const [notice, setNotice] = useState("");
   const [modal, setModal] = useState(null);
   const [schemeForm, setSchemeForm] = useState(emptySchemeForm);
-  const refresh = () => loadChitDashboard(token).then(payload => {
+  const [enriching, setEnriching] = useState(false);
+  const applyDashboard = payload => {
     setSchemes(payload.schemes);
     setCycles(payload.cycles);
     setEnrollments(payload.enrollments);
     setFixedLifts(payload.fixedLifts || []);
     setPredefinedSchedule(payload.predefinedSchedule || []);
     setError("");
-    setBusy(false);
     onSchemesChanged?.(payload.schemes || []);
-  }).catch(err => { setError(err.message || "Could not load Chit Fund schemes."); setBusy(false); });
+  };
+  const refresh = async ({ force = true } = {}) => {
+    if (force) invalidateChitDashboardCache();
+    setBusy(true);
+    setEnriching(false);
+    try {
+      const payload = await loadChitDashboard(token, { force });
+      applyDashboard(payload);
+    } catch (err) {
+      setError(err.message || "Could not load Chit Fund schemes.");
+    } finally {
+      setBusy(false);
+    }
+  };
   useEffect(() => {
     let ignore = false;
-    loadChitDashboard(token).then(payload => {
-      if (ignore) return;
-      setSchemes(payload.schemes);
-      setCycles(payload.cycles);
-      setEnrollments(payload.enrollments);
-      setFixedLifts(payload.fixedLifts || []);
-      setPredefinedSchedule(payload.predefinedSchedule || []);
+    const load = async () => {
+      setBusy(true);
+      setEnriching(false);
       setError("");
-      setBusy(false);
-    }).catch(err => { if (!ignore) { setError(err.message || "Could not load Chit Fund schemes."); setBusy(false); } });
+      const cached = await loadChitDashboard(token).catch(() => null);
+      if (!ignore && cached) {
+        applyDashboard(cached);
+        setBusy(false);
+        return;
+      }
+      try {
+        const schemes = await loadChitSchemes(token);
+        if (ignore) return;
+        setSchemes(schemes);
+        setBusy(false);
+        setEnriching(true);
+        const related = await loadChitBoardRelated(token);
+        if (ignore) return;
+        const payload = { schemes, ...related };
+        seedChitDashboardCache(token, payload);
+        setCycles(related.cycles);
+        setEnrollments(related.enrollments);
+        setFixedLifts(related.fixedLifts);
+        setPredefinedSchedule(related.predefinedSchedule);
+        onSchemesChanged?.(schemes);
+      } catch (err) {
+        if (!ignore) setError(err.message || "Could not load Chit Fund schemes.");
+      } finally {
+        if (!ignore) {
+          setBusy(false);
+          setEnriching(false);
+        }
+      }
+    };
+    load();
     return () => { ignore = true; };
   }, [token]);
   useEffect(() => {
@@ -788,19 +840,25 @@ export function ChitFundPage({ token, close, openSchemeId = null, onOpenSchemeCo
     setSelected(schemes.find(scheme => scheme.id === openSchemeId) || null);
     onOpenSchemeConsumed?.();
   }, [openSchemeId, schemes]);
-  const rows = useMemo(() => schemes.map(scheme => {
-    const schemeCycles = cycles.filter(cycle => cycle.scheme_id === scheme.id).sort((a, b) => a.cycle_number - b.cycle_number);
-    const current = schemeCycles.at(-1);
-    const members = enrollments.filter(item => item.scheme_id === scheme.id);
-    const winner = members.find(item => item.id === current?.winning_enrollment_id);
-    const schemeFixedLifts = fixedLifts.filter(item => item.scheme_id === scheme.id);
-    const fixedCurrent = schemeFixedLifts.find(item => item.status === "pending") || schemeFixedLifts.at(-1);
-    const fixedWinner = members.find(item => item.id === fixedCurrent?.enrollment_id);
-    const schemePredefined = predefinedSchedule.filter(item => item.scheme_id === scheme.id);
-    const predefinedCurrent = schemePredefined.find(item => item.status === "pending") || schemePredefined.at(-1);
-    const predefinedWinner = members.find(item => item.id === predefinedCurrent?.enrollment_id);
-    return { scheme, current, members, winner, fixedCurrent, fixedWinner, predefinedCurrent, predefinedWinner };
-  }), [schemes, cycles, enrollments, fixedLifts, predefinedSchedule]);
+  const rows = useMemo(() => {
+    const cyclesByScheme = groupRowsBySchemeId(cycles);
+    const enrollmentsByScheme = groupRowsBySchemeId(enrollments);
+    const fixedLiftsByScheme = groupRowsBySchemeId(fixedLifts);
+    const predefinedByScheme = groupRowsBySchemeId(predefinedSchedule);
+    return schemes.map(scheme => {
+      const schemeCycles = [...(cyclesByScheme.get(scheme.id) || [])].sort((a, b) => a.cycle_number - b.cycle_number);
+      const current = schemeCycles.at(-1);
+      const members = enrollmentsByScheme.get(scheme.id) || [];
+      const winner = members.find(item => item.id === current?.winning_enrollment_id);
+      const schemeFixedLifts = fixedLiftsByScheme.get(scheme.id) || [];
+      const fixedCurrent = schemeFixedLifts.find(item => item.status === "pending") || schemeFixedLifts.at(-1);
+      const fixedWinner = members.find(item => item.id === fixedCurrent?.enrollment_id);
+      const schemePredefined = predefinedByScheme.get(scheme.id) || [];
+      const predefinedCurrent = schemePredefined.find(item => item.status === "pending") || schemePredefined.at(-1);
+      const predefinedWinner = members.find(item => item.id === predefinedCurrent?.enrollment_id);
+      return { scheme, current, members, winner, fixedCurrent, fixedWinner, predefinedCurrent, predefinedWinner };
+    });
+  }, [schemes, cycles, enrollments, fixedLifts, predefinedSchedule]);
   const submitScheme = async event => {
     event.preventDefault();
     setBusy(true); setError("");
@@ -871,12 +929,13 @@ export function ChitFundPage({ token, close, openSchemeId = null, onOpenSchemeCo
     setNotice(`${scheme.name} was deleted.`);
     await refresh();
   };
-  if (selected) return <ChitSchemeDetails token={token} scheme={selected} back={() => { setSelected(null); refresh(); }} onSchemeDeleted={schemeDeleted} />;
+  if (selected) return <ChitSchemeDetails token={token} scheme={selected} back={() => setSelected(null)} onSchemeDeleted={schemeDeleted} />;
   return <main className="shell chit-fund-page">
     <div className="toolbar"><div><Button onClick={close}>← Dashboard</Button><h1 className="title spacer">Chit Fund</h1><p className="copy chit-fund-intro">Auction Chits use live bidding, Fixed Chits use scheduled lifts, and Fixed Predefined Bid Chits use an editable generated schedule.</p></div><Button className="primary" onClick={() => setModal("choose-type")}>+ New scheme</Button></div>
     {error && <p className="red small">{error}</p>}
     {notice && <p className="green small">{notice}</p>}
-    {busy && <p className="small spacer">Loading Chit Fund schemes…</p>}
+    {busy && !schemes.length && <p className="small spacer">Loading Chit Fund schemes…</p>}
+    {enriching && !!schemes.length && <p className="small spacer">Loading current bids and member counts…</p>}
     <ChitSchemeDashboardSection kind="auction" rows={rows.filter(row => (row.scheme.chit_type || CHIT_TYPES.AUCTION) === CHIT_TYPES.AUCTION)} busy={busy} open={setSelected} edit={editScheme} activate={activate} />
     <ChitSchemeDashboardSection kind="fixed" rows={rows.filter(row => row.scheme.chit_type === CHIT_TYPES.FIXED)} busy={busy} open={setSelected} edit={editScheme} activate={activate} />
     <ChitSchemeDashboardSection kind="predefined" rows={rows.filter(row => row.scheme.chit_type === CHIT_TYPES.FIXED_PREDEFINED_BID)} busy={busy} open={setSelected} edit={editScheme} activate={activate} />
