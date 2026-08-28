@@ -56,6 +56,30 @@ export function fixedCommissionPercentFromAmount(chitValue, commissionAmount) {
   return String(roundMoney((amount / value) * 100));
 }
 
+export function resolveFixedManagerCommission({ chitValue, fixedCommissionAmount, lifts = [] } = {}) {
+  if (fixedCommissionAmount != null && fixedCommissionAmount !== "") {
+    const amount = roundMoney(Number(fixedCommissionAmount));
+    if (Number.isFinite(amount) && amount >= 0) {
+      return {
+        amount,
+        percent: fixedCommissionPercentFromAmount(chitValue, amount),
+      };
+    }
+  }
+  const fromLift = (lifts || []).find(row => Number.isFinite(Number(row?.manager_commission)));
+  if (fromLift) {
+    const amount = roundMoney(Number(fromLift.manager_commission));
+    return { amount, percent: fixedCommissionPercentFromAmount(chitValue, amount) };
+  }
+  return { amount: 0, percent: "" };
+}
+
+export function formatFixedManagerCommissionSummary({ chitValue, fixedCommissionAmount, lifts = [] } = {}, money = value => String(value ?? "")) {
+  const { amount, percent } = resolveFixedManagerCommission({ chitValue, fixedCommissionAmount, lifts });
+  if (!amount) return "—";
+  return percent ? `${money(amount)} / month · ${percent}% of chit value` : `${money(amount)} / month`;
+}
+
 export function validateFixedChit(config = {}) {
   const chitValue = roundMoney(Number(config.chitValue));
   const memberCount = Number(config.memberCount);

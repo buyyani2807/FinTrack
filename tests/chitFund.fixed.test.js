@@ -1,6 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { fixedChitMonth, fixedChitSchedule, fixedCommissionFromPercent, fixedCommissionPercentFromAmount, validateFixedChit } from "../src/features/chitFund/fixedChit.js";
+import {
+  fixedChitMonth,
+  fixedChitSchedule,
+  fixedCommissionFromPercent,
+  fixedCommissionPercentFromAmount,
+  formatFixedManagerCommissionSummary,
+  resolveFixedManagerCommission,
+  validateFixedChit,
+} from "../src/features/chitFund/fixedChit.js";
 
 const example = {
   chitValue: 100000,
@@ -36,6 +44,25 @@ test("accepts manager commission as a percent of chit value", () => {
   assert.equal(fixedCommissionPercentFromAmount(100000, 5000), "5");
   assert.deepEqual(validateFixedChit({ ...example, commissionPercent: 5 }).commissionAmount, 5000);
   assert.throws(() => validateFixedChit({ ...example, commissionPercent: 101 }), /percentage/);
+});
+
+test("resolves fixed manager commission from scheme amount or lift schedule", () => {
+  assert.deepEqual(resolveFixedManagerCommission({ chitValue: 100000, fixedCommissionAmount: 5000 }), {
+    amount: 5000,
+    percent: "5",
+  });
+  assert.deepEqual(resolveFixedManagerCommission({
+    chitValue: 100000,
+    fixedCommissionAmount: null,
+    lifts: [{ manager_commission: 5000 }],
+  }), {
+    amount: 5000,
+    percent: "5",
+  });
+  assert.equal(
+    formatFixedManagerCommissionSummary({ chitValue: 100000, fixedCommissionAmount: 5000 }, value => `Rs.${value}`),
+    "Rs.5000 / month · 5% of chit value",
+  );
 });
 
 test("validates configuration without using Auction Chit calculations", () => {
