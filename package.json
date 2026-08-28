@@ -8,6 +8,8 @@
     "build": "vite build",
     "test": "node --test",
     "smoke": "node scripts/prelaunch-smoke.mjs",
+    "test:e2e": "playwright test",
+    "test:ci": "npm test && npm run smoke && npm run test:e2e",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -18,6 +20,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.51.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",

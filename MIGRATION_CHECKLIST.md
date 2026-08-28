@@ -41,6 +41,14 @@ Run these in the Supabase SQL Editor **in order**. Each file is idempotent where
 | 035 | `035_fix_fixed_chit_commission.sql` | Fixed chit commission |
 | 036 | `036_prelaunch_hardening.sql` | **Pre-launch security hardening** |
 
+After running 036, verify in Supabase SQL Editor:
+
+```bash
+# Paste and run: scripts/verify-migration-036.sql
+```
+
+Each query should return `ok = 1`. If any check fails, re-run `036_prelaunch_hardening.sql`.
+
 ## Verify RLS after migrations
 
 ```sql

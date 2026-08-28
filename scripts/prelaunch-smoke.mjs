@@ -11,8 +11,12 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const requiredFiles = [
   "supabase/036_prelaunch_hardening.sql",
+  "scripts/verify-migration-036.sql",
   "api/auth/login.js",
   "api/auth/session.js",
+  "e2e/app.spec.js",
+  "playwright.config.js",
+  ".github/workflows/ci.yml",
   "src/lib/signupGate.js",
   "src/features/legal/LegalPage.jsx",
   "OPERATIONS.md",

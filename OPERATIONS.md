@@ -48,4 +48,6 @@ npm run build
 node scripts/prelaunch-smoke.mjs
 ```
 
-Then manually verify: financier login, create finance account, record payment, open Chit Fund, run migration `036_prelaunch_hardening.sql` on Supabase.
+Then manually verify: financier login, create finance account, record payment, open Chit Fund, run migration `036_prelaunch_hardening.sql` on Supabase, then `scripts/verify-migration-036.sql`.
+
+CI runs on every push to `main`: unit tests, smoke checks, and Playwright E2E (`npm run test:ci` locally).
