@@ -818,6 +818,7 @@ export function ChitFundPage({ token, close, openSchemeId = null, onOpenSchemeCo
   const [notice, setNotice] = useState("");
   const [modal, setModal] = useState(null);
   const [schemeForm, setSchemeForm] = useState(emptySchemeForm);
+  const [enriching, setEnriching] = useState(false);
   const [activateTarget, setActivateTarget] = useState(null);
   const [activateBusy, setActivateBusy] = useState(false);
   const [activateError, setActivateError] = useState("");
