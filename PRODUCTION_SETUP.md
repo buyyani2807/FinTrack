@@ -1,17 +1,20 @@
 # FinTrack: production setup
 
-This app is still a local prototype. Do not enter real Aadhaar, PAN, or production payment data until this setup is complete.
+Complete the steps below before entering real Aadhaar, PAN, or production payment data. See also `MIGRATION_CHECKLIST.md`, `OPERATIONS.md`, and `DEPLOYMENT.md`.
 
 ## 1. Create the secure data layer
 
 1. Create a Supabase project in the India region if available for your account.
-2. In Supabase SQL Editor, run `supabase/schema.sql`.
-3. Then run `supabase/002_finance_operations.sql`.
-4. Then run `supabase/003_account_management.sql`, `supabase/004_account_type_switch.sql`, and `supabase/005_customer_portal.sql`.
-5. Enable email/password sign-in and invite the first financier account.
-6. Copy `.env.example` to `.env` and fill in the public project URL and anon key.
+2. Run every migration in `MIGRATION_CHECKLIST.md` order, ending with `036_prelaunch_hardening.sql`.
+3. Enable email/password sign-in and invite the first financier account (or enable pilot signup env vars).
+4. Copy `.env.example` to `.env` and fill in the public project URL and anon key.
+5. On Vercel, add the same `VITE_` variables plus `SUPABASE_SERVICE_ROLE_KEY` for `/api/agents` and `/api/auth/*`.
 
-If you already ran the schema before the `provision_financier` function was added, run the updated `supabase/schema.sql` again. The statements are safe to re-run except for the initial table creations; in that case run only the final `provision_financier` block.
+Optional server-side signup invite:
+
+```sql
+alter database postgres set app.fintrack_signup_invite_code = 'your-pilot-invite';
+```
 
 ## 2. Security rules
 
@@ -23,8 +26,8 @@ If you already ran the schema before the `provision_financier` function was adde
 
 ## 3. Before accepting paid customers
 
-- Implement Supabase Auth in the frontend.
-- Move all reads/writes from `localStorage` to the database.
-- Add server-side KYC encryption and audit records for payment edits.
-- Add regular backup, support contact, privacy policy, and terms.
+- Run `npm test` and `npm run smoke` after each deploy.
+- Configure uptime monitoring and document backup restore (`OPERATIONS.md`).
+- To hide new business signup, set `VITE_ALLOW_PUBLIC_SIGNUP=false` on Vercel.
+- Add a support contact on your deployment.
 - Obtain legal advice for your lending model and data obligations.

@@ -8,7 +8,10 @@
 4. In Vercel, open the project settings and add these environment variables from your local `.env` file:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY` (required for collection agents and secure financier auth cookies)
 5. Redeploy after saving the variables.
+
+Financier refresh tokens are stored in HttpOnly cookies via `/api/auth/*` on Vercel. Local `vite` dev falls back to in-memory tokens when those routes are unavailable; use `vercel dev` to test cookie auth locally.
 
 ## Add FinTrack to a phone
 

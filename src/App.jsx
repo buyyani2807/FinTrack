@@ -4,6 +4,8 @@ import { supabase } from "./lib/supabase";
 import { monthlyInterestOnBalance } from "./features/finance/calculations";
 import { byCollectionOrderThenName, mergeAccountOrder, reorderIds } from "./features/finance/collectionOrder";
 import { ChitCustomerPortal, ChitFundPage } from "./features/chitFund/ChitFundModule";
+import { LegalPage, legalViewFromLocation, openLegalView } from "./features/legal/LegalPage.jsx";
+import { isPublicSignupAllowed, signupInviteRequired, validateSignupInvite } from "./lib/signupGate.js";
 import { assignCollectionAgent, chitCustomerPortalLogin, createCollectionAgent, createFinanceAccount, customerPortalLogin, deleteFinanceAccount, deleteFinancePayment, enableCustomerPortal, loadActiveChitSchemes, loadChitSchemeDetails, loadChitSchemes, loadCustomerKyc, loadFinanceAccounts, loadManagedAgents, loadWorkspace, recordPayment, resetCustomerPortalPin, saveCustomerKyc, setAccountStatus, saveCollectionOrder, updateCollectionAgent, updateFinanceAccount, updateFinancePayment, updatePaymentNotes } from "./lib/financeRepository";
 import { buildChitMonthStatement, currentSchemeMonth, monthLabel as chitMonthLabel } from "./features/chitFund/monthStatement";
 import { downloadChitMonthStatementPdf } from "./features/chitFund/monthStatementPdf";
@@ -287,13 +289,15 @@ function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin }) {
   const [password, setPassword] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [fullName, setFullName] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
   const [portalId, setPortalId] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const allowSignup = isPublicSignupAllowed();
   const signInAndEnter = async () => {
     const result = await supabase.auth.signIn(email, password);
     const profile = await loadWorkspace(result.access_token);
-    if (!profile.active) { supabase.auth.clearSession(); throw new Error("This account has been disabled. Contact your financier."); }
+    if (!profile.active) { await supabase.auth.signOut(); throw new Error("This account has been disabled. Contact your financier."); }
     if (mode === "agent" && profile.role !== "staff") throw new Error("This account is not a Collection Agent. Use Financier sign in.");
     if (mode === "signIn" && profile.role === "staff") throw new Error("Use Collection Agent sign in for this account.");
     onLogin({ role: profile.role === "staff" ? "agent" : "financier", authToken: result.access_token, name: profile.fullName });
@@ -308,9 +312,11 @@ function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin }) {
         if (!portalId || !password) throw new Error("Enter your Chit portal ID and PIN.");
         onChitCustomerLogin(await chitCustomerPortalLogin(portalId, password));
       } else if (mode === "signUp") {
+        if (!allowSignup) throw new Error("New business signup is invite-only. Contact FinTrack support for access.");
         if (!businessName || !fullName) throw new Error("Enter your business name and your name.");
+        if (!validateSignupInvite(inviteCode)) throw new Error("Enter a valid invite code.");
         const result = await supabase.auth.signUp(email, password);
-        const workspace = { workspace_name: businessName, display_name: fullName };
+        const workspace = { workspace_name: businessName, display_name: fullName, invite_code: inviteCode || null };
         if (!result.access_token) {
           throw new Error("Your account could not be signed in automatically. In Supabase, turn off Confirm email under Authentication → Providers → Email, then try again.");
         }
@@ -332,7 +338,7 @@ function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin }) {
     finally { setBusy(false); }
   };
   const isFinanceCustomer = mode === "customer", isChitCustomer = mode === "chitCustomer", isCustomer = isFinanceCustomer || isChitCustomer, isAgent = mode === "agent";
-  return <div className="login"><div className="brand" style={{ textAlign: "center" }}>FinTrack</div><p className="sub" style={{ textAlign: "center", marginBottom: 22 }}>{isChitCustomer ? "View your chit schemes, payments, and live bids when they apply" : isFinanceCustomer ? "View your finance balance and payment history" : isAgent ? "Collection Agent workspace" : "Secure workspace for finance businesses"}</p><form className="card" onSubmit={event => { event.preventDefault(); submit(); }}><div className="tabs" style={{ marginBottom: 18 }}><Button type="button" className={`tab ${mode === "signIn" ? "active" : ""}`} onClick={() => setMode("signIn")}>Financier sign in</Button><Button type="button" className={`tab ${mode === "agent" ? "active" : ""}`} onClick={() => setMode("agent")}>Agent login</Button><Button type="button" className={`tab ${mode === "customer" ? "active" : ""}`} onClick={() => setMode("customer")}>Customer login</Button><Button type="button" className={`tab ${mode === "chitCustomer" ? "active" : ""}`} onClick={() => setMode("chitCustomer")}>Chit customer</Button><Button type="button" className={`tab ${mode === "signUp" ? "active" : ""}`} onClick={() => setMode("signUp")}>Create business account</Button></div>{isCustomer ? <><Field label={isChitCustomer ? "Chit portal ID" : "Customer portal ID"}><input placeholder={isChitCustomer ? "e.g. CF-1A2B3C4D" : "e.g. FT-1A2B3C4D"} value={portalId} onChange={event => setPortalId(event.target.value.toUpperCase())} /></Field><div className="spacer"><Field label="6-digit PIN"><input type="password" inputMode="numeric" minLength="6" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} /></Field></div></> : <>{mode === "signUp" && <><Field label="Business name"><input placeholder="e.g. Vivek Finance" value={businessName} onChange={event => setBusinessName(event.target.value)} /></Field><div className="spacer"><Field label="Your full name"><input value={fullName} onChange={event => setFullName(event.target.value)} /></Field></div></>}<div className="spacer"><Field label={isAgent ? "Agent email" : "Business email"}><input type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} /></Field></div><div className="spacer"><Field label="Password"><input type="password" minLength="8" autoComplete={mode === "signIn" || isAgent ? "current-password" : "new-password"} value={password} onChange={event => setPassword(event.target.value)} /></Field></div></>}{mode === "signIn" && <button type="button" className="link-button" onClick={forgotPassword} disabled={busy}>Forgot password?</button>}{message && <p className="small" style={{ color: message.includes("sent") || message.includes("created") ? C.green : C.red }}>{message}</p>}<Button className="primary spacer" style={{ width: "100%" }} disabled={busy} type="submit">{busy ? "Please wait…" : isChitCustomer ? "Open chit dashboard" : isFinanceCustomer ? "Open my dashboard" : mode === "signUp" ? "Create business account" : "Sign in"}</Button></form></div>;
+  return <div className="login"><div className="brand" style={{ textAlign: "center" }}>FinTrack</div><p className="sub" style={{ textAlign: "center", marginBottom: 22 }}>{isChitCustomer ? "View your chit schemes, payments, and live bids when they apply" : isFinanceCustomer ? "View your finance balance and payment history" : isAgent ? "Collection Agent workspace" : "Secure workspace for finance businesses"}</p><form className="card" onSubmit={event => { event.preventDefault(); submit(); }}><div className="tabs" style={{ marginBottom: 18 }}><Button type="button" className={`tab ${mode === "signIn" ? "active" : ""}`} onClick={() => setMode("signIn")}>Financier sign in</Button><Button type="button" className={`tab ${mode === "agent" ? "active" : ""}`} onClick={() => setMode("agent")}>Agent login</Button><Button type="button" className={`tab ${mode === "customer" ? "active" : ""}`} onClick={() => setMode("customer")}>Customer login</Button><Button type="button" className={`tab ${mode === "chitCustomer" ? "active" : ""}`} onClick={() => setMode("chitCustomer")}>Chit customer</Button>{allowSignup && <Button type="button" className={`tab ${mode === "signUp" ? "active" : ""}`} onClick={() => setMode("signUp")}>Create business account</Button>}</div>{isCustomer ? <><Field label={isChitCustomer ? "Chit portal ID" : "Customer portal ID"}><input placeholder={isChitCustomer ? "e.g. CF-1A2B3C4D" : "e.g. FT-1A2B3C4D"} value={portalId} onChange={event => setPortalId(event.target.value.toUpperCase())} /></Field><div className="spacer"><Field label="6-digit PIN"><input type="password" inputMode="numeric" minLength="6" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} /></Field></div></> : <>{mode === "signUp" && <><Field label="Business name"><input placeholder="e.g. Vivek Finance" value={businessName} onChange={event => setBusinessName(event.target.value)} /></Field><div className="spacer"><Field label="Your full name"><input value={fullName} onChange={event => setFullName(event.target.value)} /></Field></div>{signupInviteRequired() && <div className="spacer"><Field label="Invite code"><input value={inviteCode} onChange={event => setInviteCode(event.target.value)} /></Field></div>}</>}<div className="spacer"><Field label={isAgent ? "Agent email" : "Business email"}><input type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} /></Field></div><div className="spacer"><Field label="Password"><input type="password" minLength="8" autoComplete={mode === "signIn" || isAgent ? "current-password" : "new-password"} value={password} onChange={event => setPassword(event.target.value)} /></Field></div></>}{mode === "signIn" && <button type="button" className="link-button" onClick={forgotPassword} disabled={busy}>Forgot password?</button>}{message && <p className="small" style={{ color: message.includes("sent") || message.includes("created") ? C.green : C.red }}>{message}</p>}<Button className="primary spacer" style={{ width: "100%" }} disabled={busy} type="submit">{busy ? "Please wait…" : isChitCustomer ? "Open chit dashboard" : isFinanceCustomer ? "Open my dashboard" : mode === "signUp" ? "Create business account" : "Sign in"}</Button></form><p className="small" style={{ textAlign: "center", marginTop: 16 }}><button type="button" className="link-button" onClick={() => openLegalView("privacy")}>Privacy</button> · <button type="button" className="link-button" onClick={() => openLegalView("terms")}>Terms</button></p></div>;
 }
 const csvCell = value => {
   const text = String(value ?? "");
@@ -1083,14 +1089,24 @@ function CustomerReportDownload({ loan, onResetPin }) {
 }
 export default function App() {
   const isPasswordRecovery = new URLSearchParams(window.location.search).has("reset-password") || new URLSearchParams(window.location.hash.slice(1)).get("type") === "recovery";
-  const [user, setUser] = useState(() => {
-    const authToken = supabase.auth.getAccessToken();
-    return authToken ? { role: "financier", authToken } : null;
-  });
-  const [adminPin, setAdminPin] = useState(() => localStorage.getItem("fintrack_admin_pin_v1") || "1234");
+  const [legalView, setLegalView] = useState(() => legalViewFromLocation());
+  const [user, setUser] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
   const [loans, setLoans] = useState([]);
   const [workspace, setWorkspace] = useState(null);
   const [dataError, setDataError] = useState("");
+  useEffect(() => {
+    const syncLegal = () => setLegalView(legalViewFromLocation());
+    window.addEventListener("popstate", syncLegal);
+    return () => window.removeEventListener("popstate", syncLegal);
+  }, []);
+  useEffect(() => {
+    supabase.auth.restoreSession()
+      .then(session => {
+        if (session?.access_token) setUser(current => current ?? { role: "financier", authToken: session.access_token });
+      })
+      .finally(() => setAuthReady(true));
+  }, []);
   const refreshLoans = async (token = user?.authToken) => {
     if (!token) return;
     try { setLoans(await loadFinanceAccounts(token)); setDataError(""); }
@@ -1104,9 +1120,11 @@ export default function App() {
   useEffect(() => {
     if (workspace?.role === "staff" && user?.role === "financier") setUser(current => ({ ...current, role: "agent" }));
   }, [workspace?.role, user?.role]);
-  useEffect(() => localStorage.setItem("fintrack_admin_pin_v1", adminPin), [adminPin]);
   const customerLoan = user?.role === "customer" ? user.loan : null;
-  const logout = () => { if (user?.role === "financier" || user?.role === "agent") supabase.auth.clearSession(); setUser(null); };
+  const logout = async () => {
+    if (user?.role === "financier" || user?.role === "agent") await supabase.auth.signOut();
+    setUser(null);
+  };
   const createLoan = async loan => {
     const accountId = await createFinanceAccount(user.authToken, loan);
     if (loan.aadhaar || loan.pan) await saveCustomerKyc(user.authToken, accountId, loan.aadhaar || "", loan.pan || "");
@@ -1135,5 +1153,11 @@ export default function App() {
   const updateAgentAssignment = async (loan, agentId) => { await assignCollectionAgent(user.authToken, loan.id, agentId); await refreshLoans(); };
   const saveCollectionStaff = details => updateCollectionAgent(user.authToken, details);
   const staffRole = user?.role === "agent";
+  if (legalView) {
+    return <div className="app"><style>{styles + enhancements + homeReportHide + visualRefresh + mobileCollections + mobileLayout}</style><LegalPage view={legalView} /></div>;
+  }
+  if (!authReady && !user && !isPasswordRecovery) {
+    return <div className="app"><style>{styles + enhancements + homeReportHide + visualRefresh + mobileCollections + mobileLayout}</style><div className="login"><p className="sub" style={{ textAlign: "center" }}>Loading FinTrack…</p></div></div>;
+  }
   return <div className="app"><style>{styles + enhancements + homeReportHide + visualRefresh + mobileCollections + mobileLayout + `.phone-link{color:${C.blue};text-decoration:none}.phone-link:hover{text-decoration:underline}`}</style>{isPasswordRecovery ? <PasswordRecovery /> : !user ? <FinancierAuth onLogin={setUser} onCustomerLogin={loan => setUser({ role: "customer", loan })} onChitCustomerLogin={session => setUser({ role: "chitCustomer", session })} /> : user.role === "financier" || staffRole ? <>{dataError && <div className="notice" style={{ position: "fixed", top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 20 }}>{dataError}</div>}<Financier loans={loans} businessName={workspace?.businessName} setLoans={setLoans} onCreateLoan={createLoan} onRecordPayment={savePayment} onUpdateLoan={updateLoan} onDeleteLoan={removeLoan} onSaveCustomerPortal={saveCustomerPortal} onLoadKyc={getKyc} onSaveKyc={updateKyc} onStatusChange={changeStatus} onPaymentNoteChange={changePaymentNotes} onPaymentCorrect={correctPayment} onPaymentDelete={removePayment} onCollectionOrderChange={changeCollectionOrder} role={staffRole ? "staff" : "owner"} logout={logout} />{!staffRole && <FinancierTools loans={loans} token={user.authToken} onCreateAgent={addCollectionAgent} onLoadAgents={getManagedAgents} onAssignAgent={updateAgentAssignment} onUpdateAgent={saveCollectionStaff} />}</> : user.role === "chitCustomer" ? <ChitCustomerPortal session={user.session} logout={logout} /> : <><Customer loan={customerLoan} logout={logout} /><CustomerReportDownload loan={customerLoan} /></>}</div>;
 }
