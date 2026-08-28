@@ -2,7 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   fixedChitMonth,
+  fixedChitPostLiftMonthlyPayment,
   fixedChitSchedule,
+  fixedChitScheduleDisplayPayment,
   fixedCommissionFromPercent,
   fixedCommissionPercentFromAmount,
   formatFixedManagerCommissionSummary,
@@ -33,11 +35,19 @@ test("calculates Fixed Chit payment obligations from the lift month", () => {
   assert.deepEqual(fixedChitMonth({ ...example, month: 5 }), {
     month: 5,
     liftAmount: 99000,
+    baseMonthlyPayment: 5000,
+    postLiftMonthlyPayment: 6000,
     monthlyPayment: 6000,
     remainingMonths: 15,
     totalRemainingPayment: 90000,
   });
   assert.equal(fixedChitMonth({ ...example, month: 20 }).totalRemainingPayment, 0);
+});
+
+test("shows base contribution before lift and post-lift payment after lift", () => {
+  assert.equal(fixedChitPostLiftMonthlyPayment(5000, 1000), 6000);
+  assert.equal(fixedChitScheduleDisplayPayment({ status: "pending", monthly_payment: 6000 }, 5000), 5000);
+  assert.equal(fixedChitScheduleDisplayPayment({ status: "completed", monthly_payment: 6000 }, 5000), 6000);
 });
 
 test("accepts manager commission as a percent of chit value", () => {

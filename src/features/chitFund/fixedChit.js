@@ -25,15 +25,29 @@ export function fixedChitMonth({
     throw new Error("Invalid Fixed Chit amounts");
   }
   const liftAmount = roundMoney(initial + (monthNumber - 1) * increment);
-  const monthlyPayment = roundMoney(contribution + increment);
+  const baseMonthlyPayment = contribution;
+  const postLiftMonthlyPayment = roundMoney(contribution + increment);
   const remainingMonths = duration - monthNumber;
   return {
     month: monthNumber,
     liftAmount,
-    monthlyPayment,
+    baseMonthlyPayment,
+    postLiftMonthlyPayment,
+    monthlyPayment: postLiftMonthlyPayment,
     remainingMonths,
-    totalRemainingPayment: roundMoney(monthlyPayment * remainingMonths),
+    totalRemainingPayment: roundMoney(postLiftMonthlyPayment * remainingMonths),
   };
+}
+
+export function fixedChitPostLiftMonthlyPayment(monthlyContribution, monthlyLiftIncrement) {
+  return roundMoney(Number(monthlyContribution) + Number(monthlyLiftIncrement));
+}
+
+export function fixedChitScheduleDisplayPayment(lift, monthlyContribution) {
+  const base = roundMoney(Number(monthlyContribution));
+  if (!lift) return base;
+  if (lift.status === "completed") return roundMoney(Number(lift.monthly_payment));
+  return base;
 }
 
 export function fixedChitSchedule(config = {}) {
