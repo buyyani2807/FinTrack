@@ -49,6 +49,21 @@ export function fixedCommissionFromPercent(chitValue, commissionPercent) {
   return roundMoney(value * percent / 100);
 }
 
+export function normalizeFixedCommissionAmount(chitValue, storedAmount) {
+  const value = roundMoney(Number(chitValue));
+  const amount = roundMoney(Number(storedAmount));
+  if (!Number.isFinite(value) || value <= 0 || !Number.isFinite(amount) || amount < 0) return 0;
+  if (
+    amount > 0
+    && amount <= 100
+    && amount < value / 1000
+    && roundMoney(value * amount / 100) >= 100
+  ) {
+    return roundMoney(value * amount / 100);
+  }
+  return amount;
+}
+
 export function fixedCommissionPercentFromAmount(chitValue, commissionAmount) {
   const value = Number(chitValue);
   const amount = Number(commissionAmount);
@@ -56,26 +71,32 @@ export function fixedCommissionPercentFromAmount(chitValue, commissionAmount) {
   return String(roundMoney((amount / value) * 100));
 }
 
-export function resolveFixedManagerCommission({ chitValue, fixedCommissionAmount, lifts = [] } = {}) {
-  if (fixedCommissionAmount != null && fixedCommissionAmount !== "") {
-    const amount = roundMoney(Number(fixedCommissionAmount));
-    if (Number.isFinite(amount) && amount >= 0) {
-      return {
-        amount,
-        percent: fixedCommissionPercentFromAmount(chitValue, amount),
-      };
+export function resolveFixedManagerCommission({ chitValue, fixedCommissionAmount, commissionPercent, lifts = [] } = {}) {
+  const normalizedSchemeAmount = fixedCommissionAmount != null && fixedCommissionAmount !== ""
+    ? normalizeFixedCommissionAmount(chitValue, fixedCommissionAmount)
+    : null;
+  if (normalizedSchemeAmount != null && Number.isFinite(normalizedSchemeAmount) && normalizedSchemeAmount >= 0) {
+    return {
+      amount: normalizedSchemeAmount,
+      percent: fixedCommissionPercentFromAmount(chitValue, normalizedSchemeAmount),
+    };
+  }
+  if (commissionPercent != null && commissionPercent !== "") {
+    const amount = fixedCommissionFromPercent(chitValue, commissionPercent);
+    if (amount > 0) {
+      return { amount, percent: String(Number(commissionPercent)) };
     }
   }
   const fromLift = (lifts || []).find(row => Number.isFinite(Number(row?.manager_commission)));
   if (fromLift) {
-    const amount = roundMoney(Number(fromLift.manager_commission));
+    const amount = normalizeFixedCommissionAmount(chitValue, fromLift.manager_commission);
     return { amount, percent: fixedCommissionPercentFromAmount(chitValue, amount) };
   }
   return { amount: 0, percent: "" };
 }
 
-export function formatFixedManagerCommissionSummary({ chitValue, fixedCommissionAmount, lifts = [] } = {}, money = value => String(value ?? "")) {
-  const { amount, percent } = resolveFixedManagerCommission({ chitValue, fixedCommissionAmount, lifts });
+export function formatFixedManagerCommissionSummary({ chitValue, fixedCommissionAmount, commissionPercent, lifts = [] } = {}, money = value => String(value ?? "")) {
+  const { amount, percent } = resolveFixedManagerCommission({ chitValue, fixedCommissionAmount, commissionPercent, lifts });
   if (!amount) return "—";
   return percent ? `${money(amount)} / month · ${percent}% of chit value` : `${money(amount)} / month`;
 }
@@ -89,7 +110,7 @@ export function validateFixedChit(config = {}) {
   const commissionPercent = hasPercent ? Number(config.commissionPercent) : null;
   const commissionAmount = hasPercent
     ? fixedCommissionFromPercent(chitValue, commissionPercent)
-    : roundMoney(Number(config.commissionAmount));
+    : normalizeFixedCommissionAmount(chitValue, config.commissionAmount);
   const initialLiftAmount = roundMoney(Number(config.initialLiftAmount));
   const monthlyLiftIncrement = roundMoney(Number(config.monthlyLiftIncrement));
   if (!Number.isFinite(chitValue) || chitValue <= 0) throw new Error("Chit value must be positive");

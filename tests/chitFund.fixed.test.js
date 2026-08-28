@@ -6,6 +6,7 @@ import {
   fixedCommissionFromPercent,
   fixedCommissionPercentFromAmount,
   formatFixedManagerCommissionSummary,
+  normalizeFixedCommissionAmount,
   resolveFixedManagerCommission,
   validateFixedChit,
 } from "../src/features/chitFund/fixedChit.js";
@@ -47,20 +48,30 @@ test("accepts manager commission as a percent of chit value", () => {
 });
 
 test("resolves fixed manager commission from scheme amount or lift schedule", () => {
+  assert.equal(normalizeFixedCommissionAmount(100000, 5), 5000);
+  assert.equal(normalizeFixedCommissionAmount(100000, 5000), 5000);
+  assert.equal(normalizeFixedCommissionAmount(10000, 50), 50);
   assert.deepEqual(resolveFixedManagerCommission({ chitValue: 100000, fixedCommissionAmount: 5000 }), {
     amount: 5000,
     percent: "5",
   });
   assert.deepEqual(resolveFixedManagerCommission({
     chitValue: 100000,
+    fixedCommissionAmount: 5,
+  }), {
+    amount: 5000,
+    percent: "5",
+  });
+  assert.deepEqual(resolveFixedManagerCommission({
+    chitValue: 100000,
     fixedCommissionAmount: null,
-    lifts: [{ manager_commission: 5000 }],
+    lifts: [{ manager_commission: 5 }],
   }), {
     amount: 5000,
     percent: "5",
   });
   assert.equal(
-    formatFixedManagerCommissionSummary({ chitValue: 100000, fixedCommissionAmount: 5000 }, value => `Rs.${value}`),
+    formatFixedManagerCommissionSummary({ chitValue: 100000, fixedCommissionAmount: 5 }, value => `Rs.${value}`),
     "Rs.5000 / month · 5% of chit value",
   );
 });
