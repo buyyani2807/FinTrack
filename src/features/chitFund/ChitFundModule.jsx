@@ -164,7 +164,7 @@ function ChitDeleteSchemeControl({ token, scheme, memberCount = 0, onDeleted }) 
   </>;
 }
 function ChitSchemeHeaderActions({ token, scheme, memberCount, onAddMember, onSchemeDeleted, extra }) {
-  const canAdd = scheme.status === "draft" && onAddMember && Number(memberCount) < Number(scheme.member_count || 0);
+  const canAdd = onAddMember && ["draft", "active"].includes(scheme.status) && Number(memberCount) < Number(scheme.member_count || 0);
   return <div className="row">
     {extra}
     {canAdd && <Button className="primary" onClick={onAddMember}>+ Add member</Button>}
@@ -173,7 +173,7 @@ function ChitSchemeHeaderActions({ token, scheme, memberCount, onAddMember, onSc
 }
 const enrollmentName = enrollment => enrollment?.chit_members?.full_name || enrollment?.full_name || "Member";
 const canEnrollMoreMembers = (scheme, enrollments = []) =>
-  scheme?.status === "draft" && enrollments.length < Number(scheme?.member_count || 0);
+  ["draft", "active"].includes(scheme?.status) && enrollments.length < Number(scheme?.member_count || 0);
 const nextAvailableTicket = (enrollments = [], memberCount = 0) => {
   const used = new Set(enrollments.map(item => Number(item.ticket_number) || 0));
   const limit = Math.max(Number(memberCount) || 0, enrollments.length + 1);
