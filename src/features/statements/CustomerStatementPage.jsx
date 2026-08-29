@@ -50,7 +50,7 @@ function FinanceAccountSection({ account }) {
         <td>{payment.paymentMode}</td>
         <td>{payment.collectedBy}</td>
         <td>{money(payment.balanceAfter)}</td>
-        <td>{payment.notes || "—"}</td>
+        <td>{payment.notes || ""}</td>
       </tr>)}
     </tbody></table>{!account.payments.length && <p className="small spacer">No payments recorded up to this statement date.</p>}</div>
   </section>;
@@ -94,7 +94,7 @@ function ChitAccountSection({ account }) {
         <td className="green">{money(payment.paid || payment.expected)}{payment.splitPayment ? <div className="small">Cash {money(payment.cashAmount)} · UPI {money(payment.upiAmount)}</div> : null}</td>
         <td>{payment.paymentMode || "—"}</td>
         <td>{payment.status}</td>
-        <td>{payment.notes || "—"}</td>
+        <td>{payment.notes || ""}</td>
       </tr>)}
     </tbody></table>{!account.payments.length && <p className="small spacer">No payment rows for this statement date.</p>}</div>
   </section>;

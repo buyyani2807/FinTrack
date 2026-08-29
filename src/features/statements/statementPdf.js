@@ -223,7 +223,7 @@ function layoutCustomerStatement(bundle) {
           money(payment.paid || payment.expected),
           clip(payment.paymentMode || "—", 12),
           clip(payment.status, 10),
-          clip(payment.notes || "—", 18),
+          clip(payment.notes || "", 18),
         ]);
         renderTableChunked(CHIT_COLS, tableRows);
       }
