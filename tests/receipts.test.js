@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { hasWhatsAppPhone, normalizeWhatsAppPhone } from "../src/features/receipts/phoneNormalize.js";
-import { applyTemplate, DEFAULT_WHATSAPP_TEMPLATES } from "../src/features/receipts/templateEngine.js";
+import { applyTemplate, DEFAULT_WHATSAPP_TEMPLATES, resolveWhatsAppTemplate } from "../src/features/receipts/templateEngine.js";
 import { buildChitUpcomingRows, flattenSchemePaymentsForReminders } from "../src/features/receipts/upcomingPayments.js";
 import { buildWhatsAppMessage } from "../src/features/receipts/receiptWhatsApp.js";
 
@@ -53,19 +53,35 @@ test("payment WhatsApp uses the saved short template", () => {
   assert.doesNotMatch(message, /PAYMENT RECEIPT/);
 });
 
-test("chit reminder template includes chit type", () => {
+test("chit reminder template includes scheme and chit type without days remaining", () => {
   const message = applyTemplate(DEFAULT_WHATSAPP_TEMPLATES.chit_reminder, {
-    customer_name: "Ravi",
-    amount: "₹5,000",
-    due_date: "05-Sep-2026",
-    chit_type: "Fixed Predefined Bid",
-    scheme_name: "50L Predefined",
-    month_number: "3",
-    total_months: "25",
+    customer_name: "shashi",
+    amount: "₹99,000",
+    due_date: "25 Aug 2026",
+    chit_type: "Auction",
+    scheme_name: "10 Lakhs",
+    month_number: "1",
+    total_months: "10",
     company_name: "Sudheer Finance",
+    company_phone: "9160710101",
   });
-  assert.match(message, /Chit Type: Fixed Predefined Bid/);
-  assert.match(message, /Chit Scheme: 50L Predefined/);
+  assert.match(message, /Chit Scheme: 10 Lakhs/);
+  assert.match(message, /Chit Type: Auction/);
+  assert.match(message, /Month: 1 of 10/);
+  assert.doesNotMatch(message, /Days remaining/i);
+});
+
+test("resolveWhatsAppTemplate upgrades old chit reminders that still show days remaining", () => {
+  const template = resolveWhatsAppTemplate({
+    whatsappTemplates: {
+      chit_reminder: `Hi {customer_name},
+Chit Scheme: {scheme_name}
+Days remaining: {days_remaining}`,
+    },
+  }, "chit_reminder");
+  assert.match(template, /Chit Type: \{chit_type\}/);
+  assert.match(template, /Chit Scheme: \{scheme_name\}/);
+  assert.doesNotMatch(template, /Days remaining/i);
 });
 
 test("buildChitUpcomingRows includes chit type label", () => {

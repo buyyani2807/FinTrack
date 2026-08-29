@@ -155,6 +155,7 @@ export function receiptWhatsAppVariables(receipt) {
     payment_mode: receipt.paymentMode,
     remaining_balance: receipt.money(receipt.remainingBalance),
     company_name: receipt.companyName,
+    company_phone: receipt.companyPhone || "",
     due_date: formatReceiptDate(receipt.dueDate || receipt.paymentDate),
     days_remaining: receipt.daysRemaining != null ? String(receipt.daysRemaining) : "",
     scheme_name: receipt.schemeName || "",

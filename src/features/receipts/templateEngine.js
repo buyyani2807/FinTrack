@@ -22,16 +22,28 @@ Please make the payment on or before the due date.
 Thank you,
 {company_name}`,
   chit_reminder: `Hi {customer_name},
-This is a reminder that your Chit Fund installment of {amount} is due on {due_date}.
-Chit Type: {chit_type}
+
+This is a reminder from {company_name} that your Chit Fund installment of {amount} is due on {due_date}.
+
 Chit Scheme: {scheme_name}
+Chit Type: {chit_type}
 Month: {month_number} of {total_months}
+
 Please make the payment on or before the due date.
+
 Thank you,
-{company_name}`,
+{company_name}
+{company_phone}`,
 };
 
 export function resolveWhatsAppTemplate(settings = {}, key = "payment_receipt") {
   const custom = settings?.whatsappTemplates?.[key];
-  return custom?.trim() || DEFAULT_WHATSAPP_TEMPLATES[key] || "";
+  const trimmed = custom?.trim() || "";
+  if (key === "chit_reminder" && trimmed) {
+    // Upgrade older saved templates that omit chit type or still show days remaining.
+    if (/days.?remaining/i.test(trimmed) || !/\{chit_type\}/i.test(trimmed) || !/\{scheme_name\}/i.test(trimmed)) {
+      return DEFAULT_WHATSAPP_TEMPLATES.chit_reminder;
+    }
+  }
+  return trimmed || DEFAULT_WHATSAPP_TEMPLATES[key] || "";
 }

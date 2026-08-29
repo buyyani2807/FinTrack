@@ -27,7 +27,21 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved }) {
 
   useEffect(() => {
     loadOrganizationSettings(token).then(settings => {
-      setForm(current => ({ ...current, ...settings }));
+      const savedTemplates = settings.whatsappTemplates || {};
+      const chitReminder = savedTemplates.chit_reminder || "";
+      const useDefaultChitReminder = !chitReminder.trim()
+        || /days.?remaining/i.test(chitReminder)
+        || !/\{chit_type\}/i.test(chitReminder)
+        || !/\{scheme_name\}/i.test(chitReminder);
+      setForm(current => ({
+        ...current,
+        ...settings,
+        whatsappTemplates: {
+          ...DEFAULT_WHATSAPP_TEMPLATES,
+          ...savedTemplates,
+          chit_reminder: useDefaultChitReminder ? DEFAULT_WHATSAPP_TEMPLATES.chit_reminder : chitReminder,
+        },
+      }));
     }).catch(err => setError(err.message || "Could not load settings."));
   }, [token]);
 
@@ -72,7 +86,7 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved }) {
       </div>
       <strong className="spacer">WhatsApp templates</strong>
       <p className="small">WhatsApp sends a short message from these templates. View/PDF shows the full receipt.</p>
-      <p className="small">Variables: {"{customer_name} {amount} {receipt_number} {account_id} {payment_date} {payment_mode} {remaining_balance} {company_name} {due_date} {days_remaining} {scheme_name} {chit_type} {month_number} {total_months}"}</p>
+      <p className="small">Variables: {"{customer_name} {amount} {receipt_number} {account_id} {payment_date} {payment_mode} {remaining_balance} {company_name} {company_phone} {due_date} {scheme_name} {chit_type} {month_number} {total_months}"}</p>
       <div className="form spacer">
         <Field className="span" label="Payment receipt"><textarea rows={8} value={form.whatsappTemplates.payment_receipt || ""} onChange={e => setTemplate("payment_receipt", e.target.value)} /></Field>
         <Field className="span" label="Monthly finance reminder"><textarea rows={7} value={form.whatsappTemplates.monthly_reminder || ""} onChange={e => setTemplate("monthly_reminder", e.target.value)} /></Field>
