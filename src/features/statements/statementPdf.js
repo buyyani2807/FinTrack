@@ -1,7 +1,11 @@
 import { formatReceiptDate } from "../receipts/receiptModel.js";
 
 const PAGE = { width: 595, height: 842, left: 40, right: 555, top: 800, bottom: 48 };
-const ascii = text => String(text ?? "").replace(/₹/g, "Rs.").replace(/·/g, "|").replace(/[^\x20-\x7E]/g, "?");
+const ascii = text => String(text ?? "")
+  .replace(/₹/g, "Rs.")
+  .replace(/[·•]/g, "|")
+  .replace(/[—–−]/g, "-")
+  .replace(/[^\x20-\x7E]/g, "?");
 const escapePdf = text => ascii(text).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
 
 function pdfObject(id, body) {
@@ -69,7 +73,8 @@ const ROW_H = 18;
 const HEADER_H = 20;
 
 function clip(value, max = 22) {
-  const textValue = String(value || "—");
+  const textValue = String(value ?? "");
+  if (!textValue) return "";
   return textValue.length > max ? `${textValue.slice(0, max - 1)}.` : textValue;
 }
 
