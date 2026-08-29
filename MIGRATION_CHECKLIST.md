@@ -41,6 +41,7 @@ Run these in the Supabase SQL Editor **in order**. Each file is idempotent where
 | 035 | `035_fix_fixed_chit_commission.sql` | Fixed chit commission |
 | 036 | `036_prelaunch_hardening.sql` | **Pre-launch security hardening** |
 | 037 | `037_fix_portal_id_random_bytes.sql` | Fix portal ID generation (`extensions.gen_random_bytes`) |
+| 038 | `038_digital_receipts_and_reminders.sql` | Digital receipts, branding, WhatsApp templates, payment reminders |
 
 After running 036, verify in Supabase SQL Editor:
 

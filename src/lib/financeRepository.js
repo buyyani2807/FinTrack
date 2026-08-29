@@ -1,4 +1,6 @@
 import { supabase } from "./supabase";
+import { CHIT_TYPES } from "../features/chitFund/fixedChit.js";
+import { flattenSchemePaymentsForReminders } from "../features/receipts/upcomingPayments.js";
 
 const asNumber = value => Number(value || 0);
 const memberDisplayName = row => row?.chit_members?.full_name || row?.full_name || "";
@@ -49,12 +51,222 @@ export const loadChitBoardRelated = token => Promise.all([
   predefinedSchedule,
 }));
 
-export async function loadWorkspace(token) {
+const mapOrganizationSettings = organization => ({
+  companyName: organization?.name || "",
+  companyAddress: organization?.company_address || "",
+  companyPhone: organization?.company_phone || "",
+  companyEmail: organization?.company_email || "",
+  companyLogoUrl: organization?.company_logo_url || "",
+  receiptFooter: organization?.receipt_footer || "",
+  receiptTerms: organization?.receipt_terms || "",
+  whatsappTemplates: organization?.whatsapp_templates || {},
+  reminderSettings: organization?.reminder_settings || { monthly: { 7: true, 3: true, 1: true, 0: true }, chit: { 7: true, 3: true, 1: true, 0: true } },
+});
+
+const ORG_RECEIPT_SETTINGS_SELECT = "name,company_address,company_phone,company_email,company_logo_url,receipt_footer,receipt_terms,whatsapp_templates,reminder_settings";
+
+const isMissingSchemaError = error => {
+  const message = String(error?.message || error || "").toLowerCase();
+  return message.includes("does not exist") || message.includes("could not find") || message.includes("schema cache");
+};
+
+async function loadProfileOrganization(token, profileSelect) {
   const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-  const rows = await supabase.query(`/rest/v1/profiles?id=eq.${payload.sub}&select=id,full_name,role,is_active,organizations(name)&limit=1`, token);
+  try {
+    return await supabase.query(
+      `/rest/v1/profiles?id=eq.${payload.sub}&select=${profileSelect},organizations(${ORG_RECEIPT_SETTINGS_SELECT})&limit=1`,
+      token,
+    );
+  } catch (error) {
+    if (!isMissingSchemaError(error)) throw error;
+    return supabase.query(
+      `/rest/v1/profiles?id=eq.${payload.sub}&select=${profileSelect},organizations(name)&limit=1`,
+      token,
+    );
+  }
+}
+
+export async function loadWorkspace(token) {
+  const rows = await loadProfileOrganization(token, "id,full_name,role,is_active");
   const profile = rows[0];
   const organization = Array.isArray(profile?.organizations) ? profile.organizations[0] : profile?.organizations;
-  return { businessName: organization?.name || "My Finance Business", fullName: profile?.full_name || "", role: profile?.role || "owner", active: profile?.is_active !== false, id: profile?.id || "" };
+  return {
+    businessName: organization?.name || "My Finance Business",
+    fullName: profile?.full_name || "",
+    role: profile?.role || "owner",
+    active: profile?.is_active !== false,
+    id: profile?.id || "",
+    organizationSettings: mapOrganizationSettings(organization),
+  };
+}
+
+export async function loadOrganizationSettings(token) {
+  const rows = await loadProfileOrganization(token, "id");
+  const organization = Array.isArray(rows[0]?.organizations) ? rows[0].organizations[0] : rows[0]?.organizations;
+  return mapOrganizationSettings(organization);
+}
+
+export async function saveOrganizationSettings(token, settings) {
+  return supabase.rpc("update_organization_receipt_settings", {
+    input_company_name: settings.companyName || null,
+    input_company_address: settings.companyAddress ?? null,
+    input_company_phone: settings.companyPhone ?? null,
+    input_company_email: settings.companyEmail ?? null,
+    input_company_logo_url: settings.companyLogoUrl ?? null,
+    input_receipt_footer: settings.receiptFooter ?? null,
+    input_receipt_terms: settings.receiptTerms ?? null,
+    input_whatsapp_templates: settings.whatsappTemplates ?? null,
+    input_reminder_settings: settings.reminderSettings ?? null,
+  }, token);
+}
+
+export const logReceiptActivity = (token, paymentSource, paymentId, action) => supabase.rpc("log_receipt_activity", {
+  input_payment_source: paymentSource,
+  input_payment_id: paymentId,
+  input_action: action,
+}, token);
+
+export const markPaymentReminderSent = (token, reminderSource, sourceId, cycleKey, daysBefore) => supabase.rpc("mark_payment_reminder_sent", {
+  input_reminder_source: reminderSource,
+  input_source_id: sourceId,
+  input_cycle_key: cycleKey,
+  input_days_before: daysBefore,
+}, token);
+
+export const loadPaymentReminderLog = async token => {
+  try {
+    return await supabase.query("/rest/v1/payment_reminder_log?select=reminder_source,source_id,cycle_key,days_before,sent_at&order=sent_at.desc", token);
+  } catch (error) {
+    if (isMissingSchemaError(error)) return [];
+    throw error;
+  }
+};
+
+const schemeInFilter = schemeIds => (schemeIds.length ? `in.(${schemeIds.join(",")})` : "");
+
+async function querySchemeRows(token, table, schemeIds, order = "due_date.asc") {
+  if (!schemeIds.length) return [];
+  try {
+    return await supabase.query(`/rest/v1/${table}?scheme_id=${schemeInFilter(schemeIds)}&select=*&order=${order}`, token);
+  } catch (error) {
+    if (isMissingSchemaError(error)) return [];
+    throw error;
+  }
+}
+
+async function loadUpcomingChitPaymentsFromSchemes(token) {
+  const schemes = (await loadChitSchemes(token).catch(() => [])).filter(scheme => scheme.status === "active");
+  if (!schemes.length) return [];
+
+  const schemeIds = schemes.map(scheme => scheme.id);
+  const enrollments = await supabase.query(
+    `/rest/v1/chit_enrollments?scheme_id=${schemeInFilter(schemeIds)}&select=id,scheme_id,status,chit_members(full_name,phone)&status=eq.active&order=scheme_id.asc,ticket_number.asc`,
+    token,
+  ).catch(() => []);
+
+  const rows = [];
+  const enrollmentsFor = schemeId => (enrollments || []).filter(item => item.scheme_id === schemeId);
+
+  const auctionSchemes = schemes.filter(scheme => (scheme.chit_type || CHIT_TYPES.AUCTION) === CHIT_TYPES.AUCTION);
+  if (auctionSchemes.length) {
+    const auctionSchemeIds = auctionSchemes.map(scheme => scheme.id);
+    const cycles = await querySchemeRows(token, "chit_cycles", auctionSchemeIds, "cycle_number.asc");
+    const cycleIds = cycles.map(cycle => cycle.id);
+    let installments = [];
+    if (cycleIds.length) {
+      try {
+        installments = await supabase.query(
+          `/rest/v1/chit_installments?cycle_id=in.(${cycleIds.join(",")})&select=*&order=due_date.asc`,
+          token,
+        );
+      } catch (error) {
+        if (!isMissingSchemaError(error)) throw error;
+      }
+    }
+    auctionSchemes.forEach(scheme => {
+      const schemeCycles = cycles.filter(cycle => cycle.scheme_id === scheme.id);
+      const cycleIdSet = new Set(schemeCycles.map(cycle => cycle.id));
+      rows.push(...flattenSchemePaymentsForReminders(scheme, {
+        enrollments: enrollmentsFor(scheme.id),
+        cycles: schemeCycles,
+        installments: installments.filter(item => cycleIdSet.has(item.cycle_id)),
+      }));
+    });
+  }
+
+  const fixedSchemes = schemes.filter(scheme => scheme.chit_type === CHIT_TYPES.FIXED);
+  if (fixedSchemes.length) {
+    const fixedSchemeIds = fixedSchemes.map(scheme => scheme.id);
+    const [fixedPayments, fixedLifts] = await Promise.all([
+      querySchemeRows(token, "fixed_chit_payments", fixedSchemeIds, "payment_month.asc"),
+      querySchemeRows(token, "fixed_chit_lifts", fixedSchemeIds, "month_number.asc"),
+    ]);
+    fixedSchemes.forEach(scheme => {
+      rows.push(...flattenSchemePaymentsForReminders(scheme, {
+        enrollments: enrollmentsFor(scheme.id),
+        fixedPayments: fixedPayments.filter(item => item.scheme_id === scheme.id),
+        fixedLifts: fixedLifts.filter(item => item.scheme_id === scheme.id),
+      }));
+    });
+  }
+
+  const predefinedSchemes = schemes.filter(scheme => scheme.chit_type === CHIT_TYPES.FIXED_PREDEFINED_BID);
+  if (predefinedSchemes.length) {
+    const predefinedSchemeIds = predefinedSchemes.map(scheme => scheme.id);
+    const [predefinedPayments, predefinedSchedule] = await Promise.all([
+      querySchemeRows(token, "predefined_chit_payments", predefinedSchemeIds, "payment_month.asc"),
+      querySchemeRows(token, "predefined_chit_schedule", predefinedSchemeIds, "month_number.asc"),
+    ]);
+    predefinedSchemes.forEach(scheme => {
+      rows.push(...flattenSchemePaymentsForReminders(scheme, {
+        enrollments: enrollmentsFor(scheme.id),
+        predefinedPayments: predefinedPayments.filter(item => item.scheme_id === scheme.id),
+        predefinedSchedule: predefinedSchedule.filter(item => item.scheme_id === scheme.id),
+      }));
+    });
+  }
+
+  return rows;
+}
+
+export async function loadUpcomingChitPayments(token) {
+  return loadUpcomingChitPaymentsFromSchemes(token);
+}
+
+export const fetchChitInstallmentById = (token, id) => supabase.query(`/rest/v1/chit_installments?id=eq.${id}&select=*`, token).then(rows => rows[0]);
+export const fetchFixedChitPaymentById = (token, id) => supabase.query(`/rest/v1/fixed_chit_payments?id=eq.${id}&select=*`, token).then(rows => rows[0]);
+export const fetchPredefinedChitPaymentById = (token, id) => supabase.query(`/rest/v1/predefined_chit_payments?id=eq.${id}&select=*`, token).then(rows => rows[0]);
+
+export async function fetchFinancePaymentReceipt(token, paymentId) {
+  const selectWithReceipt = "id,receipt_number,paid_on,mode,total_amount,interest_amount,principal_amount,penalty_amount,payment_reference,notes,cash_amount,upi_amount,collected_by,created_at,profiles!payments_collected_by_fkey(full_name)";
+  const selectBasic = "id,paid_on,mode,total_amount,interest_amount,principal_amount,penalty_amount,payment_reference,notes,cash_amount,upi_amount,collected_by,created_at,profiles!payments_collected_by_fkey(full_name)";
+  let rows;
+  try {
+    rows = await supabase.query(`/rest/v1/payments?id=eq.${paymentId}&select=${selectWithReceipt}`, token);
+  } catch (error) {
+    if (!isMissingSchemaError(error)) throw error;
+    rows = await supabase.query(`/rest/v1/payments?id=eq.${paymentId}&select=${selectBasic}`, token);
+  }
+  const payment = rows[0];
+  if (!payment) return null;
+  const profile = Array.isArray(payment.profiles) ? payment.profiles[0] : payment.profiles;
+  return {
+    id: payment.id,
+    receiptNumber: payment.receipt_number || "",
+    date: payment.paid_on,
+    mode: payment.mode,
+    amount: asNumber(payment.total_amount),
+    interestAmount: asNumber(payment.interest_amount),
+    principalAmount: asNumber(payment.principal_amount),
+    penaltyAmount: asNumber(payment.penalty_amount),
+    ref: payment.payment_reference || "",
+    notes: payment.notes || "",
+    cashAmount: asNumber(payment.cash_amount),
+    upiAmount: asNumber(payment.upi_amount),
+    collectedBy: payment.collected_by || "",
+    collectorName: profile?.full_name || "Financier/Admin",
+    createdAt: payment.created_at || "",
+  };
 }
 
 export async function loadFinanceAccounts(token) {
@@ -92,6 +304,8 @@ export async function loadFinanceAccounts(token) {
       penaltyAmount: asNumber(payment.penalty_amount), ref: payment.payment_reference || "", notes: payment.notes || "",
       cashAmount: asNumber(payment.cash_amount), upiAmount: asNumber(payment.upi_amount),
       collectedBy: payment.collected_by || "", collectorName: (Array.isArray(payment.profiles) ? payment.profiles[0] : payment.profiles)?.full_name || "Financier/Admin",
+      receiptNumber: payment.receipt_number || "",
+      createdAt: payment.created_at || "",
     })),
     });
   });
@@ -111,13 +325,15 @@ export async function createFinanceAccount(token, loan) {
 }
 
 export async function recordPayment(token, loan, payment) {
-  return supabase.rpc("record_finance_payment", {
+  const paymentId = await supabase.rpc("record_finance_payment", {
     account_id: loan.id, payment_date: payment.date, payment_mode: payment.mode,
     amount_total: payment.amount,
     amount_interest: payment.interestAmount || 0, amount_principal: payment.principalAmount || 0,
     amount_penalty: payment.penaltyAmount || 0, payment_ref: payment.ref || "", payment_notes: payment.notes || "",
     payment_cash_amount: payment.cashAmount || 0, payment_upi_amount: payment.upiAmount || 0,
   }, token);
+  const receipt = await fetchFinancePaymentReceipt(token, paymentId);
+  return { paymentId, transaction: receipt };
 }
 
 export async function updateFinanceAccount(token, loan) {

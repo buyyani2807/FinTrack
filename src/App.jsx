@@ -6,7 +6,12 @@ import { byCollectionOrderThenName, mergeAccountOrder, reorderIds } from "./feat
 import { ChitCustomerPortal, ChitFundPage } from "./features/chitFund/ChitFundModule";
 import { LegalPage, legalViewFromLocation, openLegalView } from "./features/legal/LegalPage.jsx";
 import { isPublicSignupAllowed, signupInviteRequired, validateSignupInvite } from "./lib/signupGate.js";
-import { assignCollectionAgent, chitCustomerPortalLogin, createCollectionAgent, createFinanceAccount, customerPortalLogin, deleteFinanceAccount, deleteFinancePayment, enableCustomerPortal, loadActiveChitSchemes, loadChitSchemeDetails, loadChitSchemes, loadCustomerKyc, loadFinanceAccounts, loadManagedAgents, loadWorkspace, recordPayment, resetCustomerPortalPin, saveCustomerKyc, setAccountStatus, saveCollectionOrder, updateCollectionAgent, updateFinanceAccount, updateFinancePayment, updatePaymentNotes } from "./lib/financeRepository";
+import { assignCollectionAgent, chitCustomerPortalLogin, createCollectionAgent, createFinanceAccount, customerPortalLogin, deleteFinanceAccount, deleteFinancePayment, enableCustomerPortal, loadActiveChitSchemes, loadChitSchemeDetails, loadChitSchemes, loadCustomerKyc, loadFinanceAccounts, loadManagedAgents, loadPaymentReminderLog, loadWorkspace, logReceiptActivity, recordPayment, resetCustomerPortalPin, saveCustomerKyc, setAccountStatus, saveCollectionOrder, updateCollectionAgent, updateFinanceAccount, updateFinancePayment, updatePaymentNotes } from "./lib/financeRepository";
+import { buildFinanceReceipt } from "./features/receipts/receiptModel.js";
+import { ReceiptActions, ReceiptSuccessModal } from "./features/receipts/ReceiptActions.jsx";
+import { ReceiptSettingsPage } from "./features/receipts/ReceiptSettingsPage.jsx";
+import { UpcomingPaymentsSection, UpcomingPaymentCard } from "./features/receipts/UpcomingPaymentsSection.jsx";
+import { buildMonthlyUpcoming } from "./features/receipts/upcomingPayments.js";
 import { buildChitMonthStatement, currentSchemeMonth, monthLabel as chitMonthLabel } from "./features/chitFund/monthStatement";
 import { downloadChitMonthStatementPdf } from "./features/chitFund/monthStatementPdf";
 
@@ -223,6 +228,28 @@ const mobileLayout = `
   .dashboard-finance-table.can-reorder td:nth-child(4){grid-area:bal;text-align:right}
   .dashboard-finance-table.can-reorder td:nth-child(5){grid-area:view}
   .dashboard-drag-handle{display:grid;place-items:center;min-width:32px;min-height:44px;padding:0 4px;border-radius:8px;background:#f4b94214;color:#f4b942}
+  .upcoming-payments-toolbar{flex-direction:column;align-items:stretch!important}
+  .upcoming-payments-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;width:100%}
+  .upcoming-payments-filters .btn.tab{width:100%;min-height:36px}
+  .upcoming-payments-table{border:0;padding:0;overflow:visible}
+  .upcoming-payments-table table,.upcoming-payments-table tbody{display:block;width:100%}
+  .upcoming-payments-table thead{display:none}
+  .upcoming-payments-table tr{display:grid;gap:4px 10px;padding:12px;margin:0 0 8px;background:#171d29;border:1px solid #303a4d;border-radius:12px}
+  .upcoming-payments-table td{border:0;padding:0;white-space:normal}
+  .upcoming-payments-table.monthly tr{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name amt" "due due" "act act"}
+  .upcoming-payments-table.monthly td:nth-child(1){grid-area:name}
+  .upcoming-payments-table.monthly td:nth-child(2){grid-area:amt;text-align:right}
+  .upcoming-payments-table.monthly td:nth-child(3){grid-area:due}
+  .upcoming-payments-table.monthly td:nth-child(4){grid-area:act}
+  .upcoming-payments-table.chit tr{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name amt" "scheme scheme" "type type" "due due" "act act"}
+  .upcoming-payments-table.chit td:nth-child(1){grid-area:name}
+  .upcoming-payments-table.chit td:nth-child(2){grid-area:scheme}
+  .upcoming-payments-table.chit td:nth-child(3){grid-area:type}
+  .upcoming-payments-table.chit td:nth-child(4){grid-area:amt;text-align:right}
+  .upcoming-payments-table.chit td:nth-child(5){grid-area:due}
+  .upcoming-payments-table.chit td:nth-child(6){grid-area:act}
+  .finance-module-shell .finance-module-body{scroll-margin-top:12px}
+  .finance-module-shell .grid.metrics{transition:opacity .12s ease}
 }
 @media(max-width:1050px) and (max-height:500px){
   .shell{padding:10px 14px calc(72px + env(safe-area-inset-bottom,0px))!important}
@@ -245,6 +272,7 @@ const mobileLayout = `
   .financier-nav button{min-height:40px;font-size:9px!important}
 }
 `;
+const receiptStyles = `.receipt-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.receipt-actions.compact .btn{padding:5px 8px;font-size:11px}.btn.whatsapp{border-color:#25d36655;color:#8ef0b0;background:#143522}.btn.whatsapp:hover{background:#1d4a30;border-color:#25d366}.receipt-success .tool-stack{display:grid;gap:8px}.receipt-paper{padding:18px;border:1px solid ${C.line};border-radius:12px;background:${C.surface}}.receipt-header{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}.receipt-header strong{font:700 18px Syne;color:${C.gold}}.receipt-meta{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:12px;color:${C.muted}}.receipt-paper hr{border:0;border-top:1px solid ${C.line};margin:12px 0}.receipt-paper section{margin-bottom:10px}.upcoming-payments .tabs{flex-wrap:wrap}.upcoming-payments-toolbar{align-items:flex-start;gap:12px}.upcoming-payments-filters .btn.tab{padding:6px 10px;font-size:12px}.upcoming-payments-table td:last-child,.upcoming-payments-table th:last-child{white-space:nowrap}.chit-type-badge{display:inline-flex;padding:3px 8px;border-radius:999px;background:#72aaff16;color:#8eb9ff;font-size:11px;font-weight:700;letter-spacing:.02em}.upcoming-payment-card .metric-value{margin:8px 0}.field textarea{min-height:88px;border:1px solid ${C.line};border-radius:8px;padding:10px;background:${C.surface};color:${C.text};width:100%;resize:vertical}`;
 const Button = ({
   children,
   className = "",
@@ -676,8 +704,9 @@ function ProfitLoss({ loan }) {
   const outstanding = loan.status === "bankrupt" ? 0 : loanBalance(loan);
   return <div className="card spacer"><strong>Profit &amp; loss</strong><p className="small">Live position based on collections, payout/principal and account status.</p><div className="grid metrics"><Metric label="Paid / invested" value={money(investedAmount(loan))} color="gold" /><Metric label="Total collected" value={money(loanPaid(loan))} color="green" /><Metric label="Outstanding" value={money(outstanding)} color="red" /><Metric label="Realized profit" value={money(realizedProfit(loan))} color="green" /><Metric label="Loss" value={money(realizedLoss(loan))} color={realizedLoss(loan) ? "red" : ""} /><Metric label="Net cash position" value={money(netPosition(loan))} color={netPosition(loan) < 0 ? "red" : "green"} /></div>{loan.status === "bankrupt" && <p className="notice"><strong>BANKRUPT</strong> · Loss amount {money(loan.lossAmount)} · Recorded {loan.statusChangedAt ? new Date(loan.statusChangedAt).toLocaleDateString("en-IN") : "—"}<br /><strong>Bankruptcy reason:</strong> {loan.statusNote || "No reason recorded."}</p>}{loan.status === "closed" && <p className="notice"><strong>Closed account</strong> · {loan.statusNote || "No closure note recorded."}</p>}</div>;
 }
-function OperationsDetail({ loan, back, collect, edit, remove, portal, kyc, editKyc, isOwner, changeStatus, editPaymentNote, correctPayment, deletePayment }) {
+function OperationsDetail({ loan, back, collect, edit, remove, portal, kyc, editKyc, isOwner, changeStatus, editPaymentNote, correctPayment, deletePayment, orgSettings, authToken, workspace, onLogReceipt, reminderLog = [] }) {
   const monthly = loan.kind === "monthly";
+  const upcoming = monthly ? buildMonthlyUpcoming([loan])[0] : null;
   const [noteTransaction, setNoteTransaction] = useState(null);
   const [correctTransaction, setCorrectTransaction] = useState(null);
   const [statusChange, setStatusChange] = useState(null);
@@ -699,7 +728,7 @@ function OperationsDetail({ loan, back, collect, edit, remove, portal, kyc, edit
     catch (error) { setDialogError(error?.message || "Could not delete this payment."); }
     finally { setDialogBusy(false); }
   };
-  return <><div className="toolbar"><div><Button onClick={back}>← Back</Button><h1 className="title spacer">{loan.customerName}</h1><p className="copy"><a className="phone-link" href={`tel:${loan.phone}`}>{loan.phone}</a> · {loan.address || "Address not added"}</p><p className="small spacer">Collection start date: <strong>{loan.startDate}</strong> · Status: <Badge status={loanStatus(loan)} />{accountOutcome(loan) && <> · {accountOutcome(loan).label} date: <strong>{accountOutcome(loan).date || "Not recorded"}</strong>{accountOutcome(loan).days ? ` · ${accountOutcome(loan).label} in ${accountOutcome(loan).days} days` : ""}</>}{isOwner && <> · User ID: <strong>{loan.portalId || "Not enabled"}</strong></>}</p></div><div className="tabs">{isOwner && <><Button onClick={() => portal(loan)}>{loan.portalId ? "Reset PIN" : "Enable customer portal"}</Button><Button onClick={() => edit(loan)}>Edit account</Button><Button className="danger" onClick={() => { setDialogError(""); setConfirmRemoveAccount(true); }}>Delete account</Button><Button className="danger" onClick={() => setStatusChange("bankrupt")}>Mark bankrupt</Button><Button onClick={() => setStatusChange(loan.status === "active" ? "closed" : "active")}>{loan.status === "active" ? "Close account" : "Reopen account"}</Button></>}{!disabled && <Button className="primary" disabled={collectedOn(loan)} onClick={() => !collectedOn(loan) && collect(loan)}>{collectedOn(loan) ? "Collected today" : "+ Record payment"}</Button>}</div></div>{isOwner && <KycDetails loan={loan} kyc={kyc} edit={editKyc} />}{isOwner && <div className="grid metrics"><Metric label="User ID" value={loan.portalId || "Not enabled"} color={loan.portalId ? "gold" : ""} /></div>}{isOwner && loan.portalId && <p className="notice">Share this User ID with the customer. Use Reset PIN to set the PIN they will use on Customer login, then share both privately.</p>}<div className="grid metrics"><Metric label={monthly ? "Principal financed" : "Customer repays"} value={money(monthly ? loan.principal : loan.collectionAmount)} color="gold" /><Metric label={monthly ? "Principal balance" : "Paid to customer"} value={money(monthly ? monthlyBalance(loan) : loan.disbursedAmount)} color="red" /><Metric label="Total received" value={money(loanPaid(loan))} color="green" />{monthly ? <Metric label="Interest pending" value={money(monthlyInterestPending(loan))} color={monthlyInterestPending(loan) ? "red" : "green"} /> : <Metric label="Daily collection" value={`${money(loan.dailyCollection)} × 100 days`} color="blue" />}</div>{loan.kind === "daily" && loanStatus(loan) === "active" && <div className="card spacer"><strong>Repayment progress</strong><div className="metric-value gold">{`Day ${dailyProgress(loan).completed} of 100`}</div><p className="small">Start date: {loan.startDate} · Days Completed: {dailyProgress(loan).completed} · Days Remaining: {dailyProgress(loan).remaining}</p><div style={{height:8,borderRadius:999,background:C.surface,overflow:"hidden"}}><div style={{height:"100%",width:`${dailyProgress(loan).completed}%`,background:C.gold}} /></div></div>}<ProfitLoss loan={loan} /><div className="card spacer"><strong>Payment history</strong><div className="table spacer"><table><thead><tr><th>Date</th>{monthly && <><th>Interest</th><th>Principal</th><th>Penalty</th></>}<th>Total</th><th>Mode</th><th>Reference</th><th>Notes / comments</th><th>Collected by</th>{isOwner && <th></th>}</tr></thead><tbody>{paymentRows.map(t => <tr key={t.id}><td>{t.date}</td>{monthly && <><td>{money(t.interestAmount)}</td><td>{money(t.principalAmount)}</td><td>{money(t.penaltyAmount)}</td></>}<td className="green">{money(monthly ? (+t.interestAmount || 0) + (+t.principalAmount || 0) + (+t.penaltyAmount || 0) : t.amount)}</td><td>{paymentModeLabel(t)}</td><td>{t.ref || "—"}</td><td>{t.notes || "—"}</td><td>{t.collectorName || "Financier/Admin"}</td>{isOwner && <td><Button onClick={() => setNoteTransaction(t)}>Edit note</Button><Button onClick={() => setCorrectTransaction(t)}>Edit payment</Button><Button className="danger" onClick={() => { setDialogError(""); setDeletePaymentTarget(t); }}>Delete</Button></td>}</tr>)}</tbody></table></div></div>{noteTransaction && <PaymentNoteEditor transaction={noteTransaction} close={() => setNoteTransaction(null)} save={editPaymentNote} />}{correctTransaction && <PaymentCorrectionEditor loan={loan} transaction={correctTransaction} close={() => setCorrectTransaction(null)} save={correctPayment} />}{statusChange && <AccountStatusModal loan={loan} status={statusChange} close={() => setStatusChange(null)} save={changeStatus} />}{confirmRemoveAccount && <ConfirmDialog title="Delete finance account?" message={`Delete ${loan.customerName}'s finance account and all its payments? This cannot be undone.`} confirmLabel="Delete account" danger busy={dialogBusy} error={dialogError} close={() => { if (!dialogBusy) { setConfirmRemoveAccount(false); setDialogError(""); } }} onConfirm={removeAccount} />}{deletePaymentTarget && <ConfirmDialog title="Delete payment?" message="Delete this payment permanently? This cannot be undone." confirmLabel="Delete payment" danger busy={dialogBusy} error={dialogError} close={() => { if (!dialogBusy) { setDeletePaymentTarget(null); setDialogError(""); } }} onConfirm={removePaymentRow} />}</>;
+  return <><div className="toolbar"><div><Button onClick={back}>← Back</Button><h1 className="title spacer">{loan.customerName}</h1><p className="copy"><a className="phone-link" href={`tel:${loan.phone}`}>{loan.phone}</a> · {loan.address || "Address not added"}</p><p className="small spacer">Collection start date: <strong>{loan.startDate}</strong> · Status: <Badge status={loanStatus(loan)} />{accountOutcome(loan) && <> · {accountOutcome(loan).label} date: <strong>{accountOutcome(loan).date || "Not recorded"}</strong>{accountOutcome(loan).days ? ` · ${accountOutcome(loan).label} in ${accountOutcome(loan).days} days` : ""}</>}{isOwner && <> · User ID: <strong>{loan.portalId || "Not enabled"}</strong></>}</p></div><div className="tabs">{isOwner && <><Button onClick={() => portal(loan)}>{loan.portalId ? "Reset PIN" : "Enable customer portal"}</Button><Button onClick={() => edit(loan)}>Edit account</Button><Button className="danger" onClick={() => { setDialogError(""); setConfirmRemoveAccount(true); }}>Delete account</Button><Button className="danger" onClick={() => setStatusChange("bankrupt")}>Mark bankrupt</Button><Button onClick={() => setStatusChange(loan.status === "active" ? "closed" : "active")}>{loan.status === "active" ? "Close account" : "Reopen account"}</Button></>}{!disabled && <Button className="primary" disabled={collectedOn(loan)} onClick={() => !collectedOn(loan) && collect(loan)}>{collectedOn(loan) ? "Collected today" : "+ Record payment"}</Button>}</div></div>{isOwner && <KycDetails loan={loan} kyc={kyc} edit={editKyc} />}{isOwner && <div className="grid metrics"><Metric label="User ID" value={loan.portalId || "Not enabled"} color={loan.portalId ? "gold" : ""} /></div>}{isOwner && loan.portalId && <p className="notice">Share this User ID with the customer. Use Reset PIN to set the PIN they will use on Customer login, then share both privately.</p>}<div className="grid metrics"><Metric label={monthly ? "Principal financed" : "Customer repays"} value={money(monthly ? loan.principal : loan.collectionAmount)} color="gold" /><Metric label={monthly ? "Principal balance" : "Paid to customer"} value={money(monthly ? monthlyBalance(loan) : loan.disbursedAmount)} color="red" /><Metric label="Total received" value={money(loanPaid(loan))} color="green" />{monthly ? <Metric label="Interest pending" value={money(monthlyInterestPending(loan))} color={monthlyInterestPending(loan) ? "red" : "green"} /> : <Metric label="Daily collection" value={`${money(loan.dailyCollection)} × 100 days`} color="blue" />}</div>{loan.kind === "daily" && loanStatus(loan) === "active" && <div className="card spacer"><strong>Repayment progress</strong><div className="metric-value gold">{`Day ${dailyProgress(loan).completed} of 100`}</div><p className="small">Start date: {loan.startDate} · Days Completed: {dailyProgress(loan).completed} · Days Remaining: {dailyProgress(loan).remaining}</p><div style={{height:8,borderRadius:999,background:C.surface,overflow:"hidden"}}><div style={{height:"100%",width:`${dailyProgress(loan).completed}%`,background:C.gold}} /></div></div>}<ProfitLoss loan={loan} />{upcoming && <UpcomingPaymentCard item={upcoming} settings={orgSettings} token={authToken} reminderLog={reminderLog} onReminderSent={() => {}} />}<div className="card spacer"><strong>Payment history</strong><div className="table spacer"><table><thead><tr><th>Date</th>{monthly && <><th>Interest</th><th>Principal</th><th>Penalty</th></>}<th>Total</th><th>Mode</th><th>Reference</th><th>Notes / comments</th><th>Collected by</th><th>Receipt</th>{isOwner && <th></th>}</tr></thead><tbody>{paymentRows.map(t => <tr key={t.id}><td>{t.date}</td>{monthly && <><td>{money(t.interestAmount)}</td><td>{money(t.principalAmount)}</td><td>{money(t.penaltyAmount)}</td></>}<td className="green">{money(monthly ? (+t.interestAmount || 0) + (+t.principalAmount || 0) + (+t.penaltyAmount || 0) : t.amount)}</td><td>{paymentModeLabel(t)}</td><td>{t.ref || "—"}</td><td>{t.notes || "—"}</td><td>{t.collectorName || "Financier/Admin"}</td><td>{t.receiptNumber ? <ReceiptActions compact receipt={buildFinanceReceipt({ loan, transaction: t, settings: orgSettings, workspace })} settings={orgSettings} token={authToken} onLogAction={onLogReceipt} /> : "—"}</td>{isOwner && <td><Button onClick={() => setNoteTransaction(t)}>Edit note</Button><Button onClick={() => setCorrectTransaction(t)}>Edit payment</Button><Button className="danger" onClick={() => { setDialogError(""); setDeletePaymentTarget(t); }}>Delete</Button></td>}</tr>)}</tbody></table></div></div>{noteTransaction && <PaymentNoteEditor transaction={noteTransaction} close={() => setNoteTransaction(null)} save={editPaymentNote} />}{correctTransaction && <PaymentCorrectionEditor loan={loan} transaction={correctTransaction} close={() => setCorrectTransaction(null)} save={correctPayment} />}{statusChange && <AccountStatusModal loan={loan} status={statusChange} close={() => setStatusChange(null)} save={changeStatus} />}{confirmRemoveAccount && <ConfirmDialog title="Delete finance account?" message={`Delete ${loan.customerName}'s finance account and all its payments? This cannot be undone.`} confirmLabel="Delete account" danger busy={dialogBusy} error={dialogError} close={() => { if (!dialogBusy) { setConfirmRemoveAccount(false); setDialogError(""); } }} onConfirm={removeAccount} />}{deletePaymentTarget && <ConfirmDialog title="Delete payment?" message="Delete this payment permanently? This cannot be undone." confirmLabel="Delete payment" danger busy={dialogBusy} error={dialogError} close={() => { if (!dialogBusy) { setDeletePaymentTarget(null); setDialogError(""); } }} onConfirm={removePaymentRow} />}</>;
 }
 function TodayCollections({ loans, kind, back, collect, view }) {
   const [search, setSearch] = useState("");
@@ -738,7 +767,8 @@ function Financier({
   onSaveCustomerPortal,
   onLoadKyc,
   onSaveKyc, activeChitSchemes = []
-  , role = "owner", onStatusChange, onPaymentNoteChange, onPaymentCorrect, onPaymentDelete, onCollectionOrderChange
+  , role = "owner", onStatusChange, onPaymentNoteChange, onPaymentCorrect, onPaymentDelete, onCollectionOrderChange,
+  authToken, orgSettings = {}, workspace = {}, onLogReceipt, module = "all", onModuleChange = () => {},
 }) {
   const [modal, setModal] = useState(null),
     [detail, setDetail] = useState(null),
@@ -748,13 +778,18 @@ function Financier({
     [editKycLoan, setEditKycLoan] = useState(null),
     [kyc, setKyc] = useState(null),
     [filter, setFilter] = useState("all"),
-    [module, setModule] = useState("all"),
     [customerMode, setCustomerMode] = useState(false),
     [statusFilter, setStatusFilter] = useState("all"),
     [search, setSearch] = useState(""),
     [reportDate, setReportDate] = useState(today()),
     [newAccountPortal, setNewAccountPortal] = useState(null);
+  const [receiptSuccess, setReceiptSuccess] = useState(null);
+  const [reminderLogState, setReminderLogState] = useState([]);
   const isOwner = role === "owner";
+  useEffect(() => {
+    if (!authToken) return;
+    loadPaymentReminderLog(authToken).then(setReminderLogState).catch(() => setReminderLogState([]));
+  }, [authToken, loans]);
   const createAccount = async loan => {
     const result = await onCreateLoan(loan);
     setModal(null);
@@ -767,44 +802,30 @@ function Financier({
   const touchTargetId = useRef(null);
   const activeLoans = loans.filter(loan => ["active", "overdue"].includes(loanStatus(loan)));
   useEffect(() => {
-    const openCustomers = event => { setModule(event.detail === "monthly" ? "monthly" : "daily"); setFilter("all"); setCustomerMode(true); setStatusFilter("all"); };
-    const openDashboard = () => { setModule("all"); setFilter("all"); setCustomerMode(false); setStatusFilter("all"); };
-    const openModule = event => {
-      const nextModule = event.detail === "monthly" ? "monthly" : "daily";
-      setModule(nextModule);
-      setFilter(nextModule);
-      setCustomerMode(false);
+    const navigate = event => {
+      const { kind = "all", customers = false } = event.detail || {};
+      onModuleChange(kind);
+      if (kind === "all") {
+        setFilter("all");
+        setCustomerMode(false);
+        setStatusFilter("all");
+        return;
+      }
+      setFilter(customers ? "all" : kind);
+      setCustomerMode(customers);
       setStatusFilter("all");
+      setSearch("");
+      setDetail(null);
+      setCollectionMode(false);
+      window.scrollTo(0, 0);
     };
-    window.addEventListener("fintrack-open-customers", openCustomers);
-    window.addEventListener("fintrack-open-dashboard", openDashboard);
-    window.addEventListener("fintrack-open-module", openModule);
-    return () => {
-      window.removeEventListener("fintrack-open-customers", openCustomers);
-      window.removeEventListener("fintrack-open-dashboard", openDashboard);
-      window.removeEventListener("fintrack-open-module", openModule);
-    };
-  }, []);
-  useEffect(() => {
-    if (detail) return undefined;
-    const hiddenLabels = customerMode
-      ? ["Daily", "Monthly"]
-      : ["daily", "monthly"].includes(module)
-        ? ["All", "Daily", "Monthly"]
-          : [];
-    const financeTypeButtons = [...document.querySelectorAll(".shell .card .toolbar .tabs .btn")]
-      .filter(button => hiddenLabels.includes(button.textContent.trim()));
-    const bankruptFilter = customerMode
-      ? [...document.querySelectorAll(".shell .card .toolbar .tabs .btn")]
-          .find(button => button.textContent.trim() === "Bankrupt")
-      : null;
-    financeTypeButtons.forEach(button => { button.hidden = true; });
-    if (bankruptFilter) bankruptFilter.textContent = "Defaulters";
-    return () => {
-      financeTypeButtons.forEach(button => { button.hidden = false; });
-      if (bankruptFilter) bankruptFilter.textContent = "Bankrupt";
-    };
-  }, [customerMode, detail, module]);
+    window.addEventListener("fintrack-navigate-module", navigate);
+    return () => window.removeEventListener("fintrack-navigate-module", navigate);
+  }, [onModuleChange]);
+  const returnToDashboard = () => {
+    window.dispatchEvent(new CustomEvent("fintrack-navigate-module", { detail: { kind: "all" } }));
+  };
+  const dedicatedModule = !customerMode && (module === "daily" || module === "monthly");
   const customerPool = customerMode
     ? loans.filter(loan => (statusFilter === "all" || loanStatus(loan) === statusFilter) && (module === "all" || loan.kind === module))
     : activeLoans.filter(loan => module === "all" || loan.kind === module);
@@ -855,8 +876,14 @@ function Financier({
   const moduleLoans = module === "all" ? loans : loans.filter(loan => loan.kind === module);
   const total = moduleLoans.reduce((s, l) => s + (l.kind === "daily" ? l.collectionAmount : l.principal), 0);
   const addPayment = async t => {
-    await onRecordPayment(modal, t);
+    const loan = modal;
+    const result = await onRecordPayment(loan, t);
     setModal(null);
+    const transaction = result?.transaction;
+    if (transaction?.receiptNumber) {
+      const loanForReceipt = { ...loan, transactions: [...loan.transactions.filter(item => item.id !== transaction.id), transaction] };
+      setReceiptSuccess(buildFinanceReceipt({ loan: loanForReceipt, transaction, settings: orgSettings, workspace }));
+    }
   };
   useEffect(() => {
     if (!detail) { setKyc(null); return; }
@@ -866,21 +893,21 @@ function Financier({
     if (!detail) return;
     if (!loans.some(loan => loan.id === detail.id)) setDetail(null);
   }, [detail, loans]);
-  if (collectionMode) return <><TodayCollections loans={loans.filter(loan => loan.kind === module)} kind={module} back={() => setCollectionMode(false)} collect={setModal} view={loan => { setDetail(loan); setCollectionMode(false); }} />{modal && <Payment loan={modal} close={() => setModal(null)} save={addPayment} />}</>;
+  if (collectionMode) return <><TodayCollections loans={loans.filter(loan => loan.kind === module)} kind={module} back={() => setCollectionMode(false)} collect={setModal} view={loan => { setDetail(loan); setCollectionMode(false); }} />{modal && <Payment loan={modal} close={() => setModal(null)} save={addPayment} />}{receiptSuccess && <ReceiptSuccessModal receipt={receiptSuccess} settings={orgSettings} token={authToken} onLogAction={onLogReceipt} close={() => setReceiptSuccess(null)} />}</>;
   if (detail) {
     const loan = loans.find(l => l.id === detail.id);
     if (!loan) return null;
-    return <main className="shell"><OperationsDetail loan={loan} back={() => setDetail(null)} collect={setModal} edit={setEditLoan} remove={async account => { await onDeleteLoan(account); setDetail(null); }} portal={setPortalLoan} kyc={kyc} editKyc={setEditKycLoan} isOwner={isOwner} changeStatus={onStatusChange} editPaymentNote={onPaymentNoteChange} correctPayment={onPaymentCorrect} deletePayment={onPaymentDelete} />{modal && <Payment loan={modal} close={() => setModal(null)} save={addPayment} />}{isOwner && editLoan && <EditAccount loan={loan} close={() => setEditLoan(null)} save={onUpdateLoan} />}{isOwner && portalLoan && <CustomerPortalSetup loan={loan} close={() => setPortalLoan(null)} save={onSaveCustomerPortal} />}{isOwner && editKycLoan && <KycEditor loan={loan} current={kyc} close={() => setEditKycLoan(null)} save={async (account, aadhaar, pan) => { await onSaveKyc(account, aadhaar, pan); setKyc(await onLoadKyc(account)); }} />}</main>;
+    return <main className="shell"><OperationsDetail loan={loan} back={() => setDetail(null)} collect={setModal} edit={setEditLoan} remove={async account => { await onDeleteLoan(account); setDetail(null); }} portal={setPortalLoan} kyc={kyc} editKyc={setEditKycLoan} isOwner={isOwner} changeStatus={onStatusChange} editPaymentNote={onPaymentNoteChange} correctPayment={onPaymentCorrect} deletePayment={onPaymentDelete} orgSettings={orgSettings} authToken={authToken} workspace={workspace} onLogReceipt={onLogReceipt} reminderLog={reminderLogState} />{modal && <Payment loan={modal} close={() => setModal(null)} save={addPayment} />}{isOwner && editLoan && <EditAccount loan={loan} close={() => setEditLoan(null)} save={onUpdateLoan} />}{isOwner && portalLoan && <CustomerPortalSetup loan={loan} close={() => setPortalLoan(null)} save={onSaveCustomerPortal} />}{isOwner && editKycLoan && <KycEditor loan={loan} current={kyc} close={() => setEditKycLoan(null)} save={async (account, aadhaar, pan) => { await onSaveKyc(account, aadhaar, pan); setKyc(await onLoadKyc(account)); }} />}{receiptSuccess && <ReceiptSuccessModal receipt={receiptSuccess} settings={orgSettings} token={authToken} onLogAction={onLogReceipt} close={() => setReceiptSuccess(null)} />}</main>;
   }
   if (!customerMode && module === "all") {
     const dailyCustomers = loans.filter(loan => loan.kind === "daily" && loanStatus(loan) === "active").sort(byCollectionOrderThenName);
     const monthlyCustomers = loans.filter(loan => loan.kind === "monthly" && loanStatus(loan) === "active").sort(byCollectionOrderThenName);
-    return <main className="shell dashboard-home"><header className="top"><div><div className="brand">{businessName || "My Finance Business"}</div><div className="sub">{isOwner ? "Financier dashboard" : "Collection agent dashboard"}</div></div><div className="top-actions"><Button onClick={logout}>Log out</Button>{isOwner && <Button className="primary" onClick={() => setModal("new")}>New Account</Button>}</div></header><div className="toolbar"><div><h1 className="title">Dashboard</h1><p className="copy">Overview of your active finance customers and Chit Fund schemes.</p></div></div><DashboardFinanceSection title="Daily Finance" customerLabel="Active Daily Customers" kind="daily" loans={dailyCustomers} onView={setDetail} canReorder={isOwner} draggedId={draggedId} setDraggedId={setDraggedId} onReorder={id => reorderDashboard("daily", id)} startTouchDrag={startTouchDrag} moveTouchDrag={moveTouchDrag} finishTouchDrag={finishTouchDrag} cancelTouchDrag={() => { touchTargetId.current = null; setDraggedId(null); }} /><DashboardFinanceSection title="Monthly Finance" customerLabel="Active Monthly Customers" kind="monthly" loans={monthlyCustomers} onView={setDetail} canReorder={isOwner} draggedId={draggedId} setDraggedId={setDraggedId} onReorder={id => reorderDashboard("monthly", id)} startTouchDrag={startTouchDrag} moveTouchDrag={moveTouchDrag} finishTouchDrag={finishTouchDrag} cancelTouchDrag={() => { touchTargetId.current = null; setDraggedId(null); }} />{isOwner && modal === "new" && <NewFinance close={() => setModal(null)} save={createAccount} />}{portalNotice}</main>;
+    return <main className="shell dashboard-home"><header className="top"><div><div className="brand">{businessName || "My Finance Business"}</div><div className="sub">{isOwner ? "Financier dashboard" : "Collection agent dashboard"}</div></div><div className="top-actions"><Button onClick={logout}>Log out</Button>{isOwner && <Button className="primary" onClick={() => setModal("new")}>New Account</Button>}</div></header><div className="toolbar"><div><h1 className="title">Dashboard</h1><p className="copy">Overview of your active finance customers and Chit Fund schemes.</p></div></div><DashboardFinanceSection title="Daily Finance" customerLabel="Active Daily Customers" kind="daily" loans={dailyCustomers} onView={setDetail} canReorder={isOwner} draggedId={draggedId} setDraggedId={setDraggedId} onReorder={id => reorderDashboard("daily", id)} startTouchDrag={startTouchDrag} moveTouchDrag={moveTouchDrag} finishTouchDrag={finishTouchDrag} cancelTouchDrag={() => { touchTargetId.current = null; setDraggedId(null); }} /><DashboardFinanceSection title="Monthly Finance" customerLabel="Active Monthly Customers" kind="monthly" loans={monthlyCustomers} onView={setDetail} canReorder={isOwner} draggedId={draggedId} setDraggedId={setDraggedId} onReorder={id => reorderDashboard("monthly", id)} startTouchDrag={startTouchDrag} moveTouchDrag={moveTouchDrag} finishTouchDrag={finishTouchDrag} cancelTouchDrag={() => { touchTargetId.current = null; setDraggedId(null); }} />{isOwner && modal === "new" && <NewFinance close={() => setModal(null)} save={createAccount} />}{portalNotice}{receiptSuccess && <ReceiptSuccessModal receipt={receiptSuccess} settings={orgSettings} token={authToken} onLogAction={onLogReceipt} close={() => setReceiptSuccess(null)} />}</main>;
   }
   {
     const loans = moduleLoans;
     const totalProfit = loans.reduce((sum, loan) => sum + realizedProfit(loan), 0), totalLoss = loans.reduce((sum, loan) => sum + realizedLoss(loan), 0);
-  return <main className="shell"><header className="top"><div><div className="brand">{businessName || "My Finance Business"}</div><div className="sub">{isOwner ? "Financier dashboard" : "Collection agent dashboard"} · Daily & monthly collections</div></div><Button onClick={logout}>Log out</Button></header><div className="toolbar"><div><h1 className="title">{customerMode ? "Customers" : "Finance portfolio"}</h1>{customerMode ? <p className="copy">Manage active and historical customer accounts.</p> : !isOwner && <p className="copy">View assigned accounts and record only collections you receive.</p>}</div><div className="tabs">{customerMode ? <Button onClick={() => { setCustomerMode(false); setStatusFilter("all"); window.dispatchEvent(new Event("fintrack-open-dashboard")); }}>← Dashboard</Button> : <><Button onClick={() => setCollectionMode(true)}>Today’s collections</Button>{isOwner && <Button className="primary" onClick={() => setModal("new")}>+ New finance account</Button>}</>}</div></div><div className="grid metrics"><Metric label="Customers" value={loans.length} color="blue" /><Metric label="Amount financed" value={money(total)} color="gold" /><Metric label="Amounts received" value={money(loans.reduce((s, l) => s + loanPaid(l), 0))} color="green" /><Metric label="Outstanding" value={money(loans.reduce((s, l) => s + loanBalance(l), 0))} color="red" /><Metric label="Profit / loss" value={`${money(totalProfit)} / ${money(totalLoss)}`} color={totalLoss ? "red" : "green"} /></div><div className="card"><div className="toolbar"><strong>{customerMode ? "All customer accounts" : "Open collection accounts"}</strong><div className="tabs">{customerMode && <><Button className={`tab ${statusFilter === "all" ? "active" : ""}`} onClick={() => setStatusFilter("all")}>All</Button><Button className={`tab ${statusFilter === "active" ? "active" : ""}`} onClick={() => setStatusFilter("active")}>Active</Button><Button className={`tab ${statusFilter === "completed" ? "active" : ""}`} onClick={() => setStatusFilter("completed")}>Completed</Button><Button className={`tab ${statusFilter === "closed" ? "active" : ""}`} onClick={() => setStatusFilter("closed")}>Closed</Button><Button className={`tab ${statusFilter === "bankrupt" ? "active" : ""}`} onClick={() => setStatusFilter("bankrupt")}>Bankrupt</Button></>}{customerMode ? <><Button className={`tab ${filter === "daily" ? "active" : ""}`} onClick={() => setFilter("daily")}>Daily</Button><Button className={`tab ${filter === "monthly" ? "active" : ""}`} onClick={() => setFilter("monthly")}>Monthly</Button></> : <><Button className={`tab ${filter === "all" ? "active" : ""}`} onClick={() => setFilter("all")}>All</Button><Button className={`tab ${filter === "daily" ? "active" : ""}`} onClick={() => setFilter("daily")}>Daily</Button><Button className={`tab ${filter === "monthly" ? "active" : ""}`} onClick={() => setFilter("monthly")}>Monthly</Button></>}</div></div><div className="customer-search"><input aria-label="Search customer" placeholder="Search name, phone, or address" value={search} onChange={event => setSearch(event.target.value)} />{search && <Button onClick={() => setSearch("")}>Clear</Button>}</div><div className="table"><table><thead><tr>{isOwner && <th>Route</th>}<th>Customer</th><th>Finance</th><th>Amount financed</th><th>Paid</th><th>Balance</th><th>Status</th><th></th></tr></thead><tbody>{shown.map((l, index) => <tr key={l.id} data-account-id={l.id} className={draggedId === l.id ? "route-row-dragging" : ""} draggable={isOwner} onDragStart={() => setDraggedId(l.id)} onDragEnd={() => setDraggedId(null)} onDragOver={e => isOwner && e.preventDefault()} onDrop={() => reorder(l.id)}><td className={isOwner ? "small route-handle" : "small"} onTouchStart={event => startTouchDrag(event, l.id)} onTouchMove={moveTouchDrag} onTouchEnd={finishTouchDrag} onTouchCancel={() => { touchTargetId.current = null; setDraggedId(null); }}>{isOwner && `↕ ${index + 1}`}</td><td><div style={{ display:"flex", alignItems:"center", gap:10 }}><span style={{ width:34, height:34, borderRadius:"50%", display:"grid", placeItems:"center", background:"rgba(114,170,255,.16)", color:C.blue, fontWeight:700 }}>{l.customerName.charAt(0).toUpperCase()}</span><div><strong>{l.customerName}</strong><br /><a className="small phone-link" href={`tel:${l.phone}`}>{l.phone}</a></div></div></td><td>{l.kind === "daily" ? "Daily · 100 days" : "Monthly interest"}<br /><span className="small">{l.kind === "monthly" ? `${annualRate(l, today())}% per month` : `${money(l.dailyCollection)}/day`}</span>{l.kind === "daily" && loanStatus(l) === "active" && <><br /><span className="small">{`Day ${dailyProgress(l).completed} / 100 · ${dailyProgress(l).completed} completed · ${dailyProgress(l).remaining} remaining`}</span></>}{accountOutcome(l) && <><br /><span className="small">{`${accountOutcome(l).label} date: ${accountOutcome(l).date || "Not recorded"}${accountOutcome(l).days ? ` · ${accountOutcome(l).label} in ${accountOutcome(l).days} days` : ""}`}</span></>}</td><td>{money(l.kind === "daily" ? l.collectionAmount : l.principal)}</td><td className="green">{money(loanPaid(l))}</td><td className="red">{money(loanBalance(l))}</td><td><Badge status={loanStatus(l)} /></td><td><Button onClick={() => setDetail(l)}>View</Button>{["active", "overdue"].includes(loanStatus(l)) && <Button className="primary" disabled={collectedOn(l)} onClick={() => !collectedOn(l) && setModal(l)}>{collectedOn(l) ? "Collected today" : "Collect"}</Button>}</td></tr>)}</tbody></table></div>{shown.length === 0 && <p className="small spacer">No customers match your search.</p>}</div>{isOwner && modal === "new" && <NewFinance close={() => setModal(null)} save={createAccount} />}{modal && modal !== "new" && <Payment loan={modal} close={() => setModal(null)} save={addPayment} />}{portalNotice}</main>;
+  return <main className={`shell finance-module-shell ${module}`}><header className="top"><div><div className="brand">{businessName || "My Finance Business"}</div><div className="sub">{isOwner ? "Financier dashboard" : "Collection agent dashboard"}{dedicatedModule ? ` · ${module === "monthly" ? "Monthly" : "Daily"} collections` : " · Daily & monthly collections"}</div></div><Button onClick={logout}>Log out</Button></header><div className="toolbar"><div><h1 className="title">{customerMode ? "Customers" : module === "monthly" ? "Monthly Finance" : module === "daily" ? "Daily Finance" : "Finance portfolio"}</h1>{customerMode ? <p className="copy">Manage active and historical customer accounts.</p> : dedicatedModule ? <p className="copy">{module === "monthly" ? "Monthly interest accounts and payment reminders." : "Daily 100-day collection accounts."}</p> : !isOwner && <p className="copy">View assigned accounts and record only collections you receive.</p>}</div><div className="tabs">{customerMode ? <Button onClick={returnToDashboard}>← Dashboard</Button> : <><Button onClick={() => setCollectionMode(true)}>Today’s collections</Button>{isOwner && <Button className="primary" onClick={() => setModal("new")}>+ New finance account</Button>}</>}</div></div><div className="finance-module-body">{module === "monthly" && !customerMode && <UpcomingPaymentsSection moduleType="monthly" loans={loans} token={authToken} settings={orgSettings} workspace={workspace} isOwner={isOwner} />}<div className="grid metrics"><Metric label="Customers" value={loans.length} color="blue" /><Metric label="Amount financed" value={money(total)} color="gold" /><Metric label="Amounts received" value={money(loans.reduce((s, l) => s + loanPaid(l), 0))} color="green" /><Metric label="Outstanding" value={money(loans.reduce((s, l) => s + loanBalance(l), 0))} color="red" /><Metric label="Profit / loss" value={`${money(totalProfit)} / ${money(totalLoss)}`} color={totalLoss ? "red" : "green"} /></div></div><div className="card"><div className="toolbar"><strong>{customerMode ? "All customer accounts" : "Open collection accounts"}</strong>{!dedicatedModule && <div className="tabs">{customerMode && <><Button className={`tab ${statusFilter === "all" ? "active" : ""}`} onClick={() => setStatusFilter("all")}>All</Button><Button className={`tab ${statusFilter === "active" ? "active" : ""}`} onClick={() => setStatusFilter("active")}>Active</Button><Button className={`tab ${statusFilter === "completed" ? "active" : ""}`} onClick={() => setStatusFilter("completed")}>Completed</Button><Button className={`tab ${statusFilter === "closed" ? "active" : ""}`} onClick={() => setStatusFilter("closed")}>Closed</Button><Button className={`tab ${statusFilter === "bankrupt" ? "active" : ""}`} onClick={() => setStatusFilter("bankrupt")}>{customerMode ? "Defaulters" : "Bankrupt"}</Button></>}{customerMode ? <><Button className={`tab ${filter === "daily" ? "active" : ""}`} onClick={() => setFilter("daily")}>Daily</Button><Button className={`tab ${filter === "monthly" ? "active" : ""}`} onClick={() => setFilter("monthly")}>Monthly</Button></> : module === "all" && <><Button className={`tab ${filter === "all" ? "active" : ""}`} onClick={() => setFilter("all")}>All</Button><Button className={`tab ${filter === "daily" ? "active" : ""}`} onClick={() => setFilter("daily")}>Daily</Button><Button className={`tab ${filter === "monthly" ? "active" : ""}`} onClick={() => setFilter("monthly")}>Monthly</Button></>}</div>}</div><div className="customer-search"><input aria-label="Search customer" placeholder="Search name, phone, or address" value={search} onChange={event => setSearch(event.target.value)} />{search && <Button onClick={() => setSearch("")}>Clear</Button>}</div><div className="table"><table><thead><tr>{isOwner && <th>Route</th>}<th>Customer</th><th>Finance</th><th>Amount financed</th><th>Paid</th><th>Balance</th><th>Status</th><th></th></tr></thead><tbody>{shown.map((l, index) => <tr key={l.id} data-account-id={l.id} className={draggedId === l.id ? "route-row-dragging" : ""} draggable={isOwner} onDragStart={() => setDraggedId(l.id)} onDragEnd={() => setDraggedId(null)} onDragOver={e => isOwner && e.preventDefault()} onDrop={() => reorder(l.id)}><td className={isOwner ? "small route-handle" : "small"} onTouchStart={event => startTouchDrag(event, l.id)} onTouchMove={moveTouchDrag} onTouchEnd={finishTouchDrag} onTouchCancel={() => { touchTargetId.current = null; setDraggedId(null); }}>{isOwner && `↕ ${index + 1}`}</td><td><div style={{ display:"flex", alignItems:"center", gap:10 }}><span style={{ width:34, height:34, borderRadius:"50%", display:"grid", placeItems:"center", background:"rgba(114,170,255,.16)", color:C.blue, fontWeight:700 }}>{l.customerName.charAt(0).toUpperCase()}</span><div><strong>{l.customerName}</strong><br /><a className="small phone-link" href={`tel:${l.phone}`}>{l.phone}</a></div></div></td><td>{l.kind === "daily" ? "Daily · 100 days" : "Monthly interest"}<br /><span className="small">{l.kind === "monthly" ? `${annualRate(l, today())}% per month` : `${money(l.dailyCollection)}/day`}</span>{l.kind === "daily" && loanStatus(l) === "active" && <><br /><span className="small">{`Day ${dailyProgress(l).completed} / 100 · ${dailyProgress(l).completed} completed · ${dailyProgress(l).remaining} remaining`}</span></>}{accountOutcome(l) && <><br /><span className="small">{`${accountOutcome(l).label} date: ${accountOutcome(l).date || "Not recorded"}${accountOutcome(l).days ? ` · ${accountOutcome(l).label} in ${accountOutcome(l).days} days` : ""}`}</span></>}</td><td>{money(l.kind === "daily" ? l.collectionAmount : l.principal)}</td><td className="green">{money(loanPaid(l))}</td><td className="red">{money(loanBalance(l))}</td><td><Badge status={loanStatus(l)} /></td><td><Button onClick={() => setDetail(l)}>View</Button>{["active", "overdue"].includes(loanStatus(l)) && <Button className="primary" disabled={collectedOn(l)} onClick={() => !collectedOn(l) && setModal(l)}>{collectedOn(l) ? "Collected today" : "Collect"}</Button>}</td></tr>)}</tbody></table></div>{shown.length === 0 && <p className="small spacer">No customers match your search.</p>}</div>{isOwner && modal === "new" && <NewFinance close={() => setModal(null)} save={createAccount} />}{modal && modal !== "new" && <Payment loan={modal} close={() => setModal(null)} save={addPayment} />}{portalNotice}</main>;
   }
 }
 function Customer({
@@ -1134,9 +1161,8 @@ function ActiveChitSchemes({ schemes = [], onOpen }) {
   return <><style>{`.dashboard-chit{margin-left:240px;max-width:calc(1420px + 240px);padding:0 44px 36px}.dashboard-chit-panel{padding:22px;background:linear-gradient(145deg,#202a3b,#1b2230)}.dashboard-chit-heading{display:flex;align-items:center;gap:12px}.dashboard-chit-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;background:#f4b94218;border:1px solid #f4b94255;color:#f4b942;font-size:20px}.dashboard-chit-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin-top:20px}.dashboard-chit-card{position:relative;padding:18px;border-radius:14px;background:#171d29;border:1px solid #303a4d;overflow:hidden}.dashboard-chit-card:before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:#f4b942}.dashboard-chit-card:hover{border-color:#526078;transform:translateY(-1px)}.dashboard-chit-type{display:inline-flex;padding:4px 8px;border-radius:999px;background:#72aaff16;color:#8eb9ff;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}.dashboard-chit-name{margin:12px 0 4px;font:700 17px Syne;color:#f4f6fb}.dashboard-chit-value{font:700 24px Syne;color:#f4b942;margin:14px 0}.dashboard-chit-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-top:13px;border-top:1px solid #303a4d}.dashboard-chit-stats span{display:block;color:#9ba9bd;font-size:10px;text-transform:uppercase;letter-spacing:.06em}.dashboard-chit-stats strong{display:block;margin-top:3px;font-size:13px;color:#e4e9f2}@media(max-width:1050px){.dashboard-chit{margin-left:0;padding:0 16px calc(96px + env(safe-area-inset-bottom,0px))}}@media(max-width:680px){.dashboard-chit{padding:0 16px calc(96px + env(safe-area-inset-bottom,0px))}.dashboard-chit-panel{padding:17px}.dashboard-chit-grid{grid-template-columns:1fr}}`}</style><section className="dashboard-chit"><div className="card dashboard-chit-panel"><div className="toolbar"><div className="dashboard-chit-heading"><div className="dashboard-chit-icon">◎</div><div><strong>Active Chit Fund Schemes</strong><p className="small">Current schemes across all Chit types</p></div></div><span className="badge active">{schemes.length} active</span></div>{schemes.length ? <div className="dashboard-chit-grid">{schemes.map(scheme => <article className="dashboard-chit-card" key={scheme.id}><span className="dashboard-chit-type">{typeLabel(scheme.chit_type)}</span><div className="dashboard-chit-name">{scheme.name}</div><div className="dashboard-chit-value">{money(scheme.chit_value)}</div><div className="dashboard-chit-stats"><div><span>Members</span><strong>{scheme.member_count}</strong></div><div><span>Duration</span><strong>{scheme.duration_months} months</strong></div></div></article>)}</div> : <p className="small spacer">No active Chit Fund schemes yet.</p>}</div></section></>;
 }
 
-function FinancierTools({ loans, token, activeChitSchemes = [], onCreateAgent, onLoadAgents, onAssignAgent, onUpdateAgent }) {
+function FinancierTools({ loans, token, activeChitSchemes = [], onCreateAgent, onLoadAgents, onAssignAgent, onUpdateAgent, orgSettings = {}, workspace = {}, onLogReceipt, onSettingsSaved, selectedModule = "all", onModuleChange = () => {} }) {
   const [panel, setPanel] = useState(null);
-  const [selectedModule, setSelectedModule] = useState("all");
   const [actionHost, setActionHost] = useState(null);
   const [dashboardChitSchemes, setDashboardChitSchemes] = useState(activeChitSchemes);
   const [openChitSchemeId, setOpenChitSchemeId] = useState(null);
@@ -1148,11 +1174,23 @@ function FinancierTools({ loans, token, activeChitSchemes = [], onCreateAgent, o
   }, [token]);
   useEffect(() => {
     const showCustomers = () => setPanel("customers");
-    const showDashboard = () => setPanel(null);
     window.addEventListener("fintrack-open-customers", showCustomers);
-    window.addEventListener("fintrack-open-dashboard", showDashboard);
-    return () => { window.removeEventListener("fintrack-open-customers", showCustomers); window.removeEventListener("fintrack-open-dashboard", showDashboard); };
+    return () => window.removeEventListener("fintrack-open-customers", showCustomers);
   }, []);
+  const goDashboard = () => {
+    setPanel(null);
+    setOpenChitSchemeId(null);
+    window.dispatchEvent(new CustomEvent("fintrack-navigate-module", { detail: { kind: "all" } }));
+  };
+  const goModule = kind => {
+    setPanel(null);
+    setOpenChitSchemeId(null);
+    window.dispatchEvent(new CustomEvent("fintrack-navigate-module", { detail: { kind } }));
+  };
+  const openCustomers = () => {
+    setPanel("customers");
+    window.dispatchEvent(new CustomEvent("fintrack-navigate-module", { detail: { kind: selectedModule === "monthly" ? "monthly" : "daily", customers: true } }));
+  };
   useEffect(() => {
     setActionHost(panel === null && ["daily", "monthly"].includes(selectedModule)
       ? document.querySelector(".shell > .toolbar > .tabs")
@@ -1161,17 +1199,19 @@ function FinancierTools({ loans, token, activeChitSchemes = [], onCreateAgent, o
   return <div className="financier-tools">
     <aside className="financier-nav">
       <div className="nav-title">FinTrack</div>
-      <Button className={panel === "dashboard" || (panel === null && selectedModule === "all") ? "tab active" : ""} onClick={() => { setSelectedModule("all"); setPanel("dashboard"); window.dispatchEvent(new Event("fintrack-open-dashboard")); window.scrollTo({ top: 0, behavior: "smooth" }); }}><span className="nav-label"><span className="nav-glyph">▦</span><span className="nav-long">Dashboard</span><span className="nav-short">Dash</span></span></Button>
-      <Button className={panel === null && selectedModule === "daily" ? "tab active" : ""} onClick={() => { setSelectedModule("daily"); setPanel(null); window.dispatchEvent(new CustomEvent("fintrack-open-module", { detail: "daily" })); }}><span className="nav-label"><span className="nav-glyph">▣</span><span className="nav-long">Daily Finance</span><span className="nav-short">Daily</span></span></Button>
-      <Button className={panel === null && selectedModule === "monthly" ? "tab active" : ""} onClick={() => { setSelectedModule("monthly"); setPanel(null); window.dispatchEvent(new CustomEvent("fintrack-open-module", { detail: "monthly" })); }}><span className="nav-label"><span className="nav-glyph">◫</span><span className="nav-long">Monthly Finance</span><span className="nav-short">Monthly</span></span></Button>
+      <Button className={panel === "dashboard" || (panel === null && selectedModule === "all") ? "tab active" : ""} onClick={goDashboard}><span className="nav-label"><span className="nav-glyph">▦</span><span className="nav-long">Dashboard</span><span className="nav-short">Dash</span></span></Button>
+      <Button className={panel === null && selectedModule === "daily" ? "tab active" : ""} onClick={() => goModule("daily")}><span className="nav-label"><span className="nav-glyph">▣</span><span className="nav-long">Daily Finance</span><span className="nav-short">Daily</span></span></Button>
+      <Button className={panel === null && selectedModule === "monthly" ? "tab active" : ""} onClick={() => goModule("monthly")}><span className="nav-label"><span className="nav-glyph">◫</span><span className="nav-long">Monthly Finance</span><span className="nav-short">Monthly</span></span></Button>
       <Button className={panel === "reports" ? "tab active" : ""} onClick={() => setPanel("reports")}><span className="nav-label"><span className="nav-glyph">↧</span><span className="nav-long">Reports</span><span className="nav-short">Reports</span></span></Button>
       <Button className={panel === "chit" ? "tab active" : ""} onClick={() => setPanel("chit")}><span className="nav-label"><span className="nav-glyph">◎</span><span className="nav-long">Chit Fund</span><span className="nav-short">Chit</span></span></Button>
+      {workspace?.role !== "staff" && <Button className={panel === "settings" ? "tab active" : ""} onClick={() => setPanel("settings")}><span className="nav-label"><span className="nav-glyph">⚙</span><span className="nav-long">Settings</span><span className="nav-short">Set</span></span></Button>}
       <div className="nav-footer">Financier workspace</div>
     </aside>
-    {actionHost && createPortal(<>{selectedModule === "daily" && <Button onClick={() => setPanel("agents")}>Agents</Button>}<Button onClick={() => { setPanel("customers"); window.dispatchEvent(new CustomEvent("fintrack-open-customers", { detail: selectedModule })); }}>Customers</Button></>, actionHost)}
+    {actionHost && createPortal(<>{selectedModule === "daily" && <Button onClick={() => setPanel("agents")}>Agents</Button>}<Button onClick={openCustomers}>Customers</Button></>, actionHost)}
     {panel === "reports" && <PortfolioReport loans={loans} token={token} close={() => setPanel(null)} />}
     {panel === "agents" && <CollectionStaffPage loans={loans} close={() => setPanel(null)} loadAgents={onLoadAgents} createAgent={onCreateAgent} assignAgent={onAssignAgent} updateAgent={onUpdateAgent} />}
-    {panel === "chit" && <div className="chit-dashboard" style={{ position: "fixed", inset: 0, zIndex: 5, overflow: "auto", background: C.bg }}><ChitFundPage token={token} openSchemeId={openChitSchemeId} onOpenSchemeConsumed={() => setOpenChitSchemeId(null)} onSchemesChanged={schemes => setDashboardChitSchemes((schemes || []).filter(scheme => scheme.status === "active"))} close={() => { setOpenChitSchemeId(null); setPanel("dashboard"); }} /></div>}
+    {panel === "chit" && <div className="chit-dashboard" style={{ position: "fixed", inset: 0, zIndex: 5, overflow: "auto", background: C.bg }}><ChitFundPage token={token} orgSettings={orgSettings} workspace={workspace} onLogReceipt={onLogReceipt} openSchemeId={openChitSchemeId} onOpenSchemeConsumed={() => setOpenChitSchemeId(null)} onSchemesChanged={schemes => setDashboardChitSchemes((schemes || []).filter(scheme => scheme.status === "active"))} close={goDashboard} /></div>}
+    {panel === "settings" && <div style={{ position: "fixed", inset: 0, zIndex: 5, overflow: "auto", background: C.bg }}><ReceiptSettingsPage token={token} close={goDashboard} onSettingsSaved={onSettingsSaved} /></div>}
     {(panel === null || panel === "dashboard") && selectedModule === "all" && <ActiveChitSchemes schemes={dashboardChitSchemes} onOpen={schemeId => { setOpenChitSchemeId(schemeId); setPanel("chit"); }} />}
   </div>;
 }
@@ -1191,6 +1231,7 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [loans, setLoans] = useState([]);
   const [workspace, setWorkspace] = useState(null);
+  const [financeModule, setFinanceModule] = useState("all");
   const [dataError, setDataError] = useState("");
   useEffect(() => {
     const syncLegal = () => setLegalView(legalViewFromLocation());
@@ -1210,9 +1251,19 @@ export default function App() {
     catch (error) { setDataError(error.message || "Could not load finance records."); }
   };
   useEffect(() => { refreshLoans(); }, [user?.authToken]);
+  const refreshWorkspace = async (token = user?.authToken) => {
+    if (!token) { setWorkspace(null); return null; }
+    try {
+      const next = await loadWorkspace(token);
+      setWorkspace(next);
+      return next;
+    } catch {
+      setWorkspace(null);
+      return null;
+    }
+  };
   useEffect(() => {
-    if (!user?.authToken) { setWorkspace(null); return; }
-    loadWorkspace(user.authToken).then(setWorkspace).catch(() => setWorkspace(null));
+    refreshWorkspace();
   }, [user?.authToken]);
   useEffect(() => {
     if (workspace?.role === "staff" && user?.role === "financier") setUser(current => ({ ...current, role: "agent" }));
@@ -1236,7 +1287,15 @@ export default function App() {
     await refreshLoans();
     return { portalId, pin };
   };
-  const savePayment = async (loan, payment) => { await recordPayment(user.authToken, loan, payment); await refreshLoans(); };
+  const savePayment = async (loan, payment) => {
+    const result = await recordPayment(user.authToken, loan, payment);
+    await refreshLoans();
+    return result;
+  };
+  const logReceipt = (token, source, paymentId, action) => {
+    const mapped = source === "finance" ? "finance" : source === "chit_auction" ? "chit_auction" : source === "chit_fixed" ? "chit_fixed" : "chit_predefined";
+    return logReceiptActivity(token, mapped, paymentId, action);
+  };
   const updateLoan = async loan => { await updateFinanceAccount(user.authToken, loan); await refreshLoans(); };
   const removeLoan = async loan => { await deleteFinanceAccount(user.authToken, loan.id); await refreshLoans(); };
   const saveCustomerPortal = async (loan, pin) => { const portalId = loan.portalId ? (await resetCustomerPortalPin(user.authToken, loan.id, pin), "") : await enableCustomerPortal(user.authToken, loan.id, pin); await refreshLoans(); return portalId; };
@@ -1264,5 +1323,5 @@ export default function App() {
   if (!authReady && !user && !isPasswordRecovery) {
     return <div className="app"><style>{styles + enhancements + homeReportHide + visualRefresh + mobileCollections + mobileLayout}</style><div className="login"><p className="sub" style={{ textAlign: "center" }}>Loading FinTrack…</p></div></div>;
   }
-  return <div className="app"><style>{styles + enhancements + homeReportHide + visualRefresh + mobileCollections + mobileLayout + `.phone-link{color:${C.blue};text-decoration:none}.phone-link:hover{text-decoration:underline}`}</style>{isPasswordRecovery ? <PasswordRecovery /> : !user ? <FinancierAuth onLogin={setUser} onCustomerLogin={loan => setUser({ role: "customer", loan })} onChitCustomerLogin={session => setUser({ role: "chitCustomer", session })} /> : user.role === "financier" || staffRole ? <>{dataError && <div className="notice" style={{ position: "fixed", top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 20 }}>{dataError}</div>}<Financier loans={loans} businessName={workspace?.businessName} setLoans={setLoans} onCreateLoan={createLoan} onRecordPayment={savePayment} onUpdateLoan={updateLoan} onDeleteLoan={removeLoan} onSaveCustomerPortal={saveCustomerPortal} onLoadKyc={getKyc} onSaveKyc={updateKyc} onStatusChange={changeStatus} onPaymentNoteChange={changePaymentNotes} onPaymentCorrect={correctPayment} onPaymentDelete={removePayment} onCollectionOrderChange={changeCollectionOrder} role={staffRole ? "staff" : "owner"} logout={logout} />{!staffRole && <FinancierTools loans={loans} token={user.authToken} onCreateAgent={addCollectionAgent} onLoadAgents={getManagedAgents} onAssignAgent={updateAgentAssignment} onUpdateAgent={saveCollectionStaff} />}</> : user.role === "chitCustomer" ? <ChitCustomerPortal session={user.session} logout={logout} /> : <><Customer loan={customerLoan} logout={logout} /><CustomerReportDownload loan={customerLoan} /></>}</div>;
+  return <div className="app"><style>{styles + enhancements + homeReportHide + visualRefresh + mobileCollections + mobileLayout + receiptStyles + `.phone-link{color:${C.blue};text-decoration:none}.phone-link:hover{text-decoration:underline}`}</style>{isPasswordRecovery ? <PasswordRecovery /> : !user ? <FinancierAuth onLogin={setUser} onCustomerLogin={loan => setUser({ role: "customer", loan })} onChitCustomerLogin={session => setUser({ role: "chitCustomer", session })} /> : user.role === "financier" || staffRole ? <>{dataError && <div className="notice" style={{ position: "fixed", top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 20 }}>{dataError}</div>}<Financier loans={loans} businessName={workspace?.businessName} setLoans={setLoans} onCreateLoan={createLoan} onRecordPayment={savePayment} onUpdateLoan={updateLoan} onDeleteLoan={removeLoan} onSaveCustomerPortal={saveCustomerPortal} onLoadKyc={getKyc} onSaveKyc={updateKyc} onStatusChange={changeStatus} onPaymentNoteChange={changePaymentNotes} onPaymentCorrect={correctPayment} onPaymentDelete={removePayment} onCollectionOrderChange={changeCollectionOrder} role={staffRole ? "staff" : "owner"} logout={logout} authToken={user.authToken} orgSettings={workspace?.organizationSettings || {}} workspace={workspace || {}} onLogReceipt={logReceipt} module={financeModule} onModuleChange={setFinanceModule} />{!staffRole && <FinancierTools loans={loans} token={user.authToken} orgSettings={workspace?.organizationSettings || {}} workspace={workspace || {}} onLogReceipt={logReceipt} onSettingsSaved={() => refreshWorkspace()} selectedModule={financeModule} onModuleChange={setFinanceModule} onCreateAgent={addCollectionAgent} onLoadAgents={getManagedAgents} onAssignAgent={updateAgentAssignment} onUpdateAgent={saveCollectionStaff} />}</> : user.role === "chitCustomer" ? <ChitCustomerPortal session={user.session} logout={logout} /> : <><Customer loan={customerLoan} logout={logout} /><CustomerReportDownload loan={customerLoan} /></>}</div>;
 }
