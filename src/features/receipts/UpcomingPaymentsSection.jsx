@@ -1,26 +1,61 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { buildChitUpcomingRows, buildMonthlyUpcoming, buildReminderReceipt, filterUpcomingPayments, formatDueDate, formatDueLabel } from "./upcomingPayments.js";
 import { buildReminderMessage, canWhatsAppShare, openWhatsAppShare } from "./receiptWhatsApp.js";
 import { loadPaymentReminderLog, loadUpcomingChitPayments, markPaymentReminderSent } from "../../lib/financeRepository.js";
 
 const money = n => `₹${Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 
-const MODULE_FILTERS = [["7days", "7 days"], ["3days", "3 days"], ["today", "Due today"], ["all", "All"]];
+const MONTHLY_FILTERS = [["7days", "7 days"], ["3days", "3 days"], ["today", "Due today"], ["all", "All"]];
+const CHIT_FILTERS = [["3days", "3 days"], ["today", "Due today"]];
 
 export function UpcomingPaymentsSection({ loans = [], token, settings, workspace, isOwner, moduleType, refreshKey = 0 }) {
   const isMonthly = moduleType === "monthly";
-  const [filter, setFilter] = useState(isMonthly ? "7days" : "all");
+  const filters = isMonthly ? MONTHLY_FILTERS : CHIT_FILTERS;
+  const listId = useId();
+  const [filter, setFilter] = useState(isMonthly ? "7days" : "3days");
+  const [expanded, setExpanded] = useState(isMonthly);
   const [chitRows, setChitRows] = useState([]);
   const [reminderLog, setReminderLog] = useState([]);
+  const [loading, setLoading] = useState(!isMonthly);
+  const [error, setError] = useState("");
   const agentId = workspace?.id || "";
-  const title = isMonthly ? "Upcoming monthly payments" : "Upcoming chit installments";
+  const title = isMonthly ? "Upcoming monthly payments" : "Upcoming installment reminders";
+  const collapsible = !isMonthly;
 
   useEffect(() => {
     if (!token) return;
-    if (!isMonthly) {
-      loadUpcomingChitPayments(token).then(setChitRows).catch(() => setChitRows([]));
-    }
-    loadPaymentReminderLog(token).then(setReminderLog).catch(() => setReminderLog([]));
+    let cancelled = false;
+    const load = async () => {
+      if (!isMonthly) {
+        setLoading(true);
+        setError("");
+        try {
+          const [rows, log] = await Promise.all([
+            loadUpcomingChitPayments(token),
+            loadPaymentReminderLog(token),
+          ]);
+          if (cancelled) return;
+          setChitRows(rows);
+          setReminderLog(log);
+        } catch (err) {
+          if (cancelled) return;
+          setChitRows([]);
+          setReminderLog([]);
+          setError(err?.message || "Could not load installment reminders.");
+        } finally {
+          if (!cancelled) setLoading(false);
+        }
+        return;
+      }
+      try {
+        const log = await loadPaymentReminderLog(token);
+        if (!cancelled) setReminderLog(log);
+      } catch {
+        if (!cancelled) setReminderLog([]);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
   }, [token, loans, isMonthly, refreshKey]);
 
   const monthlyItems = useMemo(() => {
@@ -32,6 +67,8 @@ export function UpcomingPaymentsSection({ loans = [], token, settings, workspace
   const chitItems = useMemo(() => (isMonthly ? [] : buildChitUpcomingRows(chitRows)), [chitRows, isMonthly]);
   const sourceItems = isMonthly ? monthlyItems : chitItems;
   const allItems = useMemo(() => filterUpcomingPayments(sourceItems, filter), [sourceItems, filter]);
+  const visibleItems = allItems.slice(0, 50);
+  const showList = !collapsible || expanded;
 
   const sendReminder = async item => {
     const templateKey = item.type === "monthly" ? "monthly_reminder" : "chit_reminder";
@@ -48,30 +85,96 @@ export function UpcomingPaymentsSection({ loans = [], token, settings, workspace
     }]);
   };
 
-  return <div className="card spacer upcoming-payments">
+  const retryLoad = () => {
+    setError("");
+    setLoading(true);
+    loadUpcomingChitPayments(token)
+      .then(rows => {
+        setChitRows(rows);
+        setError("");
+      })
+      .catch(err => {
+        setChitRows([]);
+        setError(err?.message || "Could not load installment reminders.");
+      })
+      .finally(() => setLoading(false));
+    loadPaymentReminderLog(token).then(setReminderLog).catch(() => setReminderLog([]));
+  };
+
+  const countLabel = loading
+    ? "Loading…"
+    : error
+      ? "Unavailable"
+      : `${allItems.length} reminder${allItems.length === 1 ? "" : "s"}`;
+
+  return <div className={`card spacer upcoming-payments ${collapsible ? "collapsible" : ""} ${expanded ? "is-expanded" : "is-collapsed"}`}>
     <div className="toolbar upcoming-payments-toolbar">
-      <strong>{title}</strong>
-      <div className="tabs upcoming-payments-filters">
-        {MODULE_FILTERS.map(([id, label]) =>
-          <button key={id} type="button" className={`btn tab ${filter === id ? "active" : ""}`} onClick={() => setFilter(id)}>{label}</button>,
+      <div className="upcoming-payments-heading">
+        {collapsible ? (
+          <button
+            type="button"
+            className="btn upcoming-payments-toggle"
+            aria-expanded={expanded}
+            aria-controls={listId}
+            onClick={() => setExpanded(current => !current)}
+          >
+            <span className="upcoming-payments-chevron" aria-hidden="true">{expanded ? "▾" : "▸"}</span>
+            <span className="upcoming-payments-title-wrap">
+              <strong>{title}</strong>
+              <span className="small upcoming-payments-count">{countLabel}</span>
+            </span>
+            <span className="upcoming-payments-toggle-label">{expanded ? "Hide reminders" : "Show reminders"}</span>
+          </button>
+        ) : (
+          <strong>{title}</strong>
+        )}
+      </div>
+      <div className="tabs upcoming-payments-filters" role="group" aria-label="Reminder filters">
+        {filters.map(([id, label]) =>
+          <button key={id} type="button" className={`btn tab ${filter === id ? "active" : ""}`} aria-pressed={filter === id} onClick={() => setFilter(id)}>{label}</button>,
         )}
       </div>
     </div>
-    {!allItems.length && <p className="small">No upcoming payments match this filter.</p>}
-    {!!allItems.length && <>
-      {allItems.length > 50 && <p className="small">Showing first 50 of {allItems.length} reminders.</p>}
-      <div className={`table spacer upcoming-payments-table ${isMonthly ? "monthly" : "chit"}`}><table><thead><tr><th>Customer</th>{!isMonthly && <><th>Scheme</th><th>Type</th></>}<th>Amount</th><th>Due</th><th></th></tr></thead><tbody>
-      {allItems.slice(0, 50).map(item => <tr key={`${item.type}-${item.sourceId}-${item.cycleKey}`}>
-        <td><strong>{item.customerName}</strong>{isMonthly && item.phone && <div className="small">{item.phone}</div>}</td>
-        {!isMonthly && <><td>{item.schemeName || "Chit Fund"}</td><td><span className="chit-type-badge">{item.chitTypeLabel || "—"}</span></td></>}
-        <td className="gold">{money(item.amount)}</td>
-        <td>{formatDueDate(item)} · {formatDueLabel(item)}</td>
-        <td>{canWhatsAppShare(item.phone)
-          ? <button type="button" className="btn whatsapp" onClick={() => sendReminder(item)}>WhatsApp</button>
-          : <span className="small">No phone</span>}</td>
-      </tr>)}
-    </tbody></table></div>
-    </>}
+
+    {collapsible && !expanded && loading && <p className="small upcoming-payments-summary" role="status">Loading installment reminders…</p>}
+    {collapsible && !expanded && !loading && error && (
+      <div className="upcoming-payments-error" role="alert">
+        <p className="small red">{error}</p>
+        <button type="button" className="btn" onClick={retryLoad}>Retry</button>
+      </div>
+    )}
+    {collapsible && !expanded && !loading && !error && (
+      <p className="small upcoming-payments-summary">
+        {allItems.length
+          ? `${allItems.length} reminder${allItems.length === 1 ? "" : "s"} match this filter. Expand to view and send WhatsApp reminders.`
+          : "No upcoming payments match this filter."}
+      </p>
+    )}
+
+    {showList && <div id={listId} className="upcoming-payments-body">
+      {loading && <p className="small" role="status">Loading installment reminders…</p>}
+      {!loading && error && (
+        <div className="upcoming-payments-error" role="alert">
+          <p className="small red">{error}</p>
+          <button type="button" className="btn" onClick={retryLoad}>Retry</button>
+        </div>
+      )}
+      {!loading && !error && !allItems.length && <p className="small">No upcoming payments match this filter.</p>}
+      {!loading && !error && !!allItems.length && <>
+        {allItems.length > 50 && <p className="small">Showing first 50 of {allItems.length} reminders.</p>}
+        <div className={`table spacer upcoming-payments-table ${isMonthly ? "monthly" : "chit"}`}><table><thead><tr><th>Customer</th>{!isMonthly && <><th>Scheme</th><th>Type</th></>}<th>Amount</th><th>Due</th><th></th></tr></thead><tbody>
+        {visibleItems.map(item => <tr key={`${item.type}-${item.sourceId}-${item.cycleKey}`}>
+          <td><strong>{item.customerName}</strong>{isMonthly && item.phone && <div className="small">{item.phone}</div>}</td>
+          {!isMonthly && <><td>{item.schemeName || "Chit Fund"}</td><td><span className="chit-type-badge">{item.chitTypeLabel || "—"}</span></td></>}
+          <td className="gold">{money(item.amount)}</td>
+          <td>{formatDueDate(item)} · {formatDueLabel(item)}</td>
+          <td>{canWhatsAppShare(item.phone)
+            ? <button type="button" className="btn whatsapp" onClick={() => sendReminder(item)}>WhatsApp</button>
+            : <span className="small">No phone</span>}</td>
+        </tr>)}
+      </tbody></table></div>
+      </>}
+    </div>}
   </div>;
 }
 
