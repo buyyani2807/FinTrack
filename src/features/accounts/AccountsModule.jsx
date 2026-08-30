@@ -35,6 +35,7 @@ const SECTIONS = [
   { id: "closing", label: "Day Closing" },
   { id: "reports", label: "Reports" },
 ];
+const PERIOD_SECTIONS = new Set(["cashbook", "expenses", "reports"]);
 
 function Modal({ title, close, children, actions }) {
   return <div className="modal-bg"><div className="modal"><div className="row"><h2 className="title">{title}</h2><button type="button" className="btn" onClick={close}>Close</button></div>{children}{actions}</div></div>;
@@ -113,7 +114,8 @@ export function AccountsModule({ token, close, loans = [] }) {
       setLedgers(ledgerRows);
       setEntries(entryRows);
       setClosings(closingRows);
-      if (!ledgerRows.length) setShowSetup(true);
+      const initialized = entryRows.some(entry => entry.sourceType === "opening_balance");
+      if (!initialized) setShowSetup(true);
     } catch (err) {
       setError(err.message || "Could not load accounts.");
     } finally {
@@ -124,7 +126,12 @@ export function AccountsModule({ token, close, loans = [] }) {
   useEffect(() => { refresh(); }, [refresh]);
 
   const range = useMemo(() => dateRangeForFilter(period, customFrom, customTo), [period, customFrom, customTo]);
-  const overview = useMemo(() => aggregateOverview(ledgers, entries, range), [ledgers, entries, range]);
+  const allTimeOverview = useMemo(
+    () => aggregateOverview(ledgers, entries, { from: "1970-01-01", to: "2099-12-31" }),
+    [ledgers, entries],
+  );
+  const periodOverview = useMemo(() => aggregateOverview(ledgers, entries, range), [ledgers, entries, range]);
+  const overview = PERIOD_SECTIONS.has(section) ? periodOverview : allTimeOverview;
   const rangedEntries = useMemo(
     () => entries.filter(entry => entry.entryDate >= range.from && entry.entryDate <= range.to),
     [entries, range],
@@ -146,18 +153,26 @@ export function AccountsModule({ token, close, loans = [] }) {
   );
 
   const saveSetup = async () => {
+    setError("");
     try {
       await initializeAccounts(token, {
         openingCash: Number(setupForm.openingCash || 0),
         openingUpi: Number(setupForm.openingUpi || 0),
         openingBank: Number(setupForm.openingBank || 0),
       });
+    } catch (err) {
+      setError(err.message || "Could not save opening balances.");
+      return;
+    }
+    try {
       await backfillCashbook(token);
       setShowSetup(false);
       setNotice("Accounts initialized and existing FinTrack transactions synced.");
       refresh();
     } catch (err) {
-      setError(err.message || "Could not initialize accounts.");
+      setShowSetup(false);
+      setError(`${err.message || "Sync failed."} Opening balances were saved — tap Sync from FinTrack on the Cashbook tab.`);
+      refresh();
     }
   };
 
@@ -259,7 +274,7 @@ export function AccountsModule({ token, close, loans = [] }) {
     <div className="tabs accounts-section-tabs spacer">
       {SECTIONS.map(item => <button key={item.id} type="button" className={`btn tab ${section === item.id ? "active" : ""}`} onClick={() => setSection(item.id)}>{item.label}</button>)}
     </div>
-    <div className="accounts-period-toolbar spacer">
+    {PERIOD_SECTIONS.has(section) && <div className="accounts-period-toolbar spacer">
       <div className="tabs">
         {["today", "week", "month", "custom"].map(key => (
           <button key={key} type="button" className={`btn tab ${period === key ? "active" : ""}`} onClick={() => setPeriod(key)}>
@@ -271,19 +286,22 @@ export function AccountsModule({ token, close, loans = [] }) {
         <input type="date" value={customFrom} onChange={event => setCustomFrom(event.target.value)} />
         <input type="date" value={customTo} onChange={event => setCustomTo(event.target.value)} />
       </div>}
-    </div>
+    </div>}
     <div className="card accounts-overview-card spacer">
       <div className="grid metrics accounts-overview-metrics">
         <div><span className="metric-label">Cash balance</span><strong className="metric-value gold">{money(overview.cash)}</strong></div>
         <div><span className="metric-label">Bank balance</span><strong className="metric-value">{money(overview.bank)}</strong></div>
         <div><span className="metric-label">UPI balance</span><strong className="metric-value">{money(overview.upi)}</strong></div>
         <div><span className="metric-label">Total funds</span><strong className="metric-value gold">{money(overview.total)}</strong></div>
-        <div><span className="metric-label">Money in</span><strong className="metric-value green">{money(overview.moneyIn)}</strong></div>
-        <div><span className="metric-label">Money out</span><strong className="metric-value red">{money(overview.moneyOut)}</strong></div>
+        {PERIOD_SECTIONS.has(section) && <>
+          <div><span className="metric-label">Money in{period === "today" ? " (today)" : ""}</span><strong className="metric-value green">{money(periodOverview.moneyIn)}</strong></div>
+          <div><span className="metric-label">Money out{period === "today" ? " (today)" : ""}</span><strong className="metric-value red">{money(periodOverview.moneyOut)}</strong></div>
+        </>}
       </div>
     </div>
     {loading ? <p className="copy">Loading accounts…</p> : <>
       {section === "cashbook" && <>
+        <p className="copy spacer">The cashbook shows money in and out. Cash and UPI are set up when you save opening balances; add extra bank accounts under <strong>Bank / UPI</strong>. Use <strong>+ Add transaction</strong> for manual entries only.</p>
         <div className="toolbar spacer">
           <div className="tabs">
             <button type="button" className="btn primary" onClick={() => setShowManual(true)}>+ Add transaction</button>
@@ -336,6 +354,7 @@ export function AccountsModule({ token, close, loans = [] }) {
         </div>
       </>}
       {section === "bank" && <>
+        <p className="copy spacer">Cash and UPI accounts are created automatically at setup. Use the form below to add named bank accounts (e.g. HDFC · 1234).</p>
         <div className="grid metrics spacer">
           {overview.ledgers.map(ledger => <div key={ledger.id} className="card"><span className="metric-label">{ledger.name}{ledger.bankAccountLast4 ? ` · ${ledger.bankAccountLast4}` : ""}</span><strong className="metric-value">{money(ledger.balance)}</strong><span className="small">{ledger.accountType.toUpperCase()}</span></div>)}
         </div>
