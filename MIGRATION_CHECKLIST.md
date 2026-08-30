@@ -42,6 +42,11 @@ Run these in the Supabase SQL Editor **in order**. Each file is idempotent where
 | 036 | `036_prelaunch_hardening.sql` | **Pre-launch security hardening** |
 | 037 | `037_fix_portal_id_random_bytes.sql` | Fix portal ID generation (`extensions.gen_random_bytes`) |
 | 038 | `038_digital_receipts_and_reminders.sql` | Digital receipts, branding, WhatsApp templates, payment reminders |
+| 039 | `039_upcoming_chit_payments_rpc.sql` | Upcoming chit payments RPC |
+| 040 | `040_chit_enroll_active_scheme.sql` | Enroll members on active chit schemes |
+| 041 | `041_accounts_cashbook.sql` | **Accounts / Cashbook** — ledger accounts, auto-sync from finance & chit payments |
+
+After running 041, open **More → Accounts**, set opening balances once, then tap **Sync from FinTrack** to backfill historical collections and disbursements.
 
 After running 036, verify in Supabase SQL Editor:
 
