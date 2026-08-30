@@ -35,7 +35,53 @@ const SECTIONS = [
   { id: "closing", label: "Day Closing" },
   { id: "reports", label: "Reports" },
 ];
-const PERIOD_SECTIONS = new Set(["cashbook", "expenses", "reports"]);
+const PERIOD_OPTIONS = [
+  { id: "today", label: "Today" },
+  { id: "week", label: "This week" },
+  { id: "month", label: "This month" },
+  { id: "custom", label: "Custom" },
+];
+
+function PeriodPills({ period, setPeriod, customFrom, setCustomFrom, customTo, setCustomTo }) {
+  return <div className="accounts-period-bar">
+    <div className="accounts-period-pills">
+      {PERIOD_OPTIONS.map(item => (
+        <button
+          key={item.id}
+          type="button"
+          className={`btn tab accounts-period-pill ${period === item.id ? "active" : ""}`}
+          onClick={() => setPeriod(item.id)}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+    {period === "custom" && <div className="accounts-custom-range">
+      <input type="date" aria-label="From date" value={customFrom} onChange={event => setCustomFrom(event.target.value)} />
+      <span className="small">to</span>
+      <input type="date" aria-label="To date" value={customTo} onChange={event => setCustomTo(event.target.value)} />
+    </div>}
+  </div>;
+}
+
+function CashbookOverview({ balances, movement }) {
+  return <div className="accounts-balance-strip">
+    <div className="accounts-balance-item"><span>Cash</span><strong className="gold">{money(balances.cash)}</strong></div>
+    <div className="accounts-balance-item"><span>Bank</span><strong>{money(balances.bank)}</strong></div>
+    <div className="accounts-balance-item"><span>UPI</span><strong>{money(balances.upi)}</strong></div>
+    <div className="accounts-balance-item"><span>Total</span><strong className="gold">{money(balances.total)}</strong></div>
+    <div className="accounts-balance-item accounts-balance-move"><span>In</span><strong className="green">{money(movement.moneyIn)}</strong></div>
+    <div className="accounts-balance-item accounts-balance-move"><span>Out</span><strong className="red">{money(movement.moneyOut)}</strong></div>
+  </div>;
+}
+
+function PanelHead({ title, children }) {
+  return <div className="accounts-panel-head spacer"><div><h2 className="accounts-panel-title">{title}</h2></div>{children}</div>;
+}
+
+function EmptyState({ children }) {
+  return <div className="card accounts-empty">{children}</div>;
+}
 
 function Modal({ title, close, children, actions }) {
   return <div className="modal-bg"><div className="modal"><div className="row"><h2 className="title">{title}</h2><button type="button" className="btn" onClick={close}>Close</button></div>{children}{actions}</div></div>;
@@ -131,7 +177,6 @@ export function AccountsModule({ token, close, loans = [] }) {
     [ledgers, entries],
   );
   const periodOverview = useMemo(() => aggregateOverview(ledgers, entries, range), [ledgers, entries, range]);
-  const overview = PERIOD_SECTIONS.has(section) ? periodOverview : allTimeOverview;
   const rangedEntries = useMemo(
     () => entries.filter(entry => entry.entryDate >= range.from && entry.entryDate <= range.to),
     [entries, range],
@@ -267,130 +312,141 @@ export function AccountsModule({ token, close, loans = [] }) {
 
   const defaultCashId = ledgers.find(l => l.accountType === "cash")?.id || "";
 
+  const periodProps = { period, setPeriod, customFrom, setCustomFrom, customTo, setCustomTo };
+
   return <div className="accounts-module shell">
     <header className="top"><div><ButtonLike onClick={close}>← Back</ButtonLike><h1 className="title spacer">Accounts</h1><p className="copy">Cashbook, expenses, bank accounts, transfers and day closing.</p></div></header>
     {error && <div className="notice">{error}</div>}
-    {notice && <div className="notice" style={{ borderColor: "#4fd08d55", color: "#4fd08d" }}>{notice}</div>}
-    <div className="tabs accounts-section-tabs spacer">
-      {SECTIONS.map(item => <button key={item.id} type="button" className={`btn tab ${section === item.id ? "active" : ""}`} onClick={() => setSection(item.id)}>{item.label}</button>)}
-    </div>
-    {PERIOD_SECTIONS.has(section) && <div className="accounts-period-toolbar spacer">
-      <div className="tabs">
-        {["today", "week", "month", "custom"].map(key => (
-          <button key={key} type="button" className={`btn tab ${period === key ? "active" : ""}`} onClick={() => setPeriod(key)}>
-            {key === "today" ? "Today" : key === "week" ? "This Week" : key === "month" ? "This Month" : "Custom"}
-          </button>
-        ))}
-      </div>
-      {period === "custom" && <div className="accounts-custom-range">
-        <input type="date" value={customFrom} onChange={event => setCustomFrom(event.target.value)} />
-        <input type="date" value={customTo} onChange={event => setCustomTo(event.target.value)} />
-      </div>}
-    </div>}
-    <div className="card accounts-overview-card spacer">
-      <div className="grid metrics accounts-overview-metrics">
-        <div><span className="metric-label">Cash balance</span><strong className="metric-value gold">{money(overview.cash)}</strong></div>
-        <div><span className="metric-label">Bank balance</span><strong className="metric-value">{money(overview.bank)}</strong></div>
-        <div><span className="metric-label">UPI balance</span><strong className="metric-value">{money(overview.upi)}</strong></div>
-        <div><span className="metric-label">Total funds</span><strong className="metric-value gold">{money(overview.total)}</strong></div>
-        {PERIOD_SECTIONS.has(section) && <>
-          <div><span className="metric-label">Money in{period === "today" ? " (today)" : ""}</span><strong className="metric-value green">{money(periodOverview.moneyIn)}</strong></div>
-          <div><span className="metric-label">Money out{period === "today" ? " (today)" : ""}</span><strong className="metric-value red">{money(periodOverview.moneyOut)}</strong></div>
-        </>}
-      </div>
-    </div>
+    {notice && <div className="notice accounts-notice-ok">{notice}</div>}
+    <nav className="accounts-section-nav spacer" aria-label="Accounts sections">
+      {SECTIONS.map(item => <button key={item.id} type="button" className={`accounts-section-tab ${section === item.id ? "active" : ""}`} onClick={() => setSection(item.id)}>{item.label}</button>)}
+    </nav>
     {loading ? <p className="copy">Loading accounts…</p> : <>
-      {section === "cashbook" && <>
-        <p className="copy spacer">The cashbook shows money in and out. Cash and UPI are set up when you save opening balances; add extra bank accounts under <strong>Bank / UPI</strong>. Use <strong>+ Add transaction</strong> for manual entries only.</p>
-        <div className="toolbar spacer">
-          <div className="tabs">
-            <button type="button" className="btn primary" onClick={() => setShowManual(true)}>+ Add transaction</button>
-            <button type="button" className="btn" onClick={() => exportCsv(rangedEntries)}>Export CSV</button>
-            <button type="button" className="btn" onClick={() => backfillCashbook(token).then(refresh)}>Sync from FinTrack</button>
+      {section === "cashbook" && <div className="accounts-panel">
+        <CashbookOverview balances={allTimeOverview} movement={periodOverview} />
+        <div className="card accounts-filter-card spacer">
+          <PeriodPills {...periodProps} />
+          <div className="accounts-filter-row">
+            <input className="accounts-search" placeholder="Search customer, receipt, reference…" value={search} onChange={event => setSearch(event.target.value)} />
+            <label className="accounts-filter-field">
+              <span className="small">Account</span>
+              <select value={accountFilter} onChange={event => setAccountFilter(event.target.value)}>
+                <option value="all">All accounts</option>
+                {ledgers.map(ledger => <option key={ledger.id} value={ledger.id}>{ledger.name}</option>)}
+              </select>
+            </label>
+            <label className="accounts-filter-field">
+              <span className="small">Type</span>
+              <select value={directionFilter} onChange={event => setDirectionFilter(event.target.value)}>
+                <option value="all">All</option>
+                <option value="in">Money in</option>
+                <option value="out">Money out</option>
+                <option value="transfer">Transfer</option>
+              </select>
+            </label>
           </div>
         </div>
-        <div className="accounts-filters spacer">
-          <input placeholder="Search customer, receipt, reference…" value={search} onChange={event => setSearch(event.target.value)} />
-          <select value={accountFilter} onChange={event => setAccountFilter(event.target.value)}>
-            <option value="all">All accounts</option>
-            {ledgers.map(ledger => <option key={ledger.id} value={ledger.id}>{ledger.name}</option>)}
-          </select>
-          <select value={directionFilter} onChange={event => setDirectionFilter(event.target.value)}>
-            <option value="all">All</option>
-            <option value="in">Money in</option>
-            <option value="out">Money out</option>
-            <option value="transfer">Transfer</option>
-          </select>
+        <div className="accounts-action-row spacer">
+          <button type="button" className="btn primary" onClick={() => setShowManual(true)}>+ Add transaction</button>
+          <button type="button" className="btn" onClick={() => exportCsv(rangedEntries)}>Export CSV</button>
+          <button type="button" className="btn" onClick={() => backfillCashbook(token).then(refresh)}>Sync from FinTrack</button>
         </div>
-        <div className="accounts-cashbook-list">
-          {cashbookRows.map(entry => <article key={entry.id} className="card accounts-cashbook-row">
-            <div className="accounts-cashbook-main">
-              <div><strong>{entry.description}</strong><p className="small">{entry.entryDate} · {entry.ledgerName} · {entry.category}</p></div>
-              <div className="accounts-cashbook-amounts">
-                {entry.moneyIn > 0 && <span className="green">{money(entry.moneyIn)} in</span>}
-                {entry.moneyOut > 0 && <span className="red">{money(entry.moneyOut)} out</span>}
-                <span className="small">Bal {money(entry.balance)}</span>
+        <div className="accounts-entry-list">
+          {cashbookRows.map(entry => <article key={entry.id} className="card accounts-entry-row">
+            <div className="accounts-entry-main">
+              <div className="accounts-entry-copy">
+                <strong>{entry.description}</strong>
+                <p className="small">{entry.entryDate} · {entry.ledgerName} · {entry.category}</p>
+              </div>
+              <div className="accounts-entry-amounts">
+                {entry.moneyIn > 0 && <span className="green">{money(entry.moneyIn)}</span>}
+                {entry.moneyOut > 0 && <span className="red">{money(entry.moneyOut)}</span>}
+                <span className="small accounts-entry-balance">Bal {money(entry.balance)}</span>
               </div>
             </div>
-            {(entry.receiptNumber || entry.paymentMode || entry.reference) && <p className="small">
+            {(entry.receiptNumber || entry.paymentMode || entry.reference) && <p className="small accounts-entry-meta">
               {entry.receiptNumber && <>Receipt {entry.receiptNumber} · </>}
               {entry.paymentMode && <>{entry.paymentMode} · </>}
               {entry.reference || ""}
             </p>}
-            {sourceOriginLabel(entry) && <p className="small accounts-origin-note">This transaction originated from {sourceOriginLabel(entry)}. Edit the original record to change the amount.</p>}
-            {entry.isEditable && <div className="tabs"><button type="button" className="btn danger" onClick={() => removeManual(entry)}>Delete</button></div>}
+            {sourceOriginLabel(entry) && <p className="small accounts-origin-note">Synced from {sourceOriginLabel(entry)} — edit the original record to change the amount.</p>}
+            {entry.isEditable && <button type="button" className="btn danger accounts-entry-delete" onClick={() => removeManual(entry)}>Delete</button>}
           </article>)}
-          {!cashbookRows.length && <div className="card">No cashbook entries for this period.</div>}
+          {!cashbookRows.length && <EmptyState>No cashbook entries for this period.</EmptyState>}
         </div>
-      </>}
-      {section === "expenses" && <>
-        <div className="toolbar spacer"><button type="button" className="btn primary" onClick={() => setShowExpense(true)}>+ Add expense</button></div>
-        <div className="accounts-cashbook-list">
-          {expenseRows.map(entry => <article key={entry.id} className="card accounts-cashbook-row">
-            <strong>{entry.description}</strong>
-            <p className="small">{entry.entryDate} · {entry.category} · {entry.ledgerName}</p>
-            <span className="red">{money(entry.moneyOut)}</span>
+      </div>}
+      {section === "expenses" && <div className="accounts-panel">
+        <PanelHead title="Expenses"><button type="button" className="btn primary" onClick={() => setShowExpense(true)}>+ Add expense</button></PanelHead>
+        <div className="card accounts-filter-card spacer"><PeriodPills {...periodProps} /></div>
+        <div className="accounts-entry-list">
+          {expenseRows.map(entry => <article key={entry.id} className="card accounts-entry-row accounts-expense-row">
+            <div className="accounts-entry-main">
+              <div><strong>{entry.description}</strong><p className="small">{entry.entryDate} · {entry.category} · {entry.ledgerName}</p></div>
+              <span className="red accounts-expense-amount">{money(entry.moneyOut)}</span>
+            </div>
+          </article>)}
+          {!expenseRows.length && <EmptyState>No expenses for this period.</EmptyState>}
+        </div>
+      </div>}
+      {section === "bank" && <div className="accounts-panel">
+        <PanelHead title="Bank & UPI accounts"><span className="small">Cash and UPI are created at setup. Add named bank accounts below.</span></PanelHead>
+        <div className="accounts-ledger-grid spacer">
+          {allTimeOverview.ledgers.map(ledger => <article key={ledger.id} className="card accounts-ledger-card">
+            <span className="accounts-ledger-type">{ledger.accountType}</span>
+            <strong className="accounts-ledger-name">{ledger.name}{ledger.bankAccountLast4 ? ` · ${ledger.bankAccountLast4}` : ""}</strong>
+            <span className="accounts-ledger-balance">{money(ledger.balance)}</span>
           </article>)}
         </div>
-      </>}
-      {section === "bank" && <>
-        <p className="copy spacer">Cash and UPI accounts are created automatically at setup. Use the form below to add named bank accounts (e.g. HDFC · 1234).</p>
-        <div className="grid metrics spacer">
-          {overview.ledgers.map(ledger => <div key={ledger.id} className="card"><span className="metric-label">{ledger.name}{ledger.bankAccountLast4 ? ` · ${ledger.bankAccountLast4}` : ""}</span><strong className="metric-value">{money(ledger.balance)}</strong><span className="small">{ledger.accountType.toUpperCase()}</span></div>)}
-        </div>
-        <div className="card spacer"><strong>Add bank account</strong>
+        <div className="card accounts-form-card spacer">
+          <strong>Add bank account</strong>
           <div className="form spacer">
-            <Field label="Bank name"><input value={bankForm.name} onChange={event => setBankForm(current => ({ ...current, name: event.target.value }))} /></Field>
-            <Field label="Account last 4 digits"><input value={bankForm.bankAccountLast4} onChange={event => setBankForm(current => ({ ...current, bankAccountLast4: event.target.value }))} maxLength={4} /></Field>
+            <Field label="Bank name"><input value={bankForm.name} onChange={event => setBankForm(current => ({ ...current, name: event.target.value }))} placeholder="e.g. HDFC" /></Field>
+            <Field label="Account last 4 digits"><input value={bankForm.bankAccountLast4} onChange={event => setBankForm(current => ({ ...current, bankAccountLast4: event.target.value }))} maxLength={4} placeholder="1234" /></Field>
             <button type="button" className="btn primary" onClick={addBank}>Add bank account</button>
           </div>
         </div>
-      </>}
-      {section === "transfers" && <>
-        <div className="toolbar spacer"><button type="button" className="btn primary" onClick={() => setShowTransfer(true)}>Transfer money</button></div>
-        <p className="copy">Transfers move money between your own accounts. They are not counted as income or expense.</p>
-      </>}
-      {section === "closing" && <>
-        <div className="toolbar spacer"><button type="button" className="btn primary" onClick={() => { setClosingForm(current => ({ ...current, ledgerAccountId: defaultCashId })); setShowClosing(true); }}>Day closing</button></div>
-        <div className="accounts-cashbook-list">
-          {closings.map(row => <article key={row.id} className="card accounts-cashbook-row">
-            <strong>{row.closing_date} · {row.ledger_accounts?.name || "Account"}</strong>
-            <p className="small">Expected {money(row.expected_balance)} · Actual {money(row.actual_balance)}</p>
-            <span className={Number(row.difference) === 0 ? "green" : "red"}>
-              {Number(row.difference) === 0 ? "✓ Reconciled" : `Difference ${money(row.difference)}`}
-            </span>
-          </article>)}
+      </div>}
+      {section === "transfers" && <div className="accounts-panel">
+        <PanelHead title="Transfers"><button type="button" className="btn primary" onClick={() => setShowTransfer(true)}>Transfer money</button></PanelHead>
+        <div className="card accounts-info-card">
+          <p className="copy">Move money between your own accounts. Transfers are not income or expense.</p>
         </div>
-      </>}
-      {section === "reports" && <>
-        <div className="card spacer"><strong>Accounts reports</strong>
-          <div className="tabs spacer">
+      </div>}
+      {section === "closing" && <div className="accounts-panel">
+        <PanelHead title="Day closing"><button type="button" className="btn primary" onClick={() => { setClosingForm(current => ({ ...current, ledgerAccountId: defaultCashId })); setShowClosing(true); }}>Record closing</button></PanelHead>
+        <div className="accounts-entry-list">
+          {closings.map(row => {
+            const reconciled = Number(row.difference) === 0;
+            return <article key={row.id} className="card accounts-closing-row">
+              <div className="accounts-closing-head">
+                <strong>{row.closing_date}</strong>
+                <span className="small">{row.ledger_accounts?.name || "Account"}</span>
+              </div>
+              <div className="accounts-closing-stats">
+                <div><span className="small">Expected</span><strong>{money(row.expected_balance)}</strong></div>
+                <div><span className="small">Actual</span><strong>{money(row.actual_balance)}</strong></div>
+                <div className={reconciled ? "accounts-closing-ok" : "accounts-closing-bad"}>
+                  <span className="small">{reconciled ? "Status" : "Difference"}</span>
+                  <strong>{reconciled ? "Reconciled" : money(row.difference)}</strong>
+                </div>
+              </div>
+            </article>;
+          })}
+          {!closings.length && <EmptyState>No day closings recorded yet.</EmptyState>}
+        </div>
+      </div>}
+      {section === "reports" && <div className="accounts-panel">
+        <PanelHead title="Reports" />
+        <div className="card accounts-filter-card spacer"><PeriodPills {...periodProps} /></div>
+        <div className="card accounts-report-card spacer">
+          <p className="copy">Export data for the selected period.</p>
+          <div className="accounts-report-actions">
             <button type="button" className="btn" onClick={() => exportCsv(rangedEntries)}>Cashbook CSV</button>
             <button type="button" className="btn" onClick={() => exportCsv(expenseRows)}>Expense CSV</button>
-            <button type="button" className="btn" onClick={() => exportCsv(overview.ledgers.map(l => ({ entryDate: todayIso(), description: l.name, ledgerName: l.accountType, category: "Balance", moneyIn: l.balance, moneyOut: 0, reference: "", receiptNumber: "" })))}>Account balances CSV</button>
+            <button type="button" className="btn" onClick={() => exportCsv(allTimeOverview.ledgers.map(l => ({ entryDate: todayIso(), description: l.name, ledgerName: l.accountType, category: "Balance", moneyIn: l.balance, moneyOut: 0, reference: "", receiptNumber: "" })))}>Account balances CSV</button>
           </div>
         </div>
-      </>}
+      </div>}
     </>}
     {showSetup && <Modal title="Set opening balances" close={() => setShowSetup(false)} actions={<div className="tabs spacer"><button type="button" className="btn primary" onClick={saveSetup}>Save & sync</button></div>}>
       <p className="copy">Enter opening balances once. Existing FinTrack collections and disbursements will be synced automatically.</p>
