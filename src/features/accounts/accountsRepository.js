@@ -108,4 +108,4 @@ export const createBankAccount = (token, { name, bankAccountLast4 }) =>
   }, token);
 
 export const deleteManualEntry = (token, entryId) =>
-  supabase.query(`/rest/v1/cashbook_entries?id=eq.${entryId}&is_editable=eq.true`, token, { method: "DELETE" });
+  supabase.rpc("accounts_delete_manual_entry", { input_entry_id: entryId }, token);

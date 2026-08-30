@@ -46,8 +46,9 @@ Run these in the Supabase SQL Editor **in order**. Each file is idempotent where
 | 040 | `040_chit_enroll_active_scheme.sql` | Enroll members on active chit schemes |
 | 041 | `041_accounts_cashbook.sql` | **Accounts / Cashbook** — ledger accounts, auto-sync from finance & chit payments |
 | 042 | `042_accounts_cashbook_sync_fix.sql` | Fix sync backfill error (`record "fa" is not assigned yet`) |
+| 043 | `043_accounts_delete_manual_entry.sql` | Delete manual cashbook entries (Salary, Rent, Capital, etc.) |
 
-After running 041 (and 042 if Save & sync failed), open **More → Accounts**, set opening balances once, then tap **Sync from FinTrack** to backfill historical collections and disbursements.
+After running 041 (and 042 if Save & sync failed), open **More → Accounts**, set opening balances once, then tap **Sync from FinTrack** to backfill historical collections and disbursements. If Cashbook **Delete** does nothing, run 043.
 
 After running 036, verify in Supabase SQL Editor:
 

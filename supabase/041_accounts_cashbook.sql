@@ -624,6 +624,24 @@ end;
 $$;
 grant execute on function public.accounts_create_bank_account(text, text) to authenticated;
 
+create or replace function public.accounts_delete_manual_entry(input_entry_id uuid)
+returns void language plpgsql security definer set search_path = public
+as $$
+declare deleted integer;
+begin
+  if not public.is_financier_owner() then raise exception 'Only a financier can delete cashbook entries'; end if;
+  delete from public.cashbook_entries
+  where id = input_entry_id
+    and organization_id = public.current_organization_id()
+    and is_editable = true;
+  get diagnostics deleted = row_count;
+  if deleted = 0 then
+    raise exception 'This transaction cannot be deleted. Synced FinTrack entries must be changed on the original record.';
+  end if;
+end;
+$$;
+grant execute on function public.accounts_delete_manual_entry(uuid) to authenticated;
+
 -- Patch payment correction/deletion to keep cashbook in sync.
 create or replace function public.update_finance_payment(
   payment_id uuid, payment_date date, payment_mode public.payment_mode,

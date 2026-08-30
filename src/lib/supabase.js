@@ -160,7 +160,7 @@ export const supabase = {
     },
   },
   rpc: (name, args, token) => request(`/rest/v1/rpc/${name}`, { method: "POST", body: JSON.stringify(args) }, token),
-  query: (path, token) => request(path, {}, token),
+  query: (path, token, options = {}) => request(path, options, token),
   from: (table, token) => ({
     select: (query = "*") => request(`/rest/v1/${table}?select=${encodeURIComponent(query)}`, {}, token),
     insert: values => request(`/rest/v1/${table}`, { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(values) }, token),
