@@ -26,6 +26,22 @@ export const SCORE_BANDS = [
   { id: "high_risk", label: "High Risk", min: 300, max: 599 },
 ];
 
+export const GAUGE_SEGMENTS = [
+  { id: "high_risk", label: "POOR", range: "300-599", color: "#22c55e", min: 300, max: 599, start: 180, end: 216 },
+  { id: "attention", label: "FAIR", range: "600-649", color: "#84cc16", min: 600, max: 649, start: 216, end: 252 },
+  { id: "fair", label: "GOOD", range: "650-699", color: "#eab308", min: 650, max: 699, start: 252, end: 288 },
+  { id: "good", label: "VERY GOOD", range: "700-749", color: "#f59e0b", min: 700, max: 749, start: 288, end: 324 },
+  { id: "excellent", label: "EXCELLENT", range: "750-900", color: "#ef4444", min: 750, max: 900, start: 324, end: 360 },
+];
+
+export const scoreToGaugeAngle = score => {
+  const clamped = Math.min(SCORE_MAX, Math.max(SCORE_MIN, Number(score) || SCORE_MIN));
+  const segment = GAUGE_SEGMENTS.find(item => clamped >= item.min && clamped <= item.max) || GAUGE_SEGMENTS[0];
+  const span = Math.max(1, segment.max - segment.min);
+  const t = (clamped - segment.min) / span;
+  return segment.start + t * (segment.end - segment.start);
+};
+
 const iso = value => String(value || "").slice(0, 10);
 const moneyRound = value => Math.round((Number(value) || 0) * 100) / 100;
 

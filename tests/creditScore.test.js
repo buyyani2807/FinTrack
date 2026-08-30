@@ -7,6 +7,7 @@ import {
   dailyInstallments,
   hasEnoughHistory,
   scoreBand,
+  scoreToGaugeAngle,
 } from "../src/features/creditScore/creditScoreModel.js";
 
 const asOf = "2026-08-30";
@@ -58,6 +59,16 @@ test("scoreBand maps requested ranges", () => {
   assert.equal(scoreBand(800).label, "Excellent");
   assert.equal(scoreBand(620).label, "Needs Attention");
   assert.equal(scoreBand(500).label, "High Risk");
+});
+
+test("gauge needle stays inside the matching score band", () => {
+  const poor = scoreToGaugeAngle(580);
+  const fair = scoreToGaugeAngle(620);
+  const excellent = scoreToGaugeAngle(820);
+  assert.ok(poor >= 180 && poor <= 216, `580 should sit in POOR, got ${poor}`);
+  assert.ok(fair >= 216 && fair <= 252, `620 should sit in FAIR, got ${fair}`);
+  assert.ok(excellent >= 324 && excellent <= 360, `820 should sit in EXCELLENT, got ${excellent}`);
+  assert.ok(poor < fair && fair < excellent);
 });
 
 test("scenario 1: every daily installment on time is Excellent", () => {

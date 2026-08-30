@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { calculateFintrackCreditScore, compactCreditScore } from "./creditScoreModel.js";
+import { GAUGE_SEGMENTS, calculateFintrackCreditScore, compactCreditScore, scoreToGaugeAngle } from "./creditScoreModel.js";
 
 const money = value => `₹${Number(value || 0).toLocaleString("en-IN")}`;
 
@@ -25,21 +25,12 @@ function donutSlice(cx, cy, outer, inner, startDeg, endDeg) {
   return `M ${startOuter.x} ${startOuter.y} A ${outer} ${outer} 0 ${large} 1 ${endOuter.x} ${endOuter.y} L ${startInner.x} ${startInner.y} A ${inner} ${inner} 0 ${large} 0 ${endInner.x} ${endInner.y} Z`;
 }
 
-const GAUGE_SEGMENTS = [
-  { label: "POOR", range: "300-599", color: "#22c55e", start: 180, end: 216 },
-  { label: "FAIR", range: "600-649", color: "#84cc16", start: 216, end: 252 },
-  { label: "GOOD", range: "650-699", color: "#eab308", start: 252, end: 288 },
-  { label: "VERY GOOD", range: "700-749", color: "#f59e0b", start: 288, end: 324 },
-  { label: "EXCELLENT", range: "750-900", color: "#ef4444", start: 324, end: 360 },
-];
-
 export function CreditScoreGauge({ score = 300, available = true, size = 320 }) {
   const cx = 180;
   const cy = 188;
   const outer = 118;
   const inner = 74;
-  const clamped = Math.min(900, Math.max(300, Number(score) || 300));
-  const needleDeg = 180 + ((clamped - 300) / 600) * 180;
+  const needleDeg = scoreToGaugeAngle(score);
   const tip = polar(cx, cy, inner - 8, needleDeg);
   const rad = (needleDeg * Math.PI) / 180;
   const px = -Math.sin(rad);
