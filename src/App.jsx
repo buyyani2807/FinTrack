@@ -171,7 +171,7 @@ const enhancements = `.financier-nav{position:fixed;z-index:6;left:20px;top:50%;
 const homeReportHide = `.shell > .toolbar > .tabs > .field,.shell > .toolbar > .tabs > .field + .btn{display:none}`;
 const visualRefresh = `
 :root{font:16px/1.45 DM Sans,system-ui,sans-serif!important;color-scheme:dark!important;background:#0e1118!important}#root{width:100%!important;max-width:none!important;min-height:100svh!important;margin:0!important;border:0!important;display:block!important;text-align:left!important}.app{min-height:100svh;background:radial-gradient(700px 480px at 4% -10%,#202b41 0%,transparent 65%),#0e1118;color:#f4f6fb}.shell{max-width:1420px;padding:36px 44px 74px}.top{margin-bottom:34px}.brand{font-family:Syne,DM Sans,sans-serif;font-size:27px;letter-spacing:-.8px;color:#f4b942}.sub{margin-top:6px;color:#9ba9bd;font-size:12px;letter-spacing:.02em}.title{font-family:Syne,DM Sans,sans-serif;font-size:28px;letter-spacing:-.7px;color:#f4f6fb!important}.shell .title,.shell .title *{color:#f4f6fb!important}.copy{color:#9ba9bd;font-size:13px}.toolbar{gap:18px}.tabs{gap:7px}.btn{min-height:38px;padding:8px 13px;border:1px solid #303a4d;background:#171c27;color:#f4f6fb;border-radius:10px;font-size:13px;font-weight:700;transition:background .18s,border-color .18s,transform .18s,box-shadow .18s}.btn:hover{transform:translateY(-1px);background:#242c3b;border-color:#4a586f;box-shadow:0 6px 16px #0005}.btn:focus-visible{outline:3px solid #f4b94255;outline-offset:2px}.btn.primary{background:#f4b942;color:#211907;border-color:#f4b942;box-shadow:0 6px 14px #0004}.btn.primary:hover{background:#ffd062;border-color:#ffd062}.btn.danger{border-color:#ff737355;color:#ff9898;background:#3c1b221f}.btn.danger:hover{background:#492027}.btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}.tab{background:transparent;color:#9ba9bd;border-color:transparent;box-shadow:none}.tab:hover{background:#ffffff0c;border-color:transparent}.tab.active{background:#f4b94218;color:#f4b942;border-color:#f4b94270;box-shadow:none}.card{background:#202737;border:1px solid #303a4d;border-radius:16px;box-shadow:0 8px 24px #0003}.card:hover{border-color:#46536a}.metrics{gap:16px;margin:22px 0 26px}.metrics .card{position:relative;overflow:hidden;padding:18px 19px;background:linear-gradient(145deg,#222c3e,#1b2230)}.metrics .card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:#f4b942}.metric-label{font-size:10px;font-weight:700;color:#9ba9bd;letter-spacing:.09em}.metric-value{font-family:Syne,DM Sans,sans-serif;font-size:24px;letter-spacing:-.65px;margin-top:9px}.gold{color:#f4b942}.green{color:#4fd08d}.red{color:#ff7373}.blue{color:#72aaff}.field{gap:7px}.field label{font-size:11px;letter-spacing:.035em;color:#aab7ca}.field input,.field select{min-height:41px;padding:9px 11px;border-radius:10px;border-color:#303a4d;background:#171c27;color:#f4f6fb;outline:none;transition:border-color .15s,box-shadow .15s}.field input:focus,.field select:focus{border-color:#f4b942;box-shadow:0 0 0 3px #f4b9421c}.table{border:1px solid #303a4d;border-radius:12px}.table table{font-size:13px}.table th{padding:12px 13px;background:#171c27;color:#9ba9bd;font-size:10px;letter-spacing:.08em}.table td{padding:13px;border-color:#303a4d;color:#e4e9f2}.table tbody tr{transition:background .15s}.table tbody tr:hover{background:#ffffff08}.badge{padding:5px 9px;border-radius:999px;font-size:9px;letter-spacing:.06em}.notice{border:1px solid #f4b94255;border-left:3px solid #f4b942;background:#f4b94216;color:#f7dc99;border-radius:10px;padding:11px 13px}.modal-bg{padding:24px;background:#000b;backdrop-filter:blur(5px)}.modal{width:min(760px,100%);padding:28px;border-radius:19px;background:#202737;border-color:#46536a;box-shadow:0 25px 80px #000a}.login{max-width:450px;margin:10vh auto}.login>.brand{font-size:34px;color:#f4b942;text-align:center}.login>.sub{font-size:13px;text-align:center}.login .card{padding:26px;background:#202737;border-color:#3c475c;box-shadow:0 22px 70px #0008}.login .tabs{display:grid;grid-template-columns:1fr 1fr}.login .tabs .btn:last-child{grid-column:1/-1}.login .tab{min-height:42px;border:1px solid #303a4d}.login .tab.active{border-color:#f4b94270}.financier-nav{background:#202737!important;border-color:#3a465a!important;border-radius:16px!important;box-shadow:0 12px 34px #0008!important}.financier-nav .nav-title{color:#f4b942!important;font-family:Syne,DM Sans,sans-serif!important}.financier-nav button{border-color:transparent!important}.financier-nav button.tab.active{background:#f4b94218!important;border-color:#f4b94270!important}.financier-nav .nav-footer{color:#9ba9bd!important;border-color:#303a4d!important}.customer-actions{right:28px!important;bottom:auto!important;top:20px!important;background:#202737!important;padding:8px!important;border:1px solid #3a465a!important;border-radius:14px!important;box-shadow:0 12px 30px #0008!important}@media(min-width:1051px){.shell{margin-left:240px;max-width:calc(1420px + 240px)}.financier-nav{left:24px!important;top:28px!important;transform:none!important;width:192px!important}}@media(max-width:1050px){.shell{padding:28px 24px 86px}.financier-nav{background:#202737f2!important}}@media(max-width:680px){.shell{padding:22px 16px 98px}.top,.toolbar{align-items:flex-start}.toolbar{flex-direction:column}.title{font-size:24px}.metrics{grid-template-columns:1fr 1fr}.metrics .card{padding:15px}.metric-value{font-size:20px}.login{margin:5vh 16px}.modal{padding:21px}.customer-actions{top:auto!important;bottom:12px!important;left:12px!important;right:12px!important}.customer-actions .tabs{justify-content:center}.form{gap:11px}}`;
-const mobileCollections = `.customer-search,.collection-search{display:flex;gap:8px;align-items:center;margin:14px 0}.customer-search input,.collection-search input{width:min(460px,100%);min-height:42px;padding:10px 12px;border:1px solid #303a4d;border-radius:10px;background:#171c27;color:#f4f6fb;outline:none}.customer-search input:focus,.collection-search input:focus{border-color:#f4b942;box-shadow:0 0 0 3px #f4b9421c}.collection-shell{max-width:970px}.collection-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:20px 0}.collection-summary>div{padding:15px 17px;border-radius:14px;background:#202737;border:1px solid #303a4d}.collection-summary span,.collection-amount span{display:block;color:#9ba9bd;font-size:11px;text-transform:uppercase;letter-spacing:.07em}.collection-summary strong{display:block;margin-top:7px;font:700 22px Syne}.collection-section{margin-top:28px}.collection-section h2{font:700 18px Syne;margin:0 0 6px;color:#f4f6fb}.collection-section h2 span{font:600 11px DM Sans;color:#9ba9bd;margin-left:7px;letter-spacing:.04em;text-transform:uppercase}.collection-list{display:grid;gap:10px;margin-top:12px}.collection-card{display:grid;grid-template-columns:46px minmax(160px,1fr) 130px auto;gap:14px;align-items:center;padding:15px;background:#202737;border:1px solid #303a4d;border-radius:15px}.monthly-card{border-left:3px solid #72aaff}.daily-card{border-left:3px solid #f4b942}.collection-card.collected{opacity:.72;border-color:#4fd08d55}.collection-avatar{display:grid;place-items:center;width:46px;height:46px;border-radius:50%;background:#72aaff1c;color:#72aaff;font-weight:800}.collection-info{display:grid;gap:2px}.collection-info strong{font-size:15px}.collection-info span,.collection-amount small{font-size:12px;color:#9ba9bd}.collection-amount{text-align:right}.collection-amount strong{display:block;margin:3px 0;font-size:16px}.collection-actions{display:flex;gap:7px}.route-handle{user-select:none;-webkit-user-select:none;touch-action:none;cursor:grab;font-weight:700;color:#f4b942}.route-handle:active{cursor:grabbing}.route-row-dragging{opacity:.55;background:#f4b94212}.link-button{display:inline-flex;align-items:center;margin-top:12px;padding:0;border:0;background:none;color:#f4b942;font:600 13px DM Sans,system-ui;cursor:pointer}.link-button:hover{text-decoration:underline}.link-button:disabled{opacity:.55;cursor:wait}@media(max-width:680px){.collection-shell{margin-left:0!important;padding-bottom:28px}.customer-search,.collection-search{width:100%}.customer-search input,.collection-search input{flex:1}.collection-summary{grid-template-columns:1fr 1fr}.collection-summary>div:last-child{grid-column:1/-1}.collection-card{grid-template-columns:42px 1fr auto;gap:10px;padding:13px}.collection-avatar{width:42px;height:42px}.collection-info span:last-child{display:none}.collection-amount{grid-column:2;text-align:left}.collection-actions{grid-column:3;grid-row:1 / span 2;flex-direction:column}.collection-actions .btn{min-width:74px}.collection-actions .btn:first-child{display:none}}`;
+const mobileCollections = `.customer-search,.collection-search{display:flex;gap:8px;align-items:center;margin:14px 0}.customer-search input,.collection-search input{width:min(460px,100%);min-height:42px;padding:10px 12px;border:1px solid #303a4d;border-radius:10px;background:#171c27;color:#f4f6fb;outline:none}.customer-search input:focus,.collection-search input:focus{border-color:#f4b942;box-shadow:0 0 0 3px #f4b9421c}.collection-shell{max-width:970px}.collection-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:20px 0}.collection-summary>div{padding:15px 17px;border-radius:14px;background:#202737;border:1px solid #303a4d}.collection-summary span,.collection-amount span{display:block;color:#9ba9bd;font-size:11px;text-transform:uppercase;letter-spacing:.07em}.collection-summary strong{display:block;margin-top:7px;font:700 22px Syne}.collection-section{margin-top:28px}.collection-section h2{font:700 18px Syne;margin:0 0 6px;color:#f4f6fb}.collection-section h2 span{font:600 11px DM Sans;color:#9ba9bd;margin-left:7px;letter-spacing:.04em;text-transform:uppercase}.collection-list{display:grid;gap:10px;margin-top:12px}.collection-card{display:grid;grid-template-columns:46px minmax(160px,1fr) 130px auto;gap:14px;align-items:center;padding:15px;background:#202737;border:1px solid #303a4d;border-radius:15px}.collection-card.can-reorder{grid-template-columns:32px 46px minmax(160px,1fr) 130px auto}.collection-drag-handle{align-self:stretch;display:grid;place-items:center;min-width:28px;border-radius:8px}.monthly-card{border-left:3px solid #72aaff}.daily-card{border-left:3px solid #f4b942}.collection-card.collected{opacity:.72;border-color:#4fd08d55}.collection-avatar{display:grid;place-items:center;width:46px;height:46px;border-radius:50%;background:#72aaff1c;color:#72aaff;font-weight:800}.collection-info{display:grid;gap:2px}.collection-info strong{font-size:15px}.collection-info span,.collection-amount small{font-size:12px;color:#9ba9bd}.collection-amount{text-align:right}.collection-amount strong{display:block;margin:3px 0;font-size:16px}.collection-actions{display:flex;gap:7px}.route-handle{user-select:none;-webkit-user-select:none;touch-action:none;cursor:grab;font-weight:700;color:#f4b942}.route-handle:active{cursor:grabbing}.route-row-dragging{opacity:.55;background:#f4b94212}.link-button{display:inline-flex;align-items:center;margin-top:12px;padding:0;border:0;background:none;color:#f4b942;font:600 13px DM Sans,system-ui;cursor:pointer}.link-button:hover{text-decoration:underline}.link-button:disabled{opacity:.55;cursor:wait}@media(max-width:680px){.collection-shell{margin-left:0!important;padding-bottom:28px}.customer-search,.collection-search{width:100%}.customer-search input,.collection-search input{flex:1}.collection-summary{grid-template-columns:1fr 1fr}.collection-summary>div:last-child{grid-column:1/-1}.collection-card{grid-template-columns:42px 1fr auto;gap:10px;padding:13px}.collection-card.can-reorder{grid-template-columns:28px 42px 1fr auto;grid-template-areas:"handle avatar actions" "handle info actions" "handle amount actions"}.collection-card.can-reorder .collection-drag-handle{grid-area:handle}.collection-card.can-reorder .collection-avatar{grid-area:avatar}.collection-card.can-reorder .collection-info{grid-area:info}.collection-card.can-reorder .collection-amount{grid-area:amount;grid-column:auto;text-align:left}.collection-card.can-reorder .collection-actions{grid-area:actions;grid-column:auto;grid-row:auto;flex-direction:column}.collection-avatar{width:42px;height:42px}.collection-info span:last-child{display:none}.collection-amount{grid-column:2;text-align:left}.collection-actions{grid-column:3;grid-row:1 / span 2;flex-direction:column}.collection-actions .btn{min-width:74px}.collection-actions .btn:first-child{display:none}}`;
 const mobileLayout = `
 .nav-short,.label-short{display:none}
 .nav-label{display:inline-flex;align-items:center;gap:7px}
@@ -731,7 +731,21 @@ function OperationsDetail({ loan, back, collect, edit, remove, portal, kyc, edit
   };
   return <><div className="toolbar"><div><Button onClick={back}>← Back</Button><h1 className="title spacer">{loan.customerName}</h1><p className="copy"><a className="phone-link" href={`tel:${loan.phone}`}>{loan.phone}</a> · {loan.address || "Address not added"}</p><p className="small spacer">Collection start date: <strong>{loan.startDate}</strong> · Status: <Badge status={loanStatus(loan)} />{accountOutcome(loan) && <> · {accountOutcome(loan).label} date: <strong>{accountOutcome(loan).date || "Not recorded"}</strong>{accountOutcome(loan).days ? ` · ${accountOutcome(loan).label} in ${accountOutcome(loan).days} days` : ""}</>}{isOwner && <> · User ID: <strong>{loan.portalId || "Not enabled"}</strong></>}</p></div><div className="tabs"><Button onClick={() => onStatement?.(loan)}>Customer Statement</Button>{isOwner && <><Button onClick={() => portal(loan)}>{loan.portalId ? "Reset PIN" : "Enable customer portal"}</Button><Button onClick={() => edit(loan)}>Edit account</Button><Button className="danger" onClick={() => { setDialogError(""); setConfirmRemoveAccount(true); }}>Delete account</Button><Button className="danger" onClick={() => setStatusChange("bankrupt")}>Mark bankrupt</Button><Button onClick={() => setStatusChange(loan.status === "active" ? "closed" : "active")}>{loan.status === "active" ? "Close account" : "Reopen account"}</Button></>}{!disabled && <Button className="primary" disabled={collectedOn(loan)} onClick={() => !collectedOn(loan) && collect(loan)}>{collectedOn(loan) ? "Collected today" : "+ Record payment"}</Button>}</div></div>{isOwner && <KycDetails loan={loan} kyc={kyc} edit={editKyc} />}{isOwner && <div className="grid metrics"><Metric label="User ID" value={loan.portalId || "Not enabled"} color={loan.portalId ? "gold" : ""} /></div>}{isOwner && loan.portalId && <p className="notice">Share this User ID with the customer. Use Reset PIN to set the PIN they will use on Customer login, then share both privately.</p>}<div className="grid metrics"><Metric label={monthly ? "Principal financed" : "Customer repays"} value={money(monthly ? loan.principal : loan.collectionAmount)} color="gold" /><Metric label={monthly ? "Principal balance" : "Paid to customer"} value={money(monthly ? monthlyBalance(loan) : loan.disbursedAmount)} color="red" /><Metric label="Total received" value={money(loanPaid(loan))} color="green" />{monthly ? <Metric label="Interest pending" value={money(monthlyInterestPending(loan))} color={monthlyInterestPending(loan) ? "red" : "green"} /> : <Metric label="Daily collection" value={`${money(loan.dailyCollection)} × 100 days`} color="blue" />}</div>{loan.kind === "daily" && loanStatus(loan) === "active" && <div className="card spacer"><strong>Repayment progress</strong><div className="metric-value gold">{`Day ${dailyProgress(loan).completed} of 100`}</div><p className="small">Start date: {loan.startDate} · Days Completed: {dailyProgress(loan).completed} · Days Remaining: {dailyProgress(loan).remaining}</p><div style={{height:8,borderRadius:999,background:C.surface,overflow:"hidden"}}><div style={{height:"100%",width:`${dailyProgress(loan).completed}%`,background:C.gold}} /></div></div>}<ProfitLoss loan={loan} />{upcoming && <UpcomingPaymentCard item={upcoming} settings={orgSettings} token={authToken} reminderLog={reminderLog} onReminderSent={() => {}} />}<div className="card spacer"><strong>Payment history</strong><div className="table spacer"><table><thead><tr><th>Date</th>{monthly && <><th>Interest</th><th>Principal</th><th>Penalty</th></>}<th>Total</th><th>Mode</th><th>Reference</th><th>Notes / comments</th><th>Collected by</th><th>Receipt</th>{isOwner && <th></th>}</tr></thead><tbody>{paymentRows.map(t => <tr key={t.id}><td>{t.date}</td>{monthly && <><td>{money(t.interestAmount)}</td><td>{money(t.principalAmount)}</td><td>{money(t.penaltyAmount)}</td></>}<td className="green">{money(monthly ? (+t.interestAmount || 0) + (+t.principalAmount || 0) + (+t.penaltyAmount || 0) : t.amount)}</td><td>{paymentModeLabel(t)}</td><td>{t.ref || "—"}</td><td>{t.notes || "—"}</td><td>{t.collectorName || "Financier/Admin"}</td><td>{t.receiptNumber ? <ReceiptActions compact receipt={buildFinanceReceipt({ loan, transaction: t, settings: orgSettings, workspace })} settings={orgSettings} token={authToken} onLogAction={onLogReceipt} /> : "—"}</td>{isOwner && <td><Button onClick={() => setNoteTransaction(t)}>Edit note</Button><Button onClick={() => setCorrectTransaction(t)}>Edit payment</Button><Button className="danger" onClick={() => { setDialogError(""); setDeletePaymentTarget(t); }}>Delete</Button></td>}</tr>)}</tbody></table></div></div>{noteTransaction && <PaymentNoteEditor transaction={noteTransaction} close={() => setNoteTransaction(null)} save={editPaymentNote} />}{correctTransaction && <PaymentCorrectionEditor loan={loan} transaction={correctTransaction} close={() => setCorrectTransaction(null)} save={correctPayment} />}{statusChange && <AccountStatusModal loan={loan} status={statusChange} close={() => setStatusChange(null)} save={changeStatus} />}{confirmRemoveAccount && <ConfirmDialog title="Delete finance account?" message={`Delete ${loan.customerName}'s finance account and all its payments? This cannot be undone.`} confirmLabel="Delete account" danger busy={dialogBusy} error={dialogError} close={() => { if (!dialogBusy) { setConfirmRemoveAccount(false); setDialogError(""); } }} onConfirm={removeAccount} />}{deletePaymentTarget && <ConfirmDialog title="Delete payment?" message="Delete this payment permanently? This cannot be undone." confirmLabel="Delete payment" danger busy={dialogBusy} error={dialogError} close={() => { if (!dialogBusy) { setDeletePaymentTarget(null); setDialogError(""); } }} onConfirm={removePaymentRow} />}</>;
 }
-function TodayCollections({ loans, kind, back, collect, view }) {
+function TodayCollections({
+  loans,
+  kind,
+  back,
+  collect,
+  view,
+  canReorder = false,
+  draggedId,
+  setDraggedId,
+  onReorder,
+  startTouchDrag,
+  moveTouchDrag,
+  finishTouchDrag,
+  cancelTouchDrag,
+}) {
   const [search, setSearch] = useState("");
   const activeLoans = loans.filter(loan => loan.status === "active" && loanBalance(loan) > 0);
   const dailyLoans = activeLoans.filter(loan => loan.kind === "daily");
@@ -741,8 +755,37 @@ function TodayCollections({ loans, kind, back, collect, view }) {
   const expectedToday = dailyLoans.reduce((sum, loan) => sum + loan.dailyCollection, 0) + monthlyLoans.reduce((sum, loan) => sum + Math.round(monthlyBalance(loan) * annualRate(loan, today()) / 100), 0);
   const receivedToday = activeLoans.reduce((sum, loan) => sum + loan.transactions.filter(transaction => transaction.date === today()).reduce((total, transaction) => total + paymentValue(loan, transaction), 0), 0);
   const matchesSearch = loan => `${loan.customerName} ${loan.phone} ${loan.address || ""}`.toLowerCase().includes(search.trim().toLowerCase());
-  const shownDailyLoans = dailyLoans.filter(matchesSearch).sort(byCustomerName);
-  const shownMonthlyLoans = monthlyLoans.filter(matchesSearch).sort(byCustomerName);
+  const shownDailyLoans = dailyLoans.filter(matchesSearch).sort(byCollectionOrderThenName);
+  const shownMonthlyLoans = monthlyLoans.filter(matchesSearch).sort(byCollectionOrderThenName);
+  const dragEnabled = canReorder && !search.trim();
+  const renderCollectionList = (rows, monthlySection = false) => {
+    if (!rows.length) {
+      return <div className="card">No matching {monthlySection ? "monthly" : "daily"}-finance customers.</div>;
+    }
+    return rows.map(loan => {
+      const paid = paidToday(loan);
+      const interest = Math.round(monthlyBalance(loan) * annualRate(loan, today()) / 100);
+      return <CollectionCard
+        key={loan.id}
+        loan={loan}
+        paid={paid}
+        label={monthlySection ? `${annualRate(loan, today())}% monthly interest` : "Daily collection"}
+        due={monthlySection ? interest : loan.dailyCollection}
+        balance={monthlySection ? monthlyBalance(loan) : dailyBalance(loan)}
+        collect={collect}
+        view={view}
+        monthly={monthlySection}
+        canReorder={dragEnabled}
+        draggedId={draggedId}
+        setDraggedId={setDraggedId}
+        onReorder={onReorder}
+        startTouchDrag={startTouchDrag}
+        moveTouchDrag={moveTouchDrag}
+        finishTouchDrag={finishTouchDrag}
+        cancelTouchDrag={cancelTouchDrag}
+      />;
+    });
+  };
   useEffect(() => {
     const sections = document.querySelectorAll(".collection-shell .collection-section");
     const unrelatedSection = kind === "daily" ? sections[1] : sections[0];
@@ -751,10 +794,64 @@ function TodayCollections({ loans, kind, back, collect, view }) {
       if (unrelatedSection) unrelatedSection.hidden = false;
     };
   }, [kind]);
-  return <main className="shell collection-shell"><header className="top"><div><Button onClick={back}>← Dashboard</Button><h1 className="title spacer">Today’s collections</h1><p className="copy">{today()} · Daily collection and monthly-interest accounts.</p></div></header><div className="collection-search"><input aria-label="Search customer" placeholder="Search by customer name, phone, or address" value={search} onChange={event => setSearch(event.target.value)} />{search && <Button onClick={() => setSearch("")}>Clear</Button>}</div><div className="collection-summary"><div><span>Collected today</span><strong>{collectedToday} / {activeLoans.length}</strong></div><div><span>Received today</span><strong className="green">{money(receivedToday)}</strong></div><div><span>Daily + monthly due</span><strong className="gold">{money(expectedToday)}</strong></div></div><div className="collection-section"><h2>Daily finance <span>{shownDailyLoans.length} shown</span></h2><div className="collection-list">{shownDailyLoans.length === 0 ? <div className="card">No matching daily-finance customers.</div> : shownDailyLoans.map(loan => { const paid = paidToday(loan); return <CollectionCard key={loan.id} loan={loan} paid={paid} label="Daily collection" due={loan.dailyCollection} balance={dailyBalance(loan)} collect={collect} view={view} />; })}</div></div><div className="collection-section"><h2>Monthly finance <span>{shownMonthlyLoans.length} shown</span></h2><p className="copy">Monthly cards show interest due on the current outstanding principal.</p><div className="collection-list">{shownMonthlyLoans.length === 0 ? <div className="card">No matching monthly-finance customers.</div> : shownMonthlyLoans.map(loan => { const paid = paidToday(loan); const interest = Math.round(monthlyBalance(loan) * annualRate(loan, today()) / 100); return <CollectionCard key={loan.id} loan={loan} paid={paid} label={`${annualRate(loan, today())}% monthly interest`} due={interest} balance={monthlyBalance(loan)} collect={collect} view={view} monthly />; })}</div></div></main>;
+  return <main className="shell collection-shell"><header className="top"><div><Button onClick={back}>← Dashboard</Button><h1 className="title spacer">Today’s collections</h1><p className="copy">{today()} · Daily collection and monthly-interest accounts.</p></div></header><div className="collection-search"><input aria-label="Search customer" placeholder="Search by customer name, phone, or address" value={search} onChange={event => setSearch(event.target.value)} />{search && <Button onClick={() => setSearch("")}>Clear</Button>}</div><div className="collection-summary"><div><span>Collected today</span><strong>{collectedToday} / {activeLoans.length}</strong></div><div><span>Received today</span><strong className="green">{money(receivedToday)}</strong></div><div><span>Daily + monthly due</span><strong className="gold">{money(expectedToday)}</strong></div></div>{canReorder && !search.trim() && (shownDailyLoans.length > 1 || shownMonthlyLoans.length > 1) && <p className="small dashboard-reorder-hint">Drag the handle to save your {kind} collection route. It is restored after refresh and sign-in.</p>}{canReorder && search.trim() && <p className="small dashboard-reorder-hint">Clear search to reorder customers.</p>}<div className="collection-section"><h2>Daily finance <span>{shownDailyLoans.length} shown</span></h2><div className={`collection-list${dragEnabled && shownDailyLoans.length > 1 ? " can-reorder" : ""}`}>{renderCollectionList(shownDailyLoans)}</div></div><div className="collection-section"><h2>Monthly finance <span>{shownMonthlyLoans.length} shown</span></h2><p className="copy">Monthly cards show interest due on the current outstanding principal.</p><div className={`collection-list${dragEnabled && shownMonthlyLoans.length > 1 ? " can-reorder" : ""}`}>{renderCollectionList(shownMonthlyLoans, true)}</div></div></main>;
 }
-function CollectionCard({ loan, paid, label, due, balance, collect, view, monthly = false }) {
-  return <article className={`collection-card ${paid ? "collected" : ""} ${monthly ? "monthly-card" : "daily-card"}`}><div className="collection-avatar">{loan.customerName.charAt(0).toUpperCase()}</div><div className="collection-info"><strong>{loan.customerName}</strong><a className="phone-link" href={`tel:${loan.phone}`}>{loan.phone}</a><span>{loan.address || "Address not added"}</span></div><div className="collection-amount"><span>{paid ? "Collected" : label}</span><strong className={paid ? "green" : "gold"}>{paid ? "✓ Paid" : money(due)}</strong><small>{monthly ? "Principal" : "Balance"} {money(balance)}</small></div><div className="collection-actions"><Button onClick={() => view(loan)}>Details</Button>{!paid && loan.status === "active" && <Button className="primary" onClick={() => collect(loan)}>Collect</Button>}</div></article>;
+function CollectionCard({
+  loan,
+  paid,
+  label,
+  due,
+  balance,
+  collect,
+  view,
+  monthly = false,
+  canReorder = false,
+  draggedId,
+  setDraggedId,
+  onReorder,
+  startTouchDrag,
+  moveTouchDrag,
+  finishTouchDrag,
+  cancelTouchDrag,
+}) {
+  const beginDrag = event => {
+    if (!canReorder) return;
+    if (event.target.closest("a,button")) {
+      event.preventDefault();
+      return;
+    }
+    event.dataTransfer?.setData("text/plain", loan.id);
+    if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+    setDraggedId?.(loan.id);
+  };
+  return <article
+    className={`collection-card ${paid ? "collected" : ""} ${monthly ? "monthly-card" : "daily-card"}${canReorder ? " can-reorder" : ""}${draggedId === loan.id ? " route-row-dragging" : ""}`}
+    data-account-id={loan.id}
+    draggable={canReorder}
+    aria-grabbed={canReorder ? draggedId === loan.id : undefined}
+    onDragStart={beginDrag}
+    onDragEnd={() => setDraggedId?.(null)}
+    onDragOver={event => canReorder && event.preventDefault()}
+    onDrop={event => {
+      if (!canReorder) return;
+      event.preventDefault();
+      onReorder?.(loan.id);
+    }}
+  >
+    {canReorder && <div
+      className="route-handle collection-drag-handle dashboard-drag-handle"
+      title={`Drag to reorder ${loan.customerName}`}
+      aria-label={`Drag to reorder ${loan.customerName}`}
+      onTouchStart={event => startTouchDrag?.(event, loan.id)}
+      onTouchMove={moveTouchDrag}
+      onTouchEnd={finishTouchDrag}
+      onTouchCancel={cancelTouchDrag}
+    >⋮⋮</div>}
+    <div className="collection-avatar">{loan.customerName.charAt(0).toUpperCase()}</div>
+    <div className="collection-info"><strong>{loan.customerName}</strong><a className="phone-link" href={`tel:${loan.phone}`}>{loan.phone}</a><span>{loan.address || "Address not added"}</span></div>
+    <div className="collection-amount"><span>{paid ? "Collected" : label}</span><strong className={paid ? "green" : "gold"}>{paid ? "✓ Paid" : money(due)}</strong><small>{monthly ? "Principal" : "Balance"} {money(balance)}</small></div>
+    <div className="collection-actions"><Button onClick={() => view(loan)}>Details</Button>{!paid && loan.status === "active" && <Button className="primary" onClick={() => collect(loan)}>Collect</Button>}</div>
+  </article>;
 }
 function Financier({
   loans,
@@ -857,8 +954,8 @@ function Financier({
     const targetId = touchTargetId.current;
     touchTargetId.current = null;
     if (!targetId) { setDraggedId(null); return; }
-    if (!customerMode && module === "all") {
-      const kind = loans.find(loan => loan.id === targetId)?.kind;
+    if (!customerMode && (module === "all" || collectionMode)) {
+      const kind = module === "all" ? loans.find(loan => loan.id === targetId)?.kind : module;
       if (kind) await reorderDashboard(kind, targetId);
       else setDraggedId(null);
       return;
@@ -895,7 +992,7 @@ function Financier({
     if (!detail) return;
     if (!loans.some(loan => loan.id === detail.id)) setDetail(null);
   }, [detail, loans]);
-  if (collectionMode) return <><TodayCollections loans={loans.filter(loan => loan.kind === module)} kind={module} back={() => setCollectionMode(false)} collect={setModal} view={loan => { setDetail(loan); setCollectionMode(false); }} />{modal && <Payment loan={modal} close={() => setModal(null)} save={addPayment} />}{receiptSuccess && <ReceiptSuccessModal receipt={receiptSuccess} settings={orgSettings} token={authToken} onLogAction={onLogReceipt} close={() => setReceiptSuccess(null)} />}</>;
+  if (collectionMode) return <><TodayCollections loans={loans.filter(loan => loan.kind === module)} kind={module} back={() => setCollectionMode(false)} collect={setModal} view={loan => { setDetail(loan); setCollectionMode(false); }} canReorder={isOwner} draggedId={draggedId} setDraggedId={setDraggedId} onReorder={targetId => reorderDashboard(module, targetId)} startTouchDrag={startTouchDrag} moveTouchDrag={moveTouchDrag} finishTouchDrag={finishTouchDrag} cancelTouchDrag={() => { touchTargetId.current = null; setDraggedId(null); }} />{modal && <Payment loan={modal} close={() => setModal(null)} save={addPayment} />}{receiptSuccess && <ReceiptSuccessModal receipt={receiptSuccess} settings={orgSettings} token={authToken} onLogAction={onLogReceipt} close={() => setReceiptSuccess(null)} />}</>;
   if (detail) {
     const loan = loans.find(l => l.id === detail.id);
     if (!loan) return null;
