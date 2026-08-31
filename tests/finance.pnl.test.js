@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { realizedLoss, realizedProfit } from "../src/features/finance/pnl.js";
+import { investedAmount, realizedLoss, realizedProfit } from "../src/features/finance/pnl.js";
 
 test("daily bankruptcy loss is unreturned capital, not remaining receivable", () => {
   const loan = {
@@ -31,4 +31,9 @@ test("monthly bankruptcy loss is remaining principal", () => {
 
 test("active accounts have no realized loss", () => {
   assert.equal(realizedLoss({ kind: "daily", status: "active", disbursedAmount: 8500, transactions: [] }), 0);
+});
+
+test("amount financed is paid-to-customer for daily and principal for monthly", () => {
+  assert.equal(investedAmount({ kind: "daily", disbursedAmount: 8500, collectionAmount: 10000 }), 8500);
+  assert.equal(investedAmount({ kind: "monthly", principal: 100000, disbursedAmount: 0 }), 100000);
 });

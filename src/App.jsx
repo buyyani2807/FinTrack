@@ -7,6 +7,7 @@ import { investedAmount, netPosition, realizedLoss, realizedProfit } from "./fea
 import { byCollectionOrderThenName, mergeAccountOrder, reorderIds } from "./features/finance/collectionOrder";
 import { financeKindLabel, staffAssignableLoans } from "./features/finance/collectionStaff";
 import { mergeAccountTransaction } from "./features/finance/paymentState.js";
+import { remainingCollectable, paymentExceedsRemaining } from "./features/finance/paymentLimits.js";
 import { collectionDetailVisibility, financeRolesAligned, ownerChromeAllowed, sessionUserRole, workspaceSessionAllowed } from "./features/finance/workspaceAccess.js";
 import { ChitCustomerPortal, ChitFundPage } from "./features/chitFund/ChitFundModule";
 import { LegalPage, legalViewFromLocation, openLegalView } from "./features/legal/LegalPage.jsx";
@@ -340,6 +341,7 @@ function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin }) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const allowSignup = isPublicSignupAllowed();
+  const chooseMode = next => { setMode(next); setMessage(""); };
   const signInAndEnter = async () => {
     const result = await supabase.auth.signIn(email, password);
     const profile = await loadWorkspace(result.access_token);
@@ -390,7 +392,7 @@ function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin }) {
     finally { setBusy(false); }
   };
   const isFinanceCustomer = mode === "customer", isChitCustomer = mode === "chitCustomer", isCustomer = isFinanceCustomer || isChitCustomer, isAgent = mode === "agent";
-  return <div className="login"><div className="brand" style={{ textAlign: "center" }}>FinTrack</div><p className="sub" style={{ textAlign: "center", marginBottom: 22 }}>{isChitCustomer ? "View your chit schemes, payments, and live bids when they apply" : isFinanceCustomer ? "View your finance balance and payment history" : isAgent ? "Collection Agent workspace" : "Secure workspace for finance businesses"}</p><form className="card" onSubmit={event => { event.preventDefault(); submit(); }}><div className="tabs" style={{ marginBottom: 18 }}><Button type="button" className={`tab ${mode === "signIn" ? "active" : ""}`} onClick={() => setMode("signIn")}>Financier sign in</Button><Button type="button" className={`tab ${mode === "agent" ? "active" : ""}`} onClick={() => setMode("agent")}>Agent login</Button><Button type="button" className={`tab ${mode === "customer" ? "active" : ""}`} onClick={() => setMode("customer")}>Customer login</Button><Button type="button" className={`tab ${mode === "chitCustomer" ? "active" : ""}`} onClick={() => setMode("chitCustomer")}>Chit customer</Button>{allowSignup && <Button type="button" className={`tab ${mode === "signUp" ? "active" : ""}`} onClick={() => setMode("signUp")}>Create business account</Button>}</div>{isCustomer ? <><Field label={isChitCustomer ? "Chit portal ID" : "Customer portal ID"}><input placeholder={isChitCustomer ? "e.g. CF-1A2B3C4D" : "e.g. FT-1A2B3C4D"} value={portalId} onChange={event => setPortalId(event.target.value.toUpperCase())} /></Field><div className="spacer"><Field label="6-digit PIN"><input type="password" inputMode="numeric" minLength="6" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} /></Field></div></> : <>{mode === "signUp" && <><Field label="Business name"><input placeholder="e.g. Vivek Finance" value={businessName} onChange={event => setBusinessName(event.target.value)} /></Field><div className="spacer"><Field label="Your full name"><input value={fullName} onChange={event => setFullName(event.target.value)} /></Field></div>{signupInviteRequired() && <div className="spacer"><Field label="Invite code"><input value={inviteCode} onChange={event => setInviteCode(event.target.value)} /></Field></div>}</>}<div className="spacer"><Field label={isAgent ? "Agent email" : "Business email"}><input type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} /></Field></div><div className="spacer"><Field label="Password"><input type="password" minLength="8" autoComplete={mode === "signIn" || isAgent ? "current-password" : "new-password"} value={password} onChange={event => setPassword(event.target.value)} /></Field></div></>}{mode === "signIn" && <button type="button" className="link-button" onClick={forgotPassword} disabled={busy}>Forgot password?</button>}{message && <p className="small" style={{ color: message.includes("sent") || message.includes("created") ? C.green : C.red }}>{message}</p>}<Button className="primary spacer" style={{ width: "100%" }} disabled={busy} type="submit">{busy ? "Please wait…" : isChitCustomer ? "Open chit dashboard" : isFinanceCustomer ? "Open my dashboard" : mode === "signUp" ? "Create business account" : "Sign in"}</Button></form><p className="small" style={{ textAlign: "center", marginTop: 16 }}><button type="button" className="link-button" onClick={() => openLegalView("privacy")}>Privacy</button> · <button type="button" className="link-button" onClick={() => openLegalView("terms")}>Terms</button></p></div>;
+  return <div className="login"><div className="brand" style={{ textAlign: "center" }}>FinTrack</div><p className="sub" style={{ textAlign: "center", marginBottom: 22 }}>{isChitCustomer ? "View your chit schemes, payments, and live bids when they apply" : isFinanceCustomer ? "View your finance balance and payment history" : isAgent ? "Collection Agent workspace" : "Secure workspace for finance businesses"}</p><form className="card" onSubmit={event => { event.preventDefault(); submit(); }}><div className="tabs" style={{ marginBottom: 18 }}><Button type="button" className={`tab ${mode === "signIn" ? "active" : ""}`} onClick={() => chooseMode("signIn")}>Financier sign in</Button><Button type="button" className={`tab ${mode === "agent" ? "active" : ""}`} onClick={() => chooseMode("agent")}>Agent login</Button><Button type="button" className={`tab ${mode === "customer" ? "active" : ""}`} onClick={() => chooseMode("customer")}>Customer login</Button><Button type="button" className={`tab ${mode === "chitCustomer" ? "active" : ""}`} onClick={() => chooseMode("chitCustomer")}>Chit customer</Button>{allowSignup && <Button type="button" className={`tab ${mode === "signUp" ? "active" : ""}`} onClick={() => chooseMode("signUp")}>Create business account</Button>}</div>{isCustomer ? <><Field label={isChitCustomer ? "Chit portal ID" : "Customer portal ID"}><input placeholder={isChitCustomer ? "e.g. CF-1A2B3C4D" : "e.g. FT-1A2B3C4D"} value={portalId} onChange={event => setPortalId(event.target.value.toUpperCase())} /></Field><div className="spacer"><Field label="6-digit PIN"><input type="password" inputMode="numeric" minLength="6" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} /></Field></div></> : <>{mode === "signUp" && <><Field label="Business name"><input placeholder="e.g. Vivek Finance" value={businessName} onChange={event => setBusinessName(event.target.value)} /></Field><div className="spacer"><Field label="Your full name"><input value={fullName} onChange={event => setFullName(event.target.value)} /></Field></div>{signupInviteRequired() && <div className="spacer"><Field label="Invite code"><input value={inviteCode} onChange={event => setInviteCode(event.target.value)} /></Field></div>}</>}<div className="spacer"><Field label={isAgent ? "Agent email" : "Business email"}><input type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} /></Field></div><div className="spacer"><Field label="Password"><input type="password" minLength="8" autoComplete={mode === "signIn" || isAgent ? "current-password" : "new-password"} value={password} onChange={event => setPassword(event.target.value)} /></Field></div></>}{mode === "signIn" && <button type="button" className="link-button" onClick={forgotPassword} disabled={busy}>Forgot password?</button>}{message && <p className="small" style={{ color: message.includes("sent") || message.includes("created") ? C.green : C.red }}>{message}</p>}<Button className="primary spacer" style={{ width: "100%" }} disabled={busy} type="submit">{busy ? "Please wait…" : isChitCustomer ? "Open chit dashboard" : isFinanceCustomer ? "Open my dashboard" : mode === "signUp" ? "Create business account" : "Sign in"}</Button></form><p className="small" style={{ textAlign: "center", marginTop: 16 }}><button type="button" className="link-button" onClick={() => openLegalView("privacy")}>Privacy</button> · <button type="button" className="link-button" onClick={() => openLegalView("terms")}>Terms</button></p></div>;
 }
 const csvCell = value => {
   const text = String(value ?? "");
@@ -521,7 +523,7 @@ function Payment({
     date: today(),
     mode: "upi",
     ref: "",
-    amount: isDaily ? String(loan.dailyCollection) : "",
+    amount: isDaily ? String(Math.min(Number(loan.dailyCollection || 0), remainingCollectable(loan))) : "",
     interestAmount: isDaily ? "" : String(Math.round(monthlyBalance(loan) * annualRate(loan, today()) / 100)),
     principalAmount: "",
     penaltyAmount: "",
@@ -540,6 +542,12 @@ function Payment({
   const submit = async () => {
     if (busy) return;
     if (!(total > 0)) return setError("Enter a valid collection amount.");
+    if (isDaily && paymentExceedsRemaining(loan, { amount: total })) {
+      return setError(`Collection cannot exceed the remaining balance of ${money(remainingCollectable(loan))}.`);
+    }
+    if (!isDaily && paymentExceedsRemaining(loan, { principalAmount: Number(f.principalAmount || 0) })) {
+      return setError(`Principal repaid cannot exceed the remaining principal of ${money(remainingCollectable(loan))}.`);
+    }
     const isSplit = f.mode === "cash_upi";
     if (isSplit && (!(Number(f.cashAmount) > 0) || !(Number(f.upiAmount) > 0) || Math.abs(splitTotal - total) > 0.001)) return setError("Cash and UPI amounts must both be positive and equal the total collected.");
     setError("");
@@ -677,6 +685,12 @@ function PaymentCorrectionEditor({ loan, transaction, close, save }) {
   const splitTotal = Number(f.cashAmount || 0) + Number(f.upiAmount || 0);
   const submit = async () => {
     if (!(total > 0)) return setError("Enter a valid collection amount.");
+    if (isDaily && paymentExceedsRemaining(loan, { amount: total, excludePaymentId: transaction.id })) {
+      return setError(`Collection cannot exceed the remaining balance of ${money(remainingCollectable(loan, { excludePaymentId: transaction.id }))}.`);
+    }
+    if (!isDaily && paymentExceedsRemaining(loan, { principalAmount: Number(f.principalAmount || 0), excludePaymentId: transaction.id })) {
+      return setError(`Principal repaid cannot exceed the remaining principal of ${money(remainingCollectable(loan, { excludePaymentId: transaction.id }))}.`);
+    }
     if (isSplit && (!(Number(f.cashAmount) > 0) || !(Number(f.upiAmount) > 0) || Math.abs(splitTotal - total) > 0.001)) {
       return setError("Cash and UPI amounts must both be positive and equal the total collected.");
     }
@@ -1097,7 +1111,7 @@ function DashboardFinanceSection({
   finishTouchDrag,
   cancelTouchDrag,
 }) {
-  const financed = loans.reduce((sum, loan) => sum + (loan.kind === "daily" ? loan.collectionAmount : loan.principal), 0);
+  const financed = loans.reduce((sum, loan) => sum + investedAmount(loan), 0);
   const received = loans.reduce((sum, loan) => sum + loanPaid(loan), 0);
   const outstanding = loans.reduce((sum, loan) => sum + loanBalance(loan), 0);
   const profit = loans.reduce((sum, loan) => sum + realizedProfit(loan), 0);
@@ -1169,7 +1183,7 @@ function DashboardFinanceSection({
               cancelTouchDrag={cancelTouchDrag}
             />}
             <td><strong>{loan.customerName}</strong><br /><a className="small phone-link" href={`tel:${loan.phone}`}>{loan.phone}</a></td>
-            <td data-label="Financed">{money(loan.kind === "daily" ? loan.collectionAmount : loan.principal)}</td>
+            <td data-label="Financed">{money(investedAmount(loan))}</td>
             <td className="red" data-label="Balance">{money(loanBalance(loan))}</td>
             <td><Button onClick={() => onView(loan)}>View</Button></td>
           </tr>)}
