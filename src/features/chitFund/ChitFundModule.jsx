@@ -51,6 +51,7 @@ import { CHIT_TYPES, fixedChitPostLiftMonthlyPayment, fixedChitScheduleDisplayPa
 import { validatePredefinedBidChit } from "./predefinedBidChit";
 import { roundMoney } from "./calculations";
 import { cashUpiSplit, cashUpiSplitIsValid } from "../finance/paymentSplit";
+import { disbursementPayoutError, disbursementPayoutSplit } from "../finance/disbursementMode";
 import { chitPaymentDisplayStatus, chitPaymentOutstanding, filterPaymentsForMonth, memberPaymentsForEnrollment, normalizeMemberPayment, portalPaymentRows } from "./memberPayments";
 import { chitTypeLabel, membershipEnrollmentId, portalMemberships } from "./memberPortal";
 import { memberRemovalCopy, schemeRemovalCopy } from "./schemeAdmin";
@@ -430,6 +431,9 @@ function ChitLiveBidding({ token, scheme, data, onFinalized }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [confirmEnd, setConfirmEnd] = useState(false);
+  const [payoutMode, setPayoutMode] = useState("cash");
+  const [payoutCash, setPayoutCash] = useState("");
+  const [payoutUpi, setPayoutUpi] = useState("");
   const refresh = () => loadChitLiveAuction(token, scheme.id).then(payload => { setLive(payload); setError(""); }).catch(err => setError(err.message || "Could not load live bidding."));
   useEffect(() => {
     let ignore = false;
@@ -472,14 +476,21 @@ function ChitLiveBidding({ token, scheme, data, onFinalized }) {
   const start = () => run(() => startChitLiveAuction(token, scheme.id, live?.next_cycle_number, today()));
   const stop = () => run(() => pauseChitLiveAuction(token, scheme.id));
   const endAuction = () => run(async () => {
-    const result = await endChitLiveAuction(token, auction.id);
+    const payoutErr = disbursementPayoutError(payoutMode, winnerPayout, payoutCash, payoutUpi);
+    if (payoutErr) throw new Error(payoutErr);
+    const split = disbursementPayoutSplit(payoutMode, winnerPayout, payoutCash, payoutUpi);
+    const result = await endChitLiveAuction(token, auction.id, {
+      payoutMode: split.mode,
+      payoutCashAmount: split.cashAmount,
+      payoutUpiAmount: split.upiAmount,
+    });
     setConfirmEnd(false);
     await onFinalized();
     return result;
   });
   return <>
     {scheme.status !== "active" && <p className="notice">Live bidding is available after the scheme is activated.</p>}
-    <p className="copy">Start live bidding on the auction date (for example the 25th of each month). First deduct the fund manager commission ({scheme.commission_percent}% = {money(limits.commission)}). Members then bid <strong>above {money(limits.commission)}</strong>, up to <strong>30% of the chit value ({money(limits.maxBid)})</strong>. Highest bid wins. The winner receives chit value minus that bid.</p>
+    <p className="copy">Start live bidding on the auction date (for example the 25th of each month). First deduct the fund manager commission ({scheme.commission_percent}% = {money(limits.commission)}). Members then bid <strong>above {money(limits.commission)}</strong>, up to <strong>30% of the chit value ({money(limits.maxBid)})</strong>. Highest bid wins. The winner receives chit value minus that bid. Bids that would leave a payout outside {scheme.min_bid_percent}–{scheme.max_bid_percent}% are rejected.</p>
     {error && <p className="red small">{error}</p>}
     <div className="grid metrics">
       <Metric label="Scheme" value={scheme.name} />
@@ -508,13 +519,16 @@ function ChitLiveBidding({ token, scheme, data, onFinalized }) {
       <div className="card"><strong>Participants</strong><div className="table spacer"><table><thead><tr><th>Ticket</th><th>Member</th><th>Status</th><th>Portal</th></tr></thead><tbody>{liveMembers.map(member => { const enrolled = data.enrollments.find(item => item.id === member.enrollment_id); return <tr key={member.enrollment_id}><td>{member.ticket_number}</td><td>{member.full_name}</td><td>{member.status === "eligible" ? "Eligible" : member.status === "already_won" ? "Already won" : member.status}</td><td>{enrollmentPortalId(enrolled) || "Not enabled"}</td></tr>; })}</tbody></table>{!liveMembers.length && <p className="small">No members in this scheme.</p>}</div></div>
       <div className="card"><strong>Bid history</strong><div className="table spacer"><table><thead><tr><th>Time</th><th>Member</th><th>Amount</th><th>Status</th></tr></thead><tbody>{(live?.bids || []).map(bid => <tr key={bid.id}><td>{formatTime(bid.submitted_at)}</td><td>Ticket {bid.ticket_number} · {bid.member_name}</td><td>{money(bid.bid_amount)}</td><td>{bid.status === "winner" ? "Winner" : bid.status === "not_selected" ? "Not selected" : "Valid"}</td></tr>)}</tbody></table>{!(live?.bids || []).length && <p className="small">No live bids yet.</p>}</div></div>
     </div>
-    {confirmEnd && <Modal><h2 className="title">End live bidding?</h2><p className="copy">This will finalize Month {auction.cycle_number} using the highest discount bid, then create the monthly bid, dividend, and installment records. Previous months will not change.</p><div className="notice">Winning member: Ticket {leadingMember?.ticket_number} · {leadingMember?.full_name}<br />Discount bid: {money(leading?.bid_amount)}<br />Winner receives (payout): {money(winnerPayout)} (chit value − discount)<br />Manager commission: {money(limits.commission)}</div><div className="row spacer"><Button onClick={() => setConfirmEnd(false)}>Cancel</Button><Button className="primary" disabled={busy} onClick={endAuction}>{busy ? "Finalizing…" : "Confirm and finalize"}</Button></div></Modal>}
+    {confirmEnd && <Modal><h2 className="title">End live bidding?</h2><p className="copy">This will finalize Month {auction.cycle_number} using the highest discount bid, then create the monthly bid, dividend, and installment records. Previous months will not change.</p><div className="notice">Winning member: Ticket {leadingMember?.ticket_number} · {leadingMember?.full_name}<br />Discount bid: {money(leading?.bid_amount)}<br />Winner receives (payout): {money(winnerPayout)} (chit value − discount)<br />Manager commission: {money(limits.commission)}</div><div className="form spacer"><Field label="Prize payout mode"><select value={payoutMode} onChange={e => setPayoutMode(e.target.value)}><option value="cash">Cash</option><option value="upi">UPI</option><option value="cash_upi">Cash + UPI</option></select></Field>{payoutMode === "cash_upi" && <><Field label="Cash amount (₹)"><input type="number" min="0" value={payoutCash} onChange={e => setPayoutCash(e.target.value)} /></Field><Field label="UPI amount (₹)"><input type="number" min="0" value={payoutUpi} onChange={e => setPayoutUpi(e.target.value)} /></Field></>}</div><div className="row spacer"><Button onClick={() => setConfirmEnd(false)}>Cancel</Button><Button className="primary" disabled={busy} onClick={endAuction}>{busy ? "Finalizing…" : "Confirm and finalize"}</Button></div></Modal>}
   </>;
 }
 
 function FixedChitLiftModal({ token, scheme, lift, enrollments, usedEnrollmentIds, close, done }) {
   const [enrollmentId, setEnrollmentId] = useState("");
   const [liftDate, setLiftDate] = useState(today());
+  const [payoutMode, setPayoutMode] = useState("cash");
+  const [payoutCash, setPayoutCash] = useState("");
+  const [payoutUpi, setPayoutUpi] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const managerCommission = resolveFixedManagerCommission({
@@ -527,15 +541,22 @@ function FixedChitLiftModal({ token, scheme, lift, enrollments, usedEnrollmentId
   const submit = async event => {
     event.preventDefault();
     if (!enrollmentId) return setError("Select a member.");
+    const paid = Number(lift.lift_amount);
+    const payoutErr = disbursementPayoutError(payoutMode, paid, payoutCash, payoutUpi);
+    if (payoutErr) return setError(payoutErr);
+    const split = disbursementPayoutSplit(payoutMode, paid, payoutCash, payoutUpi);
     setBusy(true); setError("");
     try {
-      await finalizeFixedChitLift(token, { schemeId: scheme.id, monthNumber: lift.month_number, enrollmentId, liftDate });
+      await finalizeFixedChitLift(token, {
+        schemeId: scheme.id, monthNumber: lift.month_number, enrollmentId, liftDate,
+        payoutMode: split.mode, payoutCashAmount: split.cashAmount, payoutUpiAmount: split.upiAmount,
+      });
       done();
     } catch (err) { setError(err.message || "Could not finalize this Fixed Chit lift."); }
     finally { setBusy(false); }
   };
   const postLiftMonthlyPayment = fixedChitPostLiftMonthlyPayment(scheme.installment_amount, scheme.fixed_monthly_increment);
-  return <Modal><h2 className="title">Lift Chit — Month {lift.month_number}</h2><div className="grid metrics"><Metric label="Lift amount" value={money(lift.lift_amount)} color="gold" /><Metric label="Manager commission" value={money(managerCommission)} /><Metric label="Monthly payment after lift" value={money(postLiftMonthlyPayment)} /><Metric label="Remaining months" value={Number(scheme.duration_months) - Number(lift.month_number)} /></div><form onSubmit={submit}><div className="form spacer"><Field className="span" label="Member"><select required value={enrollmentId} onChange={event => setEnrollmentId(event.target.value)}><option value="">Select member</option>{eligible.map(item => <option key={item.id} value={item.id}>Ticket {item.ticket_number} — {enrollmentName(item)}</option>)}</select></Field><Field label="Lift date"><input required type="date" value={liftDate} onChange={event => setLiftDate(event.target.value)} /></Field></div>{!eligible.length && <p className="notice">No eligible member remains for this lift.</p>}{error && <p className="red small">{error}</p>}<div className="row spacer"><Button type="button" onClick={close}>Cancel</Button><Button className="primary" type="submit" disabled={busy || !eligible.length}>{busy ? "Finalizing…" : "Finalize lift"}</Button></div></form></Modal>;
+  return <Modal><h2 className="title">Lift Chit — Month {lift.month_number}</h2><div className="grid metrics"><Metric label="Lift amount" value={money(lift.lift_amount)} color="gold" /><Metric label="Manager commission" value={money(managerCommission)} /><Metric label="Monthly payment after lift" value={money(postLiftMonthlyPayment)} /><Metric label="Remaining months" value={Number(scheme.duration_months) - Number(lift.month_number)} /></div><form onSubmit={submit}><div className="form spacer"><Field className="span" label="Member"><select required value={enrollmentId} onChange={event => setEnrollmentId(event.target.value)}><option value="">Select member</option>{eligible.map(item => <option key={item.id} value={item.id}>Ticket {item.ticket_number} — {enrollmentName(item)}</option>)}</select></Field><Field label="Lift date"><input required type="date" value={liftDate} onChange={event => setLiftDate(event.target.value)} /></Field><Field label="Prize payout mode"><select value={payoutMode} onChange={event => setPayoutMode(event.target.value)}><option value="cash">Cash</option><option value="upi">UPI</option><option value="cash_upi">Cash + UPI</option></select></Field>{payoutMode === "cash_upi" && <><Field label="Cash amount (₹)"><input type="number" min="0" value={payoutCash} onChange={event => setPayoutCash(event.target.value)} /></Field><Field label="UPI amount (₹)"><input type="number" min="0" value={payoutUpi} onChange={event => setPayoutUpi(event.target.value)} /></Field></>}</div>{!eligible.length && <p className="notice">No eligible member remains for this lift.</p>}{error && <p className="red small">{error}</p>}<div className="row spacer"><Button type="button" onClick={close}>Cancel</Button><Button className="primary" type="submit" disabled={busy || !eligible.length}>{busy ? "Finalizing…" : "Finalize lift"}</Button></div></form></Modal>;
 }
 
 function FixedChitPaymentModal({ token, payment, memberName, memberPhone, scheme, close, done, orgSettings = {}, workspace = {}, onReceipt }) {
@@ -656,16 +677,31 @@ function FixedChitSchemeDetails({ token, scheme, back, onSchemeDeleted, orgSetti
 function PredefinedAssignModal({ token, item, enrollments, usedEnrollmentIds, close, done }) {
   const [enrollmentId, setEnrollmentId] = useState("");
   const [assignedDate, setAssignedDate] = useState(today());
+  const [payoutMode, setPayoutMode] = useState("cash");
+  const [payoutCash, setPayoutCash] = useState("");
+  const [payoutUpi, setPayoutUpi] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const eligible = enrollments.filter(row => row.status === "active" && !usedEnrollmentIds.has(row.id));
   const submit = async event => {
-    event.preventDefault(); setBusy(true); setError("");
-    try { await finalizePredefinedChitMonth(token, { id: item.id, enrollmentId, assignedDate }); done(); }
+    event.preventDefault();
+    if (!enrollmentId) return setError("Select a member.");
+    const paid = Number(item.net_receivable);
+    const payoutErr = disbursementPayoutError(payoutMode, paid, payoutCash, payoutUpi);
+    if (payoutErr) return setError(payoutErr);
+    const split = disbursementPayoutSplit(payoutMode, paid, payoutCash, payoutUpi);
+    setBusy(true); setError("");
+    try {
+      await finalizePredefinedChitMonth(token, {
+        id: item.id, enrollmentId, assignedDate,
+        payoutMode: split.mode, payoutCashAmount: split.cashAmount, payoutUpiAmount: split.upiAmount,
+      });
+      done();
+    }
     catch (err) { setError(err.message || "Could not finalize this predefined month."); }
     finally { setBusy(false); }
   };
-  return <Modal><h2 className="title">Assign Member — Month {item.month_number}</h2><div className="grid metrics"><Metric label="EMI" value={money(item.emi)} /><Metric label="Bid amount" value={money(item.bid_amount)} color="gold" /><Metric label="Manager commission" value={money(item.manager_commission)} /><Metric label="Net receivable" value={money(item.net_receivable)} color="green" /></div><form onSubmit={submit}><div className="form spacer"><Field className="span" label="Member"><select required value={enrollmentId} onChange={event => setEnrollmentId(event.target.value)}><option value="">Select member</option>{eligible.map(row => <option key={row.id} value={row.id}>Ticket {row.ticket_number} — {enrollmentName(row)}</option>)}</select></Field><Field label="Finalized date"><input required type="date" value={assignedDate} onChange={event => setAssignedDate(event.target.value)} /></Field></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button type="button" onClick={close}>Cancel</Button><Button className="primary" disabled={busy || !eligible.length} type="submit">{busy ? "Finalizing…" : "Finalize assignment"}</Button></div></form></Modal>;
+  return <Modal><h2 className="title">Assign Member — Month {item.month_number}</h2><div className="grid metrics"><Metric label="EMI" value={money(item.emi)} /><Metric label="Bid amount" value={money(item.bid_amount)} color="gold" /><Metric label="Manager commission" value={money(item.manager_commission)} /><Metric label="Net receivable" value={money(item.net_receivable)} color="green" /></div><form onSubmit={submit}><div className="form spacer"><Field className="span" label="Member"><select required value={enrollmentId} onChange={event => setEnrollmentId(event.target.value)}><option value="">Select member</option>{eligible.map(row => <option key={row.id} value={row.id}>Ticket {row.ticket_number} — {enrollmentName(row)}</option>)}</select></Field><Field label="Finalized date"><input required type="date" value={assignedDate} onChange={event => setAssignedDate(event.target.value)} /></Field><Field label="Prize payout mode"><select value={payoutMode} onChange={event => setPayoutMode(event.target.value)}><option value="cash">Cash</option><option value="upi">UPI</option><option value="cash_upi">Cash + UPI</option></select></Field>{payoutMode === "cash_upi" && <><Field label="Cash amount (₹)"><input type="number" min="0" value={payoutCash} onChange={event => setPayoutCash(event.target.value)} /></Field><Field label="UPI amount (₹)"><input type="number" min="0" value={payoutUpi} onChange={event => setPayoutUpi(event.target.value)} /></Field></>}</div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button type="button" onClick={close}>Cancel</Button><Button className="primary" disabled={busy || !eligible.length} type="submit">{busy ? "Finalizing…" : "Finalize assignment"}</Button></div></form></Modal>;
 }
 
 function PredefinedScheduleEditModal({ token, item, close, done }) {
@@ -1228,6 +1264,7 @@ export function ChitCustomerPortal({ session, logout }) {
         bidAmount: amount, chitValue, commissionPercent: scheme.commission_percent,
         commissionAmount: limits.commission, liveMaxBidAmount: limits.maxBid,
         leadingBidAmount: leading?.bid_amount,
+        minBidPercent: scheme.min_bid_percent, maxBidPercent: scheme.max_bid_percent,
       });
     } catch (err) { setError(err.message); return; }
     setBusy(true); setError("");

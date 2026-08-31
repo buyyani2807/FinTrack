@@ -56,6 +56,7 @@ Run these in the Supabase SQL Editor **in order**. Each file is idempotent where
 | 048 | `048_ft028_ft031_integrity.sql` | **FT-028 / FT-031** — monthly rate edits apply from today; inactive staff cannot SELECT assigned finance rows |
 | 049 | `049_ft029_ft034_integrity.sql` | **FT-029 / FT-030 / FT-032** — monthly split must match total; collection cannot exceed remaining; edit cannot reuse another payment date |
 | 050 | `050_disbursement_payout_mode.sql` | Daily / Monthly money-out can be Cash, UPI, or Cash+UPI (cashbook posts to the matching ledger) |
+| 051 | `051_ft035_ft037_live_bid_and_chit_payout_mode.sql` | **FT-035 / FT-037** — live bids enforce payout min/max %; chit prize cashbook posts by Cash/UPI/Cash+UPI |
 
 After running 041 (and 042 if Save & sync failed), open **More → Accounts**, set opening balances once, then tap **Sync from FinTrack** to backfill historical collections and disbursements. If Cashbook **Delete** does nothing, run 043. After 044, tap **Sync from FinTrack** again so monthly principal disbursements are posted. After 045, existing daily bankrupt `loss_amount` values are rewritten to disbursed − collected.
 
@@ -70,6 +71,8 @@ After **048**, inactive collection agents cannot read assigned finance rows, and
 After **049**, finance payment RPCs reject a monthly split that does not equal the total, a collection above remaining daily/principal, and a payment-date change onto a day that already has a collection.
 
 After **050**, creating or editing a Daily / Monthly account lets you choose **Cash**, **UPI**, or **Cash + UPI** for the amount paid to the customer (or principal financed). Existing accounts stay Cash. After running 050, tap **Sync from FinTrack** only if you edit an account’s payout mode; new accounts sync automatically.
+
+After **051**, live discount bids are rejected when the resulting payout % is outside the scheme min/max (so finalize cannot fail after accepting bids). Chit prize / lift finalize screens let you choose Cash / UPI / Cash+UPI, and cashbook posts to the matching ledger. `/api/auth/signup` provisions the workspace and deletes the Auth user if provisioning fails (needs `SUPABASE_SERVICE_ROLE_KEY` on Vercel). After 051, tap **Sync from FinTrack** once so historical chit prizes re-post with mode columns (existing rows stay Cash).
 
 After running 036, verify in Supabase SQL Editor:
 

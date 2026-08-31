@@ -99,9 +99,18 @@ async function request(path, options = {}, accessToken, retried = false) {
 
 export const supabase = {
   auth: {
-    signUp: async (email, password) => {
+    signUp: async (email, password, workspace = {}) => {
       try {
-        const session = await authApi("signup", { method: "POST", body: JSON.stringify({ email, password }) });
+        const session = await authApi("signup", {
+          method: "POST",
+          body: JSON.stringify({
+            email,
+            password,
+            businessName: workspace.businessName || workspace.workspace_name || "",
+            fullName: workspace.fullName || workspace.display_name || "",
+            inviteCode: workspace.inviteCode || workspace.invite_code || "",
+          }),
+        });
         rememberAccessToken(session.access_token);
         clearLegacyStorage();
         return session;

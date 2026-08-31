@@ -27,7 +27,16 @@ export function leadingLiveBid(bids = []) {
   })[0];
 }
 
-export function validateLiveBid({ bidAmount, chitValue, commissionPercent, commissionAmount, liveMaxBidAmount, leadingBidAmount }) {
+export function validateLiveBid({
+  bidAmount,
+  chitValue,
+  commissionPercent,
+  commissionAmount,
+  liveMaxBidAmount,
+  leadingBidAmount,
+  minBidPercent = 70,
+  maxBidPercent = 95,
+}) {
   const value = Number(chitValue);
   const amount = roundMoney(Number(bidAmount));
   const { commission, maxBid } = liveAuctionLimits({ chitValue: value, commissionPercent, commissionAmount, liveMaxBidAmount });
@@ -37,7 +46,14 @@ export function validateLiveBid({ bidAmount, chitValue, commissionPercent, commi
   if (leadingBidAmount != null && Number.isFinite(Number(leadingBidAmount)) && amount <= Number(leadingBidAmount)) {
     throw new Error("A new bid must be higher than the current leading bid");
   }
-  return { bidAmount: amount, bidPercent: roundMoney(amount / value * 100), payoutAmount: liveBidPayout({ chitValue: value, bidAmount: amount }) };
+  const payoutAmount = liveBidPayout({ chitValue: value, bidAmount: amount });
+  const payoutPercent = Math.round((payoutAmount * 10000) / value) / 100;
+  const minPayout = Number(minBidPercent);
+  const maxPayout = Number(maxBidPercent);
+  if (Number.isFinite(minPayout) && Number.isFinite(maxPayout) && (payoutPercent < minPayout || payoutPercent > maxPayout)) {
+    throw new Error(`This discount would leave a payout outside the scheme payout limits (${minPayout}–${maxPayout})`);
+  }
+  return { bidAmount: amount, bidPercent: roundMoney(amount / value * 100), payoutAmount, payoutPercent };
 }
 
 export function winsForEnrollment(cycles = [], bids = [], enrollmentId, chitValue) {

@@ -534,6 +534,9 @@ export const deleteChitInstallmentPayment = (token, paymentId) => supabase.rpc("
 export const finalizeFixedChitLift = (token, lift) => supabase.rpc("chit_finalize_fixed_lift", {
   input_scheme_id: lift.schemeId, input_month_number: Number(lift.monthNumber),
   input_enrollment_id: lift.enrollmentId, input_lift_date: lift.liftDate,
+  payout_mode: lift.payoutMode || "cash",
+  payout_cash_amount: lift.payoutCashAmount != null ? Number(lift.payoutCashAmount) : null,
+  payout_upi_amount: lift.payoutUpiAmount != null ? Number(lift.payoutUpiAmount) : null,
 }, token);
 export const updateFixedChitPayment = (token, payment) => supabase.rpc("chit_update_fixed_payment", {
   input_payment_id: payment.id, input_amount_paid: Number(payment.amountPaid),
@@ -551,6 +554,9 @@ export const updatePredefinedChitScheduleMonth = (token, item) => supabase.rpc("
 }, token);
 export const finalizePredefinedChitMonth = (token, item) => supabase.rpc("chit_finalize_predefined_month", {
   input_schedule_id: item.id, input_enrollment_id: item.enrollmentId, input_assigned_date: item.assignedDate,
+  payout_mode: item.payoutMode || "cash",
+  payout_cash_amount: item.payoutCashAmount != null ? Number(item.payoutCashAmount) : null,
+  payout_upi_amount: item.payoutUpiAmount != null ? Number(item.payoutUpiAmount) : null,
 }, token);
 export const updatePredefinedChitPayment = (token, payment) => supabase.rpc("chit_update_predefined_payment", {
   input_payment_id: payment.id, input_amount_paid: Number(payment.amountPaid),
@@ -585,7 +591,12 @@ export const pauseChitLiveAuction = (token, schemeId) => supabase.rpc("chit_paus
 export const placeChitLiveBid = (token, auctionId, enrollmentId, bidAmount, clientNonce) => supabase.rpc("chit_place_live_bid", {
   input_auction_id: auctionId, input_enrollment_id: enrollmentId, input_bid_amount: Number(bidAmount), input_client_nonce: clientNonce,
 }, token);
-export const endChitLiveAuction = (token, auctionId) => supabase.rpc("chit_end_live_auction", { input_auction_id: auctionId }, token);
+export const endChitLiveAuction = (token, auctionId, payout = {}) => supabase.rpc("chit_end_live_auction", {
+  input_auction_id: auctionId,
+  payout_mode: payout.payoutMode || "cash",
+  payout_cash_amount: payout.payoutCashAmount != null ? Number(payout.payoutCashAmount) : null,
+  payout_upi_amount: payout.payoutUpiAmount != null ? Number(payout.payoutUpiAmount) : null,
+}, token);
 export const enableChitMemberPortal = (token, enrollmentId, pin) => supabase.rpc("enable_chit_member_portal", { input_enrollment_id: enrollmentId, new_pin: pin }, token);
 export const resetChitMemberPortalPin = (token, enrollmentId, pin) => supabase.rpc("reset_chit_member_portal_pin", { input_enrollment_id: enrollmentId, new_pin: pin }, token);
 export const chitCustomerPortalLogin = (portalId, pin) => supabase.rpc("chit_customer_portal_login", { input_portal_id: portalId, input_pin: pin });

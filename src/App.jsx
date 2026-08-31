@@ -380,12 +380,19 @@ function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin }) {
         if (!allowSignup) throw new Error("New business signup is invite-only. Contact FinTrack support for access.");
         if (!businessName || !fullName) throw new Error("Enter your business name and your name.");
         if (!validateSignupInvite(inviteCode)) throw new Error("Enter a valid invite code.");
-        const result = await supabase.auth.signUp(email, password);
-        const workspace = { workspace_name: businessName, display_name: fullName, invite_code: inviteCode || null };
+        const result = await supabase.auth.signUp(email, password, { businessName, fullName, inviteCode });
         if (!result.access_token) {
           throw new Error("Your account could not be signed in automatically. In Supabase, turn off Confirm email under Authentication → Providers → Email, then try again.");
         }
-        await supabase.rpc("provision_financier", workspace, result.access_token);
+        // API signup already runs provision_financier and deletes the Auth user on failure.
+        // Direct (local) signup still needs client-side provisioning.
+        if (!result.provisioned) {
+          await supabase.rpc("provision_financier", {
+            workspace_name: businessName,
+            display_name: fullName,
+            invite_code: inviteCode || null,
+          }, result.access_token);
+        }
         let profile;
         try {
           profile = await loadWorkspace(result.access_token);

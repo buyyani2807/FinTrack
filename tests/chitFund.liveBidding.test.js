@@ -25,13 +25,17 @@ test("live bidding starts above commission and caps at 30 percent of chit value"
   assert.throws(() => validateLiveBid({ ...base, bidAmount: 300001 }), /30%/);
   assert.deepEqual(
     validateLiveBid({ ...base, bidAmount: 50000.01 }),
-    { bidAmount: 50000.01, bidPercent: 5, payoutAmount: 949999.99 }
+    { bidAmount: 50000.01, bidPercent: 5, payoutAmount: 949999.99, payoutPercent: 95 }
   );
   assert.deepEqual(
     validateLiveBid({ ...base, bidAmount: 200000 }),
-    { bidAmount: 200000, bidPercent: 20, payoutAmount: 800000 }
+    { bidAmount: 200000, bidPercent: 20, payoutAmount: 800000, payoutPercent: 80 }
   );
   assert.equal(liveBidPayout({ chitValue: 1000000, bidAmount: 300000 }), 700000);
+  assert.throws(
+    () => validateLiveBid({ ...base, bidAmount: 250000, minBidPercent: 80, maxBidPercent: 95 }),
+    /payout limits/
+  );
 });
 
 test("rejects a live bid that is not higher than the leader", () => {

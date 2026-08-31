@@ -44,6 +44,25 @@ export async function signupGrant(email, password) {
   return parseAuthResponse(response);
 }
 
+/** Best-effort Auth user cleanup when workspace provisioning fails after signup. */
+export async function deleteAuthUser(userId) {
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceKey || !userId) return false;
+  try {
+    const response = await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
+      method: "DELETE",
+      headers: {
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+        "Content-Type": "application/json",
+      },
+    });
+    return response.ok || response.status === 404;
+  } catch {
+    return false;
+  }
+}
+
 export async function refreshGrant(refreshToken) {
   assertAuthConfigured();
   const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=refresh_token`, {
