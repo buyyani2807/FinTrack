@@ -9,6 +9,7 @@ import {
   runningBalancesForLedger,
   sourceOriginLabel,
   todayIso,
+  withRunningBalances,
 } from "../src/features/accounts/cashbookModel.js";
 
 const ledgers = [
@@ -56,6 +57,20 @@ test("runningBalancesForLedger calculates closing balance chronologically", () =
   const rows = runningBalancesForLedger(entries, "cash");
   assert.equal(rows[0].balance, 92500);
   assert.equal(rows.at(-1).balance, 100000);
+});
+
+test("All accounts cashbook lists UPI collections next to cash disbursements", () => {
+  const mixed = [
+    { id: "d1", ledgerAccountId: "cash", entryDate: "2026-08-31", entryTime: "09:00", moneyIn: 0, moneyOut: 8500, description: "Vamsee · Paid to customer", sourceType: "finance_disbursement" },
+    { id: "d2", ledgerAccountId: "cash", entryDate: "2026-08-31", entryTime: "09:05", moneyIn: 0, moneyOut: 800, description: "Vaishu · Paid to customer", sourceType: "finance_disbursement" },
+    { id: "in1", ledgerAccountId: "cash", entryDate: "2026-08-31", entryTime: "10:00", moneyIn: 100, moneyOut: 0, description: "Vamsee · Daily collection", sourceType: "finance_payment" },
+    { id: "in2", ledgerAccountId: "upi", entryDate: "2026-08-31", entryTime: "10:05", moneyIn: 50, moneyOut: 0, description: "Vaishu · Daily collection", sourceType: "finance_payment" },
+  ];
+  const cashOnly = runningBalancesForLedger(mixed, "cash");
+  assert.equal(cashOnly.some(row => row.id === "in2"), false);
+  const allAccounts = withRunningBalances(mixed);
+  assert.deepEqual(allAccounts.map(row => row.id).sort(), ["d1", "d2", "in1", "in2"]);
+  assert.equal(allAccounts.find(row => row.id === "in2").moneyIn, 50);
 });
 
 test("filterCashbookEntries supports split-payment search without duplication", () => {

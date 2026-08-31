@@ -55,10 +55,14 @@ export const aggregateOverview = (ledgers, entries, range) => {
   };
 };
 
-export const runningBalancesForLedger = (entries, ledgerId) => {
-  const sorted = [...entries]
-    .filter(entry => entry.ledgerAccountId === ledgerId)
-    .sort((a, b) => `${a.entryDate}${a.entryTime}`.localeCompare(`${b.entryDate}${b.entryTime}`));
+export const runningBalancesForLedger = (entries, ledgerId) =>
+  withRunningBalances(entries.filter(entry => entry.ledgerAccountId === ledgerId));
+
+export const withRunningBalances = (entries) => {
+  const sorted = [...entries].sort((a, b) =>
+    `${a.entryDate}${a.entryTime}${a.createdAt || ""}${a.id || ""}`.localeCompare(
+      `${b.entryDate}${b.entryTime}${b.createdAt || ""}${b.id || ""}`,
+    ));
   let balance = 0;
   return sorted.map(entry => {
     balance += Number(entry.moneyIn || 0) - Number(entry.moneyOut || 0);

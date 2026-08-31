@@ -23,6 +23,7 @@ import {
   runningBalancesForLedger,
   sourceOriginLabel,
   todayIso,
+  withRunningBalances,
 } from "./cashbookModel.js";
 import { formatInr } from "../../lib/formatMoney.js";
 
@@ -197,12 +198,9 @@ export function AccountsModule({ token, close, loans = [] }) {
       source: sourceFilter,
       loanById,
     });
-    const cashLedger = ledgers.find(l => l.accountType === "cash" && l.isDefault)?.id || ledgers[0]?.id;
-    return runningBalancesForLedger(
-      accountFilter === "all" ? filtered : filtered,
-      accountFilter === "all" ? cashLedger : accountFilter,
-    );
-  }, [rangedEntries, search, accountFilter, directionFilter, sourceFilter, loanById, ledgers]);
+    if (accountFilter === "all") return withRunningBalances(filtered);
+    return runningBalancesForLedger(filtered, accountFilter);
+  }, [rangedEntries, search, accountFilter, directionFilter, sourceFilter, loanById]);
 
   const expenseRows = useMemo(
     () => rangedEntries.filter(entry => entry.sourceType === "expense" || entry.category === "Expense" || EXPENSE_CATEGORIES.includes(entry.category)),
