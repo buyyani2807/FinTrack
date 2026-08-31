@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./lib/supabase";
 import { monthlyInterestOnBalance } from "./features/finance/calculations";
 import { byCollectionOrderThenName, mergeAccountOrder, reorderIds } from "./features/finance/collectionOrder";
+import { financeKindLabel, staffAssignableLoans } from "./features/finance/collectionStaff";
+import { mergeAccountTransaction } from "./features/finance/paymentState.js";
 import { ChitCustomerPortal, ChitFundPage } from "./features/chitFund/ChitFundModule";
 import { LegalPage, legalViewFromLocation, openLegalView } from "./features/legal/LegalPage.jsx";
 import { isPublicSignupAllowed, signupInviteRequired, validateSignupInvite } from "./lib/signupGate.js";
@@ -1274,17 +1276,12 @@ function CollectionStaffPage({ loans, close, loadAgents, createAgent, assignAgen
   const refresh = async () => { setLoading(true); setError(""); try { setAgents(await loadAgents()); } catch (e) { setError(e.message || "Could not load staff."); } finally { setLoading(false); } };
   useEffect(() => { refresh(); }, []);
   const assigned = loan => draftIds.includes(loan.id);
-  const visibleLoans = loans.filter(loan =>
-    loan.kind === "daily"
-    && loanStatus(loan) === "active"
-    && (!loan.collectionAgentId || loan.collectionAgentId === selected?.id)
-    && `${loan.customerName} ${loan.phone}`.toLowerCase().includes(search.toLowerCase())
-  ).sort(byCustomerName);
+  const visibleLoans = staffAssignableLoans(loans, { selectedAgentId: selected?.id, search, statusOf: loanStatus }).sort(byCustomerName);
   const choose = agent => { setSelected(agent); setDraftIds(loans.filter(loan => loan.collectionAgentId === agent.id).map(loan => loan.id)); setSearch(""); setSaved(""); };
   const toggle = id => setDraftIds(ids => ids.includes(id) ? ids.filter(value => value !== id) : [...ids, id]);
   const saveStaff = async details => { try { const updated = await updateAgent({ id: selected.id, ...details }); setSelected(updated); setAgents(current => current.map(agent => agent.id === updated.id ? updated : agent)); setShowEdit(false); setSaved("Staff details saved successfully."); } catch (e) { setError(e.message || "Could not save staff details."); } };
   const saveAssignments = async () => { try { await Promise.all(loans.map(loan => { const next = draftIds.includes(loan.id) ? selected.id : loan.collectionAgentId === selected.id ? "" : loan.collectionAgentId; return next === loan.collectionAgentId ? null : assignAgent(loan, next); })); setAgents(current => current.map(agent => agent.id === selected.id ? { ...agent, assigned_customer_count: draftIds.length } : agent)); setSaved("Customer assignments saved successfully."); } catch (e) { setError(e.message || "Could not save assignments."); } };
-  return <Modal><div className="row"><Button onClick={selected ? () => setSelected(null) : close}>← Back</Button><h2 className="title">Collection Staff</h2></div>{error && <p className="red small">{error}</p>}{!selected ? <><div className="row spacer"><span className="copy">Create staff, review existing staff, and assign customer accounts.</span><Button className="primary" onClick={() => setShowCreate(true)}>+ Create New Agent</Button></div>{loading ? <p className="small spacer">Loading collection staff…</p> : <div className="table spacer"><table><thead><tr><th>Agent</th><th>Email</th><th>Mobile</th><th>Status</th><th>Assigned customers</th><th></th></tr></thead><tbody>{agents.map(agent => <tr key={agent.id}><td>{agent.full_name}</td><td>{agent.email || "—"}</td><td>{agent.phone || "—"}</td><td><Badge status={agent.is_active ? "active" : "closed"} /></td><td>{agent.assigned_customer_count || 0}</td><td><Button onClick={() => choose(agent)}>View / Assign</Button></td></tr>)}</tbody></table></div>}</> : <div className="card spacer"><div className="row"><h3>{selected.full_name}</h3><Button onClick={() => setShowEdit(true)}>Edit staff</Button><Button onClick={() => setShowResetPassword(true)}>Reset password</Button></div><p className="small">Email and mobile number can be changed using Edit staff. Select customers, then save. {draftIds.length} customers selected.</p>{saved && <p className="green small">{saved}</p>}<div className="customer-search"><input placeholder="Search customers" value={search} onChange={e => setSearch(e.target.value)} /></div><div className="table"><table><thead><tr><th>Customer</th><th>Finance</th><th>Outstanding</th><th>Assigned</th></tr></thead><tbody>{visibleLoans.map(loan => <tr key={loan.id}><td>{loan.customerName}<br /><span className="small">{loan.phone}</span></td><td>{loan.kind}</td><td>{money(loanBalance(loan))}</td><td><input type="checkbox" checked={assigned(loan)} onChange={() => toggle(loan.id)} /></td></tr>)}</tbody></table></div><div className="row spacer"><Button onClick={() => choose(selected)}>Cancel</Button><Button className="primary" onClick={saveAssignments}>Save Changes</Button></div></div>}{showEdit && <EditCollectionStaff staff={selected} close={() => setShowEdit(false)} save={saveStaff} />}{showResetPassword && selected && <ResetStaffPasswordModal staff={selected} close={() => setShowResetPassword(false)} save={async password => { await updateAgent({ id: selected.id, name: selected.full_name, email: selected.email, phone: selected.phone, active: selected.is_active, password }); setSaved("Password reset successfully."); }} />}{showCreate && <CreateAgent close={() => { setShowCreate(false); refresh(); }} save={async details => { await createAgent(details); }} />}</Modal>;
+  return <Modal><div className="row"><Button onClick={selected ? () => setSelected(null) : close}>← Back</Button><h2 className="title">Collection Staff</h2></div>{error && <p className="red small">{error}</p>}{!selected ? <><div className="row spacer"><span className="copy">Create staff, review existing staff, and assign customer accounts.</span><Button className="primary" onClick={() => setShowCreate(true)}>+ Create New Agent</Button></div>{loading ? <p className="small spacer">Loading collection staff…</p> : <div className="table spacer"><table><thead><tr><th>Agent</th><th>Email</th><th>Mobile</th><th>Status</th><th>Assigned customers</th><th></th></tr></thead><tbody>{agents.map(agent => <tr key={agent.id}><td>{agent.full_name}</td><td>{agent.email || "—"}</td><td>{agent.phone || "—"}</td><td><Badge status={agent.is_active ? "active" : "closed"} /></td><td>{agent.assigned_customer_count || 0}</td><td><Button onClick={() => choose(agent)}>View / Assign</Button></td></tr>)}</tbody></table></div>}</> : <div className="card spacer"><div className="row"><h3>{selected.full_name}</h3><Button onClick={() => setShowEdit(true)}>Edit staff</Button><Button onClick={() => setShowResetPassword(true)}>Reset password</Button></div><p className="small">Email and mobile number can be changed using Edit staff. Select customers, then save. {draftIds.length} customers selected.</p>{saved && <p className="green small">{saved}</p>}<div className="customer-search"><input placeholder="Search customers" value={search} onChange={e => setSearch(e.target.value)} /></div><div className="table"><table><thead><tr><th>Customer</th><th>Finance</th><th>Outstanding</th><th>Assigned</th></tr></thead><tbody>{visibleLoans.map(loan => <tr key={loan.id}><td>{loan.customerName}<br /><span className="small">{loan.phone}</span></td><td>{financeKindLabel(loan.kind)}</td><td>{money(loanBalance(loan))}</td><td><input type="checkbox" checked={assigned(loan)} onChange={() => toggle(loan.id)} /></td></tr>)}</tbody></table></div><div className="row spacer"><Button onClick={() => choose(selected)}>Cancel</Button><Button className="primary" onClick={saveAssignments}>Save Changes</Button></div></div>}{showEdit && <EditCollectionStaff staff={selected} close={() => setShowEdit(false)} save={saveStaff} />}{showResetPassword && selected && <ResetStaffPasswordModal staff={selected} close={() => setShowResetPassword(false)} save={async password => { await updateAgent({ id: selected.id, name: selected.full_name, email: selected.email, phone: selected.phone, active: selected.is_active, password }); setSaved("Password reset successfully."); }} />}{showCreate && <CreateAgent close={() => { setShowCreate(false); refresh(); }} save={async details => { await createAgent(details); }} />}</Modal>;
 }
 function EditCollectionStaff({ staff, close, save }) {
   const [name, setName] = useState(staff.full_name || ""), [email, setEmail] = useState(staff.email || ""), [phone, setPhone] = useState(staff.phone || ""), [active, setActive] = useState(staff.is_active !== false), [busy, setBusy] = useState(false);
@@ -1394,11 +1391,22 @@ export default function App() {
     return () => window.removeEventListener("popstate", syncLegal);
   }, []);
   useEffect(() => {
+    let cancelled = false;
     supabase.auth.restoreSession()
-      .then(session => {
-        if (session?.access_token) setUser(current => current ?? { role: "financier", authToken: session.access_token });
+      .then(async session => {
+        if (!session?.access_token || cancelled) return;
+        const next = await loadWorkspace(session.access_token);
+        if (cancelled) return;
+        setWorkspace(next);
+        setUser({
+          role: next.role === "staff" ? "agent" : "financier",
+          authToken: session.access_token,
+          name: next.fullName,
+        });
       })
-      .finally(() => setAuthReady(true));
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setAuthReady(true); });
+    return () => { cancelled = true; };
   }, []);
   const refreshLoans = async (token = user?.authToken) => {
     if (!token) return;
@@ -1413,7 +1421,6 @@ export default function App() {
       setWorkspace(next);
       return next;
     } catch {
-      setWorkspace(null);
       return null;
     }
   };
@@ -1444,7 +1451,10 @@ export default function App() {
   };
   const savePayment = async (loan, payment) => {
     const result = await recordPayment(user.authToken, loan, payment);
-    await refreshLoans();
+    if (result?.transaction) {
+      setLoans(current => mergeAccountTransaction(current, loan.id, result.transaction));
+    }
+    refreshLoans(user.authToken);
     return result;
   };
   const logReceipt = (token, source, paymentId, action) => {
@@ -1471,11 +1481,11 @@ export default function App() {
   const getManagedAgents = () => loadManagedAgents(user.authToken);
   const updateAgentAssignment = async (loan, agentId) => { await assignCollectionAgent(user.authToken, loan.id, agentId); await refreshLoans(); };
   const saveCollectionStaff = details => updateCollectionAgent(user.authToken, details);
-  const staffRole = user?.role === "agent";
+  const staffRole = user?.role === "agent" || workspace?.role === "staff";
   if (legalView) {
     return <div className="app"><style>{styles + enhancements + homeReportHide + visualRefresh + mobileCollections + mobileLayout}</style><LegalPage view={legalView} /></div>;
   }
-  if (!authReady && !user && !isPasswordRecovery) {
+  if (!authReady && !isPasswordRecovery) {
     return <div className="app"><style>{styles + enhancements + homeReportHide + visualRefresh + mobileCollections + mobileLayout}</style><div className="login"><p className="sub" style={{ textAlign: "center" }}>Loading FinTrack…</p></div></div>;
   }
   return <div className="app"><style>{styles + enhancements + homeReportHide + visualRefresh + accountsStyles + creditScoreStyles + mobileCollections + mobileLayout + receiptStyles + `.phone-link{color:${C.blue};text-decoration:none}.phone-link:hover{text-decoration:underline}`}</style>{isPasswordRecovery ? <PasswordRecovery /> : !user ? <FinancierAuth onLogin={setUser} onCustomerLogin={loan => setUser({ role: "customer", loan })} onChitCustomerLogin={session => setUser({ role: "chitCustomer", session })} /> : user.role === "financier" || staffRole ? <>{dataError && <div className="notice" style={{ position: "fixed", top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 20 }}>{dataError}</div>}<Financier loans={loans} businessName={workspace?.businessName} setLoans={setLoans} onCreateLoan={createLoan} onRecordPayment={savePayment} onUpdateLoan={updateLoan} onDeleteLoan={removeLoan} onSaveCustomerPortal={saveCustomerPortal} onLoadKyc={getKyc} onSaveKyc={updateKyc} onStatusChange={changeStatus} onPaymentNoteChange={changePaymentNotes} onPaymentCorrect={correctPayment} onPaymentDelete={removePayment} onCollectionOrderChange={changeCollectionOrder} role={staffRole ? "staff" : "owner"} logout={logout} authToken={user.authToken} orgSettings={workspace?.organizationSettings || {}} workspace={workspace || {}} onLogReceipt={logReceipt} module={financeModule} onModuleChange={setFinanceModule} />{!staffRole && <FinancierTools loans={loans} token={user.authToken} orgSettings={workspace?.organizationSettings || {}} workspace={workspace || {}} onLogReceipt={logReceipt} onSettingsSaved={() => refreshWorkspace()} selectedModule={financeModule} onModuleChange={setFinanceModule} onCreateAgent={addCollectionAgent} onLoadAgents={getManagedAgents} onAssignAgent={updateAgentAssignment} onUpdateAgent={saveCollectionStaff} />}</> : user.role === "chitCustomer" ? <ChitCustomerPortal session={user.session} logout={logout} /> : <><Customer loan={customerLoan} logout={logout} /><CustomerReportDownload loan={customerLoan} /></>}</div>;

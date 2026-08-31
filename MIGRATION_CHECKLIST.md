@@ -47,8 +47,9 @@ Run these in the Supabase SQL Editor **in order**. Each file is idempotent where
 | 041 | `041_accounts_cashbook.sql` | **Accounts / Cashbook** — ledger accounts, auto-sync from finance & chit payments |
 | 042 | `042_accounts_cashbook_sync_fix.sql` | Fix sync backfill error (`record "fa" is not assigned yet`) |
 | 043 | `043_accounts_delete_manual_entry.sql` | Delete manual cashbook entries (Salary, Rent, Capital, etc.) |
+| 044 | `044_ft001_ft006_integrity.sql` | Chit Cash+UPI cashbook sync, owner-only chit SELECT, account-delete ledger cleanup, monthly disbursement |
 
-After running 041 (and 042 if Save & sync failed), open **More → Accounts**, set opening balances once, then tap **Sync from FinTrack** to backfill historical collections and disbursements. If Cashbook **Delete** does nothing, run 043.
+After running 041 (and 042 if Save & sync failed), open **More → Accounts**, set opening balances once, then tap **Sync from FinTrack** to backfill historical collections and disbursements. If Cashbook **Delete** does nothing, run 043. After 044, tap **Sync from FinTrack** again so monthly principal disbursements are posted.
 
 After running 036, verify in Supabase SQL Editor:
 

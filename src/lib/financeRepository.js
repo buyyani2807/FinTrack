@@ -504,6 +504,7 @@ export const updateFixedChitPayment = (token, payment) => supabase.rpc("chit_upd
   input_payment_id: payment.id, input_amount_paid: Number(payment.amountPaid),
   input_paid_date: payment.paidDate, input_payment_mode: payment.paymentMode,
   input_payment_reference: payment.paymentReference || null, input_notes: payment.notes || null,
+  input_cash_amount: Number(payment.cashAmount || 0), input_upi_amount: Number(payment.upiAmount || 0),
 }, token);
 export const deleteFixedChitPayment = (token, paymentId) => supabase.rpc("chit_delete_fixed_payment", {
   input_payment_id: paymentId,
@@ -520,6 +521,7 @@ export const updatePredefinedChitPayment = (token, payment) => supabase.rpc("chi
   input_payment_id: payment.id, input_amount_paid: Number(payment.amountPaid),
   input_paid_date: payment.paidDate, input_payment_mode: payment.paymentMode,
   input_payment_reference: payment.paymentReference || null, input_notes: payment.notes || null,
+  input_cash_amount: Number(payment.cashAmount || 0), input_upi_amount: Number(payment.upiAmount || 0),
 }, token);
 export const deletePredefinedChitPayment = (token, paymentId) => supabase.rpc("chit_delete_predefined_payment", {
   input_payment_id: paymentId,

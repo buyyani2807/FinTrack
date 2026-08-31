@@ -50,6 +50,7 @@ import { LIVE_BID_MODEL, enrollmentPortalId, liveAuctionLimits, liveBidPayout, v
 import { CHIT_TYPES, fixedChitPostLiftMonthlyPayment, fixedChitScheduleDisplayPayment, fixedCommissionFromPercent, fixedCommissionPercentFromAmount, formatFixedManagerCommissionSummary, normalizeFixedCommissionAmount, resolveFixedManagerCommission, validateFixedChit } from "./fixedChit";
 import { validatePredefinedBidChit } from "./predefinedBidChit";
 import { roundMoney } from "./calculations";
+import { cashUpiSplit, cashUpiSplitIsValid } from "../finance/paymentSplit";
 import { chitPaymentDisplayStatus, chitPaymentOutstanding, filterPaymentsForMonth, memberPaymentsForEnrollment, normalizeMemberPayment, portalPaymentRows } from "./memberPayments";
 import { chitTypeLabel, membershipEnrollmentId, portalMemberships } from "./memberPortal";
 import { memberRemovalCopy, schemeRemovalCopy } from "./schemeAdmin";
@@ -519,6 +520,8 @@ function FixedChitPaymentModal({ token, payment, memberName, memberPhone, scheme
   const [amount, setAmount] = useState(String(payment.amount_paid || payment.amount_due));
   const [date, setDate] = useState(payment.paid_date || today());
   const [mode, setMode] = useState(payment.payment_mode || "upi");
+  const [cash, setCash] = useState(String(payment.cash_amount || ""));
+  const [upi, setUpi] = useState(String(payment.upi_amount || ""));
   const [reference, setReference] = useState(payment.payment_reference || "");
   const [notes, setNotes] = useState(payment.notes || "");
   const [busy, setBusy] = useState(false);
@@ -527,10 +530,12 @@ function FixedChitPaymentModal({ token, payment, memberName, memberPhone, scheme
   const submit = async event => {
     event.preventDefault();
     const value = Number(amount);
+    const split = cashUpiSplit(mode, value, cash, upi);
     if (!(value > 0) || value > Number(payment.amount_due)) return setError("Enter an amount within the scheduled payment.");
+    if (!cashUpiSplitIsValid(mode, value, split.cash, split.upi)) return setError("Cash + UPI must equal the total.");
     setBusy(true); setError("");
     try {
-      await updateFixedChitPayment(token, { id: payment.id, amountPaid: value, paidDate: date, paymentMode: mode, paymentReference: reference, notes });
+      await updateFixedChitPayment(token, { id: payment.id, amountPaid: value, paidDate: date, paymentMode: mode, paymentReference: reference, notes, cashAmount: split.cash, upiAmount: split.upi });
       const row = await fetchFixedChitPaymentById(token, payment.id);
       if (row?.receipt_number && onReceipt) {
         onReceipt(buildChitReceipt({
@@ -548,7 +553,7 @@ function FixedChitPaymentModal({ token, payment, memberName, memberPhone, scheme
     } catch (err) { setError(err.message || "Could not save this Fixed Chit payment."); }
     finally { setBusy(false); }
   };
-  return <Modal><h2 className="title">{payment.amount_paid ? "Edit" : "Record"} Fixed Chit payment</h2><form onSubmit={submit}><div className="form spacer"><Field label="Member"><input disabled value={memberName || "Member"} /></Field><Field label="Payment month"><input disabled value={`Month ${payment.payment_month}`} /></Field><Field label="Amount due"><input disabled value={money(amountDue)} /></Field><Field label="Amount paid (₹)"><input required type="number" min="0.01" max={amountDue} step="0.01" value={amount} onChange={event => setAmount(event.target.value)} /></Field><Field label="Paid date"><input required type="date" value={date} onChange={event => setDate(event.target.value)} /></Field><Field label="Payment mode"><select value={mode} onChange={event => setMode(event.target.value)}><option value="upi">UPI</option><option value="cash">Cash</option><option value="cash_upi">Cash + UPI</option></select></Field><Field label="Reference"><input value={reference} onChange={event => setReference(event.target.value)} /></Field><Field className="span" label="Notes"><input value={notes} onChange={event => setNotes(event.target.value)} /></Field></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button type="button" onClick={close}>Cancel</Button><Button className="primary" type="submit" disabled={busy}>{busy ? "Saving…" : "Save payment"}</Button></div></form></Modal>;
+  return <Modal><h2 className="title">{payment.amount_paid ? "Edit" : "Record"} Fixed Chit payment</h2><form onSubmit={submit}><div className="form spacer"><Field label="Member"><input disabled value={memberName || "Member"} /></Field><Field label="Payment month"><input disabled value={`Month ${payment.payment_month}`} /></Field><Field label="Amount due"><input disabled value={money(amountDue)} /></Field><Field label="Amount paid (₹)"><input required type="number" min="0.01" max={amountDue} step="0.01" value={amount} onChange={event => setAmount(event.target.value)} /></Field><Field label="Paid date"><input required type="date" value={date} onChange={event => setDate(event.target.value)} /></Field><Field label="Payment mode"><select value={mode} onChange={event => setMode(event.target.value)}><option value="upi">UPI</option><option value="cash">Cash</option><option value="cash_upi">Cash + UPI</option></select></Field>{mode === "cash_upi" && <><Field label="Cash amount (₹)"><input type="number" min="0" value={cash} onChange={event => setCash(event.target.value)} /></Field><Field label="UPI amount (₹)"><input type="number" min="0" value={upi} onChange={event => setUpi(event.target.value)} /></Field></>}<Field label="Reference"><input value={reference} onChange={event => setReference(event.target.value)} /></Field><Field className="span" label="Notes"><input value={notes} onChange={event => setNotes(event.target.value)} /></Field></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button type="button" onClick={close}>Cancel</Button><Button className="primary" type="submit" disabled={busy}>{busy ? "Saving…" : "Save payment"}</Button></div></form></Modal>;
 }
 
 function ChitPaymentMonthPicker({ duration, value, onChange }) {
@@ -656,15 +661,20 @@ function PredefinedScheduleEditModal({ token, item, close, done }) {
 }
 
 function PredefinedPaymentModal({ token, payment, memberName, memberPhone, scheme, close, done, orgSettings = {}, workspace = {}, onReceipt }) {
-  const [form, setForm] = useState({ amountPaid: payment.amount_paid || payment.amount_due, paidDate: payment.paid_date || today(), paymentMode: payment.payment_mode || "upi", paymentReference: payment.payment_reference || "", notes: payment.notes || "" });
+  const [form, setForm] = useState({ amountPaid: payment.amount_paid || payment.amount_due, paidDate: payment.paid_date || today(), paymentMode: payment.payment_mode || "upi", cash: payment.cash_amount || "", upi: payment.upi_amount || "", paymentReference: payment.payment_reference || "", notes: payment.notes || "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const amountDue = roundMoney(payment.amount_due);
   const set = (key, value) => setForm(current => ({ ...current, [key]: value }));
   const submit = async event => {
-    event.preventDefault(); setBusy(true); setError("");
+    event.preventDefault();
+    const value = Number(form.amountPaid);
+    const split = cashUpiSplit(form.paymentMode, value, form.cash, form.upi);
+    if (!(value > 0) || value > Number(payment.amount_due)) return setError("Enter an amount within the scheduled payment.");
+    if (!cashUpiSplitIsValid(form.paymentMode, value, split.cash, split.upi)) return setError("Cash + UPI must equal the total.");
+    setBusy(true); setError("");
     try {
-      await updatePredefinedChitPayment(token, { id: payment.id, ...form });
+      await updatePredefinedChitPayment(token, { id: payment.id, ...form, cashAmount: split.cash, upiAmount: split.upi });
       const row = await fetchPredefinedChitPaymentById(token, payment.id);
       if (row?.receipt_number && onReceipt) {
         onReceipt(buildChitReceipt({
@@ -683,7 +693,7 @@ function PredefinedPaymentModal({ token, payment, memberName, memberPhone, schem
     catch (err) { setError(err.message || "Could not save this payment."); }
     finally { setBusy(false); }
   };
-  return <Modal><h2 className="title">{payment.amount_paid ? "Edit" : "Record"} EMI payment</h2><form onSubmit={submit}><div className="form spacer"><Field label="Member"><input disabled value={memberName || "Member"} /></Field><Field label="Expected EMI"><input disabled value={money(amountDue)} /></Field><Field label="Amount paid (₹)"><input required type="number" min="0.01" max={amountDue} step="0.01" value={form.amountPaid} onChange={e => set("amountPaid", e.target.value)} /></Field><Field label="Payment date"><input required type="date" value={form.paidDate} onChange={e => set("paidDate", e.target.value)} /></Field><Field label="Payment mode"><select value={form.paymentMode} onChange={e => set("paymentMode", e.target.value)}><option value="cash">Cash</option><option value="upi">UPI</option><option value="cash_upi">Cash + UPI</option></select></Field><Field label="Reference"><input value={form.paymentReference} onChange={e => set("paymentReference", e.target.value)} /></Field><Field label="Notes"><input value={form.notes} onChange={e => set("notes", e.target.value)} /></Field></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button type="button" onClick={close}>Cancel</Button><Button className="primary" disabled={busy} type="submit">{busy ? "Saving…" : "Save payment"}</Button></div></form></Modal>;
+  return <Modal><h2 className="title">{payment.amount_paid ? "Edit" : "Record"} EMI payment</h2><form onSubmit={submit}><div className="form spacer"><Field label="Member"><input disabled value={memberName || "Member"} /></Field><Field label="Expected EMI"><input disabled value={money(amountDue)} /></Field><Field label="Amount paid (₹)"><input required type="number" min="0.01" max={amountDue} step="0.01" value={form.amountPaid} onChange={e => set("amountPaid", e.target.value)} /></Field><Field label="Payment date"><input required type="date" value={form.paidDate} onChange={e => set("paidDate", e.target.value)} /></Field><Field label="Payment mode"><select value={form.paymentMode} onChange={e => set("paymentMode", e.target.value)}><option value="cash">Cash</option><option value="upi">UPI</option><option value="cash_upi">Cash + UPI</option></select></Field>{form.paymentMode === "cash_upi" && <><Field label="Cash amount (₹)"><input type="number" min="0" value={form.cash} onChange={e => set("cash", e.target.value)} /></Field><Field label="UPI amount (₹)"><input type="number" min="0" value={form.upi} onChange={e => set("upi", e.target.value)} /></Field></>}<Field label="Reference"><input value={form.paymentReference} onChange={e => set("paymentReference", e.target.value)} /></Field><Field label="Notes"><input value={form.notes} onChange={e => set("notes", e.target.value)} /></Field></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button type="button" onClick={close}>Cancel</Button><Button className="primary" disabled={busy} type="submit">{busy ? "Saving…" : "Save payment"}</Button></div></form></Modal>;
 }
 
 function PredefinedChitMemberDetails({ token, scheme, enrollment, item, payments, back, recordPayment, deletePayment, onPortalChange, onDeleted, orgSettings = {} }) {
