@@ -487,6 +487,18 @@ export const updateFixedChitScheme = (token, scheme) => supabase.rpc("chit_updat
   scheme_late_penalty_amount: Number(scheme.latePenaltyAmount || 0),
   scheme_security_deposit_amount: Number(scheme.securityDepositAmount || 0),
 }, token);
+const attachChitCollectorNames = async (token, groups) => {
+  const rows = (groups || []).flat().filter(Boolean);
+  rows.forEach(row => { if (row.collectorName == null) row.collectorName = ""; });
+  const ids = [...new Set(rows.map(row => row.collected_by).filter(Boolean))];
+  if (!ids.length) return;
+  const profiles = await supabase.query(`/rest/v1/profiles?select=id,full_name&id=in.(${ids.join(",")})`, token).catch(() => []);
+  const names = Object.fromEntries((profiles || []).map(profile => [profile.id, profile.full_name || ""]));
+  rows.forEach(row => {
+    row.collectorName = names[row.collected_by] || "";
+  });
+};
+
 export const loadChitSchemeDetails = async (token, schemeId) => {
   const enrollmentSelect = async extra => supabase.query(`/rest/v1/chit_enrollments?scheme_id=eq.${schemeId}&select=*,chit_members(full_name,phone,address)${extra}&order=ticket_number.asc`, token);
   const enrollmentPromise = enrollmentSelect(",chit_member_portal_credentials(portal_id)").catch(() => enrollmentSelect(""));
@@ -500,14 +512,16 @@ export const loadChitSchemeDetails = async (token, schemeId) => {
   ]);
   const members = sortMembersByName(enrollments);
   const cycleIds = cycles.map(cycle => cycle.id);
-  if (!cycleIds.length) {
-    return { enrollments: members, cycles, bids: [], installments: [], fixedLifts, fixedPayments, predefinedSchedule, predefinedPayments };
+  let bids = [];
+  let installments = [];
+  if (cycleIds.length) {
+    const cycleFilter = cycleIds.join(",");
+    [bids, installments] = await Promise.all([
+      supabase.query(`/rest/v1/chit_bids?cycle_id=in.(${cycleFilter})&select=*`, token),
+      supabase.query(`/rest/v1/chit_installments?cycle_id=in.(${cycleFilter})&select=*&order=due_date.desc`, token),
+    ]);
   }
-  const cycleFilter = cycleIds.join(",");
-  const [bids, installments] = await Promise.all([
-    supabase.query(`/rest/v1/chit_bids?cycle_id=in.(${cycleFilter})&select=*`, token),
-    supabase.query(`/rest/v1/chit_installments?cycle_id=in.(${cycleFilter})&select=*&order=due_date.desc`, token),
-  ]);
+  await attachChitCollectorNames(token, [fixedPayments, predefinedPayments, installments]);
   return { enrollments: members, cycles, bids, installments, fixedLifts, fixedPayments, predefinedSchedule, predefinedPayments };
 };
 export const updateChitInstallmentPayment = (token, payment) => supabase.rpc("chit_update_installment_payment", {

@@ -36,6 +36,8 @@ const sampleAuction = () => {
         cycle_id: "c1",
         net_amount_due: 100000,
         amount_paid: index < 2 ? 100000 : 0,
+        payment_mode: index === 0 ? "cash" : index === 1 ? "upi" : null,
+        collectorName: index === 0 ? "Vaishu" : index === 1 ? "Vamsee" : "",
       })),
     },
   };
@@ -60,7 +62,13 @@ test("builds an auction month statement matching the sample totals", () => {
   });
   assert.equal(statement.collections.length, 10);
   assert.equal(statement.collections[0].status, "Paid");
+  assert.equal(statement.collections[0].paymentMode, "Cash");
+  assert.equal(statement.collections[0].collectedBy, "Vaishu");
+  assert.equal(statement.collections[1].paymentMode, "UPI");
+  assert.equal(statement.collections[1].collectedBy, "Vamsee");
   assert.equal(statement.collections[2].status, "Pending");
+  assert.equal(statement.collections[2].paymentMode, "—");
+  assert.equal(statement.collections[2].collectedBy, "—");
   assert.equal(statement.outstanding.length, 8);
   assert.equal(statement.outstanding[0].name, "Kishore");
   assert.equal(statement.outstanding[0].thisMonth, 100000);
@@ -93,7 +101,7 @@ test("uses fixed-chit payment rows and lift prize", () => {
       enrollments: [member("e1", "Anita", 1), member("e2", "Vikram", 2)],
       fixedLifts: [{ month_number: 1, status: "completed", enrollment_id: "e1", lift_amount: 50000, manager_commission: 2000, amount_paid_to_member: 48000 }],
       fixedPayments: [
-        { enrollment_id: "e1", payment_month: 1, amount_due: 5000, amount_paid: 5000 },
+        { enrollment_id: "e1", payment_month: 1, amount_due: 5000, amount_paid: 5000, payment_mode: "cash_upi", cash_amount: 2000, upi_amount: 3000, collectorName: "Admin" },
         { enrollment_id: "e2", payment_month: 1, amount_due: 5000, amount_paid: 0 },
       ],
     },
@@ -104,6 +112,10 @@ test("uses fixed-chit payment rows and lift prize", () => {
   assert.equal(statement.prize.winner, "Anita");
   assert.equal(statement.prize.netPayout, 48000);
   assert.equal(statement.outstanding[0].name, "Vikram");
+  assert.match(statement.collections[0].paymentMode, /Cash \+ UPI/);
+  assert.equal(statement.collections[0].collectedBy, "Admin");
+  assert.equal(statement.collections[1].paymentMode, "—");
+  assert.equal(statement.collections[1].collectedBy, "—");
 });
 
 test("uses predefined EMI rows and completed month prize", () => {
@@ -112,7 +124,7 @@ test("uses predefined EMI rows and completed month prize", () => {
     details: {
       enrollments: [member("e1", "Meera", 1)],
       predefinedSchedule: [{ month_number: 1, status: "completed", enrollment_id: "e1", bid_amount: 90000, manager_commission: 3000, net_receivable: 87000, emi: 9000 }],
-      predefinedPayments: [{ enrollment_id: "e1", payment_month: 1, amount_due: 9000, amount_paid: 9000 }],
+      predefinedPayments: [{ enrollment_id: "e1", payment_month: 1, amount_due: 9000, amount_paid: 9000, payment_mode: "bank", collectorName: "Kishore" }],
     },
     monthNumber: 1,
   });
@@ -121,6 +133,23 @@ test("uses predefined EMI rows and completed month prize", () => {
   assert.equal(statement.prize.winner, "Meera");
   assert.equal(statement.prize.prize, 90000);
   assert.equal(statement.outstanding.length, 0);
+  assert.equal(statement.collections[0].paymentMode, "Bank transfer");
+  assert.equal(statement.collections[0].collectedBy, "Kishore");
+});
+
+test("treats paid legacy chit rows without mode or collector as unknown", () => {
+  const statement = buildChitMonthStatement({
+    scheme: { name: "Auction", chit_type: "auction", start_date: "2026-01-01", installment_amount: 1000, chit_value: 10000 },
+    details: {
+      enrollments: [member("e1", "Rohit", 1)],
+      cycles: [{ id: "c1", cycle_number: 1 }],
+      installments: [{ enrollment_id: "e1", cycle_id: "c1", net_amount_due: 1000, amount_paid: 1000 }],
+    },
+    monthNumber: 1,
+  });
+  assert.equal(statement.collections[0].status, "Paid");
+  assert.equal(statement.collections[0].paymentMode, "—");
+  assert.equal(statement.collections[0].collectedBy, "—");
 });
 
 test("labels months from the scheme start date and clamps the current month", () => {
@@ -142,6 +171,8 @@ test("renders a downloadable PDF with the sample statement sections", () => {
   assert.match(pdf, /MONTH STATEMENT/);
   assert.match(pdf, /AUCTION \/ PRIZE/);
   assert.match(pdf, /COLLECTIONS/);
+  assert.match(pdf, /Collected by/);
+  assert.match(pdf, /Vaishu/);
   assert.match(pdf, /OUTSTANDING DUES/);
   assert.match(pdf, /Satish/);
   assert.match(pdf, /Kishore/);

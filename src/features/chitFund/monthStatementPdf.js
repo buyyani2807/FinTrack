@@ -1,7 +1,12 @@
 import { buildChitMonthStatement, moneyInr } from "./monthStatement.js";
 
 const PAGE = { width: 595, height: 842, left: 40, right: 555, top: 800, bottom: 48 };
-const ascii = text => String(text ?? "").replace(/₹/g, "Rs.").replace(/·/g, "|").replace(/[^\x20-\x7E]/g, "?");
+const ascii = text => String(text ?? "").replace(/₹/g, "Rs.").replace(/·/g, "|").replace(/—/g, "-").replace(/[^\x20-\x7E]/g, "?");
+const clip = (value, max) => {
+  const text = ascii(value);
+  if (text.length <= max) return text;
+  return `${text.slice(0, Math.max(1, max - 1))}.`;
+};
 const escapePdf = text => ascii(text).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
 
 function pdfObject(id, body) {
@@ -114,19 +119,23 @@ function layoutStatement(statement) {
   y -= 28;
 
   heading("COLLECTIONS", `${statement.collections.length} members`);
-  commands.push(text("F1", 8, PAGE.left, y, "#"));
-  commands.push(text("F1", 8, 70, y, "Member"));
-  commands.push(text("F1", 8, 280, y, "Due"));
-  commands.push(text("F1", 8, 380, y, "Paid"));
-  commands.push(text("F1", 8, 480, y, "Status"));
+  commands.push(text("F1", 7, PAGE.left, y, "#"));
+  commands.push(text("F1", 7, 58, y, "Member"));
+  commands.push(text("F1", 7, 168, y, "Due"));
+  commands.push(text("F1", 7, 228, y, "Paid"));
+  commands.push(text("F1", 7, 288, y, "Mode"));
+  commands.push(text("F1", 7, 368, y, "Collected by"));
+  commands.push(text("F1", 7, 488, y, "Status"));
   y -= 14;
   statement.collections.forEach((row, index) => {
     ensure(16);
-    commands.push(text("F1", 10, PAGE.left, y, String(index + 1)));
-    commands.push(text("F1", 10, 70, y, row.name));
-    commands.push(text("F1", 10, 280, y, moneyInr(row.due)));
-    commands.push(text("F1", 10, 380, y, moneyInr(row.paid)));
-    commands.push(text("F1", 10, 480, y, row.status));
+    commands.push(text("F1", 8, PAGE.left, y, String(index + 1)));
+    commands.push(text("F1", 8, 58, y, clip(row.name, 18)));
+    commands.push(text("F1", 8, 168, y, moneyInr(row.due)));
+    commands.push(text("F1", 8, 228, y, moneyInr(row.paid)));
+    commands.push(text("F1", 8, 288, y, clip(row.paymentModeShort || row.paymentMode, 14)));
+    commands.push(text("F1", 8, 368, y, clip(row.collectedBy, 18)));
+    commands.push(text("F1", 8, 488, y, row.status));
     y -= 14;
   });
   y -= 8;

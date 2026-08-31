@@ -29,7 +29,7 @@ const formatStamp = date => {
   return value.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
 };
 
-function collectionRow(enrollment, due, paid) {
+function collectionRow(enrollment, due, paid, payment) {
   const amountDue = roundMoney(due);
   const amountPaid = roundMoney(paid);
   const pending = roundMoney(Math.max(0, amountDue - amountPaid));
@@ -41,7 +41,38 @@ function collectionRow(enrollment, due, paid) {
     paid: amountPaid,
     pending,
     status: pending > 0 ? "Pending" : "Paid",
+    paymentMode: chitPaymentModeLabel(payment),
+    paymentModeShort: chitPaymentModeShort(payment),
+    collectedBy: chitCollectorLabel(payment),
   };
+}
+
+function chitPaymentModeShort(payment) {
+  const label = chitPaymentModeLabel(payment);
+  if (label.startsWith("Cash + UPI")) return "Cash + UPI";
+  return label;
+}
+
+export function chitPaymentModeLabel(payment) {
+  if (!payment || roundMoney(payment.amount_paid || payment.paid || 0) <= 0) return "—";
+  const mode = String(payment.payment_mode || payment.mode || "").trim();
+  if (!mode) return "—";
+  if (mode === "cash_upi") {
+    const cash = asNumber(payment.cash_amount);
+    const upi = asNumber(payment.upi_amount);
+    if (cash > 0 || upi > 0) return `Cash + UPI (Cash ${formatInr(cash)} · UPI ${formatInr(upi)})`;
+    return "Cash + UPI";
+  }
+  if (mode === "upi") return "UPI";
+  if (mode === "cash") return "Cash";
+  if (mode === "bank") return "Bank transfer";
+  return mode;
+}
+
+export function chitCollectorLabel(payment) {
+  if (!payment || roundMoney(payment.amount_paid || payment.paid || 0) <= 0) return "—";
+  const name = String(payment.collectorName || payment.collector_name || "").trim();
+  return name || "—";
 }
 
 export function buildChitMonthStatement({ scheme, details = {}, monthNumber, generatedAt = new Date() }) {
@@ -55,14 +86,14 @@ export function buildChitMonthStatement({ scheme, details = {}, monthNumber, gen
   const collections = enrollments.map(enrollment => {
     if (type === "fixed") {
       const payment = (details.fixedPayments || []).find(item => item.enrollment_id === enrollment.id && Number(item.payment_month) === month);
-      return collectionRow(enrollment, payment?.amount_due ?? scheme.installment_amount, payment?.amount_paid || 0);
+      return collectionRow(enrollment, payment?.amount_due ?? scheme.installment_amount, payment?.amount_paid || 0, payment);
     }
     if (type === "fixed_predefined_bid") {
       const payment = (details.predefinedPayments || []).find(item => item.enrollment_id === enrollment.id && Number(item.payment_month) === month);
-      return collectionRow(enrollment, payment?.amount_due ?? predefined?.emi ?? 0, payment?.amount_paid || 0);
+      return collectionRow(enrollment, payment?.amount_due ?? predefined?.emi ?? 0, payment?.amount_paid || 0, payment);
     }
     const installment = (details.installments || []).find(item => item.enrollment_id === enrollment.id && item.cycle_id === cycle?.id);
-    return collectionRow(enrollment, installment?.net_amount_due ?? scheme.installment_amount, installment?.amount_paid || 0);
+    return collectionRow(enrollment, installment?.net_amount_due ?? scheme.installment_amount, installment?.amount_paid || 0, installment);
   });
 
   const expected = roundMoney(collections.reduce((sum, row) => sum + row.due, 0));
