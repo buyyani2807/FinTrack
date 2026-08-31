@@ -1,3 +1,5 @@
+import { formatInr } from "../../lib/formatMoney.js";
+
 const asNumber = value => Number(value || 0);
 const roundMoney = value => Math.round((asNumber(value) + Number.EPSILON) * 100) / 100;
 
@@ -137,4 +139,4 @@ export function buildChitMonthStatement({ scheme, details = {}, monthNumber, gen
   };
 }
 
-export const moneyInr = value => `Rs. ${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+export const moneyInr = value => formatInr(value, "Rs. ");

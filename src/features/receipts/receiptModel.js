@@ -1,6 +1,7 @@
 import { monthlyInterestOnBalance } from "../finance/calculations.js";
+import { formatInr } from "../../lib/formatMoney.js";
 
-const money = n => `₹${Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+const money = formatInr;
 
 export const financeAccountId = loan => loan.portalId || `${loan.kind === "daily" ? "DF" : "MF"}-${String(loan.id || "").slice(0, 8).toUpperCase()}`;
 

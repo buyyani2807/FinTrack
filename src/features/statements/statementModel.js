@@ -12,8 +12,9 @@ import { chitPaymentAmounts, chitPaymentDisplayStatus, chitPaymentOutstanding } 
 import { chitTypeLabel } from "../chitFund/memberPortal.js";
 import { enrollmentPortalId, winsForEnrollment } from "../chitFund/liveBidding.js";
 import { CHIT_TYPES } from "../chitFund/fixedChit.js";
+import { formatInr } from "../../lib/formatMoney.js";
 
-const moneyFn = n => `₹${Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+const moneyFn = formatInr;
 
 const todayIso = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 

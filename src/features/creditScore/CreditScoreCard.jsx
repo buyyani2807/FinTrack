@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { GAUGE_SEGMENTS, calculateFintrackCreditScore, scoreToGaugeAngle } from "./creditScoreModel.js";
+import { formatInr } from "../../lib/formatMoney.js";
 
-const money = value => `₹${Number(value || 0).toLocaleString("en-IN")}`;
+const money = formatInr;
 
 const BAND_COLORS = {
   excellent: "#4fd08d",

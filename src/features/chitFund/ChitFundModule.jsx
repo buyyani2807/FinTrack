@@ -54,6 +54,7 @@ import { cashUpiSplit, cashUpiSplitIsValid } from "../finance/paymentSplit";
 import { chitPaymentDisplayStatus, chitPaymentOutstanding, filterPaymentsForMonth, memberPaymentsForEnrollment, normalizeMemberPayment, portalPaymentRows } from "./memberPayments";
 import { chitTypeLabel, membershipEnrollmentId, portalMemberships } from "./memberPortal";
 import { memberRemovalCopy, schemeRemovalCopy } from "./schemeAdmin";
+import { formatInr } from "../../lib/formatMoney.js";
 
 const indiaCalendarDate = date => {
   const parts = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
@@ -61,7 +62,7 @@ const indiaCalendarDate = date => {
   return `${value.year}-${value.month}-${value.day}`;
 };
 const today = () => indiaCalendarDate(new Date());
-const money = n => `₹${Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+const money = formatInr;
 const formatChitDate = iso => {
   if (!iso) return "—";
   const [year, month, day] = String(iso).slice(0, 10).split("-");

@@ -3,6 +3,7 @@ import { chitPaymentAmounts, chitPaymentDisplayStatus } from "../chitFund/member
 import { chitTypeLabel } from "../chitFund/memberPortal.js";
 import { currentSchemeMonth } from "../chitFund/monthStatement.js";
 import { formatReceiptDate, nextMonthlyPayment } from "./receiptModel.js";
+import { formatInr } from "../../lib/formatMoney.js";
 
 const PAYMENT_KIND_TO_CHIT_TYPE = {
   auction: CHIT_TYPES.AUCTION,
@@ -220,7 +221,7 @@ export function buildReminderReceipt(item, settings = {}) {
     chitType: item.chitTypeLabel || chitTypeLabel(item.chitType) || "",
     chitFields: item.type === "chit" ? { month: item.monthNumber, totalMonths: item.totalMonths } : null,
     companyName: settings.companyName || "FinTrack",
-    money: n => `₹${Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`,
+    money: formatInr,
   };
 }
 

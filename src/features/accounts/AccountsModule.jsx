@@ -23,9 +23,10 @@ import {
   sourceOriginLabel,
   todayIso,
 } from "./cashbookModel.js";
+import { formatInr } from "../../lib/formatMoney.js";
 
 const Field = ({ label, children }) => <label className="field"><span>{label}</span>{children}</label>;
-const money = value => `₹${Number(value || 0).toLocaleString("en-IN")}`;
+const money = formatInr;
 
 const SECTIONS = [
   { id: "cashbook", label: "Cashbook" },

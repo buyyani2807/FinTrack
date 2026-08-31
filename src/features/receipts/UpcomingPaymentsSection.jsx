@@ -2,8 +2,9 @@ import { useEffect, useId, useMemo, useState } from "react";
 import { buildChitUpcomingRows, buildMonthlyUpcoming, buildReminderReceipt, filterUpcomingPayments, formatDueDate, formatDueLabel } from "./upcomingPayments.js";
 import { buildReminderMessage, canWhatsAppShare, openWhatsAppShare } from "./receiptWhatsApp.js";
 import { loadPaymentReminderLog, loadUpcomingChitPayments, markPaymentReminderSent } from "../../lib/financeRepository.js";
+import { formatInr } from "../../lib/formatMoney.js";
 
-const money = n => `₹${Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+const money = formatInr;
 const reminderKey = item => `${item.type}-${item.sourceId}-${item.cycleKey}-${item.daysRemaining}`;
 
 const openReminderWhatsApp = (item, settings) => {

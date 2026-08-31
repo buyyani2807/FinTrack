@@ -6,27 +6,26 @@ export const EXPENSE_CATEGORIES = [
 export const MANUAL_IN_CATEGORIES = ["Other Income", "Capital Added", "Loan Received", "Other"];
 export const MANUAL_OUT_CATEGORIES = ["Expense", "Miscellaneous", "Other"];
 
-export const todayIso = () => new Date().toISOString().slice(0, 10);
+const addCalendarDays = (iso, days) => {
+  const [year, month, day] = String(iso).slice(0, 10).split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+};
 
-export const dateRangeForFilter = (filter, customFrom, customTo) => {
-  const now = new Date();
-  const iso = d => d.toISOString().slice(0, 10);
-  if (filter === "today") return { from: iso(now), to: iso(now) };
+export const todayIso = (date = new Date()) => date.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+
+export const dateRangeForFilter = (filter, customFrom, customTo, now = new Date()) => {
+  const today = todayIso(now);
+  if (filter === "today") return { from: today, to: today };
   if (filter === "yesterday") {
-    const y = new Date(now);
-    y.setDate(y.getDate() - 1);
-    return { from: iso(y), to: iso(y) };
+    const yesterday = addCalendarDays(today, -1);
+    return { from: yesterday, to: yesterday };
   }
   if (filter === "week") {
-    const start = new Date(now);
-    start.setDate(start.getDate() - start.getDay());
-    return { from: iso(start), to: iso(now) };
+    const weekday = new Date(`${today}T12:00:00+05:30`).getUTCDay();
+    return { from: addCalendarDays(today, -weekday), to: today };
   }
-  if (filter === "month") {
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    return { from: iso(start), to: iso(now) };
-  }
-  return { from: customFrom || iso(now), to: customTo || iso(now) };
+  if (filter === "month") return { from: `${today.slice(0, 8)}01`, to: today };
+  return { from: customFrom || today, to: customTo || today };
 };
 
 export const ledgerBalance = (entries, ledgerId) =>

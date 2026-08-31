@@ -8,8 +8,9 @@ import {
 } from "./statementModel.js";
 import { downloadCustomerStatementPdf } from "./statementPdf.js";
 import { canWhatsAppShare, openWhatsAppShare } from "../receipts/receiptWhatsApp.js";
+import { formatInr } from "../../lib/formatMoney.js";
 
-const money = n => `₹${Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+const money = formatInr;
 
 function SummaryRow({ label, value, emphasize = false }) {
   return <div className={`statement-summary-row ${emphasize ? "emphasize" : ""}`}><span>{label}</span><strong>{value}</strong></div>;

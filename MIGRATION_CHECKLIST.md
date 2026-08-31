@@ -49,8 +49,13 @@ Run these in the Supabase SQL Editor **in order**. Each file is idempotent where
 | 043 | `043_accounts_delete_manual_entry.sql` | Delete manual cashbook entries (Salary, Rent, Capital, etc.) |
 | 044 | `044_ft001_ft006_integrity.sql` | Chit Cash+UPI cashbook sync, owner-only chit SELECT, account-delete ledger cleanup, monthly disbursement |
 | 045 | `045_ft008_ft014_integrity.sql` | Daily bankrupt capital loss, batch collection-staff assignment |
+| 046a | `046a_ft021_list_duplicate_payment_days.sql` | List same-day duplicate finance payments (read-only) |
+| 046b | `046b_ft021_keep_one_payment_per_day.sql` | Drop extra same-day payment copies (same amount only) |
+| 046 | `046_ft018_ft021_integrity.sql` | Unique one-payment-per-account-per-day index |
 
 After running 041 (and 042 if Save & sync failed), open **More → Accounts**, set opening balances once, then tap **Sync from FinTrack** to backfill historical collections and disbursements. If Cashbook **Delete** does nothing, run 043. After 044, tap **Sync from FinTrack** again so monthly principal disbursements are posted. After 045, existing daily bankrupt `loss_amount` values are rewritten to disbursed − collected.
+
+After 046, each finance account can have only one payment row per date (the RPC already enforced this). If the unique index fails, run **046a** (inspect), then **046b** (keep one row when amounts match), then rerun **046**. If 046a shows `amounts_differ = true`, do not run 046b — keep the correct row yourself.
 
 After running 036, verify in Supabase SQL Editor:
 

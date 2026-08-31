@@ -6,6 +6,7 @@ import {
   filterCashbookEntries,
   ledgerBalance,
   runningBalancesForLedger,
+  todayIso,
 } from "../src/features/accounts/cashbookModel.js";
 
 const ledgers = [
@@ -64,4 +65,13 @@ test("filterCashbookEntries supports split-payment search without duplication", 
 test("dateRangeForFilter returns today range", () => {
   const range = dateRangeForFilter("today");
   assert.equal(range.from, range.to);
+});
+
+test("cashbook today and period filters use Asia/Kolkata, not UTC", () => {
+  const lateUtc = new Date("2026-08-31T20:30:00.000Z");
+  assert.equal(todayIso(lateUtc), "2026-09-01");
+  assert.deepEqual(dateRangeForFilter("today", undefined, undefined, lateUtc), { from: "2026-09-01", to: "2026-09-01" });
+  assert.deepEqual(dateRangeForFilter("yesterday", undefined, undefined, lateUtc), { from: "2026-08-31", to: "2026-08-31" });
+  assert.deepEqual(dateRangeForFilter("month", undefined, undefined, lateUtc), { from: "2026-09-01", to: "2026-09-01" });
+  assert.equal(dateRangeForFilter("week", undefined, undefined, lateUtc).from, "2026-08-30");
 });
