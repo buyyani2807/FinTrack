@@ -20,3 +20,10 @@ export function financeRolesAligned(userRole, workspaceRole) {
 export function ownerChromeAllowed(userRole, workspaceRole) {
   return userRole === "financier" && workspaceRole === "owner";
 }
+
+export function collectionDetailVisibility(isOwner) {
+  return {
+    showDisbursedAmount: Boolean(isOwner),
+    showCustomerStatement: Boolean(isOwner),
+  };
+}

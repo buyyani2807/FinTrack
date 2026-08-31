@@ -51,11 +51,13 @@ Run these in the Supabase SQL Editor **in order**. Each file is idempotent where
 | 045 | `045_ft008_ft014_integrity.sql` | Daily bankrupt capital loss, batch collection-staff assignment |
 | 046a | `046a_ft021_list_duplicate_payment_days.sql` | Optional: list same-day finance payments (read-only) |
 | 046b | `046b_ft021_keep_one_payment_per_day.sql` | **Do not run** — would delete pilot same-day backfill payments |
-| 046 | `046_ft018_ft021_integrity.sql` | FT-021 unique index deferred; drops it if present so duplicates can stay |
+| 047 | `047_ft022_ft027_integrity.sql` | Receipt org lock, cashbook re-sync on account edit, chit Sync backfill, chit lift payouts, owner reminder/receipt logs |
 
 After running 041 (and 042 if Save & sync failed), open **More → Accounts**, set opening balances once, then tap **Sync from FinTrack** to backfill historical collections and disbursements. If Cashbook **Delete** does nothing, run 043. After 044, tap **Sync from FinTrack** again so monthly principal disbursements are posted. After 045, existing daily bankrupt `loss_amount` values are rewritten to disbursed − collected.
 
 After 046, same-day duplicate finance payments are **kept** (pilot users entered existing accounts on one calendar day). Do **not** run 046b. The unique `(finance_account_id, paid_on)` index is deferred. The record-payment RPC still rejects a new second payment on the same date going forward.
+
+After 047, tap **Sync from FinTrack** in Accounts so historical chit collections and lift payouts post to cashbook. Receipt numbers cannot be minted for another organisation. Editing Paid to customer / principal updates the cashbook disbursement row.
 
 After running 036, verify in Supabase SQL Editor:
 

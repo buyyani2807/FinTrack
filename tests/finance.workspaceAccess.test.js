@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { financeRolesAligned, ownerChromeAllowed, sessionUserRole, workspaceAccess } from "../src/features/finance/workspaceAccess.js";
+import { collectionDetailVisibility, financeRolesAligned, ownerChromeAllowed, sessionUserRole, workspaceAccess } from "../src/features/finance/workspaceAccess.js";
 
 test("owner tools stay hidden until the workspace role is known", () => {
   assert.deepEqual(workspaceAccess(null), { roleKnown: false, isOwner: false, isStaff: false });
@@ -30,4 +30,9 @@ test("agent login stays blocked while a leftover owner workspace is still in mem
   assert.equal(financeRolesAligned("financier", "owner"), true);
   assert.equal(ownerChromeAllowed("agent", "owner"), false);
   assert.equal(ownerChromeAllowed("financier", "owner"), true);
+});
+
+test("agents do not see disbursed amount or customer statements", () => {
+  assert.deepEqual(collectionDetailVisibility(true), { showDisbursedAmount: true, showCustomerStatement: true });
+  assert.deepEqual(collectionDetailVisibility(false), { showDisbursedAmount: false, showCustomerStatement: false });
 });
