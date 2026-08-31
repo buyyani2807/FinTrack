@@ -4,6 +4,7 @@ import { hasWhatsAppPhone, normalizeWhatsAppPhone } from "../src/features/receip
 import { applyTemplate, DEFAULT_WHATSAPP_TEMPLATES, resolveWhatsAppTemplate } from "../src/features/receipts/templateEngine.js";
 import { buildChitUpcomingRows, flattenSchemePaymentsForReminders } from "../src/features/receipts/upcomingPayments.js";
 import { buildWhatsAppMessage } from "../src/features/receipts/receiptWhatsApp.js";
+import { buildChitReceipt } from "../src/features/receipts/receiptModel.js";
 
 test("normalizes 10-digit Indian numbers", () => {
   assert.equal(normalizeWhatsAppPhone("9876543210"), "919876543210");
@@ -217,4 +218,30 @@ test("buildChitUpcomingRows includes overdue predefined bid members from 50L sch
   assert.ok(items.every(item => item.chitTypeLabel === "Fixed Predefined Bid"));
   assert.ok(items.every(item => item.schemeName === "50Lakhs"));
   assert.ok(items.every(item => item.amount === 152000));
+});
+
+test("chit receipts use the signed-in collector, not a hardcoded Financier label", () => {
+  const receipt = buildChitReceipt({
+    source: "chit_fixed",
+    paymentRow: { id: "p1", amount_paid: 5000, amount_due: 5000, paid_date: "2026-08-31", payment_mode: "cash", receipt_number: "CF-1" },
+    memberName: "Ravi",
+    memberPhone: "9876543210",
+    schemeName: "Scheme A",
+    schemeDuration: 20,
+    workspace: { fullName: "Anitha", role: "staff" },
+  });
+  assert.equal(receipt.collectedBy, "Anitha");
+  assert.equal(receipt.collectedByRole, "Collection Agent");
+
+  const ownerReceipt = buildChitReceipt({
+    source: "chit_auction",
+    paymentRow: { id: "p2", amount_paid: 5000, amount_due: 5000, paid_date: "2026-08-31", payment_mode: "upi", receipt_number: "CF-2" },
+    memberName: "Ravi",
+    memberPhone: "9876543210",
+    schemeName: "Scheme A",
+    schemeDuration: 20,
+    workspace: { fullName: "Suresh", role: "owner" },
+  });
+  assert.equal(ownerReceipt.collectedBy, "Suresh");
+  assert.equal(ownerReceipt.collectedByRole, "Financier");
 });

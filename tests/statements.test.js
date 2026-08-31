@@ -66,6 +66,7 @@ test("monthly statement uses existing payment totals", () => {
   assert.equal(statement.summary.loanAmount, 100000);
   assert.equal(statement.summary.principalPaid, 16160);
   assert.equal(statement.summary.outstanding, 83840);
+  assert.equal(statement.summary.totalPayable, 100000 + 2000 + 1840);
   assert.equal(statement.payments.length, 2);
 });
 

@@ -27,11 +27,11 @@ export const SCORE_BANDS = [
 ];
 
 export const GAUGE_SEGMENTS = [
-  { id: "high_risk", label: "POOR", range: "300-599", color: "#22c55e", min: 300, max: 599, start: 180, end: 216 },
-  { id: "attention", label: "FAIR", range: "600-649", color: "#84cc16", min: 600, max: 649, start: 216, end: 252 },
-  { id: "fair", label: "GOOD", range: "650-699", color: "#eab308", min: 650, max: 699, start: 252, end: 288 },
-  { id: "good", label: "VERY GOOD", range: "700-749", color: "#f59e0b", min: 700, max: 749, start: 288, end: 324 },
-  { id: "excellent", label: "EXCELLENT", range: "750-900", color: "#ef4444", min: 750, max: 900, start: 324, end: 360 },
+  { id: "high_risk", label: "HIGH RISK", range: "300-599", color: "#ff7373", min: 300, max: 599, start: 180, end: 216 },
+  { id: "attention", label: "ATTENTION", range: "600-649", color: "#f08a4b", min: 600, max: 649, start: 216, end: 252 },
+  { id: "fair", label: "FAIR", range: "650-699", color: "#f4b942", min: 650, max: 699, start: 252, end: 288 },
+  { id: "good", label: "GOOD", range: "700-749", color: "#8fd14f", min: 700, max: 749, start: 288, end: 324 },
+  { id: "excellent", label: "EXCELLENT", range: "750-900", color: "#4fd08d", min: 750, max: 900, start: 324, end: 360 },
 ];
 
 export const scoreToGaugeAngle = score => {

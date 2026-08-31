@@ -383,6 +383,17 @@ export const updateCollectionAgent = async (token, details) => {
 };
 export const loadCollectionAgents = token => supabase.query("/rest/v1/profiles?select=id,full_name,role&role=eq.staff&order=full_name.asc", token);
 export const assignCollectionAgent = (token, accountId, agentId) => supabase.rpc("assign_collection_agent", { account_id: accountId, agent_id: agentId || null }, token);
+export const assignCollectionAgents = async (token, assignments = []) => {
+  if (!assignments.length) return;
+  try {
+    await supabase.rpc("assign_collection_agents_batch", { input_assignments: assignments }, token);
+  } catch (error) {
+    if (!isMissingSchemaError(error)) throw error;
+    for (const row of assignments) {
+      await assignCollectionAgent(token, row.account_id, row.agent_id || null);
+    }
+  }
+};
 export const loadChitSchemes = token => supabase.query(`/rest/v1/chit_schemes?select=${CHIT_SCHEME_LIST_COLUMNS}&order=start_date.desc`, token);
 export const loadActiveChitSchemes = token => supabase.query(`/rest/v1/chit_schemes?select=${CHIT_ACTIVE_SCHEME_COLUMNS}&status=eq.active&order=start_date.desc`, token);
 export const loadChitMembers = token => supabase.query("/rest/v1/chit_members?select=id,full_name,phone,address,created_at,updated_at&order=full_name.asc", token);

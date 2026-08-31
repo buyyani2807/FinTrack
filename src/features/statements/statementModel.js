@@ -77,7 +77,7 @@ function buildMonthlySummary(loan, asOf, payments) {
   return {
     kind: "monthly",
     loanAmount: Number(loan.principal || 0),
-    totalPayable: Number(loan.principal || 0) + interestPaid + penaltyPaid + (outstanding > 0 ? monthlyInstallment : 0),
+    totalPayable: Number(loan.principal || 0) + interestPaid + penaltyPaid,
     totalPaid,
     outstanding,
     principalPaid,
@@ -219,7 +219,7 @@ export function buildChitMemberStatement({
   const monthsPaid = history.filter(row => row.status === "paid").length;
   const totalMonths = Number(scheme?.duration_months || 0);
   const outstanding = history.reduce((sum, row) => sum + Number(row.balance || 0), 0);
-  const wins = winsForEnrollment(cycles, bids, enrollment?.id);
+  const wins = winsForEnrollment(cycles, bids, enrollment?.id, scheme?.chit_value);
   const winCycle = winningCycleDetails(cycles, enrollment?.id);
   const chitType = scheme?.chit_type || CHIT_TYPES.AUCTION;
   const installment = Number(scheme?.installment_amount || history[0]?.expected || 0);

@@ -40,15 +40,22 @@ export function validateLiveBid({ bidAmount, chitValue, commissionPercent, commi
   return { bidAmount: amount, bidPercent: roundMoney(amount / value * 100), payoutAmount: liveBidPayout({ chitValue: value, bidAmount: amount }) };
 }
 
-export function winsForEnrollment(cycles = [], bids = [], enrollmentId) {
+export function winsForEnrollment(cycles = [], bids = [], enrollmentId, chitValue) {
   const cycleById = Object.fromEntries(cycles.map(cycle => [cycle.id, cycle]));
+  const value = Number(chitValue);
   return bids
     .filter(bid => bid.enrollment_id === enrollmentId && bid.status === "winner")
     .map(bid => {
       const cycle = cycleById[bid.cycle_id];
+      const storedPayout = Number(cycle?.winning_bid_amount);
+      const liveDiscount = Number(bid.bid_amount);
+      const payoutAmount = Number.isFinite(storedPayout) && storedPayout > 0 ? storedPayout : (Number.isFinite(value) && value > 0 ? liveBidPayout({ chitValue: value, bidAmount: liveDiscount }) : liveDiscount);
+      const discountBid = Number.isFinite(value) && value > 0 ? roundMoney(value - payoutAmount) : liveDiscount;
       return {
         month: cycle?.cycle_number,
-        bidAmount: bid.bid_amount,
+        bidAmount: payoutAmount,
+        payoutAmount,
+        discountBid,
         bidDate: cycle?.cycle_date,
         status: "Winner",
       };

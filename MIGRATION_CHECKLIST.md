@@ -48,8 +48,9 @@ Run these in the Supabase SQL Editor **in order**. Each file is idempotent where
 | 042 | `042_accounts_cashbook_sync_fix.sql` | Fix sync backfill error (`record "fa" is not assigned yet`) |
 | 043 | `043_accounts_delete_manual_entry.sql` | Delete manual cashbook entries (Salary, Rent, Capital, etc.) |
 | 044 | `044_ft001_ft006_integrity.sql` | Chit Cash+UPI cashbook sync, owner-only chit SELECT, account-delete ledger cleanup, monthly disbursement |
+| 045 | `045_ft008_ft014_integrity.sql` | Daily bankrupt capital loss, batch collection-staff assignment |
 
-After running 041 (and 042 if Save & sync failed), open **More → Accounts**, set opening balances once, then tap **Sync from FinTrack** to backfill historical collections and disbursements. If Cashbook **Delete** does nothing, run 043. After 044, tap **Sync from FinTrack** again so monthly principal disbursements are posted.
+After running 041 (and 042 if Save & sync failed), open **More → Accounts**, set opening balances once, then tap **Sync from FinTrack** to backfill historical collections and disbursements. If Cashbook **Delete** does nothing, run 043. After 044, tap **Sync from FinTrack** again so monthly principal disbursements are posted. After 045, existing daily bankrupt `loss_amount` values are rewritten to disbursed − collected.
 
 After running 036, verify in Supabase SQL Editor:
 

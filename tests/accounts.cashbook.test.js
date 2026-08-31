@@ -35,6 +35,20 @@ test("aggregateOverview totals cash, upi and period movement", () => {
   assert.equal(overview.moneyOut, 8500);
 });
 
+test("period money-in and money-out omit internal transfers", () => {
+  const range = { from: "2026-08-28", to: "2026-08-28" };
+  const withTransfers = [
+    ...entries,
+    { id: "5", ledgerAccountId: "cash", entryDate: "2026-08-28", entryTime: "13:00", moneyIn: 0, moneyOut: 4000, category: "Transfer", transactionType: "transfer_out" },
+    { id: "6", ledgerAccountId: "upi", entryDate: "2026-08-28", entryTime: "13:00", moneyIn: 4000, moneyOut: 0, category: "Transfer", transactionType: "transfer_in" },
+  ];
+  const overview = aggregateOverview(ledgers, withTransfers, range);
+  assert.equal(overview.moneyIn, 103500);
+  assert.equal(overview.moneyOut, 8500);
+  assert.equal(overview.cash, 88500);
+  assert.equal(overview.upi, 6500);
+});
+
 test("runningBalancesForLedger calculates closing balance chronologically", () => {
   const rows = runningBalancesForLedger(entries, "cash");
   assert.equal(rows[0].balance, 92500);

@@ -49,5 +49,16 @@ test("member win history is joined by enrollment id, not name", () => {
     ],
     "e1"
   );
-  assert.deepEqual(wins, [{ month: 5, bidAmount: 820000, bidDate: "2026-08-25", status: "Winner" }]);
+  assert.deepEqual(wins, [{ month: 5, bidAmount: 820000, payoutAmount: 820000, discountBid: 820000, bidDate: "2026-08-25", status: "Winner" }]);
+});
+
+test("live auction win history separates stored payout from discount bid", () => {
+  const wins = winsForEnrollment(
+    [{ id: "c1", cycle_number: 1, cycle_date: "2026-08-25", winning_bid_amount: 700000 }],
+    [{ enrollment_id: "e1", cycle_id: "c1", bid_amount: 300000, status: "winner" }],
+    "e1",
+    1000000,
+  );
+  assert.equal(wins[0].payoutAmount, 700000);
+  assert.equal(wins[0].discountBid, 300000);
 });

@@ -105,11 +105,14 @@ export function buildChitReceipt({
   schemeName,
   schemeDuration,
   settings = {},
-  collectorName = "Financier",
+  workspace = {},
+  collectorName,
 }) {
   const amount = Number(paymentRow.amount_paid ?? paymentRow.paid ?? 0);
   const due = Number(paymentRow.net_amount_due ?? paymentRow.amount_due ?? paymentRow.expected ?? 0);
   const month = Number(paymentRow.payment_month ?? paymentRow.cycle_number ?? paymentRow.month_number ?? 0);
+  const isAgent = workspace.role === "staff";
+  const name = collectorName || workspace.fullName || "Financier";
   return {
     source,
     paymentId: paymentRow.id,
@@ -132,8 +135,8 @@ export function buildChitReceipt({
     cashAmount: Number(paymentRow.cash_amount || 0),
     upiAmount: Number(paymentRow.upi_amount || 0),
     splitPayment: (paymentRow.payment_mode || paymentRow.mode) === "cash_upi",
-    collectedBy: collectorName,
-    collectedByRole: "Financier",
+    collectedBy: name,
+    collectedByRole: isAgent ? "Collection Agent" : "Financier",
     previousBalance: Math.max(0, due),
     remainingBalance: Math.max(0, due - amount),
     totalFinanced: due,

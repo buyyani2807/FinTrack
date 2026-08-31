@@ -40,10 +40,13 @@ export const balancesByLedger = (ledgers, entries) =>
     balance: ledgerBalance(entries, ledger.id),
   }));
 
+export const isInternalTransfer = entry => ["transfer_in", "transfer_out"].includes(entry.transactionType);
+
 export const aggregateOverview = (ledgers, entries, range) => {
   const inRange = entries.filter(entry => entry.entryDate >= range.from && entry.entryDate <= range.to);
-  const moneyIn = inRange.reduce((sum, entry) => sum + Number(entry.moneyIn || 0), 0);
-  const moneyOut = inRange.reduce((sum, entry) => sum + Number(entry.moneyOut || 0), 0);
+  const operating = inRange.filter(entry => !isInternalTransfer(entry));
+  const moneyIn = operating.reduce((sum, entry) => sum + Number(entry.moneyIn || 0), 0);
+  const moneyOut = operating.reduce((sum, entry) => sum + Number(entry.moneyOut || 0), 0);
   const withBalances = balancesByLedger(ledgers, entries);
   const cash = withBalances.filter(l => l.accountType === "cash").reduce((s, l) => s + l.balance, 0);
   const upi = withBalances.filter(l => l.accountType === "upi").reduce((s, l) => s + l.balance, 0);
