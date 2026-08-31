@@ -67,15 +67,26 @@ function PeriodPills({ period, setPeriod, customFrom, setCustomFrom, customTo, s
   </div>;
 }
 
-function CashbookOverview({ balances, movement }) {
-  return <div className="accounts-balance-strip">
-    <div className="accounts-balance-item"><span>Cash</span><strong className="gold">{money(balances.cash)}</strong></div>
-    <div className="accounts-balance-item"><span>Bank</span><strong>{money(balances.bank)}</strong></div>
-    <div className="accounts-balance-item"><span>UPI</span><strong>{money(balances.upi)}</strong></div>
-    <div className="accounts-balance-item"><span>Total</span><strong className="gold">{money(balances.total)}</strong></div>
-    <div className="accounts-balance-item accounts-balance-move"><span>In</span><strong className="green">{money(movement.moneyIn)}</strong></div>
-    <div className="accounts-balance-item accounts-balance-move"><span>Out</span><strong className="red">{money(movement.moneyOut)}</strong></div>
-  </div>;
+const PERIOD_IN_OUT_LABEL = {
+  today: "Today",
+  week: "This week",
+  month: "This month",
+  custom: "Selected dates",
+};
+
+function CashbookOverview({ balances, movement, period }) {
+  const when = PERIOD_IN_OUT_LABEL[period] || "Period";
+  return <>
+    <div className="accounts-balance-strip">
+      <div className="accounts-balance-item"><span>Cash on hand</span><strong className="gold">{money(balances.cash)}</strong></div>
+      <div className="accounts-balance-item"><span>Bank balance</span><strong>{money(balances.bank)}</strong></div>
+      <div className="accounts-balance-item"><span>UPI balance</span><strong>{money(balances.upi)}</strong></div>
+      <div className="accounts-balance-item"><span>All money</span><strong className="gold">{money(balances.total)}</strong></div>
+      <div className="accounts-balance-item accounts-balance-move"><span>{when} in</span><strong className="green">{money(movement.moneyIn)}</strong></div>
+      <div className="accounts-balance-item accounts-balance-move"><span>{when} out</span><strong className="red">{money(movement.moneyOut)}</strong></div>
+    </div>
+    <p className="small accounts-balance-hint">Cash, Bank and UPI are running balances of every recorded transaction, not only today. Collection received by UPI increases UPI, not Cash. Money paid to customers is recorded as money out on the payout method you chose.</p>
+  </>;
 }
 
 function PanelHead({ title, children }) {
@@ -333,7 +344,7 @@ export function AccountsModule({ token, close, loans = [] }) {
     </nav>
     {loading ? <p className="copy">Loading accounts…</p> : <>
       {section === "cashbook" && <div className="accounts-panel">
-        <CashbookOverview balances={allTimeOverview} movement={periodOverview} />
+        <CashbookOverview balances={allTimeOverview} movement={periodOverview} period={period} />
         <div className="card accounts-filter-card spacer">
           <PeriodPills {...periodProps} />
           <div className="accounts-filter-row">
