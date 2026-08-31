@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { supabase } from "./lib/supabase";
 import { monthlyInterestOnBalance } from "./features/finance/calculations";
 import { byCollectionOrderThenName, mergeAccountOrder, reorderIds } from "./features/finance/collectionOrder";
 import { financeKindLabel, staffAssignableLoans } from "./features/finance/collectionStaff";
 import { mergeAccountTransaction } from "./features/finance/paymentState.js";
-import { sessionUserRole, workspaceAccess } from "./features/finance/workspaceAccess.js";
+import { financeRolesAligned, ownerChromeAllowed, sessionUserRole } from "./features/finance/workspaceAccess.js";
 import { ChitCustomerPortal, ChitFundPage } from "./features/chitFund/ChitFundModule";
 import { LegalPage, legalViewFromLocation, openLegalView } from "./features/legal/LegalPage.jsx";
 import { isPublicSignupAllowed, signupInviteRequired, validateSignupInvite } from "./lib/signupGate.js";
@@ -171,7 +172,7 @@ const sample = [{
   }]
 }];
 const styles = `@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Syne:wght@600;700&display=swap');*{box-sizing:border-box}body{margin:0;background:${C.bg};color:${C.text};font-family:DM Sans,system-ui}button,input,select{font:inherit}button{cursor:pointer}.app{min-height:100vh}.shell{max-width:1240px;margin:auto;padding:24px}.top,.row,.toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px}.top{margin-bottom:28px}.brand{font:700 28px Syne;color:${C.gold}}.sub,.small{font-size:12px;color:${C.muted}}.tabs{display:flex;gap:8px;flex-wrap:wrap}.btn{padding:9px 13px;background:transparent;border:1px solid ${C.line};color:${C.text};border-radius:9px;font-weight:600}.btn.primary{background:${C.gold};border-color:${C.gold};color:#211907}.btn.danger{color:${C.red};border-color:#ff737355}.tab.active{color:${C.gold};border-color:${C.gold};background:#f4b94218}.card{padding:18px;background:${C.card};border:1px solid ${C.line};border-radius:14px}.grid{display:grid;gap:14px}.metrics{grid-template-columns:repeat(auto-fit,minmax(155px,1fr));margin:18px 0 22px}.two{grid-template-columns:minmax(0,1.3fr) minmax(300px,.7fr)}.metric-label{font-size:10px;color:${C.muted};text-transform:uppercase;letter-spacing:.08em}.metric-value{font:700 22px Syne;margin-top:8px}.gold{color:${C.gold}}.green{color:${C.green}}.red{color:${C.red}}.blue{color:${C.blue}}.title{font:700 22px Syne;margin:0 0 4px}.copy{margin:0;color:${C.muted};font-size:13px}.field{display:flex;flex-direction:column;gap:6px;flex:1}.field label{font-size:12px;color:${C.muted};font-weight:600}.field input,.field select{border:1px solid ${C.line};border-radius:8px;padding:10px;background:${C.surface};color:${C.text};width:100%}.form{display:grid;grid-template-columns:repeat(2,1fr);gap:13px}.span{grid-column:1/-1}.table{overflow:auto}.table table{border-collapse:collapse;width:100%;font-size:13px}.table th{text-align:left;color:${C.muted};font-size:11px;letter-spacing:.04em}.table td,.table th{padding:11px 9px;border-bottom:1px solid ${C.line};white-space:nowrap}.badge{font-size:10px;border-radius:14px;padding:4px 8px;font-weight:700;text-transform:uppercase}.badge.active{color:${C.blue};background:#72aaff18}.badge.overdue{color:${C.red};background:#ff737318}.badge.completed{color:${C.green};background:#4fd08d18}.notice{font-size:12px;line-height:1.5;background:#f4b94216;color:#f7dc99;border-left:3px solid ${C.gold};padding:10px 12px;border-radius:7px;margin:14px 0}.modal-bg{position:fixed;inset:0;padding:16px;background:#000b;z-index:10;display:flex;align-items:center;justify-content:center}.modal{width:min(720px,100%);max-height:92vh;overflow:auto;padding:22px;background:${C.card};border:1px solid ${C.line};border-radius:16px}.login{max-width:390px;margin:12vh auto}.login .card{padding:28px}.spacer{margin-top:18px}@media(max-width:680px){.shell{padding:16px}.top{align-items:flex-start;flex-direction:column}.two,.form{grid-template-columns:1fr}.span{grid-column:auto}.hide{display:none}}`;
-const enhancements = `.financier-nav{position:fixed;z-index:6;left:20px;top:50%;transform:translateY(-50%);width:194px;padding:14px;background:#151b27eF;border:1px solid ${C.line};border-radius:16px;box-shadow:0 20px 50px #0007;backdrop-filter:blur(12px)}.financier-nav .nav-title{font:700 16px Syne;color:${C.gold};padding:6px 8px 15px}.financier-nav button{width:100%;text-align:left;margin:3px 0}.financier-nav .nav-footer{border-top:1px solid ${C.line};margin-top:12px;padding-top:12px;color:${C.muted};font-size:11px}.tool-stack{display:flex;gap:8px;flex-direction:column;align-items:stretch}@media(max-width:1050px){.financier-nav{top:auto;bottom:14px;left:14px;right:14px;transform:none;width:auto;display:flex;gap:8px;padding:9px}.financier-nav .nav-title,.financier-nav .nav-footer{display:none}.financier-nav button{margin:0;text-align:center;font-size:12px}}`;
+const enhancements = `.financier-nav{position:fixed;z-index:6;left:20px;top:50%;transform:translateY(-50%);width:194px;padding:14px;background:#151b27eF;border:1px solid ${C.line};border-radius:16px;box-shadow:0 20px 50px #0007;backdrop-filter:blur(12px)}.financier-nav .nav-title{font:700 16px Syne;color:${C.gold};padding:6px 8px 15px}.financier-nav button{width:100%;text-align:left;margin:3px 0}.financier-nav .nav-footer{border-top:1px solid ${C.line};margin-top:12px;padding-top:12px;color:${C.muted};font-size:11px}.tool-stack{display:flex;gap:8px;flex-direction:column;align-items:stretch}@media(max-width:1050px){.financier-nav{top:auto;bottom:14px;left:14px;right:14px;transform:none;width:auto;display:flex;gap:8px;padding:9px}.financier-nav .nav-title,.financier-nav .nav-footer{display:none}.financier-nav button{margin:0;text-align:center;font-size:12px}}html[data-ft-role="unknown"] .financier-nav,html[data-ft-role="staff"] .financier-nav,html[data-ft-role="unknown"] .dashboard-chit,html[data-ft-role="staff"] .dashboard-chit,html[data-ft-role="unknown"] .financier-tools,html[data-ft-role="staff"] .financier-tools{display:none!important}`;
 const homeReportHide = `.shell > .toolbar > .tabs > .field,.shell > .toolbar > .tabs > .field + .btn{display:none}`;
 const visualRefresh = `
 :root{font:16px/1.45 DM Sans,system-ui,sans-serif!important;color-scheme:dark!important;background:#0e1118!important}#root{width:100%!important;max-width:none!important;min-height:100svh!important;margin:0!important;border:0!important;display:block!important;text-align:left!important}.app{min-height:100svh;background:radial-gradient(700px 480px at 4% -10%,#202b41 0%,transparent 65%),#0e1118;color:#f4f6fb}.shell{max-width:1420px;padding:36px 44px 74px}.top{margin-bottom:34px}.brand{font-family:Syne,DM Sans,sans-serif;font-size:27px;letter-spacing:-.8px;color:#f4b942}.sub{margin-top:6px;color:#9ba9bd;font-size:12px;letter-spacing:.02em}.title{font-family:Syne,DM Sans,sans-serif;font-size:28px;letter-spacing:-.7px;color:#f4f6fb!important}.shell .title,.shell .title *{color:#f4f6fb!important}.copy{color:#9ba9bd;font-size:13px}.toolbar{gap:18px}.tabs{gap:7px}.btn{min-height:38px;padding:8px 13px;border:1px solid #303a4d;background:#171c27;color:#f4f6fb;border-radius:10px;font-size:13px;font-weight:700;transition:background .18s,border-color .18s,transform .18s,box-shadow .18s}.btn:hover{transform:translateY(-1px);background:#242c3b;border-color:#4a586f;box-shadow:0 6px 16px #0005}.btn:focus-visible{outline:3px solid #f4b94255;outline-offset:2px}.btn.primary{background:#f4b942;color:#211907;border-color:#f4b942;box-shadow:0 6px 14px #0004}.btn.primary:hover{background:#ffd062;border-color:#ffd062}.btn.danger{border-color:#ff737355;color:#ff9898;background:#3c1b221f}.btn.danger:hover{background:#492027}.btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}.tab{background:transparent;color:#9ba9bd;border-color:transparent;box-shadow:none}.tab:hover{background:#ffffff0c;border-color:transparent}.tab.active{background:#f4b94218;color:#f4b942;border-color:#f4b94270;box-shadow:none}.card{background:#202737;border:1px solid #303a4d;border-radius:16px;box-shadow:0 8px 24px #0003}.card:hover{border-color:#46536a}.metrics{gap:16px;margin:22px 0 26px}.metrics .card{position:relative;overflow:hidden;padding:18px 19px;background:linear-gradient(145deg,#222c3e,#1b2230)}.metrics .card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:#f4b942}.metric-label{font-size:10px;font-weight:700;color:#9ba9bd;letter-spacing:.09em}.metric-value{font-family:Syne,DM Sans,sans-serif;font-size:24px;letter-spacing:-.65px;margin-top:9px}.gold{color:#f4b942}.green{color:#4fd08d}.red{color:#ff7373}.blue{color:#72aaff}.field{gap:7px}.field label{font-size:11px;letter-spacing:.035em;color:#aab7ca}.field input,.field select{min-height:41px;padding:9px 11px;border-radius:10px;border-color:#303a4d;background:#171c27;color:#f4f6fb;outline:none;transition:border-color .15s,box-shadow .15s}.field input:focus,.field select:focus{border-color:#f4b942;box-shadow:0 0 0 3px #f4b9421c}.table{border:1px solid #303a4d;border-radius:12px}.table table{font-size:13px}.table th{padding:12px 13px;background:#171c27;color:#9ba9bd;font-size:10px;letter-spacing:.08em}.table td{padding:13px;border-color:#303a4d;color:#e4e9f2}.table tbody tr{transition:background .15s}.table tbody tr:hover{background:#ffffff08}.badge{padding:5px 9px;border-radius:999px;font-size:9px;letter-spacing:.06em}.notice{border:1px solid #f4b94255;border-left:3px solid #f4b942;background:#f4b94216;color:#f7dc99;border-radius:10px;padding:11px 13px}.modal-bg{padding:24px;background:#000b;backdrop-filter:blur(5px)}.modal{width:min(760px,100%);padding:28px;border-radius:19px;background:#202737;border-color:#46536a;box-shadow:0 25px 80px #000a}.login{max-width:450px;margin:10vh auto}.login>.brand{font-size:34px;color:#f4b942;text-align:center}.login>.sub{font-size:13px;text-align:center}.login .card{padding:26px;background:#202737;border-color:#3c475c;box-shadow:0 22px 70px #0008}.login .tabs{display:grid;grid-template-columns:1fr 1fr}.login .tabs .btn:last-child{grid-column:1/-1}.login .tab{min-height:42px;border:1px solid #303a4d}.login .tab.active{border-color:#f4b94270}.financier-nav{background:#202737!important;border-color:#3a465a!important;border-radius:16px!important;box-shadow:0 12px 34px #0008!important}.financier-nav .nav-title{color:#f4b942!important;font-family:Syne,DM Sans,sans-serif!important}.financier-nav button{border-color:transparent!important}.financier-nav button.tab.active{background:#f4b94218!important;border-color:#f4b94270!important}.financier-nav .nav-footer{color:#9ba9bd!important;border-color:#303a4d!important}.customer-actions{right:28px!important;bottom:auto!important;top:20px!important;background:#202737!important;padding:8px!important;border:1px solid #3a465a!important;border-radius:14px!important;box-shadow:0 12px 30px #0008!important}@media(min-width:1051px){.shell{margin-left:240px;max-width:calc(1420px + 240px)}.financier-nav{left:24px!important;top:28px!important;transform:none!important;width:192px!important}}@media(max-width:1050px){.shell{padding:28px 24px 86px}.financier-nav{background:#202737f2!important}}@media(max-width:680px){.shell{padding:22px 16px 98px}.top,.toolbar{align-items:flex-start}.toolbar{flex-direction:column}.title{font-size:24px}.metrics{grid-template-columns:1fr 1fr}.metrics .card{padding:15px}.metric-value{font-size:20px}.login{margin:5vh 16px}.modal{padding:21px}.customer-actions{top:auto!important;bottom:12px!important;left:12px!important;right:12px!important}.customer-actions .tabs{justify-content:center}.form{gap:11px}}`;
@@ -1392,67 +1393,127 @@ export default function App() {
   const [workspace, setWorkspace] = useState(null);
   const [financeModule, setFinanceModule] = useState("all");
   const [dataError, setDataError] = useState("");
+  const sessionGen = useRef(0);
+  const userRoleRef = useRef(null);
+  const beginSession = () => { sessionGen.current += 1; return sessionGen.current; };
+  const isCurrentSession = gen => gen === sessionGen.current;
+  const canApplyWorkspace = next => {
+    const role = userRoleRef.current;
+    return !role || role === "customer" || role === "chitCustomer" || financeRolesAligned(role, next?.role);
+  };
+  const clearFinanceState = () => {
+    setLoans([]);
+    setFinanceModule("all");
+    setDataError("");
+    setWorkspace(null);
+    setUser(null);
+  };
   useEffect(() => {
     const syncLegal = () => setLegalView(legalViewFromLocation());
     window.addEventListener("popstate", syncLegal);
     return () => window.removeEventListener("popstate", syncLegal);
   }, []);
   useEffect(() => {
+    const gen = beginSession();
     let cancelled = false;
     supabase.auth.restoreSession()
       .then(async session => {
-        if (!session?.access_token || cancelled) return;
+        if (!session?.access_token || cancelled || !isCurrentSession(gen)) return;
         const next = await loadWorkspace(session.access_token);
-        if (cancelled) return;
-        setWorkspace(next);
-        setUser({
-          role: sessionUserRole(next.role),
-          authToken: session.access_token,
-          name: next.fullName,
+        if (cancelled || !isCurrentSession(gen)) return;
+        flushSync(() => {
+          setWorkspace(next);
+          setUser({
+            role: sessionUserRole(next.role),
+            authToken: session.access_token,
+            name: next.fullName,
+          });
+          userRoleRef.current = sessionUserRole(next.role);
         });
       })
       .catch(() => {})
-      .finally(() => { if (!cancelled) setAuthReady(true); });
+      .finally(() => { if (!cancelled && isCurrentSession(gen)) setAuthReady(true); });
     return () => { cancelled = true; };
   }, []);
   const refreshLoans = async (token = user?.authToken) => {
     if (!token) return;
-    try { setLoans(await loadFinanceAccounts(token)); setDataError(""); }
-    catch (error) { setDataError(error.message || "Could not load finance records."); }
+    const gen = sessionGen.current;
+    try {
+      const next = await loadFinanceAccounts(token);
+      if (!isCurrentSession(gen)) return;
+      setLoans(next);
+      setDataError("");
+    } catch (error) {
+      if (!isCurrentSession(gen)) return;
+      setDataError(error.message || "Could not load finance records.");
+    }
   };
-  useEffect(() => { refreshLoans(); }, [user?.authToken]);
+  useEffect(() => {
+    if (!user?.authToken) return undefined;
+    const gen = sessionGen.current;
+    let cancelled = false;
+    loadFinanceAccounts(user.authToken)
+      .then(next => {
+        if (cancelled || !isCurrentSession(gen)) return;
+        setLoans(next);
+        setDataError("");
+      })
+      .catch(error => {
+        if (cancelled || !isCurrentSession(gen)) return;
+        setDataError(error.message || "Could not load finance records.");
+      });
+    return () => { cancelled = true; };
+  }, [user?.authToken]);
   const enterSession = payload => {
     const { workspace: nextWorkspace, ...session } = payload;
-    if (nextWorkspace) setWorkspace(nextWorkspace);
-    setUser(session);
+    beginSession();
+    setLoans([]);
+    setFinanceModule("all");
+    setDataError("");
+    userRoleRef.current = session.role;
+    flushSync(() => {
+      setWorkspace(nextWorkspace || null);
+      setUser(session);
+    });
   };
   const refreshWorkspace = async (token = user?.authToken) => {
-    if (!token) {
-      if (!user) setWorkspace(null);
-      return null;
-    }
+    if (!token) return null;
+    const gen = sessionGen.current;
     try {
       const next = await loadWorkspace(token);
+      if (!isCurrentSession(gen) || !canApplyWorkspace(next)) return null;
       setWorkspace(next);
       return next;
     } catch {
-      setWorkspace(current => current || {
-        role: user?.role === "agent" ? "staff" : "owner",
-        businessName: "My Finance Business",
-        fullName: user?.name || "",
-        organizationSettings: {},
-      });
       return null;
     }
   };
   useEffect(() => {
-    refreshWorkspace();
+    if (!user?.authToken) return undefined;
+    const gen = sessionGen.current;
+    let cancelled = false;
+    loadWorkspace(user.authToken)
+      .then(next => {
+        if (cancelled || !isCurrentSession(gen) || !canApplyWorkspace(next)) return;
+        setWorkspace(next);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
   }, [user?.authToken]);
+  useLayoutEffect(() => {
+    const role = ownerChromeAllowed(user?.role, workspace?.role) ? "owner"
+      : user?.role === "agent" && workspace?.role === "staff" ? "staff"
+      : "unknown";
+    document.documentElement.dataset.ftRole = role;
+    return () => { delete document.documentElement.dataset.ftRole; };
+  }, [user?.role, workspace?.role]);
   const customerLoan = user?.role === "customer" ? user.loan : null;
   const logout = async () => {
-    if (user?.role === "financier" || user?.role === "agent") await supabase.auth.signOut();
-    setUser(null);
-    setWorkspace(null);
+    const role = user?.role;
+    beginSession();
+    userRoleRef.current = null;
+    clearFinanceState();
+    if (role === "financier" || role === "agent") await supabase.auth.signOut();
   };
   const createLoan = async loan => {
     const accountId = await createFinanceAccount(user.authToken, loan);
@@ -1500,14 +1561,14 @@ export default function App() {
   const getManagedAgents = () => loadManagedAgents(user.authToken);
   const updateAgentAssignment = async (loan, agentId) => { await assignCollectionAgent(user.authToken, loan.id, agentId); await refreshLoans(); };
   const saveCollectionStaff = details => updateCollectionAgent(user.authToken, details);
-  const access = workspaceAccess(workspace);
   const financeSession = user?.role === "financier" || user?.role === "agent";
-  const waitingForWorkspaceRole = financeSession && !access.roleKnown;
+  const showOwnerChrome = ownerChromeAllowed(user?.role, workspace?.role);
+  const waitingForWorkspaceRole = financeSession && !financeRolesAligned(user?.role, workspace?.role);
   if (legalView) {
     return <div className="app"><style>{styles + enhancements + homeReportHide + visualRefresh + mobileCollections + mobileLayout}</style><LegalPage view={legalView} /></div>;
   }
   if ((!authReady || waitingForWorkspaceRole) && !isPasswordRecovery) {
     return <div className="app"><style>{styles + enhancements + homeReportHide + visualRefresh + mobileCollections + mobileLayout}</style><div className="login"><p className="sub" style={{ textAlign: "center" }}>Loading FinTrack…</p></div></div>;
   }
-  return <div className="app"><style>{styles + enhancements + homeReportHide + visualRefresh + accountsStyles + creditScoreStyles + mobileCollections + mobileLayout + receiptStyles + `.phone-link{color:${C.blue};text-decoration:none}.phone-link:hover{text-decoration:underline}`}</style>{isPasswordRecovery ? <PasswordRecovery /> : !user ? <FinancierAuth onLogin={enterSession} onCustomerLogin={loan => setUser({ role: "customer", loan })} onChitCustomerLogin={session => setUser({ role: "chitCustomer", session })} /> : user.role === "financier" || user.role === "agent" ? <>{dataError && <div className="notice" style={{ position: "fixed", top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 20 }}>{dataError}</div>}<Financier loans={loans} businessName={workspace?.businessName} setLoans={setLoans} onCreateLoan={createLoan} onRecordPayment={savePayment} onUpdateLoan={updateLoan} onDeleteLoan={removeLoan} onSaveCustomerPortal={saveCustomerPortal} onLoadKyc={getKyc} onSaveKyc={updateKyc} onStatusChange={changeStatus} onPaymentNoteChange={changePaymentNotes} onPaymentCorrect={correctPayment} onPaymentDelete={removePayment} onCollectionOrderChange={changeCollectionOrder} role={access.isOwner ? "owner" : "staff"} logout={logout} authToken={user.authToken} orgSettings={workspace?.organizationSettings || {}} workspace={workspace || {}} onLogReceipt={logReceipt} module={financeModule} onModuleChange={setFinanceModule} />{access.isOwner && <FinancierTools loans={loans} token={user.authToken} orgSettings={workspace?.organizationSettings || {}} workspace={workspace || {}} onLogReceipt={logReceipt} onSettingsSaved={() => refreshWorkspace()} selectedModule={financeModule} onModuleChange={setFinanceModule} onCreateAgent={addCollectionAgent} onLoadAgents={getManagedAgents} onAssignAgent={updateAgentAssignment} onUpdateAgent={saveCollectionStaff} />}</> : user.role === "chitCustomer" ? <ChitCustomerPortal session={user.session} logout={logout} /> : <><Customer loan={customerLoan} logout={logout} /><CustomerReportDownload loan={customerLoan} /></>}</div>;
+  return <div className="app"><style>{styles + enhancements + homeReportHide + visualRefresh + accountsStyles + creditScoreStyles + mobileCollections + mobileLayout + receiptStyles + `.phone-link{color:${C.blue};text-decoration:none}.phone-link:hover{text-decoration:underline}`}</style>{isPasswordRecovery ? <PasswordRecovery /> : !user ? <FinancierAuth onLogin={enterSession} onCustomerLogin={loan => setUser({ role: "customer", loan })} onChitCustomerLogin={session => setUser({ role: "chitCustomer", session })} /> : user.role === "financier" || user.role === "agent" ? <>{dataError && <div className="notice" style={{ position: "fixed", top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 20 }}>{dataError}</div>}<Financier loans={loans} businessName={workspace?.businessName} setLoans={setLoans} onCreateLoan={createLoan} onRecordPayment={savePayment} onUpdateLoan={updateLoan} onDeleteLoan={removeLoan} onSaveCustomerPortal={saveCustomerPortal} onLoadKyc={getKyc} onSaveKyc={updateKyc} onStatusChange={changeStatus} onPaymentNoteChange={changePaymentNotes} onPaymentCorrect={correctPayment} onPaymentDelete={removePayment} onCollectionOrderChange={changeCollectionOrder} role={showOwnerChrome ? "owner" : "staff"} logout={logout} authToken={user.authToken} orgSettings={workspace?.organizationSettings || {}} workspace={workspace || {}} onLogReceipt={logReceipt} module={financeModule} onModuleChange={setFinanceModule} />{showOwnerChrome && <FinancierTools loans={loans} token={user.authToken} orgSettings={workspace?.organizationSettings || {}} workspace={workspace || {}} onLogReceipt={logReceipt} onSettingsSaved={() => refreshWorkspace()} selectedModule={financeModule} onModuleChange={setFinanceModule} onCreateAgent={addCollectionAgent} onLoadAgents={getManagedAgents} onAssignAgent={updateAgentAssignment} onUpdateAgent={saveCollectionStaff} />}</> : user.role === "chitCustomer" ? <ChitCustomerPortal session={user.session} logout={logout} /> : <><Customer loan={customerLoan} logout={logout} /><CustomerReportDownload loan={customerLoan} /></>}</div>;
 }

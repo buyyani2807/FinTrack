@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { sessionUserRole, workspaceAccess } from "../src/features/finance/workspaceAccess.js";
+import { financeRolesAligned, ownerChromeAllowed, sessionUserRole, workspaceAccess } from "../src/features/finance/workspaceAccess.js";
 
 test("owner tools stay hidden until the workspace role is known", () => {
   assert.deepEqual(workspaceAccess(null), { roleKnown: false, isOwner: false, isStaff: false });
@@ -20,4 +20,14 @@ test("owner chrome is only allowed for a confirmed owner workspace", () => {
   assert.equal(canShowOwnerChrome(null), false);
   assert.equal(canShowOwnerChrome({ role: "staff" }), false);
   assert.equal(canShowOwnerChrome({ role: "owner" }), true);
+});
+
+test("agent login stays blocked while a leftover owner workspace is still in memory", () => {
+  assert.equal(financeRolesAligned("agent", "owner"), false);
+  assert.equal(financeRolesAligned("agent", undefined), false);
+  assert.equal(financeRolesAligned("agent", "staff"), true);
+  assert.equal(financeRolesAligned("financier", "staff"), false);
+  assert.equal(financeRolesAligned("financier", "owner"), true);
+  assert.equal(ownerChromeAllowed("agent", "owner"), false);
+  assert.equal(ownerChromeAllowed("financier", "owner"), true);
 });

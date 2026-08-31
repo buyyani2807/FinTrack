@@ -10,3 +10,13 @@ export function workspaceAccess(workspace) {
 export function sessionUserRole(workspaceRole) {
   return workspaceRole === "staff" ? "agent" : "financier";
 }
+
+export function financeRolesAligned(userRole, workspaceRole) {
+  if (userRole === "agent") return workspaceRole === "staff";
+  if (userRole === "financier") return workspaceRole === "owner";
+  return true;
+}
+
+export function ownerChromeAllowed(userRole, workspaceRole) {
+  return userRole === "financier" && workspaceRole === "owner";
+}
