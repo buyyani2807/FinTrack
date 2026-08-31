@@ -4,6 +4,7 @@ import { monthlyInterestOnBalance } from "./features/finance/calculations";
 import { byCollectionOrderThenName, mergeAccountOrder, reorderIds } from "./features/finance/collectionOrder";
 import { financeKindLabel, staffAssignableLoans } from "./features/finance/collectionStaff";
 import { mergeAccountTransaction } from "./features/finance/paymentState.js";
+import { sessionUserRole, workspaceAccess } from "./features/finance/workspaceAccess.js";
 import { ChitCustomerPortal, ChitFundPage } from "./features/chitFund/ChitFundModule";
 import { LegalPage, legalViewFromLocation, openLegalView } from "./features/legal/LegalPage.jsx";
 import { isPublicSignupAllowed, signupInviteRequired, validateSignupInvite } from "./lib/signupGate.js";
@@ -348,7 +349,7 @@ function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin }) {
     if (!profile.active) { await supabase.auth.signOut(); throw new Error("This account has been disabled. Contact your financier."); }
     if (mode === "agent" && profile.role !== "staff") throw new Error("This account is not a Collection Agent. Use Financier sign in.");
     if (mode === "signIn" && profile.role === "staff") throw new Error("Use Collection Agent sign in for this account.");
-    onLogin({ role: profile.role === "staff" ? "agent" : "financier", authToken: result.access_token, name: profile.fullName });
+    onLogin({ role: sessionUserRole(profile.role), authToken: result.access_token, name: profile.fullName, workspace: profile });
   };
   const submit = async () => {
     setMessage(""); setBusy(true);
@@ -369,7 +370,13 @@ function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin }) {
           throw new Error("Your account could not be signed in automatically. In Supabase, turn off Confirm email under Authentication → Providers → Email, then try again.");
         }
         await supabase.rpc("provision_financier", workspace, result.access_token);
-        onLogin({ role: "financier", authToken: result.access_token, name: fullName });
+        let profile;
+        try {
+          profile = await loadWorkspace(result.access_token);
+        } catch {
+          profile = { role: "owner", businessName, fullName, organizationSettings: {}, active: true, id: "" };
+        }
+        onLogin({ role: "financier", authToken: result.access_token, name: fullName, workspace: profile });
       } else {
         await signInAndEnter();
       }
@@ -905,7 +912,7 @@ function Financier({
   onSaveCustomerPortal,
   onLoadKyc,
   onSaveKyc, activeChitSchemes = []
-  , role = "owner", onStatusChange, onPaymentNoteChange, onPaymentCorrect, onPaymentDelete, onCollectionOrderChange,
+  , role = "staff", onStatusChange, onPaymentNoteChange, onPaymentCorrect, onPaymentDelete, onCollectionOrderChange,
   authToken, orgSettings = {}, workspace = {}, onLogReceipt, module = "all", onModuleChange = () => {},
 }) {
   const [modal, setModal] = useState(null),
@@ -1349,22 +1356,22 @@ function FinancierTools({ loans, token, activeChitSchemes = [], onCreateAgent, o
       <Button className={panel === "dashboard" || (panel === null && selectedModule === "all") ? "tab active" : ""} onClick={goDashboard}><span className="nav-label"><span className="nav-glyph">▦</span><span className="nav-long">Dashboard</span><span className="nav-short">Dash</span></span></Button>
       <Button className={panel === null && selectedModule === "daily" ? "tab active" : ""} onClick={() => goModule("daily")}><span className="nav-label"><span className="nav-glyph">▣</span><span className="nav-long">Daily Finance</span><span className="nav-short">Daily</span></span></Button>
       <Button className={panel === null && selectedModule === "monthly" ? "tab active" : ""} onClick={() => goModule("monthly")}><span className="nav-label"><span className="nav-glyph">◫</span><span className="nav-long">Monthly Finance</span><span className="nav-short">Monthly</span></span></Button>
-      <Button className={panel === "reports" ? "tab active" : ""} onClick={() => setPanel("reports")}><span className="nav-label"><span className="nav-glyph">↧</span><span className="nav-long">Reports</span><span className="nav-short">Reports</span></span></Button>
-      <Button className={panel === "chit" ? "tab active" : ""} onClick={() => setPanel("chit")}><span className="nav-label"><span className="nav-glyph">◎</span><span className="nav-long">Chit Fund</span><span className="nav-short">Chit</span></span></Button>
-      {workspace?.role !== "staff" && <Button className={moreActive ? "tab active" : ""} onClick={() => setPanel("more")}><span className="nav-label"><span className="nav-glyph">⋯</span><span className="nav-long">More</span><span className="nav-short">More</span></span></Button>}
-      {workspace?.role !== "staff" && panel === "more" && <div className="financier-nav-more">
+      {workspace?.role === "owner" && <Button className={panel === "reports" ? "tab active" : ""} onClick={() => setPanel("reports")}><span className="nav-label"><span className="nav-glyph">↧</span><span className="nav-long">Reports</span><span className="nav-short">Reports</span></span></Button>}
+      {workspace?.role === "owner" && <Button className={panel === "chit" ? "tab active" : ""} onClick={() => setPanel("chit")}><span className="nav-label"><span className="nav-glyph">◎</span><span className="nav-long">Chit Fund</span><span className="nav-short">Chit</span></span></Button>}
+      {workspace?.role === "owner" && <Button className={moreActive ? "tab active" : ""} onClick={() => setPanel("more")}><span className="nav-label"><span className="nav-glyph">⋯</span><span className="nav-long">More</span><span className="nav-short">More</span></span></Button>}
+      {workspace?.role === "owner" && panel === "more" && <div className="financier-nav-more">
         <Button onClick={() => openMoreSection("accounts")}>Accounts</Button>
         <Button onClick={() => openMoreSection("agents")}>Collection Staff</Button>
         <Button onClick={() => openMoreSection("settings")}>Settings</Button>
       </div>}
       <div className="nav-footer">Financier workspace</div>
     </aside>
-    {panel === "reports" && <PortfolioReport loans={loans} token={token} close={() => setPanel(null)} />}
-    {panel === "accounts" && <div style={{ position: "fixed", inset: 0, zIndex: 5, overflow: "auto", background: C.bg }}><AccountsModule token={token} close={goDashboard} loans={loans} /></div>}
-    {panel === "agents" && <CollectionStaffPage loans={loans} close={() => setPanel("more")} loadAgents={onLoadAgents} createAgent={onCreateAgent} assignAgent={onAssignAgent} updateAgent={onUpdateAgent} />}
-    {panel === "chit" && <div className="chit-dashboard" style={{ position: "fixed", inset: 0, zIndex: 5, overflow: "auto", background: C.bg }}><ChitFundPage token={token} orgSettings={orgSettings} workspace={workspace} onLogReceipt={onLogReceipt} openSchemeId={openChitSchemeId} onOpenSchemeConsumed={() => setOpenChitSchemeId(null)} onSchemesChanged={schemes => setDashboardChitSchemes((schemes || []).filter(scheme => scheme.status === "active"))} close={goDashboard} /></div>}
-    {panel === "settings" && <div style={{ position: "fixed", inset: 0, zIndex: 5, overflow: "auto", background: C.bg }}><ReceiptSettingsPage token={token} close={() => setPanel("more")} onSettingsSaved={onSettingsSaved} /></div>}
-    {(panel === null || panel === "dashboard") && selectedModule === "all" && <ActiveChitSchemes schemes={dashboardChitSchemes} onOpen={schemeId => { setOpenChitSchemeId(schemeId); setPanel("chit"); }} />}
+    {workspace?.role === "owner" && panel === "reports" && <PortfolioReport loans={loans} token={token} close={() => setPanel(null)} />}
+    {workspace?.role === "owner" && panel === "accounts" && <div style={{ position: "fixed", inset: 0, zIndex: 5, overflow: "auto", background: C.bg }}><AccountsModule token={token} close={goDashboard} loans={loans} /></div>}
+    {workspace?.role === "owner" && panel === "agents" && <CollectionStaffPage loans={loans} close={() => setPanel("more")} loadAgents={onLoadAgents} createAgent={onCreateAgent} assignAgent={onAssignAgent} updateAgent={onUpdateAgent} />}
+    {workspace?.role === "owner" && panel === "chit" && <div className="chit-dashboard" style={{ position: "fixed", inset: 0, zIndex: 5, overflow: "auto", background: C.bg }}><ChitFundPage token={token} orgSettings={orgSettings} workspace={workspace} onLogReceipt={onLogReceipt} openSchemeId={openChitSchemeId} onOpenSchemeConsumed={() => setOpenChitSchemeId(null)} onSchemesChanged={schemes => setDashboardChitSchemes((schemes || []).filter(scheme => scheme.status === "active"))} close={goDashboard} /></div>}
+    {workspace?.role === "owner" && panel === "settings" && <div style={{ position: "fixed", inset: 0, zIndex: 5, overflow: "auto", background: C.bg }}><ReceiptSettingsPage token={token} close={() => setPanel("more")} onSettingsSaved={onSettingsSaved} /></div>}
+    {workspace?.role === "owner" && (panel === null || panel === "dashboard") && selectedModule === "all" && <ActiveChitSchemes schemes={dashboardChitSchemes} onOpen={schemeId => { setOpenChitSchemeId(schemeId); setPanel("chit"); }} />}
   </div>;
 }
 function CustomerReportDownload({ loan, onResetPin }) {
@@ -1399,7 +1406,7 @@ export default function App() {
         if (cancelled) return;
         setWorkspace(next);
         setUser({
-          role: next.role === "staff" ? "agent" : "financier",
+          role: sessionUserRole(next.role),
           authToken: session.access_token,
           name: next.fullName,
         });
@@ -1414,26 +1421,38 @@ export default function App() {
     catch (error) { setDataError(error.message || "Could not load finance records."); }
   };
   useEffect(() => { refreshLoans(); }, [user?.authToken]);
+  const enterSession = payload => {
+    const { workspace: nextWorkspace, ...session } = payload;
+    if (nextWorkspace) setWorkspace(nextWorkspace);
+    setUser(session);
+  };
   const refreshWorkspace = async (token = user?.authToken) => {
-    if (!token) { setWorkspace(null); return null; }
+    if (!token) {
+      if (!user) setWorkspace(null);
+      return null;
+    }
     try {
       const next = await loadWorkspace(token);
       setWorkspace(next);
       return next;
     } catch {
+      setWorkspace(current => current || {
+        role: user?.role === "agent" ? "staff" : "owner",
+        businessName: "My Finance Business",
+        fullName: user?.name || "",
+        organizationSettings: {},
+      });
       return null;
     }
   };
   useEffect(() => {
     refreshWorkspace();
   }, [user?.authToken]);
-  useEffect(() => {
-    if (workspace?.role === "staff" && user?.role === "financier") setUser(current => ({ ...current, role: "agent" }));
-  }, [workspace?.role, user?.role]);
   const customerLoan = user?.role === "customer" ? user.loan : null;
   const logout = async () => {
     if (user?.role === "financier" || user?.role === "agent") await supabase.auth.signOut();
     setUser(null);
+    setWorkspace(null);
   };
   const createLoan = async loan => {
     const accountId = await createFinanceAccount(user.authToken, loan);
@@ -1481,12 +1500,14 @@ export default function App() {
   const getManagedAgents = () => loadManagedAgents(user.authToken);
   const updateAgentAssignment = async (loan, agentId) => { await assignCollectionAgent(user.authToken, loan.id, agentId); await refreshLoans(); };
   const saveCollectionStaff = details => updateCollectionAgent(user.authToken, details);
-  const staffRole = user?.role === "agent" || workspace?.role === "staff";
+  const access = workspaceAccess(workspace);
+  const financeSession = user?.role === "financier" || user?.role === "agent";
+  const waitingForWorkspaceRole = financeSession && !access.roleKnown;
   if (legalView) {
     return <div className="app"><style>{styles + enhancements + homeReportHide + visualRefresh + mobileCollections + mobileLayout}</style><LegalPage view={legalView} /></div>;
   }
-  if (!authReady && !isPasswordRecovery) {
+  if ((!authReady || waitingForWorkspaceRole) && !isPasswordRecovery) {
     return <div className="app"><style>{styles + enhancements + homeReportHide + visualRefresh + mobileCollections + mobileLayout}</style><div className="login"><p className="sub" style={{ textAlign: "center" }}>Loading FinTrack…</p></div></div>;
   }
-  return <div className="app"><style>{styles + enhancements + homeReportHide + visualRefresh + accountsStyles + creditScoreStyles + mobileCollections + mobileLayout + receiptStyles + `.phone-link{color:${C.blue};text-decoration:none}.phone-link:hover{text-decoration:underline}`}</style>{isPasswordRecovery ? <PasswordRecovery /> : !user ? <FinancierAuth onLogin={setUser} onCustomerLogin={loan => setUser({ role: "customer", loan })} onChitCustomerLogin={session => setUser({ role: "chitCustomer", session })} /> : user.role === "financier" || staffRole ? <>{dataError && <div className="notice" style={{ position: "fixed", top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 20 }}>{dataError}</div>}<Financier loans={loans} businessName={workspace?.businessName} setLoans={setLoans} onCreateLoan={createLoan} onRecordPayment={savePayment} onUpdateLoan={updateLoan} onDeleteLoan={removeLoan} onSaveCustomerPortal={saveCustomerPortal} onLoadKyc={getKyc} onSaveKyc={updateKyc} onStatusChange={changeStatus} onPaymentNoteChange={changePaymentNotes} onPaymentCorrect={correctPayment} onPaymentDelete={removePayment} onCollectionOrderChange={changeCollectionOrder} role={staffRole ? "staff" : "owner"} logout={logout} authToken={user.authToken} orgSettings={workspace?.organizationSettings || {}} workspace={workspace || {}} onLogReceipt={logReceipt} module={financeModule} onModuleChange={setFinanceModule} />{!staffRole && <FinancierTools loans={loans} token={user.authToken} orgSettings={workspace?.organizationSettings || {}} workspace={workspace || {}} onLogReceipt={logReceipt} onSettingsSaved={() => refreshWorkspace()} selectedModule={financeModule} onModuleChange={setFinanceModule} onCreateAgent={addCollectionAgent} onLoadAgents={getManagedAgents} onAssignAgent={updateAgentAssignment} onUpdateAgent={saveCollectionStaff} />}</> : user.role === "chitCustomer" ? <ChitCustomerPortal session={user.session} logout={logout} /> : <><Customer loan={customerLoan} logout={logout} /><CustomerReportDownload loan={customerLoan} /></>}</div>;
+  return <div className="app"><style>{styles + enhancements + homeReportHide + visualRefresh + accountsStyles + creditScoreStyles + mobileCollections + mobileLayout + receiptStyles + `.phone-link{color:${C.blue};text-decoration:none}.phone-link:hover{text-decoration:underline}`}</style>{isPasswordRecovery ? <PasswordRecovery /> : !user ? <FinancierAuth onLogin={enterSession} onCustomerLogin={loan => setUser({ role: "customer", loan })} onChitCustomerLogin={session => setUser({ role: "chitCustomer", session })} /> : user.role === "financier" || user.role === "agent" ? <>{dataError && <div className="notice" style={{ position: "fixed", top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 20 }}>{dataError}</div>}<Financier loans={loans} businessName={workspace?.businessName} setLoans={setLoans} onCreateLoan={createLoan} onRecordPayment={savePayment} onUpdateLoan={updateLoan} onDeleteLoan={removeLoan} onSaveCustomerPortal={saveCustomerPortal} onLoadKyc={getKyc} onSaveKyc={updateKyc} onStatusChange={changeStatus} onPaymentNoteChange={changePaymentNotes} onPaymentCorrect={correctPayment} onPaymentDelete={removePayment} onCollectionOrderChange={changeCollectionOrder} role={access.isOwner ? "owner" : "staff"} logout={logout} authToken={user.authToken} orgSettings={workspace?.organizationSettings || {}} workspace={workspace || {}} onLogReceipt={logReceipt} module={financeModule} onModuleChange={setFinanceModule} />{access.isOwner && <FinancierTools loans={loans} token={user.authToken} orgSettings={workspace?.organizationSettings || {}} workspace={workspace || {}} onLogReceipt={logReceipt} onSettingsSaved={() => refreshWorkspace()} selectedModule={financeModule} onModuleChange={setFinanceModule} onCreateAgent={addCollectionAgent} onLoadAgents={getManagedAgents} onAssignAgent={updateAgentAssignment} onUpdateAgent={saveCollectionStaff} />}</> : user.role === "chitCustomer" ? <ChitCustomerPortal session={user.session} logout={logout} /> : <><Customer loan={customerLoan} logout={logout} /><CustomerReportDownload loan={customerLoan} /></>}</div>;
 }

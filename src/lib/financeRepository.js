@@ -90,10 +90,11 @@ export async function loadWorkspace(token) {
   const rows = await loadProfileOrganization(token, "id,full_name,role,is_active");
   const profile = rows[0];
   const organization = Array.isArray(profile?.organizations) ? profile.organizations[0] : profile?.organizations;
+  if (profile?.role !== "owner" && profile?.role !== "staff") throw new Error("Could not load workspace role.");
   return {
     businessName: organization?.name || "My Finance Business",
     fullName: profile?.full_name || "",
-    role: profile?.role || "owner",
+    role: profile.role,
     active: profile?.is_active !== false,
     id: profile?.id || "",
     organizationSettings: mapOrganizationSettings(organization),
