@@ -13,6 +13,7 @@ import {
   recordTransfer,
 } from "./accountsRepository.js";
 import {
+  CASHBOOK_SOURCE_FILTERS,
   EXPENSE_CATEGORIES,
   MANUAL_IN_CATEGORIES,
   MANUAL_OUT_CATEGORIES,
@@ -127,6 +128,7 @@ export function AccountsModule({ token, close, loans = [] }) {
   const [search, setSearch] = useState("");
   const [accountFilter, setAccountFilter] = useState("all");
   const [directionFilter, setDirectionFilter] = useState("all");
+  const [sourceFilter, setSourceFilter] = useState("all");
   const [showSetup, setShowSetup] = useState(false);
   const [showManual, setShowManual] = useState(false);
   const [showExpense, setShowExpense] = useState(false);
@@ -182,16 +184,25 @@ export function AccountsModule({ token, close, loans = [] }) {
     () => entries.filter(entry => entry.entryDate >= range.from && entry.entryDate <= range.to),
     [entries, range],
   );
+  const loanById = useMemo(
+    () => Object.fromEntries(loans.map(loan => [loan.id, loan])),
+    [loans],
+  );
   const cashbookRows = useMemo(() => {
     const filtered = filterCashbookEntries(rangedEntries, {
-      search, accountId: accountFilter, direction: directionFilter, category: "all",
+      search,
+      accountId: accountFilter,
+      direction: directionFilter,
+      category: "all",
+      source: sourceFilter,
+      loanById,
     });
     const cashLedger = ledgers.find(l => l.accountType === "cash" && l.isDefault)?.id || ledgers[0]?.id;
     return runningBalancesForLedger(
       accountFilter === "all" ? filtered : filtered,
       accountFilter === "all" ? cashLedger : accountFilter,
     );
-  }, [rangedEntries, search, accountFilter, directionFilter, ledgers]);
+  }, [rangedEntries, search, accountFilter, directionFilter, sourceFilter, loanById, ledgers]);
 
   const expenseRows = useMemo(
     () => rangedEntries.filter(entry => entry.sourceType === "expense" || entry.category === "Expense" || EXPENSE_CATEGORIES.includes(entry.category)),
@@ -337,7 +348,13 @@ export function AccountsModule({ token, close, loans = [] }) {
               </select>
             </label>
             <label className="accounts-filter-field">
-              <span className="small">Type</span>
+              <span className="small">Source</span>
+              <select value={sourceFilter} onChange={event => setSourceFilter(event.target.value)}>
+                {CASHBOOK_SOURCE_FILTERS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
+              </select>
+            </label>
+            <label className="accounts-filter-field">
+              <span className="small">In / out</span>
               <select value={directionFilter} onChange={event => setDirectionFilter(event.target.value)}>
                 <option value="all">All</option>
                 <option value="in">Money in</option>
@@ -349,7 +366,7 @@ export function AccountsModule({ token, close, loans = [] }) {
         </div>
         <div className="accounts-action-row spacer">
           <button type="button" className="btn primary" onClick={() => setShowManual(true)}>+ Add transaction</button>
-          <button type="button" className="btn" onClick={() => exportCsv(rangedEntries)}>Export CSV</button>
+          <button type="button" className="btn" onClick={() => exportCsv(cashbookRows)}>Export CSV</button>
           <button type="button" className="btn" onClick={() => backfillCashbook(token).then(refresh)}>Sync from FinTrack</button>
         </div>
         <div className="accounts-entry-list">
@@ -370,10 +387,10 @@ export function AccountsModule({ token, close, loans = [] }) {
               {entry.paymentMode && <>{entry.paymentMode} · </>}
               {entry.reference || ""}
             </p>}
-            {sourceOriginLabel(entry) && <p className="small accounts-origin-note">Synced from {sourceOriginLabel(entry)} — edit the original record to change the amount.</p>}
+            {sourceOriginLabel(entry, loanById) && <p className="small accounts-origin-note">Synced from {sourceOriginLabel(entry, loanById)} — edit the original record to change the amount.</p>}
             {entry.isEditable && <button type="button" className="btn danger accounts-entry-delete" onClick={() => removeManual(entry)}>Delete</button>}
           </article>)}
-          {!cashbookRows.length && <EmptyState>No cashbook entries for this period.</EmptyState>}
+          {!cashbookRows.length && <EmptyState>No cashbook entries match these filters.</EmptyState>}
         </div>
       </div>}
       {section === "expenses" && <div className="accounts-panel">

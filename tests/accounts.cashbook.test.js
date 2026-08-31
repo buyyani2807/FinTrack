@@ -2,10 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   aggregateOverview,
+  cashbookSourceKind,
   dateRangeForFilter,
   filterCashbookEntries,
   ledgerBalance,
   runningBalancesForLedger,
+  sourceOriginLabel,
   todayIso,
 } from "../src/features/accounts/cashbookModel.js";
 
@@ -60,6 +62,47 @@ test("filterCashbookEntries supports split-payment search without duplication", 
   const filtered = filterCashbookEntries(entries, { search: "split", accountId: "all", direction: "all", category: "all" });
   assert.equal(filtered.length, 1);
   assert.equal(filtered[0].moneyIn, 2500);
+});
+
+test("cashbookSourceKind classifies daily, monthly, and chit entries", () => {
+  const loanById = {
+    d1: { id: "d1", kind: "daily" },
+    m1: { id: "m1", kind: "monthly" },
+  };
+  assert.equal(cashbookSourceKind({ sourceType: "finance_payment", financeAccountId: "d1" }, loanById), "daily");
+  assert.equal(cashbookSourceKind({ sourceType: "finance_disbursement", financeAccountId: "m1" }, loanById), "monthly");
+  assert.equal(cashbookSourceKind({ sourceType: "chit_auction" }, loanById), "chit");
+  assert.equal(cashbookSourceKind({ sourceType: "chit_fixed_lift" }, loanById), "chit");
+  assert.equal(cashbookSourceKind({
+    sourceType: "finance_payment",
+    category: "Finance Collection",
+    description: "Meena · Monthly collection",
+  }), "monthly");
+  assert.equal(cashbookSourceKind({
+    sourceType: "finance_disbursement",
+    description: "Ravi · Paid to customer",
+  }), "daily");
+});
+
+test("filterCashbookEntries combines money in/out with daily, monthly, and chit sources", () => {
+  const mixed = [
+    { id: "d-in", ledgerAccountId: "cash", moneyIn: 1000, moneyOut: 0, sourceType: "finance_payment", financeAccountId: "d1", transactionType: "money_in", description: "Daily collection" },
+    { id: "d-out", ledgerAccountId: "cash", moneyIn: 0, moneyOut: 8000, sourceType: "finance_disbursement", financeAccountId: "d1", transactionType: "money_out", description: "Paid to customer" },
+    { id: "m-in", ledgerAccountId: "cash", moneyIn: 2500, moneyOut: 0, sourceType: "finance_payment", financeAccountId: "m1", transactionType: "money_in", description: "Monthly collection" },
+    { id: "m-out", ledgerAccountId: "cash", moneyIn: 0, moneyOut: 50000, sourceType: "finance_disbursement", financeAccountId: "m1", transactionType: "money_out", description: "Principal financed" },
+    { id: "c-in", ledgerAccountId: "cash", moneyIn: 3000, moneyOut: 0, sourceType: "chit_fixed", transactionType: "money_in", description: "Chit installment" },
+    { id: "c-out", ledgerAccountId: "cash", moneyIn: 0, moneyOut: 40000, sourceType: "chit_fixed_lift", transactionType: "money_out", description: "Chit payout" },
+    { id: "manual", ledgerAccountId: "cash", moneyIn: 100, moneyOut: 0, sourceType: "manual", transactionType: "money_in", description: "Other income" },
+  ];
+  const loanById = { d1: { id: "d1", kind: "daily" }, m1: { id: "m1", kind: "monthly" } };
+  const dailyIn = filterCashbookEntries(mixed, { source: "daily", direction: "in", loanById });
+  const monthlyOut = filterCashbookEntries(mixed, { source: "monthly", direction: "out", loanById });
+  const chitAll = filterCashbookEntries(mixed, { source: "chit", loanById });
+  assert.deepEqual(dailyIn.map(row => row.id), ["d-in"]);
+  assert.deepEqual(monthlyOut.map(row => row.id), ["m-out"]);
+  assert.deepEqual(chitAll.map(row => row.id), ["c-in", "c-out"]);
+  assert.equal(sourceOriginLabel(mixed[0], loanById), "Daily Finance collection");
+  assert.equal(sourceOriginLabel(mixed[3], loanById), "Monthly Finance disbursement");
 });
 
 test("dateRangeForFilter returns today range", () => {

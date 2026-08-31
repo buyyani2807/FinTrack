@@ -66,12 +66,40 @@ export const runningBalancesForLedger = (entries, ledgerId) => {
   }).reverse();
 };
 
+export const CASHBOOK_SOURCE_FILTERS = [
+  { id: "all", label: "All sources" },
+  { id: "daily", label: "Daily Finance" },
+  { id: "monthly", label: "Monthly Finance" },
+  { id: "chit", label: "Chit Fund" },
+];
+
+const inferFinanceKind = (entry, loanById = {}) => {
+  const loan = loanById[entry.financeAccountId];
+  if (loan?.kind === "daily" || loan?.kind === "monthly") return loan.kind;
+  const category = String(entry.category || "").toLowerCase();
+  const description = String(entry.description || "").toLowerCase();
+  if (category.includes("monthly") || description.includes("monthly collection") || description.includes("principal financed")) {
+    return "monthly";
+  }
+  if (category.includes("daily") || description.includes("daily collection") || description.includes("paid to customer")) {
+    return "daily";
+  }
+  return null;
+};
+
+export const cashbookSourceKind = (entry, loanById = {}) => {
+  if (String(entry.sourceType || "").startsWith("chit_")) return "chit";
+  return inferFinanceKind(entry, loanById);
+};
+
 export const filterCashbookEntries = (entries, {
   search = "",
   accountId = "all",
   direction = "all",
   category = "all",
-}) => {
+  source = "all",
+  loanById = {},
+} = {}) => {
   const q = search.trim().toLowerCase();
   return entries.filter(entry => {
     if (accountId !== "all" && entry.ledgerAccountId !== accountId) return false;
@@ -79,6 +107,7 @@ export const filterCashbookEntries = (entries, {
     if (direction === "out" && Number(entry.moneyOut || 0) <= 0) return false;
     if (direction === "transfer" && !["transfer_in", "transfer_out"].includes(entry.transactionType)) return false;
     if (category !== "all" && entry.category !== category) return false;
+    if (source !== "all" && cashbookSourceKind(entry, loanById) !== source) return false;
     if (!q) return true;
     const hay = [
       entry.description, entry.category, entry.reference, entry.receiptNumber,
@@ -88,19 +117,31 @@ export const filterCashbookEntries = (entries, {
   });
 };
 
-export const sourceOriginLabel = entry => {
+export const sourceOriginLabel = (entry, loanById = {}) => {
   if (!entry.sourceType || entry.isEditable) return null;
+  const kind = cashbookSourceKind(entry, loanById);
+  if (entry.sourceType === "finance_payment") {
+    if (kind === "monthly") return "Monthly Finance collection";
+    if (kind === "daily") return "Daily Finance collection";
+    return "Finance collection";
+  }
+  if (entry.sourceType === "finance_disbursement") {
+    if (kind === "monthly") return "Monthly Finance disbursement";
+    if (kind === "daily") return "Daily Finance disbursement";
+    return "Finance disbursement";
+  }
   const map = {
-    finance_payment: "Daily/Monthly Finance payment",
-    finance_disbursement: "Finance disbursement",
     chit_auction: "Chit Fund (Auction)",
     chit_fixed: "Chit Fund (Fixed)",
     chit_predefined: "Chit Fund (Predefined Bid)",
+    chit_fixed_lift: "Chit Fund payout (Fixed)",
+    chit_predefined_payout: "Chit Fund payout (Predefined Bid)",
+    chit_auction_payout: "Chit Fund payout (Auction)",
     expense: "Manual expense",
     transfer: "Transfer",
     opening_balance: "Opening balance",
   };
-  return map[entry.sourceType] || "Linked transaction";
+  return map[entry.sourceType] || (kind === "chit" ? "Chit Fund" : "Linked transaction");
 };
 
 export const formatCompactMoney = value => {
