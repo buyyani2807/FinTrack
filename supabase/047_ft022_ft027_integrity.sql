@@ -29,7 +29,8 @@ begin
 end;
 $$;
 
-revoke all on function public.fintrack_next_receipt_number(uuid) from public, anon, authenticated;
+revoke all on function public.fintrack_next_receipt_number(uuid) from public, anon;
+grant execute on function public.fintrack_next_receipt_number(uuid) to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- FT-027 — Receipt/reminder logs are not org-wide for staff
@@ -122,9 +123,7 @@ begin
     penalty_rate = coalesce(account_penalty_rate, 0)
   where id = account_id;
   perform public.write_finance_audit(account_id, 'account_updated', jsonb_build_object('before', before_data));
-  if to_regprocedure('public.accounts_sync_finance_disbursement(uuid)') is not null then
-    perform public.accounts_sync_finance_disbursement(account_id);
-  end if;
+  perform public.accounts_sync_finance_disbursement(account_id);
 end;
 $$;
 
