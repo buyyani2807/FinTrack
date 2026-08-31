@@ -55,6 +55,7 @@ Run these in the Supabase SQL Editor **in order**. Each file is idempotent where
 | 047 | `047_ft022_ft027_integrity.sql` | FT-022–027 together (includes 047a, plus chit Sync/lifts and reminder-log RLS) |
 | 048 | `048_ft028_ft031_integrity.sql` | **FT-028 / FT-031** — monthly rate edits apply from today; inactive staff cannot SELECT assigned finance rows |
 | 049 | `049_ft029_ft034_integrity.sql` | **FT-029 / FT-030 / FT-032** — monthly split must match total; collection cannot exceed remaining; edit cannot reuse another payment date |
+| 050 | `050_disbursement_payout_mode.sql` | Daily / Monthly money-out can be Cash, UPI, or Cash+UPI (cashbook posts to the matching ledger) |
 
 After running 041 (and 042 if Save & sync failed), open **More → Accounts**, set opening balances once, then tap **Sync from FinTrack** to backfill historical collections and disbursements. If Cashbook **Delete** does nothing, run 043. After 044, tap **Sync from FinTrack** again so monthly principal disbursements are posted. After 045, existing daily bankrupt `loss_amount` values are rewritten to disbursed − collected.
 
@@ -67,6 +68,8 @@ After the full 047, also tap **Sync from FinTrack** in Accounts so historical ch
 After **048**, inactive collection agents cannot read assigned finance rows, and editing a monthly interest rate writes `rate_changes` so earlier months keep the previous rate. No extra Sync is required.
 
 After **049**, finance payment RPCs reject a monthly split that does not equal the total, a collection above remaining daily/principal, and a payment-date change onto a day that already has a collection.
+
+After **050**, creating or editing a Daily / Monthly account lets you choose **Cash**, **UPI**, or **Cash + UPI** for the amount paid to the customer (or principal financed). Existing accounts stay Cash. After running 050, tap **Sync from FinTrack** only if you edit an account’s payout mode; new accounts sync automatically.
 
 After running 036, verify in Supabase SQL Editor:
 

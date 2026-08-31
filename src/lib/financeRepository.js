@@ -287,6 +287,9 @@ export async function loadFinanceAccounts(token) {
     startDate: account.start_date,
     collectionAmount: asNumber(account.collection_amount),
     disbursedAmount: asNumber(account.disbursed_amount),
+    disbursementMode: account.disbursement_mode || "cash",
+    disbursementCashAmount: asNumber(account.disbursement_cash_amount),
+    disbursementUpiAmount: asNumber(account.disbursement_upi_amount),
     dailyCollection: asNumber(account.daily_collection),
     principal: asNumber(account.principal),
     annualRate: asNumber(account.monthly_interest_rate),
@@ -322,6 +325,9 @@ export async function createFinanceAccount(token, loan) {
     account_principal: loan.kind === "monthly" ? loan.principal : null,
     account_monthly_interest_rate: loan.kind === "monthly" ? loan.annualRate : null,
     account_penalty_rate: loan.kind === "monthly" ? loan.penaltyRate : 0,
+    payout_mode: loan.disbursementMode || "cash",
+    payout_cash_amount: loan.disbursementCashAmount ?? 0,
+    payout_upi_amount: loan.disbursementUpiAmount ?? 0,
   }, token);
 }
 
@@ -347,6 +353,9 @@ export async function updateFinanceAccount(token, loan) {
     account_principal: loan.kind === "monthly" ? loan.principal : null,
     account_monthly_interest_rate: loan.kind === "monthly" ? loan.annualRate : null,
     account_penalty_rate: loan.kind === "monthly" ? loan.penaltyRate : 0,
+    payout_mode: loan.disbursementMode || "cash",
+    payout_cash_amount: loan.disbursementCashAmount ?? 0,
+    payout_upi_amount: loan.disbursementUpiAmount ?? 0,
   }, token);
 }
 

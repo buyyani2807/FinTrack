@@ -8,6 +8,7 @@ import { byCollectionOrderThenName, mergeAccountOrder, reorderIds } from "./feat
 import { financeKindLabel, staffAssignableLoans } from "./features/finance/collectionStaff";
 import { mergeAccountTransaction } from "./features/finance/paymentState.js";
 import { remainingCollectable, paymentExceedsRemaining } from "./features/finance/paymentLimits.js";
+import { disbursementPayoutError, disbursementPayoutSplit, disbursementPayoutTotal } from "./features/finance/disbursementMode.js";
 import { collectionDetailVisibility, financeRolesAligned, ownerChromeAllowed, sessionUserRole, workspaceSessionAllowed } from "./features/finance/workspaceAccess.js";
 import { ChitCustomerPortal, ChitFundPage } from "./features/chitFund/ChitFundModule";
 import { LegalPage, legalViewFromLocation, openLegalView } from "./features/legal/LegalPage.jsx";
@@ -301,6 +302,21 @@ const Field = ({
   children,
   className = ""
 }) => <div className={`field ${className}`}><label>{label}</label>{children}</div>;
+function PayoutModeFields({ mode, cash, upi, onMode, onCash, onUpi }) {
+  return <>
+    <Field className="span" label="Paid out by">
+      <select value={mode || "cash"} onChange={event => onMode(event.target.value)}>
+        <option value="cash">Cash</option>
+        <option value="upi">UPI</option>
+        <option value="cash_upi">Cash + UPI</option>
+      </select>
+    </Field>
+    {(mode || "cash") === "cash_upi" && <>
+      <Field label="Cash amount (₹)"><input type="number" min="0" step="0.01" value={cash ?? ""} onChange={event => onCash(event.target.value)} /></Field>
+      <Field label="UPI amount (₹)"><input type="number" min="0" step="0.01" value={upi ?? ""} onChange={event => onUpi(event.target.value)} /></Field>
+    </>}
+  </>;
+}
 const Metric = ({
   label,
   value,
@@ -479,7 +495,10 @@ function NewFinance({
     disbursedAmount: "",
     principal: "100000",
     annualRate: "3",
-    penaltyRate: "5"
+    penaltyRate: "5",
+    disbursementMode: "cash",
+    disbursementCashAmount: "",
+    disbursementUpiAmount: ""
   });
   const [err, setErr] = useState("");
   const set = (k, v) => setF(x => ({
@@ -489,6 +508,10 @@ function NewFinance({
   const submit = async () => {
     const daily = f.kind === "daily";
     if (!f.customerName || !f.phone || daily && (+f.collectionAmount <= 0 || +f.disbursedAmount <= 0) || !daily && +f.principal <= 0) return setErr(daily ? "Enter customer details, the financed amount, and the actual positive amount paid to the customer." : "Complete the customer details and amount.");
+    const payoutTotal = disbursementPayoutTotal(f.kind, f.disbursedAmount, f.principal);
+    const payoutErr = disbursementPayoutError(f.disbursementMode, payoutTotal, f.disbursementCashAmount, f.disbursementUpiAmount);
+    if (payoutErr) return setErr(payoutErr);
+    const payout = disbursementPayoutSplit(f.disbursementMode, payoutTotal, f.disbursementCashAmount, f.disbursementUpiAmount);
     const stamp = Date.now().toString().slice(-6),
       isDaily = f.kind === "daily";
     try {
@@ -507,11 +530,14 @@ function NewFinance({
       penaltyRate: +f.penaltyRate,
       dailyCollection: isDaily ? dailyInstallmentAmount(f.collectionAmount) : 0,
       rateChanges: [],
+      disbursementMode: payout.mode,
+      disbursementCashAmount: payout.cashAmount,
+      disbursementUpiAmount: payout.upiAmount,
       transactions: []
       });
     } catch (error) { setErr(error.message || "Could not create the finance account."); }
   };
-  return <Modal close={close}><h2 className="title">New finance account</h2><p className="copy">Customer portal access is enabled automatically with a generated PIN.</p><div className="tabs spacer"><Button className={`tab ${f.kind === "daily" ? "active" : ""}`} onClick={() => set("kind", "daily")}>Daily Finance</Button><Button className={`tab ${f.kind === "monthly" ? "active" : ""}`} onClick={() => set("kind", "monthly")}>Monthly Finance</Button></div><div className="form spacer"><Field label="Customer name *"><input value={f.customerName} onChange={e => set("customerName", e.target.value)} /></Field><Field label="Phone *"><input value={f.phone} onChange={e => set("phone", e.target.value)} /></Field><Field label="Start date"><input type="date" value={f.startDate} onChange={e => set("startDate", e.target.value)} /></Field><Field label="Address"><input value={f.address} onChange={e => set("address", e.target.value)} /></Field><div className="notice span"><strong>KYC details</strong> — store these only with customer consent.</div><Field label="Aadhaar number"><input inputMode="numeric" maxLength="12" placeholder="12-digit Aadhaar" value={f.aadhaar} onChange={e => set("aadhaar", e.target.value.replace(/\D/g, ""))} /></Field><Field label="PAN number"><input maxLength="10" placeholder="ABCDE1234F" value={f.pan} onChange={e => set("pan", e.target.value.toUpperCase())} /></Field>{f.kind === "daily" ? <><Field label="Amount financed — repaid in 100 days (₹) *"><input type="number" min="1" value={f.collectionAmount} onChange={e => set("collectionAmount", e.target.value)} /></Field><Field label="Actual paid to customer (₹) *"><input type="number" min="1" placeholder="Enter the actual amount paid" value={f.disbursedAmount} onChange={e => set("disbursedAmount", e.target.value)} /></Field><div className="notice span">Enter the actual amount paid to the customer. It is not calculated automatically and will be used in Profit &amp; Loss. The repayment schedule remains 100 days: {money(dailyInstallmentAmount(f.collectionAmount || 0))} per day.</div></> : <><Field label="Principal (₹) *"><input type="number" value={f.principal} onChange={e => set("principal", e.target.value)} /></Field><Field label="Monthly interest rate (%)"><input type="number" value={f.annualRate} onChange={e => set("annualRate", e.target.value)} /></Field><Field label="Missed-interest penalty (%)"><input type="number" value={f.penaltyRate} onChange={e => set("penaltyRate", e.target.value)} /></Field></>}</div>{err && <p className="red small">{err}</p>}<div className="row spacer"><Button onClick={close}>Cancel</Button><Button className="primary" onClick={submit}>Create account</Button></div></Modal>;
+  return <Modal close={close}><h2 className="title">New finance account</h2><p className="copy">Customer portal access is enabled automatically with a generated PIN.</p><div className="tabs spacer"><Button className={`tab ${f.kind === "daily" ? "active" : ""}`} onClick={() => set("kind", "daily")}>Daily Finance</Button><Button className={`tab ${f.kind === "monthly" ? "active" : ""}`} onClick={() => set("kind", "monthly")}>Monthly Finance</Button></div><div className="form spacer"><Field label="Customer name *"><input value={f.customerName} onChange={e => set("customerName", e.target.value)} /></Field><Field label="Phone *"><input value={f.phone} onChange={e => set("phone", e.target.value)} /></Field><Field label="Start date"><input type="date" value={f.startDate} onChange={e => set("startDate", e.target.value)} /></Field><Field label="Address"><input value={f.address} onChange={e => set("address", e.target.value)} /></Field><div className="notice span"><strong>KYC details</strong> — store these only with customer consent.</div><Field label="Aadhaar number"><input inputMode="numeric" maxLength="12" placeholder="12-digit Aadhaar" value={f.aadhaar} onChange={e => set("aadhaar", e.target.value.replace(/\D/g, ""))} /></Field><Field label="PAN number"><input maxLength="10" placeholder="ABCDE1234F" value={f.pan} onChange={e => set("pan", e.target.value.toUpperCase())} /></Field>{f.kind === "daily" ? <><Field label="Amount financed — repaid in 100 days (₹) *"><input type="number" min="1" value={f.collectionAmount} onChange={e => set("collectionAmount", e.target.value)} /></Field><Field label="Actual paid to customer (₹) *"><input type="number" min="1" placeholder="Enter the actual amount paid" value={f.disbursedAmount} onChange={e => set("disbursedAmount", e.target.value)} /></Field><PayoutModeFields mode={f.disbursementMode} cash={f.disbursementCashAmount} upi={f.disbursementUpiAmount} onMode={value => set("disbursementMode", value)} onCash={value => set("disbursementCashAmount", value)} onUpi={value => set("disbursementUpiAmount", value)} /><div className="notice span">Enter the actual amount paid to the customer. It is not calculated automatically and will be used in Profit &amp; Loss. The repayment schedule remains 100 days: {money(dailyInstallmentAmount(f.collectionAmount || 0))} per day.</div></> : <><Field label="Principal (₹) *"><input type="number" value={f.principal} onChange={e => set("principal", e.target.value)} /></Field><PayoutModeFields mode={f.disbursementMode} cash={f.disbursementCashAmount} upi={f.disbursementUpiAmount} onMode={value => set("disbursementMode", value)} onCash={value => set("disbursementCashAmount", value)} onUpi={value => set("disbursementUpiAmount", value)} /><Field label="Monthly interest rate (%)"><input type="number" value={f.annualRate} onChange={e => set("annualRate", e.target.value)} /></Field><Field label="Missed-interest penalty (%)"><input type="number" value={f.penaltyRate} onChange={e => set("penaltyRate", e.target.value)} /></Field></>}</div>{err && <p className="red small">{err}</p>}<div className="row spacer"><Button onClick={close}>Cancel</Button><Button className="primary" onClick={submit}>Create account</Button></div></Modal>;
 }
 function Payment({
   loan,
@@ -571,11 +597,26 @@ function EditAccount({ loan, close, save }) {
   const set = (key, value) => setForm(current => ({ ...current, [key]: value }));
   const submit = async () => {
     try {
-      const updated = { ...form, collectionAmount: +form.collectionAmount, disbursedAmount: form.kind === "daily" ? +form.disbursedAmount : 0, dailyCollection: form.kind === "daily" ? dailyInstallmentAmount(form.collectionAmount) : 0, principal: +form.principal, annualRate: +form.annualRate, penaltyRate: +form.penaltyRate };
+      const payoutTotal = disbursementPayoutTotal(form.kind, form.disbursedAmount, form.principal);
+      const payoutErr = disbursementPayoutError(form.disbursementMode, payoutTotal, form.disbursementCashAmount, form.disbursementUpiAmount);
+      if (payoutErr) return setError(payoutErr);
+      const payout = disbursementPayoutSplit(form.disbursementMode, payoutTotal, form.disbursementCashAmount, form.disbursementUpiAmount);
+      const updated = {
+        ...form,
+        collectionAmount: +form.collectionAmount,
+        disbursedAmount: form.kind === "daily" ? +form.disbursedAmount : 0,
+        dailyCollection: form.kind === "daily" ? dailyInstallmentAmount(form.collectionAmount) : 0,
+        principal: +form.principal,
+        annualRate: +form.annualRate,
+        penaltyRate: +form.penaltyRate,
+        disbursementMode: payout.mode,
+        disbursementCashAmount: payout.cashAmount,
+        disbursementUpiAmount: payout.upiAmount,
+      };
       await save(updated); close();
     } catch (err) { setError(err.message || "Could not update the account."); }
   };
-  return <Modal><h2 className="title">Edit finance account</h2><p className="copy">Correct the plan type or any account detail. Changes are recorded in the audit log.</p><div className="tabs spacer"><Button className={`tab ${form.kind === "daily" ? "active" : ""}`} onClick={() => set("kind", "daily")}>Daily Finance</Button><Button className={`tab ${form.kind === "monthly" ? "active" : ""}`} onClick={() => set("kind", "monthly")}>Monthly Finance</Button></div><div className="form spacer"><Field label="Customer name"><input value={form.customerName} onChange={e => set("customerName", e.target.value)} /></Field><Field label="Phone"><input value={form.phone} onChange={e => set("phone", e.target.value)} /></Field><Field label="Collection start date"><input type="date" value={form.startDate} disabled /></Field><Field label="Address"><input value={form.address} onChange={e => set("address", e.target.value)} /></Field>{form.kind === "daily" ? <><Field label="100-day repayment amount (₹)"><input type="number" value={form.collectionAmount} onChange={e => set("collectionAmount", e.target.value)} /></Field><Field label="Paid to customer (₹)"><input type="number" min="0" value={form.disbursedAmount} onChange={e => set("disbursedAmount", e.target.value)} /></Field><div className="notice span">Paid to customer is editable for corrections. Profit, loss and outstanding figures update automatically from the saved value.</div></> : <><Field label="Principal (₹)"><input type="number" value={form.principal} onChange={e => set("principal", e.target.value)} /></Field><Field label="Monthly interest rate (%)"><input type="number" value={form.annualRate} onChange={e => set("annualRate", e.target.value)} /></Field><Field label="Penalty rate (%)"><input type="number" value={form.penaltyRate} onChange={e => set("penaltyRate", e.target.value)} /></Field><div className="notice span">A rate change applies from today. Interest already due for earlier months stays at the previous rate.</div></>}</div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button onClick={close}>Cancel</Button><Button className="primary" onClick={submit}>Save changes</Button></div></Modal>;
+  return <Modal><h2 className="title">Edit finance account</h2><p className="copy">Correct the plan type or any account detail. Changes are recorded in the audit log.</p><div className="tabs spacer"><Button className={`tab ${form.kind === "daily" ? "active" : ""}`} onClick={() => set("kind", "daily")}>Daily Finance</Button><Button className={`tab ${form.kind === "monthly" ? "active" : ""}`} onClick={() => set("kind", "monthly")}>Monthly Finance</Button></div><div className="form spacer"><Field label="Customer name"><input value={form.customerName} onChange={e => set("customerName", e.target.value)} /></Field><Field label="Phone"><input value={form.phone} onChange={e => set("phone", e.target.value)} /></Field><Field label="Collection start date"><input type="date" value={form.startDate} disabled /></Field><Field label="Address"><input value={form.address} onChange={e => set("address", e.target.value)} /></Field>{form.kind === "daily" ? <><Field label="100-day repayment amount (₹)"><input type="number" value={form.collectionAmount} onChange={e => set("collectionAmount", e.target.value)} /></Field><Field label="Paid to customer (₹)"><input type="number" min="0" value={form.disbursedAmount} onChange={e => set("disbursedAmount", e.target.value)} /></Field><PayoutModeFields mode={form.disbursementMode} cash={form.disbursementCashAmount} upi={form.disbursementUpiAmount} onMode={value => set("disbursementMode", value)} onCash={value => set("disbursementCashAmount", value)} onUpi={value => set("disbursementUpiAmount", value)} /><div className="notice span">Paid to customer is editable for corrections. Profit, loss and outstanding figures update automatically from the saved value.</div></> : <><Field label="Principal (₹)"><input type="number" value={form.principal} onChange={e => set("principal", e.target.value)} /></Field><PayoutModeFields mode={form.disbursementMode} cash={form.disbursementCashAmount} upi={form.disbursementUpiAmount} onMode={value => set("disbursementMode", value)} onCash={value => set("disbursementCashAmount", value)} onUpi={value => set("disbursementUpiAmount", value)} /><Field label="Monthly interest rate (%)"><input type="number" value={form.annualRate} onChange={e => set("annualRate", e.target.value)} /></Field><Field label="Penalty rate (%)"><input type="number" value={form.penaltyRate} onChange={e => set("penaltyRate", e.target.value)} /></Field><div className="notice span">A rate change applies from today. Interest already due for earlier months stays at the previous rate.</div></>}</div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button onClick={close}>Cancel</Button><Button className="primary" onClick={submit}>Save changes</Button></div></Modal>;
 }
 const Modal = ({
   children
