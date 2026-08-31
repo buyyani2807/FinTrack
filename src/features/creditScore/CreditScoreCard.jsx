@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { GAUGE_SEGMENTS, calculateFintrackCreditScore, compactCreditScore, scoreToGaugeAngle } from "./creditScoreModel.js";
+import { GAUGE_SEGMENTS, calculateFintrackCreditScore, scoreToGaugeAngle } from "./creditScoreModel.js";
 
 const money = value => `₹${Number(value || 0).toLocaleString("en-IN")}`;
 
@@ -55,15 +55,6 @@ export function CreditScoreGauge({ score = 300, available = true, size = 320 }) 
     <circle cx={cx} cy={cy} r="5" fill="#e8edf5" />
     <text x={cx} y="236" textAnchor="middle" className="credit-score-gauge-title">FINTRACK CREDIT SCORE</text>
   </svg>;
-}
-
-export function CreditScorePill({ loans = [], chitPayments = [], asOf }) {
-  const compact = useMemo(
-    () => compactCreditScore({ loans, chitPayments, asOf }),
-    [loans, chitPayments, asOf],
-  );
-  if (!compact.available) return <span className="credit-score-pill muted">Score N/A</span>;
-  return <span className={`credit-score-pill ${compact.band}`}>{compact.score} · {compact.rating}</span>;
 }
 
 function FactorList({ items, tone }) {
