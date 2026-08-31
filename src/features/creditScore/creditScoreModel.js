@@ -4,6 +4,8 @@
  *
  * Weights (0–1) can be adjusted later without rewriting allocation logic.
  */
+import { monthlyRateOnDate } from "../finance/calculations.js";
+
 export const SCORE_MIN = 300;
 export const SCORE_MAX = 900;
 export const MIN_DAILY_OBSERVATIONS = 5;
@@ -86,10 +88,7 @@ export const scoreBand = score => SCORE_BANDS.find(band => score >= band.min && 
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
-const rateAt = (loan, date) => {
-  const changes = [...(loan.rateChanges || [])].sort((a, b) => String(a.effectiveDate).localeCompare(String(b.effectiveDate)));
-  return Number(changes.filter(change => iso(change.effectiveDate) <= iso(date)).at(-1)?.annualRate ?? loan.annualRate ?? 0);
-};
+const rateAt = (loan, date) => monthlyRateOnDate(loan, date);
 
 const monthlyInterest = (balance, ratePercent) => Math.round(Number(balance || 0) * Number(ratePercent || 0) / 100);
 

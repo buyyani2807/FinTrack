@@ -27,3 +27,8 @@ export function collectionDetailVisibility(isOwner) {
     showCustomerStatement: Boolean(isOwner),
   };
 }
+
+export function workspaceSessionAllowed(workspace) {
+  if (!workspace || workspace.active === false) return false;
+  return workspace.role === "owner" || workspace.role === "staff";
+}

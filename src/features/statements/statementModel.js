@@ -1,4 +1,4 @@
-import { monthlyInterestOnBalance } from "../finance/calculations.js";
+import { monthlyInterestOnBalance, monthlyRateOnDate } from "../finance/calculations.js";
 import {
   financeAccountId,
   financeTypeLabel,
@@ -68,10 +68,7 @@ function buildMonthlySummary(loan, asOf, payments) {
   const penaltyPaid = payments.reduce((sum, t) => sum + Number(t.penaltyAmount || 0), 0);
   const totalPaid = principalPaid + interestPaid + penaltyPaid;
   const outstanding = loan.status === "bankrupt" ? 0 : Math.max(0, Number(loan.principal || 0) - principalPaid);
-  const rate = Number([...(loan.rateChanges || [])]
-    .sort((a, b) => a.effectiveDate.localeCompare(b.effectiveDate))
-    .filter(r => r.effectiveDate <= asOf)
-    .at(-1)?.annualRate || loan.annualRate || 0);
+  const rate = monthlyRateOnDate(loan, asOf);
   const monthlyInstallment = outstanding > 0 ? Math.round(monthlyInterestOnBalance(outstanding, rate)) : 0;
   const next = nextMonthlyPayment({ ...loan, transactions: payments }, asOf);
   const installmentsPaid = payments.filter(t => Number(t.interestAmount || 0) > 0 || Number(t.principalAmount || 0) > 0).length;

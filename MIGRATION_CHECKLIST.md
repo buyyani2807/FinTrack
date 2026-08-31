@@ -53,6 +53,7 @@ Run these in the Supabase SQL Editor **in order**. Each file is idempotent where
 | 046b | `046b_ft021_keep_one_payment_per_day.sql` | **Do not run** — would delete pilot same-day backfill payments |
 | 047a | `047a_ft022_ft023_integrity.sql` | **FT-022 / FT-023** — receipt numbers locked to current org; cashbook re-syncs when disbursed/principal is edited |
 | 047 | `047_ft022_ft027_integrity.sql` | FT-022–027 together (includes 047a, plus chit Sync/lifts and reminder-log RLS) |
+| 048 | `048_ft028_ft031_integrity.sql` | **FT-028 / FT-031** — monthly rate edits apply from today; inactive staff cannot SELECT assigned finance rows |
 
 After running 041 (and 042 if Save & sync failed), open **More → Accounts**, set opening balances once, then tap **Sync from FinTrack** to backfill historical collections and disbursements. If Cashbook **Delete** does nothing, run 043. After 044, tap **Sync from FinTrack** again so monthly principal disbursements are posted. After 045, existing daily bankrupt `loss_amount` values are rewritten to disbursed − collected.
 
@@ -61,6 +62,8 @@ After 046, same-day duplicate finance payments are **kept** (pilot users entered
 After **047a** (or 047), receipt numbers cannot be minted for another organisation, and editing Paid to customer / principal updates the cashbook disbursement row.
 
 After the full 047, also tap **Sync from FinTrack** in Accounts so historical chit collections and lift payouts post to cashbook.
+
+After **048**, inactive collection agents cannot read assigned finance rows, and editing a monthly interest rate writes `rate_changes` so earlier months keep the previous rate. No extra Sync is required.
 
 After running 036, verify in Supabase SQL Editor:
 

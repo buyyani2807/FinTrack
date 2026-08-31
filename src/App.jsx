@@ -1,13 +1,13 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { supabase } from "./lib/supabase";
-import { monthlyInterestOnBalance, dailyInstallmentAmount } from "./features/finance/calculations";
+import { monthlyInterestOnBalance, dailyInstallmentAmount, monthlyRateOnDate } from "./features/finance/calculations";
 import { formatInr } from "./lib/formatMoney.js";
 import { investedAmount, netPosition, realizedLoss, realizedProfit } from "./features/finance/pnl.js";
 import { byCollectionOrderThenName, mergeAccountOrder, reorderIds } from "./features/finance/collectionOrder";
 import { financeKindLabel, staffAssignableLoans } from "./features/finance/collectionStaff";
 import { mergeAccountTransaction } from "./features/finance/paymentState.js";
-import { collectionDetailVisibility, financeRolesAligned, ownerChromeAllowed, sessionUserRole } from "./features/finance/workspaceAccess.js";
+import { collectionDetailVisibility, financeRolesAligned, ownerChromeAllowed, sessionUserRole, workspaceSessionAllowed } from "./features/finance/workspaceAccess.js";
 import { ChitCustomerPortal, ChitFundPage } from "./features/chitFund/ChitFundModule";
 import { LegalPage, legalViewFromLocation, openLegalView } from "./features/legal/LegalPage.jsx";
 import { isPublicSignupAllowed, signupInviteRequired, validateSignupInvite } from "./lib/signupGate.js";
@@ -69,7 +69,7 @@ const accountOutcome = loan => {
   const label = status.charAt(0).toUpperCase() + status.slice(1);
   return { label, date, days: date ? elapsedDays(loan.startDate, date) + 1 : null };
 };
-const annualRate = (loan, date) => Number([...loan.rateChanges].sort((a, b) => a.effectiveDate.localeCompare(b.effectiveDate)).filter(r => r.effectiveDate <= date).at(-1)?.annualRate || loan.annualRate || 0);
+const annualRate = (loan, date) => monthlyRateOnDate(loan, date);
 const txTotal = (loan, key) => loan.transactions.reduce((s, t) => s + Number(t[key] || 0), 0);
 const dailyPaid = loan => txTotal(loan, "amount");
 const dailyBalance = loan => Math.max(0, loan.collectionAmount - dailyPaid(loan));
@@ -567,7 +567,7 @@ function EditAccount({ loan, close, save }) {
       await save(updated); close();
     } catch (err) { setError(err.message || "Could not update the account."); }
   };
-  return <Modal><h2 className="title">Edit finance account</h2><p className="copy">Correct the plan type or any account detail. Changes are recorded in the audit log.</p><div className="tabs spacer"><Button className={`tab ${form.kind === "daily" ? "active" : ""}`} onClick={() => set("kind", "daily")}>Daily Finance</Button><Button className={`tab ${form.kind === "monthly" ? "active" : ""}`} onClick={() => set("kind", "monthly")}>Monthly Finance</Button></div><div className="form spacer"><Field label="Customer name"><input value={form.customerName} onChange={e => set("customerName", e.target.value)} /></Field><Field label="Phone"><input value={form.phone} onChange={e => set("phone", e.target.value)} /></Field><Field label="Collection start date"><input type="date" value={form.startDate} disabled /></Field><Field label="Address"><input value={form.address} onChange={e => set("address", e.target.value)} /></Field>{form.kind === "daily" ? <><Field label="100-day repayment amount (₹)"><input type="number" value={form.collectionAmount} onChange={e => set("collectionAmount", e.target.value)} /></Field><Field label="Paid to customer (₹)"><input type="number" min="0" value={form.disbursedAmount} onChange={e => set("disbursedAmount", e.target.value)} /></Field><div className="notice span">Paid to customer is editable for corrections. Profit, loss and outstanding figures update automatically from the saved value.</div></> : <><Field label="Principal (₹)"><input type="number" value={form.principal} onChange={e => set("principal", e.target.value)} /></Field><Field label="Monthly interest rate (%)"><input type="number" value={form.annualRate} onChange={e => set("annualRate", e.target.value)} /></Field><Field label="Penalty rate (%)"><input type="number" value={form.penaltyRate} onChange={e => set("penaltyRate", e.target.value)} /></Field></>}</div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button onClick={close}>Cancel</Button><Button className="primary" onClick={submit}>Save changes</Button></div></Modal>;
+  return <Modal><h2 className="title">Edit finance account</h2><p className="copy">Correct the plan type or any account detail. Changes are recorded in the audit log.</p><div className="tabs spacer"><Button className={`tab ${form.kind === "daily" ? "active" : ""}`} onClick={() => set("kind", "daily")}>Daily Finance</Button><Button className={`tab ${form.kind === "monthly" ? "active" : ""}`} onClick={() => set("kind", "monthly")}>Monthly Finance</Button></div><div className="form spacer"><Field label="Customer name"><input value={form.customerName} onChange={e => set("customerName", e.target.value)} /></Field><Field label="Phone"><input value={form.phone} onChange={e => set("phone", e.target.value)} /></Field><Field label="Collection start date"><input type="date" value={form.startDate} disabled /></Field><Field label="Address"><input value={form.address} onChange={e => set("address", e.target.value)} /></Field>{form.kind === "daily" ? <><Field label="100-day repayment amount (₹)"><input type="number" value={form.collectionAmount} onChange={e => set("collectionAmount", e.target.value)} /></Field><Field label="Paid to customer (₹)"><input type="number" min="0" value={form.disbursedAmount} onChange={e => set("disbursedAmount", e.target.value)} /></Field><div className="notice span">Paid to customer is editable for corrections. Profit, loss and outstanding figures update automatically from the saved value.</div></> : <><Field label="Principal (₹)"><input type="number" value={form.principal} onChange={e => set("principal", e.target.value)} /></Field><Field label="Monthly interest rate (%)"><input type="number" value={form.annualRate} onChange={e => set("annualRate", e.target.value)} /></Field><Field label="Penalty rate (%)"><input type="number" value={form.penaltyRate} onChange={e => set("penaltyRate", e.target.value)} /></Field><div className="notice span">A rate change applies from today. Interest already due for earlier months stays at the previous rate.</div></>}</div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button onClick={close}>Cancel</Button><Button className="primary" onClick={submit}>Save changes</Button></div></Modal>;
 }
 const Modal = ({
   children
@@ -1422,6 +1422,12 @@ export default function App() {
     setWorkspace(null);
     setUser(null);
   };
+  const endInactiveFinanceSession = async () => {
+    beginSession();
+    userRoleRef.current = null;
+    clearFinanceState();
+    await supabase.auth.signOut();
+  };
   useEffect(() => {
     const syncLegal = () => setLegalView(legalViewFromLocation());
     window.addEventListener("popstate", syncLegal);
@@ -1435,6 +1441,10 @@ export default function App() {
         if (!session?.access_token || cancelled || !isCurrentSession(gen)) return;
         const next = await loadWorkspace(session.access_token);
         if (cancelled || !isCurrentSession(gen)) return;
+        if (!workspaceSessionAllowed(next)) {
+          await supabase.auth.signOut();
+          return;
+        }
         flushSync(() => {
           setWorkspace(next);
           setUser({
@@ -1495,7 +1505,12 @@ export default function App() {
     const gen = sessionGen.current;
     try {
       const next = await loadWorkspace(token);
-      if (!isCurrentSession(gen) || !canApplyWorkspace(next)) return null;
+      if (!isCurrentSession(gen)) return null;
+      if (!workspaceSessionAllowed(next)) {
+        await endInactiveFinanceSession();
+        return null;
+      }
+      if (!canApplyWorkspace(next)) return null;
       setWorkspace(next);
       return next;
     } catch {
@@ -1507,8 +1522,13 @@ export default function App() {
     const gen = sessionGen.current;
     let cancelled = false;
     loadWorkspace(user.authToken)
-      .then(next => {
-        if (cancelled || !isCurrentSession(gen) || !canApplyWorkspace(next)) return;
+      .then(async next => {
+        if (cancelled || !isCurrentSession(gen)) return;
+        if (!workspaceSessionAllowed(next)) {
+          await endInactiveFinanceSession();
+          return;
+        }
+        if (!canApplyWorkspace(next)) return;
         setWorkspace(next);
       })
       .catch(() => {});

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { collectionDetailVisibility, financeRolesAligned, ownerChromeAllowed, sessionUserRole, workspaceAccess } from "../src/features/finance/workspaceAccess.js";
+import { collectionDetailVisibility, financeRolesAligned, ownerChromeAllowed, sessionUserRole, workspaceAccess, workspaceSessionAllowed } from "../src/features/finance/workspaceAccess.js";
 
 test("owner tools stay hidden until the workspace role is known", () => {
   assert.deepEqual(workspaceAccess(null), { roleKnown: false, isOwner: false, isStaff: false });
@@ -35,4 +35,13 @@ test("agent login stays blocked while a leftover owner workspace is still in mem
 test("agents do not see disbursed amount or customer statements", () => {
   assert.deepEqual(collectionDetailVisibility(true), { showDisbursedAmount: true, showCustomerStatement: true });
   assert.deepEqual(collectionDetailVisibility(false), { showDisbursedAmount: false, showCustomerStatement: false });
+});
+
+test("inactive workspace sessions are not allowed", () => {
+  assert.equal(workspaceSessionAllowed({ role: "staff", active: true }), true);
+  assert.equal(workspaceSessionAllowed({ role: "owner", active: true }), true);
+  assert.equal(workspaceSessionAllowed({ role: "staff", active: false }), false);
+  assert.equal(workspaceSessionAllowed({ role: "owner", active: false }), false);
+  assert.equal(workspaceSessionAllowed(null), false);
+  assert.equal(workspaceSessionAllowed({ role: "staff" }), true);
 });

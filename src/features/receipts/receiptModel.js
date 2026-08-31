@@ -1,4 +1,4 @@
-import { monthlyInterestOnBalance } from "../finance/calculations.js";
+import { monthlyInterestOnBalance, monthlyRateOnDate } from "../finance/calculations.js";
 import { formatInr } from "../../lib/formatMoney.js";
 
 const money = formatInr;
@@ -205,8 +205,7 @@ export function nextMonthlyPayment(loan, asOf = "") {
   for (let n = 1; n <= 600; n += 1) {
     const dueDate = addMonths(loan.startDate, n);
     if (dueDate >= today) {
-      const rate = [...(loan.rateChanges || [])].sort((a, b) => a.effectiveDate.localeCompare(b.effectiveDate))
-        .filter(r => r.effectiveDate <= dueDate).at(-1)?.annualRate || loan.annualRate || 0;
+      const rate = monthlyRateOnDate(loan, dueDate);
       const amount = Math.round(monthlyInterestOnBalance(balance, rate));
       const daysRemaining = Math.max(0, Math.floor((new Date(`${dueDate}T12:00:00`) - new Date(`${today}T12:00:00`)) / 86400000));
       return { dueDate, amount, daysRemaining, outstanding: balance, cycleKey: dueDate };
