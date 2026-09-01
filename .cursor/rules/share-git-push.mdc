@@ -1,0 +1,18 @@
+---
+description: After local changes, always share the git commands to commit and push
+alwaysApply: true
+---
+
+# Share git push commands
+
+After any local code change in this repo, always include the exact git commands the user can run to commit and push — even if they did not ask to commit.
+
+Use the current branch name. Include only the files that were changed for the task. Do not run commit or push unless the user asks.
+
+Example:
+
+```bash
+git add src/App.jsx
+git commit -m "Short message describing why the change was made."
+git push origin main
+```
