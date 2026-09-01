@@ -55,6 +55,8 @@ import { disbursementPayoutError, disbursementPayoutSplit } from "../finance/dis
 import { chitPaymentDisplayStatus, chitPaymentOutstanding, filterPaymentsForMonth, memberPaymentsForEnrollment, normalizeMemberPayment, portalPaymentRows } from "./memberPayments";
 import { chitTypeLabel, membershipEnrollmentId, portalMemberships } from "./memberPortal";
 import { memberRemovalCopy, schemeRemovalCopy } from "./schemeAdmin";
+import { buildChitMonthStatement, currentSchemeMonth, monthLabel as chitMonthLabel } from "./monthStatement";
+import { downloadChitMonthStatementPdf } from "./monthStatementPdf";
 import { formatInr } from "../../lib/formatMoney.js";
 
 const indiaCalendarDate = date => {
@@ -959,6 +961,54 @@ function ChitSchemeDashboardSection({ kind, rows, busy, open, edit, activate }) 
   </section>;
 }
 
+function ChitLandingReports({ token, schemes }) {
+  const [schemeId, setSchemeId] = useState(schemes[0]?.id || "");
+  const [monthNumber, setMonthNumber] = useState(1);
+  const [details, setDetails] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const scheme = schemes.find(item => item.id === schemeId);
+  useEffect(() => {
+    if (!schemeId && schemes[0]) {
+      setSchemeId(schemes[0].id);
+      setMonthNumber(currentSchemeMonth(schemes[0]));
+    }
+  }, [schemes, schemeId]);
+  useEffect(() => {
+    if (!schemeId) { setDetails(null); return; }
+    let ignore = false;
+    setBusy(true);
+    loadChitSchemeDetails(token, schemeId).then(payload => {
+      if (ignore) return;
+      setDetails(payload);
+      setError("");
+      setBusy(false);
+    }).catch(err => { if (!ignore) { setError(err.message || "Could not load scheme details."); setBusy(false); } });
+    return () => { ignore = true; };
+  }, [token, schemeId]);
+  const statement = scheme && details ? buildChitMonthStatement({ scheme, details, monthNumber }) : null;
+  const months = Array.from({ length: Number(scheme?.duration_months || 0) }, (_, index) => index + 1);
+  return <div className="card">
+    <strong>Chit Fund reports</strong>
+    <p className="copy">Scheme collection, member dues, bid history, and outstanding for the selected month. Open a scheme for dividends and live bid detail.</p>
+    <div className="form spacer">
+      <Field label="Scheme"><select value={schemeId} onChange={event => { const next = schemes.find(item => item.id === event.target.value); setSchemeId(event.target.value); if (next) setMonthNumber(currentSchemeMonth(next)); }}>{schemes.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
+      <Field label="Month"><select value={monthNumber} onChange={event => setMonthNumber(Number(event.target.value))}>{months.map(month => <option key={month} value={month}>{chitMonthLabel(scheme?.start_date, month)}</option>)}</select></Field>
+    </div>
+    {error && <p className="red small">{error}</p>}
+    {busy && <p className="small">Loading statement…</p>}
+    {statement && !busy && <>
+      <div className="grid metrics">
+        <Metric label="Expected" value={money(statement.expected)} color="gold" />
+        <Metric label="Collected" value={money(statement.collected)} color="green" />
+        <Metric label="Pending" value={money(statement.pending)} color="red" />
+      </div>
+      <div className="row spacer"><Button className="primary" onClick={() => downloadChitMonthStatementPdf({ scheme, details, monthNumber })}>Download month statement</Button></div>
+    </>}
+    {!schemes.length && <p className="small spacer">No Chit Fund schemes yet.</p>}
+  </div>;
+}
+
 export function ChitFundPage({ token, close, openSchemeId = null, onOpenSchemeConsumed, onSchemesChanged, orgSettings = {}, workspace = {}, onLogReceipt }) {
   const [schemes, setSchemes] = useState([]);
   const [cycles, setCycles] = useState([]);
@@ -977,6 +1027,7 @@ export function ChitFundPage({ token, close, openSchemeId = null, onOpenSchemeCo
   const [activateError, setActivateError] = useState("");
   const [receiptSuccess, setReceiptSuccess] = useState(null);
   const [reminderRefresh, setReminderRefresh] = useState(0);
+  const [landing, setLanding] = useState("schemes");
   const applyDashboard = payload => {
     setSchemes(payload.schemes);
     setCycles(payload.cycles);
@@ -1151,14 +1202,25 @@ export function ChitFundPage({ token, close, openSchemeId = null, onOpenSchemeCo
   if (selected) return <><ChitSchemeDetails token={token} scheme={selected} back={() => { setSelected(null); setReminderRefresh(current => current + 1); }} onSchemeDeleted={schemeDeleted} orgSettings={orgSettings} workspace={workspace} onReceipt={setReceiptSuccess} onLogReceipt={onLogReceipt} />{receiptSuccess && <ReceiptSuccessModal receipt={receiptSuccess} settings={orgSettings} token={token} onLogAction={onLogReceipt} close={() => setReceiptSuccess(null)} />}</>;
   return <main className="shell chit-fund-page">
     <div className="toolbar"><div><Button onClick={close}>← Dashboard</Button><h1 className="title spacer">Chit Fund</h1><p className="copy chit-fund-intro">Auction Chits use live bidding, Fixed Chits use scheduled lifts, and Fixed Predefined Bid Chits use an editable generated schedule.</p></div><Button className="primary" onClick={() => setModal("choose-type")}>+ New scheme</Button></div>
+    <nav className="module-section-nav" aria-label="Chit Fund sections">
+      {[["schemes", "Schemes"], ["members", "Members"], ["bids", "Bids"], ["payments", "Payments"], ["reports", "Reports"]].map(([id, label]) => (
+        <button key={id} type="button" className={`module-section-tab ${landing === id ? "active" : ""}`} onClick={() => setLanding(id)}>{label}</button>
+      ))}
+    </nav>
     {error && <p className="red small">{error}</p>}
     {notice && <p className="green small">{notice}</p>}
-    <UpcomingPaymentsSection moduleType="chit" loans={[]} token={token} settings={orgSettings} workspace={workspace} isOwner={workspace?.role !== "staff"} refreshKey={reminderRefresh} />
+    {(landing === "schemes" || landing === "payments") && <UpcomingPaymentsSection moduleType="chit" loans={[]} token={token} settings={orgSettings} workspace={workspace} isOwner={workspace?.role !== "staff"} refreshKey={reminderRefresh} />}
     {busy && !schemes.length && <p className="small spacer">Loading Chit Fund schemes…</p>}
-    {enriching && !!schemes.length && <p className="small spacer">Loading current bids and member counts…</p>}
+    {enriching && !!schemes.length && landing === "schemes" && <p className="small spacer">Loading current bids and member counts…</p>}
+    {landing === "schemes" && <>
     <ChitSchemeDashboardSection kind="auction" rows={rows.filter(row => (row.scheme.chit_type || CHIT_TYPES.AUCTION) === CHIT_TYPES.AUCTION)} busy={busy} open={setSelected} edit={editScheme} activate={requestActivate} />
     <ChitSchemeDashboardSection kind="fixed" rows={rows.filter(row => row.scheme.chit_type === CHIT_TYPES.FIXED)} busy={busy} open={setSelected} edit={editScheme} activate={requestActivate} />
     <ChitSchemeDashboardSection kind="predefined" rows={rows.filter(row => row.scheme.chit_type === CHIT_TYPES.FIXED_PREDEFINED_BID)} busy={busy} open={setSelected} edit={editScheme} activate={requestActivate} />
+    </>}
+    {landing === "members" && <div className="card"><strong>Members</strong><p className="small">Open a scheme to enroll members, record payments, or run bids. This list is across all schemes.</p><div className="table spacer"><table><thead><tr><th>Scheme</th><th>Ticket</th><th>Member</th><th></th></tr></thead><tbody>{enrollments.map(item => { const scheme = schemes.find(row => row.id === item.scheme_id); return <tr key={item.id}><td>{scheme?.name || "Scheme"}</td><td>{item.ticket_number}</td><td>{item.chit_members?.full_name || "Member"}</td><td><Button onClick={() => setSelected(scheme || null)}>Open scheme</Button></td></tr>; })}{!enrollments.length && <tr><td colSpan="4">No members enrolled yet.</td></tr>}</tbody></table></div></div>}
+    {landing === "bids" && <div className="card"><strong>Bids</strong><p className="small">Auction bid history across schemes. Open a scheme to record a monthly bid or start live bidding.</p><div className="table spacer"><table><thead><tr><th>Scheme</th><th>Month</th><th>Bid date</th><th>Winning bid</th></tr></thead><tbody>{cycles.map(cycle => { const scheme = schemes.find(row => row.id === cycle.scheme_id); return <tr key={cycle.id}><td>{scheme?.name || "Scheme"}</td><td>Month {cycle.cycle_number}</td><td>{cycle.cycle_date}</td><td>{money(cycle.winning_bid_amount)}</td></tr>; })}{!cycles.length && <tr><td colSpan="4">No bids recorded yet.</td></tr>}</tbody></table></div></div>}
+    {landing === "payments" && <div className="card spacer"><p className="copy">Upcoming Chit Fund dues are listed above. Open a scheme to record a payment, dividend, or prize payout.</p></div>}
+    {landing === "reports" && <ChitLandingReports token={token} schemes={schemes} />}
     {modal === "choose-type" && <ChitTypeChooser close={() => setModal(null)} choose={type => { setSchemeForm(emptySchemeForm(type)); setModal("scheme"); }} />}
     {(modal === "scheme" || modal === "edit-scheme") && (schemeForm.chitType === CHIT_TYPES.FIXED_PREDEFINED_BID
       ? <PredefinedBidSchemeForm form={schemeForm} setForm={setSchemeForm} busy={busy} error={error} onClose={() => setModal(null)} onSubmit={submitScheme} />

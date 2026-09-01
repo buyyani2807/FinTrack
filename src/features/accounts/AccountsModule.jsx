@@ -126,7 +126,7 @@ export function AccountsSummaryCard({ token, moneyFmt = money }) {
   </div>;
 }
 
-export function AccountsModule({ token, close, loans = [] }) {
+export function CashbookWorkspace({ token, close, loans = [], embedded = false }) {
   const [section, setSection] = useState("cashbook");
   const [ledgers, setLedgers] = useState([]);
   const [entries, setEntries] = useState([]);
@@ -336,7 +336,7 @@ export function AccountsModule({ token, close, loans = [] }) {
   const periodProps = { period, setPeriod, customFrom, setCustomFrom, customTo, setCustomTo };
 
   return <div className="accounts-module shell">
-    <header className="top"><div><ButtonLike onClick={close}>← Back</ButtonLike><h1 className="title spacer">Accounts</h1><p className="copy">Cashbook, expenses, bank accounts, transfers and day closing.</p></div></header>
+    <header className="top"><div><ButtonLike onClick={close}>{embedded ? "← Accounts" : "← Back"}</ButtonLike><h1 className="title spacer">{embedded ? "Cashbook" : "Accounts"}</h1><p className="copy">{embedded ? "Operational cash, bank and UPI movement. This is not the double-entry ledger." : "Cashbook, expenses, bank accounts, transfers and day closing."}</p></div></header>
     {error && <div className="notice">{error}</div>}
     {notice && <div className="notice accounts-notice-ok">{notice}</div>}
     <nav className="accounts-section-nav spacer" aria-label="Accounts sections">

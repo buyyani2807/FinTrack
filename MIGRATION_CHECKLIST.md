@@ -57,8 +57,9 @@ Run these in the Supabase SQL Editor **in order**. Each file is idempotent where
 | 049 | `049_ft029_ft034_integrity.sql` | **FT-029 / FT-030 / FT-032** — monthly split must match total; collection cannot exceed remaining; edit cannot reuse another payment date |
 | 050 | `050_disbursement_payout_mode.sql` | Daily / Monthly money-out can be Cash, UPI, or Cash+UPI (cashbook posts to the matching ledger) |
 | 051 | `051_ft035_ft037_live_bid_and_chit_payout_mode.sql` | **FT-035 / FT-037** — live bids enforce payout min/max %; chit prize cashbook posts by Cash/UPI/Cash+UPI |
+| 052 | `052_fintrack_accounts_double_entry.sql` | **FinTrack Accounts** — standalone double-entry books (chart of accounts, vouchers, audit, period lock). Accounting integration is **OFF by default**. Does not change Cashbook, Daily, Monthly, or Chit Fund. |
 
-After running 041 (and 042 if Save & sync failed), open **More → Accounts**, set opening balances once, then tap **Sync from FinTrack** to backfill historical collections and disbursements. If Cashbook **Delete** does nothing, run 043. After 044, tap **Sync from FinTrack** again so monthly principal disbursements are posted. After 045, existing daily bankrupt `loss_amount` values are rewritten to disbursed − collected.
+After running 041 (and 042 if Save & sync failed), open **Accounts**, set opening balances once on the Cashbook section, then tap **Sync from FinTrack** to backfill historical collections and disbursements. If Cashbook **Delete** does nothing, run 043. After 044, tap **Sync from FinTrack** again so monthly principal disbursements are posted. After 045, existing daily bankrupt `loss_amount` values are rewritten to disbursed − collected.
 
 After 046, same-day duplicate finance payments are **kept** (pilot users entered existing accounts on one calendar day). Do **not** run 046b. The unique `(finance_account_id, paid_on)` index is deferred. The record-payment RPC still rejects a new second payment on the same date going forward.
 
@@ -73,6 +74,8 @@ After **049**, finance payment RPCs reject a monthly split that does not equal t
 After **050**, creating or editing a Daily / Monthly account lets you choose **Cash**, **UPI**, or **Cash + UPI** for the amount paid to the customer (or principal financed). Existing accounts stay Cash. After running 050, tap **Sync from FinTrack** only if you edit an account’s payout mode; new accounts sync automatically.
 
 After **051**, live discount bids are rejected when the resulting payout % is outside the scheme min/max (so finalize cannot fail after accepting bids). Chit prize / lift finalize screens let you choose Cash / UPI / Cash+UPI, and cashbook posts to the matching ledger. `/api/auth/signup` provisions the workspace and deletes the Auth user if provisioning fails (needs `SUPABASE_SERVICE_ROLE_KEY` on Vercel). After 051, tap **Sync from FinTrack** once so historical chit prizes re-post with mode columns (existing rows stay Cash).
+
+After **052**, the primary nav is **Dashboard · Daily · Monthly · Chit Fund · Accounts · More**. Open **Accounts** to create a chart of accounts. Cashbook remains the operational money view inside Accounts. Leave **Accounting integration OFF** unless you want Daily / Monthly / Chit / Cashbook transactions to post linked double-entry vouchers automatically. Collection agents do not get Accounts access. Verify with `scripts/verify-migration-052.sql` (each row should show `ok = 1`).
 
 After running 036, verify in Supabase SQL Editor:
 
