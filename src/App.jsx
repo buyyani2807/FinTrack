@@ -1036,6 +1036,7 @@ function Financier({
   };
   const portalNotice = newAccountPortal && <NewAccountPortalNotice customerName={newAccountPortal.customerName} portalId={newAccountPortal.portalId} pin={newAccountPortal.pin} close={() => setNewAccountPortal(null)} />;
   const [draggedId, setDraggedId] = useState(null);
+  const [dashboardCustomersOpen, setDashboardCustomersOpen] = useState({ daily: false, monthly: false });
   const touchTargetId = useRef(null);
   const activeLoans = loans.filter(loan => ["active", "overdue"].includes(loanStatus(loan)));
   useEffect(() => {
@@ -1159,7 +1160,7 @@ function Financier({
   if (!customerMode && module === "all") {
     const dailyCustomers = loans.filter(loan => loan.kind === "daily" && loanStatus(loan) === "active").sort(byCollectionOrderThenName);
     const monthlyCustomers = loans.filter(loan => loan.kind === "monthly" && loanStatus(loan) === "active").sort(byCollectionOrderThenName);
-    return <main className="shell dashboard-home"><header className="top"><div><div className="brand">{businessName || "My Finance Business"}</div><div className="sub">{isOwner ? "Financier dashboard" : "Collection agent dashboard"}</div></div><div className="top-actions"><Button onClick={logout}>Log out</Button></div></header><div className="toolbar"><div><h1 className="title">Dashboard</h1><p className="copy">Overview of your active finance customers and Chit Fund schemes.</p></div></div>{isOwner && authToken && <AccountsSummaryCard token={authToken} moneyFmt={money} />}<DashboardFinanceSection title="Daily Finance" customerLabel="Active Daily Customers" kind="daily" loans={dailyCustomers} onView={setDetail} canReorder={isOwner} showPnl={isOwner} draggedId={draggedId} setDraggedId={setDraggedId} onReorder={id => reorderDashboard("daily", id)} startTouchDrag={startTouchDrag} moveTouchDrag={moveTouchDrag} finishTouchDrag={finishTouchDrag} cancelTouchDrag={() => { touchTargetId.current = null; setDraggedId(null); }} /><DashboardFinanceSection title="Monthly Finance" customerLabel="Active Monthly Customers" kind="monthly" loans={monthlyCustomers} onView={setDetail} canReorder={isOwner} showPnl={isOwner} draggedId={draggedId} setDraggedId={setDraggedId} onReorder={id => reorderDashboard("monthly", id)} startTouchDrag={startTouchDrag} moveTouchDrag={moveTouchDrag} finishTouchDrag={finishTouchDrag} cancelTouchDrag={() => { touchTargetId.current = null; setDraggedId(null); }} />{portalNotice}{receiptSuccess && <ReceiptSuccessModal receipt={receiptSuccess} settings={orgSettings} token={authToken} onLogAction={onLogReceipt} close={() => setReceiptSuccess(null)} />}</main>;
+    return <main className="shell dashboard-home"><header className="top"><div><div className="brand">{businessName || "My Finance Business"}</div><div className="sub">{isOwner ? "Financier dashboard" : "Collection agent dashboard"}</div></div><div className="top-actions"><Button onClick={logout}>Log out</Button></div></header><div className="toolbar"><div><h1 className="title">Dashboard</h1><p className="copy">Overview of your active finance customers and Chit Fund schemes.</p></div></div>{isOwner && authToken && <AccountsSummaryCard token={authToken} moneyFmt={money} />}<DashboardFinanceSection title="Daily Finance" customerLabel="Active Daily Customers" kind="daily" loans={dailyCustomers} customersOpen={dashboardCustomersOpen.daily} onToggleCustomers={() => setDashboardCustomersOpen(current => ({ ...current, daily: !current.daily }))} onView={setDetail} canReorder={isOwner} showPnl={isOwner} draggedId={draggedId} setDraggedId={setDraggedId} onReorder={id => reorderDashboard("daily", id)} startTouchDrag={startTouchDrag} moveTouchDrag={moveTouchDrag} finishTouchDrag={finishTouchDrag} cancelTouchDrag={() => { touchTargetId.current = null; setDraggedId(null); }} /><DashboardFinanceSection title="Monthly Finance" customerLabel="Active Monthly Customers" kind="monthly" loans={monthlyCustomers} customersOpen={dashboardCustomersOpen.monthly} onToggleCustomers={() => setDashboardCustomersOpen(current => ({ ...current, monthly: !current.monthly }))} onView={setDetail} canReorder={isOwner} showPnl={isOwner} draggedId={draggedId} setDraggedId={setDraggedId} onReorder={id => reorderDashboard("monthly", id)} startTouchDrag={startTouchDrag} moveTouchDrag={moveTouchDrag} finishTouchDrag={finishTouchDrag} cancelTouchDrag={() => { touchTargetId.current = null; setDraggedId(null); }} />{portalNotice}{receiptSuccess && <ReceiptSuccessModal receipt={receiptSuccess} settings={orgSettings} token={authToken} onLogAction={onLogReceipt} close={() => setReceiptSuccess(null)} />}</main>;
   }
   if (dedicatedModule && isOwner && moduleSection === "reports") {
     return <main className={`shell finance-module-shell ${module}`}><header className="top"><div><div className="brand">{businessName || "My Finance Business"}</div><div className="sub">{module === "monthly" ? "Monthly" : "Daily"} reports</div></div><Button onClick={logout}>Log out</Button></header><nav className="module-section-nav" aria-label="Module sections"><button type="button" className="module-section-tab" onClick={() => goModuleSection("overview")}>Overview</button><button type="button" className="module-section-tab" onClick={() => goModuleSection("customers")}>Customers</button><button type="button" className="module-section-tab active">Reports</button></nav><PortfolioReport loans={loans.filter(loan => loan.kind === module)} token={authToken} lockedKind={module} showChit={false} embedded title={`${module === "monthly" ? "Monthly" : "Daily"} Reports`} />{portalNotice}</main>;
@@ -1185,6 +1186,8 @@ function DashboardFinanceSection({
   customerLabel,
   kind,
   loans,
+  customersOpen = false,
+  onToggleCustomers,
   onView,
   canReorder = false,
   showPnl = false,
@@ -1203,6 +1206,8 @@ function DashboardFinanceSection({
   const loss = loans.reduce((sum, loan) => sum + realizedLoss(loan), 0);
   const icon = title === "Daily Finance" ? "◷" : "◫";
   const rows = [...loans].sort(byCollectionOrderThenName);
+  const panelId = `dashboard-${kind}-customers`;
+  const toggleId = `${panelId}-toggle`;
   const beginDrag = (event, loanId) => {
     if (!canReorder) return;
     if (event.target.closest("a,button")) {
@@ -1219,10 +1224,8 @@ function DashboardFinanceSection({
         <div className="dashboard-finance-icon">{icon}</div>
         <div>
           <strong>{title}</strong>
-          <p className="small">{customerLabel || "Active customer portfolio"}</p>
         </div>
       </div>
-      <span className="badge active">{loans.length} active customers</span>
     </div>
     <div className="grid metrics dashboard-finance-metrics">
       <Metric label="Amount financed" value={money(financed)} color="gold" />
@@ -1230,6 +1233,24 @@ function DashboardFinanceSection({
       <Metric label="Outstanding" value={money(outstanding)} color="red" />
       {showPnl && <Metric label="Profit / loss" value={`${money(profit)} / ${money(loss)}`} color={loss ? "red" : "green"} />}
     </div>
+    <button
+      type="button"
+      id={toggleId}
+      className="dashboard-customers-toggle"
+      aria-expanded={customersOpen}
+      aria-controls={panelId}
+      onClick={onToggleCustomers}
+    >
+      <span>{customerLabel || "Active Customers"} ({loans.length})</span>
+      <span className="dashboard-customers-chevron" aria-hidden="true">{customersOpen ? "▲" : "▼"}</span>
+    </button>
+    <div
+      id={panelId}
+      className={`dashboard-customers-panel${customersOpen ? " open" : ""}`}
+      role="region"
+      aria-labelledby={toggleId}
+      hidden={!customersOpen}
+    >
     {canReorder && rows.length > 1 && <p className="small dashboard-reorder-hint">Drag the handle to save your {kind} collection order. It is restored after refresh and sign-in.</p>}
     {rows.length ? <div className={`table dashboard-finance-table${canReorder ? " can-reorder" : ""}`}>
       <table>
@@ -1275,6 +1296,7 @@ function DashboardFinanceSection({
         </tbody>
       </table>
     </div> : <p className="small spacer dashboard-finance-empty">No active customers.</p>}
+    </div>
   </section>;
 }
 function PinResetModal({ title, currentPin, onSave, close }) {

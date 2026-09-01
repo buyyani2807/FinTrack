@@ -113,7 +113,56 @@ body {
 }
 
 .dashboard-finance-metrics {
-  margin-bottom: 20px;
+  margin-bottom: 8px;
+}
+
+.dashboard-customers-toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  margin: 0;
+  padding: 8px 2px;
+  border: 0;
+  border-top: 1px solid #303a4d;
+  background: transparent;
+  color: #f4f6fb;
+  font: 700 13px DM Sans, system-ui, sans-serif;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dashboard-customers-toggle:hover {
+  color: #f4b942;
+}
+
+.dashboard-customers-toggle:focus-visible {
+  outline: 3px solid #f4b94255;
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.dashboard-customers-chevron {
+  flex-shrink: 0;
+  color: #f4b942;
+  font-size: 11px;
+  line-height: 1;
+  transition: transform .18s ease;
+}
+
+.dashboard-customers-panel {
+  padding-top: 6px;
+}
+
+.dashboard-customers-panel[hidden] {
+  display: none;
+}
+
+.dashboard-customers-panel .dashboard-finance-table {
+  border-top: 0;
+  padding-top: 0;
 }
 
 .dashboard-finance-table {
