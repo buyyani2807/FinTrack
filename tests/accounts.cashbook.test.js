@@ -5,6 +5,7 @@ import {
   cashbookSourceKind,
   dateRangeForFilter,
   filterCashbookEntries,
+  formatIstDateTime,
   ledgerBalance,
   runningBalancesForLedger,
   sourceOriginLabel,
@@ -123,6 +124,11 @@ test("filterCashbookEntries combines money in/out with daily, monthly, and chit 
 test("dateRangeForFilter returns today range", () => {
   const range = dateRangeForFilter("today");
   assert.equal(range.from, range.to);
+});
+
+test("formatIstDateTime converts stored UTC timestamps to India time", () => {
+  assert.equal(formatIstDateTime("2026-09-01T11:54:17.000Z"), "2026-09-01 17:24:17");
+  assert.equal(formatIstDateTime(""), "—");
 });
 
 test("cashbook today and period filters use Asia/Kolkata, not UTC", () => {

@@ -32,7 +32,7 @@ import {
   simpleEntryDraft,
   voucherTotals,
 } from "./accountingModel.js";
-import { todayIso } from "./cashbookModel.js";
+import { formatIstDateTime, todayIso } from "./cashbookModel.js";
 import {
   accountLedger,
   balanceSheet,
@@ -667,8 +667,8 @@ export function AccountsModule({ token, close, loans = [] }) {
           </div>
           <div className="card accounts-form-card spacer">
             <strong>Audit trail</strong>
-            <div className="table spacer"><table><thead><tr><th>When</th><th>Action</th><th>Entity</th><th>Reason</th></tr></thead><tbody>
-              {audit.map(row => <tr key={row.id}><td>{String(row.createdAt || "").slice(0, 19).replace("T", " ")}</td><td>{row.action}</td><td>{row.entityType}</td><td>{row.reason || "—"}</td></tr>)}
+            <div className="table spacer"><table><thead><tr><th>When (IST)</th><th>Action</th><th>Entity</th><th>Reason</th></tr></thead><tbody>
+              {audit.map(row => <tr key={row.id}><td>{formatIstDateTime(row.createdAt)}</td><td>{row.action}</td><td>{row.entityType}</td><td>{row.reason || "—"}</td></tr>)}
               {!audit.length && <tr><td colSpan="4">No accounting audit events yet.</td></tr>}
             </tbody></table></div>
           </div>
