@@ -168,6 +168,17 @@ function classifyInstallment(dueDate, expected, paid, lastPayDate, asOf) {
   };
 }
 
+/** Daily collections are due from the day after the collection start date. */
+export function dailyFirstDueDate(startDate) {
+  return addDays(iso(startDate), 1);
+}
+
+export function dailyDueCount(startDate, asOf) {
+  const start = iso(startDate);
+  if (!start || iso(asOf) <= start) return 0;
+  return Math.min(100, daysBetween(start, asOf));
+}
+
 function allocatePayments(installments, payments, asOf) {
   const pool = payments
     .filter(item => item.amount > 0 && iso(item.date) && iso(item.date) <= iso(asOf))
@@ -188,16 +199,34 @@ function allocatePayments(installments, payments, asOf) {
   }).filter(Boolean);
 }
 
+/** Daily finance: each calendar day’s collection is satisfied by payments recorded on that same date. */
+function allocateDailyPayments(installments, payments, asOf) {
+  const paidByDate = new Map();
+  payments
+    .filter(item => item.amount > 0 && iso(item.date) && iso(item.date) <= iso(asOf))
+    .forEach(item => {
+      const key = iso(item.date);
+      paidByDate.set(key, moneyRound((paidByDate.get(key) || 0) + item.amount));
+    });
+
+  return installments.map(item => {
+    const due = iso(item.dueDate);
+    const paid = paidByDate.get(due) || 0;
+    const lastPayDate = paid > 0 ? due : "";
+    return classifyInstallment(due, item.expected, paid, lastPayDate, asOf);
+  }).filter(Boolean);
+}
+
 function dailyHorizon(loan, asOf) {
   const start = iso(loan.startDate);
-  const elapsed = Math.min(100, Math.max(0, daysBetween(start, asOf) + 1));
+  const elapsed = dailyDueCount(start, asOf);
   const daily = Number(loan.dailyCollection || 0);
   const collected = loanPaidTotal(loan);
   const target = Number(loan.collectionAmount || 0);
   if (daily > 0 && (target > 0 && collected + 0.009 >= target || loan.status === "completed" || loan.status === "closed")) {
     const lastPaid = [...(loan.transactions || [])].map(item => iso(item.date)).filter(Boolean).sort().at(-1);
-    const payoffDays = lastPaid ? daysBetween(start, lastPaid) + 1 : elapsed;
-    return Math.min(elapsed, Math.max(1, payoffDays));
+    const payoffDays = lastPaid && lastPaid > start ? daysBetween(start, lastPaid) : elapsed;
+    return Math.min(elapsed, Math.max(0, payoffDays));
   }
   return elapsed;
 }
@@ -205,17 +234,19 @@ function dailyHorizon(loan, asOf) {
 export function dailyInstallments(loan, asOf) {
   const start = iso(loan.startDate);
   if (!start || !loan.dailyCollection) return [];
-  const elapsed = dailyHorizon(loan, asOf);
+  const count = dailyHorizon(loan, asOf);
+  if (!count) return [];
+  const firstDue = dailyFirstDueDate(start);
   const dues = [];
-  for (let index = 0; index < elapsed; index += 1) {
-    dues.push({ dueDate: addDays(start, index), expected: Number(loan.dailyCollection) });
+  for (let index = 0; index < count; index += 1) {
+    dues.push({ dueDate: addDays(firstDue, index), expected: Number(loan.dailyCollection) });
   }
   const payments = (loan.transactions || []).map(item => ({
     id: item.id,
     date: item.date,
     amount: financePaymentCredit(loan, item),
   }));
-  return allocatePayments(dues, payments, asOf).map(row => ({ ...row, source: "daily", accountId: loan.id }));
+  return allocateDailyPayments(dues, payments, asOf).map(row => ({ ...row, source: "daily", accountId: loan.id }));
 }
 
 export function monthlyInstallments(loan, asOf) {

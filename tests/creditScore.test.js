@@ -47,8 +47,8 @@ const monthlyLoan = ({ payments = [], startDate = "2026-01-15", status = "active
   ...extra,
 });
 
-const onTimeDaily = (start, days) =>
-  Array.from({ length: days }, (_, index) => ({ date: addDays(start, index), amount: 1000 }));
+const onTimeDaily = (collectionStart, days) =>
+  Array.from({ length: days }, (_, index) => ({ date: addDays(collectionStart, index + 1), amount: 1000 }));
 
 test("weights total 100%", () => {
   const total = Object.values(SCORE_WEIGHTS).reduce((sum, value) => sum + value, 0);
@@ -92,29 +92,28 @@ test("scenario 1: every daily installment on time is Excellent", () => {
   assert.equal(result.summary.late, 0);
 });
 
-test("scenario 2: occasional 1–2 day delays only reduce the score slightly", () => {
-  const payments = onTimeDaily("2026-08-01", 30);
-  payments[5].date = addDays("2026-08-01", 6);
-  payments[12].date = addDays("2026-08-01", 14);
-  const late = calculateFintrackCreditScore({ loans: [dailyLoan({ startDate: "2026-08-01", payments })], asOf });
+test("scenario 2: a couple of missed daily collections only reduce the score slightly", () => {
+  const payments = onTimeDaily("2026-08-01", 30).filter((_, index) => index !== 6 && index !== 13);
+  const missed = calculateFintrackCreditScore({ loans: [dailyLoan({ startDate: "2026-08-01", payments })], asOf });
   const perfect = calculateFintrackCreditScore({
     loans: [dailyLoan({ startDate: "2026-08-01", payments: onTimeDaily("2026-08-01", 30) })],
     asOf,
   });
-  assert.ok(late.available && perfect.available);
-  assert.ok(late.score < perfect.score);
-  assert.ok(perfect.score - late.score <= 40, `drop too large: ${perfect.score - late.score}`);
-  assert.ok(late.score >= 700);
+  assert.ok(missed.available && perfect.available);
+  assert.ok(missed.score < perfect.score);
+  assert.ok(perfect.score - missed.score <= 65, `drop too large: ${perfect.score - missed.score}`);
+  assert.ok(missed.score >= 780);
+  assert.equal(missed.summary.missed, 2);
+  assert.equal(missed.summary.late, 0);
 });
 
-test("scenario 3: frequent late payments cause a moderate reduction", () => {
-  const payments = onTimeDaily("2026-08-01", 30).map((item, index) => (
-    index % 2 === 0 ? item : { ...item, date: addDays(item.date, 5) }
-  ));
+test("scenario 3: frequent missed daily collections cause a moderate reduction", () => {
+  const payments = onTimeDaily("2026-08-01", 30).filter((_, index) => index % 2 === 0);
   const result = calculateFintrackCreditScore({ loans: [dailyLoan({ startDate: "2026-08-01", payments })], asOf });
   assert.ok(result.score < 750);
-  assert.ok(result.score >= 600);
-  assert.ok(result.summary.late >= 8);
+  assert.ok(result.score >= 550);
+  assert.ok(result.summary.missed >= 8);
+  assert.equal(result.summary.late, 0);
 });
 
 test("scenario 4: multiple missed payments significantly reduce the score", () => {
@@ -128,13 +127,13 @@ test("scenario 5: split payments completed before due date stay on time", () => 
   const loan = dailyLoan({
     startDate: "2026-08-20",
     payments: [
-      { date: "2026-08-20", amount: 500 },
-      { date: "2026-08-20", amount: 500 },
-      { date: "2026-08-21", amount: 1000 },
-      { date: "2026-08-22", amount: 400 },
-      { date: "2026-08-22", amount: 600 },
-      { date: "2026-08-23", amount: 1000 },
+      { date: "2026-08-21", amount: 500 },
+      { date: "2026-08-21", amount: 500 },
+      { date: "2026-08-22", amount: 1000 },
+      { date: "2026-08-23", amount: 400 },
+      { date: "2026-08-23", amount: 600 },
       { date: "2026-08-24", amount: 1000 },
+      { date: "2026-08-25", amount: 1000 },
       ...onTimeDaily("2026-08-25", 6),
     ],
   });
@@ -145,22 +144,20 @@ test("scenario 5: split payments completed before due date stay on time", () => 
   assert.equal(result.summary.missed, 0);
 });
 
-test("scenario 6: remainder paid after due date is late, not two misses", () => {
+test("scenario 6: partial payment on a due date stays partial, not a duplicate miss", () => {
   const loan = dailyLoan({
     startDate: "2026-08-20",
     payments: [
-      { date: "2026-08-20", amount: 500 },
-      { date: "2026-08-22", amount: 500 },
-      { date: "2026-08-21", amount: 1000 },
+      { date: "2026-08-21", amount: 500 },
       { date: "2026-08-22", amount: 1000 },
       { date: "2026-08-23", amount: 1000 },
       { date: "2026-08-24", amount: 1000 },
-      ...onTimeDaily("2026-08-25", 6),
+      ...onTimeDaily("2026-08-24", 7),
     ],
   });
   const first = dailyInstallments(loan, asOf)[0];
-  assert.equal(first.status, "late");
-  assert.ok(first.daysLate >= 1);
+  assert.equal(first.dueDate, "2026-08-21");
+  assert.equal(first.status, "partial");
   const result = calculateFintrackCreditScore({ loans: [loan], asOf });
   assert.ok(result.summary.missed === 0);
 });
@@ -203,7 +200,7 @@ test("scenario 8: completed accounts contribute positively", () => {
 
 test("scenario 9: new customer has no score", () => {
   const result = calculateFintrackCreditScore({
-    loans: [dailyLoan({ startDate: "2026-08-29", payments: [{ date: "2026-08-29", amount: 1000 }] })],
+    loans: [dailyLoan({ startDate: "2026-08-29", payments: [{ date: "2026-08-30", amount: 1000 }] })],
     asOf,
   });
   assert.equal(result.available, false);
@@ -254,6 +251,35 @@ test("monthly on-time interest payments produce a score", () => {
   });
   assert.equal(result.available, true);
   assert.ok(result.score >= 700);
+});
+
+test("daily finance: first due is the day after collection start; same-day EOD payments are on time", () => {
+  const loan = dailyLoan({
+    startDate: "2026-08-28",
+    extra: { dailyCollection: 200, collectionAmount: 20000 },
+    payments: [
+      { date: "2026-08-29", amount: 200 },
+      { date: "2026-08-30", amount: 200 },
+      { date: "2026-08-31", amount: 200 },
+    ],
+  });
+  const rows = dailyInstallments(loan, "2026-09-01");
+  assert.deepEqual(rows.map(row => row.dueDate), ["2026-08-29", "2026-08-30", "2026-08-31", "2026-09-01"]);
+  assert.deepEqual(
+    rows.slice(0, 3).map(row => row.status),
+    ["on_time", "on_time", "on_time"],
+  );
+  assert.equal(rows[3].status, "missed");
+  const result = calculateFintrackCreditScore({ loans: [loan], asOf: "2026-09-01" });
+  assert.equal(result.summary.late, 0);
+  assert.equal(result.summary.missed, 1);
+  assert.equal(result.summary.onTime, 3);
+});
+
+test("daily finance: no installment is due on the collection start date", () => {
+  const loan = dailyLoan({ startDate: "2026-08-28", extra: { dailyCollection: 200 } });
+  assert.deepEqual(dailyInstallments(loan, "2026-08-28"), []);
+  assert.equal(dailyInstallments(loan, "2026-08-29")[0]?.dueDate, "2026-08-29");
 });
 
 test("chit installments score late vs on-time", () => {
