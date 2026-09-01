@@ -24,6 +24,36 @@ export const PARTY_TYPES = [
   { id: "other", label: "Other" },
 ];
 
+export const MONEY_MODES = [
+  { id: "cash", label: "Cash" },
+  { id: "upi", label: "UPI" },
+  { id: "bank", label: "Bank" },
+];
+
+export const SIMPLE_ENTRY_KINDS = [
+  { id: "sale", label: "Sale", voucherType: "sales" },
+  { id: "purchase", label: "Purchase", voucherType: "purchase" },
+  { id: "expense", label: "Expense", voucherType: "payment" },
+  { id: "receipt", label: "Receipt", voucherType: "receipt" },
+  { id: "payment", label: "Payment", voucherType: "payment" },
+  { id: "transfer", label: "Transfer", voucherType: "contra" },
+];
+
+export const SIMPLE_EXPENSE_CODES = [
+  ["5000", "Rent"],
+  ["5010", "Salary"],
+  ["5040", "Electricity"],
+  ["5050", "Internet"],
+  ["5030", "Fuel"],
+  ["5090", "Travel"],
+  ["5080", "Marketing"],
+  ["5065", "Office Expenses"],
+  ["5060", "Office Supplies"],
+  ["5100", "Bank Charges"],
+  ["5120", "Professional Fees"],
+  ["5990", "Miscellaneous"],
+];
+
 export const COA_GROUPS = [
   { id: "asset", label: "Assets", side: "debit" },
   { id: "liability", label: "Liabilities", side: "credit" },
@@ -48,7 +78,9 @@ export const SYSTEM_CODES = {
   otherIncome: "4100",
   chitCommission: "4200",
   sales: "4300",
+  serviceIncome: "4310",
   purchase: "5110",
+  professionalFees: "5120",
   otherExpense: "5990",
 };
 
@@ -61,6 +93,7 @@ export const DEFAULT_CHART_OF_ACCOUNTS = [
   { code: "1120", name: "Monthly Finance Receivable", groupType: "asset", accountType: "receivable", isSystem: true },
   { code: "1130", name: "Chit Fund Receivable", groupType: "asset", accountType: "receivable", isSystem: true },
   { code: "1200", name: "Loans & Advances", groupType: "asset", accountType: "other", isSystem: false },
+  { code: "1300", name: "Fixed Assets", groupType: "asset", accountType: "other", isSystem: false },
   { code: "2000", name: "Accounts Payable", groupType: "liability", accountType: "payable", isSystem: true },
   { code: "2100", name: "Loans Payable", groupType: "liability", accountType: "payable", isSystem: false },
   { code: "3000", name: "Capital", groupType: "equity", accountType: "capital", isSystem: true },
@@ -70,6 +103,7 @@ export const DEFAULT_CHART_OF_ACCOUNTS = [
   { code: "4100", name: "Other Income", groupType: "income", accountType: "income", isSystem: true },
   { code: "4200", name: "Chit Commission", groupType: "income", accountType: "income", isSystem: true },
   { code: "4300", name: "Sales", groupType: "income", accountType: "income", isSystem: true },
+  { code: "4310", name: "Service Income", groupType: "income", accountType: "income", isSystem: false },
   { code: "5000", name: "Rent", groupType: "expense", accountType: "expense", isSystem: false },
   { code: "5010", name: "Salary", groupType: "expense", accountType: "expense", isSystem: false },
   { code: "5020", name: "Agent Commission", groupType: "expense", accountType: "expense", isSystem: false },
@@ -77,11 +111,13 @@ export const DEFAULT_CHART_OF_ACCOUNTS = [
   { code: "5040", name: "Electricity", groupType: "expense", accountType: "expense", isSystem: false },
   { code: "5050", name: "Internet", groupType: "expense", accountType: "expense", isSystem: false },
   { code: "5060", name: "Office Supplies", groupType: "expense", accountType: "expense", isSystem: false },
+  { code: "5065", name: "Office Expenses", groupType: "expense", accountType: "expense", isSystem: false },
   { code: "5070", name: "Maintenance", groupType: "expense", accountType: "expense", isSystem: false },
   { code: "5080", name: "Marketing", groupType: "expense", accountType: "expense", isSystem: false },
   { code: "5090", name: "Travel", groupType: "expense", accountType: "expense", isSystem: false },
   { code: "5100", name: "Bank Charges", groupType: "expense", accountType: "expense", isSystem: false },
   { code: "5110", name: "Purchase", groupType: "expense", accountType: "expense", isSystem: true },
+  { code: "5120", name: "Professional Fees", groupType: "expense", accountType: "expense", isSystem: false },
   { code: "5990", name: "Other Expenses", groupType: "expense", accountType: "expense", isSystem: true },
 ];
 
@@ -381,6 +417,146 @@ export function contraLines({ accounts, fromType, toType, amount, description = 
     { ...to, description },
     { ...from, description },
   ];
+}
+
+export function moneyByMode(mode, amount) {
+  const value = roundMoney(amount);
+  return {
+    cash: mode === "cash" ? value : 0,
+    upi: mode === "upi" ? value : 0,
+    bank: mode === "bank" ? value : 0,
+  };
+}
+
+export function resolveAccountCode(accounts, code, fallbackCode) {
+  return findAccount(accounts, { code })?.code || findAccount(accounts, { code: fallbackCode })?.code || fallbackCode;
+}
+
+export function saleLines({ accounts, amount, settlement = "credit", moneyMode = "cash", partyId = null, description = "" }) {
+  const value = roundMoney(amount);
+  const sales = findAccount(accounts, { code: SYSTEM_CODES.sales });
+  if (!sales) throw new Error("Missing Sales account");
+  const credit = { coaId: sales.id, code: sales.code, debit: 0, credit: value, description };
+  if (settlement === "credit") {
+    const receivable = findAccount(accounts, { code: SYSTEM_CODES.receivable }) || findAccount(accounts, { accountType: "receivable" });
+    if (!receivable) throw new Error("Missing Accounts Receivable");
+    return [
+      { coaId: receivable.id, code: receivable.code, partyId, debit: value, credit: 0, description },
+      credit,
+    ];
+  }
+  const split = moneyByMode(moneyMode, value);
+  return [
+    moneyLine(accounts, "cash", split.cash, "debit"),
+    moneyLine(accounts, "upi", split.upi, "debit"),
+    moneyLine(accounts, "bank", split.bank, "debit"),
+  ].filter(Boolean).map(line => ({ ...line, description })).concat(credit);
+}
+
+export function purchaseLines({ accounts, amount, settlement = "credit", moneyMode = "cash", partyId = null, description = "" }) {
+  const value = roundMoney(amount);
+  const purchase = findAccount(accounts, { code: SYSTEM_CODES.purchase });
+  if (!purchase) throw new Error("Missing Purchase account");
+  const debit = { coaId: purchase.id, code: purchase.code, debit: value, credit: 0, description };
+  if (settlement === "credit") {
+    const payable = findAccount(accounts, { code: SYSTEM_CODES.payable }) || findAccount(accounts, { accountType: "payable" });
+    if (!payable) throw new Error("Missing Accounts Payable");
+    return [
+      debit,
+      { coaId: payable.id, code: payable.code, partyId, debit: 0, credit: value, description },
+    ];
+  }
+  const split = moneyByMode(moneyMode, value);
+  return [
+    debit,
+    ...[
+      moneyLine(accounts, "cash", split.cash, "credit"),
+      moneyLine(accounts, "upi", split.upi, "credit"),
+      moneyLine(accounts, "bank", split.bank, "credit"),
+    ].filter(Boolean).map(line => ({ ...line, description })),
+  ];
+}
+
+export function simpleEntryDraft({
+  kind,
+  accounts,
+  date,
+  amount,
+  partyId = null,
+  moneyMode = "cash",
+  settlement = "credit",
+  expenseCode = SYSTEM_CODES.otherExpense,
+  fromType = "cash",
+  toType = "bank",
+  narration = "",
+} = {}) {
+  const value = roundMoney(amount);
+  if (value <= 0) throw new Error("Enter an amount greater than zero");
+  const split = moneyByMode(moneyMode, value);
+  const description = String(narration || "").trim();
+
+  if (kind === "sale") {
+    if (settlement === "credit" && !partyId) throw new Error("Choose the customer");
+    return {
+      voucherType: "sales",
+      date,
+      partyId: partyId || null,
+      narration: description || (settlement === "credit" ? "Credit sale" : `${MONEY_MODES.find(mode => mode.id === moneyMode)?.label || "Cash"} sale`),
+      lines: saleLines({ accounts, amount: value, settlement, moneyMode, partyId, description }),
+    };
+  }
+  if (kind === "purchase") {
+    if (settlement === "credit" && !partyId) throw new Error("Choose the supplier");
+    return {
+      voucherType: "purchase",
+      date,
+      partyId: partyId || null,
+      narration: description || (settlement === "credit" ? "Credit purchase" : `${MONEY_MODES.find(mode => mode.id === moneyMode)?.label || "Cash"} purchase`),
+      lines: purchaseLines({ accounts, amount: value, settlement, moneyMode, partyId, description }),
+    };
+  }
+  if (kind === "expense") {
+    const code = resolveAccountCode(accounts, expenseCode, SYSTEM_CODES.otherExpense);
+    const name = findAccount(accounts, { code })?.name || "Expense";
+    return {
+      voucherType: "payment",
+      date,
+      partyId: null,
+      narration: description || name,
+      lines: paymentLines({ accounts, ...split, expenseCode: code, description: description || name }),
+    };
+  }
+  if (kind === "receipt") {
+    if (!partyId) throw new Error("Choose the customer");
+    return {
+      voucherType: "receipt",
+      date,
+      partyId,
+      narration: description || "Customer receipt",
+      lines: receiptLines({ accounts, ...split, receivableCode: SYSTEM_CODES.receivable, partyId, description }),
+    };
+  }
+  if (kind === "payment") {
+    if (!partyId) throw new Error("Choose the supplier");
+    return {
+      voucherType: "payment",
+      date,
+      partyId,
+      narration: description || "Supplier payment",
+      lines: paymentLines({ accounts, ...split, payableCode: SYSTEM_CODES.payable, partyId, description }),
+    };
+  }
+  if (kind === "transfer") {
+    if (fromType === toType) throw new Error("Choose two different accounts to transfer");
+    return {
+      voucherType: "contra",
+      date,
+      partyId: null,
+      narration: description || `Transfer ${fromType} to ${toType}`,
+      lines: contraLines({ accounts, fromType, toType, amount: value, description }),
+    };
+  }
+  throw new Error("Unknown entry type");
 }
 
 export function disbursementLines({ accounts, cash = 0, upi = 0, bank = 0, receivableCode = SYSTEM_CODES.dailyReceivable, partyId = null, description = "" }) {

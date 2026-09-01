@@ -16,17 +16,23 @@ import {
   indianFinancialYear,
   ledgerBalances,
   paymentLines,
+  purchaseLines,
   postVoucher,
   receiptLines,
   reverseVoucher,
   roundMoney,
+  saleLines,
+  simpleEntryDraft,
   voucherTotals,
 } from "../src/features/accounts/accountingModel.js";
 import {
   balanceSheet,
   cashFlow,
+  dashboardMetrics,
   dayBook,
+  invoiceRegister,
   partyBalances,
+  partyLedger,
   profitAndLoss,
   trialBalance,
 } from "../src/features/accounts/accountingReports.js";
@@ -216,4 +222,91 @@ test("integration uses paid-to-customer cashbook amount for disbursements", () =
   }];
   const created = buildIntegrationVouchers(accounts, cashbook, { enabled: true, financeKindBySource: { "loan-1": "daily" } });
   assert.equal(created[0].lines.find(line => line.debit > 0).debit, 8500);
+});
+
+test("cash sale debits money and credits Sales without Daily Finance", () => {
+  const lines = saleLines({ accounts, amount: 10000, settlement: "paid", moneyMode: "cash" });
+  assert.equal(voucherTotals(lines).balanced, true);
+  assert.equal(lines.find(line => line.code === SYSTEM_CODES.cash).debit, 10000);
+  assert.equal(lines.find(line => line.code === SYSTEM_CODES.sales).credit, 10000);
+});
+
+test("credit sale debits Accounts Receivable for an accounts-only customer", () => {
+  const lines = saleLines({ accounts, amount: 25000, settlement: "credit", partyId: "ravi" });
+  assert.equal(lines.find(line => line.code === SYSTEM_CODES.receivable).debit, 25000);
+  assert.equal(lines.find(line => line.code === SYSTEM_CODES.receivable).partyId, "ravi");
+  assert.equal(lines.find(line => line.code === SYSTEM_CODES.sales).credit, 25000);
+});
+
+test("credit purchase credits Accounts Payable for an accounts-only supplier", () => {
+  const lines = purchaseLines({ accounts, amount: 15000, settlement: "credit", partyId: "xyz" });
+  assert.equal(lines.find(line => line.code === SYSTEM_CODES.purchase).debit, 15000);
+  assert.equal(lines.find(line => line.code === SYSTEM_CODES.payable).credit, 15000);
+  assert.equal(lines.find(line => line.code === SYSTEM_CODES.payable).partyId, "xyz");
+});
+
+test("expense draft posts a payment voucher without a manual journal", () => {
+  const draft = simpleEntryDraft({ kind: "expense", accounts, date: "2026-04-06", amount: 20000, moneyMode: "cash", expenseCode: "5000" });
+  assert.equal(draft.voucherType, "payment");
+  assert.equal(draft.lines.find(line => line.code === "5000").debit, 20000);
+  assert.equal(draft.lines.find(line => line.code === SYSTEM_CODES.cash).credit, 20000);
+});
+
+test("UPI is a first-class receipt mode", () => {
+  const draft = simpleEntryDraft({ kind: "receipt", accounts, date: "2026-04-08", amount: 5000, moneyMode: "upi", partyId: "ravi" });
+  assert.equal(draft.lines.find(line => line.code === SYSTEM_CODES.upi).debit, 5000);
+  assert.equal(draft.lines.find(line => line.code === SYSTEM_CODES.receivable).credit, 5000);
+});
+
+test("ABC Traders generic books stay in equation without finance modules", () => {
+  const ravi = { id: "ravi", name: "Ravi", partyType: "customer" };
+  const xyz = { id: "xyz", name: "XYZ", partyType: "supplier" };
+  const capital = posted("journal", "2026-04-01", [
+    { coaId: "1000", code: "1000", debit: 100000, credit: 0 },
+    { coaId: "3000", code: "3000", debit: 0, credit: 100000 },
+  ], { n: 1 });
+  const cashSale = posted("sales", "2026-04-02", saleLines({ accounts, amount: 10000, settlement: "paid", moneyMode: "cash" }), { n: 1 });
+  const creditSale = posted("sales", "2026-04-03", saleLines({ accounts, amount: 25000, settlement: "credit", partyId: "ravi" }), { n: 2, partyId: "ravi" });
+  const customerPay = posted("receipt", "2026-04-04", receiptLines({ accounts, cash: 10000, receivableCode: SYSTEM_CODES.receivable, partyId: "ravi" }), { n: 1, partyId: "ravi" });
+  const creditPurchase = posted("purchase", "2026-04-05", purchaseLines({ accounts, amount: 15000, settlement: "credit", partyId: "xyz" }), { n: 1, partyId: "xyz" });
+  const supplierPay = posted("payment", "2026-04-06", paymentLines({ accounts, cash: 5000, payableCode: SYSTEM_CODES.payable, partyId: "xyz" }), { n: 1, partyId: "xyz" });
+  const rent = posted("payment", "2026-04-07", paymentLines({ accounts, cash: 20000, expenseCode: "5000" }), { n: 2 });
+  const transfer = posted("contra", "2026-04-08", contraLines({ accounts, fromType: "cash", toType: "bank", amount: 30000 }), { n: 1 });
+  const upiReceipt = posted("receipt", "2026-04-09", receiptLines({ accounts, upi: 5000, receivableCode: SYSTEM_CODES.receivable, partyId: "ravi" }), { n: 2, partyId: "ravi" });
+  const vouchers = [capital, cashSale, creditSale, customerPay, creditPurchase, supplierPay, rent, transfer, upiReceipt];
+  const range = { from: "2026-04-01", to: "2026-04-30" };
+  const tb = trialBalance(accounts, vouchers, range);
+  assert.equal(tb.balanced, true);
+  assert.equal(tb.totalDebit, tb.totalCredit);
+  const pnl = profitAndLoss(accounts, vouchers, range);
+  assert.equal(pnl.net, 0);
+  assert.ok(pnl.income.some(row => row.code === SYSTEM_CODES.sales && row.amount === 35000));
+  assert.ok(pnl.expenses.some(row => row.code === SYSTEM_CODES.purchase && row.amount === 15000));
+  assert.ok(pnl.expenses.some(row => row.code === "5000" && row.amount === 20000));
+  const sheet = balanceSheet(accounts, vouchers, range);
+  assert.equal(sheet.balanced, true);
+  assert.equal(sheet.totalAssets, roundMoney(sheet.totalLiabilities + sheet.totalEquity));
+  const balances = ledgerBalances(accounts, vouchers, range);
+  assert.equal(balances.find(row => row.code === SYSTEM_CODES.cash).balance, 65000);
+  assert.equal(balances.find(row => row.code === SYSTEM_CODES.bank).balance, 30000);
+  assert.equal(balances.find(row => row.code === SYSTEM_CODES.upi).balance, 5000);
+  const ar = partyBalances(accounts, vouchers, [ravi, xyz], { kind: "receivable", ...range });
+  const ap = partyBalances(accounts, vouchers, [ravi, xyz], { kind: "payable", ...range });
+  assert.equal(ar.find(row => row.id === "ravi").balance, 10000);
+  assert.equal(ap.find(row => row.id === "xyz").balance, 10000);
+  const invoices = invoiceRegister(accounts, vouchers, [ravi, xyz], { kind: "receivable", today: "2026-04-09", ...range });
+  const creditInvoice = invoices.find(row => row.partyId === "ravi");
+  assert.equal(creditInvoice.amount, 25000);
+  assert.equal(creditInvoice.paid, 15000);
+  assert.equal(creditInvoice.outstanding, 10000);
+  const payables = invoiceRegister(accounts, vouchers, [ravi, xyz], { kind: "payable", today: "2026-04-09", ...range });
+  assert.equal(payables.find(row => row.partyId === "xyz").outstanding, 10000);
+  const raviLedger = partyLedger(accounts, vouchers, ravi, range);
+  assert.equal(raviLedger.outstanding, 10000);
+  const dash = dashboardMetrics(accounts, vouchers, [ravi, xyz], { today: "2026-04-09", ...range });
+  assert.equal(dash.cash, 65000);
+  assert.equal(dash.bank, 30000);
+  assert.equal(dash.upi, 5000);
+  assert.equal(dash.todayReceipts, 5000);
+  assert.equal(dash.equationHolds, true);
 });
