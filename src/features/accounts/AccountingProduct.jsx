@@ -46,19 +46,20 @@ const Field = ({ label, children }) => <label className="field"><span>{label}</s
 const emptyLine = () => ({ coaId: "", debit: "", credit: "", description: "" });
 
 const SECTIONS = [
-  { id: "overview", label: "Overview" },
-  { id: "ledger", label: "Ledger" },
-  { id: "vouchers", label: "Vouchers" },
-  { id: "cashbook", label: "Cashbook" },
-  { id: "receivables", label: "Receivables" },
-  { id: "payables", label: "Payables" },
-  { id: "reports", label: "Reports" },
-  { id: "bank", label: "Bank Reconciliation" },
-  { id: "pnl", label: "Profit & Loss" },
-  { id: "balance", label: "Balance Sheet" },
-  { id: "trial", label: "Trial Balance" },
-  { id: "setup", label: "Setup" },
+  { id: "overview", label: "Overview", group: "Books" },
+  { id: "ledger", label: "Ledger", group: "Books" },
+  { id: "vouchers", label: "Vouchers", group: "Books" },
+  { id: "cashbook", label: "Cashbook", group: "Books" },
+  { id: "receivables", label: "Receivables", group: "Parties" },
+  { id: "payables", label: "Payables", group: "Parties" },
+  { id: "reports", label: "Reports", group: "Reports" },
+  { id: "bank", label: "Bank Reconciliation", group: "Reports" },
+  { id: "pnl", label: "Profit & Loss", group: "Reports" },
+  { id: "balance", label: "Balance Sheet", group: "Reports" },
+  { id: "trial", label: "Trial Balance", group: "Reports" },
+  { id: "setup", label: "Setup", group: "Company" },
 ];
+const SECTION_GROUPS = [...new Set(SECTIONS.map(item => item.group))];
 
 const REPORT_TABS = [
   { id: "daybook", label: "Day Book" },
@@ -220,13 +221,18 @@ export function AccountsModule({ token, close, loans = [] }) {
   }
 
   return <div className="acc-shell">
-    <aside className="acc-sidebar">
+    <aside className="acc-sidebar" aria-label="Accounts sections">
       <div className="acc-sidebar-brand">
-        <strong>FinTrack Accounts</strong>
-        <span className="small">Professional accounting</span>
+        <strong>Accounts</strong>
+        <span className="small">Ledgers and reports</span>
       </div>
-      {SECTIONS.map(item => (
-        <button key={item.id} type="button" className={`acc-nav-item ${section === item.id ? "active" : ""}`} onClick={() => openSection(item.id)}>{item.label}</button>
+      {SECTION_GROUPS.map(group => (
+        <div key={group}>
+          <div className="acc-nav-group">{group}</div>
+          {SECTIONS.filter(item => item.group === group).map(item => (
+            <button key={item.id} type="button" className={`acc-nav-item ${section === item.id ? "active" : ""}`} onClick={() => openSection(item.id)}>{item.label}</button>
+          ))}
+        </div>
       ))}
     </aside>
     <main className="shell acc-main">
