@@ -235,7 +235,7 @@ export function AccountsModule({ token, close, loans = [] }) {
         </div>
       ))}
     </aside>
-    <main className="shell acc-main">
+    <main className="acc-main">
       <header className="top">
         <div>
           <button type="button" className="btn" onClick={section === "overview" ? close : () => openSection("overview")}>{section === "overview" ? "← Dashboard" : "← Accounts"}</button>
