@@ -92,12 +92,13 @@ const AccSkeleton = () => (
     {Array.from({ length: 8 }, (_, index) => <div key={index} className="acc-skel" />)}
   </div>
 );
-function AccUserMenu({ workspace = {}, onSetup, onLogout, compact = false }) {
+function AccUserMenu({ workspace = {}, onSetup, onLogout, placement = "sidebar" }) {
   const [open, setOpen] = useState(false);
   const root = useRef(null);
   const name = workspace.fullName || workspace.businessName || "Owner";
   const email = workspace.organizationSettings?.companyEmail || workspace.businessName || "FinTrack Accounts";
   const initials = name.split(" ").filter(Boolean).map(part => part[0]).join("").slice(0, 2).toUpperCase() || "FT";
+  const isHeader = placement === "header";
   useEffect(() => {
     if (!open) return undefined;
     const onDoc = event => { if (!root.current?.contains(event.target)) setOpen(false); };
@@ -109,16 +110,58 @@ function AccUserMenu({ workspace = {}, onSetup, onLogout, compact = false }) {
       document.removeEventListener("keydown", onKey);
     };
   }, [open]);
-  return <div className={compact ? "acc-header-user" : "acc-user"} ref={root}>
+  return <div className={isHeader ? "acc-header-user" : "acc-user"} ref={root}>
     <button type="button" className="acc-user-btn" aria-label="Account menu" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(current => !current)}>
       <span className="acc-avatar" aria-hidden="true">{initials}</span>
-      {!compact && <span className="acc-user-copy"><strong>{name}</strong><span>{email}</span></span>}
+      <span className="acc-user-copy"><strong>{name}</strong><span>Log out</span></span>
     </button>
-    {open && <div className={`acc-user-menu${compact ? " mobile" : ""}`} role="menu">
+    {open && <div className={`acc-user-menu${isHeader ? " header" : ""}`} role="menu">
+      <p className="acc-user-menu-meta">{email}</p>
       <button type="button" role="menuitem" onClick={() => { setOpen(false); onSetup?.(); }}>Account settings</button>
       <button type="button" role="menuitem" className="danger" onClick={() => { setOpen(false); onLogout?.(); }}>Log out</button>
     </div>}
   </div>;
+}
+
+function AccSidebar({ section, navSections, openSection, workspace, onSetup, onLogout }) {
+  return <aside className="acc-sidebar" aria-label="Accounts sections">
+    <div className="acc-sidebar-brand">
+      <strong>FinTrack Accounts</strong>
+      <span className="small">Small-business books</span>
+    </div>
+    <div className="acc-sidebar-nav">
+      {SECTION_GROUPS.map(group => (
+        <div key={group}>
+          <div className="acc-nav-group">{group}</div>
+          {navSections.filter(item => item.group === group).map(item => (
+            <button key={item.id} type="button" className={`acc-nav-item ${section === item.id ? "active" : ""}`} aria-current={section === item.id ? "page" : undefined} onClick={() => openSection(item.id)}>{item.label}</button>
+          ))}
+        </div>
+      ))}
+    </div>
+    <div className="acc-sidebar-footer">
+      <AccUserMenu placement="sidebar" workspace={workspace} onSetup={onSetup} onLogout={onLogout} />
+    </div>
+  </aside>;
+}
+
+function AccPageHeader({ backLabel, onBack, title, copy, extras, workspace, onSetup, onLogout }) {
+  return <>
+    <header className="acc-page-head">
+      <div className="acc-page-head-start">
+        <button type="button" className="btn" onClick={onBack}>{backLabel}</button>
+      </div>
+      <p className="acc-kicker acc-page-head-brand">FinTrack Accounts</p>
+      <div className="acc-page-head-end">
+        {extras}
+        <AccUserMenu placement="header" workspace={workspace} onSetup={onSetup} onLogout={onLogout} />
+      </div>
+    </header>
+    <div className="acc-page-title">
+      <h1 className="title">{title}</h1>
+      {copy ? <p className="copy acc-page-copy">{copy}</p> : null}
+    </div>
+  </>;
 }
 const emptyLine = () => ({ coaId: "", debit: "", credit: "", description: "" });
 const emptyBankLine = () => ({ lineDate: todayIso(), description: "", amount: "", direction: "in" });
@@ -731,31 +774,17 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
 
   if (section === "cashbook") {
     return <div className="acc-shell">
-      <aside className="acc-sidebar" aria-label="Accounts sections">
-        <div className="acc-sidebar-brand">
-          <strong>FinTrack Accounts</strong>
-          <span className="small">Small-business books</span>
-        </div>
-        {SECTION_GROUPS.map(group => (
-          <div key={group}>
-            <div className="acc-nav-group">{group}</div>
-            {navSections.filter(item => item.group === group).map(item => (
-              <button key={item.id} type="button" className={`acc-nav-item ${section === item.id ? "active" : ""}`} aria-current={section === item.id ? "page" : undefined} onClick={() => openSection(item.id)}>{item.label}</button>
-            ))}
-          </div>
-        ))}
-        <AccUserMenu workspace={workspace} onSetup={() => openSection("setup")} onLogout={requestLogout} />
-      </aside>
+      <AccSidebar section={section} navSections={navSections} openSection={openSection} workspace={workspace} onSetup={() => openSection("setup")} onLogout={requestLogout} />
       <main className="acc-main">
-        <header className="top">
-          <div>
-            <button type="button" className="btn" onClick={() => openSection("overview")}>← Accounts</button>
-            <p className="acc-kicker spacer">FinTrack Accounts</p>
-            <h1 className="title">Cashbook</h1>
-            <p className="copy acc-page-copy">Operational cash, bank and UPI movement. This is not the double-entry ledger.</p>
-          </div>
-          <AccUserMenu compact workspace={workspace} onSetup={() => openSection("setup")} onLogout={requestLogout} />
-        </header>
+        <AccPageHeader
+          backLabel="← Accounts"
+          onBack={() => openSection("overview")}
+          title="Cashbook"
+          copy="Operational cash, bank and UPI movement. This is not the double-entry ledger."
+          workspace={workspace}
+          onSetup={() => openSection("setup")}
+          onLogout={requestLogout}
+        />
         <CashbookWorkspace token={token} close={() => openSection("overview")} loans={loans} embedded />
         {confirmLogout && <Modal title="Log out of Accounts?" close={() => !signingOut && setConfirmLogout(false)} actions={<div className="tabs spacer"><button type="button" className="btn" disabled={signingOut} onClick={() => setConfirmLogout(false)}>Stay signed in</button><button type="button" className="btn danger" disabled={signingOut} onClick={confirmAccountsLogout}>{signingOut ? "Signing out…" : "Log out"}</button></div>}>
           <p className="copy">This ends your FinTrack session. You will need to sign in again to open Accounts or any other module.</p>
@@ -765,30 +794,17 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
   }
 
   return <div className="acc-shell">
-    <aside className="acc-sidebar" aria-label="Accounts sections">
-      <div className="acc-sidebar-brand">
-        <strong>FinTrack Accounts</strong>
-        <span className="small">Small-business books</span>
-      </div>
-      {SECTION_GROUPS.map(group => (
-        <div key={group}>
-          <div className="acc-nav-group">{group}</div>
-          {navSections.filter(item => item.group === group).map(item => (
-            <button key={item.id} type="button" className={`acc-nav-item ${section === item.id ? "active" : ""}`} aria-current={section === item.id ? "page" : undefined} onClick={() => openSection(item.id)}>{item.label}</button>
-          ))}
-        </div>
-      ))}
-      <AccUserMenu workspace={workspace} onSetup={() => openSection("setup")} onLogout={requestLogout} />
-    </aside>
+    <AccSidebar section={section} navSections={navSections} openSection={openSection} workspace={workspace} onSetup={() => openSection("setup")} onLogout={requestLogout} />
     <main className="acc-main acc-print-root">
-      <header className="top">
-        <div>
-          <button type="button" className="btn" onClick={section === "overview" ? close : () => openSection("overview")}>{section === "overview" ? "← Dashboard" : "← Accounts"}</button>
-          <p className="acc-kicker spacer">FinTrack Accounts</p>
-          <h1 className="title">{SECTIONS.find(item => item.id === section)?.label || "Accounts"}</h1>
-          <p className="copy acc-page-copy">{settings?.companyName || workspace.businessName || "Your business"} · {fy.label} · {range.from} to {range.to}</p>
-        </div>
-        <div className="tabs acc-top-actions acc-top-actions-compact">
+      <AccPageHeader
+        backLabel={section === "overview" ? "← Dashboard" : "← Accounts"}
+        onBack={section === "overview" ? close : () => openSection("overview")}
+        title={SECTIONS.find(item => item.id === section)?.label || "Accounts"}
+        copy={`${settings?.companyName || workspace.businessName || "Your business"} · ${fy.label} · ${range.from} to ${range.to}`}
+        workspace={workspace}
+        onSetup={() => openSection("setup")}
+        onLogout={requestLogout}
+        extras={<>
           <select className="acc-new-entry" defaultValue="" aria-label="New entry" onChange={event => {
             if (event.target.value) {
               openSimple(event.target.value);
@@ -800,9 +816,8 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
           </select>
           <button type="button" className="btn primary" onClick={openVoucher}>+ Voucher</button>
           <button type="button" className="btn" onClick={openParty}>+ Party</button>
-          <AccUserMenu compact workspace={workspace} onSetup={() => openSection("setup")} onLogout={requestLogout} />
-        </div>
-      </header>
+        </>}
+      />
       {error && <div className="notice acc-toast error" role="alert">{error}</div>}
       {notice && <div className="notice accounts-notice-ok acc-toast ok" role="status">{notice}</div>}
       {migrationRequired && <div className="notice">Run <strong>052_fintrack_accounts_double_entry.sql</strong>, then <strong>053</strong>, <strong>054</strong>, <strong>055_accounts_p0_reversal_integrity.sql</strong>, <strong>056_accounts_p2_due_date_parent.sql</strong>, and <strong>057_accounts_post_date_and_line_checks.sql</strong> in the Supabase SQL editor, then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}

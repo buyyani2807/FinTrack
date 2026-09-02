@@ -25,9 +25,25 @@
 .accounts-dashboard .acc-sidebar {
   display: flex;
   flex-direction: column;
+  align-self: stretch !important;
+  height: 100svh;
+  max-height: 100svh;
+  overflow: hidden;
   background: linear-gradient(180deg, #151c29 0%, #121820 100%);
   border-right: 1px solid var(--acc-line);
-  padding: 18px 12px 20px;
+  padding: 18px 12px 12px;
+}
+
+.accounts-dashboard .acc-sidebar-nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.accounts-dashboard .acc-sidebar-footer {
+  flex: 0 0 auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--acc-line);
 }
 
 .accounts-dashboard .acc-sidebar-brand {
@@ -80,20 +96,45 @@
   display: none;
 }
 
-.accounts-dashboard .acc-main > .top {
-  align-items: flex-start;
-  gap: 16px;
+.accounts-dashboard .acc-page-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.accounts-dashboard .acc-page-head-start {
+  justify-self: start;
+}
+
+.accounts-dashboard .acc-page-head-brand {
+  justify-self: center;
+  margin: 0;
+  text-align: center;
+}
+
+.accounts-dashboard .acc-page-head-end {
+  justify-self: end;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.accounts-dashboard .acc-page-title {
   margin-bottom: 18px;
 }
 
-.accounts-dashboard .acc-main .title {
-  margin: 10px 0 4px;
+.accounts-dashboard .acc-page-title .title {
+  margin: 0 0 4px;
   font-size: 26px;
   letter-spacing: -0.04em;
 }
 
 .accounts-dashboard .acc-kicker {
-  margin: 0 0 2px;
+  margin: 0;
   color: var(--acc-gold);
   font-size: 11px;
   font-weight: 700;
@@ -363,8 +404,6 @@
 
 .accounts-dashboard .acc-user {
   position: relative;
-  margin-top: auto;
-  padding-top: 16px;
 }
 
 .accounts-dashboard .acc-user-btn {
@@ -415,12 +454,21 @@
   left: 0;
   right: 0;
   bottom: calc(100% + 8px);
-  z-index: 6;
+  z-index: 8;
   padding: 8px;
   border: 1px solid var(--acc-line);
   border-radius: 12px;
   background: #171f2c;
   box-shadow: var(--acc-shadow);
+}
+
+.accounts-dashboard .acc-user-menu-meta {
+  margin: 0 10px 6px;
+  color: var(--acc-muted);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .accounts-dashboard .acc-user-menu button {
@@ -446,12 +494,24 @@
 }
 
 .accounts-dashboard .acc-header-user {
-  display: none;
+  display: block;
+  position: relative;
+  flex: 0 0 auto;
 }
+
 .accounts-dashboard .acc-header-user .acc-user-btn {
   width: auto;
-  padding: 4px;
-  border-radius: 50%;
+  max-width: 220px;
+  padding: 6px 10px 6px 6px;
+  border-radius: 12px;
+}
+
+.accounts-dashboard .acc-user-menu.header {
+  left: auto;
+  right: 0;
+  bottom: auto;
+  top: calc(100% + 8px);
+  width: 220px;
 }
 
 .accounts-dashboard .acc-modal {
@@ -509,16 +569,19 @@
   .accounts-dashboard .acc-main {
     padding: 14px 16px calc(108px + env(safe-area-inset-bottom, 0px));
   }
-  .accounts-dashboard .acc-header-user {
-    display: block;
-    position: relative;
+  .accounts-dashboard .acc-page-head {
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "back user" "brand brand";
   }
-  .accounts-dashboard .acc-user-menu.mobile {
+  .accounts-dashboard .acc-page-head-start { grid-area: back; }
+  .accounts-dashboard .acc-page-head-brand { grid-area: brand; }
+  .accounts-dashboard .acc-page-head-end { grid-area: user; }
+  .accounts-dashboard .acc-user-menu.header {
     left: auto;
     right: 0;
     bottom: auto;
     top: calc(100% + 8px);
-    width: min(240px, calc(100vw - 32px));
+    width: min(220px, calc(100vw - 32px));
   }
 }
 
