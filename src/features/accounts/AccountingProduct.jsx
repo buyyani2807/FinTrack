@@ -182,29 +182,153 @@ function AccUserMenu({ workspace = {}, onSetup, onLogout, placement = "sidebar" 
   </div>;
 }
 
-function AccSidebar({ section, navSections, openSection, workspace, onSetup, onLogout }) {
-  return <aside className="acc-sidebar" aria-label="Accounts sections">
-    <div className="acc-sidebar-brand">
-      <strong>FinTrack Accounts</strong>
-      <span className="small">Small-business books</span>
-    </div>
-    <div className="acc-sidebar-nav">
-      {SECTION_GROUPS.map(group => (
-        <div key={group}>
-          <div className="acc-nav-group">{group}</div>
-          {navSections.filter(item => item.group === group).map(item => (
-            <button key={item.id} type="button" className={`acc-nav-item ${section === item.id ? "active" : ""}`} aria-current={section === item.id ? "page" : undefined} onClick={() => openSection(item.id)}>{item.label}</button>
-          ))}
-        </div>
-      ))}
-    </div>
-    <div className="acc-sidebar-footer">
-      <AccUserMenu placement="sidebar" workspace={workspace} onSetup={onSetup} onLogout={onLogout} />
-    </div>
-  </aside>;
+const NAV_STORAGE_KEY = "fintrack-accounts-nav";
+const NAV_TREE = [
+  { id: "overview", label: "Overview", glyph: "⌂" },
+  { id: "vouchers", label: "Transactions", glyph: "▣" },
+  {
+    id: "parties",
+    label: "Parties",
+    glyph: "◉",
+    children: [
+      { id: "parties", label: "Party Ledger" },
+      { id: "receivables", label: "Receivables" },
+      { id: "payables", label: "Payables" },
+    ],
+  },
+  {
+    id: "reports",
+    label: "Reports",
+    glyph: "▦",
+    children: [
+      { id: "reports", label: "Day Book" },
+      { id: "ledger", label: "Ledger" },
+      { id: "trial", label: "Trial Balance" },
+      { id: "pnl", label: "Profit & Loss" },
+      { id: "balance", label: "Balance Sheet" },
+    ],
+  },
+  { id: "bank", label: "Banking", glyph: "⬡" },
+  { id: "cashbook", label: "Cashbook", glyph: "◇", requiresCashbook: true },
+  { id: "setup", label: "Setup", glyph: "⚙" },
+];
+
+const navItemIsActive = (item, section) => item.children?.some(child => child.id === section) || item.id === section;
+
+function sectionTrail(section, reportTab) {
+  if (section === "overview") return ["Overview"];
+  if (section === "vouchers") return ["Transactions"];
+  if (section === "parties") return ["Parties", "Party Ledger"];
+  if (section === "receivables") return ["Parties", "Receivables"];
+  if (section === "payables") return ["Parties", "Payables"];
+  if (section === "ledger") return ["Reports", "Ledger"];
+  if (section === "pnl") return ["Reports", "Profit & Loss"];
+  if (section === "balance") return ["Reports", "Balance Sheet"];
+  if (section === "trial") return ["Reports", "Trial Balance"];
+  if (section === "reports") return ["Reports", REPORT_TABS.find(item => item.id === reportTab)?.label || "Day Book"];
+  if (section === "bank") return ["Banking"];
+  if (section === "cashbook") return ["Cashbook"];
+  if (section === "setup") return ["Setup"];
+  if (section === "more") return ["More"];
+  return [SECTIONS.find(item => item.id === section)?.label || "Accounts"];
 }
 
-function AccPageHeader({ backLabel, onBack, title, copy, extras, workspace, onSetup, onLogout }) {
+function AccSidebar({ section, expanded, onToggle, onNavigate, showCashbook }) {
+  const [openGroup, setOpenGroup] = useState(null);
+  const root = useRef(null);
+  const items = NAV_TREE.filter(item => !item.requiresCashbook || showCashbook);
+
+  useEffect(() => {
+    if (expanded) setOpenGroup(null);
+  }, [expanded]);
+
+  useEffect(() => {
+    if (!openGroup) return undefined;
+    const onDoc = event => { if (!root.current?.contains(event.target)) setOpenGroup(null); };
+    const onKey = event => { if (event.key === "Escape") setOpenGroup(null); };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [openGroup]);
+
+  const go = id => {
+    setOpenGroup(null);
+    onNavigate(id);
+  };
+
+  return (
+    <aside className={`acc-sidebar${expanded ? " expanded" : " collapsed"}`} ref={root} aria-label="Accounts sections">
+      <div className="acc-sidebar-brand">
+        {expanded ? <>
+          <strong>FinTrack Accounts</strong>
+          <span className="small">Small-business books</span>
+        </> : <strong className="acc-sidebar-mark" title="FinTrack Accounts">FT</strong>}
+      </div>
+      <div className="acc-sidebar-nav" id="acc-sidebar-nav">
+        {items.map(item => {
+          const active = navItemIsActive(item, section);
+          const kidsOpen = Boolean(item.children?.length) && (expanded ? active : openGroup === item.id);
+          return (
+            <div key={item.id} className={`acc-nav-block${active ? " active" : ""}`}>
+              <button
+                type="button"
+                className={`acc-nav-item${active ? " active" : ""}`}
+                aria-current={item.id === section ? "page" : undefined}
+                aria-expanded={item.children?.length ? kidsOpen : undefined}
+                aria-haspopup={item.children?.length && !expanded ? "true" : undefined}
+                title={item.label}
+                onClick={() => {
+                  if (!expanded && item.children?.length) {
+                    setOpenGroup(current => current === item.id ? null : item.id);
+                    return;
+                  }
+                  go(item.id);
+                }}
+              >
+                <span className="acc-nav-glyph" aria-hidden="true">{item.glyph}</span>
+                {expanded ? <span className="acc-nav-label">{item.label}</span> : <span className="acc-sr-only">{item.label}</span>}
+              </button>
+              {kidsOpen && item.children && (
+                <div className={expanded ? "acc-nav-children" : "acc-nav-flyout"} role={expanded ? undefined : "menu"}>
+                  {item.children.map(child => (
+                    <button
+                      key={`${item.id}-${child.id}-${child.label}`}
+                      type="button"
+                      role={expanded ? undefined : "menuitem"}
+                      className={`acc-nav-sub${section === child.id ? " active" : ""}`}
+                      aria-current={section === child.id ? "page" : undefined}
+                      onClick={() => go(child.id)}
+                    >
+                      {child.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <div className="acc-sidebar-footer">
+        <button
+          type="button"
+          className="acc-nav-toggle"
+          aria-controls="acc-sidebar-nav"
+          aria-expanded={expanded}
+          title={expanded ? "Collapse navigation" : "Expand navigation"}
+          onClick={onToggle}
+        >
+          <span aria-hidden="true">{expanded ? "‹" : "›"}</span>
+          {expanded ? <span>Collapse</span> : <span className="acc-sr-only">Expand navigation</span>}
+        </button>
+      </div>
+    </aside>
+  );
+}
+
+function AccPageHeader({ backLabel, onBack, title, copy, trail, extras, workspace, onSetup, onLogout }) {
   return <>
     <header className="acc-page-head">
       <div className="acc-page-head-start">
@@ -217,6 +341,14 @@ function AccPageHeader({ backLabel, onBack, title, copy, extras, workspace, onSe
       </div>
     </header>
     <div className="acc-page-title">
+      {trail?.length ? (
+        <nav className="acc-breadcrumb" aria-label="Breadcrumb">
+          <ol>
+            <li>Accounts</li>
+            {trail.map(item => <li key={item}>{item}</li>)}
+          </ol>
+        </nav>
+      ) : null}
       <h1 className="title">{title}</h1>
       {copy ? <p className="copy acc-page-copy">{copy}</p> : null}
     </div>
@@ -286,8 +418,8 @@ const SECTIONS = [
   { id: "balance", label: "Balance Sheet", group: "Reports" },
   { id: "trial", label: "Trial Balance", group: "Reports" },
   { id: "setup", label: "Setup", group: "Company" },
+  { id: "more", label: "More", group: "Company" },
 ];
-const SECTION_GROUPS = [...new Set(SECTIONS.map(item => item.group))];
 
 const REPORT_TABS = [
   { id: "daybook", label: "Day Book" },
@@ -312,8 +444,13 @@ const MOBILE_TABS = [
 
 const MORE_LINKS = [
   ["ledger", "Ledger"],
-  ["cashbook", "Cashbook"],
+  ["receivables", "Receivables"],
+  ["payables", "Payables"],
   ["bank", "Bank Reconciliation"],
+  ["trial", "Trial Balance"],
+  ["pnl", "Profit & Loss"],
+  ["balance", "Balance Sheet"],
+  ["cashbook", "Cashbook"],
   ["setup", "Setup"],
 ];
 
@@ -415,6 +552,9 @@ function CoaFormFields({ form, setForm, accounts = [] }) {
 export function AccountsModule({ token, close, loans = [], logout, workspace = {} }) {
   const [section, setSection] = useState("overview");
   const [reportTab, setReportTab] = useState("daybook");
+  const [navExpanded, setNavExpanded] = useState(() => {
+    try { return sessionStorage.getItem(NAV_STORAGE_KEY) === "expanded"; } catch { return false; }
+  });
   const [settings, setSettings] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [parties, setParties] = useState([]);
@@ -508,10 +648,6 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
     () => standaloneVisibleAccounts(accounts, { integrationEnabled: settings?.integrationEnabled }),
     [accounts, settings],
   );
-  const navSections = useMemo(
-    () => SECTIONS.filter(item => item.id !== "cashbook" || showCashbook),
-    [showCashbook],
-  );
   const moreLinks = useMemo(
     () => MORE_LINKS.filter(([id]) => id !== "cashbook" || showCashbook),
     [showCashbook],
@@ -585,7 +721,16 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
     if (id === "trial") setReportTab("trial");
     if (id === "pnl") setReportTab("pnl");
     if (id === "balance") setReportTab("balance");
+    if (id === "reports") setReportTab("daybook");
     window.scrollTo(0, 0);
+  };
+
+  const toggleNav = () => {
+    setNavExpanded(current => {
+      const next = !current;
+      try { sessionStorage.setItem(NAV_STORAGE_KEY, next ? "expanded" : "collapsed"); } catch { /* ignore */ }
+      return next;
+    });
   };
 
   const requestLogout = () => {
@@ -932,19 +1077,27 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
   };
 
   if (section === "cashbook") {
-    return <div className="acc-shell">
-      <AccSidebar section={section} navSections={navSections} openSection={openSection} workspace={workspace} onSetup={() => openSection("setup")} onLogout={requestLogout} />
+    return <div className={`acc-shell${navExpanded ? " nav-expanded" : ""}`}>
+      <AccSidebar section={section} expanded={navExpanded} onToggle={toggleNav} onNavigate={openSection} showCashbook={showCashbook} />
       <main className="acc-main">
         <AccPageHeader
           backLabel="← Accounts"
           onBack={() => openSection("overview")}
           title="Cashbook"
+          trail={sectionTrail("cashbook")}
           copy="Operational cash, bank and UPI movement. This is not the double-entry ledger."
           workspace={workspace}
           onSetup={() => openSection("setup")}
           onLogout={requestLogout}
         />
         <CashbookWorkspace token={token} close={() => openSection("overview")} loans={loans} embedded />
+        <nav className="acc-bottom-nav" aria-label="Accounts">
+          {MOBILE_TABS.map(item => (
+            <button key={item.id} type="button" className={`acc-bottom-item ${mobileTab === item.id ? "active" : ""}`} onClick={() => openSection(item.id)}>
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </nav>
         {confirmLogout && <Modal title="Log out of Accounts?" close={() => !signingOut && setConfirmLogout(false)} actions={<div className="tabs spacer"><button type="button" className="btn" disabled={signingOut} onClick={() => setConfirmLogout(false)}>Stay signed in</button><button type="button" className="btn danger" disabled={signingOut} onClick={confirmAccountsLogout}>{signingOut ? "Signing out…" : "Log out"}</button></div>}>
           <p className="copy">This ends your FinTrack session. You will need to sign in again to open Accounts or any other module.</p>
         </Modal>}
@@ -952,13 +1105,14 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
     </div>;
   }
 
-  return <div className="acc-shell">
-    <AccSidebar section={section} navSections={navSections} openSection={openSection} workspace={workspace} onSetup={() => openSection("setup")} onLogout={requestLogout} />
+  return <div className={`acc-shell${navExpanded ? " nav-expanded" : ""}`}>
+    <AccSidebar section={section} expanded={navExpanded} onToggle={toggleNav} onNavigate={openSection} showCashbook={showCashbook} />
     <main className="acc-main acc-print-root">
       <AccPageHeader
         backLabel={section === "overview" ? "← Dashboard" : "← Accounts"}
         onBack={section === "overview" ? close : () => openSection("overview")}
         title={SECTIONS.find(item => item.id === section)?.label || "Accounts"}
+        trail={sectionTrail(section, reportTab)}
         copy={`${settings?.companyName || workspace.businessName || "Your business"} · ${fy.label} · ${range.from} to ${range.to}`}
         workspace={workspace}
         onSetup={() => openSection("setup")}
@@ -980,9 +1134,11 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
       {error && <div className="notice acc-toast error" role="alert">{error}</div>}
       {notice && <div className="notice accounts-notice-ok acc-toast ok" role="status">{notice}</div>}
       {migrationRequired && <div className="notice">Run <strong>052_fintrack_accounts_double_entry.sql</strong>, then <strong>053</strong>, <strong>054</strong>, <strong>055_accounts_p0_reversal_integrity.sql</strong>, <strong>056_accounts_p2_due_date_parent.sql</strong>, <strong>057_accounts_post_date_and_line_checks.sql</strong>, and <strong>058_accounts_party_update_delete.sql</strong> in the Supabase SQL editor, then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
-      <nav className="acc-mobile-cards" aria-label="Accounts">
+      <nav className="acc-bottom-nav" aria-label="Accounts">
         {MOBILE_TABS.map(item => (
-          <button key={item.id} type="button" className={`acc-mobile-card ${mobileTab === item.id ? "active" : ""}`} onClick={() => openSection(item.id)}>{item.label}</button>
+          <button key={item.id} type="button" className={`acc-bottom-item ${mobileTab === item.id ? "active" : ""}`} onClick={() => openSection(item.id)}>
+            <span>{item.label}</span>
+          </button>
         ))}
       </nav>
       {loading ? <><p className="copy">Loading Accounts…</p><AccSkeleton /></> : <>
@@ -1207,7 +1363,8 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
         </div>}
 
         {section === "more" && <div className="acc-panel">
-          <div className="acc-landing-grid">
+          <p className="copy">Ledger, banking, statements and setup. Day-to-day work stays on Home, Transactions, Parties and Reports.</p>
+          <div className="acc-landing-grid spacer">
             {moreLinks.map(([id, title]) => (
               <button key={id} type="button" className="card acc-landing-card" onClick={() => openSection(id)}>
                 <strong>{title}</strong>
