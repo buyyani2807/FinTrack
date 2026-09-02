@@ -756,6 +756,8 @@ export function AccountsModule({ token, close, loans = [] }) {
             </label>
             <button type="button" className="btn" onClick={() => exportReport("csv")}>Export CSV</button>
             <button type="button" className="btn" onClick={() => exportReport("xls")}>Export Excel</button>
+          </div>
+          {invoiceTable(section === "receivables" ? arInvoices : apInvoices, section === "payables" ? "payable" : "receivable")}
           <p className="small spacer">Party totals: {(section === "receivables" ? ar : ap).map(row => `${row.name} ${money(row.balance)}`).join(" · ") || "none"}</p>
         </div>}
 
