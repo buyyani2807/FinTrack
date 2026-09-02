@@ -4,14 +4,23 @@
   --acc-surface: #141a24;
   --acc-card: #1a2230;
   --acc-line: #2c3648;
+  --acc-line-strong: #3d4b63;
   --acc-text: #f3f6fb;
   --acc-muted: #93a0b5;
   --acc-gold: #f4b942;
+  --acc-gold-ink: #211907;
   --acc-green: #4fd08d;
   --acc-red: #ff7a7a;
   --acc-blue: #7eb6ff;
+  --acc-control-h: 36px;
+  --acc-input-h: 40px;
+  --acc-compact-h: 32px;
+  --acc-radius-ctrl: 10px;
   --acc-radius: 14px;
   --acc-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  --acc-font: 13px;
+  color: var(--acc-text);
+  font-size: var(--acc-font);
   background:
     radial-gradient(900px 420px at 8% -12%, #1d283c 0%, transparent 62%),
     var(--acc-bg);
@@ -200,10 +209,11 @@ html:has(.accounts-dashboard) .financier-nav {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 40px;
+  height: var(--acc-control-h);
+  min-height: var(--acc-control-h);
   border: 1px solid var(--acc-line);
-  border-radius: 10px;
-  background: #121820;
+  border-radius: var(--acc-radius-ctrl);
+  background: var(--acc-surface);
   color: var(--acc-muted);
   font-size: 12px;
   font-weight: 700;
@@ -302,6 +312,13 @@ html:has(.accounts-dashboard) .financier-nav {
   margin-bottom: 18px;
 }
 
+.accounts-dashboard .acc-page-title .title,
+.accounts-dashboard .acc-modal .title,
+.accounts-dashboard .acc-modal h2,
+.accounts-dashboard h2 {
+  color: var(--acc-text);
+}
+
 .accounts-dashboard .acc-page-title .title {
   margin: 0 0 4px;
   font-size: 26px;
@@ -321,39 +338,156 @@ html:has(.accounts-dashboard) .financier-nav {
   max-width: 62ch;
 }
 
-.accounts-dashboard .btn {
-  min-height: 40px;
-  border-radius: 10px;
-  transition: border-color 0.12s ease, background 0.12s ease;
+.accounts-dashboard .btn,
+.accounts-dashboard .acc-new-entry {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: var(--acc-control-h);
+  min-height: var(--acc-control-h);
+  max-height: var(--acc-control-h);
+  padding: 0 12px;
+  border: 1px solid var(--acc-line);
+  border-radius: var(--acc-radius-ctrl);
+  background: var(--acc-surface);
+  color: var(--acc-text);
+  font-family: inherit;
+  font-size: var(--acc-font);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0;
+  white-space: nowrap;
+  box-shadow: none;
+  vertical-align: middle;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease, filter 0.12s ease;
+}
+
+.accounts-dashboard .acc-new-entry {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 28px;
+  color-scheme: dark;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--acc-muted) 50%),
+    linear-gradient(135deg, var(--acc-muted) 50%, transparent 50%);
+  background-position: calc(100% - 14px) calc(50% - 2px), calc(100% - 9px) calc(50% - 2px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  background-color: var(--acc-surface);
+}
+
+.accounts-dashboard .btn:hover:not(:disabled),
+.accounts-dashboard .acc-new-entry:hover {
+  border-color: var(--acc-line-strong);
+  background: #1c2533;
+}
+
+.accounts-dashboard .btn.primary {
+  background: var(--acc-gold);
+  border-color: var(--acc-gold);
+  color: var(--acc-gold-ink);
+  box-shadow: none;
+}
+
+.accounts-dashboard .btn.primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+  background: var(--acc-gold);
+  border-color: var(--acc-gold);
+}
+
+.accounts-dashboard .btn.danger {
+  color: var(--acc-red);
+  border-color: #ff7a7a55;
+  background: #201418;
+}
+
+.accounts-dashboard .btn.danger:hover:not(:disabled) {
+  background: #2a1719;
+  border-color: #ff7a7a88;
+}
+
+.accounts-dashboard .btn:disabled,
+.accounts-dashboard .acc-new-entry:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+  filter: none;
 }
 
 .accounts-dashboard .btn:focus-visible,
 .accounts-dashboard .acc-new-entry:focus-visible,
 .accounts-dashboard input:focus-visible,
-.accounts-dashboard select:focus-visible {
+.accounts-dashboard select:focus-visible,
+.accounts-dashboard textarea:focus-visible {
   outline: 2px solid var(--acc-gold);
   outline-offset: 2px;
 }
 
-.accounts-dashboard .btn.primary {
-  box-shadow: 0 6px 16px rgba(244, 185, 66, 0.18);
+.accounts-dashboard .acc-table-wrap .btn,
+.accounts-dashboard .acc-party-actions .btn,
+.accounts-dashboard .accounts-entry-amounts .btn {
+  height: var(--acc-compact-h);
+  min-height: var(--acc-compact-h);
+  max-height: var(--acc-compact-h);
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.accounts-dashboard .accounts-period-pill {
+  height: var(--acc-control-h);
+  min-height: var(--acc-control-h);
+  max-height: var(--acc-control-h);
+  padding: 0 14px;
+  border-radius: 999px;
+}
+
+.accounts-dashboard .accounts-period-pill.active {
+  background: #f4b94218;
+  border-color: var(--acc-gold);
+  color: var(--acc-gold);
+}
+
+.accounts-dashboard .accounts-section-tab {
+  min-height: var(--acc-control-h);
+  padding: 8px 12px;
+  font-size: var(--acc-font);
 }
 
 .accounts-dashboard .acc-top-actions-compact {
   align-items: center;
 }
 
-.accounts-dashboard .acc-new-entry,
 .accounts-dashboard .accounts-search,
 .accounts-dashboard .field input,
 .accounts-dashboard .field select,
 .accounts-dashboard .acc-modal input,
-.accounts-dashboard .acc-modal select {
-  min-height: 40px;
-  border-radius: 10px;
+.accounts-dashboard .acc-modal select,
+.accounts-dashboard .accounts-filter-field input,
+.accounts-dashboard .accounts-filter-field select {
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--acc-input-h);
+  min-height: var(--acc-input-h);
+  padding: 0 12px;
+  border-radius: var(--acc-radius-ctrl);
   background: var(--acc-surface);
   border: 1px solid var(--acc-line);
   color: var(--acc-text);
+  font: inherit;
+  color-scheme: dark;
+}
+
+.accounts-dashboard .accounts-search:hover,
+.accounts-dashboard .field input:hover,
+.accounts-dashboard .field select:hover,
+.accounts-dashboard .acc-modal input:hover,
+.accounts-dashboard .acc-modal select:hover,
+.accounts-dashboard .accounts-filter-field input:hover,
+.accounts-dashboard .accounts-filter-field select:hover {
+  border-color: var(--acc-line-strong);
 }
 
 .accounts-dashboard .card {
@@ -443,12 +577,10 @@ html:has(.accounts-dashboard) .financier-nav {
 }
 
 .accounts-dashboard .acc-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin: 8px 0 16px;
-}
-
-.accounts-dashboard .acc-quick-actions .btn {
-  min-height: 38px;
 }
 
 .accounts-dashboard .acc-landing-grid {
@@ -464,6 +596,7 @@ html:has(.accounts-dashboard) .financier-nav {
   align-items: flex-start;
   padding: 16px;
   text-align: left;
+  cursor: pointer;
 }
 
 .accounts-dashboard .acc-landing-card:hover,
@@ -544,6 +677,13 @@ html:has(.accounts-dashboard) .financier-nav {
   font: 700 16px Syne, sans-serif;
 }
 
+.accounts-dashboard .accounts-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
 .accounts-dashboard .acc-toast {
   margin: 0 0 12px;
   padding: 10px 12px;
@@ -585,30 +725,38 @@ html:has(.accounts-dashboard) .financier-nav {
   display: flex;
   width: 100%;
   align-items: center;
-  gap: 10px;
-  padding: 8px;
+  gap: 8px;
+  height: var(--acc-control-h);
+  min-height: var(--acc-control-h);
+  max-height: var(--acc-control-h);
+  padding: 0 10px 0 4px;
   border: 1px solid var(--acc-line);
-  border-radius: 12px;
-  background: #121820;
+  border-radius: var(--acc-radius-ctrl);
+  background: var(--acc-surface);
   color: inherit;
   text-align: left;
+  box-shadow: none;
 }
 
 .accounts-dashboard .acc-avatar {
   flex: 0 0 auto;
-  width: 34px;
-  height: 34px;
+  width: 26px;
+  height: 26px;
   display: grid;
   place-items: center;
   border-radius: 50%;
   background: #f4b94222;
   color: var(--acc-gold);
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 800;
 }
 
 .accounts-dashboard .acc-user-copy {
   min-width: 0;
+}
+
+.accounts-dashboard .acc-user-copy strong {
+  font: 600 13px DM Sans, system-ui, sans-serif;
 }
 
 .accounts-dashboard .acc-user-copy strong,
@@ -676,9 +824,13 @@ html:has(.accounts-dashboard) .financier-nav {
 
 .accounts-dashboard .acc-header-user .acc-user-btn {
   width: auto;
-  max-width: 220px;
-  padding: 6px 10px 6px 6px;
-  border-radius: 12px;
+  max-width: 200px;
+  padding: 0 10px 0 4px;
+  border-radius: var(--acc-radius-ctrl);
+}
+
+.accounts-dashboard .acc-header-user .acc-user-btn:hover {
+  border-color: var(--acc-line-strong);
 }
 
 .accounts-dashboard .acc-user-menu.header {
@@ -691,6 +843,16 @@ html:has(.accounts-dashboard) .financier-nav {
 
 .accounts-dashboard .acc-modal {
   max-width: min(760px, calc(100vw - 24px));
+}
+
+.accounts-dashboard .acc-modal .row {
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.accounts-dashboard .acc-modal .tabs {
+  align-items: center;
 }
 
 .accounts-dashboard .acc-modal .form {
@@ -805,7 +967,8 @@ html:has(.accounts-dashboard) .financier-nav {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 34px;
+  height: var(--acc-control-h);
+  min-height: var(--acc-control-h);
   padding: 0 12px;
   border-radius: 999px;
   border: 1px solid var(--acc-line);
@@ -813,6 +976,11 @@ html:has(.accounts-dashboard) .financier-nav {
   color: var(--acc-muted);
   font-size: 12px;
   font-weight: 700;
+  cursor: pointer;
+}
+
+.accounts-dashboard .acc-filter-chip:hover {
+  border-color: var(--acc-line-strong);
 }
 
 .accounts-dashboard .acc-filter-chip span {
@@ -898,15 +1066,6 @@ html:has(.accounts-dashboard) .financier-nav {
   justify-content: flex-end;
 }
 
-.accounts-dashboard .acc-party-actions .btn {
-  min-height: 34px;
-}
-
-.accounts-dashboard .btn.danger {
-  color: #ffb4b4;
-  border-color: #ff7a7a55;
-}
-
 .accounts-dashboard .acc-party-cards {
   display: none;
   gap: 10px;
@@ -984,9 +1143,10 @@ html:has(.accounts-dashboard) .financier-nav {
 .accounts-dashboard .acc-party-ledger-filters input,
 .accounts-dashboard .acc-party-ledger-filters select {
   width: 100%;
-  min-height: 42px;
-  padding: 9px 12px;
-  border-radius: 10px;
+  height: var(--acc-input-h);
+  min-height: var(--acc-input-h);
+  padding: 0 12px;
+  border-radius: var(--acc-radius-ctrl);
   border: 1px solid var(--acc-line);
   background: var(--acc-surface);
   color: var(--acc-text);

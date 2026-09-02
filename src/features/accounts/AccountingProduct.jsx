@@ -172,7 +172,7 @@ function AccUserMenu({ workspace = {}, onSetup, onLogout, placement = "sidebar" 
   return <div className={isHeader ? "acc-header-user" : "acc-user"} ref={root}>
     <button type="button" className="acc-user-btn" aria-label="Account menu" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(current => !current)}>
       <span className="acc-avatar" aria-hidden="true">{initials}</span>
-      <span className="acc-user-copy"><strong>{name}</strong><span>Log out</span></span>
+      <span className="acc-user-copy"><strong>{name}</strong>{isHeader ? null : <span>Account</span>}</span>
     </button>
     {open && <div className={`acc-user-menu${isHeader ? " header" : ""}`} role="menu">
       <p className="acc-user-menu-meta">{email}</p>
