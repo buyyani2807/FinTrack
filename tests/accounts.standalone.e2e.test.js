@@ -223,6 +223,13 @@ test("unbalanced, zero, negative, and missing-account drafts are rejected", () =
     date: "2026-04-01",
     lines: [{ coaId: "1000", debit: -1, credit: 0 }, { coaId: "3000", debit: 0, credit: 1 }],
   }), /negative|Unbalanced/);
+  assert.throws(() => buildVoucher({
+    voucherType: "journal",
+    voucherNumber: "JNL-FUT",
+    date: "2099-12-31",
+    today: "2026-09-02",
+    lines: [{ coaId: "1000", debit: 1, credit: 0 }, { coaId: "3000", debit: 0, credit: 1 }],
+  }), /future/);
 });
 
 test("decimals stay in equation at paise precision", () => {

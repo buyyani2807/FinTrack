@@ -294,6 +294,14 @@ export const assertPeriodOpen = (isoDate, locks = []) => {
   }
 };
 
+export const accountingTodayIso = (now = new Date()) => now.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+
+export const assertVoucherDateNotFuture = (isoDate, today = accountingTodayIso()) => {
+  const date = String(isoDate || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("Voucher date is required");
+  if (date > String(today).slice(0, 10)) throw new Error("Voucher date cannot be in the future");
+};
+
 export const assertCanMutatePosted = () => {
   throw new Error("Posted vouchers cannot be overwritten. Reverse or cancel them instead.");
 };
@@ -313,8 +321,10 @@ export function buildVoucher({
   sourceTransactionId = null,
   createdBy = null,
   createdAt = null,
+  today,
 } = {}) {
   if (!VOUCHER_TYPES[voucherType]) throw new Error("Unknown voucher type");
+  assertVoucherDateNotFuture(date, today);
   assertBalancedVoucher(lines);
   return {
     id,
@@ -342,8 +352,9 @@ export function buildVoucher({
   };
 }
 
-export function postVoucher(existing, draft, { locks = [], actorId = null } = {}) {
+export function postVoucher(existing, draft, { locks = [], actorId = null, today } = {}) {
   assertPeriodOpen(draft.date, locks);
+  assertVoucherDateNotFuture(draft.date, today);
   if (existing?.status === VOUCHER_STATUS.posted) assertCanMutatePosted();
   const numbered = {
     ...draft,
@@ -351,13 +362,15 @@ export function postVoucher(existing, draft, { locks = [], actorId = null } = {}
     status: VOUCHER_STATUS.posted,
     postedAt: new Date().toISOString(),
     postedBy: actorId,
+    today,
   };
   return buildVoucher(numbered);
 }
 
-export function reverseVoucher(voucher, { date, reason = "", locks = [], sequence, actorId = null } = {}) {
+export function reverseVoucher(voucher, { date, reason = "", locks = [], sequence, actorId = null, today } = {}) {
   if (!isPosted(voucher)) throw new Error("Only posted vouchers can be reversed");
   assertPeriodOpen(date || voucher.date, locks);
+  assertVoucherDateNotFuture(date || voucher.date, today);
   const reversalLines = voucher.lines.map(line => ({
     coaId: line.coaId,
     code: line.code,
@@ -378,6 +391,7 @@ export function reverseVoucher(voucher, { date, reason = "", locks = [], sequenc
     sourceType: "reversal",
     sourceTransactionId: voucher.id,
     createdBy: actorId,
+    today,
   });
 }
 
@@ -620,7 +634,9 @@ export function simpleEntryDraft({
   toAccountId = null,
   dueDate = null,
   narration = "",
+  today,
 } = {}) {
+  assertVoucherDateNotFuture(date, today);
   const value = roundMoney(amount);
   if (value <= 0) throw new Error("Enter an amount greater than zero");
   const split = moneyByMode(moneyMode, value);

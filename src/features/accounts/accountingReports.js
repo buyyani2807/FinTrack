@@ -425,34 +425,4 @@ export function invoiceRegister(accounts, vouchers, parties = [], { kind = "rece
   });
 }
 
-export const csvCell = value => {
-  const text = String(value ?? "");
-  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-};
-
-export function downloadAccountsCsv(filename, rows) {
-  const csv = rows.map(row => row.map(csvCell).join(",")).join("\r\n");
-  const url = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" }));
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
-}
-
-const excelCell = value => String(value ?? "")
-  .replace(/&/g, "&amp;")
-  .replace(/</g, "&lt;")
-  .replace(/>/g, "&gt;");
-
-export function downloadAccountsExcel(filename, rows) {
-  const table = `<table>${(rows || []).map(row => `<tr>${row.map(cell => `<td>${excelCell(cell)}</td>`).join("")}</tr>`).join("")}</table>`;
-  const html = `\uFEFF<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body>${table}</body></html>`;
-  const url = URL.createObjectURL(new Blob([html], { type: "application/vnd.ms-excel" }));
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = String(filename || "fintrack-report.xls").replace(/\.csv$/i, ".xls");
-  if (!link.download.endsWith(".xls")) link.download = `${link.download}.xls`;
-  link.click();
-  URL.revokeObjectURL(url);
-}
+export { downloadAccountsCsv, downloadAccountsExcel, downloadAccountsPdf } from "./accountingExport.js";

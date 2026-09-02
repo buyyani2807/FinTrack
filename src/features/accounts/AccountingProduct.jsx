@@ -34,7 +34,9 @@ import {
   VOUCHER_TYPES,
   accountNormalSide,
   addDaysIso,
+  assertBalancedVoucher,
   assertCanDeleteLedger,
+  assertVoucherDateNotFuture,
   createSubmitLock,
   defaultAccountTypeForGroup,
   indianFinancialYear,
@@ -55,14 +57,13 @@ import {
   dashboardMetrics,
   dayBook,
   defaultBankStatementLines,
-  downloadAccountsCsv,
-  downloadAccountsExcel,
   invoiceRegister,
   partyBalances,
   partyLedger,
   profitAndLoss,
   trialBalance,
 } from "./accountingReports.js";
+import { downloadAccountsCsv, downloadAccountsExcel, downloadAccountsPdf } from "./accountingExport.js";
 import { formatInr } from "../../lib/formatMoney.js";
 
 const money = formatInr;
@@ -159,13 +160,13 @@ function ReasonModal({ title, label, value, onChange, onConfirm, onClose, saving
   </Modal>;
 }
 
-function VoucherForm({ accounts, parties, voucherType, setVoucherType, form, setForm, lines, setLines, onSubmit, saving }) {
+function VoucherForm({ accounts, parties, voucherType, setVoucherType, form, setForm, lines, setLines, onSubmit, saving, maxDate }) {
   const totals = voucherTotals(lines.map(line => ({ ...line, debit: Number(line.debit || 0), credit: Number(line.credit || 0) })));
   const setLine = (index, patch) => setLines(current => current.map((line, i) => i === index ? { ...line, ...patch } : line));
   return <>
     <div className="form">
       <Field label="Voucher type"><select value={voucherType} onChange={event => setVoucherType(event.target.value)}>{Object.values(VOUCHER_TYPES).map(type => <option key={type.id} value={type.id}>{type.label}</option>)}</select></Field>
-      <Field label="Date"><input type="date" value={form.date} onChange={event => setForm(current => ({ ...current, date: event.target.value }))} /></Field>
+      <Field label="Date"><input type="date" max={maxDate} value={form.date} onChange={event => setForm(current => ({ ...current, date: event.target.value }))} /></Field>
       <Field label="Party (optional)"><select value={form.partyId} onChange={event => setForm(current => ({ ...current, partyId: event.target.value }))}><option value="">None</option>{parties.map(party => <option key={party.id} value={party.id}>{party.name}</option>)}</select></Field>
       {(voucherType === "sales" || voucherType === "purchase") && <Field label="Due date (optional)"><input type="date" value={form.dueDate || ""} onChange={event => setForm(current => ({ ...current, dueDate: event.target.value }))} /></Field>}
       <Field className="span" label="Narration"><input value={form.narration} onChange={event => setForm(current => ({ ...current, narration: event.target.value }))} /></Field>
@@ -186,7 +187,7 @@ function VoucherForm({ accounts, parties, voucherType, setVoucherType, form, set
   </>;
 }
 
-function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, saving }) {
+function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, saving, maxDate }) {
   const customers = parties.filter(party => party.partyType === "customer");
   const suppliers = parties.filter(party => party.partyType === "supplier");
   const expenseOptions = SIMPLE_EXPENSE_CODES.filter(([code]) => accounts.some(account => account.code === code) || code === "5990");
@@ -204,7 +205,7 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
   return <>
     <p className="copy">{noteCopy}</p>
     <div className="form">
-      <Field label="Date"><input type="date" value={form.date} onChange={event => set({ date: event.target.value })} /></Field>
+      <Field label="Date"><input type="date" max={maxDate} value={form.date} onChange={event => set({ date: event.target.value })} /></Field>
       {(kind === "sale" || kind === "purchase") && <Field label="Payment"><select value={form.settlement} onChange={event => set({ settlement: event.target.value })}><option value="credit">Credit</option><option value="paid">Paid now</option></select></Field>}
       {(kind !== "transfer" && kind !== "credit_note" && kind !== "debit_note" && (kind === "expense" || kind === "receipt" || kind === "payment" || form.settlement === "paid")) && <Field label="Mode"><select value={form.moneyMode} onChange={event => set({ moneyMode: event.target.value })}>{MONEY_MODES.map(mode => <option key={mode.id} value={mode.id}>{mode.label}</option>)}</select></Field>}
       {(kind === "sale" || kind === "purchase") && form.settlement === "credit" && <Field label="Due date"><input type="date" value={form.dueDate || addDaysIso(form.date, 7)} onChange={event => set({ dueDate: event.target.value })} /></Field>}
@@ -363,11 +364,11 @@ export function AccountsModule({ token, close, loans = [] }) {
     }
   }, [ledgerId, visibleAccounts]);
 
-  const metrics = useMemo(() => dashboardMetrics(accounts, vouchers, parties, { today: todayIso(), ...range }), [accounts, vouchers, parties, range]);
-  const tb = useMemo(() => trialBalance(accounts, vouchers, range), [accounts, vouchers, range]);
-  const pnl = useMemo(() => profitAndLoss(accounts, vouchers, range), [accounts, vouchers, range]);
-  const sheet = useMemo(() => balanceSheet(accounts, vouchers, range), [accounts, vouchers, range]);
-  const flow = useMemo(() => cashFlow(accounts, vouchers, range), [accounts, vouchers, range]);
+  const metrics = useMemo(() => dashboardMetrics(visibleAccounts, vouchers, parties, { today: todayIso(), ...range }), [visibleAccounts, vouchers, parties, range]);
+  const tb = useMemo(() => trialBalance(visibleAccounts, vouchers, range), [visibleAccounts, vouchers, range]);
+  const pnl = useMemo(() => profitAndLoss(visibleAccounts, vouchers, range), [visibleAccounts, vouchers, range]);
+  const sheet = useMemo(() => balanceSheet(visibleAccounts, vouchers, range), [visibleAccounts, vouchers, range]);
+  const flow = useMemo(() => cashFlow(visibleAccounts, vouchers, range), [visibleAccounts, vouchers, range]);
   const books = useMemo(() => dayBook(vouchers, range), [vouchers, range]);
   const ar = useMemo(() => partyBalances(accounts, vouchers, parties, { kind: "receivable", ...range }), [accounts, vouchers, parties, range]);
   const ap = useMemo(() => partyBalances(accounts, vouchers, parties, { kind: "payable", ...range }), [accounts, vouchers, parties, range]);
@@ -424,7 +425,8 @@ export function AccountsModule({ token, close, loans = [] }) {
   };
 
   const submitVoucher = () => run(async () => {
-    await postVoucher(token, {
+    assertVoucherDateNotFuture(voucherForm.date);
+    const payload = {
       voucherType,
       date: voucherForm.date,
       dueDate: voucherForm.dueDate || null,
@@ -437,7 +439,9 @@ export function AccountsModule({ token, close, loans = [] }) {
         description: voucherForm.narration,
         partyId: voucherForm.partyId || null,
       })),
-    });
+    };
+    assertBalancedVoucher(payload.lines);
+    await postVoucher(token, payload);
     setShowVoucher(false);
     setLines([emptyLine(), emptyLine()]);
   }, "Voucher posted.");
@@ -582,7 +586,11 @@ export function AccountsModule({ token, close, loans = [] }) {
 
   const exportReport = format => {
     const { filename, rows } = exportRows();
-    if (format === "xls") downloadAccountsExcel(`${filename}.xls`, rows);
+    const active = ["receivables", "payables", "pnl", "balance", "trial"].includes(section) ? section : reportTab;
+    const title = REPORT_TABS.find(item => item.id === active)?.label || "Accounts report";
+    const subtitle = `${settings?.companyName || "FinTrack"} · ${rangeFrom} to ${rangeTo}`;
+    if (format === "xlsx") downloadAccountsExcel(`${filename}.xlsx`, rows);
+    else if (format === "pdf") downloadAccountsPdf(`${filename}.pdf`, { title, subtitle, rows });
     else downloadAccountsCsv(`${filename}.csv`, rows);
   };
 
@@ -647,7 +655,7 @@ export function AccountsModule({ token, close, loans = [] }) {
       </header>
       {error && <div className="notice">{error}</div>}
       {notice && <div className="notice accounts-notice-ok">{notice}</div>}
-      {migrationRequired && <div className="notice">Run <strong>052_fintrack_accounts_double_entry.sql</strong>, then <strong>053</strong>, <strong>054</strong>, <strong>055_accounts_p0_reversal_integrity.sql</strong>, and <strong>056_accounts_p2_due_date_parent.sql</strong> in the Supabase SQL editor, then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
+      {migrationRequired && <div className="notice">Run <strong>052_fintrack_accounts_double_entry.sql</strong>, then <strong>053</strong>, <strong>054</strong>, <strong>055_accounts_p0_reversal_integrity.sql</strong>, <strong>056_accounts_p2_due_date_parent.sql</strong>, and <strong>057_accounts_post_date_and_line_checks.sql</strong> in the Supabase SQL editor, then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
       <nav className="acc-mobile-cards" aria-label="Accounts">
         {MOBILE_TABS.map(item => (
           <button key={item.id} type="button" className={`acc-mobile-card ${mobileTab === item.id ? "active" : ""}`} onClick={() => openSection(item.id)}>{item.label}</button>
@@ -708,7 +716,8 @@ export function AccountsModule({ token, close, loans = [] }) {
               <select value={ledgerId} onChange={event => setLedgerId(event.target.value)}>{visibleAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</select>
             </label>
             <button type="button" className="btn" onClick={() => downloadAccountsCsv(`fintrack-ledger-${todayIso()}.csv`, [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])])}>Export CSV</button>
-            <button type="button" className="btn" onClick={() => downloadAccountsExcel(`fintrack-ledger-${todayIso()}.xls`, [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])])}>Export Excel</button>
+            <button type="button" className="btn" onClick={() => downloadAccountsExcel(`fintrack-ledger-${todayIso()}.xlsx`, [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])])}>Export Excel</button>
+            <button type="button" className="btn" onClick={() => downloadAccountsPdf(`fintrack-ledger-${todayIso()}.pdf`, { title: "Ledger", subtitle: `${ledger.account?.code || ""} ${ledger.account?.name || ""}`, rows: [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])] })}>Download PDF</button>
           </div>
           <div className="table spacer"><table><thead><tr><th>Date</th><th>Voucher</th><th>Narration</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead><tbody>
             {ledger.rows.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.narration}</td><td>{row.debit ? money(row.debit) : ""}</td><td>{row.credit ? money(row.credit) : ""}</td><td>{money(row.balance)}</td></tr>)}
@@ -755,7 +764,8 @@ export function AccountsModule({ token, close, loans = [] }) {
               <input type="checkbox" checked={outstandingOnly} onChange={event => setOutstandingOnly(event.target.checked)} />
             </label>
             <button type="button" className="btn" onClick={() => exportReport("csv")}>Export CSV</button>
-            <button type="button" className="btn" onClick={() => exportReport("xls")}>Export Excel</button>
+            <button type="button" className="btn" onClick={() => exportReport("xlsx")}>Export Excel</button>
+            <button type="button" className="btn" onClick={() => exportReport("pdf")}>Download PDF</button>
           </div>
           {invoiceTable(section === "receivables" ? arInvoices : apInvoices, section === "payables" ? "payable" : "receivable")}
           <p className="small spacer">Party totals: {(section === "receivables" ? ar : ap).map(row => `${row.name} ${money(row.balance)}`).join(" · ") || "none"}</p>
@@ -816,8 +826,8 @@ export function AccountsModule({ token, close, loans = [] }) {
             }}>{item.label}</button>)}
             </div>
             <button type="button" className="btn" onClick={() => exportReport("csv")}>Export CSV</button>
-            <button type="button" className="btn" onClick={() => exportReport("xls")}>Export Excel</button>
-            <button type="button" className="btn" onClick={() => window.print()}>Print / PDF</button>
+            <button type="button" className="btn" onClick={() => exportReport("xlsx")}>Export Excel</button>
+            <button type="button" className="btn" onClick={() => exportReport("pdf")}>Download PDF</button>
           </div>
           {(section === "trial" || reportTab === "trial") && section !== "pnl" && section !== "balance" && <div className="table spacer"><table><thead><tr><th>Code</th><th>Account</th><th>Debit</th><th>Credit</th></tr></thead><tbody>
             {tb.rows.map(row => <tr key={row.id}><td>{row.code}</td><td>{row.name}</td><td>{row.debit ? money(row.debit) : ""}</td><td>{row.credit ? money(row.credit) : ""}</td></tr>)}
@@ -998,10 +1008,10 @@ export function AccountsModule({ token, close, loans = [] }) {
 
       {showVoucher && <Modal title="Post voucher" close={() => !saving && setShowVoucher(false)}>
         <p className="copy">Total debits must equal total credits. Unbalanced vouchers cannot be posted.</p>
-        <VoucherForm accounts={visibleAccounts} parties={parties} voucherType={voucherType} setVoucherType={setVoucherType} form={voucherForm} setForm={setVoucherForm} lines={lines} setLines={setLines} onSubmit={submitVoucher} saving={saving} />
+        <VoucherForm accounts={visibleAccounts} parties={parties} voucherType={voucherType} setVoucherType={setVoucherType} form={voucherForm} setForm={setVoucherForm} lines={lines} setLines={setLines} onSubmit={submitVoucher} saving={saving} maxDate={todayIso()} />
       </Modal>}
       {showSimple && <Modal title={SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry"} close={() => !saving && setShowSimple(false)}>
-        <SimpleEntryForm kind={simpleKind} accounts={visibleAccounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} />
+        <SimpleEntryForm kind={simpleKind} accounts={visibleAccounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} maxDate={todayIso()} />
       </Modal>}
       {showParty && <Modal title="Add party" close={() => !saving && setShowParty(false)} actions={<div className="tabs spacer"><button type="button" className="btn primary" disabled={saving} onClick={() => run(async () => { await createParty(token, partyForm); setShowParty(false); }, "Party saved.")}>{saving ? "Saving…" : "Save party"}</button></div>}>
         <div className="form">

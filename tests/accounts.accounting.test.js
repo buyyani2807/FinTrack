@@ -44,6 +44,7 @@ import {
   profitAndLoss,
   trialBalance,
 } from "../src/features/accounts/accountingReports.js";
+import { buildAccountsXlsx, renderAccountsPdf } from "../src/features/accounts/accountingExport.js";
 
 const accounts = DEFAULT_CHART_OF_ACCOUNTS.map(row => ({ ...row, id: row.code }));
 
@@ -509,4 +510,64 @@ test("standalone chart hides finance and chit ledgers until integration is on", 
   assert.equal(hidden.some(account => account.code === "4300"), true);
   const shown = standaloneVisibleAccounts(accounts, { integrationEnabled: true });
   assert.equal(shown.some(account => account.code === "1110"), true);
+});
+
+test("standalone reports hide finance ledgers while integration is off", () => {
+  const range = { from: "2026-04-01", to: "2027-03-31" };
+  const visible = standaloneVisibleAccounts(accounts);
+  const sheet = balanceSheet(visible, [], range);
+  const pnl = profitAndLoss(visible, [], range);
+  assert.equal(sheet.assets.some(row => row.code === "1110"), false);
+  assert.equal(sheet.assets.some(row => row.code === "1130"), false);
+  assert.equal(pnl.income.some(row => row.code === "4200"), false);
+  assert.equal(pnl.expenses.some(row => row.code === "5020"), false);
+  assert.equal(sheet.assets.some(row => row.code === "1000"), true);
+  assert.equal(sheet.balanced, true);
+  const full = balanceSheet(accounts, [], range);
+  assert.equal(full.assets.some(row => row.code === "1110"), true);
+});
+
+test("future voucher dates are rejected", () => {
+  const lines = [
+    { coaId: "1000", debit: 1, credit: 0 },
+    { coaId: "3000", debit: 0, credit: 1 },
+  ];
+  assert.throws(() => buildVoucher({
+    voucherType: "journal",
+    voucherNumber: "JNL-FUT",
+    date: "2099-12-31",
+    today: "2026-09-02",
+    lines,
+  }), /future/);
+  assert.throws(() => simpleEntryDraft({
+    kind: "sale",
+    accounts,
+    date: "2026-09-03",
+    amount: 10,
+    settlement: "paid",
+    today: "2026-09-02",
+  }), /future/);
+  const voucher = buildVoucher({
+    voucherType: "journal",
+    voucherNumber: "JNL-TODAY",
+    date: "2026-09-02",
+    today: "2026-09-02",
+    lines,
+  });
+  assert.equal(voucher.date, "2026-09-02");
+});
+
+test("accounts excel is a real xlsx zip and pdf is generated", () => {
+  const rows = [["Code", "Account", "Amount"], ["1000", "Cash in Hand", 10], ["", "Total", 10]];
+  const xlsx = buildAccountsXlsx(rows);
+  assert.equal(xlsx[0], 0x50);
+  assert.equal(xlsx[1], 0x4b);
+  const unzipped = new TextDecoder().decode(xlsx);
+  assert.match(unzipped, /Cash in Hand/);
+  assert.match(unzipped, /workbook\.xml/);
+  const pdf = renderAccountsPdf({ title: "Trial Balance", subtitle: "FY 2026-27", rows });
+  assert.match(pdf, /^%PDF-1.4/);
+  assert.match(pdf, /%%EOF/);
+  assert.match(pdf, /Trial Balance/);
+  assert.match(pdf, /Cash in Hand/);
 });
