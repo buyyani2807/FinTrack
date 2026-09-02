@@ -11,6 +11,11 @@ const wrap = promise => promise.catch(err => {
   throw err;
 });
 
+const ignoreMissing = promise => promise.catch(err => {
+  if (isMissing(err)) return null;
+  throw err;
+});
+
 const mapCoa = row => ({
   id: row.id,
   code: row.code,
@@ -21,6 +26,7 @@ const mapCoa = row => ({
   isActive: row.is_active,
   openingBalance: Number(row.opening_balance || 0),
   openingSide: row.opening_side,
+  parentId: row.parent_id || null,
 });
 
 const mapParty = row => ({
@@ -47,6 +53,7 @@ const mapVoucher = (row, lines = []) => ({
   sourceType: row.source_type,
   sourceTransactionId: row.source_transaction_id,
   cancelReason: row.cancel_reason || "",
+  dueDate: row.due_date || null,
   createdAt: row.created_at,
   postedAt: row.posted_at,
   lines: lines
@@ -156,8 +163,8 @@ export const saveAccountingSettings = (token, payload) =>
 export const setAccountingIntegration = (token, enabled) =>
   wrap(supabase.rpc("acc_set_integration", { input_enabled: Boolean(enabled) }, token));
 
-export const createChartAccount = (token, payload) =>
-  wrap(supabase.rpc("acc_create_coa", {
+export const createChartAccount = async (token, payload) => {
+  const id = await wrap(supabase.rpc("acc_create_coa", {
     input_code: payload.code,
     input_name: payload.name,
     input_group_type: payload.groupType,
@@ -165,15 +172,26 @@ export const createChartAccount = (token, payload) =>
     input_opening: Number(payload.openingBalance || 0),
     input_opening_side: payload.openingSide || "debit",
   }, token));
+  if (payload.parentId) await setChartAccountParent(token, id, payload.parentId);
+  return id;
+};
 
-export const updateChartAccount = (token, payload) =>
-  wrap(supabase.rpc("acc_update_coa", {
+export const updateChartAccount = async (token, payload) => {
+  await wrap(supabase.rpc("acc_update_coa", {
     input_id: payload.id,
     input_code: payload.code,
     input_name: payload.name,
     input_opening: Number(payload.openingBalance || 0),
     input_opening_side: payload.openingSide || "debit",
     input_is_active: payload.isActive !== false,
+  }, token));
+  await setChartAccountParent(token, payload.id, payload.parentId || null);
+};
+
+export const setChartAccountParent = (token, id, parentId) =>
+  ignoreMissing(supabase.rpc("acc_set_coa_parent", {
+    input_id: id,
+    input_parent_id: parentId || null,
   }, token));
 
 export const deleteChartAccount = (token, id) =>
@@ -190,8 +208,8 @@ export const createParty = (token, payload) =>
     input_notes: payload.notes || null,
   }, token));
 
-export const postVoucher = (token, payload) =>
-  wrap(supabase.rpc("acc_post_voucher", {
+export const postVoucher = async (token, payload) => {
+  const id = await wrap(supabase.rpc("acc_post_voucher", {
     input_voucher_type: payload.voucherType,
     input_date: payload.date,
     input_narration: payload.narration || "",
@@ -206,6 +224,15 @@ export const postVoucher = (token, payload) =>
     input_source_module: payload.sourceModule || null,
     input_source_type: payload.sourceType || null,
     input_source_transaction_id: payload.sourceTransactionId || null,
+  }, token));
+  if (payload.dueDate) await setVoucherDueDate(token, id, payload.dueDate);
+  return id;
+};
+
+export const setVoucherDueDate = (token, id, dueDate) =>
+  ignoreMissing(supabase.rpc("acc_set_voucher_due", {
+    input_voucher_id: id,
+    input_due: dueDate || null,
   }, token));
 
 export const cancelVoucher = (token, id, reason) =>

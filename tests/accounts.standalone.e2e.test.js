@@ -201,6 +201,8 @@ test("ABC Traders standalone books stay in equation through the full operating c
 
   const flow = cashFlow(chart, books, fy);
   assert.equal(flow.net, roundMoney(flow.inflow - flow.outflow));
+  assert.equal(flow.transfers, 25000);
+  assert.ok(flow.inflow < flow.inflow + flow.transfers);
   assert.equal(dashSafe(chart, books), true);
 });
 

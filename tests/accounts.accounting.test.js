@@ -5,6 +5,7 @@ import {
   SYSTEM_CODES,
   VOUCHER_STATUS,
   accountingEquationHolds,
+  addDaysIso,
   assertBalancedVoucher,
   assertCanDeleteLedger,
   buildIntegrationVouchers,
@@ -27,6 +28,7 @@ import {
   roundMoney,
   saleLines,
   simpleEntryDraft,
+  standaloneVisibleAccounts,
   voucherTotals,
 } from "../src/features/accounts/accountingModel.js";
 import {
@@ -52,6 +54,7 @@ const posted = (type, date, lines, extra = {}) => buildVoucher({
   lines,
   narration: extra.narration || type,
   partyId: extra.partyId || null,
+  dueDate: extra.dueDate || null,
   sourceModule: extra.sourceModule,
   sourceType: extra.sourceType,
   sourceTransactionId: extra.sourceTransactionId,
@@ -424,4 +427,86 @@ test("ABC Traders generic books stay in equation without finance modules", () =>
   assert.equal(dash.upi, 5000);
   assert.equal(dash.todayReceipts, 5000);
   assert.equal(dash.equationHolds, true);
+});
+
+test("cash flow excludes internal cash bank transfers from inflow and outflow", () => {
+  const vouchers = [
+    posted("journal", "2026-04-01", [
+      { coaId: "1000", code: "1000", debit: 5000, credit: 0 },
+      { coaId: "3000", code: "3000", debit: 0, credit: 5000 },
+    ]),
+    posted("contra", "2026-04-02", contraLines({ accounts, fromType: "cash", toType: "bank", amount: 2000 }), { n: 1 }),
+    posted("payment", "2026-04-03", paymentLines({ accounts, cash: 500, expenseCode: "5000" }), { n: 1 }),
+  ];
+  const flow = cashFlow(accounts, vouchers, { from: "2026-04-01", to: "2026-04-30" });
+  assert.equal(flow.inflow, 5000);
+  assert.equal(flow.outflow, 500);
+  assert.equal(flow.transfers, 2000);
+  assert.equal(flow.net, 4500);
+});
+
+test("customer advance is due of zero not an outstanding abs balance", () => {
+  const ravi = { id: "ravi", name: "Ravi", partyType: "customer" };
+  const receipt = posted("receipt", "2026-04-01", receiptLines({
+    accounts, cash: 5000, receivableCode: SYSTEM_CODES.receivable, partyId: "ravi",
+  }), { partyId: "ravi" });
+  const ledger = partyLedger(accounts, [receipt], ravi);
+  assert.equal(ledger.outstanding, 0);
+  assert.equal(ledger.due, 0);
+  assert.equal(ledger.advance, 5000);
+});
+
+test("supplier advance is due of zero not an outstanding abs balance", () => {
+  const xyz = { id: "xyz", name: "XYZ", partyType: "supplier" };
+  const payment = posted("payment", "2026-04-01", paymentLines({
+    accounts, cash: 4000, payableCode: SYSTEM_CODES.payable, partyId: "xyz",
+  }), { partyId: "xyz" });
+  const ledger = partyLedger(accounts, [payment], xyz);
+  assert.equal(ledger.outstanding, 0);
+  assert.equal(ledger.due, 0);
+  assert.equal(ledger.advance, 4000);
+});
+
+test("credit sale uses stored due date when present", () => {
+  const ravi = { id: "ravi", name: "Ravi", partyType: "customer" };
+  const sale = posted("sales", "2026-04-01", saleLines({
+    accounts, amount: 1000, settlement: "credit", partyId: "ravi",
+  }), { partyId: "ravi", dueDate: "2026-04-20" });
+  const invoices = invoiceRegister(accounts, [sale], [ravi], { kind: "receivable", today: "2026-04-10" });
+  assert.equal(invoices[0].dueDate, "2026-04-20");
+  const fallback = posted("sales", "2026-04-01", saleLines({
+    accounts, amount: 500, settlement: "credit", partyId: "ravi",
+  }), { n: 2, partyId: "ravi" });
+  const without = invoiceRegister(accounts, [fallback], [ravi], { kind: "receivable", today: "2026-04-10" });
+  assert.equal(without[0].dueDate, addDaysIso("2026-04-01", 7));
+});
+
+test("guided transfer posts between specific money accounts", () => {
+  const extraBank = { ...accounts.find(row => row.code === "1020"), id: "1021", code: "1021", name: "HDFC Bank", isSystem: false };
+  const chart = [...accounts, extraBank];
+  const lines = contraLines({ accounts: chart, fromAccountId: "1000", toAccountId: "1021", amount: 1500 });
+  assert.equal(lines.find(line => line.code === "1021").debit, 1500);
+  assert.equal(lines.find(line => line.code === "1000").credit, 1500);
+  const draft = simpleEntryDraft({
+    kind: "transfer",
+    accounts: chart,
+    date: "2026-04-02",
+    amount: 1500,
+    fromAccountId: "1000",
+    toAccountId: "1021",
+  });
+  assert.equal(draft.voucherType, "contra");
+  assert.throws(
+    () => simpleEntryDraft({ kind: "transfer", accounts: chart, date: "2026-04-02", amount: 100, fromAccountId: "1000", toAccountId: "1000" }),
+    /two different accounts/,
+  );
+});
+
+test("standalone chart hides finance and chit ledgers until integration is on", () => {
+  const hidden = standaloneVisibleAccounts(accounts);
+  assert.equal(hidden.some(account => account.code === "1110"), false);
+  assert.equal(hidden.some(account => account.code === "4200"), false);
+  assert.equal(hidden.some(account => account.code === "4300"), true);
+  const shown = standaloneVisibleAccounts(accounts, { integrationEnabled: true });
+  assert.equal(shown.some(account => account.code === "1110"), true);
 });

@@ -1,10 +1,13 @@
 import {
   SYSTEM_CODES,
   accountingEquationHolds,
+  addDaysIso,
   affectsLedgers,
   findAccount,
+  isMoneyAccount,
   isReversalVoucher,
   ledgerBalances,
+  partyPosition,
   roundMoney,
   signedBalance,
   voucherTotals,
@@ -112,14 +115,26 @@ export function balanceSheet(accounts, vouchers, range = {}) {
   };
 }
 
+const isInternalMoneyTransfer = (voucher, moneyIds) => {
+  const lines = (voucher.lines || []).filter(line => Number(line.debit || 0) || Number(line.credit || 0));
+  if (lines.length < 2) return false;
+  if (voucher.voucherType === "contra") return true;
+  return lines.every(line => moneyIds.has(line.coaId) || moneyIds.has(line.code));
+};
+
 export function cashFlow(accounts, vouchers, range = {}) {
-  const moneyTypes = new Set(["cash", "bank", "upi"]);
-  const money = (accounts || []).filter(account => moneyTypes.has(account.accountType));
+  const money = (accounts || []).filter(isMoneyAccount);
   const ids = new Set(money.map(account => account.id || account.code));
   let inflow = 0;
   let outflow = 0;
+  let transfers = 0;
   for (const voucher of vouchers || []) {
     if (!affectsLedgers(voucher) || !inRange(voucher.date, range.from, range.to)) continue;
+    if (isInternalMoneyTransfer(voucher, ids)) {
+      const moved = roundMoney((voucher.lines || []).reduce((sum, line) => sum + Number(line.debit || 0), 0));
+      transfers = roundMoney(transfers + moved);
+      continue;
+    }
     for (const line of voucher.lines || []) {
       if (!ids.has(line.coaId) && !ids.has(line.code)) continue;
       inflow = roundMoney(inflow + Number(line.debit || 0));
@@ -131,19 +146,16 @@ export function cashFlow(accounts, vouchers, range = {}) {
     const openCredit = account.openingCredit || (account.openingSide === "credit" ? account.openingBalance : 0) || 0;
     return sum + signedBalance("asset", openDebit, openCredit);
   }, 0));
-  const before = ledgerBalances(accounts, vouchers, { to: range.from ? undefined : undefined });
-  const closing = roundMoney(
-    ledgerBalances(accounts, vouchers, range)
-      .filter(row => moneyTypes.has(row.accountType))
-      .reduce((sum, row) => sum + row.balance, 0),
-  );
+  const closingRows = ledgerBalances(accounts, vouchers, range).filter(row => isMoneyAccount(row));
+  const closing = roundMoney(closingRows.reduce((sum, row) => sum + row.balance, 0));
   return {
     opening,
     inflow,
     outflow,
+    transfers,
     net: roundMoney(inflow - outflow),
     closing: closing || roundMoney(opening + inflow - outflow),
-    byAccount: before.filter(row => moneyTypes.has(row.accountType)),
+    byAccount: closingRows,
   };
 }
 
@@ -247,12 +259,6 @@ export function overviewMetrics(accounts, vouchers, parties, range) {
   };
 }
 
-const addDays = (iso, days) => {
-  const date = new Date(`${String(iso).slice(0, 10)}T00:00:00`);
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
-};
-
 const daysBetween = (from, to) => {
   const start = new Date(`${String(from).slice(0, 10)}T00:00:00`);
   const end = new Date(`${String(to).slice(0, 10)}T00:00:00`);
@@ -331,11 +337,14 @@ export function partyLedger(accounts, vouchers, party, { from, to, voucherType }
       balance: running,
     });
   }
+  const position = partyPosition(party.partyType, running);
   return {
     party,
     opening: 0,
-    closing: running,
-    outstanding: Math.abs(running),
+    closing: position.closing,
+    outstanding: position.outstanding,
+    due: position.due,
+    advance: position.advance,
     rows,
   };
 }
@@ -372,7 +381,7 @@ export function invoiceRegister(accounts, vouchers, parties = [], { kind = "rece
         partyType: partyById[voucherPartyId]?.partyType || (isAr ? "customer" : "supplier"),
         reference: voucher.voucherNumber,
         invoiceDate: voucher.date,
-        dueDate: addDays(voucher.date, 7),
+        dueDate: voucher.dueDate || addDaysIso(voucher.date, 7),
         amount,
         paid: hitsLedger ? 0 : amount,
         voucherType: voucher.voucherType,
@@ -427,6 +436,23 @@ export function downloadAccountsCsv(filename, rows) {
   const link = document.createElement("a");
   link.href = url;
   link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+const excelCell = value => String(value ?? "")
+  .replace(/&/g, "&amp;")
+  .replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;");
+
+export function downloadAccountsExcel(filename, rows) {
+  const table = `<table>${(rows || []).map(row => `<tr>${row.map(cell => `<td>${excelCell(cell)}</td>`).join("")}</tr>`).join("")}</table>`;
+  const html = `\uFEFF<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body>${table}</body></html>`;
+  const url = URL.createObjectURL(new Blob([html], { type: "application/vnd.ms-excel" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = String(filename || "fintrack-report.xls").replace(/\.csv$/i, ".xls");
+  if (!link.download.endsWith(".xls")) link.download = `${link.download}.xls`;
   link.click();
   URL.revokeObjectURL(url);
 }

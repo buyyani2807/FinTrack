@@ -147,6 +147,31 @@ export const DEFAULT_CHART_OF_ACCOUNTS = [
 
 export const roundMoney = value => Math.round((Number(value) || 0) * 100) / 100;
 
+export const FINANCE_ONLY_CODES = new Set(["1110", "1120", "1130", "4200", "5020"]);
+
+export const isFinanceOnlyAccount = account => FINANCE_ONLY_CODES.has(account?.code);
+
+export const standaloneVisibleAccounts = (accounts = [], { integrationEnabled = false } = {}) =>
+  integrationEnabled ? accounts : (accounts || []).filter(account => !isFinanceOnlyAccount(account));
+
+export const addDaysIso = (iso, days) => {
+  const date = new Date(`${String(iso).slice(0, 10)}T00:00:00`);
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+};
+
+export const MONEY_ACCOUNT_TYPES = new Set(["cash", "bank", "upi"]);
+
+export const isMoneyAccount = account => MONEY_ACCOUNT_TYPES.has(account?.accountType);
+
+export function partyPosition(partyType, running) {
+  const value = roundMoney(running);
+  const supplier = partyType === "supplier";
+  const due = roundMoney(supplier ? Math.max(0, -value) : Math.max(0, value));
+  const advance = roundMoney(supplier ? Math.max(0, value) : Math.max(0, -value));
+  return { due, advance, outstanding: due, closing: value };
+}
+
 export const indianFinancialYear = (isoDate) => {
   const [year, month] = String(isoDate).slice(0, 10).split("-").map(Number);
   const startYear = month >= 4 ? year : year - 1;
@@ -282,6 +307,7 @@ export function buildVoucher({
   lines,
   status = VOUCHER_STATUS.posted,
   partyId = null,
+  dueDate = null,
   sourceModule = null,
   sourceType = null,
   sourceTransactionId = null,
@@ -295,6 +321,7 @@ export function buildVoucher({
     voucherType,
     voucherNumber,
     date,
+    dueDate: dueDate || null,
     narration,
     lines: lines.map((line, index) => ({
       lineNo: index + 1,
@@ -473,13 +500,24 @@ export function paymentLines({ accounts, cash = 0, upi = 0, bank = 0, expenseCod
   return [...lines, ...credits];
 }
 
-export function contraLines({ accounts, fromType, toType, amount, description = "" }) {
+export function contraLines({ accounts, fromType, toType, fromAccountId, toAccountId, amount, description = "" }) {
   const value = roundMoney(amount);
-  const from = moneyLine(accounts, fromType, value, "credit");
-  const to = moneyLine(accounts, toType, value, "debit");
+  const fromAccount = fromAccountId
+    ? (accounts || []).find(account => account.id === fromAccountId || account.code === fromAccountId)
+    : findAccount(accounts, { accountType: fromType });
+  const toAccount = toAccountId
+    ? (accounts || []).find(account => account.id === toAccountId || account.code === toAccountId)
+    : findAccount(accounts, { accountType: toType });
+  if (!fromAccount || !toAccount) throw new Error("Missing cash, bank or UPI account");
+  if (!isMoneyAccount(fromAccount) || !isMoneyAccount(toAccount)) {
+    throw new Error("Transfer must use cash, bank or UPI accounts");
+  }
+  if ((fromAccount.id || fromAccount.code) === (toAccount.id || toAccount.code)) {
+    throw new Error("Choose two different accounts to transfer");
+  }
   return [
-    { ...to, description },
-    { ...from, description },
+    { coaId: toAccount.id, code: toAccount.code, debit: value, credit: 0, description },
+    { coaId: fromAccount.id, code: fromAccount.code, debit: 0, credit: value, description },
   ];
 }
 
@@ -578,18 +616,23 @@ export function simpleEntryDraft({
   expenseCode = SYSTEM_CODES.otherExpense,
   fromType = "cash",
   toType = "bank",
+  fromAccountId = null,
+  toAccountId = null,
+  dueDate = null,
   narration = "",
 } = {}) {
   const value = roundMoney(amount);
   if (value <= 0) throw new Error("Enter an amount greater than zero");
   const split = moneyByMode(moneyMode, value);
   const description = String(narration || "").trim();
+  const invoiceDue = settlement === "credit" ? (dueDate || addDaysIso(date, 7)) : null;
 
   if (kind === "sale") {
     if (settlement === "credit" && !partyId) throw new Error("Choose the customer");
     return {
       voucherType: "sales",
       date,
+      dueDate: invoiceDue,
       partyId: partyId || null,
       narration: description || (settlement === "credit" ? "Credit sale" : `${MONEY_MODES.find(mode => mode.id === moneyMode)?.label || "Cash"} sale`),
       lines: saleLines({ accounts, amount: value, settlement, moneyMode, partyId, description }),
@@ -600,6 +643,7 @@ export function simpleEntryDraft({
     return {
       voucherType: "purchase",
       date,
+      dueDate: invoiceDue,
       partyId: partyId || null,
       narration: description || (settlement === "credit" ? "Credit purchase" : `${MONEY_MODES.find(mode => mode.id === moneyMode)?.label || "Cash"} purchase`),
       lines: purchaseLines({ accounts, amount: value, settlement, moneyMode, partyId, description }),
@@ -657,13 +701,32 @@ export function simpleEntryDraft({
     };
   }
   if (kind === "transfer") {
-    if (fromType === toType) throw new Error("Choose two different accounts to transfer");
+    if (fromAccountId && toAccountId && fromAccountId === toAccountId) {
+      throw new Error("Choose two different accounts to transfer");
+    }
+    if (!fromAccountId && !toAccountId && fromType === toType) {
+      throw new Error("Choose two different accounts to transfer");
+    }
+    const fromAccount = fromAccountId
+      ? (accounts || []).find(account => account.id === fromAccountId || account.code === fromAccountId)
+      : findAccount(accounts, { accountType: fromType });
+    const toAccount = toAccountId
+      ? (accounts || []).find(account => account.id === toAccountId || account.code === toAccountId)
+      : findAccount(accounts, { accountType: toType });
     return {
       voucherType: "contra",
       date,
       partyId: null,
-      narration: description || `Transfer ${fromType} to ${toType}`,
-      lines: contraLines({ accounts, fromType, toType, amount: value, description }),
+      narration: description || `Transfer ${fromAccount?.name || fromType} to ${toAccount?.name || toType}`,
+      lines: contraLines({
+        accounts,
+        fromType,
+        toType,
+        fromAccountId: fromAccount?.id || fromAccountId,
+        toAccountId: toAccount?.id || toAccountId,
+        amount: value,
+        description,
+      }),
     };
   }
   throw new Error("Unknown entry type");

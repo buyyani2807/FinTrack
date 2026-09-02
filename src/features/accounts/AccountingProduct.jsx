@@ -33,14 +33,17 @@ import {
   SIMPLE_EXPENSE_CODES,
   VOUCHER_TYPES,
   accountNormalSide,
+  addDaysIso,
   assertCanDeleteLedger,
   createSubmitLock,
   defaultAccountTypeForGroup,
   indianFinancialYear,
   ledgerHasPostedLines,
+  moneyAccounts,
   previousIndianFinancialYear,
   roundMoney,
   simpleEntryDraft,
+  standaloneVisibleAccounts,
   voucherTotals,
 } from "./accountingModel.js";
 import { formatIstDateTime, todayIso } from "./cashbookModel.js";
@@ -53,6 +56,7 @@ import {
   dayBook,
   defaultBankStatementLines,
   downloadAccountsCsv,
+  downloadAccountsExcel,
   invoiceRegister,
   partyBalances,
   partyLedger,
@@ -74,6 +78,7 @@ const emptyCoaForm = () => ({
   openingBalance: "",
   openingSide: "debit",
   isSystem: false,
+  parentId: "",
 });
 
 function ReportRangeBar({ fy, lastFy, from, to, onChange }) {
@@ -145,6 +150,15 @@ function Modal({ title, close, children, actions }) {
   return <div className="modal-bg"><div className="modal acc-modal"><div className="row"><h2 className="title">{title}</h2><button type="button" className="btn" onClick={close}>Close</button></div>{children}{actions}</div></div>;
 }
 
+function ReasonModal({ title, label, value, onChange, onConfirm, onClose, saving, confirmLabel = "Continue" }) {
+  return <Modal title={title} close={() => !saving && onClose()} actions={<div className="tabs spacer"><button type="button" className="btn primary" disabled={saving || !String(value || "").trim()} onClick={onConfirm}>{saving ? "Saving…" : confirmLabel}</button></div>}>
+    <p className="copy">This is stored on the audit trail. Posted amounts are not edited.</p>
+    <div className="form">
+      <Field className="span" label={label}><input value={value} onChange={event => onChange(event.target.value)} autoFocus /></Field>
+    </div>
+  </Modal>;
+}
+
 function VoucherForm({ accounts, parties, voucherType, setVoucherType, form, setForm, lines, setLines, onSubmit, saving }) {
   const totals = voucherTotals(lines.map(line => ({ ...line, debit: Number(line.debit || 0), credit: Number(line.credit || 0) })));
   const setLine = (index, patch) => setLines(current => current.map((line, i) => i === index ? { ...line, ...patch } : line));
@@ -153,6 +167,7 @@ function VoucherForm({ accounts, parties, voucherType, setVoucherType, form, set
       <Field label="Voucher type"><select value={voucherType} onChange={event => setVoucherType(event.target.value)}>{Object.values(VOUCHER_TYPES).map(type => <option key={type.id} value={type.id}>{type.label}</option>)}</select></Field>
       <Field label="Date"><input type="date" value={form.date} onChange={event => setForm(current => ({ ...current, date: event.target.value }))} /></Field>
       <Field label="Party (optional)"><select value={form.partyId} onChange={event => setForm(current => ({ ...current, partyId: event.target.value }))}><option value="">None</option>{parties.map(party => <option key={party.id} value={party.id}>{party.name}</option>)}</select></Field>
+      {(voucherType === "sales" || voucherType === "purchase") && <Field label="Due date (optional)"><input type="date" value={form.dueDate || ""} onChange={event => setForm(current => ({ ...current, dueDate: event.target.value }))} /></Field>}
       <Field className="span" label="Narration"><input value={form.narration} onChange={event => setForm(current => ({ ...current, narration: event.target.value }))} /></Field>
     </div>
     <div className="table spacer"><table><thead><tr><th>Account</th><th>Debit</th><th>Credit</th><th></th></tr></thead><tbody>
@@ -175,6 +190,7 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
   const customers = parties.filter(party => party.partyType === "customer");
   const suppliers = parties.filter(party => party.partyType === "supplier");
   const expenseOptions = SIMPLE_EXPENSE_CODES.filter(([code]) => accounts.some(account => account.code === code) || code === "5990");
+  const transferAccounts = moneyAccounts(accounts).filter(account => account.isActive !== false);
   const set = patch => setForm(current => ({ ...current, ...patch }));
   const needsParty = kind === "sale" || kind === "receipt" || kind === "credit_note" ? "customer"
     : kind === "purchase" || kind === "payment" || kind === "debit_note" ? "supplier"
@@ -191,10 +207,11 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
       <Field label="Date"><input type="date" value={form.date} onChange={event => set({ date: event.target.value })} /></Field>
       {(kind === "sale" || kind === "purchase") && <Field label="Payment"><select value={form.settlement} onChange={event => set({ settlement: event.target.value })}><option value="credit">Credit</option><option value="paid">Paid now</option></select></Field>}
       {(kind !== "transfer" && kind !== "credit_note" && kind !== "debit_note" && (kind === "expense" || kind === "receipt" || kind === "payment" || form.settlement === "paid")) && <Field label="Mode"><select value={form.moneyMode} onChange={event => set({ moneyMode: event.target.value })}>{MONEY_MODES.map(mode => <option key={mode.id} value={mode.id}>{mode.label}</option>)}</select></Field>}
+      {(kind === "sale" || kind === "purchase") && form.settlement === "credit" && <Field label="Due date"><input type="date" value={form.dueDate || addDaysIso(form.date, 7)} onChange={event => set({ dueDate: event.target.value })} /></Field>}
       {kind === "expense" && <Field label="Expense"><select value={form.expenseCode} onChange={event => set({ expenseCode: event.target.value })}>{expenseOptions.map(([code, name]) => <option key={code} value={code}>{name}</option>)}</select></Field>}
       {kind === "transfer" && <>
-        <Field label="From"><select value={form.fromType} onChange={event => set({ fromType: event.target.value })}>{MONEY_MODES.map(mode => <option key={mode.id} value={mode.id}>{mode.label}</option>)}</select></Field>
-        <Field label="To"><select value={form.toType} onChange={event => set({ toType: event.target.value })}>{MONEY_MODES.map(mode => <option key={mode.id} value={mode.id}>{mode.label}</option>)}</select></Field>
+        <Field label="From"><select value={form.fromAccountId || ""} onChange={event => set({ fromAccountId: event.target.value })}><option value="">Select account</option>{transferAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</select></Field>
+        <Field label="To"><select value={form.toAccountId || ""} onChange={event => set({ toAccountId: event.target.value })}><option value="">Select account</option>{transferAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</select></Field>
       </>}
       {needsParty && <Field label={needsParty === "supplier" ? "Supplier" : "Customer"}><select value={form.partyId} onChange={event => set({ partyId: event.target.value })}><option value="">Select</option>{partyList.map(party => <option key={party.id} value={party.id}>{party.name}</option>)}</select></Field>}
       <Field label="Amount"><input type="number" min="0" step="0.01" value={form.amount} onChange={event => set({ amount: event.target.value })} /></Field>
@@ -204,8 +221,9 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
   </>;
 }
 
-function CoaFormFields({ form, setForm }) {
+function CoaFormFields({ form, setForm, accounts = [] }) {
   const types = ACCOUNT_TYPES_BY_GROUP[form.groupType] || ACCOUNT_TYPES_BY_GROUP.expense;
+  const parents = (accounts || []).filter(account => account.groupType === form.groupType && account.id !== form.id);
   const set = patch => setForm(current => ({ ...current, ...patch }));
   return <div className="form">
     <Field label="Code"><input value={form.code} disabled={Boolean(form.isSystem)} onChange={event => set({ code: event.target.value })} /></Field>
@@ -213,9 +231,10 @@ function CoaFormFields({ form, setForm }) {
     <Field label="Group"><select value={form.groupType} disabled={Boolean(form.id)} onChange={event => {
       const groupType = event.target.value;
       const accountType = defaultAccountTypeForGroup(groupType);
-      set({ groupType, accountType, openingSide: accountNormalSide(groupType) });
+      set({ groupType, accountType, openingSide: accountNormalSide(groupType), parentId: "" });
     }}>{COA_GROUPS.map(group => <option key={group.id} value={group.id}>{group.label}</option>)}</select></Field>
     <Field label="Type"><select value={form.accountType} disabled={Boolean(form.id)} onChange={event => set({ accountType: event.target.value })}>{types.map(type => <option key={type.id} value={type.id}>{type.label}</option>)}</select></Field>
+    <Field label="Parent (optional)"><select value={form.parentId || ""} onChange={event => set({ parentId: event.target.value })}><option value="">None</option>{parents.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</select></Field>
     <Field label="Opening balance"><input type="number" min="0" step="0.01" value={form.openingBalance} onChange={event => set({ openingBalance: event.target.value })} /></Field>
     <Field label="Opening side"><select value={form.openingSide} onChange={event => set({ openingSide: event.target.value })}><option value="debit">Debit</option><option value="credit">Credit</option></select></Field>
   </div>;
@@ -248,7 +267,7 @@ export function AccountsModule({ token, close, loans = [] }) {
   const [showParty, setShowParty] = useState(false);
   const [showCoa, setShowCoa] = useState(false);
   const [voucherType, setVoucherType] = useState("receipt");
-  const [voucherForm, setVoucherForm] = useState({ date: todayIso(), narration: "", partyId: "" });
+  const [voucherForm, setVoucherForm] = useState({ date: todayIso(), narration: "", partyId: "", dueDate: addDaysIso(todayIso(), 7) });
   const [lines, setLines] = useState([emptyLine(), emptyLine()]);
   const [partyForm, setPartyForm] = useState({ partyType: "customer", name: "", phone: "", email: "", address: "" });
   const [coaForm, setCoaForm] = useState(emptyCoaForm);
@@ -273,8 +292,13 @@ export function AccountsModule({ token, close, loans = [] }) {
     expenseCode: "5000",
     fromType: "cash",
     toType: "bank",
+    fromAccountId: "",
+    toAccountId: "",
+    dueDate: addDaysIso(todayIso(), 7),
     narration: "",
   });
+  const [reasonDialog, setReasonDialog] = useState(null);
+  const [reasonText, setReasonText] = useState("");
   const [partyFocusId, setPartyFocusId] = useState("");
   const [partyTxnType, setPartyTxnType] = useState("");
   const [partyFrom, setPartyFrom] = useState(fy.from);
@@ -303,7 +327,8 @@ export function AccountsModule({ token, close, loans = [] }) {
       setStatements(nextStatements);
       setMigrationRequired(false);
       if (nextSettings) setSetupForm({ companyName: nextSettings.companyName, booksStartedOn: nextSettings.booksStartedOn || todayIso() });
-      if (!ledgerId && nextAccounts[0]) setLedgerId(nextAccounts[0].id);
+      const visible = standaloneVisibleAccounts(nextAccounts, { integrationEnabled: nextSettings?.integrationEnabled });
+      if (!ledgerId && visible[0]) setLedgerId(visible[0].id);
     } catch (err) {
       if (err.code === "MIGRATION_REQUIRED") setMigrationRequired(true);
       else setError(err.message || "Could not load Accounts.");
@@ -313,6 +338,30 @@ export function AccountsModule({ token, close, loans = [] }) {
   }, [token, ledgerId]);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  const showCashbook = Boolean(settings?.integrationEnabled);
+  const visibleAccounts = useMemo(
+    () => standaloneVisibleAccounts(accounts, { integrationEnabled: settings?.integrationEnabled }),
+    [accounts, settings],
+  );
+  const navSections = useMemo(
+    () => SECTIONS.filter(item => item.id !== "cashbook" || showCashbook),
+    [showCashbook],
+  );
+  const moreLinks = useMemo(
+    () => MORE_LINKS.filter(([id]) => id !== "cashbook" || showCashbook),
+    [showCashbook],
+  );
+
+  useEffect(() => {
+    if (section === "cashbook" && !showCashbook) setSection("overview");
+  }, [section, showCashbook]);
+
+  useEffect(() => {
+    if (ledgerId && !visibleAccounts.some(account => account.id === ledgerId) && visibleAccounts[0]) {
+      setLedgerId(visibleAccounts[0].id);
+    }
+  }, [ledgerId, visibleAccounts]);
 
   const metrics = useMemo(() => dashboardMetrics(accounts, vouchers, parties, { today: todayIso(), ...range }), [accounts, vouchers, parties, range]);
   const tb = useMemo(() => trialBalance(accounts, vouchers, range), [accounts, vouchers, range]);
@@ -378,6 +427,7 @@ export function AccountsModule({ token, close, loans = [] }) {
     await postVoucher(token, {
       voucherType,
       date: voucherForm.date,
+      dueDate: voucherForm.dueDate || null,
       narration: voucherForm.narration,
       partyId: voucherForm.partyId || null,
       lines: lines.map(line => ({
@@ -393,6 +443,7 @@ export function AccountsModule({ token, close, loans = [] }) {
   }, "Voucher posted.");
 
   const openSimple = kind => {
+    const money = moneyAccounts(visibleAccounts);
     setSimpleKind(kind);
     setSimpleForm(current => ({
       ...current,
@@ -403,6 +454,9 @@ export function AccountsModule({ token, close, loans = [] }) {
       moneyMode: "cash",
       fromType: "cash",
       toType: "bank",
+      fromAccountId: money.find(account => account.accountType === "cash")?.id || money[0]?.id || "",
+      toAccountId: money.find(account => account.accountType === "bank")?.id || money.find(account => account.id !== money[0]?.id)?.id || "",
+      dueDate: addDaysIso(todayIso(), 7),
     }));
     setShowSimple(true);
   };
@@ -419,6 +473,9 @@ export function AccountsModule({ token, close, loans = [] }) {
       expenseCode: simpleForm.expenseCode,
       fromType: simpleForm.fromType,
       toType: simpleForm.toType,
+      fromAccountId: simpleForm.fromAccountId || null,
+      toAccountId: simpleForm.toAccountId || null,
+      dueDate: simpleForm.dueDate || null,
       narration: simpleForm.narration,
     });
     await postVoucher(token, draft);
@@ -436,6 +493,7 @@ export function AccountsModule({ token, close, loans = [] }) {
         openingBalance: account.openingBalance ? String(account.openingBalance) : "",
         openingSide: account.openingSide || accountNormalSide(account.groupType),
         isSystem: Boolean(account.isSystem),
+        parentId: account.parentId || "",
       });
     } else {
       setCoaForm(emptyCoaForm());
@@ -489,33 +547,60 @@ export function AccountsModule({ token, close, loans = [] }) {
     : section === "pnl" || section === "balance" || section === "trial" ? "reports"
     : "more";
 
-  const exportReport = () => {
+  const exportRows = () => {
     const active = ["receivables", "payables", "pnl", "balance", "trial"].includes(section) ? section : reportTab;
     const stamp = todayIso();
     if (active === "trial") {
-      downloadAccountsCsv(`fintrack-trial-balance-${stamp}.csv`, [["Code", "Account", "Debit", "Credit"], ...tb.rows.map(row => [row.code, row.name, row.debit, row.credit]), ["", "Total", tb.totalDebit, tb.totalCredit]]);
-    } else if (active === "pnl") {
-      downloadAccountsCsv(`fintrack-profit-loss-${stamp}.csv`, [["Section", "Account", "Amount"], ...pnl.income.map(row => ["Income", row.name, row.amount]), ["Income", "Total income", pnl.totalIncome], ...pnl.expenses.map(row => ["Expense", row.name, row.amount]), ["Expense", "Total expenses", pnl.totalExpense], ["", "Net profit", pnl.net]]);
-    } else if (active === "balance") {
-      downloadAccountsCsv(`fintrack-balance-sheet-${stamp}.csv`, [["Section", "Code", "Account", "Amount"], ...sheet.assets.map(row => ["Asset", row.code, row.name, row.balance]), ...sheet.liabilities.map(row => ["Liability", row.code, row.name, row.balance]), ...sheet.equity.map(row => ["Equity", row.code, row.name, row.balance])]);
-    } else if (active === "daybook") {
-      downloadAccountsCsv(`fintrack-day-book-${stamp}.csv`, [["Date", "Number", "Type", "Narration", "Amount"], ...books.map(row => [row.date, row.voucherNumber, row.voucherType, row.narration, row.debit])]);
-    } else if (active === "receivables") {
-      downloadAccountsCsv(`fintrack-receivables-${stamp}.csv`, [["Customer", "Invoice", "Invoice date", "Due date", "Amount", "Paid", "Outstanding", "Days", "Status"], ...arInvoices.map(row => [row.partyName, row.reference, row.invoiceDate, row.dueDate, row.amount, row.paid, row.outstanding, row.daysOutstanding, row.status])]);
-    } else if (active === "payables") {
-      downloadAccountsCsv(`fintrack-payables-${stamp}.csv`, [["Supplier", "Invoice", "Invoice date", "Due date", "Amount", "Paid", "Outstanding", "Status"], ...apInvoices.map(row => [row.partyName, row.reference, row.invoiceDate, row.dueDate, row.amount, row.paid, row.outstanding, row.status])]);
-    } else if (active === "sales") {
-      downloadAccountsCsv(`fintrack-sales-${stamp}.csv`, [["Date", "Number", "Narration", "Amount"], ...salesRows.map(row => [row.date, row.voucherNumber, row.narration, row.debit])]);
-    } else if (active === "purchases") {
-      downloadAccountsCsv(`fintrack-purchases-${stamp}.csv`, [["Date", "Number", "Narration", "Amount"], ...purchaseRows.map(row => [row.date, row.voucherNumber, row.narration, row.debit])]);
-    } else if (active === "ledger") {
-      downloadAccountsCsv(`fintrack-ledger-${stamp}.csv`, [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])]);
-    } else {
-      downloadAccountsCsv(`fintrack-cash-flow-${stamp}.csv`, [["Metric", "Amount"], ["Inflow", flow.inflow], ["Outflow", flow.outflow], ["Net", flow.net]]);
+      return { filename: `fintrack-trial-balance-${stamp}`, rows: [["Code", "Account", "Debit", "Credit"], ...tb.rows.map(row => [row.code, row.name, row.debit, row.credit]), ["", "Total", tb.totalDebit, tb.totalCredit]] };
     }
+    if (active === "pnl") {
+      return { filename: `fintrack-profit-loss-${stamp}`, rows: [["Section", "Account", "Amount"], ...pnl.income.map(row => ["Income", row.name, row.amount]), ["Income", "Total income", pnl.totalIncome], ...pnl.expenses.map(row => ["Expense", row.name, row.amount]), ["Expense", "Total expenses", pnl.totalExpense], ["", "Net profit", pnl.net]] };
+    }
+    if (active === "balance") {
+      return { filename: `fintrack-balance-sheet-${stamp}`, rows: [["Section", "Code", "Account", "Amount"], ...sheet.assets.map(row => ["Asset", row.code, row.name, row.balance]), ...sheet.liabilities.map(row => ["Liability", row.code, row.name, row.balance]), ...sheet.equity.map(row => ["Equity", row.code, row.name, row.balance])] };
+    }
+    if (active === "daybook") {
+      return { filename: `fintrack-day-book-${stamp}`, rows: [["Date", "Number", "Type", "Narration", "Amount"], ...books.map(row => [row.date, row.voucherNumber, row.voucherType, row.narration, row.debit])] };
+    }
+    if (active === "receivables") {
+      return { filename: `fintrack-receivables-${stamp}`, rows: [["Customer", "Invoice", "Invoice date", "Due date", "Amount", "Paid", "Outstanding", "Days", "Status"], ...arInvoices.map(row => [row.partyName, row.reference, row.invoiceDate, row.dueDate, row.amount, row.paid, row.outstanding, row.daysOutstanding, row.status])] };
+    }
+    if (active === "payables") {
+      return { filename: `fintrack-payables-${stamp}`, rows: [["Supplier", "Invoice", "Invoice date", "Due date", "Amount", "Paid", "Outstanding", "Status"], ...apInvoices.map(row => [row.partyName, row.reference, row.invoiceDate, row.dueDate, row.amount, row.paid, row.outstanding, row.status])] };
+    }
+    if (active === "sales") {
+      return { filename: `fintrack-sales-${stamp}`, rows: [["Date", "Number", "Narration", "Amount"], ...salesRows.map(row => [row.date, row.voucherNumber, row.narration, row.debit])] };
+    }
+    if (active === "purchases") {
+      return { filename: `fintrack-purchases-${stamp}`, rows: [["Date", "Number", "Narration", "Amount"], ...purchaseRows.map(row => [row.date, row.voucherNumber, row.narration, row.debit])] };
+    }
+    if (active === "ledger") {
+      return { filename: `fintrack-ledger-${stamp}`, rows: [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])] };
+    }
+    return { filename: `fintrack-cash-flow-${stamp}`, rows: [["Metric", "Amount"], ["Inflow", flow.inflow], ["Outflow", flow.outflow], ["Internal transfers (excluded)", flow.transfers || 0], ["Net", flow.net]] };
   };
 
-  const invoiceTable = (rows, kind) => <div className="table spacer"><table><thead><tr><th>{kind === "payable" ? "Supplier" : "Customer"}</th><th>Invoice</th><th>Invoice date</th><th>Due date</th><th>Amount</th><th>Paid</th><th>Outstanding</th>{kind !== "payable" && <th>Days</th>}<th>Status</th></tr></thead><tbody>
+  const exportReport = format => {
+    const { filename, rows } = exportRows();
+    if (format === "xls") downloadAccountsExcel(`${filename}.xls`, rows);
+    else downloadAccountsCsv(`${filename}.csv`, rows);
+  };
+
+  const askReason = (title, confirmLabel, onConfirm) => {
+    setReasonText("");
+    setReasonDialog({ title, confirmLabel, onConfirm });
+  };
+
+  const submitReason = () => {
+    const reason = String(reasonText || "").trim();
+    if (!reason || !reasonDialog) return;
+    const work = reasonDialog.onConfirm;
+    setReasonDialog(null);
+    setReasonText("");
+    work(reason);
+  };
+
+  const invoiceTable = (rows, kind) => <div className="table spacer accounts-invoice-table"><table><thead><tr><th>{kind === "payable" ? "Supplier" : "Customer"}</th><th>Invoice</th><th>Invoice date</th><th>Due date</th><th>Amount</th><th>Paid</th><th>Outstanding</th>{kind !== "payable" && <th>Days</th>}<th>Status</th></tr></thead><tbody>
     {rows.map(row => <tr key={row.id}><td>{row.partyName}</td><td>{row.reference}</td><td>{row.invoiceDate}</td><td>{row.dueDate}</td><td>{money(row.amount)}</td><td>{money(row.paid)}</td><td>{money(row.outstanding)}</td>{kind !== "payable" && <td>{row.daysOutstanding}</td>}<td>{row.status}</td></tr>)}
     {!rows.length && <tr><td colSpan={kind === "payable" ? 8 : 9}>No {kind === "payable" ? "payables" : "receivables"} yet.</td></tr>}
   </tbody></table></div>;
@@ -533,28 +618,36 @@ export function AccountsModule({ token, close, loans = [] }) {
       {SECTION_GROUPS.map(group => (
         <div key={group}>
           <div className="acc-nav-group">{group}</div>
-          {SECTIONS.filter(item => item.group === group).map(item => (
+          {navSections.filter(item => item.group === group).map(item => (
             <button key={item.id} type="button" className={`acc-nav-item ${section === item.id ? "active" : ""}`} onClick={() => openSection(item.id)}>{item.label}</button>
           ))}
         </div>
       ))}
     </aside>
-    <main className="acc-main">
+    <main className="acc-main acc-print-root">
       <header className="top">
         <div>
           <button type="button" className="btn" onClick={section === "overview" ? close : () => openSection("overview")}>{section === "overview" ? "← Dashboard" : "← Accounts"}</button>
           <h1 className="title spacer">{SECTIONS.find(item => item.id === section)?.label || "Accounts"}</h1>
           <p className="copy">{fy.label} · {range.from} to {range.to} · Standalone books for any small business. Daily Finance and Chit Fund are optional.</p>
         </div>
-        <div className="tabs acc-top-actions">
-          {SIMPLE_ENTRY_KINDS.map(item => <button key={item.id} type="button" className="btn" onClick={() => openSimple(item.id)}>+ {item.label}</button>)}
+        <div className="tabs acc-top-actions acc-top-actions-compact">
+          <select className="acc-new-entry" defaultValue="" aria-label="New entry" onChange={event => {
+            if (event.target.value) {
+              openSimple(event.target.value);
+              event.target.value = "";
+            }
+          }}>
+            <option value="">+ New entry</option>
+            {SIMPLE_ENTRY_KINDS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
+          </select>
           <button type="button" className="btn primary" onClick={() => setShowVoucher(true)}>+ Voucher</button>
           <button type="button" className="btn" onClick={() => setShowParty(true)}>+ Party</button>
         </div>
       </header>
       {error && <div className="notice">{error}</div>}
       {notice && <div className="notice accounts-notice-ok">{notice}</div>}
-      {migrationRequired && <div className="notice">Run <strong>052_fintrack_accounts_double_entry.sql</strong>, then <strong>053</strong>, <strong>054</strong>, and <strong>055_accounts_p0_reversal_integrity.sql</strong> in the Supabase SQL editor, then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
+      {migrationRequired && <div className="notice">Run <strong>052_fintrack_accounts_double_entry.sql</strong>, then <strong>053</strong>, <strong>054</strong>, <strong>055_accounts_p0_reversal_integrity.sql</strong>, and <strong>056_accounts_p2_due_date_parent.sql</strong> in the Supabase SQL editor, then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
       <nav className="acc-mobile-cards" aria-label="Accounts">
         {MOBILE_TABS.map(item => (
           <button key={item.id} type="button" className={`acc-mobile-card ${mobileTab === item.id ? "active" : ""}`} onClick={() => openSection(item.id)}>{item.label}</button>
@@ -596,7 +689,7 @@ export function AccountsModule({ token, close, loans = [] }) {
               ["parties", "Customers & suppliers", "Accounts parties are independent of Daily Finance customers and Chit Fund members."],
               ["receivables", "Receivables", "Invoice outstanding, due dates and status. Finance receivables link only when integration is on."],
               ["payables", "Payables", "Supplier invoices and balances from purchase vouchers."],
-              ["cashbook", "Cashbook", "Operational cash, bank and UPI movement. Unchanged from FinTrack collections."],
+              ...(showCashbook ? [["cashbook", "Cashbook", "Operational cash, bank and UPI movement. Unchanged from FinTrack collections."]] : []),
               ["reports", "Reports", "Day Book, Ledger, Trial Balance, P&L, Balance Sheet, Cash Flow, Sales and Purchases."],
               ["setup", "Company setup", `Accounting integration is ${settings?.integrationEnabled ? "ON" : "OFF"}. Off by default.`],
             ].map(([id, title, copy]) => (
@@ -612,9 +705,10 @@ export function AccountsModule({ token, close, loans = [] }) {
           <ReportRangeBar fy={fy} lastFy={lastFy} from={rangeFrom} to={rangeTo} onChange={setReportRange} />
           <div className="card accounts-filter-card spacer">
             <label className="accounts-filter-field"><span className="small">Account</span>
-              <select value={ledgerId} onChange={event => setLedgerId(event.target.value)}>{accounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</select>
+              <select value={ledgerId} onChange={event => setLedgerId(event.target.value)}>{visibleAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</select>
             </label>
             <button type="button" className="btn" onClick={() => downloadAccountsCsv(`fintrack-ledger-${todayIso()}.csv`, [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])])}>Export CSV</button>
+            <button type="button" className="btn" onClick={() => downloadAccountsExcel(`fintrack-ledger-${todayIso()}.xls`, [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])])}>Export Excel</button>
           </div>
           <div className="table spacer"><table><thead><tr><th>Date</th><th>Voucher</th><th>Narration</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead><tbody>
             {ledger.rows.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.narration}</td><td>{row.debit ? money(row.debit) : ""}</td><td>{row.credit ? money(row.credit) : ""}</td><td>{money(row.balance)}</td></tr>)}
@@ -641,14 +735,8 @@ export function AccountsModule({ token, close, loans = [] }) {
                 <div className="accounts-entry-amounts">
                   <span>{money(voucherTotals(voucher.lines).debit)}</span>
                   {voucher.status === "posted" && <>
-                    <button type="button" className="btn" disabled={saving} onClick={() => {
-                      const reason = window.prompt("Reason for reversal");
-                      if (reason) run(() => reverseVoucher(token, voucher.id, todayIso(), reason), "Reversal posted.");
-                    }}>Reverse</button>
-                    <button type="button" className="btn danger" disabled={saving} onClick={() => {
-                      const reason = window.prompt("Reason to cancel");
-                      if (reason) run(() => cancelVoucher(token, voucher.id, reason), "Voucher cancelled.");
-                    }}>Cancel</button>
+                    <button type="button" className="btn" disabled={saving} onClick={() => askReason("Reverse voucher", "Post reversal", reason => run(() => reverseVoucher(token, voucher.id, todayIso(), reason), "Reversal posted."))}>Reverse</button>
+                    <button type="button" className="btn danger" disabled={saving} onClick={() => askReason("Cancel voucher", "Cancel voucher", reason => run(() => cancelVoucher(token, voucher.id, reason), "Voucher cancelled."))}>Cancel</button>
                   </>}
                 </div>
               </div>
@@ -666,9 +754,8 @@ export function AccountsModule({ token, close, loans = [] }) {
             <label className="accounts-filter-field"><span className="small">Outstanding only</span>
               <input type="checkbox" checked={outstandingOnly} onChange={event => setOutstandingOnly(event.target.checked)} />
             </label>
-            <button type="button" className="btn" onClick={exportReport}>Export CSV</button>
-          </div>
-          {invoiceTable(section === "receivables" ? arInvoices : apInvoices, section === "payables" ? "payable" : "receivable")}
+            <button type="button" className="btn" onClick={() => exportReport("csv")}>Export CSV</button>
+            <button type="button" className="btn" onClick={() => exportReport("xls")}>Export Excel</button>
           <p className="small spacer">Party totals: {(section === "receivables" ? ar : ap).map(row => `${row.name} ${money(row.balance)}`).join(" · ") || "none"}</p>
         </div>}
 
@@ -697,7 +784,7 @@ export function AccountsModule({ token, close, loans = [] }) {
             </label>
           </div>
           {focusedParty ? <>
-            <p className="small">Opening {money(partyBook.opening)} · Outstanding {money(partyBook.outstanding)}</p>
+            <p className="small">Opening {money(partyBook.opening)} · {partyBook.advance > 0 ? `Advance ${money(partyBook.advance)}` : `Outstanding ${money(partyBook.outstanding)}`}</p>
             <div className="table spacer"><table><thead><tr><th>Date</th><th>Voucher</th><th>Type</th><th>Narration</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead><tbody>
               {partyBook.rows.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.voucherType}</td><td>{row.narration}</td><td>{row.debit ? money(row.debit) : ""}</td><td>{row.credit ? money(row.credit) : ""}</td><td>{money(row.balance)}</td></tr>)}
               {!partyBook.rows.length && <tr><td colSpan="7">No transactions for this party in the selected dates.</td></tr>}
@@ -707,7 +794,7 @@ export function AccountsModule({ token, close, loans = [] }) {
 
         {section === "more" && <div className="acc-panel">
           <div className="acc-landing-grid">
-            {MORE_LINKS.map(([id, title]) => (
+            {moreLinks.map(([id, title]) => (
               <button key={id} type="button" className="card acc-landing-card" onClick={() => openSection(id)}>
                 <strong>{title}</strong>
               </button>
@@ -726,7 +813,8 @@ export function AccountsModule({ token, close, loans = [] }) {
               else { setSection("reports"); setReportTab(item.id); }
             }}>{item.label}</button>)}
             </div>
-            <button type="button" className="btn" onClick={exportReport}>Export CSV</button>
+            <button type="button" className="btn" onClick={() => exportReport("csv")}>Export CSV</button>
+            <button type="button" className="btn" onClick={() => exportReport("xls")}>Export Excel</button>
             <button type="button" className="btn" onClick={() => window.print()}>Print / PDF</button>
           </div>
           {(section === "trial" || reportTab === "trial") && section !== "pnl" && section !== "balance" && <div className="table spacer"><table><thead><tr><th>Code</th><th>Account</th><th>Debit</th><th>Credit</th></tr></thead><tbody>
@@ -750,7 +838,10 @@ export function AccountsModule({ token, close, loans = [] }) {
             {books.map(row => <tr key={row.id}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.voucherType}</td><td>{row.narration}</td><td>{money(row.debit)}</td></tr>)}
             {!books.length && <tr><td colSpan="5">No posted vouchers in this period.</td></tr>}
           </tbody></table></div>}
-          {section === "reports" && reportTab === "cashflow" && <div className="grid metrics"><div className="card"><div className="metric-label">Inflow</div><div className="metric-value green">{money(flow.inflow)}</div></div><div className="card"><div className="metric-label">Outflow</div><div className="metric-value red">{money(flow.outflow)}</div></div><div className="card"><div className="metric-label">Net cash</div><div className="metric-value gold">{money(flow.net)}</div></div></div>}
+          {section === "reports" && reportTab === "cashflow" && <>
+            <div className="grid metrics"><div className="card"><div className="metric-label">Inflow</div><div className="metric-value green">{money(flow.inflow)}</div></div><div className="card"><div className="metric-label">Outflow</div><div className="metric-value red">{money(flow.outflow)}</div></div><div className="card"><div className="metric-label">Net cash</div><div className="metric-value gold">{money(flow.net)}</div></div></div>
+            <p className="small">Internal cash/bank/UPI transfers ({money(flow.transfers || 0)}) are excluded from inflow and outflow. Closing cash still follows the ledgers.</p>
+          </>}
           {section === "reports" && reportTab === "receivables" && invoiceTable(arInvoices, "receivable")}
           {section === "reports" && reportTab === "payables" && invoiceTable(apInvoices, "payable")}
           {section === "reports" && reportTab === "sales" && <div className="table spacer"><table><thead><tr><th>Date</th><th>Number</th><th>Narration</th><th>Amount</th></tr></thead><tbody>
@@ -764,7 +855,7 @@ export function AccountsModule({ token, close, loans = [] }) {
           {section === "reports" && reportTab === "ledger" && <>
             <div className="card accounts-filter-card spacer">
               <label className="accounts-filter-field"><span className="small">Account</span>
-                <select value={ledgerId} onChange={event => setLedgerId(event.target.value)}>{accounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</select>
+                <select value={ledgerId} onChange={event => setLedgerId(event.target.value)}>{visibleAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</select>
               </label>
             </div>
             <div className="table spacer"><table><thead><tr><th>Date</th><th>Voucher</th><th>Narration</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead><tbody>
@@ -856,13 +947,13 @@ export function AccountsModule({ token, close, loans = [] }) {
           </div>
           <div className="card accounts-form-card spacer">
             <strong>Chart of accounts</strong>
-            <p className="copy">Opening debit and credit sides across the chart should balance. System accounts can be renamed and given openings, but not deleted.</p>
+            <p className="copy">Opening debit and credit sides across the chart should balance. System accounts can be renamed and given openings, but not deleted.{settings?.integrationEnabled ? "" : " Daily Finance, Monthly Finance, and Chit Fund ledgers stay hidden while integration is off."}</p>
             <div className="table spacer"><table><thead><tr><th>Code</th><th>Account</th><th>Group</th><th>Opening</th><th></th></tr></thead><tbody>
-              {accounts.map(account => {
+              {visibleAccounts.map(account => {
                 const used = ledgerHasPostedLines(account, vouchers);
                 return <tr key={account.id}>
                   <td>{account.code}</td>
-                  <td>{account.name}{account.isSystem ? " · system" : ""}</td>
+                  <td style={account.parentId ? { paddingLeft: 22 } : undefined}>{account.parentId ? "↳ " : ""}{account.name}{account.isSystem ? " · system" : ""}</td>
                   <td>{account.groupType}</td>
                   <td>{account.openingBalance ? `${money(account.openingBalance)} ${account.openingSide}` : "—"}</td>
                   <td>
@@ -890,10 +981,7 @@ export function AccountsModule({ token, close, loans = [] }) {
             </div>
             <button type="button" className="btn" disabled={saving} onClick={() => run(() => lockAccountingPeriod(token, lockForm.from, lockForm.to), "Period locked.")}>{saving ? "Saving…" : "Lock period"}</button>
             <div className="table spacer"><table><thead><tr><th>Period</th><th>Status</th><th></th></tr></thead><tbody>
-              {locks.map(lock => <tr key={lock.id}><td>{lock.periodFrom} to {lock.periodTo}</td><td>{lock.isLocked ? "Locked" : "Reopened"}</td>              <td>{lock.isLocked && <button type="button" className="btn" disabled={saving} onClick={() => {
-                const reason = window.prompt("Reason to reopen");
-                if (reason) run(() => reopenAccountingPeriod(token, lock.id, reason), "Period reopened.");
-              }}>Reopen</button>}</td></tr>)}
+              {locks.map(lock => <tr key={lock.id}><td>{lock.periodFrom} to {lock.periodTo}</td><td>{lock.isLocked ? "Locked" : "Reopened"}</td>              <td>{lock.isLocked && <button type="button" className="btn" disabled={saving} onClick={() => askReason("Reopen period", "Reopen", reason => run(() => reopenAccountingPeriod(token, lock.id, reason), "Period reopened."))}>Reopen</button>}</td></tr>)}
             </tbody></table></div>
           </div>
           <div className="card accounts-form-card spacer">
@@ -908,10 +996,10 @@ export function AccountsModule({ token, close, loans = [] }) {
 
       {showVoucher && <Modal title="Post voucher" close={() => !saving && setShowVoucher(false)}>
         <p className="copy">Total debits must equal total credits. Unbalanced vouchers cannot be posted.</p>
-        <VoucherForm accounts={accounts} parties={parties} voucherType={voucherType} setVoucherType={setVoucherType} form={voucherForm} setForm={setVoucherForm} lines={lines} setLines={setLines} onSubmit={submitVoucher} saving={saving} />
+        <VoucherForm accounts={visibleAccounts} parties={parties} voucherType={voucherType} setVoucherType={setVoucherType} form={voucherForm} setForm={setVoucherForm} lines={lines} setLines={setLines} onSubmit={submitVoucher} saving={saving} />
       </Modal>}
       {showSimple && <Modal title={SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry"} close={() => !saving && setShowSimple(false)}>
-        <SimpleEntryForm kind={simpleKind} accounts={accounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} />
+        <SimpleEntryForm kind={simpleKind} accounts={visibleAccounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} />
       </Modal>}
       {showParty && <Modal title="Add party" close={() => !saving && setShowParty(false)} actions={<div className="tabs spacer"><button type="button" className="btn primary" disabled={saving} onClick={() => run(async () => { await createParty(token, partyForm); setShowParty(false); }, "Party saved.")}>{saving ? "Saving…" : "Save party"}</button></div>}>
         <div className="form">
@@ -922,8 +1010,18 @@ export function AccountsModule({ token, close, loans = [] }) {
         </div>
       </Modal>}
       {showCoa && <Modal title={coaForm.id ? "Edit ledger account" : "Add ledger account"} close={() => !saving && setShowCoa(false)} actions={<div className="tabs spacer"><button type="button" className="btn primary" disabled={saving} onClick={saveCoa}>{saving ? "Saving…" : "Save account"}</button></div>}>
-        <CoaFormFields form={coaForm} setForm={setCoaForm} />
+        <CoaFormFields form={coaForm} setForm={setCoaForm} accounts={visibleAccounts} />
       </Modal>}
+      {reasonDialog && <ReasonModal
+        title={reasonDialog.title}
+        label="Reason"
+        value={reasonText}
+        onChange={setReasonText}
+        confirmLabel={reasonDialog.confirmLabel}
+        saving={saving}
+        onClose={() => { setReasonDialog(null); setReasonText(""); }}
+        onConfirm={submitReason}
+      />}
     </main>
   </div>;
 }
