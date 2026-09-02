@@ -554,7 +554,7 @@ export function AccountsModule({ token, close, loans = [] }) {
       </header>
       {error && <div className="notice">{error}</div>}
       {notice && <div className="notice accounts-notice-ok">{notice}</div>}
-      {migrationRequired && <div className="notice">Run <strong>052_fintrack_accounts_double_entry.sql</strong>, then <strong>053_accounts_small_business_coa.sql</strong> and <strong>054_accounts_p1_ledger_opening.sql</strong> in the Supabase SQL editor, then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
+      {migrationRequired && <div className="notice">Run <strong>052_fintrack_accounts_double_entry.sql</strong>, then <strong>053</strong>, <strong>054</strong>, and <strong>055_accounts_p0_reversal_integrity.sql</strong> in the Supabase SQL editor, then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
       <nav className="acc-mobile-cards" aria-label="Accounts">
         {MOBILE_TABS.map(item => (
           <button key={item.id} type="button" className={`acc-mobile-card ${mobileTab === item.id ? "active" : ""}`} onClick={() => openSection(item.id)}>{item.label}</button>
@@ -635,7 +635,7 @@ export function AccountsModule({ token, close, loans = [] }) {
               <div className="accounts-entry-main">
                 <div>
                   <strong>{voucher.voucherNumber}</strong>
-                  <p className="small">{voucher.date} · {VOUCHER_TYPES[voucher.voucherType]?.label} · {voucher.status}{voucher.sourceType ? ` · ${voucher.sourceModule}/${voucher.sourceType}` : ""}</p>
+                  <p className="small">{voucher.date} · {VOUCHER_TYPES[voucher.voucherType]?.label} · {voucher.status}{voucher.sourceType ? ` · ${voucher.sourceModule}/${voucher.sourceType}` : ""}{voucher.status === "reversed" ? " · kept in ledgers with its reversal" : ""}</p>
                   <p className="small">{voucher.narration}</p>
                 </div>
                 <div className="accounts-entry-amounts">

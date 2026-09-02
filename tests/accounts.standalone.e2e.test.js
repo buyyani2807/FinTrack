@@ -260,13 +260,16 @@ test("JS reversal nets to zero when the original stays posted", () => {
   assert.equal(balanceSheet(chart, books, fy).balanced, true);
 });
 
-test("SQL-style reversal that marks the original reversed inverts the books", () => {
+test("SQL-style reversal that marks the original reversed still nets to zero", () => {
   const original = post("receipt", "2026-04-03", receiptLines({ accounts: chart, cash: 1000, partyId: "ravi" }), { partyId: "ravi" });
   const reversal = reverseVoucher(original, { date: "2026-04-04", sequence: 99, reason: "Correction" });
   const sqlStyle = [{ ...original, status: "reversed" }, reversal];
-  assert.equal(bal(sqlStyle, "1000"), -1000);
-  assert.equal(dayBook(sqlStyle, fy).length, 1);
-  assert.equal(trialBalance(chart, sqlStyle, fy).balanced, true, "TB can still balance while cash is wrong");
+  assert.equal(bal(sqlStyle, "1000"), 0);
+  assert.equal(roundMoney(party(sqlStyle, "ravi", "receivable")), 0);
+  assert.equal(dayBook(sqlStyle, fy).length, 2);
+  assert.equal(trialBalance(chart, sqlStyle, fy).balanced, true);
+  assert.equal(balanceSheet(chart, sqlStyle, fy).balanced, true);
+  assert.throws(() => cancelVoucher(sqlStyle[0], { reason: "undo" }), /cannot be cancelled/);
 });
 
 test("500 generic sales keep trial balance and the accounting equation", () => {

@@ -125,6 +125,26 @@ test("posted vouchers cannot be overwritten; reverse creates opposite lines", ()
   assert.equal(cancelled.cancelReason, "Entered twice");
 });
 
+test("SQL-style reverse keeps original reversed lines in the books so cash nets to zero", () => {
+  const original = posted("receipt", "2026-04-03", receiptLines({ accounts, cash: 1000, partyId: "ravi" }), { n: 1, partyId: "ravi" });
+  const reversal = reverseVoucher(original, { date: "2026-04-04", sequence: 2, reason: "Correction" });
+  const books = [{ ...original, status: VOUCHER_STATUS.reversed }, reversal];
+  assert.equal(ledgerBalances(accounts, books).find(row => row.code === SYSTEM_CODES.cash).balance, 0);
+  assert.equal(dayBook(books, { from: "2026-04-01", to: "2026-04-30" }).length, 2);
+  assert.equal(trialBalance(accounts, books, { from: "2026-04-01", to: "2026-04-30" }).balanced, true);
+  assert.equal(balanceSheet(accounts, books, { from: "2026-04-01", to: "2026-04-30" }).balanced, true);
+  const sale = posted("sales", "2026-04-05", saleLines({ accounts, amount: 5000, settlement: "credit", partyId: "ravi" }), { n: 1, partyId: "ravi" });
+  const saleReversal = reverseVoucher(sale, { date: "2026-04-06", sequence: 2, reason: "Wrong invoice" });
+  const arBooks = [{ ...sale, status: VOUCHER_STATUS.reversed }, saleReversal];
+  const invoices = invoiceRegister(accounts, arBooks, [{ id: "ravi", name: "Ravi", partyType: "customer" }], {
+    kind: "receivable", today: "2026-04-06", from: "2026-04-01", to: "2026-04-30",
+  });
+  assert.equal(invoices.filter(row => row.voucherType === "sales").length, 1);
+  assert.equal(invoices.find(row => row.partyId === "ravi").outstanding, 0);
+  assert.equal(partyBalances(accounts, arBooks, [{ id: "ravi", name: "Ravi", partyType: "customer" }], { kind: "receivable" }).length, 0);
+  assert.throws(() => cancelVoucher({ ...sale, status: VOUCHER_STATUS.reversed }, { reason: "split pair" }), /cannot be cancelled/);
+});
+
 test("locked periods reject new posts", () => {
   const locks = [{ periodFrom: "2026-04-01", periodTo: "2026-04-30", isLocked: true }];
   assert.equal(dateIsLocked("2026-04-15", locks), true);

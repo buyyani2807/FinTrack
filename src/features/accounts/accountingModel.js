@@ -256,6 +256,9 @@ export const assertBalancedVoucher = (lines = []) => {
 
 export const isPosted = voucher => voucher?.status === VOUCHER_STATUS.posted;
 export const isCancelled = voucher => voucher?.status === VOUCHER_STATUS.cancelled;
+export const isReversed = voucher => voucher?.status === VOUCHER_STATUS.reversed;
+export const isReversalVoucher = voucher => voucher?.sourceType === "reversal";
+export const affectsLedgers = voucher => isPosted(voucher) || isReversed(voucher);
 
 export const dateIsLocked = (isoDate, locks = []) =>
   (locks || []).some(lock => lock.isLocked !== false && isoDate >= lock.periodFrom && isoDate <= lock.periodTo);
@@ -353,6 +356,7 @@ export function reverseVoucher(voucher, { date, reason = "", locks = [], sequenc
 
 export function cancelVoucher(voucher, { reason = "", locks = [] } = {}) {
   if (isCancelled(voucher)) throw new Error("Voucher is already cancelled");
+  if (isReversed(voucher)) throw new Error("Reversed vouchers cannot be cancelled. Cancel the reversal instead.");
   if (isPosted(voucher)) assertPeriodOpen(voucher.date, locks);
   return {
     ...voucher,
@@ -372,7 +376,7 @@ export function ledgerBalances(accounts = [], vouchers = [], { from, to, include
     credit: includeOpening ? roundMoney(account.openingCredit || (account.openingSide === "credit" ? account.openingBalance : 0) || 0) : 0,
   }]));
   for (const voucher of vouchers || []) {
-    if (!isPosted(voucher)) continue;
+    if (!affectsLedgers(voucher)) continue;
     if (from && voucher.date < from) continue;
     if (to && voucher.date > to) continue;
     for (const line of voucher.lines || []) {
@@ -816,7 +820,7 @@ export function buildIntegrationVouchers(accounts, cashbookEntries, { enabled = 
   if (!enabled) return [];
   const postedKeys = new Set(
     (existing || [])
-      .filter(voucher => isPosted(voucher) && voucher.sourceTransactionId)
+      .filter(voucher => affectsLedgers(voucher) && voucher.sourceTransactionId)
       .map(voucher => `${voucher.sourceType}:${voucher.sourceTransactionId}`),
   );
   const created = [];

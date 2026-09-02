@@ -1,8 +1,9 @@
 import {
   SYSTEM_CODES,
   accountingEquationHolds,
+  affectsLedgers,
   findAccount,
-  isPosted,
+  isReversalVoucher,
   ledgerBalances,
   roundMoney,
   signedBalance,
@@ -13,7 +14,7 @@ const inRange = (date, from, to) => (!from || date >= from) && (!to || date <= t
 
 export function dayBook(vouchers = [], { from, to } = {}) {
   return (vouchers || [])
-    .filter(voucher => isPosted(voucher) && inRange(voucher.date, from, to))
+    .filter(voucher => affectsLedgers(voucher) && inRange(voucher.date, from, to))
     .sort((a, b) => `${a.date}${a.voucherNumber}`.localeCompare(`${b.date}${b.voucherNumber}`))
     .map(voucher => ({
       ...voucher,
@@ -32,7 +33,7 @@ export function accountLedger(accounts, vouchers, coaId, { from, to } = {}) {
     account.openingCredit || (account.openingSide === "credit" ? account.openingBalance : 0) || 0,
   );
   const posted = (vouchers || [])
-    .filter(voucher => isPosted(voucher))
+    .filter(voucher => affectsLedgers(voucher))
     .sort((a, b) => `${a.date}${a.voucherNumber}`.localeCompare(`${b.date}${b.voucherNumber}`));
   for (const voucher of posted) {
     for (const line of voucher.lines || []) {
@@ -118,7 +119,7 @@ export function cashFlow(accounts, vouchers, range = {}) {
   let inflow = 0;
   let outflow = 0;
   for (const voucher of vouchers || []) {
-    if (!isPosted(voucher) || !inRange(voucher.date, range.from, range.to)) continue;
+    if (!affectsLedgers(voucher) || !inRange(voucher.date, range.from, range.to)) continue;
     for (const line of voucher.lines || []) {
       if (!ids.has(line.coaId) && !ids.has(line.code)) continue;
       inflow = roundMoney(inflow + Number(line.debit || 0));
@@ -155,7 +156,7 @@ export function partyBalances(accounts, vouchers, parties = [], { kind = "receiv
     byParty.set(party.id, { ...party, debit: 0, credit: 0, balance: 0 });
   }
   for (const voucher of vouchers || []) {
-    if (!isPosted(voucher) || !inRange(voucher.date, from, to)) continue;
+    if (!affectsLedgers(voucher) || !inRange(voucher.date, from, to)) continue;
     for (const line of voucher.lines || []) {
       if (!ledgerIds.has(line.coaId) && !ledgerIds.has(line.code)) continue;
       const partyId = line.partyId || voucher.partyId || "unassigned";
@@ -206,7 +207,7 @@ export function bankVoucherLines(accounts, vouchers, coaId) {
   if (!account) return [];
   const rows = [];
   for (const voucher of vouchers || []) {
-    if (!isPosted(voucher)) continue;
+    if (!affectsLedgers(voucher)) continue;
     for (const line of voucher.lines || []) {
       if (line.coaId !== account.id && line.code !== account.code) continue;
       rows.push({
@@ -273,9 +274,12 @@ export function dashboardMetrics(accounts, vouchers, parties, { today, from, to 
   const byType = type => roundMoney(
     balances.filter(row => row.accountType === type).reduce((sum, row) => sum + row.balance, 0),
   );
-  const todayRows = (vouchers || []).filter(voucher => isPosted(voucher) && voucher.date === today);
+  const todayRows = (vouchers || []).filter(voucher => affectsLedgers(voucher) && voucher.date === today);
   const sumType = type => roundMoney(
-    todayRows.filter(voucher => voucher.voucherType === type).reduce((sum, voucher) => sum + voucherTotals(voucher.lines).debit, 0),
+    todayRows.filter(voucher => voucher.voucherType === type).reduce((sum, voucher) => {
+      const amount = voucherTotals(voucher.lines).debit;
+      return isReversalVoucher(voucher) ? sum - amount : sum + amount;
+    }, 0),
   );
   const pnl = profitAndLoss(accounts, vouchers, range);
   return {
@@ -303,7 +307,7 @@ export function partyLedger(accounts, vouchers, party, { from, to, voucherType }
   const rows = [];
   let running = 0;
   const posted = (vouchers || [])
-    .filter(isPosted)
+    .filter(affectsLedgers)
     .sort((a, b) => `${a.date}${a.voucherNumber}`.localeCompare(`${b.date}${b.voucherNumber}`));
   for (const voucher of posted) {
     if (voucherType && voucher.voucherType !== voucherType) continue;
@@ -346,7 +350,7 @@ export function invoiceRegister(accounts, vouchers, parties = [], { kind = "rece
   const invoices = [];
   const pool = new Map();
   const posted = (vouchers || [])
-    .filter(isPosted)
+    .filter(affectsLedgers)
     .sort((a, b) => `${a.date}${a.voucherNumber}`.localeCompare(`${b.date}${b.voucherNumber}`));
 
   const enqueue = (id, amount) => {
@@ -360,7 +364,7 @@ export function invoiceRegister(accounts, vouchers, parties = [], { kind = "rece
     const voucherPartyId = voucher.partyId || (voucher.lines || []).find(line => line.partyId)?.partyId || null;
     const hitsLedger = (voucher.lines || []).some(line => lineHitsType(accounts, line, ledgerType));
 
-    if (voucher.voucherType === invoiceType) {
+    if (voucher.voucherType === invoiceType && !isReversalVoucher(voucher)) {
       invoices.push({
         id: voucher.id,
         partyId: voucherPartyId,
@@ -375,7 +379,7 @@ export function invoiceRegister(accounts, vouchers, parties = [], { kind = "rece
       });
       continue;
     }
-    if ((voucher.voucherType === settleType || voucher.voucherType === noteType) && hitsLedger) {
+    if ((voucher.voucherType === settleType || voucher.voucherType === noteType || isReversalVoucher(voucher)) && hitsLedger) {
       enqueue(voucherPartyId, amount);
     }
   }
