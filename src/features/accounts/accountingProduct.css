@@ -480,6 +480,23 @@ html:has(.accounts-dashboard) .financier-nav {
   color-scheme: dark;
 }
 
+.accounts-dashboard .field {
+  display: grid;
+  gap: 6px;
+}
+
+.accounts-dashboard .field > span {
+  color: #c5d0e0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.accounts-dashboard .acc-num-input {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .accounts-dashboard .accounts-search:hover,
 .accounts-dashboard .field input:hover,
 .accounts-dashboard .field select:hover,
@@ -674,6 +691,7 @@ html:has(.accounts-dashboard) .financier-nav {
 }
 
 .accounts-dashboard .acc-empty strong {
+  color: var(--acc-text);
   font: 700 16px Syne, sans-serif;
 }
 
@@ -1054,6 +1072,12 @@ html:has(.accounts-dashboard) .financier-nav {
   color: var(--acc-muted);
 }
 
+.accounts-dashboard .acc-status-pill.suggested {
+  color: var(--acc-gold);
+  border-color: #f4b94255;
+  background: #f4b94214;
+}
+
 .accounts-dashboard .acc-party-meta,
 .accounts-dashboard .acc-party-contact {
   display: block;
@@ -1266,6 +1290,187 @@ html:has(.accounts-dashboard) .financier-nav {
   color: var(--acc-muted);
 }
 
+.accounts-dashboard .acc-voucher-chip.in {
+  color: var(--acc-green);
+  border-color: #4fd08d44;
+  background: #4fd08d14;
+}
+
+.accounts-dashboard .acc-voucher-chip.out {
+  color: var(--acc-red);
+  border-color: #ff7a7a44;
+  background: #ff7a7a14;
+}
+
+.accounts-dashboard .acc-bank {
+  display: grid;
+  gap: 16px;
+}
+
+.accounts-dashboard .acc-bank-note {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid #f4b94233;
+  border-radius: var(--acc-radius);
+  background: #f4b94210;
+  color: #e8c98a;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.accounts-dashboard .acc-bank .acc-section-title {
+  margin: 16px 0 10px;
+}
+
+.accounts-dashboard .acc-bank > .acc-section-title {
+  margin: 2px 0 0;
+}
+
+.accounts-dashboard .acc-bank .acc-setup-card > .acc-section-title:first-of-type {
+  margin-top: 0;
+}
+
+.accounts-dashboard .acc-bank-meta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px 14px;
+  align-items: end;
+}
+
+.accounts-dashboard .acc-bank-meta .span {
+  grid-column: 1 / -1;
+}
+
+.accounts-dashboard .acc-bank-line-table table {
+  min-width: 720px;
+}
+
+.accounts-dashboard .acc-bank-line-table td {
+  padding: 8px 10px;
+}
+
+.accounts-dashboard .acc-bank-line-table input,
+.accounts-dashboard .acc-bank-line-table select,
+.accounts-dashboard .acc-bank-match-table select,
+.accounts-dashboard .acc-bank-match-card select {
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--acc-compact-h);
+  min-height: var(--acc-compact-h);
+  padding: 0 10px;
+  border-radius: var(--acc-radius-ctrl);
+  background: var(--acc-surface);
+  border: 1px solid var(--acc-line);
+  color: var(--acc-text);
+  font: inherit;
+  color-scheme: dark;
+}
+
+.accounts-dashboard .acc-bank-line-table .acc-bank-desc {
+  min-width: 240px;
+}
+
+.accounts-dashboard .acc-bank-line-table td:nth-child(1) {
+  width: 148px;
+}
+
+.accounts-dashboard .acc-bank-line-table td:nth-child(3) {
+  width: 132px;
+}
+
+.accounts-dashboard .acc-bank-line-table td:nth-child(4) {
+  width: 108px;
+}
+
+.accounts-dashboard .acc-bank-line-table td:nth-child(5) {
+  width: 92px;
+}
+
+.accounts-dashboard .acc-bank-line-cards,
+.accounts-dashboard .acc-bank-match-cards {
+  display: none;
+  gap: 10px;
+}
+
+.accounts-dashboard .acc-bank-line-card,
+.accounts-dashboard .acc-bank-match-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  background: var(--acc-surface);
+  box-shadow: none;
+}
+
+.accounts-dashboard .acc-bank-actions {
+  margin-top: 14px;
+  justify-content: flex-end;
+}
+
+.accounts-dashboard .acc-bank-statement {
+  padding: 16px;
+}
+
+.accounts-dashboard .acc-bank-statement-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 16px;
+  margin-bottom: 14px;
+}
+
+.accounts-dashboard .acc-bank-statement-head h3 {
+  margin: 0;
+  color: var(--acc-text);
+  font: 700 16px Syne, sans-serif;
+}
+
+.accounts-dashboard .acc-bank-statement-head .small {
+  margin: 4px 0 0;
+}
+
+.accounts-dashboard .acc-bank-statement-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  color: var(--acc-muted);
+  font-size: 12px;
+}
+
+.accounts-dashboard .acc-bank-statement-stats strong {
+  color: var(--acc-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.accounts-dashboard .acc-bank-match-select {
+  min-width: 280px;
+}
+
+.accounts-dashboard .acc-bank-match-select,
+.accounts-dashboard .acc-bank-match-card-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.accounts-dashboard .acc-bank-match-card-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.accounts-dashboard .acc-bank-match-card-top strong {
+  color: var(--acc-text);
+}
+
+.accounts-dashboard .acc-bank .acc-empty {
+  margin: 0;
+}
+
 .accounts-dashboard .acc-party-ledger-card-amounts strong {
   color: var(--acc-text);
   font-variant-numeric: tabular-nums;
@@ -1290,6 +1495,9 @@ html:has(.accounts-dashboard) .financier-nav {
   }
   .accounts-dashboard .acc-party-ledger-filters {
     grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr));
+  }
+  .accounts-dashboard .acc-bank-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -1430,6 +1638,33 @@ html:has(.accounts-dashboard) .financier-nav {
   }
   .accounts-dashboard .acc-party-ledger-cards {
     display: grid;
+  }
+  .accounts-dashboard .acc-bank-meta {
+    grid-template-columns: 1fr;
+  }
+  .accounts-dashboard .acc-bank-line-table,
+  .accounts-dashboard .acc-bank-match-table {
+    display: none;
+  }
+  .accounts-dashboard .acc-bank-line-cards,
+  .accounts-dashboard .acc-bank-match-cards {
+    display: grid;
+  }
+  .accounts-dashboard .acc-bank-actions {
+    justify-content: stretch;
+  }
+  .accounts-dashboard .acc-bank-actions .btn {
+    flex: 1 1 0;
+    min-height: 42px;
+  }
+  .accounts-dashboard .acc-bank-statement-stats {
+    width: 100%;
+  }
+  .accounts-dashboard .acc-bank-match-card-actions {
+    grid-template-columns: 1fr;
+  }
+  .accounts-dashboard .acc-bank-match-card-actions .btn {
+    min-height: 42px;
   }
 }
 

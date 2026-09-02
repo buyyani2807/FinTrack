@@ -96,6 +96,21 @@ const AccEmpty = ({ title, copy, actionLabel, onAction }) => (
   </div>
 );
 
+const bankMatchLabel = status => (status === "matched" ? "Matched" : status === "suggested" ? "Suggested" : "Unmatched");
+const bankMatchTone = status => (status === "matched" ? "active" : status === "suggested" ? "suggested" : "inactive");
+
+const BankMatchControls = ({ line, selected, options, saving, onSelect, onMatch, onUnmatch }) => (
+  <>
+    <select value={selected} onChange={event => onSelect(event.target.value)} disabled={line.matchStatus === "matched"}>
+      <option value="">Choose books line</option>
+      {options.map(item => <option key={item.id} value={item.id}>{item.date} · {item.voucherNumber} · {money(item.amount)}</option>)}
+    </select>
+    {line.matchStatus === "matched"
+      ? <button type="button" className="btn" disabled={saving} onClick={onUnmatch}>Unmatch</button>
+      : <button type="button" className="btn primary" disabled={saving || !selected} onClick={onMatch}>Match</button>}
+  </>
+);
+
 const PARTY_TYPE_FILTERS = [
   { id: "all", label: "All", emptyTitle: "No parties found", emptyCopy: "Try a different search or clear the filter." },
   { id: "customer", label: "Customers", emptyTitle: "No customers found", emptyCopy: "No customer parties match this search." },
@@ -980,6 +995,11 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
     run(() => deleteChartAccount(token, account.id), "Account deleted.");
   };
 
+  const patchBankLine = (index, patch) => setBankForm(current => ({
+    ...current,
+    lines: current.lines.map((row, i) => i === index ? { ...row, ...patch } : row),
+  }));
+
   const submitBankStatement = () => run(async () => {
     const coaId = bankForm.coaId || bankAccounts[0]?.id;
     if (!coaId) throw new Error("Choose a bank account");
@@ -1436,62 +1456,113 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
           </>}
         </div>}
 
-        {section === "bank" && <div className="acc-panel">
-          <p className="copy">Reconciliation marks statement lines against posted voucher lines. Matching does not change cash, bank, P&amp;L, or the trial balance.</p>
-          <div className="card accounts-form-card">
-            <strong>Add bank statement</strong>
-            <div className="form spacer">
+        {section === "bank" && <div className="acc-panel acc-bank">
+          <p className="acc-bank-note">Matching marks statement lines against posted voucher lines. It never changes cash, bank, P&amp;L, or the trial balance.</p>
+          <AccSetupSection icon="B" title="Add bank statement" copy="Enter the statement totals first, then each line from the bank. Save before matching.">
+            <h3 className="acc-section-title">Statement details</h3>
+            <div className="acc-bank-meta">
               <Field label="Bank account"><select value={bankForm.coaId || bankAccounts[0]?.id || ""} onChange={event => setBankForm(current => ({ ...current, coaId: event.target.value }))}><option value="">Select bank</option>{bankAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</select></Field>
               <Field label="Statement date"><input type="date" value={bankForm.statementDate} onChange={event => setBankForm(current => ({ ...current, statementDate: event.target.value }))} /></Field>
-              <Field label="Statement opening"><input type="number" step="0.01" value={bankForm.openingBalance} onChange={event => setBankForm(current => ({ ...current, openingBalance: event.target.value }))} /></Field>
-              <Field label="Statement closing"><input type="number" step="0.01" value={bankForm.closingBalance} onChange={event => setBankForm(current => ({ ...current, closingBalance: event.target.value }))} /></Field>
+              <Field label="Opening balance"><input className="acc-num-input" type="number" step="0.01" placeholder="0.00" value={bankForm.openingBalance} onChange={event => setBankForm(current => ({ ...current, openingBalance: event.target.value }))} /></Field>
+              <Field label="Closing balance"><input className="acc-num-input" type="number" step="0.01" placeholder="0.00" value={bankForm.closingBalance} onChange={event => setBankForm(current => ({ ...current, closingBalance: event.target.value }))} /></Field>
             </div>
-            <div className="table spacer"><table><thead><tr><th>Date</th><th>Description</th><th>Amount</th><th>In / Out</th><th></th></tr></thead><tbody>
+            <h3 className="acc-section-title">Statement lines</h3>
+            <div className="table acc-table-wrap acc-bank-line-table"><table><thead><tr><th>Date</th><th>Description</th><th className="acc-num">Amount</th><th>In / Out</th><th></th></tr></thead><tbody>
               {bankForm.lines.map((line, index) => <tr key={index}>
-                <td><input type="date" value={line.lineDate} onChange={event => setBankForm(current => ({ ...current, lines: current.lines.map((row, i) => i === index ? { ...row, lineDate: event.target.value } : row) }))} /></td>
-                <td><input value={line.description} onChange={event => setBankForm(current => ({ ...current, lines: current.lines.map((row, i) => i === index ? { ...row, description: event.target.value } : row) }))} /></td>
-                <td><input type="number" min="0" step="0.01" value={line.amount} onChange={event => setBankForm(current => ({ ...current, lines: current.lines.map((row, i) => i === index ? { ...row, amount: event.target.value } : row) }))} /></td>
-                <td><select value={line.direction} onChange={event => setBankForm(current => ({ ...current, lines: current.lines.map((row, i) => i === index ? { ...row, direction: event.target.value } : row) }))}><option value="in">In</option><option value="out">Out</option></select></td>
-                <td>{bankForm.lines.length > 1 && <button type="button" className="btn" onClick={() => setBankForm(current => ({ ...current, lines: current.lines.filter((_, i) => i !== index) }))}>Remove</button>}</td>
+                <td><input type="date" value={line.lineDate} onChange={event => patchBankLine(index, { lineDate: event.target.value })} /></td>
+                <td className="acc-bank-desc"><input value={line.description} placeholder="e.g. UPI from customer" onChange={event => patchBankLine(index, { description: event.target.value })} /></td>
+                <td><input className="acc-num-input" type="number" min="0" step="0.01" placeholder="0.00" value={line.amount} onChange={event => patchBankLine(index, { amount: event.target.value })} /></td>
+                <td><select value={line.direction} onChange={event => patchBankLine(index, { direction: event.target.value })}><option value="in">In</option><option value="out">Out</option></select></td>
+                <td>{bankForm.lines.length > 1 && <button type="button" className="btn danger" onClick={() => setBankForm(current => ({ ...current, lines: current.lines.filter((_, i) => i !== index) }))}>Remove</button>}</td>
               </tr>)}
             </tbody></table></div>
-            <div className="accounts-action-row">
-              <button type="button" className="btn" onClick={() => setBankForm(current => ({ ...current, lines: [...current.lines, emptyBankLine()] }))}>Add line</button>
+            <div className="acc-bank-line-cards">
+              {bankForm.lines.map((line, index) => (
+                <article key={index} className="card acc-bank-line-card">
+                  <div className="acc-bank-meta">
+                    <Field label="Date"><input type="date" value={line.lineDate} onChange={event => patchBankLine(index, { lineDate: event.target.value })} /></Field>
+                    <Field label="In / Out"><select value={line.direction} onChange={event => patchBankLine(index, { direction: event.target.value })}><option value="in">Money in</option><option value="out">Money out</option></select></Field>
+                    <Field className="span" label="Description"><input value={line.description} placeholder="e.g. UPI from customer" onChange={event => patchBankLine(index, { description: event.target.value })} /></Field>
+                    <Field label="Amount"><input className="acc-num-input" type="number" min="0" step="0.01" placeholder="0.00" value={line.amount} onChange={event => patchBankLine(index, { amount: event.target.value })} /></Field>
+                  </div>
+                  {bankForm.lines.length > 1 && <button type="button" className="btn danger" onClick={() => setBankForm(current => ({ ...current, lines: current.lines.filter((_, i) => i !== index) }))}>Remove line</button>}
+                </article>
+              ))}
+            </div>
+            <div className="accounts-action-row acc-bank-actions">
+              <button type="button" className="btn" onClick={() => setBankForm(current => ({ ...current, lines: [...current.lines, emptyBankLine()] }))}>+ Add line</button>
               <button type="button" className="btn primary" disabled={saving} onClick={submitBankStatement}>{saving ? "Saving…" : "Save statement"}</button>
             </div>
-          </div>
+          </AccSetupSection>
+          <h3 className="acc-section-title">Saved statements</h3>
           {statements.map(statement => {
             const voucherLines = bankVoucherLines(accounts, vouchers, statement.coaId).map(line => ({
               ...line,
               matched: matchedLineIds.has(line.id),
             }));
             const displayLines = defaultBankStatementLines(statement.lines, voucherLines);
-            return <article key={statement.id} className="card spacer">
-              <strong>{statement.accountName} · {statement.statementDate}</strong>
-              <p className="small">Opening {money(statement.openingBalance)} · Closing {money(statement.closingBalance)}</p>
-              <div className="table spacer"><table><thead><tr><th>Date</th><th>Description</th><th>Amount</th><th>Status</th><th>Books line</th><th></th></tr></thead><tbody>
+            const unmatched = displayLines.filter(line => line.matchStatus !== "matched").length;
+            return <article key={statement.id} className="card acc-bank-statement">
+              <header className="acc-bank-statement-head">
+                <div>
+                  <h3>{statement.accountName}</h3>
+                  <p className="small">{statement.statementDate}</p>
+                </div>
+                <div className="acc-bank-statement-stats">
+                  <span>Opening <strong>{money(statement.openingBalance)}</strong></span>
+                  <span>Closing <strong>{money(statement.closingBalance)}</strong></span>
+                  <span className={`acc-status-pill ${unmatched ? "inactive" : "active"}`}>{unmatched ? `${unmatched} unmatched` : "All matched"}</span>
+                </div>
+              </header>
+              <div className="table acc-table-wrap acc-bank-match-table"><table><thead><tr><th>Date</th><th>Description</th><th className="acc-num">Amount</th><th>Status</th><th>Match to books</th></tr></thead><tbody>
                 {displayLines.map(line => {
                   const options = bankVoucherLines(accounts, vouchers, statement.coaId).filter(item => !matchedLineIds.has(item.id) || item.id === line.matchedVoucherLineId);
                   const selected = matchChoice[line.id] || line.matchedVoucherLineId || "";
                   return <tr key={line.id}>
                     <td>{line.lineDate}</td>
-                    <td>{line.description}</td>
-                    <td>{money(line.amount)} {line.direction}</td>
-                    <td>{line.matchStatus}</td>
-                    <td>
-                      <select value={selected} onChange={event => setMatchChoice(current => ({ ...current, [line.id]: event.target.value }))} disabled={line.matchStatus === "matched"}>
-                        <option value="">Unmatched</option>
-                        {options.map(item => <option key={item.id} value={item.id}>{item.date} · {item.voucherNumber} · {money(item.amount)}</option>)}
-                      </select>
-                    </td>
-                    <td>
-                      {line.matchStatus === "matched"
-                        ? <button type="button" className="btn" disabled={saving} onClick={() => run(() => saveBankMatch(token, line.id, null, "Unmatched"), "Line unmatched. Books unchanged.")}>Unmatch</button>
-                        : <button type="button" className="btn" disabled={saving || !(matchChoice[line.id] || line.matchedVoucherLineId)} onClick={() => run(() => saveBankMatch(token, line.id, matchChoice[line.id] || line.matchedVoucherLineId, "Matched"), "Line matched. Books unchanged.")}>Match</button>}
+                    <td>{line.description || "—"}</td>
+                    <td className="acc-num">{money(line.amount)} <span className={`acc-voucher-chip ${line.direction === "out" ? "out" : "in"}`}>{line.direction === "out" ? "Out" : "In"}</span></td>
+                    <td><span className={`acc-status-pill ${bankMatchTone(line.matchStatus)}`}>{bankMatchLabel(line.matchStatus)}</span></td>
+                    <td className="acc-bank-match-select">
+                      <BankMatchControls
+                        line={line}
+                        selected={selected}
+                        options={options}
+                        saving={saving}
+                        onSelect={value => setMatchChoice(current => ({ ...current, [line.id]: value }))}
+                        onMatch={() => run(() => saveBankMatch(token, line.id, selected, "Matched"), "Line matched. Books unchanged.")}
+                        onUnmatch={() => run(() => saveBankMatch(token, line.id, null, "Unmatched"), "Line unmatched. Books unchanged.")}
+                      />
                     </td>
                   </tr>;
                 })}
               </tbody></table></div>
+              <div className="acc-bank-match-cards">
+                {displayLines.map(line => {
+                  const options = bankVoucherLines(accounts, vouchers, statement.coaId).filter(item => !matchedLineIds.has(item.id) || item.id === line.matchedVoucherLineId);
+                  const selected = matchChoice[line.id] || line.matchedVoucherLineId || "";
+                  return (
+                    <article key={line.id} className="card acc-bank-match-card">
+                      <div className="acc-bank-match-card-top">
+                        <strong>{line.description || "Statement line"}</strong>
+                        <span className={`acc-status-pill ${bankMatchTone(line.matchStatus)}`}>{bankMatchLabel(line.matchStatus)}</span>
+                      </div>
+                      <p className="small">{line.lineDate} · {money(line.amount)} · {line.direction === "out" ? "Out" : "In"}</p>
+                      <div className="acc-bank-match-card-actions">
+                        <BankMatchControls
+                          line={line}
+                          selected={selected}
+                          options={options}
+                          saving={saving}
+                          onSelect={value => setMatchChoice(current => ({ ...current, [line.id]: value }))}
+                          onMatch={() => run(() => saveBankMatch(token, line.id, selected, "Matched"), "Line matched. Books unchanged.")}
+                          onUnmatch={() => run(() => saveBankMatch(token, line.id, null, "Unmatched"), "Line unmatched. Books unchanged.")}
+                        />
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
             </article>;
           })}
           {!statements.length && <AccEmpty title="No bank statements yet" copy="Add opening, closing, and statement lines above. Matching never changes the books." />}
