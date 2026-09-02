@@ -97,6 +97,21 @@ function EmptyState({ children }) {
   return <div className="card accounts-empty">{children}</div>;
 }
 
+const emptyManualForm = () => ({
+  direction: "in", ledgerAccountId: "", date: todayIso(), category: MANUAL_IN_CATEGORIES[0],
+  description: "", amount: "", reference: "", notes: "",
+});
+const emptyExpenseForm = () => ({
+  ledgerAccountId: "", date: todayIso(), category: EXPENSE_CATEGORIES[0],
+  description: "", amount: "", notes: "", reference: "",
+});
+const emptyTransferForm = () => ({
+  fromLedgerId: "", toLedgerId: "", date: todayIso(), amount: "", description: "", notes: "",
+});
+const emptyClosingForm = (ledgerAccountId = "") => ({
+  ledgerAccountId, date: todayIso(), actualBalance: "", notes: "",
+});
+
 function Modal({ title, close, children, actions }) {
   return <div className="modal-bg"><div className="modal"><div className="row"><h2 className="title">{title}</h2><button type="button" className="btn" onClick={close}>Close</button></div>{children}{actions}</div></div>;
 }
@@ -147,20 +162,10 @@ export function CashbookWorkspace({ token, close, loans = [], embedded = false }
   const [showTransfer, setShowTransfer] = useState(false);
   const [showClosing, setShowClosing] = useState(false);
   const [setupForm, setSetupForm] = useState({ openingCash: "", openingUpi: "", openingBank: "" });
-  const [manualForm, setManualForm] = useState({
-    direction: "in", ledgerAccountId: "", date: todayIso(), category: MANUAL_IN_CATEGORIES[0],
-    description: "", amount: "", reference: "", notes: "",
-  });
-  const [expenseForm, setExpenseForm] = useState({
-    ledgerAccountId: "", date: todayIso(), category: EXPENSE_CATEGORIES[0],
-    description: "", amount: "", notes: "", reference: "",
-  });
-  const [transferForm, setTransferForm] = useState({
-    fromLedgerId: "", toLedgerId: "", date: todayIso(), amount: "", description: "", notes: "",
-  });
-  const [closingForm, setClosingForm] = useState({
-    ledgerAccountId: "", date: todayIso(), actualBalance: "", notes: "",
-  });
+  const [manualForm, setManualForm] = useState(emptyManualForm);
+  const [expenseForm, setExpenseForm] = useState(emptyExpenseForm);
+  const [transferForm, setTransferForm] = useState(emptyTransferForm);
+  const [closingForm, setClosingForm] = useState(emptyClosingForm);
   const [bankForm, setBankForm] = useState({ name: "", bankAccountLast4: "" });
 
   const refresh = useCallback(async () => {
@@ -242,6 +247,40 @@ export function CashbookWorkspace({ token, close, loans = [], embedded = false }
     }
   };
 
+  const openManual = () => {
+    setManualForm(emptyManualForm());
+    setShowManual(true);
+  };
+  const closeManual = () => {
+    setShowManual(false);
+    setManualForm(emptyManualForm());
+  };
+  const openExpense = () => {
+    setExpenseForm(emptyExpenseForm());
+    setShowExpense(true);
+  };
+  const closeExpense = () => {
+    setShowExpense(false);
+    setExpenseForm(emptyExpenseForm());
+  };
+  const openTransfer = () => {
+    setTransferForm(emptyTransferForm());
+    setShowTransfer(true);
+  };
+  const closeTransfer = () => {
+    setShowTransfer(false);
+    setTransferForm(emptyTransferForm());
+  };
+  const openClosing = () => {
+    const cashId = ledgers.find(l => l.accountType === "cash")?.id || "";
+    setClosingForm(emptyClosingForm(cashId));
+    setShowClosing(true);
+  };
+  const closeClosing = () => {
+    setShowClosing(false);
+    setClosingForm(emptyClosingForm());
+  };
+
   const saveManual = async () => {
     try {
       await recordManualEntry(token, {
@@ -249,6 +288,7 @@ export function CashbookWorkspace({ token, close, loans = [], embedded = false }
         amount: Number(manualForm.amount),
       });
       setShowManual(false);
+      setManualForm(emptyManualForm());
       refresh();
     } catch (err) {
       setError(err.message || "Could not save transaction.");
@@ -262,6 +302,7 @@ export function CashbookWorkspace({ token, close, loans = [], embedded = false }
         amount: Number(expenseForm.amount),
       });
       setShowExpense(false);
+      setExpenseForm(emptyExpenseForm());
       refresh();
     } catch (err) {
       setError(err.message || "Could not save expense.");
@@ -275,6 +316,7 @@ export function CashbookWorkspace({ token, close, loans = [], embedded = false }
         amount: Number(transferForm.amount),
       });
       setShowTransfer(false);
+      setTransferForm(emptyTransferForm());
       refresh();
     } catch (err) {
       setError(err.message || "Could not save transfer.");
@@ -288,6 +330,7 @@ export function CashbookWorkspace({ token, close, loans = [], embedded = false }
         actualBalance: Number(closingForm.actualBalance),
       });
       setShowClosing(false);
+      setClosingForm(emptyClosingForm());
       refresh();
     } catch (err) {
       setError(err.message || "Could not save day closing.");
@@ -331,8 +374,6 @@ export function CashbookWorkspace({ token, close, loans = [], embedded = false }
     URL.revokeObjectURL(url);
   };
 
-  const defaultCashId = ledgers.find(l => l.accountType === "cash")?.id || "";
-
   const periodProps = { period, setPeriod, customFrom, setCustomFrom, customTo, setCustomTo };
 
   return <div className="accounts-module shell">
@@ -374,7 +415,7 @@ export function CashbookWorkspace({ token, close, loans = [], embedded = false }
           </div>
         </div>
         <div className="accounts-action-row spacer">
-          <button type="button" className="btn primary" onClick={() => setShowManual(true)}>+ Add transaction</button>
+          <button type="button" className="btn primary" onClick={openManual}>+ Add transaction</button>
           <button type="button" className="btn" onClick={() => exportCsv(cashbookRows)}>Export CSV</button>
           <button type="button" className="btn" onClick={() => backfillCashbook(token).then(refresh)}>Sync from FinTrack</button>
         </div>
@@ -403,7 +444,7 @@ export function CashbookWorkspace({ token, close, loans = [], embedded = false }
         </div>
       </div>}
       {section === "expenses" && <div className="accounts-panel">
-        <PanelHead title="Expenses"><button type="button" className="btn primary" onClick={() => setShowExpense(true)}>+ Add expense</button></PanelHead>
+        <PanelHead title="Expenses"><button type="button" className="btn primary" onClick={openExpense}>+ Add expense</button></PanelHead>
         <div className="card accounts-filter-card spacer"><PeriodPills {...periodProps} /></div>
         <div className="accounts-entry-list">
           {expenseRows.map(entry => <article key={entry.id} className="card accounts-entry-row accounts-expense-row">
@@ -434,13 +475,13 @@ export function CashbookWorkspace({ token, close, loans = [], embedded = false }
         </div>
       </div>}
       {section === "transfers" && <div className="accounts-panel">
-        <PanelHead title="Transfers"><button type="button" className="btn primary" onClick={() => setShowTransfer(true)}>Transfer money</button></PanelHead>
+        <PanelHead title="Transfers"><button type="button" className="btn primary" onClick={openTransfer}>Transfer money</button></PanelHead>
         <div className="card accounts-info-card">
           <p className="copy">Move money between your own accounts. Transfers are not income or expense.</p>
         </div>
       </div>}
       {section === "closing" && <div className="accounts-panel">
-        <PanelHead title="Day closing"><button type="button" className="btn primary" onClick={() => { setClosingForm(current => ({ ...current, ledgerAccountId: defaultCashId })); setShowClosing(true); }}>Record closing</button></PanelHead>
+        <PanelHead title="Day closing"><button type="button" className="btn primary" onClick={openClosing}>Record closing</button></PanelHead>
         <div className="accounts-entry-list">
           {closings.map(row => {
             const reconciled = Number(row.difference) === 0;
@@ -483,7 +524,7 @@ export function CashbookWorkspace({ token, close, loans = [], embedded = false }
         <Field label="Opening bank"><input type="number" value={setupForm.openingBank} onChange={event => setSetupForm(current => ({ ...current, openingBank: event.target.value }))} /></Field>
       </div>
     </Modal>}
-    {showManual && <Modal title="Add transaction" close={() => setShowManual(false)} actions={<div className="tabs spacer"><button type="button" className="btn primary" onClick={saveManual}>Save</button></div>}>
+    {showManual && <Modal title="Add transaction" close={closeManual} actions={<div className="tabs spacer"><button type="button" className="btn primary" onClick={saveManual}>Save</button></div>}>
       <div className="form">
         <Field label="Direction"><select value={manualForm.direction} onChange={event => setManualForm(current => ({ ...current, direction: event.target.value }))}><option value="in">Money in</option><option value="out">Money out</option></select></Field>
         <Field label="Account"><select value={manualForm.ledgerAccountId} onChange={event => setManualForm(current => ({ ...current, ledgerAccountId: event.target.value }))}><option value="">Select</option>{ledgers.map(ledger => <option key={ledger.id} value={ledger.id}>{ledger.name}</option>)}</select></Field>
@@ -493,7 +534,7 @@ export function CashbookWorkspace({ token, close, loans = [], embedded = false }
         <Field label="Amount"><input type="number" value={manualForm.amount} onChange={event => setManualForm(current => ({ ...current, amount: event.target.value }))} /></Field>
       </div>
     </Modal>}
-    {showExpense && <Modal title="Add expense" close={() => setShowExpense(false)} actions={<div className="tabs spacer"><button type="button" className="btn primary" onClick={saveExpense}>Save expense</button></div>}>
+    {showExpense && <Modal title="Add expense" close={closeExpense} actions={<div className="tabs spacer"><button type="button" className="btn primary" onClick={saveExpense}>Save expense</button></div>}>
       <div className="form">
         <Field label="Account"><select value={expenseForm.ledgerAccountId} onChange={event => setExpenseForm(current => ({ ...current, ledgerAccountId: event.target.value }))}><option value="">Select</option>{ledgers.map(ledger => <option key={ledger.id} value={ledger.id}>{ledger.name}</option>)}</select></Field>
         <Field label="Date"><input type="date" value={expenseForm.date} onChange={event => setExpenseForm(current => ({ ...current, date: event.target.value }))} /></Field>
@@ -502,7 +543,7 @@ export function CashbookWorkspace({ token, close, loans = [], embedded = false }
         <Field label="Amount"><input type="number" value={expenseForm.amount} onChange={event => setExpenseForm(current => ({ ...current, amount: event.target.value }))} /></Field>
       </div>
     </Modal>}
-    {showTransfer && <Modal title="Transfer money" close={() => setShowTransfer(false)} actions={<div className="tabs spacer"><button type="button" className="btn primary" onClick={saveTransfer}>Transfer</button></div>}>
+    {showTransfer && <Modal title="Transfer money" close={closeTransfer} actions={<div className="tabs spacer"><button type="button" className="btn primary" onClick={saveTransfer}>Transfer</button></div>}>
       <div className="form">
         <Field label="From"><select value={transferForm.fromLedgerId} onChange={event => setTransferForm(current => ({ ...current, fromLedgerId: event.target.value }))}><option value="">Select</option>{ledgers.map(ledger => <option key={ledger.id} value={ledger.id}>{ledger.name}</option>)}</select></Field>
         <Field label="To"><select value={transferForm.toLedgerId} onChange={event => setTransferForm(current => ({ ...current, toLedgerId: event.target.value }))}><option value="">Select</option>{ledgers.map(ledger => <option key={ledger.id} value={ledger.id}>{ledger.name}</option>)}</select></Field>
@@ -510,7 +551,7 @@ export function CashbookWorkspace({ token, close, loans = [], embedded = false }
         <Field label="Amount"><input type="number" value={transferForm.amount} onChange={event => setTransferForm(current => ({ ...current, amount: event.target.value }))} /></Field>
       </div>
     </Modal>}
-    {showClosing && <Modal title="Day closing" close={() => setShowClosing(false)} actions={<div className="tabs spacer"><button type="button" className="btn primary" onClick={saveClosing}>Save closing</button></div>}>
+    {showClosing && <Modal title="Day closing" close={closeClosing} actions={<div className="tabs spacer"><button type="button" className="btn primary" onClick={saveClosing}>Save closing</button></div>}>
       <div className="form">
         <Field label="Account"><select value={closingForm.ledgerAccountId} onChange={event => setClosingForm(current => ({ ...current, ledgerAccountId: event.target.value }))}><option value="">Select</option>{ledgers.map(ledger => <option key={ledger.id} value={ledger.id}>{ledger.name}</option>)}</select></Field>
         <Field label="Date"><input type="date" value={closingForm.date} onChange={event => setClosingForm(current => ({ ...current, date: event.target.value }))} /></Field>

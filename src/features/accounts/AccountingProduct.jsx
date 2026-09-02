@@ -71,6 +71,21 @@ const Field = ({ label, children }) => <label className="field"><span>{label}</s
 const emptyLine = () => ({ coaId: "", debit: "", credit: "", description: "" });
 const emptyBankLine = () => ({ lineDate: todayIso(), description: "", amount: "", direction: "in" });
 const emptyPartyForm = () => ({ partyType: "customer", name: "", phone: "", email: "", address: "" });
+const emptyVoucherForm = () => ({ date: todayIso(), narration: "", partyId: "", dueDate: addDaysIso(todayIso(), 7) });
+const emptySimpleForm = () => ({
+  date: todayIso(),
+  amount: "",
+  partyId: "",
+  moneyMode: "cash",
+  settlement: "credit",
+  expenseCode: "5000",
+  fromType: "cash",
+  toType: "bank",
+  fromAccountId: "",
+  toAccountId: "",
+  dueDate: addDaysIso(todayIso(), 7),
+  narration: "",
+});
 const emptyCoaForm = () => ({
   id: null,
   code: "",
@@ -269,7 +284,7 @@ export function AccountsModule({ token, close, loans = [] }) {
   const [showParty, setShowParty] = useState(false);
   const [showCoa, setShowCoa] = useState(false);
   const [voucherType, setVoucherType] = useState("receipt");
-  const [voucherForm, setVoucherForm] = useState({ date: todayIso(), narration: "", partyId: "", dueDate: addDaysIso(todayIso(), 7) });
+  const [voucherForm, setVoucherForm] = useState(emptyVoucherForm);
   const [lines, setLines] = useState([emptyLine(), emptyLine()]);
   const [partyForm, setPartyForm] = useState(emptyPartyForm);
   const [coaForm, setCoaForm] = useState(emptyCoaForm);
@@ -285,20 +300,7 @@ export function AccountsModule({ token, close, loans = [] }) {
   const [matchChoice, setMatchChoice] = useState({});
   const [showSimple, setShowSimple] = useState(false);
   const [simpleKind, setSimpleKind] = useState("sale");
-  const [simpleForm, setSimpleForm] = useState({
-    date: todayIso(),
-    amount: "",
-    partyId: "",
-    moneyMode: "cash",
-    settlement: "credit",
-    expenseCode: "5000",
-    fromType: "cash",
-    toType: "bank",
-    fromAccountId: "",
-    toAccountId: "",
-    dueDate: addDaysIso(todayIso(), 7),
-    narration: "",
-  });
+  const [simpleForm, setSimpleForm] = useState(emptySimpleForm);
   const [reasonDialog, setReasonDialog] = useState(null);
   const [reasonText, setReasonText] = useState("");
   const [partyFocusId, setPartyFocusId] = useState("");
@@ -444,26 +446,38 @@ export function AccountsModule({ token, close, loans = [] }) {
     assertBalancedVoucher(payload.lines);
     await postVoucher(token, payload);
     setShowVoucher(false);
+    setVoucherForm(emptyVoucherForm());
     setLines([emptyLine(), emptyLine()]);
   }, "Voucher posted.");
+
+  const openVoucher = () => {
+    setVoucherForm(emptyVoucherForm());
+    setLines([emptyLine(), emptyLine()]);
+    setShowVoucher(true);
+  };
+
+  const closeVoucher = () => {
+    if (saving) return;
+    setShowVoucher(false);
+    setVoucherForm(emptyVoucherForm());
+    setLines([emptyLine(), emptyLine()]);
+  };
 
   const openSimple = kind => {
     const money = moneyAccounts(visibleAccounts);
     setSimpleKind(kind);
-    setSimpleForm(current => ({
-      ...current,
-      date: todayIso(),
-      amount: "",
-      narration: "",
-      settlement: kind === "sale" || kind === "purchase" ? "credit" : current.settlement,
-      moneyMode: "cash",
-      fromType: "cash",
-      toType: "bank",
+    setSimpleForm({
+      ...emptySimpleForm(),
       fromAccountId: money.find(account => account.accountType === "cash")?.id || money[0]?.id || "",
       toAccountId: money.find(account => account.accountType === "bank")?.id || money.find(account => account.id !== money[0]?.id)?.id || "",
-      dueDate: addDaysIso(todayIso(), 7),
-    }));
+    });
     setShowSimple(true);
+  };
+
+  const closeSimple = () => {
+    if (saving) return;
+    setShowSimple(false);
+    setSimpleForm(emptySimpleForm());
   };
 
   const openParty = () => {
@@ -496,6 +510,7 @@ export function AccountsModule({ token, close, loans = [] }) {
     });
     await postVoucher(token, draft);
     setShowSimple(false);
+    setSimpleForm(emptySimpleForm());
   }, `${SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry"} saved.`);
 
   const openCoa = account => {
@@ -515,6 +530,12 @@ export function AccountsModule({ token, close, loans = [] }) {
       setCoaForm(emptyCoaForm());
     }
     setShowCoa(true);
+  };
+
+  const closeCoa = () => {
+    if (saving) return;
+    setShowCoa(false);
+    setCoaForm(emptyCoaForm());
   };
 
   const saveCoa = () => run(async () => {
@@ -661,7 +682,7 @@ export function AccountsModule({ token, close, loans = [] }) {
             <option value="">+ New entry</option>
             {SIMPLE_ENTRY_KINDS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
           </select>
-          <button type="button" className="btn primary" onClick={() => setShowVoucher(true)}>+ Voucher</button>
+          <button type="button" className="btn primary" onClick={openVoucher}>+ Voucher</button>
           <button type="button" className="btn" onClick={openParty}>+ Party</button>
         </div>
       </header>
@@ -743,7 +764,7 @@ export function AccountsModule({ token, close, loans = [] }) {
           </div>
           <div className="accounts-action-row spacer">
             <input className="accounts-search" placeholder="Search voucher number or narration" value={search} onChange={event => setSearch(event.target.value)} />
-            <button type="button" className="btn primary" onClick={() => setShowVoucher(true)}>+ Advanced voucher</button>
+            <button type="button" className="btn primary" onClick={openVoucher}>+ Advanced voucher</button>
           </div>
           <div className="accounts-entry-list spacer">
             {shownVouchers.map(voucher => <article key={voucher.id} className="card accounts-entry-row">
@@ -1018,11 +1039,11 @@ export function AccountsModule({ token, close, loans = [] }) {
         </div>}
       </>}
 
-      {showVoucher && <Modal title="Post voucher" close={() => !saving && setShowVoucher(false)}>
+      {showVoucher && <Modal title="Post voucher" close={closeVoucher}>
         <p className="copy">Total debits must equal total credits. Unbalanced vouchers cannot be posted.</p>
         <VoucherForm accounts={visibleAccounts} parties={parties} voucherType={voucherType} setVoucherType={setVoucherType} form={voucherForm} setForm={setVoucherForm} lines={lines} setLines={setLines} onSubmit={submitVoucher} saving={saving} maxDate={todayIso()} />
       </Modal>}
-      {showSimple && <Modal title={SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry"} close={() => !saving && setShowSimple(false)}>
+      {showSimple && <Modal title={SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry"} close={closeSimple}>
         <SimpleEntryForm kind={simpleKind} accounts={visibleAccounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} maxDate={todayIso()} />
       </Modal>}
       {showParty && <Modal title="Add party" close={closeParty} actions={<div className="tabs spacer"><button type="button" className="btn primary" disabled={saving} onClick={() => run(async () => { await createParty(token, partyForm); setShowParty(false); setPartyForm(emptyPartyForm()); }, "Party saved.")}>{saving ? "Saving…" : "Save party"}</button></div>}>
@@ -1033,7 +1054,7 @@ export function AccountsModule({ token, close, loans = [] }) {
           <Field label="Email"><input value={partyForm.email} onChange={event => setPartyForm(current => ({ ...current, email: event.target.value }))} /></Field>
         </div>
       </Modal>}
-      {showCoa && <Modal title={coaForm.id ? "Edit ledger account" : "Add ledger account"} close={() => !saving && setShowCoa(false)} actions={<div className="tabs spacer"><button type="button" className="btn primary" disabled={saving} onClick={saveCoa}>{saving ? "Saving…" : "Save account"}</button></div>}>
+      {showCoa && <Modal title={coaForm.id ? "Edit ledger account" : "Add ledger account"} close={closeCoa} actions={<div className="tabs spacer"><button type="button" className="btn primary" disabled={saving} onClick={saveCoa}>{saving ? "Saving…" : "Save account"}</button></div>}>
         <CoaFormFields form={coaForm} setForm={setCoaForm} accounts={visibleAccounts} />
       </Modal>}
       {reasonDialog && <ReasonModal
