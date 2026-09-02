@@ -197,6 +197,13 @@ export const setChartAccountParent = (token, id, parentId) =>
 export const deleteChartAccount = (token, id) =>
   wrap(supabase.rpc("acc_delete_coa", { input_id: id }, token));
 
+const wrapPartyMutation = promise => promise.catch(err => {
+  if (isMissing(err)) {
+    throw new Error("Run 058_accounts_party_update_delete.sql in the Supabase SQL editor to enable party edit and delete.");
+  }
+  throw err;
+});
+
 export const createParty = (token, payload) =>
   wrap(supabase.rpc("acc_create_party", {
     input_party_type: payload.partyType,
@@ -206,6 +213,27 @@ export const createParty = (token, payload) =>
     input_address: payload.address || null,
     input_gstin: payload.gstin || null,
     input_notes: payload.notes || null,
+  }, token));
+
+export const updateParty = (token, payload) =>
+  wrapPartyMutation(supabase.rpc("acc_update_party", {
+    input_id: payload.id,
+    input_party_type: payload.partyType,
+    input_name: payload.name,
+    input_phone: payload.phone || null,
+    input_email: payload.email || null,
+    input_address: payload.address || null,
+    input_gstin: payload.gstin || null,
+    input_notes: payload.notes || null,
+  }, token));
+
+export const deleteParty = (token, id) =>
+  wrapPartyMutation(supabase.rpc("acc_delete_party", { input_id: id }, token));
+
+export const setPartyActive = (token, id, isActive) =>
+  wrapPartyMutation(supabase.rpc("acc_set_party_active", {
+    input_id: id,
+    input_active: isActive !== false,
   }, token));
 
 export const postVoucher = async (token, payload) => {

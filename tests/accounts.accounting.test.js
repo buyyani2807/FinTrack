@@ -8,6 +8,8 @@ import {
   addDaysIso,
   assertBalancedVoucher,
   assertCanDeleteLedger,
+  assertCanChangePartyType,
+  assertCanDeleteParty,
   buildIntegrationVouchers,
   buildVoucher,
   cancelVoucher,
@@ -15,10 +17,12 @@ import {
   createSubmitLock,
   dateIsLocked,
   disbursementLines,
+  filterParties,
   formatVoucherNumber,
   indianFinancialYear,
   ledgerBalances,
   ledgerHasPostedLines,
+  partyHasAccountingUse,
   paymentLines,
   previousIndianFinancialYear,
   purchaseLines,
@@ -29,6 +33,7 @@ import {
   saleLines,
   simpleEntryDraft,
   standaloneVisibleAccounts,
+  validatePartyForm,
   voucherTotals,
 } from "../src/features/accounts/accountingModel.js";
 import {
@@ -303,6 +308,36 @@ test("guided debit note reduces purchase and payable for a supplier", () => {
   assert.equal(draft.lines.find(line => line.code === SYSTEM_CODES.payable).debit, 2000);
   assert.equal(draft.lines.find(line => line.code === SYSTEM_CODES.purchase).credit, 2000);
   assert.throws(() => simpleEntryDraft({ kind: "debit_note", accounts, date: "2026-04-10", amount: 2000 }), /supplier/);
+});
+
+test("unused parties can be deleted and parties with voucher history cannot", () => {
+  const unused = { id: "party-new", name: "Fresh Traders", partyType: "customer" };
+  const used = { id: "party-used", name: "Ravi Kumar", partyType: "customer" };
+  const voucher = posted("sales", "2026-04-01", [
+    { coaId: "1200", code: "1200", debit: 1000, credit: 0, partyId: "party-used" },
+    { coaId: "4000", code: "4000", debit: 0, credit: 1000 },
+  ]);
+  voucher.partyId = "party-used";
+  assert.equal(partyHasAccountingUse(unused.id, [voucher]), false);
+  assertCanDeleteParty(unused, [voucher]);
+  assert.throws(() => assertCanDeleteParty(used, [voucher]), /accounting transactions already exist/);
+  assertCanChangePartyType(unused, "supplier", [voucher]);
+  assert.throws(() => assertCanChangePartyType(used, "supplier", [voucher]), /Party type cannot be changed/);
+});
+
+test("party search and type filter work together without resetting either", () => {
+  const rows = [
+    { id: "1", name: "Ravi Kumar", partyType: "customer", phone: "9991112222", email: "" },
+    { id: "2", name: "Ravi Steels", partyType: "supplier", phone: "", email: "ravi@steels.test" },
+    { id: "3", name: "Meena", partyType: "customer", phone: "", email: "" },
+  ];
+  assert.equal(filterParties(rows, { type: "all", search: "" }).length, 3);
+  assert.deepEqual(filterParties(rows, { type: "customer", search: "Ravi" }).map(row => row.id), ["1"]);
+  assert.deepEqual(filterParties(rows, { type: "supplier", search: "Ravi" }).map(row => row.id), ["2"]);
+  assert.equal(filterParties(rows, { type: "customer", search: "zzz" }).length, 0);
+  assert.equal(validatePartyForm({ partyType: "customer", name: "" }), "Enter the party name.");
+  assert.equal(validatePartyForm({ partyType: "customer", name: "Ravi", email: "bad" }), "Enter a valid email address, or leave it blank.");
+  assert.equal(validatePartyForm({ partyType: "customer", name: "Ravi", email: "ravi@test.com" }), "");
 });
 
 test("unused ledgers can be deleted and used or system ledgers cannot", () => {

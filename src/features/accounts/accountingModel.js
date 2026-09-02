@@ -203,6 +203,50 @@ export const assertCanDeleteLedger = (account, vouchers = []) => {
   if (ledgerHasPostedLines(account, vouchers)) throw new Error("Cannot delete an account that has transactions");
 };
 
+export function partyHasAccountingUse(partyId, vouchers = []) {
+  if (!partyId) return false;
+  return (vouchers || []).some(voucher =>
+    voucher.partyId === partyId
+    || (voucher.lines || []).some(line => line.partyId === partyId)
+  );
+}
+
+export function assertCanDeleteParty(party, vouchers = []) {
+  if (!party?.id) throw new Error("Choose a party");
+  if (partyHasAccountingUse(party.id, vouchers)) {
+    throw new Error("This party cannot be deleted because accounting transactions already exist for this party.");
+  }
+}
+
+export function assertCanChangePartyType(party, nextType, vouchers = []) {
+  if (!party?.id || party.partyType === nextType) return;
+  if (partyHasAccountingUse(party.id, vouchers)) {
+    throw new Error("Party type cannot be changed because accounting transactions already exist for this party.");
+  }
+}
+
+export function validatePartyForm(form) {
+  if (!String(form?.name || "").trim()) return "Enter the party name.";
+  if (!PARTY_TYPES.some(type => type.id === form?.partyType)) return "Choose a party type.";
+  const email = String(form?.email || "").trim();
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Enter a valid email address, or leave it blank.";
+  const phone = String(form?.phone || "").trim();
+  if (phone && !/^[\d+\-\s()]{6,20}$/.test(phone)) return "Enter a valid phone number, or leave it blank.";
+  return "";
+}
+
+export function filterParties(parties = [], { type = "all", search = "" } = {}) {
+  const query = String(search || "").trim().toLowerCase();
+  return (parties || []).filter(party => {
+    if (type && type !== "all" && party.partyType !== type) return false;
+    if (!query) return true;
+    return [party.name, party.phone, party.email, party.gstin, party.address]
+      .join(" ")
+      .toLowerCase()
+      .includes(query);
+  });
+}
+
 export function createSubmitLock() {
   let locked = false;
   return {

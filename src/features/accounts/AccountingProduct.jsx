@@ -7,6 +7,7 @@ import {
   createChartAccount,
   createParty,
   deleteChartAccount,
+  deleteParty,
   initializeAccounting,
   loadAccountingSettings,
   loadAuditLog,
@@ -22,8 +23,10 @@ import {
   reverseVoucher,
   saveAccountingSettings,
   setAccountingIntegration,
+  setPartyActive,
   syncAccountingOperations,
   updateChartAccount,
+  updateParty,
 } from "./accountingRepository.js";
 import {
   ACCOUNT_TYPES_BY_GROUP,
@@ -36,17 +39,22 @@ import {
   accountNormalSide,
   addDaysIso,
   assertBalancedVoucher,
+  assertCanChangePartyType,
   assertCanDeleteLedger,
+  assertCanDeleteParty,
   assertVoucherDateNotFuture,
   createSubmitLock,
   defaultAccountTypeForGroup,
+  filterParties,
   indianFinancialYear,
   ledgerHasPostedLines,
   moneyAccounts,
+  partyHasAccountingUse,
   previousIndianFinancialYear,
   roundMoney,
   simpleEntryDraft,
   standaloneVisibleAccounts,
+  validatePartyForm,
   voucherTotals,
 } from "./accountingModel.js";
 import { formatIstDateTime, todayIso } from "./cashbookModel.js";
@@ -87,6 +95,57 @@ const AccEmpty = ({ title, copy, actionLabel, onAction }) => (
     {actionLabel && onAction && <button type="button" className="btn primary" onClick={onAction}>{actionLabel}</button>}
   </div>
 );
+
+const PARTY_TYPE_FILTERS = [
+  { id: "all", label: "All", emptyTitle: "No parties found", emptyCopy: "Try a different search or clear the filter." },
+  { id: "customer", label: "Customers", emptyTitle: "No customers found", emptyCopy: "No customer parties match this search." },
+  { id: "supplier", label: "Suppliers", emptyTitle: "No suppliers found", emptyCopy: "No supplier parties match this search." },
+  { id: "employee", label: "Employees", emptyTitle: "No employees found", emptyCopy: "No employee parties match this search." },
+  { id: "agent", label: "Agents", emptyTitle: "No agents found", emptyCopy: "No agent parties match this search." },
+  { id: "other", label: "Other", emptyTitle: "No other parties found", emptyCopy: "No other parties match this search." },
+];
+
+const partyTypeLabel = id => PARTY_TYPES.find(type => type.id === id)?.label || id;
+
+const PartyTypeBadge = ({ type }) => (
+  <span className={`acc-type-badge ${type || "other"}`}>{partyTypeLabel(type)}</span>
+);
+
+function AccSetupSection({ icon, title, copy, actions, children }) {
+  return (
+    <section className="card acc-setup-card">
+      <header className="acc-setup-head">
+        <span className="acc-setup-icon" aria-hidden="true">{icon}</span>
+        <div className="acc-setup-copy">
+          <h2>{title}</h2>
+          {copy ? <p className="copy">{copy}</p> : null}
+        </div>
+        {actions ? <div className="acc-setup-actions">{actions}</div> : null}
+      </header>
+      {children}
+    </section>
+  );
+}
+
+function PartyFormFields({ form, setForm, typeLocked = false }) {
+  const set = patch => setForm(current => ({ ...current, ...patch }));
+  return (
+    <div className="form acc-party-form">
+      <Field required label="Type">
+        <select value={form.partyType} disabled={typeLocked} onChange={event => set({ partyType: event.target.value })}>
+          {PARTY_TYPES.map(type => <option key={type.id} value={type.id}>{type.label}</option>)}
+        </select>
+      </Field>
+      <Field required label="Name"><input value={form.name} placeholder="e.g. Sai Traders" onChange={event => set({ name: event.target.value })} /></Field>
+      <Field label="Phone"><input value={form.phone} placeholder="10-digit mobile" onChange={event => set({ phone: event.target.value })} /></Field>
+      <Field label="Email"><input value={form.email} placeholder="optional" onChange={event => set({ email: event.target.value })} /></Field>
+      <Field className="span" label="Address"><input value={form.address} placeholder="optional" onChange={event => set({ address: event.target.value })} /></Field>
+      <Field label="GSTIN"><input value={form.gstin} placeholder="optional" onChange={event => set({ gstin: event.target.value })} /></Field>
+      <Field label="Notes"><input value={form.notes} placeholder="optional" onChange={event => set({ notes: event.target.value })} /></Field>
+      {typeLocked ? <p className="small acc-party-lock">Party type is locked because this party already has accounting transactions.</p> : null}
+    </div>
+  );
+}
 const AccSkeleton = () => (
   <div className="acc-skeleton" aria-hidden="true">
     {Array.from({ length: 8 }, (_, index) => <div key={index} className="acc-skel" />)}
@@ -165,7 +224,7 @@ function AccPageHeader({ backLabel, onBack, title, copy, extras, workspace, onSe
 }
 const emptyLine = () => ({ coaId: "", debit: "", credit: "", description: "" });
 const emptyBankLine = () => ({ lineDate: todayIso(), description: "", amount: "", direction: "in" });
-const emptyPartyForm = () => ({ partyType: "customer", name: "", phone: "", email: "", address: "" });
+const emptyPartyForm = () => ({ id: null, partyType: "customer", name: "", phone: "", email: "", address: "", gstin: "", notes: "" });
 const emptyVoucherForm = () => ({ date: todayIso(), narration: "", partyId: "", dueDate: addDaysIso(todayIso(), 7) });
 const emptySimpleForm = () => ({
   date: todayIso(),
@@ -274,11 +333,12 @@ function ReasonModal({ title, label, value, onChange, onConfirm, onClose, saving
 function VoucherForm({ accounts, parties, voucherType, setVoucherType, form, setForm, lines, setLines, onSubmit, saving, maxDate }) {
   const totals = voucherTotals(lines.map(line => ({ ...line, debit: Number(line.debit || 0), credit: Number(line.credit || 0) })));
   const setLine = (index, patch) => setLines(current => current.map((line, i) => i === index ? { ...line, ...patch } : line));
+  const selectableParties = parties.filter(party => party.isActive !== false || party.id === form.partyId);
   return <>
     <div className="form">
       <Field label="Voucher type"><select value={voucherType} onChange={event => setVoucherType(event.target.value)}>{Object.values(VOUCHER_TYPES).map(type => <option key={type.id} value={type.id}>{type.label}</option>)}</select></Field>
       <Field label="Date"><input type="date" max={maxDate} value={form.date} onChange={event => setForm(current => ({ ...current, date: event.target.value }))} /></Field>
-      <Field label="Party (optional)"><select value={form.partyId} onChange={event => setForm(current => ({ ...current, partyId: event.target.value }))}><option value="">None</option>{parties.map(party => <option key={party.id} value={party.id}>{party.name}</option>)}</select></Field>
+      <Field label="Party (optional)"><select value={form.partyId} onChange={event => setForm(current => ({ ...current, partyId: event.target.value }))}><option value="">None</option>{selectableParties.map(party => <option key={party.id} value={party.id}>{party.name}{party.isActive === false ? " · inactive" : ""}</option>)}</select></Field>
       {(voucherType === "sales" || voucherType === "purchase") && <Field label="Due date (optional)"><input type="date" value={form.dueDate || ""} onChange={event => setForm(current => ({ ...current, dueDate: event.target.value }))} /></Field>}
       <Field className="span" label="Narration"><input value={form.narration} placeholder="e.g. Office rent for September" onChange={event => setForm(current => ({ ...current, narration: event.target.value }))} /></Field>
     </div>
@@ -299,8 +359,8 @@ function VoucherForm({ accounts, parties, voucherType, setVoucherType, form, set
 }
 
 function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, saving, maxDate }) {
-  const customers = parties.filter(party => party.partyType === "customer");
-  const suppliers = parties.filter(party => party.partyType === "supplier");
+  const customers = parties.filter(party => party.partyType === "customer" && (party.isActive !== false || party.id === form.partyId));
+  const suppliers = parties.filter(party => party.partyType === "supplier" && (party.isActive !== false || party.id === form.partyId));
   const expenseOptions = SIMPLE_EXPENSE_CODES.filter(([code]) => accounts.some(account => account.code === code) || code === "5990");
   const transferAccounts = moneyAccounts(accounts).filter(account => account.isActive !== false);
   const set = patch => setForm(current => ({ ...current, ...patch }));
@@ -404,6 +464,9 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
   const [partyTxnType, setPartyTxnType] = useState("");
   const [partyFrom, setPartyFrom] = useState(fy.from);
   const [partyTo, setPartyTo] = useState(fy.to);
+  const [partyTypeFilter, setPartyTypeFilter] = useState("all");
+  const [partySearch, setPartySearch] = useState("");
+  const [partyDeleteDialog, setPartyDeleteDialog] = useState(null);
   const [outstandingOnly, setOutstandingOnly] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -477,6 +540,25 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
   const salesRows = useMemo(() => books.filter(row => row.voucherType === "sales"), [books]);
   const purchaseRows = useMemo(() => books.filter(row => row.voucherType === "purchase"), [books]);
   const focusedParty = useMemo(() => parties.find(party => party.id === partyFocusId) || parties[0] || null, [parties, partyFocusId]);
+  const setupParties = useMemo(
+    () => filterParties(parties, { type: partyTypeFilter, search: partySearch }),
+    [parties, partyTypeFilter, partySearch],
+  );
+  const partyCountByType = useMemo(() => {
+    const counts = { all: parties.length };
+    for (const type of PARTY_TYPES) counts[type.id] = parties.filter(party => party.partyType === type.id).length;
+    return counts;
+  }, [parties]);
+  const outstandingByParty = useMemo(() => {
+    const map = new Map();
+    for (const row of ar) map.set(row.id, { kind: "receivable", balance: row.balance });
+    for (const row of ap) {
+      if (!map.has(row.id) || Math.abs(row.balance) > Math.abs(map.get(row.id).balance)) {
+        map.set(row.id, { kind: "payable", balance: row.balance });
+      }
+    }
+    return map;
+  }, [ar, ap]);
   const partyBook = useMemo(() => partyLedger(accounts, vouchers, focusedParty, {
     from: partyFrom,
     to: partyTo,
@@ -600,8 +682,21 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
     setSimpleForm(emptySimpleForm());
   };
 
-  const openParty = () => {
-    setPartyForm(emptyPartyForm());
+  const openParty = (party = null) => {
+    if (party?.id) {
+      setPartyForm({
+        id: party.id,
+        partyType: party.partyType || "customer",
+        name: party.name || "",
+        phone: party.phone || "",
+        email: party.email || "",
+        address: party.address || "",
+        gstin: party.gstin || "",
+        notes: party.notes || "",
+      });
+    } else {
+      setPartyForm(emptyPartyForm());
+    }
     setShowParty(true);
   };
 
@@ -610,6 +705,70 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
     setShowParty(false);
     setPartyForm(emptyPartyForm());
   };
+
+  const saveParty = () => {
+    const message = validatePartyForm(partyForm);
+    if (message) { setError(message); return; }
+    const existing = partyForm.id ? parties.find(party => party.id === partyForm.id) : null;
+    try {
+      if (existing) assertCanChangePartyType(existing, partyForm.partyType, vouchers);
+    } catch (err) {
+      setError(err.message);
+      return;
+    }
+    const createdLabel = partyForm.partyType === "customer" ? "Customer created successfully"
+      : partyForm.partyType === "supplier" ? "Supplier created successfully"
+      : "Party saved successfully";
+    run(async () => {
+      if (partyForm.id) await updateParty(token, partyForm);
+      else await createParty(token, partyForm);
+      setShowParty(false);
+      setPartyForm(emptyPartyForm());
+    }, partyForm.id ? "Party updated successfully" : createdLabel);
+  };
+
+  const requestDeleteParty = party => {
+    if (!party?.id) return;
+    if (partyHasAccountingUse(party.id, vouchers)) setPartyDeleteDialog({ mode: "blocked", party });
+    else setPartyDeleteDialog({ mode: "confirm", party });
+  };
+
+  const confirmDeleteParty = () => {
+    const party = partyDeleteDialog?.party;
+    if (!party) return;
+    try {
+      assertCanDeleteParty(party, vouchers);
+    } catch (err) {
+      setPartyDeleteDialog({ mode: "blocked", party });
+      setError(err.message);
+      return;
+    }
+    run(async () => {
+      await deleteParty(token, party.id);
+      setPartyDeleteDialog(null);
+    }, "Party deleted.");
+  };
+
+  const setPartyActiveState = (party, isActive) => {
+    if (!party?.id) return;
+    run(async () => {
+      await setPartyActive(token, party.id, isActive);
+      setPartyDeleteDialog(null);
+    }, isActive ? "Party reactivated. Historical transactions are unchanged." : "Party deactivated. Historical transactions are unchanged.");
+  };
+
+  const clearPartyFilters = () => {
+    setPartyTypeFilter("all");
+    setPartySearch("");
+  };
+
+  const partyActions = party => (
+    <div className="acc-party-actions">
+      <button type="button" className="btn" disabled={saving} onClick={() => openParty(party)}>Edit</button>
+      <button type="button" className="btn danger" disabled={saving} onClick={() => requestDeleteParty(party)}>Delete</button>
+      {party.isActive === false && <button type="button" className="btn" disabled={saving} onClick={() => setPartyActiveState(party, true)}>Reactivate</button>}
+    </div>
+  );
 
   const submitSimple = () => run(async () => {
     const draft = simpleEntryDraft({
@@ -820,7 +979,7 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
       />
       {error && <div className="notice acc-toast error" role="alert">{error}</div>}
       {notice && <div className="notice accounts-notice-ok acc-toast ok" role="status">{notice}</div>}
-      {migrationRequired && <div className="notice">Run <strong>052_fintrack_accounts_double_entry.sql</strong>, then <strong>053</strong>, <strong>054</strong>, <strong>055_accounts_p0_reversal_integrity.sql</strong>, <strong>056_accounts_p2_due_date_parent.sql</strong>, and <strong>057_accounts_post_date_and_line_checks.sql</strong> in the Supabase SQL editor, then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
+      {migrationRequired && <div className="notice">Run <strong>052_fintrack_accounts_double_entry.sql</strong>, then <strong>053</strong>, <strong>054</strong>, <strong>055_accounts_p0_reversal_integrity.sql</strong>, <strong>056_accounts_p2_due_date_parent.sql</strong>, <strong>057_accounts_post_date_and_line_checks.sql</strong>, and <strong>058_accounts_party_update_delete.sql</strong> in the Supabase SQL editor, then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
       <nav className="acc-mobile-cards" aria-label="Accounts">
         {MOBILE_TABS.map(item => (
           <button key={item.id} type="button" className={`acc-mobile-card ${mobileTab === item.id ? "active" : ""}`} onClick={() => openSection(item.id)}>{item.label}</button>
@@ -973,7 +1132,7 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
           <p className="copy">Accounting customers and suppliers are independent of Daily Finance customers and Chit Fund members.</p>
           <div className="card accounts-filter-card spacer">
             <label className="accounts-filter-field"><span className="small">Party</span>
-              <select value={focusedParty?.id || ""} onChange={event => setPartyFocusId(event.target.value)}><option value="">Select party</option>{parties.map(party => <option key={party.id} value={party.id}>{party.name} · {party.partyType}</option>)}</select>
+              <select value={focusedParty?.id || ""} onChange={event => setPartyFocusId(event.target.value)}><option value="">Select party</option>{parties.map(party => <option key={party.id} value={party.id}>{party.name} · {party.partyType}{party.isActive === false ? " · inactive" : ""}</option>)}</select>
             </label>
             <label className="accounts-filter-field"><span className="small">From</span>
               <input type="date" value={partyFrom} onChange={event => setPartyFrom(event.target.value)} />
@@ -1131,29 +1290,22 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
           {!statements.length && <AccEmpty title="No bank statements yet" copy="Add opening, closing, and statement lines above. Matching never changes the books." />}
         </div>}
 
-        {section === "setup" && <div className="acc-panel">
-          <div className="card accounts-form-card">
-            <strong>Company / financial year</strong>
-            <p className="copy">Indian financial year is 1 April to 31 March.</p>
+        {section === "setup" && <div className="acc-panel acc-setup">
+          <p className="copy acc-setup-lead">Company books, chart of accounts, parties, and controls for this business.</p>
+          <AccSetupSection icon="FY" title="Company / financial year" copy="Indian financial year is 1 April to 31 March.">
             <div className="form spacer">
               <Field label="Business name"><input value={setupForm.companyName} onChange={event => setSetupForm(current => ({ ...current, companyName: event.target.value }))} /></Field>
               <Field label="Books start date"><input type="date" value={setupForm.booksStartedOn} onChange={event => setSetupForm(current => ({ ...current, booksStartedOn: event.target.value }))} /></Field>
             </div>
             <button type="button" className="btn primary" disabled={saving} onClick={() => run(() => saveAccountingSettings(token, { ...setupForm, fyStartMonth: 4 }), "Company details saved.")}>{saving ? "Saving…" : "Save company"}</button>
-          </div>
-          <div className="card accounts-form-card spacer">
-            <strong>Accounting integration</strong>
-            <p className="copy">Off by default. When on, eligible Daily Finance, Monthly Finance, Chit Fund, and Cashbook transactions create linked accounting vouchers. The same payment is never entered twice. Cashbook stays the operational money view.</p>
-            <p className="small">Status: <strong>{settings?.integrationEnabled ? "ON" : "OFF"}</strong></p>
-            <div className="accounts-action-row">
-              <button type="button" className="btn" disabled={saving} onClick={() => run(() => setAccountingIntegration(token, !settings?.integrationEnabled), `Integration ${settings?.integrationEnabled ? "disabled" : "enabled"}.`)}>{settings?.integrationEnabled ? "Turn integration off" : "Turn integration on"}</button>
-              {settings?.integrationEnabled && <button type="button" className="btn" disabled={saving} onClick={() => run(() => syncAccountingOperations(token), "Linked vouchers synced from operations.")}>Sync linked vouchers</button>}
-            </div>
-          </div>
-          <div className="card accounts-form-card spacer">
-            <strong>Chart of accounts</strong>
-            <p className="copy">Opening debit and credit sides across the chart should balance. System accounts can be renamed and given openings, but not deleted.{settings?.integrationEnabled ? "" : " Daily Finance, Monthly Finance, and Chit Fund ledgers stay hidden while integration is off."}</p>
-            <div className="table spacer"><table><thead><tr><th>Code</th><th>Account</th><th>Group</th><th>Opening</th><th></th></tr></thead><tbody>
+          </AccSetupSection>
+          <AccSetupSection
+            icon="#"
+            title="Chart of accounts"
+            copy={`Opening debit and credit sides across the chart should balance. System accounts can be renamed and given openings, but not deleted.${settings?.integrationEnabled ? "" : " Daily Finance, Monthly Finance, and Chit Fund ledgers stay hidden while integration is off."}`}
+            actions={<button type="button" className="btn" onClick={() => openCoa(null)}>+ Account</button>}
+          >
+            <div className="table spacer acc-table-wrap"><table><thead><tr><th>Code</th><th>Account</th><th>Group</th><th>Opening</th><th></th></tr></thead><tbody>
               {visibleAccounts.map(account => {
                 const used = ledgerHasPostedLines(account, vouchers);
                 return <tr key={account.id}>
@@ -1168,34 +1320,119 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
                 </tr>;
               })}
             </tbody></table></div>
-            <button type="button" className="btn" onClick={() => openCoa(null)}>+ Account</button>
-          </div>
-          <div className="card accounts-form-card spacer">
-            <strong>Parties</strong>
-            <p className="copy">Customers, suppliers, employees, agents, and others used only by Accounts. They do not have to exist in Daily Finance, Monthly Finance, or Chit Fund.</p>
-            <div className="table spacer"><table><thead><tr><th>Name</th><th>Type</th><th>Phone</th></tr></thead><tbody>
-              {parties.map(party => <tr key={party.id}><td>{party.name}</td><td>{party.partyType}</td><td>{party.phone || "—"}</td></tr>)}
-              {!parties.length && <tr><td colSpan="3">No parties yet. Add a customer or supplier from Parties.</td></tr>}
-            </tbody></table></div>
-          </div>
-          <div className="card accounts-form-card spacer">
-            <strong>Period locking</strong>
+          </AccSetupSection>
+          <AccSetupSection
+            icon="P"
+            title="Parties"
+            copy="Customers, suppliers, employees, agents, and others used only by Accounts. They do not have to exist in Daily Finance, Monthly Finance, or Chit Fund."
+            actions={<button type="button" className="btn primary" onClick={() => openParty()}>+ Add Party</button>}
+          >
+            <div className="acc-party-toolbar">
+              <label className="accounts-filter-field acc-party-search">
+                <span className="small">Search parties</span>
+                <input value={partySearch} placeholder="Name, phone, or email" onChange={event => setPartySearch(event.target.value)} />
+              </label>
+              <label className="accounts-filter-field acc-party-type-select">
+                <span className="small">Party type</span>
+                <select value={partyTypeFilter} onChange={event => setPartyTypeFilter(event.target.value)}>
+                  {PARTY_TYPE_FILTERS.map(item => <option key={item.id} value={item.id}>{item.label} ({partyCountByType[item.id] || 0})</option>)}
+                </select>
+              </label>
+              <div className="acc-party-chips" role="group" aria-label="Party type">
+                {PARTY_TYPE_FILTERS.map(item => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`acc-filter-chip ${partyTypeFilter === item.id ? "active" : ""}`}
+                    onClick={() => setPartyTypeFilter(item.id)}
+                  >
+                    {item.label} <span>{partyCountByType[item.id] || 0}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <p className="small acc-party-count">
+              {partySearch || partyTypeFilter !== "all"
+                ? `${setupParties.length} of ${parties.length} ${parties.length === 1 ? "party" : "parties"}`
+                : `${parties.length} ${parties.length === 1 ? "party" : "parties"}`}
+            </p>
+            {!parties.length ? (
+              <AccEmpty title="No parties yet" copy="Add customers and suppliers to start managing your accounting relationships." actionLabel="+ Add Party" onAction={() => openParty()} />
+            ) : !setupParties.length ? (
+              <AccEmpty
+                title={PARTY_TYPE_FILTERS.find(item => item.id === partyTypeFilter)?.emptyTitle || "No parties found"}
+                copy={PARTY_TYPE_FILTERS.find(item => item.id === partyTypeFilter)?.emptyCopy || "Clear the filter to see all parties."}
+                actionLabel="Clear filter"
+                onAction={clearPartyFilters}
+              />
+            ) : <>
+              <div className="table acc-table-wrap acc-party-table"><table><thead><tr><th>Party</th><th>Type</th><th>Contact</th><th className="acc-num">Outstanding</th><th>Status</th><th></th></tr></thead><tbody>
+                {setupParties.map(party => {
+                  const outstanding = outstandingByParty.get(party.id);
+                  return <tr key={party.id}>
+                    <td>
+                      <strong>{party.name}</strong>
+                      {party.gstin ? <span className="small acc-party-meta">{party.gstin}</span> : null}
+                    </td>
+                    <td><PartyTypeBadge type={party.partyType} /></td>
+                    <td>
+                      <span className="acc-party-contact">{party.phone || "—"}</span>
+                      {party.email ? <span className="small acc-party-meta">{party.email}</span> : null}
+                    </td>
+                    <td className="acc-num">{outstanding?.balance ? money(outstanding.balance) : "—"}</td>
+                    <td><span className={`acc-status-pill ${party.isActive === false ? "inactive" : "active"}`}>{party.isActive === false ? "Inactive" : "Active"}</span></td>
+                    <td>{partyActions(party)}</td>
+                  </tr>;
+                })}
+              </tbody></table></div>
+              <div className="acc-party-cards">
+                {setupParties.map(party => {
+                  const outstanding = outstandingByParty.get(party.id);
+                  return <article key={party.id} className="card acc-party-card">
+                    <div className="acc-party-card-top">
+                      <div>
+                        <strong>{party.name}</strong>
+                        <div className="acc-party-card-meta">
+                          <PartyTypeBadge type={party.partyType} />
+                          <span className={`acc-status-pill ${party.isActive === false ? "inactive" : "active"}`}>{party.isActive === false ? "Inactive" : "Active"}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="small">{party.phone || party.email || "No contact"}{party.phone && party.email ? ` · ${party.email}` : ""}</p>
+                    <p className="acc-party-outstanding">Outstanding: <strong>{outstanding?.balance ? money(outstanding.balance) : "—"}</strong></p>
+                    {partyActions(party)}
+                  </article>;
+                })}
+              </div>
+            </>}
+          </AccSetupSection>
+          <AccSetupSection
+            icon="↔"
+            title="Accounting integration"
+            copy="Off by default. When on, eligible Daily Finance, Monthly Finance, Chit Fund, and Cashbook transactions create linked accounting vouchers. The same payment is never entered twice. Cashbook stays the operational money view."
+            actions={<span className={`acc-chip ${settings?.integrationEnabled ? "ok" : ""}`}>Status: {settings?.integrationEnabled ? "ON" : "OFF"}</span>}
+          >
+            <div className="accounts-action-row">
+              <button type="button" className="btn" disabled={saving} onClick={() => run(() => setAccountingIntegration(token, !settings?.integrationEnabled), `Integration ${settings?.integrationEnabled ? "disabled" : "enabled"}.`)}>{settings?.integrationEnabled ? "Turn integration off" : "Turn integration on"}</button>
+              {settings?.integrationEnabled && <button type="button" className="btn" disabled={saving} onClick={() => run(() => syncAccountingOperations(token), "Linked vouchers synced from operations.")}>Sync linked vouchers</button>}
+            </div>
+          </AccSetupSection>
+          <AccSetupSection icon="L" title="Period locking" copy="Lock a closed period so posted vouchers in that range cannot be changed.">
             <div className="form spacer">
               <Field label="From"><input type="date" value={lockForm.from} onChange={event => setLockForm(current => ({ ...current, from: event.target.value }))} /></Field>
               <Field label="To"><input type="date" value={lockForm.to} onChange={event => setLockForm(current => ({ ...current, to: event.target.value }))} /></Field>
             </div>
             <button type="button" className="btn" disabled={saving} onClick={() => run(() => lockAccountingPeriod(token, lockForm.from, lockForm.to), "Period locked.")}>{saving ? "Saving…" : "Lock period"}</button>
-            <div className="table spacer"><table><thead><tr><th>Period</th><th>Status</th><th></th></tr></thead><tbody>
+            <div className="table spacer acc-table-wrap"><table><thead><tr><th>Period</th><th>Status</th><th></th></tr></thead><tbody>
               {locks.map(lock => <tr key={lock.id}><td>{lock.periodFrom} to {lock.periodTo}</td><td>{lock.isLocked ? "Locked" : "Reopened"}</td>              <td>{lock.isLocked && <button type="button" className="btn" disabled={saving} onClick={() => askReason("Reopen period", "Reopen", reason => run(() => reopenAccountingPeriod(token, lock.id, reason), "Period reopened."))}>Reopen</button>}</td></tr>)}
             </tbody></table></div>
-          </div>
-          <div className="card accounts-form-card spacer">
-            <strong>Audit trail</strong>
-            <div className="table spacer"><table><thead><tr><th>When (IST)</th><th>Action</th><th>Entity</th><th>Reason</th></tr></thead><tbody>
+          </AccSetupSection>
+          <AccSetupSection icon="A" title="Audit trail" copy="Owner actions on books, parties, and settings. Posted amounts are not edited here.">
+            <div className="table spacer acc-table-wrap"><table><thead><tr><th>When (IST)</th><th>Action</th><th>Entity</th><th>Reason</th></tr></thead><tbody>
               {audit.map(row => <tr key={row.id}><td>{formatIstDateTime(row.createdAt)}</td><td>{row.action}</td><td>{row.entityType}</td><td>{row.reason || "—"}</td></tr>)}
               {!audit.length && <tr><td colSpan="4">No accounting audit events yet.</td></tr>}
             </tbody></table></div>
-          </div>
+          </AccSetupSection>
         </div>}
       </>}
 
@@ -1206,13 +1443,17 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
       {showSimple && <Modal title={SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry"} close={closeSimple}>
         <SimpleEntryForm kind={simpleKind} accounts={visibleAccounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} maxDate={todayIso()} />
       </Modal>}
-      {showParty && <Modal title="Add party" close={closeParty} actions={<div className="tabs spacer"><button type="button" className="btn" disabled={saving} onClick={closeParty}>Cancel</button><button type="button" className="btn primary" disabled={saving} onClick={() => run(async () => { await createParty(token, partyForm); setShowParty(false); setPartyForm(emptyPartyForm()); }, partyForm.partyType === "customer" ? "Customer created successfully" : partyForm.partyType === "supplier" ? "Supplier created successfully" : "Party saved successfully")}>{saving ? "Saving…" : "Save party"}</button></div>}>
-        <div className="form">
-          <Field label="Type"><select value={partyForm.partyType} onChange={event => setPartyForm(current => ({ ...current, partyType: event.target.value }))}>{PARTY_TYPES.map(type => <option key={type.id} value={type.id}>{type.label}</option>)}</select></Field>
-          <Field required label="Name"><input value={partyForm.name} placeholder="e.g. Sai Traders" onChange={event => setPartyForm(current => ({ ...current, name: event.target.value }))} /></Field>
-          <Field label="Phone"><input value={partyForm.phone} placeholder="10-digit mobile" onChange={event => setPartyForm(current => ({ ...current, phone: event.target.value }))} /></Field>
-          <Field label="Email"><input value={partyForm.email} placeholder="optional" onChange={event => setPartyForm(current => ({ ...current, email: event.target.value }))} /></Field>
-        </div>
+      {showParty && <Modal title={partyForm.id ? "Edit party" : "Add party"} close={closeParty} actions={<div className="tabs spacer"><button type="button" className="btn" disabled={saving} onClick={closeParty}>Cancel</button><button type="button" className="btn primary" disabled={saving} onClick={saveParty}>{saving ? "Saving…" : partyForm.id ? "Save changes" : "Save party"}</button></div>}>
+        <p className="copy">{partyForm.id ? "Updates this party only. Existing vouchers and ledgers stay attached to the same party." : "Accounts parties are independent of Daily Finance customers and Chit Fund members."}</p>
+        <PartyFormFields form={partyForm} setForm={setPartyForm} typeLocked={Boolean(partyForm.id && partyHasAccountingUse(partyForm.id, vouchers))} />
+      </Modal>}
+      {partyDeleteDialog?.mode === "confirm" && <Modal title="Delete party?" close={() => !saving && setPartyDeleteDialog(null)} actions={<div className="tabs spacer"><button type="button" className="btn" disabled={saving} onClick={() => setPartyDeleteDialog(null)}>Cancel</button><button type="button" className="btn danger" disabled={saving} onClick={confirmDeleteParty}>{saving ? "Deleting…" : "Delete"}</button></div>}>
+        <p className="copy">Are you sure you want to delete this party?</p>
+        <p className="small"><strong>{partyDeleteDialog.party.name}</strong> · {partyTypeLabel(partyDeleteDialog.party.partyType)}</p>
+      </Modal>}
+      {partyDeleteDialog?.mode === "blocked" && <Modal title="This party cannot be deleted" close={() => !saving && setPartyDeleteDialog(null)} actions={<div className="tabs spacer">{partyDeleteDialog.party.isActive !== false && <button type="button" className="btn" disabled={saving} onClick={() => setPartyActiveState(partyDeleteDialog.party, false)}>{saving ? "Saving…" : "Deactivate instead"}</button>}<button type="button" className="btn primary" disabled={saving} onClick={() => setPartyDeleteDialog(null)}>Close</button></div>}>
+        <p className="copy">This party cannot be deleted because accounting transactions already exist for this party.</p>
+        <p className="small">Historical vouchers, ledgers, receivables, payables, and reports stay intact. Deactivate the party if it should no longer appear on new entries.</p>
       </Modal>}
       {showCoa && <Modal title={coaForm.id ? "Edit ledger account" : "Add ledger account"} close={closeCoa} actions={<div className="tabs spacer"><button type="button" className="btn primary" disabled={saving} onClick={saveCoa}>{saving ? "Saving…" : "Save account"}</button></div>}>
         <CoaFormFields form={coaForm} setForm={setCoaForm} accounts={visibleAccounts} />

@@ -552,6 +552,228 @@
   padding: 16px;
 }
 
+.accounts-dashboard .acc-setup {
+  display: grid;
+  gap: 16px;
+}
+
+.accounts-dashboard .acc-setup-lead {
+  margin: 0 2px 2px;
+}
+
+.accounts-dashboard .acc-setup-card {
+  padding: 18px 18px 16px;
+}
+
+.accounts-dashboard .acc-setup-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px 14px;
+  align-items: start;
+  margin-bottom: 14px;
+}
+
+.accounts-dashboard .acc-setup-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #f4b94218;
+  color: var(--acc-gold);
+  font: 800 12px Syne, sans-serif;
+  letter-spacing: 0.02em;
+}
+
+.accounts-dashboard .acc-setup-copy h2 {
+  margin: 0;
+  font: 700 16px Syne, sans-serif;
+}
+
+.accounts-dashboard .acc-setup-copy .copy {
+  margin: 4px 0 0;
+}
+
+.accounts-dashboard .acc-setup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.accounts-dashboard .acc-party-toolbar {
+  display: grid;
+  grid-template-columns: minmax(180px, 280px) minmax(0, 1fr);
+  gap: 10px 12px;
+  align-items: end;
+}
+
+.accounts-dashboard .acc-party-search,
+.accounts-dashboard .acc-party-type-select {
+  display: grid;
+  gap: 6px;
+}
+
+.accounts-dashboard .acc-party-type-select {
+  display: none;
+}
+
+.accounts-dashboard .acc-party-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.accounts-dashboard .acc-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--acc-line);
+  background: var(--acc-surface);
+  color: var(--acc-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.accounts-dashboard .acc-filter-chip span {
+  color: #c5d0e0;
+  font-variant-numeric: tabular-nums;
+}
+
+.accounts-dashboard .acc-filter-chip.active {
+  border-color: #f4b94266;
+  background: #f4b94216;
+  color: var(--acc-gold);
+}
+
+.accounts-dashboard .acc-filter-chip.active span {
+  color: var(--acc-gold);
+}
+
+.accounts-dashboard .acc-party-count {
+  margin: 10px 0 8px;
+}
+
+.accounts-dashboard .acc-type-badge,
+.accounts-dashboard .acc-status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid var(--acc-line);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.accounts-dashboard .acc-type-badge.customer {
+  color: var(--acc-green);
+  border-color: #4fd08d44;
+  background: #4fd08d14;
+}
+
+.accounts-dashboard .acc-type-badge.supplier {
+  color: var(--acc-blue);
+  border-color: #7eb6ff44;
+  background: #7eb6ff14;
+}
+
+.accounts-dashboard .acc-type-badge.employee {
+  color: var(--acc-gold);
+  border-color: #f4b94255;
+  background: #f4b94214;
+}
+
+.accounts-dashboard .acc-type-badge.agent {
+  color: #c9b8ff;
+  border-color: #c9b8ff44;
+  background: #c9b8ff12;
+}
+
+.accounts-dashboard .acc-type-badge.other {
+  color: var(--acc-muted);
+  background: #93a0b514;
+}
+
+.accounts-dashboard .acc-status-pill.active {
+  color: var(--acc-green);
+  border-color: #4fd08d33;
+}
+
+.accounts-dashboard .acc-status-pill.inactive {
+  color: var(--acc-muted);
+}
+
+.accounts-dashboard .acc-party-meta,
+.accounts-dashboard .acc-party-contact {
+  display: block;
+}
+
+.accounts-dashboard .acc-party-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.accounts-dashboard .acc-party-actions .btn {
+  min-height: 34px;
+}
+
+.accounts-dashboard .btn.danger {
+  color: #ffb4b4;
+  border-color: #ff7a7a55;
+}
+
+.accounts-dashboard .acc-party-cards {
+  display: none;
+  gap: 10px;
+}
+
+.accounts-dashboard .acc-party-card {
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.accounts-dashboard .acc-party-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.accounts-dashboard .acc-party-outstanding {
+  margin: 0;
+  color: var(--acc-muted);
+}
+
+.accounts-dashboard .acc-party-outstanding strong {
+  color: var(--acc-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.accounts-dashboard .acc-party-lock {
+  grid-column: 1 / -1;
+  color: var(--acc-gold);
+}
+
+.accounts-dashboard .acc-party-form .span {
+  grid-column: 1 / -1;
+}
+
+.accounts-dashboard .acc-setup-card .acc-empty {
+  background: var(--acc-surface);
+  box-shadow: none;
+}
+
 @keyframes acc-pulse {
   0% { background-position: 100% 0; }
   100% { background-position: -100% 0; }
@@ -562,6 +784,12 @@
   .accounts-dashboard .acc-metric-grid.three,
   .accounts-dashboard .acc-skeleton {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .accounts-dashboard .acc-setup-head {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .accounts-dashboard .acc-setup-actions {
+    grid-column: 2;
   }
 }
 
@@ -603,5 +831,39 @@
   .accounts-dashboard .acc-modal {
     max-height: min(92svh, 760px);
     overflow: auto;
+  }
+  .accounts-dashboard .acc-setup-head,
+  .accounts-dashboard .acc-setup-actions {
+    grid-template-columns: 1fr;
+    grid-column: 1;
+  }
+  .accounts-dashboard .acc-setup-actions {
+    justify-content: stretch;
+  }
+  .accounts-dashboard .acc-setup-actions .btn {
+    width: 100%;
+    min-height: 42px;
+  }
+  .accounts-dashboard .acc-party-toolbar {
+    grid-template-columns: 1fr;
+  }
+  .accounts-dashboard .acc-party-chips {
+    display: none;
+  }
+  .accounts-dashboard .acc-party-type-select {
+    display: grid;
+  }
+  .accounts-dashboard .acc-party-table {
+    display: none;
+  }
+  .accounts-dashboard .acc-party-cards {
+    display: grid;
+  }
+  .accounts-dashboard .acc-party-actions {
+    justify-content: stretch;
+  }
+  .accounts-dashboard .acc-party-actions .btn {
+    flex: 1 1 0;
+    min-height: 42px;
   }
 }
