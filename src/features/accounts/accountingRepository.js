@@ -162,7 +162,22 @@ export const createChartAccount = (token, payload) =>
     input_name: payload.name,
     input_group_type: payload.groupType,
     input_account_type: payload.accountType || "other",
+    input_opening: Number(payload.openingBalance || 0),
+    input_opening_side: payload.openingSide || "debit",
   }, token));
+
+export const updateChartAccount = (token, payload) =>
+  wrap(supabase.rpc("acc_update_coa", {
+    input_id: payload.id,
+    input_code: payload.code,
+    input_name: payload.name,
+    input_opening: Number(payload.openingBalance || 0),
+    input_opening_side: payload.openingSide || "debit",
+    input_is_active: payload.isActive !== false,
+  }, token));
+
+export const deleteChartAccount = (token, id) =>
+  wrap(supabase.rpc("acc_delete_coa", { input_id: id }, token));
 
 export const createParty = (token, payload) =>
   wrap(supabase.rpc("acc_create_party", {

@@ -201,6 +201,28 @@ export function matchBankLine(statementLine, voucherLines = []) {
 export const defaultBankStatementLines = (lines = [], voucherLines = []) =>
   lines.map(line => matchBankLine(line, voucherLines));
 
+export function bankVoucherLines(accounts, vouchers, coaId) {
+  const account = (accounts || []).find(item => item.id === coaId || item.code === coaId);
+  if (!account) return [];
+  const rows = [];
+  for (const voucher of vouchers || []) {
+    if (!isPosted(voucher)) continue;
+    for (const line of voucher.lines || []) {
+      if (line.coaId !== account.id && line.code !== account.code) continue;
+      rows.push({
+        id: line.id,
+        date: voucher.date,
+        voucherNumber: voucher.voucherNumber,
+        narration: line.description || voucher.narration,
+        debit: roundMoney(line.debit),
+        credit: roundMoney(line.credit),
+        amount: roundMoney(Number(line.debit || 0) + Number(line.credit || 0)),
+      });
+    }
+  }
+  return rows.sort((a, b) => `${a.date}${a.voucherNumber}`.localeCompare(`${b.date}${b.voucherNumber}`));
+}
+
 export function overviewMetrics(accounts, vouchers, parties, range) {
   const tb = trialBalance(accounts, vouchers, range);
   const pnl = profitAndLoss(accounts, vouchers, range);

@@ -6,16 +6,20 @@ import {
   VOUCHER_STATUS,
   accountingEquationHolds,
   assertBalancedVoucher,
+  assertCanDeleteLedger,
   buildIntegrationVouchers,
   buildVoucher,
   cancelVoucher,
   contraLines,
+  createSubmitLock,
   dateIsLocked,
   disbursementLines,
   formatVoucherNumber,
   indianFinancialYear,
   ledgerBalances,
+  ledgerHasPostedLines,
   paymentLines,
+  previousIndianFinancialYear,
   purchaseLines,
   postVoucher,
   receiptLines,
@@ -27,10 +31,12 @@ import {
 } from "../src/features/accounts/accountingModel.js";
 import {
   balanceSheet,
+  bankVoucherLines,
   cashFlow,
   dashboardMetrics,
   dayBook,
   invoiceRegister,
+  matchBankLine,
   partyBalances,
   partyLedger,
   profitAndLoss,
@@ -256,6 +262,95 @@ test("UPI is a first-class receipt mode", () => {
   const draft = simpleEntryDraft({ kind: "receipt", accounts, date: "2026-04-08", amount: 5000, moneyMode: "upi", partyId: "ravi" });
   assert.equal(draft.lines.find(line => line.code === SYSTEM_CODES.upi).debit, 5000);
   assert.equal(draft.lines.find(line => line.code === SYSTEM_CODES.receivable).credit, 5000);
+});
+
+test("guided credit note reduces sales and receivable for a customer", () => {
+  const draft = simpleEntryDraft({ kind: "credit_note", accounts, date: "2026-04-10", amount: 4000, partyId: "ravi" });
+  assert.equal(draft.voucherType, "credit_note");
+  assert.equal(draft.lines.find(line => line.code === SYSTEM_CODES.sales).debit, 4000);
+  assert.equal(draft.lines.find(line => line.code === SYSTEM_CODES.receivable).credit, 4000);
+  assert.equal(draft.lines.find(line => line.code === SYSTEM_CODES.receivable).partyId, "ravi");
+  assert.throws(() => simpleEntryDraft({ kind: "credit_note", accounts, date: "2026-04-10", amount: 4000 }), /customer/);
+});
+
+test("guided debit note reduces purchase and payable for a supplier", () => {
+  const draft = simpleEntryDraft({ kind: "debit_note", accounts, date: "2026-04-10", amount: 2000, partyId: "xyz" });
+  assert.equal(draft.voucherType, "debit_note");
+  assert.equal(draft.lines.find(line => line.code === SYSTEM_CODES.payable).debit, 2000);
+  assert.equal(draft.lines.find(line => line.code === SYSTEM_CODES.purchase).credit, 2000);
+  assert.throws(() => simpleEntryDraft({ kind: "debit_note", accounts, date: "2026-04-10", amount: 2000 }), /supplier/);
+});
+
+test("unused ledgers can be deleted and used or system ledgers cannot", () => {
+  const unused = { id: "5065", code: "5065", isSystem: false };
+  const system = accounts.find(row => row.code === "1000");
+  const voucher = posted("journal", "2026-04-01", [
+    { coaId: "1000", code: "1000", debit: 10, credit: 0 },
+    { coaId: "3000", code: "3000", debit: 0, credit: 10 },
+  ]);
+  assert.equal(ledgerHasPostedLines(unused, [voucher]), false);
+  assertCanDeleteLedger(unused, [voucher]);
+  assert.throws(() => assertCanDeleteLedger(system, []), /System accounts/);
+  assert.throws(() => assertCanDeleteLedger(system, [voucher]), /System accounts|transactions/);
+});
+
+test("double submit lock skips the second click while the first is in flight", async () => {
+  const lock = createSubmitLock();
+  let started = 0;
+  let finished = 0;
+  const first = lock.run(async () => {
+    started += 1;
+    await new Promise(resolve => setTimeout(resolve, 20));
+    finished += 1;
+    return "ok";
+  });
+  const second = await lock.run(async () => { started += 1; });
+  assert.equal(second.skipped, true);
+  const firstResult = await first;
+  assert.equal(firstResult.skipped, false);
+  assert.equal(firstResult.result, "ok");
+  assert.equal(started, 1);
+  assert.equal(finished, 1);
+});
+
+test("report date range excludes later vouchers from trial balance", () => {
+  const april = posted("sales", "2026-04-02", saleLines({ accounts, amount: 1000, settlement: "paid", moneyMode: "cash" }), { n: 1 });
+  const may = posted("sales", "2026-05-02", saleLines({ accounts, amount: 5000, settlement: "paid", moneyMode: "cash" }), { n: 2 });
+  const aprilTb = trialBalance(accounts, [april, may], { from: "2026-04-01", to: "2026-04-30" });
+  const mayTb = trialBalance(accounts, [april, may], { from: "2026-05-01", to: "2026-05-31" });
+  assert.equal(aprilTb.rows.find(row => row.code === SYSTEM_CODES.sales).credit, 1000);
+  assert.equal(mayTb.rows.find(row => row.code === SYSTEM_CODES.sales).credit, 5000);
+});
+
+test("previous Indian FY is the year before the current FY", () => {
+  const previous = previousIndianFinancialYear("2026-09-02");
+  assert.equal(previous.from, "2025-04-01");
+  assert.equal(previous.to, "2026-03-31");
+});
+
+test("opening debit and credit sides both feed trial balance without a journal", () => {
+  const seeded = accounts.map(row => ({
+    ...row,
+    openingBalance: row.code === "1000" ? 250 : row.code === "3000" ? 250 : 0,
+    openingSide: row.code === "1000" ? "debit" : row.code === "3000" ? "credit" : "debit",
+  }));
+  const tb = trialBalance(seeded, [], { from: "2026-04-01", to: "2027-03-31" });
+  assert.equal(tb.balanced, true);
+  assert.equal(tb.rows.find(row => row.code === "1000").debit, 250);
+  assert.equal(tb.rows.find(row => row.code === "3000").credit, 250);
+});
+
+test("bank statement matching does not change ledger balances", () => {
+  const voucher = posted("receipt", "2026-04-03", receiptLines({ accounts, bank: 1000 }), { n: 1 });
+  voucher.lines = voucher.lines.map((line, index) => ({ ...line, id: `line-${index}` }));
+  const before = ledgerBalances(accounts, [voucher]).find(row => row.code === SYSTEM_CODES.bank).balance;
+  const suggested = matchBankLine(
+    { amount: 1000, lineDate: "2026-04-03", matchStatus: "unmatched" },
+    bankVoucherLines(accounts, [voucher], SYSTEM_CODES.bank).map(line => ({ ...line, date: "2026-04-03" })),
+  );
+  assert.equal(suggested.matchStatus, "suggested");
+  const after = ledgerBalances(accounts, [voucher]).find(row => row.code === SYSTEM_CODES.bank).balance;
+  assert.equal(after, before);
 });
 
 test("ABC Traders generic books stay in equation without finance modules", () => {

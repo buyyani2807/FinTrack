@@ -36,8 +36,32 @@ export const SIMPLE_ENTRY_KINDS = [
   { id: "expense", label: "Expense", voucherType: "payment" },
   { id: "receipt", label: "Receipt", voucherType: "receipt" },
   { id: "payment", label: "Payment", voucherType: "payment" },
+  { id: "credit_note", label: "Credit note", voucherType: "credit_note" },
+  { id: "debit_note", label: "Debit note", voucherType: "debit_note" },
   { id: "transfer", label: "Transfer", voucherType: "contra" },
 ];
+
+export const ACCOUNT_TYPES_BY_GROUP = {
+  asset: [
+    { id: "cash", label: "Cash" },
+    { id: "upi", label: "UPI" },
+    { id: "bank", label: "Bank" },
+    { id: "receivable", label: "Receivable" },
+    { id: "other", label: "Other asset" },
+  ],
+  liability: [
+    { id: "payable", label: "Payable" },
+    { id: "other", label: "Other liability" },
+  ],
+  equity: [
+    { id: "capital", label: "Capital" },
+    { id: "drawing", label: "Drawings" },
+    { id: "retained", label: "Retained earnings" },
+    { id: "other", label: "Other equity" },
+  ],
+  income: [{ id: "income", label: "Income" }],
+  expense: [{ id: "expense", label: "Expense" }],
+};
 
 export const SIMPLE_EXPENSE_CODES = [
   ["5000", "Rent"],
@@ -133,6 +157,42 @@ export const indianFinancialYear = (isoDate) => {
     to: `${startYear + 1}-03-31`,
   };
 };
+
+export const previousIndianFinancialYear = isoDate => {
+  const current = indianFinancialYear(isoDate);
+  return indianFinancialYear(`${current.startYear - 1}-06-01`);
+};
+
+export const defaultAccountTypeForGroup = groupType => (ACCOUNT_TYPES_BY_GROUP[groupType] || [{ id: "other" }])[0].id;
+
+export const ledgerHasPostedLines = (account, vouchers = []) => {
+  if (!account) return false;
+  return (vouchers || []).some(voucher => (voucher.lines || []).some(line =>
+    line.coaId === account.id || line.code === account.code,
+  ));
+};
+
+export const assertCanDeleteLedger = (account, vouchers = []) => {
+  if (!account) throw new Error("Choose an account");
+  if (account.isSystem) throw new Error("System accounts cannot be deleted");
+  if (ledgerHasPostedLines(account, vouchers)) throw new Error("Cannot delete an account that has transactions");
+};
+
+export function createSubmitLock() {
+  let locked = false;
+  return {
+    get busy() { return locked; },
+    async run(work) {
+      if (locked) return { skipped: true };
+      locked = true;
+      try {
+        return { skipped: false, result: await work() };
+      } finally {
+        locked = false;
+      }
+    },
+  };
+}
 
 export const financialYearContaining = (isoDate, fyStartMonth = 4) => {
   if (fyStartMonth === 4) return indianFinancialYear(isoDate);
@@ -453,6 +513,32 @@ export function saleLines({ accounts, amount, settlement = "credit", moneyMode =
   ].filter(Boolean).map(line => ({ ...line, description })).concat(credit);
 }
 
+export function creditNoteLines({ accounts, amount, partyId, description = "" }) {
+  const value = roundMoney(amount);
+  const sales = findAccount(accounts, { code: SYSTEM_CODES.sales });
+  const receivable = findAccount(accounts, { code: SYSTEM_CODES.receivable }) || findAccount(accounts, { accountType: "receivable" });
+  if (!sales) throw new Error("Missing Sales account");
+  if (!receivable) throw new Error("Missing Accounts Receivable");
+  if (!partyId) throw new Error("Choose the customer");
+  return [
+    { coaId: sales.id, code: sales.code, debit: value, credit: 0, description },
+    { coaId: receivable.id, code: receivable.code, partyId, debit: 0, credit: value, description },
+  ];
+}
+
+export function debitNoteLines({ accounts, amount, partyId, description = "" }) {
+  const value = roundMoney(amount);
+  const purchase = findAccount(accounts, { code: SYSTEM_CODES.purchase });
+  const payable = findAccount(accounts, { code: SYSTEM_CODES.payable }) || findAccount(accounts, { accountType: "payable" });
+  if (!purchase) throw new Error("Missing Purchase account");
+  if (!payable) throw new Error("Missing Accounts Payable");
+  if (!partyId) throw new Error("Choose the supplier");
+  return [
+    { coaId: payable.id, code: payable.code, partyId, debit: value, credit: 0, description },
+    { coaId: purchase.id, code: purchase.code, debit: 0, credit: value, description },
+  ];
+}
+
 export function purchaseLines({ accounts, amount, settlement = "credit", moneyMode = "cash", partyId = null, description = "" }) {
   const value = roundMoney(amount);
   const purchase = findAccount(accounts, { code: SYSTEM_CODES.purchase });
@@ -544,6 +630,26 @@ export function simpleEntryDraft({
       partyId,
       narration: description || "Supplier payment",
       lines: paymentLines({ accounts, ...split, payableCode: SYSTEM_CODES.payable, partyId, description }),
+    };
+  }
+  if (kind === "credit_note") {
+    if (!partyId) throw new Error("Choose the customer");
+    return {
+      voucherType: "credit_note",
+      date,
+      partyId,
+      narration: description || "Credit note",
+      lines: creditNoteLines({ accounts, amount: value, partyId, description }),
+    };
+  }
+  if (kind === "debit_note") {
+    if (!partyId) throw new Error("Choose the supplier");
+    return {
+      voucherType: "debit_note",
+      date,
+      partyId,
+      narration: description || "Debit note",
+      lines: debitNoteLines({ accounts, amount: value, partyId, description }),
     };
   }
   if (kind === "transfer") {
