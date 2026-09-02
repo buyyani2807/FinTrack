@@ -70,6 +70,7 @@ const money = formatInr;
 const Field = ({ label, children }) => <label className="field"><span>{label}</span>{children}</label>;
 const emptyLine = () => ({ coaId: "", debit: "", credit: "", description: "" });
 const emptyBankLine = () => ({ lineDate: todayIso(), description: "", amount: "", direction: "in" });
+const emptyPartyForm = () => ({ partyType: "customer", name: "", phone: "", email: "", address: "" });
 const emptyCoaForm = () => ({
   id: null,
   code: "",
@@ -270,7 +271,7 @@ export function AccountsModule({ token, close, loans = [] }) {
   const [voucherType, setVoucherType] = useState("receipt");
   const [voucherForm, setVoucherForm] = useState({ date: todayIso(), narration: "", partyId: "", dueDate: addDaysIso(todayIso(), 7) });
   const [lines, setLines] = useState([emptyLine(), emptyLine()]);
-  const [partyForm, setPartyForm] = useState({ partyType: "customer", name: "", phone: "", email: "", address: "" });
+  const [partyForm, setPartyForm] = useState(emptyPartyForm);
   const [coaForm, setCoaForm] = useState(emptyCoaForm);
   const [setupForm, setSetupForm] = useState({ companyName: "", booksStartedOn: todayIso() });
   const [lockForm, setLockForm] = useState({ from: fy.from, to: fy.to, reason: "" });
@@ -465,6 +466,17 @@ export function AccountsModule({ token, close, loans = [] }) {
     setShowSimple(true);
   };
 
+  const openParty = () => {
+    setPartyForm(emptyPartyForm());
+    setShowParty(true);
+  };
+
+  const closeParty = () => {
+    if (saving) return;
+    setShowParty(false);
+    setPartyForm(emptyPartyForm());
+  };
+
   const submitSimple = () => run(async () => {
     const draft = simpleEntryDraft({
       kind: simpleKind,
@@ -650,7 +662,7 @@ export function AccountsModule({ token, close, loans = [] }) {
             {SIMPLE_ENTRY_KINDS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
           </select>
           <button type="button" className="btn primary" onClick={() => setShowVoucher(true)}>+ Voucher</button>
-          <button type="button" className="btn" onClick={() => setShowParty(true)}>+ Party</button>
+          <button type="button" className="btn" onClick={openParty}>+ Party</button>
         </div>
       </header>
       {error && <div className="notice">{error}</div>}
@@ -773,7 +785,7 @@ export function AccountsModule({ token, close, loans = [] }) {
 
         {section === "parties" && <div className="acc-panel">
           <div className="accounts-action-row">
-            <button type="button" className="btn primary" onClick={() => setShowParty(true)}>+ Party</button>
+            <button type="button" className="btn primary" onClick={openParty}>+ Party</button>
             <button type="button" className="btn" onClick={() => openSection("receivables")}>Receivables</button>
             <button type="button" className="btn" onClick={() => openSection("payables")}>Payables</button>
           </div>
@@ -1013,7 +1025,7 @@ export function AccountsModule({ token, close, loans = [] }) {
       {showSimple && <Modal title={SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry"} close={() => !saving && setShowSimple(false)}>
         <SimpleEntryForm kind={simpleKind} accounts={visibleAccounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} maxDate={todayIso()} />
       </Modal>}
-      {showParty && <Modal title="Add party" close={() => !saving && setShowParty(false)} actions={<div className="tabs spacer"><button type="button" className="btn primary" disabled={saving} onClick={() => run(async () => { await createParty(token, partyForm); setShowParty(false); }, "Party saved.")}>{saving ? "Saving…" : "Save party"}</button></div>}>
+      {showParty && <Modal title="Add party" close={closeParty} actions={<div className="tabs spacer"><button type="button" className="btn primary" disabled={saving} onClick={() => run(async () => { await createParty(token, partyForm); setShowParty(false); setPartyForm(emptyPartyForm()); }, "Party saved.")}>{saving ? "Saving…" : "Save party"}</button></div>}>
         <div className="form">
           <Field label="Type"><select value={partyForm.partyType} onChange={event => setPartyForm(current => ({ ...current, partyType: event.target.value }))}>{PARTY_TYPES.map(type => <option key={type.id} value={type.id}>{type.label}</option>)}</select></Field>
           <Field label="Name"><input value={partyForm.name} onChange={event => setPartyForm(current => ({ ...current, name: event.target.value }))} /></Field>
