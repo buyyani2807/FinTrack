@@ -829,6 +829,7 @@
 .accounts-dashboard .acc-party-ledger-identity h2 {
   margin: 0;
   font: 700 20px/1.2 Syne, sans-serif;
+  color: var(--acc-text);
 }
 
 .accounts-dashboard .acc-party-ledger-contact {
