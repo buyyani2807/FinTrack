@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CashbookWorkspace } from "./AccountsModule.jsx";
+import "./accountingProduct.css";
 import {
   addBankStatement,
   cancelVoucher,
@@ -67,7 +68,58 @@ import { downloadAccountsCsv, downloadAccountsExcel, downloadAccountsPdf } from 
 import { formatInr } from "../../lib/formatMoney.js";
 
 const money = formatInr;
-const Field = ({ label, children }) => <label className="field"><span>{label}</span>{children}</label>;
+const Field = ({ label, children, required, className }) => (
+  <label className={`field${className ? ` ${className}` : ""}`}>
+    <span>{label}{required ? <span className="acc-req"> *</span> : null}</span>
+    {children}
+  </label>
+);
+const AccMetric = ({ label, value, tone = "" }) => (
+  <article className="card acc-metric-card">
+    <div className="metric-label">{label}</div>
+    <div className={`metric-value ${tone}`}>{value}</div>
+  </article>
+);
+const AccEmpty = ({ title, copy, actionLabel, onAction }) => (
+  <div className="card acc-empty">
+    <strong>{title}</strong>
+    <p className="copy">{copy}</p>
+    {actionLabel && onAction && <button type="button" className="btn primary" onClick={onAction}>{actionLabel}</button>}
+  </div>
+);
+const AccSkeleton = () => (
+  <div className="acc-skeleton" aria-hidden="true">
+    {Array.from({ length: 8 }, (_, index) => <div key={index} className="acc-skel" />)}
+  </div>
+);
+function AccUserMenu({ workspace = {}, onSetup, onLogout, compact = false }) {
+  const [open, setOpen] = useState(false);
+  const root = useRef(null);
+  const name = workspace.fullName || workspace.businessName || "Owner";
+  const email = workspace.organizationSettings?.companyEmail || workspace.businessName || "FinTrack Accounts";
+  const initials = name.split(" ").filter(Boolean).map(part => part[0]).join("").slice(0, 2).toUpperCase() || "FT";
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDoc = event => { if (!root.current?.contains(event.target)) setOpen(false); };
+    const onKey = event => { if (event.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+  return <div className={compact ? "acc-header-user" : "acc-user"} ref={root}>
+    <button type="button" className="acc-user-btn" aria-label="Account menu" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(current => !current)}>
+      <span className="acc-avatar" aria-hidden="true">{initials}</span>
+      {!compact && <span className="acc-user-copy"><strong>{name}</strong><span>{email}</span></span>}
+    </button>
+    {open && <div className={`acc-user-menu${compact ? " mobile" : ""}`} role="menu">
+      <button type="button" role="menuitem" onClick={() => { setOpen(false); onSetup?.(); }}>Account settings</button>
+      <button type="button" role="menuitem" className="danger" onClick={() => { setOpen(false); onLogout?.(); }}>Log out</button>
+    </div>}
+  </div>;
+}
 const emptyLine = () => ({ coaId: "", debit: "", credit: "", description: "" });
 const emptyBankLine = () => ({ lineDate: todayIso(), description: "", amount: "", direction: "in" });
 const emptyPartyForm = () => ({ partyType: "customer", name: "", phone: "", email: "", address: "" });
@@ -185,7 +237,7 @@ function VoucherForm({ accounts, parties, voucherType, setVoucherType, form, set
       <Field label="Date"><input type="date" max={maxDate} value={form.date} onChange={event => setForm(current => ({ ...current, date: event.target.value }))} /></Field>
       <Field label="Party (optional)"><select value={form.partyId} onChange={event => setForm(current => ({ ...current, partyId: event.target.value }))}><option value="">None</option>{parties.map(party => <option key={party.id} value={party.id}>{party.name}</option>)}</select></Field>
       {(voucherType === "sales" || voucherType === "purchase") && <Field label="Due date (optional)"><input type="date" value={form.dueDate || ""} onChange={event => setForm(current => ({ ...current, dueDate: event.target.value }))} /></Field>}
-      <Field className="span" label="Narration"><input value={form.narration} onChange={event => setForm(current => ({ ...current, narration: event.target.value }))} /></Field>
+      <Field className="span" label="Narration"><input value={form.narration} placeholder="e.g. Office rent for September" onChange={event => setForm(current => ({ ...current, narration: event.target.value }))} /></Field>
     </div>
     <div className="table spacer"><table><thead><tr><th>Account</th><th>Debit</th><th>Credit</th><th></th></tr></thead><tbody>
       {lines.map((line, index) => <tr key={index}>
@@ -231,7 +283,7 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
         <Field label="To"><select value={form.toAccountId || ""} onChange={event => set({ toAccountId: event.target.value })}><option value="">Select account</option>{transferAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</select></Field>
       </>}
       {needsParty && <Field label={needsParty === "supplier" ? "Supplier" : "Customer"}><select value={form.partyId} onChange={event => set({ partyId: event.target.value })}><option value="">Select</option>{partyList.map(party => <option key={party.id} value={party.id}>{party.name}</option>)}</select></Field>}
-      <Field label="Amount"><input type="number" min="0" step="0.01" value={form.amount} onChange={event => set({ amount: event.target.value })} /></Field>
+      <Field required label="Amount"><input type="number" min="0" step="0.01" value={form.amount} placeholder="0.00" onChange={event => set({ amount: event.target.value })} /></Field>
       <Field className="span" label="Note (optional)"><input value={form.narration} onChange={event => set({ narration: event.target.value })} placeholder="Received from Ravi" /></Field>
     </div>
     <div className="tabs spacer"><button type="button" className="btn primary" disabled={saving} onClick={onSubmit}>{saving ? "Saving…" : "Save"}</button></div>
@@ -257,7 +309,7 @@ function CoaFormFields({ form, setForm, accounts = [] }) {
   </div>;
 }
 
-export function AccountsModule({ token, close, loans = [] }) {
+export function AccountsModule({ token, close, loans = [], logout, workspace = {} }) {
   const [section, setSection] = useState("overview");
   const [reportTab, setReportTab] = useState("daybook");
   const [settings, setSettings] = useState(null);
@@ -303,6 +355,8 @@ export function AccountsModule({ token, close, loans = [] }) {
   const [simpleForm, setSimpleForm] = useState(emptySimpleForm);
   const [reasonDialog, setReasonDialog] = useState(null);
   const [reasonText, setReasonText] = useState("");
+  const [confirmLogout, setConfirmLogout] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const [partyFocusId, setPartyFocusId] = useState("");
   const [partyTxnType, setPartyTxnType] = useState("");
   const [partyFrom, setPartyFrom] = useState(fy.from);
@@ -409,6 +463,29 @@ export function AccountsModule({ token, close, loans = [] }) {
     window.scrollTo(0, 0);
   };
 
+  const requestLogout = () => {
+    if (!logout) return;
+    setConfirmLogout(true);
+  };
+
+  const confirmAccountsLogout = async () => {
+    if (!logout || signingOut) return;
+    setSigningOut(true);
+    try {
+      sessionStorage.setItem("fintrack-login-context", "accounts");
+      sessionStorage.setItem("fintrack-open-accounts", "1");
+      await logout({ from: "accounts" });
+    } finally {
+      setSigningOut(false);
+      setConfirmLogout(false);
+    }
+  };
+
+  const recentVouchers = useMemo(
+    () => [...vouchers].sort((a, b) => `${b.date}${b.voucherNumber}`.localeCompare(`${a.date}${a.voucherNumber}`)).slice(0, 8),
+    [vouchers],
+  );
+
   const run = async (work, success) => {
     const outcome = await submitLock.run(async () => {
       setSaving(true);
@@ -448,7 +525,7 @@ export function AccountsModule({ token, close, loans = [] }) {
     setShowVoucher(false);
     setVoucherForm(emptyVoucherForm());
     setLines([emptyLine(), emptyLine()]);
-  }, "Voucher posted.");
+  }, "Voucher saved successfully");
 
   const openVoucher = () => {
     setVoucherForm(emptyVoucherForm());
@@ -511,7 +588,7 @@ export function AccountsModule({ token, close, loans = [] }) {
     await postVoucher(token, draft);
     setShowSimple(false);
     setSimpleForm(emptySimpleForm());
-  }, `${SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry"} saved.`);
+  }, `${SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry"} saved successfully`);
 
   const openCoa = account => {
     if (account) {
@@ -641,36 +718,75 @@ export function AccountsModule({ token, close, loans = [] }) {
     work(reason);
   };
 
-  const invoiceTable = (rows, kind) => <div className="table spacer accounts-invoice-table"><table><thead><tr><th>{kind === "payable" ? "Supplier" : "Customer"}</th><th>Invoice</th><th>Invoice date</th><th>Due date</th><th>Amount</th><th>Paid</th><th>Outstanding</th>{kind !== "payable" && <th>Days</th>}<th>Status</th></tr></thead><tbody>
-    {rows.map(row => <tr key={row.id}><td>{row.partyName}</td><td>{row.reference}</td><td>{row.invoiceDate}</td><td>{row.dueDate}</td><td>{money(row.amount)}</td><td>{money(row.paid)}</td><td>{money(row.outstanding)}</td>{kind !== "payable" && <td>{row.daysOutstanding}</td>}<td>{row.status}</td></tr>)}
-    {!rows.length && <tr><td colSpan={kind === "payable" ? 8 : 9}>No {kind === "payable" ? "payables" : "receivables"} yet.</td></tr>}
+  const invoiceTable = (rows, kind) => {
+    const emptyTitle = kind === "payable" ? "No outstanding payables" : "No outstanding receivables";
+    const emptyCopy = kind === "payable"
+      ? "Supplier invoices will appear here after you record a purchase."
+      : "Customer invoices will appear here after you record a credit sale.";
+    return <div className="table spacer acc-table-wrap accounts-invoice-table"><table><thead><tr><th>{kind === "payable" ? "Supplier" : "Customer"}</th><th>Invoice</th><th>Invoice date</th><th>Due date</th><th className="acc-num">Amount</th><th className="acc-num">Paid</th><th className="acc-num">Outstanding</th>{kind !== "payable" && <th className="acc-num">Days</th>}<th>Status</th></tr></thead><tbody>
+    {rows.map(row => <tr key={row.id}><td>{row.partyName}</td><td>{row.reference}</td><td>{row.invoiceDate}</td><td>{row.dueDate}</td><td className="acc-num">{money(row.amount)}</td><td className="acc-num">{money(row.paid)}</td><td className="acc-num">{money(row.outstanding)}</td>{kind !== "payable" && <td className="acc-num">{row.daysOutstanding}</td>}<td>{row.status}</td></tr>)}
+    {!rows.length && <tr><td colSpan={kind === "payable" ? 8 : 9}>{emptyTitle}. {emptyCopy}</td></tr>}
   </tbody></table></div>;
+  };
 
   if (section === "cashbook") {
-    return <CashbookWorkspace token={token} close={() => openSection("overview")} loans={loans} embedded />;
+    return <div className="acc-shell">
+      <aside className="acc-sidebar" aria-label="Accounts sections">
+        <div className="acc-sidebar-brand">
+          <strong>FinTrack Accounts</strong>
+          <span className="small">Small-business books</span>
+        </div>
+        {SECTION_GROUPS.map(group => (
+          <div key={group}>
+            <div className="acc-nav-group">{group}</div>
+            {navSections.filter(item => item.group === group).map(item => (
+              <button key={item.id} type="button" className={`acc-nav-item ${section === item.id ? "active" : ""}`} aria-current={section === item.id ? "page" : undefined} onClick={() => openSection(item.id)}>{item.label}</button>
+            ))}
+          </div>
+        ))}
+        <AccUserMenu workspace={workspace} onSetup={() => openSection("setup")} onLogout={requestLogout} />
+      </aside>
+      <main className="acc-main">
+        <header className="top">
+          <div>
+            <button type="button" className="btn" onClick={() => openSection("overview")}>← Accounts</button>
+            <p className="acc-kicker spacer">FinTrack Accounts</p>
+            <h1 className="title">Cashbook</h1>
+            <p className="copy acc-page-copy">Operational cash, bank and UPI movement. This is not the double-entry ledger.</p>
+          </div>
+          <AccUserMenu compact workspace={workspace} onSetup={() => openSection("setup")} onLogout={requestLogout} />
+        </header>
+        <CashbookWorkspace token={token} close={() => openSection("overview")} loans={loans} embedded />
+        {confirmLogout && <Modal title="Log out of Accounts?" close={() => !signingOut && setConfirmLogout(false)} actions={<div className="tabs spacer"><button type="button" className="btn" disabled={signingOut} onClick={() => setConfirmLogout(false)}>Stay signed in</button><button type="button" className="btn danger" disabled={signingOut} onClick={confirmAccountsLogout}>{signingOut ? "Signing out…" : "Log out"}</button></div>}>
+          <p className="copy">This ends your FinTrack session. You will need to sign in again to open Accounts or any other module.</p>
+        </Modal>}
+      </main>
+    </div>;
   }
 
   return <div className="acc-shell">
     <aside className="acc-sidebar" aria-label="Accounts sections">
       <div className="acc-sidebar-brand">
-        <strong>Accounts</strong>
-        <span className="small">Ledgers and reports</span>
+        <strong>FinTrack Accounts</strong>
+        <span className="small">Small-business books</span>
       </div>
       {SECTION_GROUPS.map(group => (
         <div key={group}>
           <div className="acc-nav-group">{group}</div>
           {navSections.filter(item => item.group === group).map(item => (
-            <button key={item.id} type="button" className={`acc-nav-item ${section === item.id ? "active" : ""}`} onClick={() => openSection(item.id)}>{item.label}</button>
+            <button key={item.id} type="button" className={`acc-nav-item ${section === item.id ? "active" : ""}`} aria-current={section === item.id ? "page" : undefined} onClick={() => openSection(item.id)}>{item.label}</button>
           ))}
         </div>
       ))}
+      <AccUserMenu workspace={workspace} onSetup={() => openSection("setup")} onLogout={requestLogout} />
     </aside>
     <main className="acc-main acc-print-root">
       <header className="top">
         <div>
           <button type="button" className="btn" onClick={section === "overview" ? close : () => openSection("overview")}>{section === "overview" ? "← Dashboard" : "← Accounts"}</button>
-          <h1 className="title spacer">{SECTIONS.find(item => item.id === section)?.label || "Accounts"}</h1>
-          <p className="copy">{fy.label} · {range.from} to {range.to} · Standalone books for any small business. Daily Finance and Chit Fund are optional.</p>
+          <p className="acc-kicker spacer">FinTrack Accounts</p>
+          <h1 className="title">{SECTIONS.find(item => item.id === section)?.label || "Accounts"}</h1>
+          <p className="copy acc-page-copy">{settings?.companyName || workspace.businessName || "Your business"} · {fy.label} · {range.from} to {range.to}</p>
         </div>
         <div className="tabs acc-top-actions acc-top-actions-compact">
           <select className="acc-new-entry" defaultValue="" aria-label="New entry" onChange={event => {
@@ -684,17 +800,18 @@ export function AccountsModule({ token, close, loans = [] }) {
           </select>
           <button type="button" className="btn primary" onClick={openVoucher}>+ Voucher</button>
           <button type="button" className="btn" onClick={openParty}>+ Party</button>
+          <AccUserMenu compact workspace={workspace} onSetup={() => openSection("setup")} onLogout={requestLogout} />
         </div>
       </header>
-      {error && <div className="notice">{error}</div>}
-      {notice && <div className="notice accounts-notice-ok">{notice}</div>}
+      {error && <div className="notice acc-toast error" role="alert">{error}</div>}
+      {notice && <div className="notice accounts-notice-ok acc-toast ok" role="status">{notice}</div>}
       {migrationRequired && <div className="notice">Run <strong>052_fintrack_accounts_double_entry.sql</strong>, then <strong>053</strong>, <strong>054</strong>, <strong>055_accounts_p0_reversal_integrity.sql</strong>, <strong>056_accounts_p2_due_date_parent.sql</strong>, and <strong>057_accounts_post_date_and_line_checks.sql</strong> in the Supabase SQL editor, then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
       <nav className="acc-mobile-cards" aria-label="Accounts">
         {MOBILE_TABS.map(item => (
           <button key={item.id} type="button" className={`acc-mobile-card ${mobileTab === item.id ? "active" : ""}`} onClick={() => openSection(item.id)}>{item.label}</button>
         ))}
       </nav>
-      {loading ? <p className="copy">Loading Accounts…</p> : <>
+      {loading ? <><p className="copy">Loading Accounts…</p><AccSkeleton /></> : <>
         {section === "overview" && <div className="acc-panel">
           <ReportRangeBar fy={fy} lastFy={lastFy} from={rangeFrom} to={rangeTo} onChange={setReportRange} />
           {!settings && <div className="card accounts-form-card">
@@ -706,25 +823,52 @@ export function AccountsModule({ token, close, loans = [] }) {
             </div>
             <button type="button" className="btn primary" disabled={saving} onClick={() => run(() => initializeAccounting(token, setupForm), "Accounts opened.")}>{saving ? "Saving…" : "Create chart of accounts"}</button>
           </div>}
-          <div className="grid metrics">
-            <div className="card"><div className="metric-label">Cash</div><div className="metric-value gold">{money(metrics.cash)}</div></div>
-            <div className="card"><div className="metric-label">Bank</div><div className="metric-value gold">{money(metrics.bank)}</div></div>
-            <div className="card"><div className="metric-label">UPI</div><div className="metric-value gold">{money(metrics.upi)}</div></div>
-            <div className="card"><div className="metric-label">Receivables</div><div className="metric-value blue">{money(metrics.receivables)}</div></div>
-            <div className="card"><div className="metric-label">Payables</div><div className="metric-value">{money(metrics.payables)}</div></div>
-            <div className="card"><div className="metric-label">Today&apos;s sales</div><div className="metric-value">{money(metrics.todaySales)}</div></div>
-            <div className="card"><div className="metric-label">Today&apos;s purchases</div><div className="metric-value">{money(metrics.todayPurchases)}</div></div>
-            <div className="card"><div className="metric-label">Today&apos;s receipts</div><div className="metric-value green">{money(metrics.todayReceipts)}</div></div>
-            <div className="card"><div className="metric-label">Today&apos;s payments</div><div className="metric-value red">{money(metrics.todayPayments)}</div></div>
-            <div className="card"><div className="metric-label">Income</div><div className="metric-value green">{money(metrics.income)}</div></div>
-            <div className="card"><div className="metric-label">Expenses</div><div className="metric-value red">{money(metrics.expenses)}</div></div>
-            <div className="card"><div className="metric-label">Net profit</div><div className={`metric-value ${metrics.netProfit < 0 ? "red" : "green"}`}>{money(metrics.netProfit)}</div></div>
-            <div className="card"><div className="metric-label">Equation</div><div className={`metric-value ${metrics.equationHolds ? "green" : "red"}`}>{metrics.equationHolds ? "In balance" : "Out of balance"}</div></div>
+          <div className="acc-status-row">
+            <span className={`acc-chip ${metrics.equationHolds ? "ok" : "warn"}`}>{metrics.equationHolds ? "Books in balance" : "Books out of balance"}</span>
+            <span className="acc-chip">Integration {settings?.integrationEnabled ? "ON" : "OFF"}</span>
           </div>
-          <div className="acc-quick-actions spacer">
-            {SIMPLE_ENTRY_KINDS.map(item => <button key={item.id} type="button" className="btn" onClick={() => openSimple(item.id)}>+ {item.label}</button>)}
-          </div>
-          <div className="acc-landing-grid">
+          <section className="acc-section">
+            <h2 className="acc-section-title">Financial summary</h2>
+            <div className="acc-metric-grid fill">
+              <AccMetric label="Cash" value={money(metrics.cash)} tone="gold" />
+              <AccMetric label="Bank" value={money(metrics.bank)} tone="gold" />
+              <AccMetric label="UPI" value={money(metrics.upi)} tone="gold" />
+              <AccMetric label="Receivables" value={money(metrics.receivables)} tone="blue" />
+              <AccMetric label="Payables" value={money(metrics.payables)} />
+            </div>
+          </section>
+          <section className="acc-section">
+            <h2 className="acc-section-title">Performance</h2>
+            <div className="acc-metric-grid three">
+              <AccMetric label="Income" value={money(metrics.income)} tone="green" />
+              <AccMetric label="Expenses" value={money(metrics.expenses)} tone="red" />
+              <AccMetric label="Net profit" value={money(metrics.netProfit)} tone={metrics.netProfit < 0 ? "red" : "green"} />
+            </div>
+          </section>
+          <section className="acc-section">
+            <h2 className="acc-section-title">Activity</h2>
+            <div className="acc-metric-grid">
+              <AccMetric label="Today's sales" value={money(metrics.todaySales)} />
+              <AccMetric label="Today's purchases" value={money(metrics.todayPurchases)} />
+              <AccMetric label="Today's receipts" value={money(metrics.todayReceipts)} tone="green" />
+              <AccMetric label="Today's payments" value={money(metrics.todayPayments)} tone="red" />
+            </div>
+          </section>
+          <section className="acc-section">
+            <h2 className="acc-section-title">Quick actions</h2>
+            <div className="acc-quick-actions">
+              {SIMPLE_ENTRY_KINDS.map(item => <button key={item.id} type="button" className="btn" onClick={() => openSimple(item.id)}>+ {item.label}</button>)}
+            </div>
+          </section>
+          <section className="acc-section">
+            <h2 className="acc-section-title">Recent transactions</h2>
+            {recentVouchers.length ? <div className="table acc-table-wrap"><table><thead><tr><th>Date</th><th>Number</th><th>Type</th><th>Narration</th><th className="acc-num">Amount</th></tr></thead><tbody>
+              {recentVouchers.map(voucher => <tr key={voucher.id}><td>{voucher.date}</td><td>{voucher.voucherNumber}</td><td>{VOUCHER_TYPES[voucher.voucherType]?.label || voucher.voucherType}</td><td>{voucher.narration || "—"}</td><td className="acc-num">{money(voucherTotals(voucher.lines).debit)}</td></tr>)}
+            </tbody></table></div> : <AccEmpty title="No transactions yet" copy="Record a sale, purchase, receipt, or payment to start the books." actionLabel="+ Create transaction" onAction={() => openSimple("sale")} />}
+          </section>
+          <section className="acc-section">
+            <h2 className="acc-section-title">Go to</h2>
+            <div className="acc-landing-grid">
             {[
               ["vouchers", "Transactions", "Guided sale, purchase, expense, receipt and payment. Advanced vouchers stay available."],
               ["parties", "Customers & suppliers", "Accounts parties are independent of Daily Finance customers and Chit Fund members."],
@@ -739,7 +883,8 @@ export function AccountsModule({ token, close, loans = [] }) {
                 <p className="small">{copy}</p>
               </button>
             ))}
-          </div>
+            </div>
+          </section>
         </div>}
 
         {section === "ledger" && <div className="acc-panel">
@@ -752,9 +897,9 @@ export function AccountsModule({ token, close, loans = [] }) {
             <button type="button" className="btn" onClick={() => downloadAccountsExcel(`fintrack-ledger-${todayIso()}.xlsx`, [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])])}>Export Excel</button>
             <button type="button" className="btn" onClick={() => downloadAccountsPdf(`fintrack-ledger-${todayIso()}.pdf`, { title: "Ledger", subtitle: `${ledger.account?.code || ""} ${ledger.account?.name || ""}`, rows: [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])] })}>Download PDF</button>
           </div>
-          <div className="table spacer"><table><thead><tr><th>Date</th><th>Voucher</th><th>Narration</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead><tbody>
-            {ledger.rows.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.narration}</td><td>{row.debit ? money(row.debit) : ""}</td><td>{row.credit ? money(row.credit) : ""}</td><td>{money(row.balance)}</td></tr>)}
-            {!ledger.rows.length && <tr><td colSpan="6">No postings on this ledger yet.</td></tr>}
+          <div className="table spacer acc-table-wrap"><table><thead><tr><th>Date</th><th>Voucher</th><th>Narration</th><th className="acc-num">Debit</th><th className="acc-num">Credit</th><th className="acc-num">Balance</th></tr></thead><tbody>
+            {ledger.rows.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.narration}</td><td className="acc-num">{row.debit ? money(row.debit) : ""}</td><td className="acc-num">{row.credit ? money(row.credit) : ""}</td><td className="acc-num">{money(row.balance)}</td></tr>)}
+            {!ledger.rows.length && <tr><td colSpan="6">No postings on this ledger yet. Post a voucher to see movement here.</td></tr>}
           </tbody></table></div>
         </div>}
 
@@ -786,7 +931,7 @@ export function AccountsModule({ token, close, loans = [] }) {
                 {voucher.lines.map(line => <tr key={line.id}><td>{line.code} {line.name}</td><td>{line.debit ? money(line.debit) : ""}</td><td>{line.credit ? money(line.credit) : ""}</td></tr>)}
               </tbody></table></div>
             </article>)}
-            {!shownVouchers.length && <div className="card accounts-empty">No vouchers posted yet.</div>}
+            {!shownVouchers.length && <AccEmpty title="No transactions yet" copy="Use a guided entry for everyday work, or an advanced voucher for a custom journal." actionLabel="+ Create transaction" onAction={() => openSimple("sale")} />}
           </div>
         </div>}
 
@@ -830,11 +975,11 @@ export function AccountsModule({ token, close, loans = [] }) {
           </div>
           {focusedParty ? <>
             <p className="small">Opening {money(partyBook.opening)} · {partyBook.advance > 0 ? `Advance ${money(partyBook.advance)}` : `Outstanding ${money(partyBook.outstanding)}`}</p>
-            <div className="table spacer"><table><thead><tr><th>Date</th><th>Voucher</th><th>Type</th><th>Narration</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead><tbody>
-              {partyBook.rows.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.voucherType}</td><td>{row.narration}</td><td>{row.debit ? money(row.debit) : ""}</td><td>{row.credit ? money(row.credit) : ""}</td><td>{money(row.balance)}</td></tr>)}
+            <div className="table spacer acc-table-wrap"><table><thead><tr><th>Date</th><th>Voucher</th><th>Type</th><th>Narration</th><th className="acc-num">Debit</th><th className="acc-num">Credit</th><th className="acc-num">Balance</th></tr></thead><tbody>
+              {partyBook.rows.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.voucherType}</td><td>{row.narration}</td><td className="acc-num">{row.debit ? money(row.debit) : ""}</td><td className="acc-num">{row.credit ? money(row.credit) : ""}</td><td className="acc-num">{money(row.balance)}</td></tr>)}
               {!partyBook.rows.length && <tr><td colSpan="7">No transactions for this party in the selected dates.</td></tr>}
             </tbody></table></div>
-          </> : <div className="card accounts-empty">Add a customer or supplier to open their ledger.</div>}
+          </> : <AccEmpty title="No customers or suppliers yet" copy="Accounts parties are independent of Daily Finance customers and Chit Fund members." actionLabel="+ Add party" onAction={openParty} />}
         </div>}
 
         {section === "more" && <div className="acc-panel">
@@ -862,9 +1007,9 @@ export function AccountsModule({ token, close, loans = [] }) {
             <button type="button" className="btn" onClick={() => exportReport("xlsx")}>Export Excel</button>
             <button type="button" className="btn" onClick={() => exportReport("pdf")}>Download PDF</button>
           </div>
-          {(section === "trial" || reportTab === "trial") && section !== "pnl" && section !== "balance" && <div className="table spacer"><table><thead><tr><th>Code</th><th>Account</th><th>Debit</th><th>Credit</th></tr></thead><tbody>
-            {tb.rows.map(row => <tr key={row.id}><td>{row.code}</td><td>{row.name}</td><td>{row.debit ? money(row.debit) : ""}</td><td>{row.credit ? money(row.credit) : ""}</td></tr>)}
-            <tr><td></td><td><strong>Total</strong></td><td><strong>{money(tb.totalDebit)}</strong></td><td><strong>{money(tb.totalCredit)}</strong></td></tr>
+          {(section === "trial" || reportTab === "trial") && section !== "pnl" && section !== "balance" && <div className="table spacer acc-table-wrap"><table><thead><tr><th>Code</th><th>Account</th><th className="acc-num">Debit</th><th className="acc-num">Credit</th></tr></thead><tbody>
+            {tb.rows.map(row => <tr key={row.id}><td>{row.code}</td><td>{row.name}</td><td className="acc-num">{row.debit ? money(row.debit) : ""}</td><td className="acc-num">{row.credit ? money(row.credit) : ""}</td></tr>)}
+            <tr><td></td><td><strong>Total</strong></td><td className="acc-num"><strong>{money(tb.totalDebit)}</strong></td><td className="acc-num"><strong>{money(tb.totalCredit)}</strong></td></tr>
           </tbody></table></div>}
           {(section === "pnl" || reportTab === "pnl") && section !== "trial" && section !== "balance" && <div className="grid two spacer">
             <div className="card"><strong>Income</strong>{pnl.income.filter(row => row.amount).map(row => <p key={row.id} className="row spacer"><span>{row.name}</span><strong>{money(row.amount)}</strong></p>)}<p className="row"><span>Total income</span><strong className="green">{money(pnl.totalIncome)}</strong></p></div>
@@ -879,22 +1024,22 @@ export function AccountsModule({ token, close, loans = [] }) {
               <p className="small">{sheet.balanced ? "Assets equal liabilities plus equity." : "Balance sheet is out of equation."}</p>
             </div>
           </div>}
-          {section === "reports" && reportTab === "daybook" && <div className="table spacer"><table><thead><tr><th>Date</th><th>Number</th><th>Type</th><th>Narration</th><th>Amount</th></tr></thead><tbody>
-            {books.map(row => <tr key={row.id}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.voucherType}</td><td>{row.narration}</td><td>{money(row.debit)}</td></tr>)}
-            {!books.length && <tr><td colSpan="5">No posted vouchers in this period.</td></tr>}
+          {section === "reports" && reportTab === "daybook" && <div className="table spacer acc-table-wrap"><table><thead><tr><th>Date</th><th>Number</th><th>Type</th><th>Narration</th><th className="acc-num">Amount</th></tr></thead><tbody>
+            {books.map(row => <tr key={row.id}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.voucherType}</td><td>{row.narration}</td><td className="acc-num">{money(row.debit)}</td></tr>)}
+            {!books.length && <tr><td colSpan="5">No posted vouchers in this period. Change the date range or record a transaction.</td></tr>}
           </tbody></table></div>}
           {section === "reports" && reportTab === "cashflow" && <>
-            <div className="grid metrics"><div className="card"><div className="metric-label">Inflow</div><div className="metric-value green">{money(flow.inflow)}</div></div><div className="card"><div className="metric-label">Outflow</div><div className="metric-value red">{money(flow.outflow)}</div></div><div className="card"><div className="metric-label">Net cash</div><div className="metric-value gold">{money(flow.net)}</div></div></div>
+            <div className="acc-metric-grid three"><AccMetric label="Inflow" value={money(flow.inflow)} tone="green" /><AccMetric label="Outflow" value={money(flow.outflow)} tone="red" /><AccMetric label="Net cash" value={money(flow.net)} tone="gold" /></div>
             <p className="small">Internal cash/bank/UPI transfers ({money(flow.transfers || 0)}) are excluded from inflow and outflow. Closing cash still follows the ledgers.</p>
           </>}
           {section === "reports" && reportTab === "receivables" && invoiceTable(arInvoices, "receivable")}
           {section === "reports" && reportTab === "payables" && invoiceTable(apInvoices, "payable")}
-          {section === "reports" && reportTab === "sales" && <div className="table spacer"><table><thead><tr><th>Date</th><th>Number</th><th>Narration</th><th>Amount</th></tr></thead><tbody>
-            {salesRows.map(row => <tr key={row.id}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.narration}</td><td>{money(row.debit)}</td></tr>)}
+          {section === "reports" && reportTab === "sales" && <div className="table spacer acc-table-wrap"><table><thead><tr><th>Date</th><th>Number</th><th>Narration</th><th className="acc-num">Amount</th></tr></thead><tbody>
+            {salesRows.map(row => <tr key={row.id}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.narration}</td><td className="acc-num">{money(row.debit)}</td></tr>)}
             {!salesRows.length && <tr><td colSpan="4">No sales vouchers in this period.</td></tr>}
           </tbody></table></div>}
-          {section === "reports" && reportTab === "purchases" && <div className="table spacer"><table><thead><tr><th>Date</th><th>Number</th><th>Narration</th><th>Amount</th></tr></thead><tbody>
-            {purchaseRows.map(row => <tr key={row.id}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.narration}</td><td>{money(row.debit)}</td></tr>)}
+          {section === "reports" && reportTab === "purchases" && <div className="table spacer acc-table-wrap"><table><thead><tr><th>Date</th><th>Number</th><th>Narration</th><th className="acc-num">Amount</th></tr></thead><tbody>
+            {purchaseRows.map(row => <tr key={row.id}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.narration}</td><td className="acc-num">{money(row.debit)}</td></tr>)}
             {!purchaseRows.length && <tr><td colSpan="4">No purchase vouchers in this period.</td></tr>}
           </tbody></table></div>}
           {section === "reports" && reportTab === "ledger" && <>
@@ -903,8 +1048,8 @@ export function AccountsModule({ token, close, loans = [] }) {
                 <select value={ledgerId} onChange={event => setLedgerId(event.target.value)}>{visibleAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</select>
               </label>
             </div>
-            <div className="table spacer"><table><thead><tr><th>Date</th><th>Voucher</th><th>Narration</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead><tbody>
-              {ledger.rows.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.narration}</td><td>{row.debit ? money(row.debit) : ""}</td><td>{row.credit ? money(row.credit) : ""}</td><td>{money(row.balance)}</td></tr>)}
+            <div className="table spacer acc-table-wrap"><table><thead><tr><th>Date</th><th>Voucher</th><th>Narration</th><th className="acc-num">Debit</th><th className="acc-num">Credit</th><th className="acc-num">Balance</th></tr></thead><tbody>
+              {ledger.rows.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.narration}</td><td className="acc-num">{row.debit ? money(row.debit) : ""}</td><td className="acc-num">{row.credit ? money(row.credit) : ""}</td><td className="acc-num">{money(row.balance)}</td></tr>)}
               {!ledger.rows.length && <tr><td colSpan="6">No postings on this ledger in this period.</td></tr>}
             </tbody></table></div>
           </>}
@@ -968,7 +1113,7 @@ export function AccountsModule({ token, close, loans = [] }) {
               </tbody></table></div>
             </article>;
           })}
-          {!statements.length && <div className="card accounts-empty">No bank statements yet. Add opening, closing, and statement lines above.</div>}
+          {!statements.length && <AccEmpty title="No bank statements yet" copy="Add opening, closing, and statement lines above. Matching never changes the books." />}
         </div>}
 
         {section === "setup" && <div className="acc-panel">
@@ -1015,7 +1160,7 @@ export function AccountsModule({ token, close, loans = [] }) {
             <p className="copy">Customers, suppliers, employees, agents, and others used only by Accounts. They do not have to exist in Daily Finance, Monthly Finance, or Chit Fund.</p>
             <div className="table spacer"><table><thead><tr><th>Name</th><th>Type</th><th>Phone</th></tr></thead><tbody>
               {parties.map(party => <tr key={party.id}><td>{party.name}</td><td>{party.partyType}</td><td>{party.phone || "—"}</td></tr>)}
-              {!parties.length && <tr><td colSpan="3">No parties yet.</td></tr>}
+              {!parties.length && <tr><td colSpan="3">No parties yet. Add a customer or supplier from Parties.</td></tr>}
             </tbody></table></div>
           </div>
           <div className="card accounts-form-card spacer">
@@ -1046,12 +1191,12 @@ export function AccountsModule({ token, close, loans = [] }) {
       {showSimple && <Modal title={SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry"} close={closeSimple}>
         <SimpleEntryForm kind={simpleKind} accounts={visibleAccounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} maxDate={todayIso()} />
       </Modal>}
-      {showParty && <Modal title="Add party" close={closeParty} actions={<div className="tabs spacer"><button type="button" className="btn primary" disabled={saving} onClick={() => run(async () => { await createParty(token, partyForm); setShowParty(false); setPartyForm(emptyPartyForm()); }, "Party saved.")}>{saving ? "Saving…" : "Save party"}</button></div>}>
+      {showParty && <Modal title="Add party" close={closeParty} actions={<div className="tabs spacer"><button type="button" className="btn" disabled={saving} onClick={closeParty}>Cancel</button><button type="button" className="btn primary" disabled={saving} onClick={() => run(async () => { await createParty(token, partyForm); setShowParty(false); setPartyForm(emptyPartyForm()); }, partyForm.partyType === "customer" ? "Customer created successfully" : partyForm.partyType === "supplier" ? "Supplier created successfully" : "Party saved successfully")}>{saving ? "Saving…" : "Save party"}</button></div>}>
         <div className="form">
           <Field label="Type"><select value={partyForm.partyType} onChange={event => setPartyForm(current => ({ ...current, partyType: event.target.value }))}>{PARTY_TYPES.map(type => <option key={type.id} value={type.id}>{type.label}</option>)}</select></Field>
-          <Field label="Name"><input value={partyForm.name} onChange={event => setPartyForm(current => ({ ...current, name: event.target.value }))} /></Field>
-          <Field label="Phone"><input value={partyForm.phone} onChange={event => setPartyForm(current => ({ ...current, phone: event.target.value }))} /></Field>
-          <Field label="Email"><input value={partyForm.email} onChange={event => setPartyForm(current => ({ ...current, email: event.target.value }))} /></Field>
+          <Field required label="Name"><input value={partyForm.name} placeholder="e.g. Sai Traders" onChange={event => setPartyForm(current => ({ ...current, name: event.target.value }))} /></Field>
+          <Field label="Phone"><input value={partyForm.phone} placeholder="10-digit mobile" onChange={event => setPartyForm(current => ({ ...current, phone: event.target.value }))} /></Field>
+          <Field label="Email"><input value={partyForm.email} placeholder="optional" onChange={event => setPartyForm(current => ({ ...current, email: event.target.value }))} /></Field>
         </div>
       </Modal>}
       {showCoa && <Modal title={coaForm.id ? "Edit ledger account" : "Add ledger account"} close={closeCoa} actions={<div className="tabs spacer"><button type="button" className="btn primary" disabled={saving} onClick={saveCoa}>{saving ? "Saving…" : "Save account"}</button></div>}>
@@ -1067,6 +1212,9 @@ export function AccountsModule({ token, close, loans = [] }) {
         onClose={() => { setReasonDialog(null); setReasonText(""); }}
         onConfirm={submitReason}
       />}
+      {confirmLogout && <Modal title="Log out of Accounts?" close={() => !signingOut && setConfirmLogout(false)} actions={<div className="tabs spacer"><button type="button" className="btn" disabled={signingOut} onClick={() => setConfirmLogout(false)}>Stay signed in</button><button type="button" className="btn danger" disabled={signingOut} onClick={confirmAccountsLogout}>{signingOut ? "Signing out…" : "Log out"}</button></div>}>
+        <p className="copy">This ends your FinTrack session. You will need to sign in again to open Accounts or any other module.</p>
+      </Modal>}
     </main>
   </div>;
 }
