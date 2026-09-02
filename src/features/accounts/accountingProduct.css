@@ -774,6 +774,167 @@
   box-shadow: none;
 }
 
+.accounts-dashboard .acc-party-ledger {
+  display: grid;
+  gap: 14px;
+}
+
+.accounts-dashboard .acc-party-ledger-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px 16px;
+}
+
+.accounts-dashboard .acc-party-ledger-toolbar .copy {
+  margin: 0;
+  max-width: 54ch;
+}
+
+.accounts-dashboard .acc-party-ledger-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.accounts-dashboard .acc-party-ledger-filters {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.7fr) repeat(3, minmax(132px, 1fr));
+  gap: 12px 14px;
+  align-items: end;
+  padding: 16px;
+}
+
+.accounts-dashboard .acc-party-ledger-filters input,
+.accounts-dashboard .acc-party-ledger-filters select {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--acc-line);
+  background: var(--acc-surface);
+  color: var(--acc-text);
+  color-scheme: dark;
+}
+
+.accounts-dashboard .acc-party-ledger-identity {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 14px 20px;
+}
+
+.accounts-dashboard .acc-party-ledger-identity h2 {
+  margin: 0;
+  font: 700 20px/1.2 Syne, sans-serif;
+}
+
+.accounts-dashboard .acc-party-ledger-contact {
+  margin: 8px 0 0;
+}
+
+.accounts-dashboard .acc-party-ledger-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(140px, 176px));
+  gap: 10px;
+}
+
+.accounts-dashboard .acc-party-ledger-stats article {
+  padding: 12px 14px;
+  border: 1px solid var(--acc-line);
+  border-radius: 12px;
+  background: var(--acc-card);
+}
+
+.accounts-dashboard .acc-party-ledger-stats span {
+  display: block;
+  color: var(--acc-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.accounts-dashboard .acc-party-ledger-stats strong {
+  display: block;
+  margin-top: 6px;
+  font: 700 18px/1.2 Syne, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.accounts-dashboard .acc-party-ledger-stats strong.ok {
+  color: var(--acc-green);
+}
+
+.accounts-dashboard .acc-party-ledger-stats strong.due {
+  color: var(--acc-gold);
+}
+
+.accounts-dashboard .acc-voucher-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid var(--acc-line);
+  background: #f4b94212;
+  color: #e8c98a;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.accounts-dashboard .acc-party-ledger-narration {
+  max-width: 320px;
+  color: #d5deea;
+}
+
+.accounts-dashboard .acc-party-ledger-balance {
+  font-weight: 700;
+}
+
+.accounts-dashboard .acc-party-ledger-table td {
+  white-space: nowrap;
+}
+
+.accounts-dashboard .acc-party-ledger-table td.acc-party-ledger-narration {
+  white-space: normal;
+}
+
+.accounts-dashboard .acc-party-ledger-cards {
+  display: none;
+  gap: 10px;
+}
+
+.accounts-dashboard .acc-party-ledger-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+}
+
+.accounts-dashboard .acc-party-ledger-card-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.accounts-dashboard .acc-party-ledger-card-amounts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin: 4px 0 0;
+  color: var(--acc-muted);
+}
+
+.accounts-dashboard .acc-party-ledger-card-amounts strong {
+  color: var(--acc-text);
+  font-variant-numeric: tabular-nums;
+}
+
 @keyframes acc-pulse {
   0% { background-position: 100% 0; }
   100% { background-position: -100% 0; }
@@ -790,6 +951,9 @@
   }
   .accounts-dashboard .acc-setup-actions {
     grid-column: 2;
+  }
+  .accounts-dashboard .acc-party-ledger-filters {
+    grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -810,6 +974,12 @@
     bottom: auto;
     top: calc(100% + 8px);
     width: min(220px, calc(100vw - 32px));
+  }
+  .accounts-dashboard .acc-party-ledger-filters {
+    grid-template-columns: 1fr 1fr;
+  }
+  .accounts-dashboard .acc-party-ledger-party {
+    grid-column: 1 / -1;
   }
 }
 
@@ -865,5 +1035,28 @@
   .accounts-dashboard .acc-party-actions .btn {
     flex: 1 1 0;
     min-height: 42px;
+  }
+  .accounts-dashboard .acc-party-ledger-filters {
+    grid-template-columns: 1fr;
+  }
+  .accounts-dashboard .acc-party-ledger-party {
+    grid-column: 1;
+  }
+  .accounts-dashboard .acc-party-ledger-links {
+    width: 100%;
+  }
+  .accounts-dashboard .acc-party-ledger-links .btn {
+    flex: 1 1 0;
+    min-height: 42px;
+  }
+  .accounts-dashboard .acc-party-ledger-stats {
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+  .accounts-dashboard .acc-party-ledger-table {
+    display: none;
+  }
+  .accounts-dashboard .acc-party-ledger-cards {
+    display: grid;
   }
 }
