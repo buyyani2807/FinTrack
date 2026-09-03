@@ -1093,6 +1093,21 @@ html:has(.accounts-dashboard) .financier-nav {
   display: none;
 }
 
+.accounts-dashboard .acc-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--acc-line);
+}
+
+.accounts-dashboard .acc-pager .small {
+  flex: 1;
+  text-align: center;
+}
+
 .accounts-dashboard .acc-party-toolbar {
   display: grid;
   grid-template-columns: minmax(180px, 280px) minmax(0, 1fr);

@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   DEFAULT_CHART_OF_ACCOUNTS,
+  GST_RATES,
   SYSTEM_CODES,
   VOUCHER_STATUS,
   accountingEquationHolds,
@@ -15,15 +16,19 @@ import {
   cancelVoucher,
   contraLines,
   createSubmitLock,
+  creditNoteLines,
   dateIsLocked,
+  debitNoteLines,
   disbursementLines,
   filterParties,
   formatVoucherNumber,
+  gstSplit,
   indianFinancialYear,
   ledgerBalances,
   ledgerHasPostedLines,
   partyHasAccountingUse,
   paymentLines,
+  prepareGstAmount,
   previousIndianFinancialYear,
   purchaseLines,
   postVoucher,
@@ -42,6 +47,7 @@ import {
   cashFlow,
   dashboardMetrics,
   dayBook,
+  gstBooksReport,
   invoiceRegister,
   matchBankLine,
   partyBalances,
@@ -605,4 +611,120 @@ test("accounts excel is a real xlsx zip and pdf is generated", () => {
   assert.match(pdf, /%%EOF/);
   assert.match(pdf, /Trial Balance/);
   assert.match(pdf, /Cash in Hand/);
+});
+
+const gst18Intra = { enabled: true, rate: 18, intra: true, taxInclusive: false, hsnSac: "9983" };
+const gst18Inter = { enabled: true, rate: 18, intra: false, taxInclusive: false, hsnSac: "9983" };
+
+test("GST split covers 0, 5, 12, 18 and 28 for intra and inter supply", () => {
+  assert.deepEqual(GST_RATES, [0, 5, 12, 18, 28]);
+  for (const rate of GST_RATES) {
+    const intra = gstSplit({ taxable: 10000, rate, intra: true });
+    const inter = gstSplit({ taxable: 10000, rate, intra: false });
+    const tax = roundMoney(10000 * rate / 100);
+    assert.equal(intra.taxable, 10000);
+    assert.equal(inter.taxable, 10000);
+    if (rate === 0) {
+      assert.equal(intra.cgst + intra.sgst + intra.igst, 0);
+      assert.equal(inter.igst, 0);
+      continue;
+    }
+    assert.equal(intra.supplyType, "intra");
+    assert.equal(inter.supplyType, "inter");
+    assert.equal(roundMoney(intra.cgst + intra.sgst), tax);
+    assert.equal(intra.igst, 0);
+    assert.equal(inter.igst, tax);
+    assert.equal(inter.cgst + inter.sgst, 0);
+    assert.equal(intra.total, roundMoney(10000 + tax));
+    assert.equal(inter.total, roundMoney(10000 + tax));
+  }
+});
+
+test("tax-inclusive GST backs out taxable value", () => {
+  const prepared = prepareGstAmount(11800, { enabled: true, rate: 18, intra: true, taxInclusive: true });
+  assert.equal(prepared.taxable, 10000);
+  assert.equal(prepared.cgst, 900);
+  assert.equal(prepared.sgst, 900);
+  assert.equal(prepared.total, 11800);
+});
+
+test("GST sale stays balanced and credits Sales with taxable value only", () => {
+  const lines = saleLines({ accounts, amount: 10000, settlement: "credit", partyId: "ravi", gst: gst18Intra });
+  assert.equal(voucherTotals(lines).balanced, true);
+  assert.equal(lines.find(line => line.code === SYSTEM_CODES.receivable).debit, 11800);
+  assert.equal(lines.find(line => line.code === SYSTEM_CODES.sales).credit, 10000);
+  assert.equal(lines.find(line => line.code === SYSTEM_CODES.outputCgst).credit, 900);
+  assert.equal(lines.find(line => line.code === SYSTEM_CODES.outputSgst).credit, 900);
+  const inter = saleLines({ accounts, amount: 10000, settlement: "credit", partyId: "ravi", gst: gst18Inter });
+  assert.equal(inter.find(line => line.code === SYSTEM_CODES.outputIgst).credit, 1800);
+  assert.equal(inter.find(line => line.code === SYSTEM_CODES.outputCgst), undefined);
+});
+
+test("GST purchase books input tax and keeps Purchase at taxable", () => {
+  const lines = purchaseLines({ accounts, amount: 10000, settlement: "credit", partyId: "xyz", gst: gst18Intra });
+  assert.equal(voucherTotals(lines).balanced, true);
+  assert.equal(lines.find(line => line.code === SYSTEM_CODES.purchase).debit, 10000);
+  assert.equal(lines.find(line => line.code === SYSTEM_CODES.inputCgst).debit, 900);
+  assert.equal(lines.find(line => line.code === SYSTEM_CODES.inputSgst).debit, 900);
+  assert.equal(lines.find(line => line.code === SYSTEM_CODES.payable).credit, 11800);
+});
+
+test("credit and debit notes reverse the same GST split", () => {
+  const cn = creditNoteLines({ accounts, amount: 10000, partyId: "ravi", gst: gst18Intra });
+  const dn = debitNoteLines({ accounts, amount: 10000, partyId: "xyz", gst: gst18Inter });
+  assert.equal(voucherTotals(cn).balanced, true);
+  assert.equal(voucherTotals(dn).balanced, true);
+  assert.equal(cn.find(line => line.code === SYSTEM_CODES.sales).debit, 10000);
+  assert.equal(cn.find(line => line.code === SYSTEM_CODES.outputCgst).debit, 900);
+  assert.equal(cn.find(line => line.code === SYSTEM_CODES.receivable).credit, 11800);
+  assert.equal(dn.find(line => line.code === SYSTEM_CODES.purchase).credit, 10000);
+  assert.equal(dn.find(line => line.code === SYSTEM_CODES.inputIgst).credit, 1800);
+  assert.equal(dn.find(line => line.code === SYSTEM_CODES.payable).debit, 11800);
+});
+
+test("P&L uses taxable sales and purchases, not GST-inclusive totals", () => {
+  const sale = posted("sales", "2026-04-05", saleLines({ accounts, amount: 10000, settlement: "credit", partyId: "ravi", gst: gst18Intra }), { n: 1, partyId: "ravi" });
+  const buy = posted("purchase", "2026-04-06", purchaseLines({ accounts, amount: 5000, settlement: "credit", partyId: "xyz", gst: gst18Intra }), { n: 1, partyId: "xyz" });
+  const range = { from: "2026-04-01", to: "2026-04-30" };
+  const pnl = profitAndLoss(accounts, [sale, buy], range);
+  assert.equal(pnl.income.find(row => row.code === SYSTEM_CODES.sales).amount, 10000);
+  assert.equal(pnl.expenses.find(row => row.code === SYSTEM_CODES.purchase).amount, 5000);
+  const tb = trialBalance(accounts, [sale, buy], range);
+  assert.equal(tb.balanced, true);
+  assert.equal(tb.rows.find(row => row.code === SYSTEM_CODES.outputCgst).credit, 900);
+  assert.equal(tb.rows.find(row => row.code === SYSTEM_CODES.inputCgst).debit, 450);
+});
+
+test("empty GST ledgers stay off the trial balance until tax is posted", () => {
+  const tb = trialBalance(accounts, [], { from: "2026-04-01", to: "2027-03-31" });
+  assert.equal(tb.rows.find(row => row.code === SYSTEM_CODES.inputCgst), undefined);
+  assert.equal(tb.rows.find(row => row.code === SYSTEM_CODES.outputIgst), undefined);
+});
+
+test("GST books report nets output tax against eligible ITC and signs notes", () => {
+  const saleDraft = simpleEntryDraft({ kind: "sale", accounts, date: "2026-04-08", amount: 10000, partyId: "ravi", settlement: "credit", gst: gst18Intra });
+  const buyDraft = simpleEntryDraft({ kind: "purchase", accounts, date: "2026-04-08", amount: 5000, partyId: "xyz", settlement: "credit", gst: gst18Intra });
+  const cnDraft = simpleEntryDraft({ kind: "credit_note", accounts, date: "2026-04-09", amount: 1000, partyId: "ravi", gst: gst18Intra });
+  const sale = posted("sales", saleDraft.date, saleDraft.lines, { n: 1, partyId: "ravi" });
+  const buy = posted("purchase", buyDraft.date, buyDraft.lines, { n: 1, partyId: "xyz" });
+  const note = posted("credit_note", cnDraft.date, cnDraft.lines, { n: 1, partyId: "ravi" });
+  sale.gstLines = saleDraft.gstLines;
+  buy.gstLines = buyDraft.gstLines;
+  note.gstLines = cnDraft.gstLines;
+  const report = gstBooksReport([sale, buy, note], { from: "2026-04-01", to: "2026-04-30" });
+  assert.equal(report.outputTax, 1620);
+  assert.equal(report.inputTax, 900);
+  assert.equal(report.netPayable, 720);
+  assert.equal(report.byRate.find(row => row.rate === 18).taxable, 14000);
+  const metrics = dashboardMetrics(accounts, [sale], [], { today: "2026-04-08", from: "2026-04-01", to: "2026-04-30" });
+  assert.equal(metrics.todaySales, 10000);
+});
+
+test("rate 0 or missing GST keeps the old two-line sale", () => {
+  const none = saleLines({ accounts, amount: 10000, settlement: "credit", partyId: "ravi" });
+  const zero = saleLines({ accounts, amount: 10000, settlement: "credit", partyId: "ravi", gst: { enabled: true, rate: 0, intra: true } });
+  assert.equal(none.length, 2);
+  assert.equal(zero.length, 2);
+  assert.equal(none.find(line => line.code === SYSTEM_CODES.sales).credit, 10000);
+  assert.equal(zero.find(line => line.code === SYSTEM_CODES.receivable).debit, 10000);
 });

@@ -275,15 +275,25 @@ export function invoiceStatus({ outstanding, dueDate, invoiceDate, today }) {
 
 export function dashboardMetrics(accounts, vouchers, parties, { today, from, to } = {}) {
   const range = { from, to };
-  const overview = overviewMetrics(accounts, vouchers, parties, range);
   const balances = ledgerBalances(accounts, vouchers, range);
+  const pnl = profitAndLoss(accounts, vouchers, range);
+  const receivables = partyBalances(accounts, vouchers, parties, { kind: "receivable", ...range });
+  const payables = partyBalances(accounts, vouchers, parties, { kind: "payable", ...range });
   const byType = type => roundMoney(
     balances.filter(row => row.accountType === type).reduce((sum, row) => sum + row.balance, 0),
   );
+  const cashAccount = findAccount(accounts, { accountType: "cash" });
+  const assets = roundMoney(balances.filter(row => row.groupType === "asset").reduce((sum, row) => sum + row.balance, 0));
+  const liabilities = roundMoney(balances.filter(row => row.groupType === "liability").reduce((sum, row) => sum + row.balance, 0));
+  const equity = roundMoney(balances.filter(row => row.groupType === "equity").reduce((sum, row) => (
+    sum + (row.code === SYSTEM_CODES.retained ? roundMoney(row.balance + pnl.net) : row.balance)
+  ), 0));
+  const tbRows = balances.filter(row => row.debit || row.credit);
+  const accountByKey = new Map((accounts || []).flatMap(item => [[item.id, item], [item.code, item]]));
   const todayRows = (vouchers || []).filter(voucher => affectsLedgers(voucher) && voucher.date === today);
   const netCode = (voucher, code) => roundMoney(
     (voucher.lines || []).reduce((sum, line) => {
-      const account = (accounts || []).find(item => item.id === line.coaId || item.code === line.code);
+      const account = accountByKey.get(line.coaId) || accountByKey.get(line.code);
       if ((account?.code || line.code) !== code) return sum;
       return sum + Number(line.credit || 0) - Number(line.debit || 0);
     }, 0),
@@ -298,9 +308,18 @@ export function dashboardMetrics(accounts, vouchers, parties, { today, from, to 
       return isReversalVoucher(voucher) ? sum - Math.abs(amount) : sum + amount;
     }, 0),
   );
-  const pnl = profitAndLoss(accounts, vouchers, range);
   return {
-    ...overview,
+    fy: range,
+    trialBalanced: roundMoney(tbRows.reduce((sum, row) => sum + row.debit, 0)) === roundMoney(tbRows.reduce((sum, row) => sum + row.credit, 0)),
+    netProfit: pnl.net,
+    cashOnHand: cashAccount ? balances.find(row => row.id === cashAccount.id || row.code === cashAccount.code)?.balance || 0 : roundMoney(byType("cash") + byType("bank") + byType("upi")),
+    cashClosing: roundMoney(byType("cash") + byType("bank") + byType("upi")),
+    receivables: roundMoney(receivables.reduce((sum, row) => sum + row.balance, 0)),
+    payables: roundMoney(payables.reduce((sum, row) => sum + row.balance, 0)),
+    assets,
+    liabilities,
+    equity,
+    equationHolds: assets === roundMoney(liabilities + equity),
     cash: byType("cash"),
     bank: byType("bank"),
     upi: byType("upi"),

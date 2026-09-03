@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useId, useMemo, useRef, useState } from "react";
 import "./accountingProduct.css";
 import {
   addBankStatement,
@@ -78,6 +78,7 @@ import {
   profitAndLoss,
   trialBalance,
 } from "./accountingReports.js";
+import { LIST_PAGE_SIZE, pageSlice } from "./accountsList.js";
 import { downloadAccountsCsv, downloadAccountsExcel, downloadAccountsPdf } from "./accountingExport.js";
 import { formatInr } from "../../lib/formatMoney.js";
 
@@ -131,6 +132,17 @@ const partyTypeLabel = id => PARTY_TYPES.find(type => type.id === id)?.label || 
 const PartyTypeBadge = ({ type }) => (
   <span className={`acc-type-badge ${type || "other"}`}>{partyTypeLabel(type)}</span>
 );
+
+function AccPager({ page, pages, total, onPage, noun = "rows" }) {
+  if (total <= LIST_PAGE_SIZE) return null;
+  return (
+    <div className="acc-pager">
+      <button type="button" className="btn" disabled={page <= 1} onClick={() => onPage(page - 1)}>Previous</button>
+      <span className="small">Page {page} of {pages} · {total} {noun}</span>
+      <button type="button" className="btn" disabled={page >= pages} onClick={() => onPage(page + 1)}>Next</button>
+    </div>
+  );
+}
 
 function AccSetupSection({ icon, title, copy, actions, children, collapsible = false, summary = "" }) {
   const [open, setOpen] = useState(!collapsible);
@@ -737,8 +749,16 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
   const [showCreateCompany, setShowCreateCompany] = useState(false);
   const [companyDraft, setCompanyDraft] = useState({ name: "", booksStartedOn: todayIso() });
   const [gstForm, setGstForm] = useState({ gstRegistration: "unregistered", gstin: "", legalName: "", stateCode: "" });
+  const [listPage, setListPage] = useState(1);
+  const [expandedVoucherId, setExpandedVoucherId] = useState(null);
+  const deferredSearch = useDeferredValue(search);
+  const deferredPartySearch = useDeferredValue(partySearch);
+  const sectionRef = useRef(section);
+  const refreshGen = useRef(0);
+  sectionRef.current = section;
 
   const refresh = useCallback(async (preferredCompanyId) => {
+    const gen = ++refreshGen.current;
     setLoading(true);
     setError("");
     try {
@@ -748,6 +768,7 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
       } catch (err) {
         if (err.code !== "MIGRATION_REQUIRED") throw err;
       }
+      if (gen !== refreshGen.current) return;
       setCompanies(nextCompanies);
       let stored = preferredCompanyId || "";
       if (!stored) {
@@ -771,15 +792,13 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
         setActiveAccountsCompanyId(null);
         setActiveCompanyId("");
       }
-      const [nextSettings, nextAccounts, nextParties, nextVouchers, nextAudit, nextLocks, nextStatements] = await Promise.all([
+      const [nextSettings, nextAccounts, nextParties, nextVouchers] = await Promise.all([
         loadAccountingSettings(token),
         loadChartOfAccounts(token),
         loadParties(token),
         loadVouchers(token),
-        loadAuditLog(token),
-        loadPeriodLocks(token),
-        loadBankStatements(token),
       ]);
+      if (gen !== refreshGen.current) return;
       const mergedSettings = {
         ...(nextSettings || {}),
         companyName: nextCompany?.name || nextSettings?.companyName || "",
@@ -790,30 +809,75 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
       setAccounts(nextAccounts);
       setParties(nextParties);
       setVouchers(nextVouchers);
-      setAudit(nextAudit);
-      setLocks(nextLocks);
-      setStatements(nextStatements);
       setMigrationRequired(false);
       if (mergedSettings.companyName || mergedSettings.booksStartedOn) {
         setSetupForm({ companyName: mergedSettings.companyName, booksStartedOn: mergedSettings.booksStartedOn || todayIso() });
       }
-      const visible = standaloneVisibleAccounts(nextAccounts, { integrationEnabled: mergedSettings?.integrationEnabled });
-      if (!ledgerId && visible[0]) setLedgerId(visible[0].id);
+      if (sectionRef.current === "setup") {
+        const [nextAudit, nextLocks] = await Promise.all([loadAuditLog(token), loadPeriodLocks(token)]);
+        if (gen !== refreshGen.current) return;
+        setAudit(nextAudit);
+        setLocks(nextLocks);
+      }
+      if (sectionRef.current === "bank") {
+        const nextStatements = await loadBankStatements(token);
+        if (gen !== refreshGen.current) return;
+        setStatements(nextStatements);
+      }
     } catch (err) {
+      if (gen !== refreshGen.current) return;
       if (err.code === "MIGRATION_REQUIRED") setMigrationRequired(true);
       else setError(err.message || "Could not load Accounts.");
     } finally {
-      setLoading(false);
+      if (gen === refreshGen.current) setLoading(false);
     }
-  }, [token, ledgerId]);
+  }, [token]);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  useEffect(() => {
+    if (!token || migrationRequired) return undefined;
+    if (section !== "setup" && section !== "bank") return undefined;
+    let cancelled = false;
+    const loadExtras = async () => {
+      try {
+        if (section === "setup") {
+          const [nextAudit, nextLocks] = await Promise.all([loadAuditLog(token), loadPeriodLocks(token)]);
+          if (!cancelled) {
+            setAudit(nextAudit);
+            setLocks(nextLocks);
+          }
+          return;
+        }
+        const nextStatements = await loadBankStatements(token);
+        if (!cancelled) setStatements(nextStatements);
+      } catch (err) {
+        if (!cancelled) setError(err.message || "Could not load this screen.");
+      }
+    };
+    loadExtras();
+    return () => { cancelled = true; };
+  }, [section, token, activeCompanyId, migrationRequired]);
+
+  useEffect(() => { setListPage(1); setExpandedVoucherId(null); }, [section, reportTab, deferredSearch, ledgerId, partyTypeFilter, deferredPartySearch]);
 
   const visibleAccounts = useMemo(
     () => standaloneVisibleAccounts(accounts, { integrationEnabled: settings?.integrationEnabled }),
     [accounts, settings],
   );
   const moreLinks = MORE_LINKS;
+  const reportId = section === "pnl" || section === "balance" || section === "trial" ? section : (section === "reports" ? reportTab : "");
+  const wantOverview = section === "overview";
+  const wantTrial = reportId === "trial";
+  const wantPnl = reportId === "pnl";
+  const wantSheet = reportId === "balance";
+  const wantFlow = reportId === "cashflow";
+  const wantDayBook = reportId === "daybook" || reportId === "sales" || reportId === "purchases";
+  const wantGst = reportId === "gst";
+  const wantInvoices = section === "receivables" || section === "payables" || reportId === "receivables" || reportId === "payables";
+  const wantArAp = wantOverview || wantInvoices || section === "setup";
+  const wantLedger = section === "ledger";
+  const wantPartyBook = section === "parties";
 
   useEffect(() => {
     if (ledgerId && !visibleAccounts.some(account => account.id === ledgerId) && visibleAccounts[0]) {
@@ -821,24 +885,58 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
     }
   }, [ledgerId, visibleAccounts]);
 
-  const metrics = useMemo(() => dashboardMetrics(visibleAccounts, vouchers, parties, { today: todayIso(), ...range }), [visibleAccounts, vouchers, parties, range]);
-  const tb = useMemo(() => trialBalance(visibleAccounts, vouchers, range), [visibleAccounts, vouchers, range]);
-  const pnl = useMemo(() => profitAndLoss(visibleAccounts, vouchers, range), [visibleAccounts, vouchers, range]);
-  const sheet = useMemo(() => balanceSheet(visibleAccounts, vouchers, range), [visibleAccounts, vouchers, range]);
-  const flow = useMemo(() => cashFlow(visibleAccounts, vouchers, range), [visibleAccounts, vouchers, range]);
-  const books = useMemo(() => dayBook(vouchers, range), [vouchers, range]);
-  const ar = useMemo(() => partyBalances(accounts, vouchers, parties, { kind: "receivable", ...range }), [accounts, vouchers, parties, range]);
-  const ap = useMemo(() => partyBalances(accounts, vouchers, parties, { kind: "payable", ...range }), [accounts, vouchers, parties, range]);
-  const arInvoices = useMemo(() => invoiceRegister(accounts, vouchers, parties, { kind: "receivable", today: todayIso(), ...range, outstandingOnly }), [accounts, vouchers, parties, range, outstandingOnly]);
-  const apInvoices = useMemo(() => invoiceRegister(accounts, vouchers, parties, { kind: "payable", today: todayIso(), ...range, outstandingOnly }), [accounts, vouchers, parties, range, outstandingOnly]);
+  const metrics = useMemo(
+    () => (wantOverview ? dashboardMetrics(visibleAccounts, vouchers, parties, { today: todayIso(), ...range }) : null),
+    [wantOverview, visibleAccounts, vouchers, parties, range],
+  );
+  const tb = useMemo(
+    () => (wantTrial ? trialBalance(visibleAccounts, vouchers, range) : { rows: [], totalDebit: 0, totalCredit: 0, balanced: true }),
+    [wantTrial, visibleAccounts, vouchers, range],
+  );
+  const pnl = useMemo(
+    () => (wantPnl ? profitAndLoss(visibleAccounts, vouchers, range) : { income: [], expenses: [], totalIncome: 0, totalExpense: 0, net: 0 }),
+    [wantPnl, visibleAccounts, vouchers, range],
+  );
+  const sheet = useMemo(
+    () => (wantSheet ? balanceSheet(visibleAccounts, vouchers, range) : { assets: [], liabilities: [], equity: [], totalAssets: 0, totalLiabilities: 0, totalEquity: 0, netProfit: 0, balanced: true }),
+    [wantSheet, visibleAccounts, vouchers, range],
+  );
+  const flow = useMemo(
+    () => (wantFlow ? cashFlow(visibleAccounts, vouchers, range) : { inflow: 0, outflow: 0, transfers: 0, net: 0 }),
+    [wantFlow, visibleAccounts, vouchers, range],
+  );
+  const books = useMemo(() => (wantDayBook ? dayBook(vouchers, range) : []), [wantDayBook, vouchers, range]);
+  const ar = useMemo(
+    () => (wantArAp ? partyBalances(accounts, vouchers, parties, { kind: "receivable", ...range }) : []),
+    [wantArAp, accounts, vouchers, parties, range],
+  );
+  const ap = useMemo(
+    () => (wantArAp ? partyBalances(accounts, vouchers, parties, { kind: "payable", ...range }) : []),
+    [wantArAp, accounts, vouchers, parties, range],
+  );
+  const arInvoices = useMemo(
+    () => (wantInvoices && (section === "receivables" || reportId === "receivables")
+      ? invoiceRegister(accounts, vouchers, parties, { kind: "receivable", today: todayIso(), ...range, outstandingOnly })
+      : []),
+    [wantInvoices, section, reportId, accounts, vouchers, parties, range, outstandingOnly],
+  );
+  const apInvoices = useMemo(
+    () => (wantInvoices && (section === "payables" || reportId === "payables")
+      ? invoiceRegister(accounts, vouchers, parties, { kind: "payable", today: todayIso(), ...range, outstandingOnly })
+      : []),
+    [wantInvoices, section, reportId, accounts, vouchers, parties, range, outstandingOnly],
+  );
   const salesRows = useMemo(() => books.filter(row => row.voucherType === "sales"), [books]);
   const purchaseRows = useMemo(() => books.filter(row => row.voucherType === "purchase"), [books]);
-  const gstReport = useMemo(() => gstBooksReport(vouchers, range), [vouchers, range]);
+  const gstReport = useMemo(
+    () => (wantGst ? gstBooksReport(vouchers, range) : { rows: [], output: [], input: [], byRate: [], byHsn: [], outputTax: 0, inputTax: 0, netPayable: 0 }),
+    [wantGst, vouchers, range],
+  );
   const activeCompany = useMemo(() => companies.find(item => item.id === activeCompanyId) || companies[0] || null, [companies, activeCompanyId]);
   const focusedParty = useMemo(() => parties.find(party => party.id === partyFocusId) || parties[0] || null, [parties, partyFocusId]);
   const setupParties = useMemo(
-    () => filterParties(parties, { type: partyTypeFilter, search: partySearch }),
-    [parties, partyTypeFilter, partySearch],
+    () => filterParties(parties, { type: partyTypeFilter, search: deferredPartySearch }),
+    [parties, partyTypeFilter, deferredPartySearch],
   );
   const partyCountByType = useMemo(() => {
     const counts = { all: parties.length };
@@ -855,17 +953,29 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
     }
     return map;
   }, [ar, ap]);
-  const partyBook = useMemo(() => partyLedger(accounts, vouchers, focusedParty, {
+  const partyBook = useMemo(() => (wantPartyBook ? partyLedger(accounts, vouchers, focusedParty, {
     from: partyFrom,
     to: partyTo,
     voucherType: partyTxnType || undefined,
-  }), [accounts, vouchers, focusedParty, partyFrom, partyTo, partyTxnType]);
-  const ledger = useMemo(() => accountLedger(accounts, vouchers, ledgerId, range), [accounts, vouchers, ledgerId, range]);
-  const q = search.trim().toLowerCase();
+  }) : { party: focusedParty, rows: [], opening: 0, closing: 0, outstanding: 0 }), [wantPartyBook, accounts, vouchers, focusedParty, partyFrom, partyTo, partyTxnType]);
+  const ledger = useMemo(
+    () => (wantLedger ? accountLedger(accounts, vouchers, ledgerId, range) : { account: null, rows: [] }),
+    [wantLedger, accounts, vouchers, ledgerId, range],
+  );
+  const q = String(deferredSearch || "").trim().toLowerCase();
   const shownVouchers = useMemo(() => vouchers.filter(voucher => {
     if (!q) return true;
     return `${voucher.voucherNumber} ${voucher.narration} ${voucher.voucherType}`.toLowerCase().includes(q);
   }), [vouchers, q]);
+  const pagedVouchers = useMemo(() => pageSlice(shownVouchers, listPage), [shownVouchers, listPage]);
+  const pagedLedger = useMemo(() => pageSlice(ledger.rows, listPage), [ledger.rows, listPage]);
+  const pagedBooks = useMemo(() => pageSlice(books, listPage), [books, listPage]);
+  const pagedAudit = useMemo(() => pageSlice(audit, listPage), [audit, listPage]);
+  const pagedArInvoices = useMemo(() => pageSlice(arInvoices, listPage), [arInvoices, listPage]);
+  const pagedApInvoices = useMemo(() => pageSlice(apInvoices, listPage), [apInvoices, listPage]);
+  const pagedSetupParties = useMemo(() => pageSlice(setupParties, listPage), [setupParties, listPage]);
+  const pagedPartyBook = useMemo(() => pageSlice(partyBook.rows, listPage), [partyBook.rows, listPage]);
+  const pagedGstOutput = useMemo(() => pageSlice(gstReport.output, listPage), [gstReport.output, listPage]);
   const bankAccounts = useMemo(() => accounts.filter(account => account.accountType === "bank" && account.isActive !== false), [accounts]);
   const matchedLineIds = useMemo(() => new Set(
     statements.flatMap(statement => statement.lines.map(line => line.matchedVoucherLineId).filter(Boolean)),
@@ -1256,13 +1366,22 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
   };
 
   const exportReport = format => {
-    const { filename, rows } = exportRows();
-    const active = ["receivables", "payables", "pnl", "balance", "trial"].includes(section) ? section : reportTab;
-    const title = REPORT_TABS.find(item => item.id === active)?.label || "Accounts report";
-    const subtitle = `${settings?.companyName || "FinTrack"} · ${rangeFrom} to ${rangeTo}`;
-    if (format === "xlsx") downloadAccountsExcel(`${filename}.xlsx`, rows);
-    else if (format === "pdf") downloadAccountsPdf(`${filename}.pdf`, { title, subtitle, rows });
-    else downloadAccountsCsv(`${filename}.csv`, rows);
+    setNotice("Preparing download…");
+    window.setTimeout(() => {
+      try {
+        const { filename, rows } = exportRows();
+        const active = ["receivables", "payables", "pnl", "balance", "trial"].includes(section) ? section : reportTab;
+        const title = REPORT_TABS.find(item => item.id === active)?.label || "Accounts report";
+        const subtitle = `${settings?.companyName || "FinTrack"} · ${rangeFrom} to ${rangeTo}`;
+        if (format === "xlsx") downloadAccountsExcel(`${filename}.xlsx`, rows);
+        else if (format === "pdf") downloadAccountsPdf(`${filename}.pdf`, { title, subtitle, rows });
+        else downloadAccountsCsv(`${filename}.csv`, rows);
+        setNotice("");
+      } catch (err) {
+        setNotice("");
+        setError(err.message || "Could not export.");
+      }
+    }, 0);
   };
 
   const askReason = (title, confirmLabel, onConfirm) => {
@@ -1346,34 +1465,34 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
             <button type="button" className="btn primary" disabled={saving} onClick={() => run(() => initializeAccounting(token, setupForm), "Accounts opened.")}>{saving ? "Saving…" : "Create chart of accounts"}</button>
           </div>}
           <div className="acc-status-row">
-            <span className={`acc-chip ${metrics.equationHolds ? "ok" : "warn"}`}>{metrics.equationHolds ? "Books in balance" : "Books out of balance"}</span>
+            <span className={`acc-chip ${metrics?.equationHolds ? "ok" : "warn"}`}>{metrics?.equationHolds ? "Books in balance" : "Books out of balance"}</span>
             <span className="acc-chip">Integration {settings?.integrationEnabled ? "ON" : "OFF"}</span>
           </div>
           <section className="acc-section">
             <h2 className="acc-section-title">Financial summary</h2>
             <div className="acc-metric-grid fill">
-              <AccMetric label="Cash" value={money(metrics.cash)} tone="gold" />
-              <AccMetric label="Bank" value={money(metrics.bank)} tone="gold" />
-              <AccMetric label="UPI" value={money(metrics.upi)} tone="gold" />
-              <AccMetric label="Receivables" value={money(metrics.receivables)} tone="blue" />
-              <AccMetric label="Payables" value={money(metrics.payables)} />
+              <AccMetric label="Cash" value={money(metrics?.cash)} tone="gold" />
+              <AccMetric label="Bank" value={money(metrics?.bank)} tone="gold" />
+              <AccMetric label="UPI" value={money(metrics?.upi)} tone="gold" />
+              <AccMetric label="Receivables" value={money(metrics?.receivables)} tone="blue" />
+              <AccMetric label="Payables" value={money(metrics?.payables)} />
             </div>
           </section>
           <section className="acc-section">
             <h2 className="acc-section-title">Performance</h2>
             <div className="acc-metric-grid three">
-              <AccMetric label="Income" value={money(metrics.income)} tone="green" />
-              <AccMetric label="Expenses" value={money(metrics.expenses)} tone="red" />
-              <AccMetric label="Net profit" value={money(metrics.netProfit)} tone={metrics.netProfit < 0 ? "red" : "green"} />
+              <AccMetric label="Income" value={money(metrics?.income)} tone="green" />
+              <AccMetric label="Expenses" value={money(metrics?.expenses)} tone="red" />
+              <AccMetric label="Net profit" value={money(metrics?.netProfit)} tone={metrics?.netProfit < 0 ? "red" : "green"} />
             </div>
           </section>
           <section className="acc-section">
             <h2 className="acc-section-title">Activity</h2>
             <div className="acc-metric-grid">
-              <AccMetric label="Today's sales" value={money(metrics.todaySales)} />
-              <AccMetric label="Today's purchases" value={money(metrics.todayPurchases)} />
-              <AccMetric label="Today's receipts" value={money(metrics.todayReceipts)} tone="green" />
-              <AccMetric label="Today's payments" value={money(metrics.todayPayments)} tone="red" />
+              <AccMetric label="Today's sales" value={money(metrics?.todaySales)} />
+              <AccMetric label="Today's purchases" value={money(metrics?.todayPurchases)} />
+              <AccMetric label="Today's receipts" value={money(metrics?.todayReceipts)} tone="green" />
+              <AccMetric label="Today's payments" value={money(metrics?.todayPayments)} tone="red" />
             </div>
           </section>
           <section className="acc-section">
@@ -1420,9 +1539,10 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
             <button type="button" className="btn" onClick={() => downloadAccountsPdf(`fintrack-ledger-${todayIso()}.pdf`, { title: "Ledger", subtitle: `${ledger.account?.code || ""} ${ledger.account?.name || ""}`, rows: [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])] })}>Download PDF</button>
           </div>
           <div className="table spacer acc-table-wrap"><table><thead><tr><th>Date</th><th>Voucher</th><th>Narration</th><th className="acc-num">Debit</th><th className="acc-num">Credit</th><th className="acc-num">Balance</th></tr></thead><tbody>
-            {ledger.rows.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.narration}</td><td className="acc-num">{row.debit ? money(row.debit) : ""}</td><td className="acc-num">{row.credit ? money(row.credit) : ""}</td><td className="acc-num">{money(row.balance)}</td></tr>)}
+            {pagedLedger.items.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.narration}</td><td className="acc-num">{row.debit ? money(row.debit) : ""}</td><td className="acc-num">{row.credit ? money(row.credit) : ""}</td><td className="acc-num">{money(row.balance)}</td></tr>)}
             {!ledger.rows.length && <tr><td colSpan="6">No postings on this ledger yet. Post a voucher to see movement here.</td></tr>}
           </tbody></table></div>
+          <AccPager page={pagedLedger.page} pages={pagedLedger.pages} total={pagedLedger.total} onPage={setListPage} noun="postings" />
         </div>}
 
         {section === "vouchers" && <div className="acc-panel">
@@ -1434,7 +1554,7 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
             <button type="button" className="btn primary" onClick={openVoucher}>+ Advanced voucher</button>
           </div>
           <div className="accounts-entry-list spacer">
-            {shownVouchers.map(voucher => <article key={voucher.id} className="card accounts-entry-row">
+            {pagedVouchers.items.map(voucher => <article key={voucher.id} className="card accounts-entry-row">
               <div className="accounts-entry-main">
                 <div>
                   <strong>{voucher.voucherNumber}</strong>
@@ -1443,18 +1563,20 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
                 </div>
                 <div className="accounts-entry-amounts">
                   <span>{money(voucherTotals(voucher.lines).debit)}</span>
+                  <button type="button" className="btn" onClick={() => setExpandedVoucherId(current => current === voucher.id ? null : voucher.id)}>{expandedVoucherId === voucher.id ? "Hide lines" : "Lines"}</button>
                   {voucher.status === "posted" && <>
                     <button type="button" className="btn" disabled={saving} onClick={() => askReason("Reverse voucher", "Post reversal", reason => run(() => reverseVoucher(token, voucher.id, todayIso(), reason), "Reversal posted."))}>Reverse</button>
                     <button type="button" className="btn danger" disabled={saving} onClick={() => askReason("Cancel voucher", "Cancel voucher", reason => run(() => cancelVoucher(token, voucher.id, reason), "Voucher cancelled."))}>Cancel</button>
                   </>}
                 </div>
               </div>
-              <div className="table spacer"><table><thead><tr><th>Account</th><th>Debit</th><th>Credit</th></tr></thead><tbody>
+              {expandedVoucherId === voucher.id && <div className="table spacer"><table><thead><tr><th>Account</th><th>Debit</th><th>Credit</th></tr></thead><tbody>
                 {voucher.lines.map(line => <tr key={line.id}><td>{line.code} {line.name}</td><td>{line.debit ? money(line.debit) : ""}</td><td>{line.credit ? money(line.credit) : ""}</td></tr>)}
-              </tbody></table></div>
+              </tbody></table></div>}
             </article>)}
             {!shownVouchers.length && <AccEmpty title="No transactions yet" copy="Use a guided entry for everyday work, or an advanced voucher for a custom journal." actionLabel="+ Create transaction" onAction={() => openSimple("sale")} />}
           </div>
+          <AccPager page={pagedVouchers.page} pages={pagedVouchers.pages} total={pagedVouchers.total} onPage={setListPage} noun="vouchers" />
         </div>}
 
         {(section === "receivables" || section === "payables") && <div className="acc-panel">
@@ -1467,7 +1589,14 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
             <button type="button" className="btn" onClick={() => exportReport("xlsx")}>Export Excel</button>
             <button type="button" className="btn" onClick={() => exportReport("pdf")}>Download PDF</button>
           </div>
-          {invoiceTable(section === "receivables" ? arInvoices : apInvoices, section === "payables" ? "payable" : "receivable")}
+          {invoiceTable(section === "receivables" ? pagedArInvoices.items : pagedApInvoices.items, section === "payables" ? "payable" : "receivable")}
+          <AccPager
+            page={(section === "receivables" ? pagedArInvoices : pagedApInvoices).page}
+            pages={(section === "receivables" ? pagedArInvoices : pagedApInvoices).pages}
+            total={(section === "receivables" ? pagedArInvoices : pagedApInvoices).total}
+            onPage={setListPage}
+            noun="invoices"
+          />
           <p className="small spacer">Party totals: {(section === "receivables" ? ar : ap).map(row => `${row.name} ${money(row.balance)}`).join(" · ") || "none"}</p>
         </div>}
 
@@ -1523,7 +1652,7 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
               </div>
             </div>
             <div className="table acc-table-wrap acc-party-ledger-table"><table><thead><tr><th>Date</th><th>Voucher</th><th>Type</th><th>Narration</th><th className="acc-num">Debit</th><th className="acc-num">Credit</th><th className="acc-num">Balance</th></tr></thead><tbody>
-              {partyBook.rows.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}>
+              {pagedPartyBook.items.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}>
                 <td>{row.date}</td>
                 <td><strong>{row.voucherNumber}</strong></td>
                 <td><span className="acc-voucher-chip">{VOUCHER_TYPES[row.voucherType]?.label || row.voucherType}</span></td>
@@ -1534,8 +1663,9 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
               </tr>)}
               {!partyBook.rows.length && <tr><td colSpan="7">No transactions for this party in the selected dates.</td></tr>}
             </tbody></table></div>
+            <AccPager page={pagedPartyBook.page} pages={pagedPartyBook.pages} total={pagedPartyBook.total} onPage={setListPage} noun="transactions" />
             <div className="acc-party-ledger-cards">
-              {partyBook.rows.map((row, index) => (
+              {pagedPartyBook.items.map((row, index) => (
                 <article key={`${row.voucherNumber}-${index}`} className="card acc-party-ledger-card">
                   <div className="acc-party-ledger-card-top">
                     <strong>{row.voucherNumber}</strong>
@@ -1597,16 +1727,25 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
               <p className="small">{sheet.balanced ? "Assets equal liabilities plus equity." : "Balance sheet is out of equation."}</p>
             </div>
           </div>}
-          {section === "reports" && reportTab === "daybook" && <div className="table spacer acc-table-wrap"><table><thead><tr><th>Date</th><th>Number</th><th>Type</th><th>Narration</th><th className="acc-num">Amount</th></tr></thead><tbody>
-            {books.map(row => <tr key={row.id}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.voucherType}</td><td>{row.narration}</td><td className="acc-num">{money(row.debit)}</td></tr>)}
+          {section === "reports" && reportTab === "daybook" && <>
+            <div className="table spacer acc-table-wrap"><table><thead><tr><th>Date</th><th>Number</th><th>Type</th><th>Narration</th><th className="acc-num">Amount</th></tr></thead><tbody>
+            {pagedBooks.items.map(row => <tr key={row.id}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.voucherType}</td><td>{row.narration}</td><td className="acc-num">{money(row.debit)}</td></tr>)}
             {!books.length && <tr><td colSpan="5">No posted vouchers in this period. Change the date range or record a transaction.</td></tr>}
-          </tbody></table></div>}
+          </tbody></table></div>
+            <AccPager page={pagedBooks.page} pages={pagedBooks.pages} total={pagedBooks.total} onPage={setListPage} noun="vouchers" />
+          </>}
           {section === "reports" && reportTab === "cashflow" && <>
             <div className="acc-metric-grid three"><AccMetric label="Inflow" value={money(flow.inflow)} tone="green" /><AccMetric label="Outflow" value={money(flow.outflow)} tone="red" /><AccMetric label="Net cash" value={money(flow.net)} tone="gold" /></div>
             <p className="small">Internal cash/bank/UPI transfers ({money(flow.transfers || 0)}) are excluded from inflow and outflow. Closing cash still follows the ledgers.</p>
           </>}
-          {section === "reports" && reportTab === "receivables" && invoiceTable(arInvoices, "receivable")}
-          {section === "reports" && reportTab === "payables" && invoiceTable(apInvoices, "payable")}
+          {section === "reports" && reportTab === "receivables" && <>
+            {invoiceTable(pagedArInvoices.items, "receivable")}
+            <AccPager page={pagedArInvoices.page} pages={pagedArInvoices.pages} total={pagedArInvoices.total} onPage={setListPage} noun="invoices" />
+          </>}
+          {section === "reports" && reportTab === "payables" && <>
+            {invoiceTable(pagedApInvoices.items, "payable")}
+            <AccPager page={pagedApInvoices.page} pages={pagedApInvoices.pages} total={pagedApInvoices.total} onPage={setListPage} noun="invoices" />
+          </>}
           {section === "reports" && reportTab === "sales" && <div className="table spacer acc-table-wrap"><table><thead><tr><th>Date</th><th>Number</th><th>Narration</th><th className="acc-num">Amount</th></tr></thead><tbody>
             {salesRows.map(row => <tr key={row.id}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.narration}</td><td className="acc-num">{money(row.debit)}</td></tr>)}
             {!salesRows.length && <tr><td colSpan="4">No sales vouchers in this period.</td></tr>}
@@ -1634,9 +1773,10 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
             </tbody></table></div>
             <h3 className="acc-section-title">Output GST</h3>
             <div className="table acc-table-wrap"><table><thead><tr><th>Date</th><th>Voucher</th><th>HSN</th><th className="acc-num">Taxable</th><th className="acc-num">Tax</th></tr></thead><tbody>
-              {gstReport.output.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.hsnSac || "—"}</td><td className="acc-num">{money(row.taxable)}</td><td className="acc-num">{money(row.cgst + row.sgst + row.igst)}</td></tr>)}
+              {pagedGstOutput.items.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.hsnSac || "—"}</td><td className="acc-num">{money(row.taxable)}</td><td className="acc-num">{money(row.cgst + row.sgst + row.igst)}</td></tr>)}
               {!gstReport.output.length && <tr><td colSpan="5">No output GST in this period.</td></tr>}
             </tbody></table></div>
+            <AccPager page={pagedGstOutput.page} pages={pagedGstOutput.pages} total={pagedGstOutput.total} onPage={setListPage} noun="output lines" />
             <h3 className="acc-section-title">Input GST / ITC</h3>
             <div className="table acc-table-wrap"><table><thead><tr><th>Date</th><th>Voucher</th><th>HSN</th><th className="acc-num">Taxable</th><th className="acc-num">ITC</th></tr></thead><tbody>
               {gstReport.input.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.hsnSac || "—"}</td><td className="acc-num">{money(row.taxable)}</td><td className="acc-num">{money(row.itcEligible ? row.cgst + row.sgst + row.igst : 0)}</td></tr>)}
@@ -1884,7 +2024,7 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
               />
             ) : <>
               <div className="table acc-table-wrap acc-party-table"><table><thead><tr><th>Party</th><th>Type</th><th>Contact</th><th className="acc-num">Outstanding</th><th>Status</th><th></th></tr></thead><tbody>
-                {setupParties.map(party => {
+                {pagedSetupParties.items.map(party => {
                   const outstanding = outstandingByParty.get(party.id);
                   return <tr key={party.id}>
                     <td>
@@ -1903,7 +2043,7 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
                 })}
               </tbody></table></div>
               <div className="acc-party-cards">
-                {setupParties.map(party => {
+                {pagedSetupParties.items.map(party => {
                   const outstanding = outstandingByParty.get(party.id);
                   return <article key={party.id} className="card acc-party-card">
                     <div className="acc-party-card-top">
@@ -1921,6 +2061,7 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
                   </article>;
                 })}
               </div>
+              <AccPager page={pagedSetupParties.page} pages={pagedSetupParties.pages} total={pagedSetupParties.total} onPage={setListPage} noun="parties" />
             </>}
           </AccSetupSection>
           <AccSetupSection
@@ -1952,9 +2093,10 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
             summary={`${audit.length} ${audit.length === 1 ? "event" : "events"}`}
           >
             <div className="table spacer acc-table-wrap"><table><thead><tr><th>When (IST)</th><th>Action</th><th>Entity</th><th>Reason</th></tr></thead><tbody>
-              {audit.map(row => <tr key={row.id}><td>{formatIstDateTime(row.createdAt)}</td><td>{row.action}</td><td>{row.entityType}</td><td>{row.reason || "—"}</td></tr>)}
+              {pagedAudit.items.map(row => <tr key={row.id}><td>{formatIstDateTime(row.createdAt)}</td><td>{row.action}</td><td>{row.entityType}</td><td>{row.reason || "—"}</td></tr>)}
               {!audit.length && <tr><td colSpan="4">No accounting audit events yet.</td></tr>}
             </tbody></table></div>
+            <AccPager page={pagedAudit.page} pages={pagedAudit.pages} total={pagedAudit.total} onPage={setListPage} noun="events" />
           </AccSetupSection>
         </div>}
       </>}

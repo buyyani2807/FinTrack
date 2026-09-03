@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, lazy, Suspense } from "react";
 import { flushSync } from "react-dom";
 import { supabase } from "./lib/supabase";
 import { monthlyInterestOnBalance, dailyInstallmentAmount, monthlyRateOnDate } from "./features/finance/calculations";
@@ -22,7 +22,7 @@ import { UpcomingPaymentsSection, UpcomingPaymentCard } from "./features/receipt
 import { buildMonthlyUpcoming } from "./features/receipts/upcomingPayments.js";
 import { CustomerStatementPage } from "./features/statements/CustomerStatementPage.jsx";
 import { AccountsSummaryCard, CashbookWorkspace } from "./features/accounts/AccountsModule.jsx";
-import { AccountsModule } from "./features/accounts/AccountingProduct.jsx";
+const AccountsModule = lazy(() => import("./features/accounts/AccountingProduct.jsx").then(module => ({ default: module.AccountsModule })));
 import { CreditScoreCard } from "./features/creditScore/CreditScoreCard.jsx";
 import { buildChitMonthStatement, currentSchemeMonth, monthLabel as chitMonthLabel } from "./features/chitFund/monthStatement";
 import { downloadChitMonthStatementPdf } from "./features/chitFund/monthStatementPdf";
@@ -1527,7 +1527,7 @@ function FinancierTools({ loans, token, activeChitSchemes = [], onCreateAgent, o
       <div className="nav-footer">Financier workspace</div>
     </aside>
     {workspace?.role === "owner" && panel === "cashbook" && <div style={{ position: "fixed", inset: 0, zIndex: 5, overflow: "auto", background: C.bg }}><CashbookWorkspace token={token} close={goDashboard} loans={loans} /></div>}
-    {workspace?.role === "owner" && panel === "accounts" && <div className="accounts-dashboard"><AccountsModule token={token} close={goDashboard} logout={logout} workspace={workspace} /></div>}
+    {workspace?.role === "owner" && panel === "accounts" && <div className="accounts-dashboard"><Suspense fallback={<div className="shell"><p className="copy">Loading Accounts…</p></div>}><AccountsModule token={token} close={goDashboard} logout={logout} workspace={workspace} /></Suspense></div>}
     {workspace?.role === "owner" && panel === "agents" && <CollectionStaffPage loans={loans} close={() => setPanel("more")} loadAgents={onLoadAgents} createAgent={onCreateAgent} assignAgent={onAssignAgent} updateAgent={onUpdateAgent} />}
     {workspace?.role === "owner" && panel === "chit" && <div className="chit-dashboard" style={{ position: "fixed", inset: 0, zIndex: 5, overflow: "auto", background: C.bg }}><ChitFundPage token={token} orgSettings={orgSettings} workspace={workspace} onLogReceipt={onLogReceipt} openSchemeId={openChitSchemeId} onOpenSchemeConsumed={() => setOpenChitSchemeId(null)} onSchemesChanged={schemes => setDashboardChitSchemes((schemes || []).filter(scheme => scheme.status === "active"))} close={goDashboard} /></div>}
     {workspace?.role === "owner" && panel === "settings" && <div style={{ position: "fixed", inset: 0, zIndex: 5, overflow: "auto", background: C.bg }}><ReceiptSettingsPage token={token} close={() => setPanel("more")} onSettingsSaved={onSettingsSaved} /></div>}

@@ -1,4 +1,8 @@
 import { supabase } from "../../lib/supabase";
+import { groupByKey } from "./accountsList.js";
+import { assembleVouchers } from "./accountsVoucherAssembly.js";
+
+export { assembleVouchers };
 
 const isMissing = err => /could not find|does not exist|schema cache|404|PGRST202/i.test(String(err?.message || err?.code || ""));
 
@@ -12,7 +16,10 @@ export const getActiveAccountsCompanyId = () => activeCompanyId;
 
 const companyHeaders = () => (activeCompanyId ? { "x-acc-company-id": activeCompanyId } : {});
 const companyEq = () => (activeCompanyId ? `&company_id=eq.${encodeURIComponent(activeCompanyId)}` : "");
-const accOpts = () => ({ headers: companyHeaders() });
+const accOpts = () => ({
+  headers: companyHeaders(),
+  signal: typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(45000) : undefined,
+});
 const accRpc = (name, args, token) => supabase.rpc(name, { ...args, ...(activeCompanyId ? { input_company_id: activeCompanyId } : {}) }, token, companyHeaders());
 const accQuery = (path, token) => supabase.query(path, token, accOpts());
 
@@ -73,48 +80,6 @@ const mapCompany = row => ({
   stateName: row.stateName || row.state_name || "",
 });
 
-const mapVoucher = (row, lines = [], gstLines = []) => ({
-  id: row.id,
-  voucherType: row.voucher_type,
-  voucherNumber: row.voucher_number,
-  date: row.voucher_date,
-  narration: row.narration || "",
-  status: row.status,
-  partyId: row.party_id,
-  sourceModule: row.source_module,
-  sourceType: row.source_type,
-  sourceTransactionId: row.source_transaction_id,
-  cancelReason: row.cancel_reason || "",
-  dueDate: row.due_date || null,
-  createdAt: row.created_at,
-  postedAt: row.posted_at,
-  gstLines: gstLines.filter(line => line.voucher_id === row.id).map(line => ({
-    hsnSac: line.hsn_sac || "",
-    description: line.description || "",
-    taxable: Number(line.taxable_amount || 0),
-    rate: Number(line.rate || 0),
-    cgst: Number(line.cgst_amount || 0),
-    sgst: Number(line.sgst_amount || 0),
-    igst: Number(line.igst_amount || 0),
-    supplyType: line.supply_type || "none",
-    itcEligible: line.itc_eligible !== false,
-  })),
-  lines: lines
-    .filter(line => line.voucher_id === row.id)
-    .sort((a, b) => a.line_no - b.line_no)
-    .map(line => ({
-      id: line.id,
-      lineNo: line.line_no,
-      coaId: line.coa_id,
-      partyId: line.party_id,
-      debit: Number(line.debit || 0),
-      credit: Number(line.credit || 0),
-      description: line.description || "",
-      code: line.acc_coa?.code,
-      name: line.acc_coa?.name,
-    })),
-});
-
 export const loadAccountsCompanies = token => wrap(
   supabase.rpc("acc_list_companies", {}, token).then(rows => {
     let list = rows;
@@ -133,7 +98,7 @@ export const createAccountsCompany = (token, payload) =>
   }, token));
 
 export const loadAccountingSettings = token => wrap(
-  accQuery("/rest/v1/acc_settings?select=*&limit=1", token)
+  accQuery("/rest/v1/acc_settings?select=company_name,fy_start_month,books_started_on,integration_enabled&limit=1", token)
     .then(rows => rows[0] ? {
       companyName: rows[0].company_name || "",
       fyStartMonth: Number(rows[0].fy_start_month || 4),
@@ -143,23 +108,23 @@ export const loadAccountingSettings = token => wrap(
 );
 
 export const loadChartOfAccounts = token => wrap(
-  accQuery(`/rest/v1/acc_coa?select=*&order=code.asc${companyEq()}`, token).then(rows => rows.map(mapCoa)),
+  accQuery(`/rest/v1/acc_coa?select=id,code,name,group_type,account_type,is_system,is_active,opening_balance,opening_side,parent_id&order=code.asc${companyEq()}`, token).then(rows => rows.map(mapCoa)),
 );
 
 export const loadParties = token => wrap(
-  accQuery(`/rest/v1/acc_parties?select=*&order=name.asc${companyEq()}`, token).then(rows => rows.map(mapParty)),
+  accQuery(`/rest/v1/acc_parties?select=id,party_type,name,phone,email,address,gstin,state_code,gst_registration,notes,is_active&order=name.asc${companyEq()}`, token).then(rows => rows.map(mapParty)),
 );
 
 export const loadVouchers = token => wrap(
   Promise.all([
-    accQuery(`/rest/v1/acc_vouchers?select=*&order=voucher_date.desc,voucher_number.desc&limit=2000${companyEq()}`, token),
-    accQuery(`/rest/v1/acc_voucher_lines?select=*,acc_coa(code,name)&order=line_no.asc&limit=20000${companyEq()}`, token),
-    accQuery(`/rest/v1/acc_gst_lines?select=*&order=line_no.asc&limit=20000${companyEq()}`, token).catch(() => []),
-  ]).then(([vouchers, lines, gstLines]) => vouchers.map(row => mapVoucher(row, lines, gstLines || []))),
+    accQuery(`/rest/v1/acc_vouchers?select=id,voucher_type,voucher_number,voucher_date,narration,status,party_id,source_module,source_type,source_transaction_id,cancel_reason,due_date,created_at,posted_at&order=voucher_date.desc,voucher_number.desc&limit=2000${companyEq()}`, token),
+    accQuery(`/rest/v1/acc_voucher_lines?select=id,voucher_id,line_no,coa_id,party_id,debit,credit,description,acc_coa(code,name)&order=line_no.asc&limit=20000${companyEq()}`, token),
+    accQuery(`/rest/v1/acc_gst_lines?select=id,voucher_id,line_no,hsn_sac,description,taxable_amount,rate,cgst_amount,sgst_amount,igst_amount,supply_type,itc_eligible&order=line_no.asc&limit=20000${companyEq()}`, token).catch(() => []),
+  ]).then(([vouchers, lines, gstLines]) => assembleVouchers(vouchers, lines, gstLines || [])),
 );
 
 export const loadAuditLog = token => wrap(
-  accQuery(`/rest/v1/acc_audit_log?select=*&order=created_at.desc&limit=300${companyEq()}`, token)
+  accQuery(`/rest/v1/acc_audit_log?select=id,entity_type,entity_id,action,actor_id,old_value,new_value,reason,created_at&order=created_at.desc&limit=300${companyEq()}`, token)
     .then(rows => rows.map(row => ({
       id: row.id,
       entityType: row.entity_type,
@@ -174,7 +139,7 @@ export const loadAuditLog = token => wrap(
 );
 
 export const loadPeriodLocks = token => wrap(
-  accQuery(`/rest/v1/acc_period_locks?select=*&order=period_from.desc${companyEq()}`, token)
+  accQuery(`/rest/v1/acc_period_locks?select=id,period_from,period_to,is_locked,reopen_reason,locked_at&order=period_from.desc${companyEq()}`, token)
     .then(rows => rows.map(row => ({
       id: row.id,
       periodFrom: row.period_from,
@@ -187,25 +152,28 @@ export const loadPeriodLocks = token => wrap(
 
 export const loadBankStatements = token => wrap(
   Promise.all([
-    accQuery(`/rest/v1/acc_bank_statements?select=*,acc_coa(name,code)&order=statement_date.desc${companyEq()}`, token),
-    accQuery(`/rest/v1/acc_bank_statement_lines?select=*&order=line_date.asc${companyEq()}`, token),
-  ]).then(([statements, lines]) => statements.map(row => ({
-    id: row.id,
-    coaId: row.coa_id,
-    accountName: row.acc_coa?.name || "",
-    statementDate: row.statement_date,
-    openingBalance: Number(row.opening_balance || 0),
-    closingBalance: Number(row.closing_balance || 0),
-    lines: lines.filter(line => line.statement_id === row.id).map(line => ({
-      id: line.id,
-      lineDate: line.line_date,
-      description: line.description,
-      amount: Number(line.amount || 0),
-      direction: line.direction,
-      matchedVoucherLineId: line.matched_voucher_line_id,
-      matchStatus: line.match_status,
-    })),
-  }))),
+    accQuery(`/rest/v1/acc_bank_statements?select=id,coa_id,statement_date,opening_balance,closing_balance,acc_coa(name,code)&order=statement_date.desc${companyEq()}`, token),
+    accQuery(`/rest/v1/acc_bank_statement_lines?select=id,statement_id,line_date,description,amount,direction,matched_voucher_line_id,match_status&order=line_date.asc${companyEq()}`, token),
+  ]).then(([statements, lines]) => {
+    const linesBy = groupByKey(lines, "statement_id");
+    return statements.map(row => ({
+      id: row.id,
+      coaId: row.coa_id,
+      accountName: row.acc_coa?.name || "",
+      statementDate: row.statement_date,
+      openingBalance: Number(row.opening_balance || 0),
+      closingBalance: Number(row.closing_balance || 0),
+      lines: (linesBy.get(row.id) || []).map(line => ({
+        id: line.id,
+        lineDate: line.line_date,
+        description: line.description,
+        amount: Number(line.amount || 0),
+        direction: line.direction,
+        matchedVoucherLineId: line.matched_voucher_line_id,
+        matchStatus: line.match_status,
+      })),
+    }));
+  }),
 );
 
 export const initializeAccounting = (token, { companyName, booksStartedOn } = {}) =>
