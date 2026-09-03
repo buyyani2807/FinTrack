@@ -168,7 +168,7 @@ export const supabase = {
       clearLegacyStorage();
     },
   },
-  rpc: (name, args, token) => request(`/rest/v1/rpc/${name}`, { method: "POST", body: JSON.stringify(args) }, token),
+  rpc: (name, args, token, extraHeaders = {}) => request(`/rest/v1/rpc/${name}`, { method: "POST", body: JSON.stringify(args), headers: extraHeaders }, token),
   query: (path, token, options = {}) => request(path, options, token),
   from: (table, token) => ({
     select: (query = "*") => request(`/rest/v1/${table}?select=${encodeURIComponent(query)}`, {}, token),

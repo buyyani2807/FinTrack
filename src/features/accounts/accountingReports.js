@@ -281,10 +281,21 @@ export function dashboardMetrics(accounts, vouchers, parties, { today, from, to 
     balances.filter(row => row.accountType === type).reduce((sum, row) => sum + row.balance, 0),
   );
   const todayRows = (vouchers || []).filter(voucher => affectsLedgers(voucher) && voucher.date === today);
+  const netCode = (voucher, code) => roundMoney(
+    (voucher.lines || []).reduce((sum, line) => {
+      const account = (accounts || []).find(item => item.id === line.coaId || item.code === line.code);
+      if ((account?.code || line.code) !== code) return sum;
+      return sum + Number(line.credit || 0) - Number(line.debit || 0);
+    }, 0),
+  );
   const sumType = type => roundMoney(
     todayRows.filter(voucher => voucher.voucherType === type).reduce((sum, voucher) => {
-      const amount = voucherTotals(voucher.lines).debit;
-      return isReversalVoucher(voucher) ? sum - amount : sum + amount;
+      const amount = type === "sales"
+        ? netCode(voucher, SYSTEM_CODES.sales)
+        : type === "purchase"
+          ? roundMoney(-netCode(voucher, SYSTEM_CODES.purchase))
+          : voucherTotals(voucher.lines).debit;
+      return isReversalVoucher(voucher) ? sum - Math.abs(amount) : sum + amount;
     }, 0),
   );
   const pnl = profitAndLoss(accounts, vouchers, range);
@@ -423,6 +434,64 @@ export function invoiceRegister(accounts, vouchers, parties = [], { kind = "rece
     if (outstandingOnly && row.outstanding <= 0) return false;
     return true;
   });
+}
+
+export function gstBooksReport(vouchers = [], { from, to } = {}) {
+  const rows = [];
+  for (const voucher of (vouchers || []).filter(item => affectsLedgers(item) && inRange(item.date, from, to))) {
+    const sign = voucher.voucherType === "credit_note" || voucher.voucherType === "debit_note" || isReversalVoucher(voucher) ? -1 : 1;
+    for (const line of voucher.gstLines || []) {
+      rows.push({
+        date: voucher.date,
+        voucherNumber: voucher.voucherNumber,
+        voucherType: voucher.voucherType,
+        narration: voucher.narration,
+        hsnSac: line.hsnSac || line.hsn_sac || "",
+        taxable: roundMoney(sign * Number(line.taxable ?? line.taxable_amount ?? 0)),
+        rate: Number(line.rate || 0),
+        cgst: roundMoney(sign * Number(line.cgst ?? line.cgst_amount ?? 0)),
+        sgst: roundMoney(sign * Number(line.sgst ?? line.sgst_amount ?? 0)),
+        igst: roundMoney(sign * Number(line.igst ?? line.igst_amount ?? 0)),
+        supplyType: line.supplyType || line.supply_type || "none",
+        itcEligible: line.itcEligible !== false && line.itc_eligible !== false,
+        direction: voucher.voucherType === "purchase" || voucher.voucherType === "debit_note" ? "input" : "output",
+      });
+    }
+  }
+  const output = rows.filter(row => row.direction === "output");
+  const input = rows.filter(row => row.direction === "input");
+  const sum = (list, key) => roundMoney(list.reduce((total, row) => total + Number(row[key] || 0), 0));
+  const outputTax = roundMoney(sum(output, "cgst") + sum(output, "sgst") + sum(output, "igst"));
+  const eligibleInput = input.filter(row => row.itcEligible);
+  const inputTax = roundMoney(sum(eligibleInput, "cgst") + sum(eligibleInput, "sgst") + sum(eligibleInput, "igst"));
+  const byRate = {};
+  for (const row of rows) {
+    const key = String(row.rate);
+    if (!byRate[key]) byRate[key] = { rate: row.rate, taxable: 0, cgst: 0, sgst: 0, igst: 0 };
+    byRate[key].taxable = roundMoney(byRate[key].taxable + row.taxable);
+    byRate[key].cgst = roundMoney(byRate[key].cgst + row.cgst);
+    byRate[key].sgst = roundMoney(byRate[key].sgst + row.sgst);
+    byRate[key].igst = roundMoney(byRate[key].igst + row.igst);
+  }
+  const byHsn = {};
+  for (const row of rows) {
+    const key = row.hsnSac || "—";
+    if (!byHsn[key]) byHsn[key] = { hsnSac: key, taxable: 0, cgst: 0, sgst: 0, igst: 0 };
+    byHsn[key].taxable = roundMoney(byHsn[key].taxable + row.taxable);
+    byHsn[key].cgst = roundMoney(byHsn[key].cgst + row.cgst);
+    byHsn[key].sgst = roundMoney(byHsn[key].sgst + row.sgst);
+    byHsn[key].igst = roundMoney(byHsn[key].igst + row.igst);
+  }
+  return {
+    rows,
+    output,
+    input,
+    outputTax,
+    inputTax,
+    netPayable: roundMoney(outputTax - inputTax),
+    byRate: Object.values(byRate).sort((a, b) => a.rate - b.rate),
+    byHsn: Object.values(byHsn),
+  };
 }
 
 export { downloadAccountsCsv, downloadAccountsExcel, downloadAccountsPdf } from "./accountingExport.js";
