@@ -308,6 +308,99 @@ html:has(.accounts-dashboard) .financier-nav {
   gap: 8px;
 }
 
+.accounts-dashboard .acc-company-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px 12px;
+  margin: 12px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--acc-line);
+  border-radius: 12px;
+  background: #151b27;
+}
+
+.accounts-dashboard .acc-company-bar-field {
+  display: grid;
+  gap: 4px;
+  min-width: min(280px, 100%);
+  flex: 1 1 220px;
+}
+
+.accounts-dashboard .acc-company-bar-field > span {
+  color: var(--acc-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.accounts-dashboard .acc-company-switch {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  height: var(--acc-control-h);
+  padding: 0 28px 0 12px;
+  border: 1px solid var(--acc-line);
+  border-radius: var(--acc-radius-ctrl);
+  background: var(--acc-surface);
+  color: var(--acc-text);
+  font: inherit;
+  font-weight: 600;
+}
+
+.accounts-dashboard .acc-company-bar-gst {
+  align-self: center;
+}
+
+.accounts-dashboard .acc-gst-setup-hint {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px dashed var(--acc-line);
+  border-radius: 10px;
+  background: #151b27;
+}
+
+.accounts-dashboard .acc-gst-setup-hint .copy {
+  margin: 0;
+}
+
+.accounts-dashboard .acc-company-setup-list {
+  display: grid;
+  gap: 8px;
+}
+
+.accounts-dashboard .acc-company-setup-item {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid var(--acc-line);
+  border-radius: 10px;
+  background: var(--acc-surface);
+  color: inherit;
+  cursor: pointer;
+}
+
+.accounts-dashboard .acc-company-setup-item.current {
+  border-color: var(--acc-gold);
+}
+
+.accounts-dashboard .acc-gst-preview {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--acc-line);
+  border-radius: 10px;
+  background: #151b27;
+  color: var(--acc-muted);
+}
+
+.accounts-dashboard .acc-gst-reports .acc-section-title {
+  margin-top: 18px;
+}
+
 .accounts-dashboard .acc-page-title {
   margin-bottom: 18px;
 }

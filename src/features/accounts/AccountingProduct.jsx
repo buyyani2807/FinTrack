@@ -4,12 +4,14 @@ import "./accountingProduct.css";
 import {
   addBankStatement,
   cancelVoucher,
+  createAccountsCompany,
   createChartAccount,
   createParty,
   deleteChartAccount,
   deleteParty,
   initializeAccounting,
   loadAccountingSettings,
+  loadAccountsCompanies,
   loadAuditLog,
   loadBankStatements,
   loadChartOfAccounts,
@@ -22,7 +24,9 @@ import {
   reopenAccountingPeriod,
   reverseVoucher,
   saveAccountingSettings,
+  saveGstSettings,
   setAccountingIntegration,
+  setActiveAccountsCompanyId,
   setPartyActive,
   syncAccountingOperations,
   updateChartAccount,
@@ -33,6 +37,8 @@ import {
   COA_GROUPS,
   MONEY_MODES,
   PARTY_TYPES,
+  GST_RATES,
+  INDIA_STATES,
   SIMPLE_ENTRY_KINDS,
   SIMPLE_EXPENSE_CODES,
   VOUCHER_TYPES,
@@ -46,10 +52,13 @@ import {
   createSubmitLock,
   defaultAccountTypeForGroup,
   filterParties,
+  gstStateFromGstin,
   indianFinancialYear,
+  isIntraGst,
   ledgerHasPostedLines,
   moneyAccounts,
   partyHasAccountingUse,
+  prepareGstAmount,
   previousIndianFinancialYear,
   roundMoney,
   simpleEntryDraft,
@@ -66,6 +75,7 @@ import {
   dashboardMetrics,
   dayBook,
   defaultBankStatementLines,
+  gstBooksReport,
   invoiceRegister,
   partyBalances,
   partyLedger,
@@ -155,7 +165,21 @@ function PartyFormFields({ form, setForm, typeLocked = false }) {
       <Field label="Phone"><input value={form.phone} placeholder="10-digit mobile" onChange={event => set({ phone: event.target.value })} /></Field>
       <Field label="Email"><input value={form.email} placeholder="optional" onChange={event => set({ email: event.target.value })} /></Field>
       <Field className="span" label="Address"><input value={form.address} placeholder="optional" onChange={event => set({ address: event.target.value })} /></Field>
-      <Field label="GSTIN"><input value={form.gstin} placeholder="optional" onChange={event => set({ gstin: event.target.value })} /></Field>
+      <Field label="GSTIN"><input value={form.gstin} placeholder="optional" onChange={event => set({ gstin: event.target.value, stateCode: event.target.value ? (gstStateFromGstin(event.target.value) || form.stateCode) : form.stateCode })} /></Field>
+      <Field label="GST registration">
+        <select value={form.gstRegistration || ""} onChange={event => set({ gstRegistration: event.target.value })}>
+          <option value="">Not set</option>
+          <option value="regular">Regular</option>
+          <option value="composition">Composition</option>
+          <option value="unregistered">Unregistered</option>
+        </select>
+      </Field>
+      <Field label="State">
+        <select value={form.stateCode || ""} onChange={event => set({ stateCode: event.target.value })}>
+          <option value="">Select state</option>
+          {INDIA_STATES.map(state => <option key={state.code} value={state.code}>{state.code} · {state.name}</option>)}
+        </select>
+      </Field>
       <Field label="Notes"><input value={form.notes} placeholder="optional" onChange={event => set({ notes: event.target.value })} /></Field>
       {typeLocked ? <p className="small acc-party-lock">Party type is locked because this party already has accounting transactions.</p> : null}
     </div>
@@ -198,6 +222,7 @@ function AccUserMenu({ workspace = {}, onSetup, onLogout, placement = "sidebar" 
 }
 
 const NAV_STORAGE_KEY = "fintrack-accounts-nav";
+const COMPANY_STORAGE_KEY = "fintrack-accounts-company";
 const NAV_TREE = [
   { id: "overview", label: "Overview", glyph: "⌂" },
   { id: "vouchers", label: "Transactions", glyph: "▣" },
@@ -217,6 +242,7 @@ const NAV_TREE = [
     glyph: "▦",
     children: [
       { id: "reports", label: "Day Book" },
+      { id: "gst", label: "GST" },
       { id: "ledger", label: "Ledger" },
       { id: "trial", label: "Trial Balance" },
       { id: "pnl", label: "Profit & Loss" },
@@ -343,7 +369,39 @@ function AccSidebar({ section, expanded, onToggle, onNavigate, showCashbook }) {
   );
 }
 
-function AccPageHeader({ backLabel, onBack, title, copy, trail, extras, workspace, onSetup, onLogout }) {
+const gstStatusLabel = company => {
+  const reg = company?.gstRegistration || "unregistered";
+  if (reg === "regular") return company.gstin ? `GST Regular · ${company.gstin}` : "GST Regular";
+  if (reg === "composition") return "GST Composition";
+  return "GST unregistered";
+};
+
+function AccCompanyBar({ companies, activeId, onSelect, onCreate, gstLabel }) {
+  return (
+    <div className="acc-company-bar">
+      <label className="acc-company-bar-field">
+        <span>Company</span>
+        <select
+          className="acc-company-switch"
+          value={activeId || ""}
+          aria-label="Accounts company"
+          onChange={event => onSelect(event.target.value)}
+        >
+          {!companies.length && <option value="">No companies yet — run 059 or create one</option>}
+          {companies.map(company => (
+            <option key={company.id} value={company.id}>
+              {company.name}{company.isPrimary ? " · primary" : ""}
+            </option>
+          ))}
+        </select>
+      </label>
+      <button type="button" className="btn" onClick={onCreate}>+ Create company</button>
+      {gstLabel ? <span className="small acc-company-bar-gst">{gstLabel}</span> : null}
+    </div>
+  );
+}
+
+function AccPageHeader({ backLabel, onBack, title, copy, trail, extras, companyBar, workspace, onSetup, onLogout }) {
   return <>
     <header className="acc-page-head">
       <div className="acc-page-head-start">
@@ -366,12 +424,13 @@ function AccPageHeader({ backLabel, onBack, title, copy, trail, extras, workspac
       ) : null}
       <h1 className="title">{title}</h1>
       {copy ? <p className="copy acc-page-copy">{copy}</p> : null}
+      {companyBar}
     </div>
   </>;
 }
 const emptyLine = () => ({ coaId: "", debit: "", credit: "", description: "" });
 const emptyBankLine = () => ({ lineDate: todayIso(), description: "", amount: "", direction: "in" });
-const emptyPartyForm = () => ({ id: null, partyType: "customer", name: "", phone: "", email: "", address: "", gstin: "", notes: "" });
+const emptyPartyForm = () => ({ id: null, partyType: "customer", name: "", phone: "", email: "", address: "", gstin: "", stateCode: "", gstRegistration: "", notes: "" });
 const emptyVoucherForm = () => ({ date: todayIso(), narration: "", partyId: "", dueDate: addDaysIso(todayIso(), 7) });
 const emptySimpleForm = () => ({
   date: todayIso(),
@@ -386,6 +445,9 @@ const emptySimpleForm = () => ({
   toAccountId: "",
   dueDate: addDaysIso(todayIso(), 7),
   narration: "",
+  gstRate: "18",
+  hsnSac: "",
+  taxInclusive: false,
 });
 const emptyCoaForm = () => ({
   id: null,
@@ -446,6 +508,7 @@ const REPORT_TABS = [
   { id: "payables", label: "Payables" },
   { id: "sales", label: "Sales" },
   { id: "purchases", label: "Purchases" },
+  { id: "gst", label: "GST" },
   { id: "ledger", label: "Ledger" },
 ];
 
@@ -466,6 +529,7 @@ const MORE_LINKS = [
   ["pnl", "Profit & Loss"],
   ["balance", "Balance Sheet"],
   ["cashbook", "Cashbook"],
+  ["gst", "GST"],
   ["setup", "Setup"],
 ];
 
@@ -510,7 +574,7 @@ function VoucherForm({ accounts, parties, voucherType, setVoucherType, form, set
   </>;
 }
 
-function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, saving, maxDate }) {
+function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, saving, maxDate, gstCompany, onGstSetup }) {
   const customers = parties.filter(party => party.partyType === "customer" && (party.isActive !== false || party.id === form.partyId));
   const suppliers = parties.filter(party => party.partyType === "supplier" && (party.isActive !== false || party.id === form.partyId));
   const expenseOptions = SIMPLE_EXPENSE_CODES.filter(([code]) => accounts.some(account => account.code === code) || code === "5990");
@@ -520,6 +584,12 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
     : kind === "purchase" || kind === "payment" || kind === "debit_note" ? "supplier"
     : null;
   const partyList = needsParty === "supplier" ? suppliers : customers;
+  const gstKinds = kind === "sale" || kind === "purchase" || kind === "credit_note" || kind === "debit_note";
+  const gstOn = gstCompany?.gstRegistration === "regular" && gstKinds;
+  const selectedParty = parties.find(party => party.id === form.partyId);
+  const partyState = selectedParty?.stateCode || gstStateFromGstin(selectedParty?.gstin);
+  const intra = isIntraGst(gstCompany?.stateCode, partyState);
+  const gstPreview = gstOn ? prepareGstAmount(form.amount, { enabled: Number(form.gstRate) > 0, rate: form.gstRate, intra, taxInclusive: form.taxInclusive, hsnSac: form.hsnSac }) : null;
   const noteCopy = kind === "credit_note"
     ? "Reduces the customer balance and sales. Original invoices stay in Day Book."
     : kind === "debit_note"
@@ -539,8 +609,27 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
       </>}
       {needsParty && <Field label={needsParty === "supplier" ? "Supplier" : "Customer"}><select value={form.partyId} onChange={event => set({ partyId: event.target.value })}><option value="">Select</option>{partyList.map(party => <option key={party.id} value={party.id}>{party.name}</option>)}</select></Field>}
       <Field required label="Amount"><input type="number" min="0" step="0.01" value={form.amount} placeholder="0.00" onChange={event => set({ amount: event.target.value })} /></Field>
+      {gstKinds && gstOn && <>
+        <Field label="GST rate"><select value={form.gstRate} onChange={event => set({ gstRate: event.target.value })}>{GST_RATES.map(rate => <option key={rate} value={String(rate)}>{rate}%</option>)}</select></Field>
+        <Field label="Price"><select value={form.taxInclusive ? "incl" : "excl"} onChange={event => set({ taxInclusive: event.target.value === "incl" })}><option value="excl">Tax exclusive</option><option value="incl">Tax inclusive</option></select></Field>
+        <Field label="HSN / SAC"><input value={form.hsnSac} placeholder="optional" onChange={event => set({ hsnSac: event.target.value })} /></Field>
+        <Field label="Supply">{intra ? "Intra-state (CGST + SGST)" : partyState ? "Inter-state (IGST)" : "Set party state for CGST/SGST vs IGST"}</Field>
+      </>}
+      {gstKinds && !gstOn && (
+        <div className="acc-gst-setup-hint span">
+          <p className="copy">GST is off for {gstCompany?.name || "this company"} ({gstStatusLabel(gstCompany)}). This {kind.replaceAll("_", " ")} posts without tax until you choose Regular in Setup and save GSTIN + state.</p>
+          {onGstSetup ? <button type="button" className="btn" onClick={onGstSetup}>Open GST setup</button> : null}
+        </div>
+      )}
       <Field className="span" label="Note (optional)"><input value={form.narration} onChange={event => set({ narration: event.target.value })} placeholder="Received from Ravi" /></Field>
     </div>
+    {gstPreview && Number(form.amount) > 0 && Number(form.gstRate) > 0 && (
+      <p className="small acc-gst-preview">
+        Taxable {money(gstPreview.taxable)}
+        {gstPreview.supplyType === "intra" ? ` · CGST ${money(gstPreview.cgst)} · SGST ${money(gstPreview.sgst)}` : ` · IGST ${money(gstPreview.igst)}`}
+        {` · Total ${money(gstPreview.total)}`}
+      </p>
+    )}
     <div className="tabs spacer"><button type="button" className="btn primary" disabled={saving} onClick={onSubmit}>{saving ? "Saving…" : "Save"}</button></div>
   </>;
 }
@@ -623,11 +712,45 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
   const [partySearch, setPartySearch] = useState("");
   const [partyDeleteDialog, setPartyDeleteDialog] = useState(null);
   const [outstandingOnly, setOutstandingOnly] = useState(false);
+  const [companies, setCompanies] = useState([]);
+  const [activeCompanyId, setActiveCompanyId] = useState("");
+  const [showCreateCompany, setShowCreateCompany] = useState(false);
+  const [companyDraft, setCompanyDraft] = useState({ name: "", booksStartedOn: todayIso() });
+  const [gstForm, setGstForm] = useState({ gstRegistration: "unregistered", gstin: "", legalName: "", stateCode: "" });
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (preferredCompanyId) => {
     setLoading(true);
     setError("");
     try {
+      let nextCompanies = [];
+      try {
+        nextCompanies = await loadAccountsCompanies(token);
+      } catch (err) {
+        if (err.code !== "MIGRATION_REQUIRED") throw err;
+      }
+      setCompanies(nextCompanies);
+      let stored = preferredCompanyId || "";
+      if (!stored) {
+        try { stored = sessionStorage.getItem(COMPANY_STORAGE_KEY) || ""; } catch { stored = ""; }
+      }
+      const nextCompany = nextCompanies.find(item => item.id === stored)
+        || nextCompanies.find(item => item.isPrimary)
+        || nextCompanies[0]
+        || null;
+      if (nextCompany) {
+        setActiveAccountsCompanyId(nextCompany.id);
+        setActiveCompanyId(nextCompany.id);
+        try { sessionStorage.setItem(COMPANY_STORAGE_KEY, nextCompany.id); } catch { /* ignore */ }
+        setGstForm({
+          gstRegistration: nextCompany.gstRegistration || "unregistered",
+          gstin: nextCompany.gstin || "",
+          legalName: nextCompany.legalName || "",
+          stateCode: nextCompany.stateCode || "",
+        });
+      } else {
+        setActiveAccountsCompanyId(null);
+        setActiveCompanyId("");
+      }
       const [nextSettings, nextAccounts, nextParties, nextVouchers, nextAudit, nextLocks, nextStatements] = await Promise.all([
         loadAccountingSettings(token),
         loadChartOfAccounts(token),
@@ -637,7 +760,13 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
         loadPeriodLocks(token),
         loadBankStatements(token),
       ]);
-      setSettings(nextSettings);
+      const mergedSettings = {
+        ...(nextSettings || {}),
+        companyName: nextCompany?.name || nextSettings?.companyName || "",
+        booksStartedOn: nextCompany?.booksStartedOn || nextSettings?.booksStartedOn || "",
+        fyStartMonth: nextCompany?.fyStartMonth || nextSettings?.fyStartMonth || 4,
+      };
+      setSettings(Object.keys(mergedSettings).length ? mergedSettings : nextSettings);
       setAccounts(nextAccounts);
       setParties(nextParties);
       setVouchers(nextVouchers);
@@ -645,8 +774,10 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
       setLocks(nextLocks);
       setStatements(nextStatements);
       setMigrationRequired(false);
-      if (nextSettings) setSetupForm({ companyName: nextSettings.companyName, booksStartedOn: nextSettings.booksStartedOn || todayIso() });
-      const visible = standaloneVisibleAccounts(nextAccounts, { integrationEnabled: nextSettings?.integrationEnabled });
+      if (mergedSettings.companyName || mergedSettings.booksStartedOn) {
+        setSetupForm({ companyName: mergedSettings.companyName, booksStartedOn: mergedSettings.booksStartedOn || todayIso() });
+      }
+      const visible = standaloneVisibleAccounts(nextAccounts, { integrationEnabled: mergedSettings?.integrationEnabled });
       if (!ledgerId && visible[0]) setLedgerId(visible[0].id);
     } catch (err) {
       if (err.code === "MIGRATION_REQUIRED") setMigrationRequired(true);
@@ -690,6 +821,8 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
   const apInvoices = useMemo(() => invoiceRegister(accounts, vouchers, parties, { kind: "payable", today: todayIso(), ...range, outstandingOnly }), [accounts, vouchers, parties, range, outstandingOnly]);
   const salesRows = useMemo(() => books.filter(row => row.voucherType === "sales"), [books]);
   const purchaseRows = useMemo(() => books.filter(row => row.voucherType === "purchase"), [books]);
+  const gstReport = useMemo(() => gstBooksReport(vouchers, range), [vouchers, range]);
+  const activeCompany = useMemo(() => companies.find(item => item.id === activeCompanyId) || companies[0] || null, [companies, activeCompanyId]);
   const focusedParty = useMemo(() => parties.find(party => party.id === partyFocusId) || parties[0] || null, [parties, partyFocusId]);
   const setupParties = useMemo(
     () => filterParties(parties, { type: partyTypeFilter, search: partySearch }),
@@ -732,12 +865,30 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
   };
 
   const openSection = id => {
+    if (id === "gst") {
+      setSection("reports");
+      setReportTab("gst");
+      window.scrollTo(0, 0);
+      return;
+    }
     setSection(id);
     if (id === "trial") setReportTab("trial");
     if (id === "pnl") setReportTab("pnl");
     if (id === "balance") setReportTab("balance");
     if (id === "reports") setReportTab("daybook");
     window.scrollTo(0, 0);
+  };
+
+  const switchCompany = id => {
+    setAccounts([]);
+    setParties([]);
+    setVouchers([]);
+    setStatements([]);
+    setAudit([]);
+    setLocks([]);
+    setLedgerId("");
+    setMatchChoice({});
+    refresh(id);
   };
 
   const toggleNav = () => {
@@ -852,6 +1003,8 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
         email: party.email || "",
         address: party.address || "",
         gstin: party.gstin || "",
+        stateCode: party.stateCode || gstStateFromGstin(party.gstin),
+        gstRegistration: party.gstRegistration || "",
         notes: party.notes || "",
       });
     } else {
@@ -931,6 +1084,10 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
   );
 
   const submitSimple = () => run(async () => {
+    const activeCompany = companies.find(item => item.id === activeCompanyId);
+    const selectedParty = parties.find(party => party.id === simpleForm.partyId);
+    const gstOn = activeCompany?.gstRegistration === "regular" && ["sale", "purchase", "credit_note", "debit_note"].includes(simpleKind);
+    const partyState = selectedParty?.stateCode || gstStateFromGstin(selectedParty?.gstin);
     const draft = simpleEntryDraft({
       kind: simpleKind,
       accounts,
@@ -946,6 +1103,14 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
       toAccountId: simpleForm.toAccountId || null,
       dueDate: simpleForm.dueDate || null,
       narration: simpleForm.narration,
+      gst: gstOn ? {
+        enabled: Number(simpleForm.gstRate) > 0,
+        rate: simpleForm.gstRate,
+        intra: isIntraGst(activeCompany?.stateCode, partyState),
+        taxInclusive: simpleForm.taxInclusive,
+        hsnSac: simpleForm.hsnSac,
+        itcEligible: simpleKind === "purchase" || simpleKind === "debit_note",
+      } : undefined,
     });
     await postVoucher(token, draft);
     setShowSimple(false);
@@ -1058,6 +1223,18 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
     if (active === "ledger") {
       return { filename: `fintrack-ledger-${stamp}`, rows: [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])] };
     }
+    if (active === "gst") {
+      return {
+        filename: `fintrack-gst-books-${stamp}`,
+        rows: [
+          ["Date", "Voucher", "Type", "HSN / SAC", "Taxable", "Rate", "CGST", "SGST", "IGST", "Direction"],
+          ...gstReport.rows.map(row => [row.date, row.voucherNumber, row.voucherType, row.hsnSac || "", row.taxable, row.rate, row.cgst, row.sgst, row.igst, row.direction]),
+          ["", "", "", "Output GST", "", "", "", "", gstReport.outputTax, ""],
+          ["", "", "", "Eligible ITC", "", "", "", "", gstReport.inputTax, ""],
+          ["", "", "", "Net GST payable", "", "", "", "", gstReport.netPayable, ""],
+        ],
+      };
+    }
     return { filename: `fintrack-cash-flow-${stamp}`, rows: [["Metric", "Amount"], ["Inflow", flow.inflow], ["Outflow", flow.outflow], ["Internal transfers (excluded)", flow.transfers || 0], ["Net", flow.net]] };
   };
 
@@ -1133,10 +1310,17 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
         onBack={section === "overview" ? close : () => openSection("overview")}
         title={SECTIONS.find(item => item.id === section)?.label || "Accounts"}
         trail={sectionTrail(section, reportTab)}
-        copy={`${settings?.companyName || workspace.businessName || "Your business"} · ${fy.label} · ${range.from} to ${range.to}`}
+        copy={`${activeCompany?.name || settings?.companyName || workspace.businessName || "Your business"} · ${fy.label} · ${range.from} to ${range.to}`}
         workspace={workspace}
         onSetup={() => openSection("setup")}
         onLogout={requestLogout}
+        companyBar={<AccCompanyBar
+          companies={companies}
+          activeId={activeCompanyId}
+          onSelect={switchCompany}
+          onCreate={() => { setCompanyDraft({ name: "", booksStartedOn: todayIso() }); setShowCreateCompany(true); }}
+          gstLabel={gstStatusLabel(activeCompany)}
+        />}
         extras={<>
           <select className="acc-new-entry" defaultValue="" aria-label="New entry" onChange={event => {
             if (event.target.value) {
@@ -1153,7 +1337,7 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
       />
       {error && <div className="notice acc-toast error" role="alert">{error}</div>}
       {notice && <div className="notice accounts-notice-ok acc-toast ok" role="status">{notice}</div>}
-      {migrationRequired && <div className="notice">Run <strong>052_fintrack_accounts_double_entry.sql</strong>, then <strong>053</strong>, <strong>054</strong>, <strong>055_accounts_p0_reversal_integrity.sql</strong>, <strong>056_accounts_p2_due_date_parent.sql</strong>, <strong>057_accounts_post_date_and_line_checks.sql</strong>, and <strong>058_accounts_party_update_delete.sql</strong> in the Supabase SQL editor, then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
+      {migrationRequired && <div className="notice">Run <strong>052</strong> through <strong>060_accounts_gst.sql</strong> in the Supabase SQL editor (including <strong>059_accounts_multi_company.sql</strong>), then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
       <nav className="acc-bottom-nav" aria-label="Accounts">
         {MOBILE_TABS.map(item => (
           <button key={item.id} type="button" className={`acc-bottom-item ${mobileTab === item.id ? "active" : ""}`} onClick={() => openSection(item.id)}>
@@ -1443,6 +1627,34 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
             {purchaseRows.map(row => <tr key={row.id}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.narration}</td><td className="acc-num">{money(row.debit)}</td></tr>)}
             {!purchaseRows.length && <tr><td colSpan="4">No purchase vouchers in this period.</td></tr>}
           </tbody></table></div>}
+          {section === "reports" && reportTab === "gst" && <div className="acc-gst-reports">
+            <p className="copy">GST figures are from this company’s books for the selected dates. They are not a filed GSTR-1 or GSTR-3B.</p>
+            <div className="acc-metric-grid three">
+              <AccMetric label="Output GST" value={money(gstReport.outputTax)} />
+              <AccMetric label="Eligible ITC" value={money(gstReport.inputTax)} />
+              <AccMetric label="Net GST payable" value={money(gstReport.netPayable)} tone={gstReport.netPayable > 0 ? "due" : ""} />
+            </div>
+            <h3 className="acc-section-title">Tax-rate summary</h3>
+            <div className="table acc-table-wrap"><table><thead><tr><th>Rate</th><th className="acc-num">Taxable</th><th className="acc-num">CGST</th><th className="acc-num">SGST</th><th className="acc-num">IGST</th></tr></thead><tbody>
+              {gstReport.byRate.map(row => <tr key={row.rate}><td>{row.rate}%</td><td className="acc-num">{money(row.taxable)}</td><td className="acc-num">{money(row.cgst)}</td><td className="acc-num">{money(row.sgst)}</td><td className="acc-num">{money(row.igst)}</td></tr>)}
+              {!gstReport.byRate.length && <tr><td colSpan="5">No GST lines in this period.</td></tr>}
+            </tbody></table></div>
+            <h3 className="acc-section-title">HSN / SAC</h3>
+            <div className="table acc-table-wrap"><table><thead><tr><th>HSN / SAC</th><th className="acc-num">Taxable</th><th className="acc-num">CGST</th><th className="acc-num">SGST</th><th className="acc-num">IGST</th></tr></thead><tbody>
+              {gstReport.byHsn.map(row => <tr key={row.hsnSac}><td>{row.hsnSac}</td><td className="acc-num">{money(row.taxable)}</td><td className="acc-num">{money(row.cgst)}</td><td className="acc-num">{money(row.sgst)}</td><td className="acc-num">{money(row.igst)}</td></tr>)}
+              {!gstReport.byHsn.length && <tr><td colSpan="5">No HSN/SAC lines in this period.</td></tr>}
+            </tbody></table></div>
+            <h3 className="acc-section-title">Output GST</h3>
+            <div className="table acc-table-wrap"><table><thead><tr><th>Date</th><th>Voucher</th><th>HSN</th><th className="acc-num">Taxable</th><th className="acc-num">Tax</th></tr></thead><tbody>
+              {gstReport.output.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.hsnSac || "—"}</td><td className="acc-num">{money(row.taxable)}</td><td className="acc-num">{money(row.cgst + row.sgst + row.igst)}</td></tr>)}
+              {!gstReport.output.length && <tr><td colSpan="5">No output GST in this period.</td></tr>}
+            </tbody></table></div>
+            <h3 className="acc-section-title">Input GST / ITC</h3>
+            <div className="table acc-table-wrap"><table><thead><tr><th>Date</th><th>Voucher</th><th>HSN</th><th className="acc-num">Taxable</th><th className="acc-num">ITC</th></tr></thead><tbody>
+              {gstReport.input.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.hsnSac || "—"}</td><td className="acc-num">{money(row.taxable)}</td><td className="acc-num">{money(row.itcEligible ? row.cgst + row.sgst + row.igst : 0)}</td></tr>)}
+              {!gstReport.input.length && <tr><td colSpan="5">No input GST in this period.</td></tr>}
+            </tbody></table></div>
+          </div>}
           {section === "reports" && reportTab === "ledger" && <>
             <div className="card accounts-filter-card spacer">
               <label className="accounts-filter-field"><span className="small">Account</span>
@@ -1569,13 +1781,48 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
         </div>}
 
         {section === "setup" && <div className="acc-panel acc-setup">
-          <p className="copy acc-setup-lead">Company books, chart of accounts, parties, and controls for this business.</p>
-          <AccSetupSection icon="FY" title="Company / financial year" copy="Indian financial year is 1 April to 31 March.">
+          <p className="copy acc-setup-lead">Books, chart, parties, GST, and locks for {activeCompany?.name || "this Accounts company"} only. Daily Finance, Monthly Finance, and Chit Fund stay on the Finance workspace.</p>
+          <AccSetupSection icon="FY" title="Company / financial year" copy="Indian financial year is 1 April to 31 March. Saving the name here updates the current Accounts company, not Finance.">
             <div className="form spacer">
               <Field label="Business name"><input value={setupForm.companyName} onChange={event => setSetupForm(current => ({ ...current, companyName: event.target.value }))} /></Field>
               <Field label="Books start date"><input type="date" value={setupForm.booksStartedOn} onChange={event => setSetupForm(current => ({ ...current, booksStartedOn: event.target.value }))} /></Field>
             </div>
             <button type="button" className="btn primary" disabled={saving} onClick={() => run(() => saveAccountingSettings(token, { ...setupForm, fyStartMonth: 4 }), "Company details saved.")}>{saving ? "Saving…" : "Save company"}</button>
+            <div className="acc-company-setup-list spacer">
+              <p className="small">Each company has its own books. Switching never mixes vouchers.</p>
+              {companies.map(company => (
+                <button
+                  key={company.id}
+                  type="button"
+                  className={`acc-company-setup-item${company.id === activeCompanyId ? " current" : ""}`}
+                  onClick={() => company.id !== activeCompanyId && switchCompany(company.id)}
+                >
+                  <strong>{company.name}</strong>
+                  <span className="small">{company.isPrimary ? "Primary" : "Company"}{company.id === activeCompanyId ? " · current" : ""} · {gstStatusLabel(company)}</span>
+                </button>
+              ))}
+              <button type="button" className="btn" onClick={() => { setCompanyDraft({ name: "", booksStartedOn: todayIso() }); setShowCreateCompany(true); }}>+ Create company</button>
+            </div>
+          </AccSetupSection>
+          <AccSetupSection icon="GST" title={`GST${activeCompany?.name ? ` · ${activeCompany.name}` : ""}`} copy="GST is per company. These settings never apply to another Accounts company or to Daily / Monthly Finance. Books reports only — not GST portal filing.">
+            <div className="form spacer">
+              <Field label="Registration">
+                <select value={gstForm.gstRegistration} onChange={event => setGstForm(current => ({ ...current, gstRegistration: event.target.value }))}>
+                  <option value="unregistered">Unregistered</option>
+                  <option value="regular">Regular</option>
+                  <option value="composition">Composition</option>
+                </select>
+              </Field>
+              <Field label="GSTIN"><input value={gstForm.gstin} placeholder="e.g. 36AAAAA0000A1Z5" onChange={event => setGstForm(current => ({ ...current, gstin: event.target.value, stateCode: gstStateFromGstin(event.target.value) || current.stateCode }))} /></Field>
+              <Field label="Legal name"><input value={gstForm.legalName} onChange={event => setGstForm(current => ({ ...current, legalName: event.target.value }))} /></Field>
+              <Field label="State">
+                <select value={gstForm.stateCode} onChange={event => setGstForm(current => ({ ...current, stateCode: event.target.value }))}>
+                  <option value="">Select state</option>
+                  {INDIA_STATES.map(state => <option key={state.code} value={state.code}>{state.code} · {state.name}</option>)}
+                </select>
+              </Field>
+            </div>
+            <button type="button" className="btn primary" disabled={saving} onClick={() => run(() => saveGstSettings(token, { ...gstForm, stateName: INDIA_STATES.find(state => state.code === gstForm.stateCode)?.name || "" }), "GST settings saved.")}>{saving ? "Saving…" : "Save GST"}</button>
           </AccSetupSection>
           <AccSetupSection
             icon="#"
@@ -1718,8 +1965,19 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
         <p className="copy">Total debits must equal total credits. Unbalanced vouchers cannot be posted.</p>
         <VoucherForm accounts={visibleAccounts} parties={parties} voucherType={voucherType} setVoucherType={setVoucherType} form={voucherForm} setForm={setVoucherForm} lines={lines} setLines={setLines} onSubmit={submitVoucher} saving={saving} maxDate={todayIso()} />
       </Modal>}
+      {showCreateCompany && <Modal title="Create company" close={() => !saving && setShowCreateCompany(false)} actions={<div className="tabs spacer"><button type="button" className="btn" disabled={saving} onClick={() => setShowCreateCompany(false)}>Cancel</button><button type="button" className="btn primary" disabled={saving || !String(companyDraft.name || "").trim()} onClick={() => run(async () => {
+        const id = await createAccountsCompany(token, companyDraft);
+        setShowCreateCompany(false);
+        await refresh(id);
+      }, "Company created. This company’s books start empty.")}>{saving ? "Saving…" : "Create company"}</button></div>}>
+        <p className="copy">A new company has its own chart, parties, vouchers, bank, GST, and locks. It does not copy SriHitha Infra or any other company.</p>
+        <div className="form">
+          <Field required label="Company name"><input value={companyDraft.name} onChange={event => setCompanyDraft(current => ({ ...current, name: event.target.value }))} placeholder="e.g. ABC Traders" /></Field>
+          <Field label="Books start date"><input type="date" value={companyDraft.booksStartedOn} onChange={event => setCompanyDraft(current => ({ ...current, booksStartedOn: event.target.value }))} /></Field>
+        </div>
+      </Modal>}
       {showSimple && <Modal title={SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry"} close={closeSimple}>
-        <SimpleEntryForm kind={simpleKind} accounts={visibleAccounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} maxDate={todayIso()} />
+        <SimpleEntryForm kind={simpleKind} accounts={visibleAccounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} maxDate={todayIso()} gstCompany={activeCompany} onGstSetup={() => { setShowSimple(false); openSection("setup"); }} />
       </Modal>}
       {showParty && <Modal title={partyForm.id ? "Edit party" : "Add party"} close={closeParty} actions={<div className="tabs spacer"><button type="button" className="btn" disabled={saving} onClick={closeParty}>Cancel</button><button type="button" className="btn primary" disabled={saving} onClick={saveParty}>{saving ? "Saving…" : partyForm.id ? "Save changes" : "Save party"}</button></div>}>
         <p className="copy">{partyForm.id ? "Updates this party only. Existing vouchers and ledgers stay attached to the same party." : "Accounts parties are independent of Daily Finance customers and Chit Fund members."}</p>

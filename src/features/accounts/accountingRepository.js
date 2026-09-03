@@ -1,10 +1,24 @@
 import { supabase } from "../../lib/supabase";
 
-const isMissing = err => /could not find|does not exist|schema cache|404/i.test(String(err?.message || ""));
+const isMissing = err => /could not find|does not exist|schema cache|404|PGRST202/i.test(String(err?.message || err?.code || ""));
+
+let activeCompanyId = null;
+
+export const setActiveAccountsCompanyId = id => {
+  activeCompanyId = id || null;
+};
+
+export const getActiveAccountsCompanyId = () => activeCompanyId;
+
+const companyHeaders = () => (activeCompanyId ? { "x-acc-company-id": activeCompanyId } : {});
+const companyEq = () => (activeCompanyId ? `&company_id=eq.${encodeURIComponent(activeCompanyId)}` : "");
+const accOpts = () => ({ headers: companyHeaders() });
+const accRpc = (name, args, token) => supabase.rpc(name, { ...args, ...(activeCompanyId ? { input_company_id: activeCompanyId } : {}) }, token, companyHeaders());
+const accQuery = (path, token) => supabase.query(path, token, accOpts());
 
 const wrap = promise => promise.catch(err => {
   if (isMissing(err)) {
-    const error = new Error("Run migration 052 in the Supabase SQL editor to enable FinTrack Accounts.");
+    const error = new Error("Run migrations 052–060 in the Supabase SQL editor to enable FinTrack Accounts companies and GST.");
     error.code = "MIGRATION_REQUIRED";
     throw error;
   }
@@ -37,11 +51,29 @@ const mapParty = row => ({
   email: row.email || "",
   address: row.address || "",
   gstin: row.gstin || "",
+  stateCode: row.state_code || "",
+  gstRegistration: row.gst_registration || "",
   notes: row.notes || "",
   isActive: row.is_active,
 });
 
-const mapVoucher = (row, lines = []) => ({
+const mapCompany = row => ({
+  id: row.id,
+  name: row.name || "",
+  fyStartMonth: Number(row.fyStartMonth || row.fy_start_month || 4),
+  booksStartedOn: row.booksStartedOn || row.books_started_on || "",
+  status: row.status || "active",
+  isPrimary: Boolean(row.isPrimary ?? row.is_primary),
+  createdAt: row.createdAt || row.created_at,
+  updatedAt: row.updatedAt || row.updated_at,
+  gstRegistration: row.gstRegistration || row.gst_registration || "unregistered",
+  gstin: row.gstin || "",
+  legalName: row.legalName || row.legal_name || "",
+  stateCode: row.stateCode || row.state_code || "",
+  stateName: row.stateName || row.state_name || "",
+});
+
+const mapVoucher = (row, lines = [], gstLines = []) => ({
   id: row.id,
   voucherType: row.voucher_type,
   voucherNumber: row.voucher_number,
@@ -56,6 +88,17 @@ const mapVoucher = (row, lines = []) => ({
   dueDate: row.due_date || null,
   createdAt: row.created_at,
   postedAt: row.posted_at,
+  gstLines: gstLines.filter(line => line.voucher_id === row.id).map(line => ({
+    hsnSac: line.hsn_sac || "",
+    description: line.description || "",
+    taxable: Number(line.taxable_amount || 0),
+    rate: Number(line.rate || 0),
+    cgst: Number(line.cgst_amount || 0),
+    sgst: Number(line.sgst_amount || 0),
+    igst: Number(line.igst_amount || 0),
+    supplyType: line.supply_type || "none",
+    itcEligible: line.itc_eligible !== false,
+  })),
   lines: lines
     .filter(line => line.voucher_id === row.id)
     .sort((a, b) => a.line_no - b.line_no)
@@ -72,8 +115,25 @@ const mapVoucher = (row, lines = []) => ({
     })),
 });
 
+export const loadAccountsCompanies = token => wrap(
+  supabase.rpc("acc_list_companies", {}, token).then(rows => {
+    let list = rows;
+    if (typeof list === "string") {
+      try { list = JSON.parse(list); } catch { list = []; }
+    }
+    return (Array.isArray(list) ? list : []).map(mapCompany);
+  }),
+);
+
+export const createAccountsCompany = (token, payload) =>
+  wrap(supabase.rpc("acc_create_company", {
+    input_name: payload.name,
+    input_books_started_on: payload.booksStartedOn || null,
+    input_fy_start_month: payload.fyStartMonth || 4,
+  }, token));
+
 export const loadAccountingSettings = token => wrap(
-  supabase.query("/rest/v1/acc_settings?select=*&limit=1", token)
+  accQuery("/rest/v1/acc_settings?select=*&limit=1", token)
     .then(rows => rows[0] ? {
       companyName: rows[0].company_name || "",
       fyStartMonth: Number(rows[0].fy_start_month || 4),
@@ -83,22 +143,23 @@ export const loadAccountingSettings = token => wrap(
 );
 
 export const loadChartOfAccounts = token => wrap(
-  supabase.query("/rest/v1/acc_coa?select=*&order=code.asc", token).then(rows => rows.map(mapCoa)),
+  accQuery(`/rest/v1/acc_coa?select=*&order=code.asc${companyEq()}`, token).then(rows => rows.map(mapCoa)),
 );
 
 export const loadParties = token => wrap(
-  supabase.query("/rest/v1/acc_parties?select=*&order=name.asc", token).then(rows => rows.map(mapParty)),
+  accQuery(`/rest/v1/acc_parties?select=*&order=name.asc${companyEq()}`, token).then(rows => rows.map(mapParty)),
 );
 
 export const loadVouchers = token => wrap(
   Promise.all([
-    supabase.query("/rest/v1/acc_vouchers?select=*&order=voucher_date.desc,voucher_number.desc&limit=2000", token),
-    supabase.query("/rest/v1/acc_voucher_lines?select=*,acc_coa(code,name)&order=line_no.asc&limit=20000", token),
-  ]).then(([vouchers, lines]) => vouchers.map(row => mapVoucher(row, lines))),
+    accQuery(`/rest/v1/acc_vouchers?select=*&order=voucher_date.desc,voucher_number.desc&limit=2000${companyEq()}`, token),
+    accQuery(`/rest/v1/acc_voucher_lines?select=*,acc_coa(code,name)&order=line_no.asc&limit=20000${companyEq()}`, token),
+    accQuery(`/rest/v1/acc_gst_lines?select=*&order=line_no.asc&limit=20000${companyEq()}`, token).catch(() => []),
+  ]).then(([vouchers, lines, gstLines]) => vouchers.map(row => mapVoucher(row, lines, gstLines || []))),
 );
 
 export const loadAuditLog = token => wrap(
-  supabase.query("/rest/v1/acc_audit_log?select=*&order=created_at.desc&limit=300", token)
+  accQuery(`/rest/v1/acc_audit_log?select=*&order=created_at.desc&limit=300${companyEq()}`, token)
     .then(rows => rows.map(row => ({
       id: row.id,
       entityType: row.entity_type,
@@ -113,7 +174,7 @@ export const loadAuditLog = token => wrap(
 );
 
 export const loadPeriodLocks = token => wrap(
-  supabase.query("/rest/v1/acc_period_locks?select=*&order=period_from.desc", token)
+  accQuery(`/rest/v1/acc_period_locks?select=*&order=period_from.desc${companyEq()}`, token)
     .then(rows => rows.map(row => ({
       id: row.id,
       periodFrom: row.period_from,
@@ -126,8 +187,8 @@ export const loadPeriodLocks = token => wrap(
 
 export const loadBankStatements = token => wrap(
   Promise.all([
-    supabase.query("/rest/v1/acc_bank_statements?select=*,acc_coa(name,code)&order=statement_date.desc", token),
-    supabase.query("/rest/v1/acc_bank_statement_lines?select=*&order=line_date.asc", token),
+    accQuery(`/rest/v1/acc_bank_statements?select=*,acc_coa(name,code)&order=statement_date.desc${companyEq()}`, token),
+    accQuery(`/rest/v1/acc_bank_statement_lines?select=*&order=line_date.asc${companyEq()}`, token),
   ]).then(([statements, lines]) => statements.map(row => ({
     id: row.id,
     coaId: row.coa_id,
@@ -154,17 +215,26 @@ export const initializeAccounting = (token, { companyName, booksStartedOn } = {}
   }, token));
 
 export const saveAccountingSettings = (token, payload) =>
-  wrap(supabase.rpc("acc_save_settings", {
+  wrap(accRpc("acc_save_settings", {
     input_company_name: payload.companyName || null,
     input_fy_start_month: payload.fyStartMonth || 4,
     input_books_started_on: payload.booksStartedOn || null,
+  }, token));
+
+export const saveGstSettings = (token, payload) =>
+  wrap(accRpc("acc_save_gst_settings", {
+    input_gst_registration: payload.gstRegistration || "unregistered",
+    input_gstin: payload.gstin || null,
+    input_legal_name: payload.legalName || null,
+    input_state_code: payload.stateCode || null,
+    input_state_name: payload.stateName || null,
   }, token));
 
 export const setAccountingIntegration = (token, enabled) =>
   wrap(supabase.rpc("acc_set_integration", { input_enabled: Boolean(enabled) }, token));
 
 export const createChartAccount = async (token, payload) => {
-  const id = await wrap(supabase.rpc("acc_create_coa", {
+  const id = await wrap(accRpc("acc_create_coa", {
     input_code: payload.code,
     input_name: payload.name,
     input_group_type: payload.groupType,
@@ -177,7 +247,7 @@ export const createChartAccount = async (token, payload) => {
 };
 
 export const updateChartAccount = async (token, payload) => {
-  await wrap(supabase.rpc("acc_update_coa", {
+  await wrap(accRpc("acc_update_coa", {
     input_id: payload.id,
     input_code: payload.code,
     input_name: payload.name,
@@ -189,23 +259,23 @@ export const updateChartAccount = async (token, payload) => {
 };
 
 export const setChartAccountParent = (token, id, parentId) =>
-  ignoreMissing(supabase.rpc("acc_set_coa_parent", {
+  ignoreMissing(accRpc("acc_set_coa_parent", {
     input_id: id,
     input_parent_id: parentId || null,
   }, token));
 
 export const deleteChartAccount = (token, id) =>
-  wrap(supabase.rpc("acc_delete_coa", { input_id: id }, token));
+  wrap(accRpc("acc_delete_coa", { input_id: id }, token));
 
 const wrapPartyMutation = promise => promise.catch(err => {
   if (isMissing(err)) {
-    throw new Error("Run 058_accounts_party_update_delete.sql in the Supabase SQL editor to enable party edit and delete.");
+    throw new Error("Run 058–060 in the Supabase SQL editor to enable party edit and GST.");
   }
   throw err;
 });
 
 export const createParty = (token, payload) =>
-  wrap(supabase.rpc("acc_create_party", {
+  wrap(accRpc("acc_create_party", {
     input_party_type: payload.partyType,
     input_name: payload.name,
     input_phone: payload.phone || null,
@@ -213,10 +283,12 @@ export const createParty = (token, payload) =>
     input_address: payload.address || null,
     input_gstin: payload.gstin || null,
     input_notes: payload.notes || null,
+    input_state_code: payload.stateCode || null,
+    input_gst_registration: payload.gstRegistration || null,
   }, token));
 
 export const updateParty = (token, payload) =>
-  wrapPartyMutation(supabase.rpc("acc_update_party", {
+  wrapPartyMutation(accRpc("acc_update_party", {
     input_id: payload.id,
     input_party_type: payload.partyType,
     input_name: payload.name,
@@ -225,19 +297,21 @@ export const updateParty = (token, payload) =>
     input_address: payload.address || null,
     input_gstin: payload.gstin || null,
     input_notes: payload.notes || null,
+    input_state_code: payload.stateCode || null,
+    input_gst_registration: payload.gstRegistration || null,
   }, token));
 
 export const deleteParty = (token, id) =>
-  wrapPartyMutation(supabase.rpc("acc_delete_party", { input_id: id }, token));
+  wrapPartyMutation(accRpc("acc_delete_party", { input_id: id }, token));
 
 export const setPartyActive = (token, id, isActive) =>
-  wrapPartyMutation(supabase.rpc("acc_set_party_active", {
+  wrapPartyMutation(accRpc("acc_set_party_active", {
     input_id: id,
     input_active: isActive !== false,
   }, token));
 
 export const postVoucher = async (token, payload) => {
-  const id = await wrap(supabase.rpc("acc_post_voucher", {
+  const id = await wrap(accRpc("acc_post_voucher", {
     input_voucher_type: payload.voucherType,
     input_date: payload.date,
     input_narration: payload.narration || "",
@@ -252,38 +326,39 @@ export const postVoucher = async (token, payload) => {
     input_source_module: payload.sourceModule || null,
     input_source_type: payload.sourceType || null,
     input_source_transaction_id: payload.sourceTransactionId || null,
+    input_gst_lines: payload.gstLines?.length ? payload.gstLines : null,
   }, token));
   if (payload.dueDate) await setVoucherDueDate(token, id, payload.dueDate);
   return id;
 };
 
 export const setVoucherDueDate = (token, id, dueDate) =>
-  ignoreMissing(supabase.rpc("acc_set_voucher_due", {
+  ignoreMissing(accRpc("acc_set_voucher_due", {
     input_voucher_id: id,
     input_due: dueDate || null,
   }, token));
 
 export const cancelVoucher = (token, id, reason) =>
-  wrap(supabase.rpc("acc_cancel_voucher", { input_voucher_id: id, input_reason: reason }, token));
+  wrap(accRpc("acc_cancel_voucher", { input_voucher_id: id, input_reason: reason }, token));
 
 export const reverseVoucher = (token, id, date, reason) =>
-  wrap(supabase.rpc("acc_reverse_voucher", {
+  wrap(accRpc("acc_reverse_voucher", {
     input_voucher_id: id,
     input_date: date,
     input_reason: reason,
   }, token));
 
 export const lockAccountingPeriod = (token, from, to) =>
-  wrap(supabase.rpc("acc_lock_period", { input_from: from, input_to: to }, token));
+  wrap(accRpc("acc_lock_period", { input_from: from, input_to: to }, token));
 
 export const reopenAccountingPeriod = (token, id, reason) =>
-  wrap(supabase.rpc("acc_reopen_period", { input_lock_id: id, input_reason: reason }, token));
+  wrap(accRpc("acc_reopen_period", { input_lock_id: id, input_reason: reason }, token));
 
 export const syncAccountingOperations = token =>
   wrap(supabase.rpc("acc_sync_operations", {}, token));
 
 export const addBankStatement = (token, payload) =>
-  wrap(supabase.rpc("acc_add_bank_statement", {
+  wrap(accRpc("acc_add_bank_statement", {
     input_coa_id: payload.coaId,
     input_statement_date: payload.statementDate,
     input_opening: Number(payload.openingBalance || 0),
@@ -292,7 +367,7 @@ export const addBankStatement = (token, payload) =>
   }, token));
 
 export const matchBankLine = (token, lineId, voucherLineId, note) =>
-  wrap(supabase.rpc("acc_match_bank_line", {
+  wrap(accRpc("acc_match_bank_line", {
     input_line_id: lineId,
     input_voucher_line_id: voucherLineId || null,
     input_note: note || null,
