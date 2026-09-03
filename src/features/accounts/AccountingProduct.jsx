@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { CashbookWorkspace } from "./AccountsModule.jsx";
 import "./accountingProduct.css";
 import {
@@ -133,9 +133,12 @@ const PartyTypeBadge = ({ type }) => (
   <span className={`acc-type-badge ${type || "other"}`}>{partyTypeLabel(type)}</span>
 );
 
-function AccSetupSection({ icon, title, copy, actions, children }) {
+function AccSetupSection({ icon, title, copy, actions, children, collapsible = false, summary = "" }) {
+  const [open, setOpen] = useState(!collapsible);
+  const panelId = useId();
+  const toggleId = useId();
   return (
-    <section className="card acc-setup-card">
+    <section className={`card acc-setup-card${collapsible && !open ? " collapsed" : ""}`}>
       <header className="acc-setup-head">
         <span className="acc-setup-icon" aria-hidden="true">{icon}</span>
         <div className="acc-setup-copy">
@@ -144,7 +147,28 @@ function AccSetupSection({ icon, title, copy, actions, children }) {
         </div>
         {actions ? <div className="acc-setup-actions">{actions}</div> : null}
       </header>
-      {children}
+      {collapsible && (
+        <button
+          type="button"
+          id={toggleId}
+          className="acc-setup-toggle"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() => setOpen(current => !current)}
+        >
+          <span>{open ? `Hide ${summary}` : `Show ${summary}`}</span>
+          <span className="acc-setup-chevron" aria-hidden="true">{open ? "▲" : "▼"}</span>
+        </button>
+      )}
+      <div
+        id={panelId}
+        className="acc-setup-body"
+        role={collapsible ? "region" : undefined}
+        aria-labelledby={collapsible ? toggleId : undefined}
+        hidden={collapsible && !open}
+      >
+        {children}
+      </div>
     </section>
   );
 }
@@ -1826,6 +1850,8 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
             title="Chart of accounts"
             copy={`Opening debit and credit sides across the chart should balance. System accounts can be renamed and given openings, but not deleted.${settings?.integrationEnabled ? "" : " Daily Finance, Monthly Finance, and Chit Fund ledgers stay hidden while integration is off."}`}
             actions={<button type="button" className="btn" onClick={() => openCoa(null)}>+ Account</button>}
+            collapsible
+            summary={`${visibleAccounts.length} ${visibleAccounts.length === 1 ? "account" : "accounts"}`}
           >
             <div className="table spacer acc-table-wrap"><table><thead><tr><th>Code</th><th>Account</th><th>Group</th><th>Opening</th><th></th></tr></thead><tbody>
               {visibleAccounts.map(account => {
@@ -1848,6 +1874,8 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
             title="Parties"
             copy="Customers, suppliers, employees, agents, and others used only by Accounts. They do not have to exist in Daily Finance, Monthly Finance, or Chit Fund."
             actions={<button type="button" className="btn primary" onClick={() => openParty()}>+ Add Party</button>}
+            collapsible
+            summary={`${parties.length} ${parties.length === 1 ? "party" : "parties"}`}
           >
             <div className="acc-party-toolbar">
               <label className="accounts-filter-field acc-party-search">
@@ -1949,7 +1977,13 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
               {locks.map(lock => <tr key={lock.id}><td>{lock.periodFrom} to {lock.periodTo}</td><td>{lock.isLocked ? "Locked" : "Reopened"}</td>              <td>{lock.isLocked && <button type="button" className="btn" disabled={saving} onClick={() => askReason("Reopen period", "Reopen", reason => run(() => reopenAccountingPeriod(token, lock.id, reason), "Period reopened."))}>Reopen</button>}</td></tr>)}
             </tbody></table></div>
           </AccSetupSection>
-          <AccSetupSection icon="A" title="Audit trail" copy="Owner actions on books, parties, and settings. Posted amounts are not edited here.">
+          <AccSetupSection
+            icon="A"
+            title="Audit trail"
+            copy="Owner actions on books, parties, and settings. Posted amounts are not edited here."
+            collapsible
+            summary={`${audit.length} ${audit.length === 1 ? "event" : "events"}`}
+          >
             <div className="table spacer acc-table-wrap"><table><thead><tr><th>When (IST)</th><th>Action</th><th>Entity</th><th>Reason</th></tr></thead><tbody>
               {audit.map(row => <tr key={row.id}><td>{formatIstDateTime(row.createdAt)}</td><td>{row.action}</td><td>{row.entityType}</td><td>{row.reason || "—"}</td></tr>)}
               {!audit.length && <tr><td colSpan="4">No accounting audit events yet.</td></tr>}

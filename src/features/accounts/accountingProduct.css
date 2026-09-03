@@ -1050,6 +1050,49 @@ html:has(.accounts-dashboard) .financier-nav {
   gap: 8px;
 }
 
+.accounts-dashboard .acc-setup-card.collapsed .acc-setup-head {
+  margin-bottom: 8px;
+}
+
+.accounts-dashboard .acc-setup-toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  margin: 0;
+  padding: 8px 2px 2px;
+  border: 0;
+  border-top: 1px solid var(--acc-line);
+  background: transparent;
+  color: var(--acc-text);
+  font: 700 13px inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.accounts-dashboard .acc-setup-toggle:hover {
+  color: var(--acc-gold);
+}
+
+.accounts-dashboard .acc-setup-toggle:focus-visible {
+  outline: 2px solid var(--acc-gold);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.accounts-dashboard .acc-setup-chevron {
+  flex-shrink: 0;
+  color: var(--acc-gold);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.accounts-dashboard .acc-setup-body[hidden] {
+  display: none;
+}
+
 .accounts-dashboard .acc-party-toolbar {
   display: grid;
   grid-template-columns: minmax(180px, 280px) minmax(0, 1fr);
