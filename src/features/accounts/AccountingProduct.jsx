@@ -89,40 +89,53 @@ const Field = ({ label, children, required, className }) => (
     {children}
   </label>
 );
-const AccMetric = ({ label, value, tone = "", onClick }) => (
-  <article className={`card acc-metric-card${onClick ? " clickable" : ""}`} {...(onClick ? { role: "button", tabIndex: 0, onClick, onKeyDown: event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onClick(); } } } : {})}>
+const AccMetric = ({ label, value, tone = "", onClick, hint = "" }) => (
+  <article
+    className={`card acc-metric-card tone-${tone || "plain"}${onClick ? " clickable" : ""}`}
+    {...(onClick ? {
+      role: "button",
+      tabIndex: 0,
+      onClick,
+      onKeyDown: event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onClick(); } },
+    } : {})}
+  >
     <div className="metric-label">{label}</div>
     <div className={`metric-value ${tone}`}>{value}</div>
+    {hint ? <div className="metric-hint">{hint}</div> : null}
   </article>
 );
 
 const AccCompareChart = ({ receivables, payables, onReceivables, onPayables }) => {
-  const max = Math.max(Number(receivables) || 0, Number(payables) || 0, 1);
+  const ar = Number(receivables) || 0;
+  const ap = Number(payables) || 0;
+  const max = Math.max(ar, ap, 1);
   return (
-    <section className="card acc-dash-compare">
-      <h2 className="acc-section-title">Receivables vs Payables</h2>
-      <p className="acc-dash-compare-sub">Outstanding Amount</p>
-      <button type="button" className="acc-compare-row" onClick={onReceivables} aria-label={`Receivables ${money(receivables)}`}>
-        <span className="acc-compare-label">Receivables</span>
-        <span className="acc-compare-track" aria-hidden="true"><span className="bar ar" style={{ width: `${((Number(receivables) || 0) / max) * 100}%` }} /></span>
-        <strong className="acc-compare-amt">{money(receivables)}</strong>
-      </button>
-      <button type="button" className="acc-compare-row" onClick={onPayables} aria-label={`Payables ${money(payables)}`}>
-        <span className="acc-compare-label">Payables</span>
-        <span className="acc-compare-track" aria-hidden="true"><span className="bar ap" style={{ width: `${((Number(payables) || 0) / max) * 100}%` }} /></span>
-        <strong className="acc-compare-amt">{money(payables)}</strong>
-      </button>
+    <section className="card acc-ov-compare">
+      <header className="acc-ov-block-head">
+        <div>
+          <h2>Receivables vs Payables</h2>
+          <p>Outstanding balances from your books</p>
+        </div>
+      </header>
+      <div className="acc-ov-compare-grid">
+        <button type="button" className="acc-ov-compare-side ar" onClick={onReceivables} aria-label={`Receivables ${money(ar)}`}>
+          <span className="acc-ov-compare-kicker">Receivables</span>
+          <strong className="acc-ov-compare-value">{money(ar)}</strong>
+          <span className="acc-ov-compare-track" aria-hidden="true">
+            <span style={{ width: `${(ar / max) * 100}%` }} />
+          </span>
+          <span className="acc-ov-compare-link">View receivables →</span>
+        </button>
+        <button type="button" className="acc-ov-compare-side ap" onClick={onPayables} aria-label={`Payables ${money(ap)}`}>
+          <span className="acc-ov-compare-kicker">Payables</span>
+          <strong className="acc-ov-compare-value">{money(ap)}</strong>
+          <span className="acc-ov-compare-track" aria-hidden="true">
+            <span style={{ width: `${(ap / max) * 100}%` }} />
+          </span>
+          <span className="acc-ov-compare-link">View payables →</span>
+        </button>
+      </div>
     </section>
-  );
-};
-
-const AccFlowBar = ({ inflow, outflow }) => {
-  const max = Math.max(inflow, outflow, 1);
-  return (
-    <div className="acc-dash-flow-bars" aria-hidden="true">
-      <div className="acc-dash-flow-track"><span className="in" style={{ width: `${(inflow / max) * 100}%` }} /></div>
-      <div className="acc-dash-flow-track"><span className="out" style={{ width: `${(outflow / max) * 100}%` }} /></div>
-    </div>
   );
 };
 
@@ -138,7 +151,7 @@ function AccOverviewMore({ onNavigate }) {
   const go = id => { setOpen(false); onNavigate(id); };
   return (
     <div className="acc-ov-more" ref={root}>
-      <button type="button" className="btn" aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen(current => !current)}>More ⋯</button>
+      <button type="button" className="acc-ov-link-btn" aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen(current => !current)}>More ⋯</button>
       {open && (
         <menu className="acc-ov-more-menu" role="menu">
           {[
@@ -1516,7 +1529,13 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
       </nav>
       {loading ? <><p className="copy">Loading Accounts…</p><AccSkeleton /></> : <>
         {section === "overview" && <div className="acc-panel acc-overview">
-          <ReportRangeBar fy={fy} lastFy={lastFy} from={rangeFrom} to={rangeTo} onChange={setReportRange} />
+          <div className="acc-ov-toolbar">
+            <ReportRangeBar fy={fy} lastFy={lastFy} from={rangeFrom} to={rangeTo} onChange={setReportRange} />
+            <div className="acc-status-row">
+              <span className={`acc-chip ${metrics?.equationHolds ? "ok" : "warn"}`}>{metrics?.equationHolds ? "Books in balance" : "Books out of balance"}</span>
+              <span className="acc-chip">Integration {settings?.integrationEnabled ? "ON" : "OFF"}</span>
+            </div>
+          </div>
           {!settings && <div className="card accounts-form-card">
             <strong>Open the books</strong>
             <p className="copy">Create a chart of accounts for this business. You do not need Daily Finance, Monthly Finance, or Chit Fund records.</p>
@@ -1526,20 +1545,13 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
             </div>
             <button type="button" className="btn primary" disabled={saving} onClick={() => run(() => initializeAccounting(token, setupForm), "Accounts opened.")}>{saving ? "Saving…" : "Create chart of accounts"}</button>
           </div>}
-          <div className="acc-status-row">
-            <span className={`acc-chip ${metrics?.equationHolds ? "ok" : "warn"}`}>{metrics?.equationHolds ? "Books in balance" : "Books out of balance"}</span>
-            <span className="acc-chip">Integration {settings?.integrationEnabled ? "ON" : "OFF"}</span>
-          </div>
 
-          <section className="acc-section">
-            <h2 className="acc-section-title">Key financial metrics</h2>
-            <div className="acc-metric-grid acc-ov-metrics">
+          <section className="acc-section acc-ov-money">
+            <h2 className="acc-section-title">Money on hand</h2>
+            <div className="acc-metric-grid three">
               <AccMetric label="Cash" value={money(metrics?.cash)} tone="gold" />
               <AccMetric label="Bank" value={money(metrics?.bank)} tone="gold" />
-              <AccMetric label="Receivables" value={money(metrics?.receivables)} tone="blue" onClick={() => openSection("receivables")} />
-              <AccMetric label="Payables" value={money(metrics?.payables)} onClick={() => openSection("payables")} />
-              <AccMetric label="Income" value={money(metrics?.income)} tone="green" onClick={() => openSection("pnl")} />
-              <AccMetric label="Expenses" value={money(metrics?.expenses)} tone="red" onClick={() => openSection("pnl")} />
+              <AccMetric label="UPI" value={money(metrics?.upi)} tone="gold" />
             </div>
           </section>
 
@@ -1550,41 +1562,65 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
             onPayables={() => openSection("payables")}
           />
 
-          <section className="card acc-dash-flow acc-ov-cashflow">
-            <header className="acc-dash-card-head">
-              <h2>Cash flow</h2>
-              <span className="small">{range.from} → {range.to}</span>
+          <section className="acc-section">
+            <h2 className="acc-section-title">Performance</h2>
+            <div className="acc-metric-grid three">
+              <AccMetric label="Income" value={money(metrics?.income)} tone="green" onClick={() => openSection("pnl")} hint="Open P&L" />
+              <AccMetric label="Expenses" value={money(metrics?.expenses)} tone="red" onClick={() => openSection("pnl")} hint="Open P&L" />
+              <AccMetric label="Net profit" value={money(metrics?.netProfit)} tone={metrics?.netProfit < 0 ? "red" : "green"} onClick={() => openSection("pnl")} />
+            </div>
+          </section>
+
+          <section className="card acc-ov-flow">
+            <header className="acc-ov-block-head">
+              <div>
+                <h2>Cash flow</h2>
+                <p>{range.from} to {range.to}</p>
+              </div>
             </header>
-            <div className="acc-dash-flow-body">
-              <AccFlowBar inflow={flow.inflow || 0} outflow={flow.outflow || 0} />
-              <ul className="acc-dash-legend">
-                <li><i className="dot muted" /> Opening: <strong>{money(flow.opening)}</strong></li>
-                <li><i className="dot green" /> Incoming: <strong>{money(flow.inflow)}</strong></li>
-                <li><i className="dot red" /> Outgoing: <strong>{money(flow.outflow)}</strong></li>
-                <li><i className="dot blue" /> Closing: <strong>{money(flow.closing)}</strong></li>
-              </ul>
+            <div className="acc-ov-flow-stats">
+              <div><span>Opening</span><strong>{money(flow.opening)}</strong></div>
+              <div className="in"><span>Incoming</span><strong>{money(flow.inflow)}</strong></div>
+              <div className="out"><span>Outgoing</span><strong>{money(flow.outflow)}</strong></div>
+              <div className="close"><span>Closing</span><strong>{money(flow.closing)}</strong></div>
+            </div>
+            <div className="acc-ov-flow-bars" aria-hidden="true">
+              <div className="track"><span className="in" style={{ width: `${((flow.inflow || 0) / Math.max(flow.inflow || 0, flow.outflow || 0, 1)) * 100}%` }} /></div>
+              <div className="track"><span className="out" style={{ width: `${((flow.outflow || 0) / Math.max(flow.inflow || 0, flow.outflow || 0, 1)) * 100}%` }} /></div>
             </div>
           </section>
 
           <section className="acc-section">
             <div className="acc-section-head">
               <h2 className="acc-section-title">Recent transactions</h2>
-              <button type="button" className="btn" onClick={() => openSection("vouchers")}>View all</button>
+              <button type="button" className="acc-ov-link-btn" onClick={() => openSection("vouchers")}>View all</button>
             </div>
-            {recentVouchers.length ? <div className="table acc-table-wrap"><table><thead><tr><th>Date</th><th>Number</th><th>Type</th><th>Narration</th><th className="acc-num">Amount</th></tr></thead><tbody>
-              {recentVouchers.map(voucher => <tr key={voucher.id}><td>{voucher.date}</td><td>{voucher.voucherNumber}</td><td>{VOUCHER_TYPES[voucher.voucherType]?.label || voucher.voucherType}</td><td>{voucher.narration || "—"}</td><td className="acc-num">{money(voucherTotals(voucher.lines).debit)}</td></tr>)}
-            </tbody></table></div> : <AccEmpty title="No transactions yet" copy="Use + New entry in the header to record a sale, purchase, receipt, or payment." />}
+            {recentVouchers.length ? (
+              <div className="card acc-ov-recent">
+                {recentVouchers.map(voucher => (
+                  <div key={voucher.id} className="acc-ov-recent-row">
+                    <div>
+                      <strong>{voucher.voucherNumber}</strong>
+                      <p>{voucher.date} · {VOUCHER_TYPES[voucher.voucherType]?.label || voucher.voucherType}</p>
+                      <p className="narration">{voucher.narration || "—"}</p>
+                    </div>
+                    <span className="amt">{money(voucherTotals(voucher.lines).debit)}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <AccEmpty title="No transactions yet" copy="Use + New entry in the header to record a sale, purchase, receipt, or payment." />
+            )}
           </section>
 
-          <section className="acc-section">
-            <h2 className="acc-section-title">Quick actions</h2>
+          <section className="acc-section acc-ov-links">
+            <h2 className="acc-section-title">Go</h2>
             <div className="acc-ov-actions">
-              <button type="button" className="btn" onClick={() => openSection("ledger")}>Ledger</button>
-              <button type="button" className="btn" onClick={() => openSection("reports")}>Reports</button>
-              <button type="button" className="btn" onClick={() => openSection("bank")}>Banking</button>
+              <button type="button" className="acc-ov-link-btn" onClick={() => openSection("ledger")}>Ledger</button>
+              <button type="button" className="acc-ov-link-btn" onClick={() => openSection("reports")}>Reports</button>
+              <button type="button" className="acc-ov-link-btn" onClick={() => openSection("bank")}>Banking</button>
               <AccOverviewMore onNavigate={openSection} />
             </div>
-            <p className="small acc-ov-hint">Create entries with <strong>+ New entry</strong> or <strong>+ Party</strong> in the header. Full navigation is in the sidebar.</p>
           </section>
         </div>}
 
