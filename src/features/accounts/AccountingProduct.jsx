@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { CashbookWorkspace } from "./AccountsModule.jsx";
 import "./accountingProduct.css";
 import {
   addBankStatement,
@@ -271,7 +270,7 @@ const NAV_TREE = [
     ],
   },
   { id: "bank", label: "Banking", glyph: "⬡" },
-  { id: "cashbook", label: "Cashbook", glyph: "◇", requiresCashbook: true },
+  { id: "cashbook", label: "Cashbook", glyph: "◇" },
   { id: "setup", label: "Setup", glyph: "⚙" },
 ];
 
@@ -295,10 +294,10 @@ function sectionTrail(section, reportTab) {
   return [SECTIONS.find(item => item.id === section)?.label || "Accounts"];
 }
 
-function AccSidebar({ section, expanded, onToggle, onNavigate, showCashbook }) {
+function AccSidebar({ section, expanded, onToggle, onNavigate }) {
   const [openGroup, setOpenGroup] = useState(null);
   const root = useRef(null);
-  const items = NAV_TREE.filter(item => !item.requiresCashbook || showCashbook);
+  const items = NAV_TREE;
 
   useEffect(() => {
     if (expanded) setOpenGroup(null);
@@ -674,7 +673,7 @@ function CoaFormFields({ form, setForm, accounts = [] }) {
   </div>;
 }
 
-export function AccountsModule({ token, close, loans = [], logout, workspace = {} }) {
+export function AccountsModule({ token, close, logout, workspace = {} }) {
   const [section, setSection] = useState("overview");
   const [reportTab, setReportTab] = useState("daybook");
   const [navExpanded, setNavExpanded] = useState(() => {
@@ -810,19 +809,11 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  const showCashbook = Boolean(settings?.integrationEnabled);
   const visibleAccounts = useMemo(
     () => standaloneVisibleAccounts(accounts, { integrationEnabled: settings?.integrationEnabled }),
     [accounts, settings],
   );
-  const moreLinks = useMemo(
-    () => MORE_LINKS.filter(([id]) => id !== "cashbook" || showCashbook),
-    [showCashbook],
-  );
-
-  useEffect(() => {
-    if (section === "cashbook" && !showCashbook) setSection("overview");
-  }, [section, showCashbook]);
+  const moreLinks = MORE_LINKS;
 
   useEffect(() => {
     if (ledgerId && !visibleAccounts.some(account => account.id === ledgerId) && visibleAccounts[0]) {
@@ -886,6 +877,11 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
   };
 
   const openSection = id => {
+    if (id === "cashbook") {
+      close();
+      window.dispatchEvent(new CustomEvent("fintrack-open-cashbook"));
+      return;
+    }
     if (id === "gst") {
       setSection("reports");
       setReportTab("gst");
@@ -1294,37 +1290,8 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
   </tbody></table></div>;
   };
 
-  if (section === "cashbook") {
-    return <div className={`acc-shell${navExpanded ? " nav-expanded" : ""}`}>
-      <AccSidebar section={section} expanded={navExpanded} onToggle={toggleNav} onNavigate={openSection} showCashbook={showCashbook} />
-      <main className="acc-main">
-        <AccPageHeader
-          backLabel="← Accounts"
-          onBack={() => openSection("overview")}
-          title="Cashbook"
-          trail={sectionTrail("cashbook")}
-          copy="Operational cash, bank and UPI movement. This is not the double-entry ledger."
-          workspace={workspace}
-          onSetup={() => openSection("setup")}
-          onLogout={requestLogout}
-        />
-        <CashbookWorkspace token={token} close={() => openSection("overview")} loans={loans} embedded />
-        <nav className="acc-bottom-nav" aria-label="Accounts">
-          {MOBILE_TABS.map(item => (
-            <button key={item.id} type="button" className={`acc-bottom-item ${mobileTab === item.id ? "active" : ""}`} onClick={() => openSection(item.id)}>
-              <span>{item.label}</span>
-            </button>
-          ))}
-        </nav>
-        {confirmLogout && <Modal title="Log out of Accounts?" close={() => !signingOut && setConfirmLogout(false)} actions={<div className="tabs spacer"><button type="button" className="btn" disabled={signingOut} onClick={() => setConfirmLogout(false)}>Stay signed in</button><button type="button" className="btn danger" disabled={signingOut} onClick={confirmAccountsLogout}>{signingOut ? "Signing out…" : "Log out"}</button></div>}>
-          <p className="copy">This ends your FinTrack session. You will need to sign in again to open Accounts or any other module.</p>
-        </Modal>}
-      </main>
-    </div>;
-  }
-
   return <div className={`acc-shell${navExpanded ? " nav-expanded" : ""}`}>
-    <AccSidebar section={section} expanded={navExpanded} onToggle={toggleNav} onNavigate={openSection} showCashbook={showCashbook} />
+    <AccSidebar section={section} expanded={navExpanded} onToggle={toggleNav} onNavigate={openSection} />
     <main className="acc-main acc-print-root">
       <AccPageHeader
         backLabel={section === "overview" ? "← Dashboard" : "← Accounts"}
@@ -1429,9 +1396,9 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
               ["parties", "Customers & suppliers", "Accounts parties are independent of Daily Finance customers and Chit Fund members."],
               ["receivables", "Receivables", "Invoice outstanding, due dates and status. Finance receivables link only when integration is on."],
               ["payables", "Payables", "Supplier invoices and balances from purchase vouchers."],
-              ...(showCashbook ? [["cashbook", "Cashbook", "Operational cash, bank and UPI movement. Unchanged from FinTrack collections."]] : []),
+              ["cashbook", "Finance cashbook", "Opens the Finance cashbook. It is not this Accounts company's ledger."],
               ["reports", "Reports", "Day Book, Ledger, Trial Balance, P&L, Balance Sheet, Cash Flow, Sales and Purchases."],
-              ["setup", "Company setup", `Accounting integration is ${settings?.integrationEnabled ? "ON" : "OFF"}. Off by default.`],
+              ["setup", "Company setup", `Books integration is ${settings?.integrationEnabled ? "ON" : "OFF"}. Off by default — it does not turn Cashbook on or off.`],
             ].map(([id, title, copy]) => (
               <button key={id} type="button" className="card acc-landing-card" onClick={() => openSection(id)}>
                 <strong>{title}</strong>
@@ -1959,7 +1926,7 @@ export function AccountsModule({ token, close, loans = [], logout, workspace = {
           <AccSetupSection
             icon="↔"
             title="Accounting integration"
-            copy="Off by default. When on, eligible Daily Finance, Monthly Finance, Chit Fund, and Cashbook transactions create linked accounting vouchers. The same payment is never entered twice. Cashbook stays the operational money view."
+            copy="Cashbook is always available from Finance. This switch only copies eligible Daily, Monthly, Chit, and Cashbook rows into the primary Accounts company. Keep it off if Accounts books belong to a different business. The same payment is never posted twice."
             actions={<span className={`acc-chip ${settings?.integrationEnabled ? "ok" : ""}`}>Status: {settings?.integrationEnabled ? "ON" : "OFF"}</span>}
           >
             <div className="accounts-action-row">

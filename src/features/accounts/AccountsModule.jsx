@@ -128,8 +128,8 @@ export function AccountsSummaryCard({ token, moneyFmt = money }) {
       .catch(() => setOverview(null));
   }, [token]);
   if (!overview) return null;
-  return <div className="card accounts-summary-card spacer">
-    <div className="toolbar accounts-summary-heading"><strong>Accounts</strong><span className="small">Today&apos;s movement</span></div>
+  return <button type="button" className="card accounts-summary-card spacer" onClick={() => window.dispatchEvent(new CustomEvent("fintrack-open-cashbook"))}>
+    <div className="toolbar accounts-summary-heading"><strong>Cashbook</strong><span className="small">Today&apos;s movement · Open</span></div>
     <div className="accounts-summary-grid">
       <div><span className="small">Cash</span><strong className="gold">{moneyFmt(overview.cash)}</strong></div>
       <div><span className="small">Bank</span><strong>{moneyFmt(overview.bank)}</strong></div>
@@ -138,10 +138,10 @@ export function AccountsSummaryCard({ token, moneyFmt = money }) {
       <div><span className="small">Today&apos;s in</span><strong className="green">{moneyFmt(overview.moneyIn)}</strong></div>
       <div><span className="small">Today&apos;s out</span><strong className="red">{moneyFmt(overview.moneyOut)}</strong></div>
     </div>
-  </div>;
+  </button>;
 }
 
-export function CashbookWorkspace({ token, close, loans = [], embedded = false }) {
+export function CashbookWorkspace({ token, close, loans = [] }) {
   const [section, setSection] = useState("cashbook");
   const [ledgers, setLedgers] = useState([]);
   const [entries, setEntries] = useState([]);
@@ -377,13 +377,13 @@ export function CashbookWorkspace({ token, close, loans = [], embedded = false }
   const periodProps = { period, setPeriod, customFrom, setCustomFrom, customTo, setCustomTo };
 
   return <div className="accounts-module shell">
-    <header className="top"><div><ButtonLike onClick={close}>{embedded ? "← Accounts" : "← Back"}</ButtonLike><h1 className="title spacer">{embedded ? "Cashbook" : "Accounts"}</h1><p className="copy">{embedded ? "Operational cash, bank and UPI movement. This is not the double-entry ledger." : "Cashbook, expenses, bank accounts, transfers and day closing."}</p></div></header>
+    <header className="top"><div><ButtonLike onClick={close}>← Dashboard</ButtonLike><h1 className="title spacer">Cashbook</h1><p className="copy">Cash, bank and UPI for this Finance workspace. Independent of Accounts companies and their double-entry books.</p></div></header>
     {error && <div className="notice">{error}</div>}
     {notice && <div className="notice accounts-notice-ok">{notice}</div>}
-    <nav className="accounts-section-nav spacer" aria-label="Accounts sections">
+    <nav className="accounts-section-nav spacer" aria-label="Cashbook sections">
       {SECTIONS.map(item => <button key={item.id} type="button" className={`accounts-section-tab ${section === item.id ? "active" : ""}`} onClick={() => setSection(item.id)}>{item.label}</button>)}
     </nav>
-    {loading ? <p className="copy">Loading accounts…</p> : <>
+    {loading ? <p className="copy">Loading cashbook…</p> : <>
       {section === "cashbook" && <div className="accounts-panel">
         <CashbookOverview balances={allTimeOverview} movement={periodOverview} period={period} />
         <div className="card accounts-filter-card spacer">
