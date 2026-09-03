@@ -89,42 +89,32 @@ const Field = ({ label, children, required, className }) => (
     {children}
   </label>
 );
-const AccMetric = ({ label, value, tone = "" }) => (
-  <article className="card acc-metric-card">
+const AccMetric = ({ label, value, tone = "", onClick }) => (
+  <article className={`card acc-metric-card${onClick ? " clickable" : ""}`} {...(onClick ? { role: "button", tabIndex: 0, onClick, onKeyDown: event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onClick(); } } } : {})}>
     <div className="metric-label">{label}</div>
     <div className={`metric-value ${tone}`}>{value}</div>
   </article>
 );
 
-const invoiceAgingTotals = (rows = []) => {
-  let current = 0;
-  let overdue = 0;
-  for (const row of rows) {
-    const amount = Number(row.outstanding || 0);
-    if (row.status === "Overdue") overdue += amount;
-    else current += amount;
-  }
-  return { current, overdue, total: current + overdue };
+const AccCompareChart = ({ receivables, payables, onReceivables, onPayables }) => {
+  const max = Math.max(Number(receivables) || 0, Number(payables) || 0, 1);
+  return (
+    <section className="card acc-dash-compare">
+      <h2 className="acc-section-title">Receivables vs Payables</h2>
+      <p className="acc-dash-compare-sub">Outstanding Amount</p>
+      <button type="button" className="acc-compare-row" onClick={onReceivables} aria-label={`Receivables ${money(receivables)}`}>
+        <span className="acc-compare-label">Receivables</span>
+        <span className="acc-compare-track" aria-hidden="true"><span className="bar ar" style={{ width: `${((Number(receivables) || 0) / max) * 100}%` }} /></span>
+        <strong className="acc-compare-amt">{money(receivables)}</strong>
+      </button>
+      <button type="button" className="acc-compare-row" onClick={onPayables} aria-label={`Payables ${money(payables)}`}>
+        <span className="acc-compare-label">Payables</span>
+        <span className="acc-compare-track" aria-hidden="true"><span className="bar ap" style={{ width: `${((Number(payables) || 0) / max) * 100}%` }} /></span>
+        <strong className="acc-compare-amt">{money(payables)}</strong>
+      </button>
+    </section>
+  );
 };
-
-const AccAgingCard = ({ title, subtitle, total, current, overdue, onNew, onOpen }) => (
-  <article className="card acc-dash-aging">
-    <header className="acc-dash-aging-head">
-      <button type="button" className="acc-dash-aging-title" onClick={onOpen}>{title}</button>
-      <button type="button" className="btn primary acc-dash-new" onClick={onNew}>+ New</button>
-    </header>
-    <p className="acc-dash-aging-sub">{subtitle}</p>
-    <button type="button" className="acc-dash-aging-total" onClick={onOpen}>{money(total)}</button>
-    <div className="acc-dash-aging-bar" aria-hidden="true">
-      <span className="current" style={{ flexGrow: Math.max(current, 0.01) }} />
-      <span className="overdue" style={{ flexGrow: Math.max(overdue, 0.01) }} />
-    </div>
-    <footer className="acc-dash-aging-foot">
-      <span><i className="dot current" /> Current: <strong>{money(current)}</strong></span>
-      <span><i className="dot overdue" /> Overdue: <strong>{money(overdue)}</strong></span>
-    </footer>
-  </article>
-);
 
 const AccFlowBar = ({ inflow, outflow }) => {
   const max = Math.max(inflow, outflow, 1);
@@ -135,6 +125,37 @@ const AccFlowBar = ({ inflow, outflow }) => {
     </div>
   );
 };
+
+function AccOverviewMore({ onNavigate }) {
+  const [open, setOpen] = useState(false);
+  const root = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDoc = event => { if (!root.current?.contains(event.target)) setOpen(false); };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+  const go = id => { setOpen(false); onNavigate(id); };
+  return (
+    <div className="acc-ov-more" ref={root}>
+      <button type="button" className="btn" aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen(current => !current)}>More ⋯</button>
+      {open && (
+        <menu className="acc-ov-more-menu" role="menu">
+          {[
+            ["parties", "Party ledger"],
+            ["cashbook", "Cashbook"],
+            ["pnl", "Profit & Loss"],
+            ["balance", "Balance Sheet"],
+            ["trial", "Trial Balance"],
+            ["setup", "Setup"],
+          ].map(([id, label]) => (
+            <button key={id} type="button" role="menuitem" onClick={() => go(id)}>{label}</button>
+          ))}
+        </menu>
+      )}
+    </div>
+  );
+}
 
 const AccEmpty = ({ title, copy, actionLabel, onAction }) => (
   <div className="card acc-empty">
@@ -910,7 +931,7 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
   const reportId = section === "pnl" || section === "balance" || section === "trial" ? section : (section === "reports" ? reportTab : "");
   const wantOverview = section === "overview";
   const wantTrial = reportId === "trial";
-  const wantPnl = reportId === "pnl" || wantOverview;
+  const wantPnl = reportId === "pnl";
   const wantSheet = reportId === "balance";
   const wantFlow = reportId === "cashflow" || wantOverview;
   const wantDayBook = reportId === "daybook" || reportId === "sales" || reportId === "purchases";
@@ -966,22 +987,6 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
       ? invoiceRegister(accounts, vouchers, parties, { kind: "payable", today: todayIso(), ...range, outstandingOnly })
       : []),
     [wantInvoices, section, reportId, accounts, vouchers, parties, range, outstandingOnly],
-  );
-  const overviewArAging = useMemo(
-    () => (wantOverview
-      ? invoiceAgingTotals(invoiceRegister(accounts, vouchers, parties, { kind: "receivable", today: todayIso(), ...range, outstandingOnly: true }))
-      : { current: 0, overdue: 0, total: 0 }),
-    [wantOverview, accounts, vouchers, parties, range],
-  );
-  const overviewApAging = useMemo(
-    () => (wantOverview
-      ? invoiceAgingTotals(invoiceRegister(accounts, vouchers, parties, { kind: "payable", today: todayIso(), ...range, outstandingOnly: true }))
-      : { current: 0, overdue: 0, total: 0 }),
-    [wantOverview, accounts, vouchers, parties, range],
-  );
-  const topExpenses = useMemo(
-    () => (wantOverview ? [...(pnl.expenses || [])].filter(row => row.amount > 0).sort((a, b) => b.amount - a.amount).slice(0, 5) : []),
-    [wantOverview, pnl],
   );
   const salesRows = useMemo(() => books.filter(row => row.voucherType === "sales"), [books]);
   const purchaseRows = useMemo(() => books.filter(row => row.voucherType === "purchase"), [books]);
@@ -1510,7 +1515,7 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
         ))}
       </nav>
       {loading ? <><p className="copy">Loading Accounts…</p><AccSkeleton /></> : <>
-        {section === "overview" && <div className="acc-panel">
+        {section === "overview" && <div className="acc-panel acc-overview">
           <ReportRangeBar fy={fy} lastFy={lastFy} from={rangeFrom} to={rangeTo} onChange={setReportRange} />
           {!settings && <div className="card accounts-form-card">
             <strong>Open the books</strong>
@@ -1526,123 +1531,60 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
             <span className="acc-chip">Integration {settings?.integrationEnabled ? "ON" : "OFF"}</span>
           </div>
 
-          <section className="acc-dash-grid two">
-            <AccAgingCard
-              title="Total Receivables"
-              subtitle="Total unpaid invoices"
-              total={overviewArAging.total}
-              current={overviewArAging.current}
-              overdue={overviewArAging.overdue}
-              onNew={() => openSimple("sale")}
-              onOpen={() => openSection("receivables")}
-            />
-            <AccAgingCard
-              title="Total Payables"
-              subtitle="Total unpaid bills"
-              total={overviewApAging.total}
-              current={overviewApAging.current}
-              overdue={overviewApAging.overdue}
-              onNew={() => openSimple("purchase")}
-              onOpen={() => openSection("payables")}
-            />
+          <section className="acc-section">
+            <h2 className="acc-section-title">Key financial metrics</h2>
+            <div className="acc-metric-grid acc-ov-metrics">
+              <AccMetric label="Cash" value={money(metrics?.cash)} tone="gold" />
+              <AccMetric label="Bank" value={money(metrics?.bank)} tone="gold" />
+              <AccMetric label="Receivables" value={money(metrics?.receivables)} tone="blue" onClick={() => openSection("receivables")} />
+              <AccMetric label="Payables" value={money(metrics?.payables)} onClick={() => openSection("payables")} />
+              <AccMetric label="Income" value={money(metrics?.income)} tone="green" onClick={() => openSection("pnl")} />
+              <AccMetric label="Expenses" value={money(metrics?.expenses)} tone="red" onClick={() => openSection("pnl")} />
+            </div>
           </section>
 
-          <section className="card acc-dash-flow">
+          <AccCompareChart
+            receivables={metrics?.receivables || 0}
+            payables={metrics?.payables || 0}
+            onReceivables={() => openSection("receivables")}
+            onPayables={() => openSection("payables")}
+          />
+
+          <section className="card acc-dash-flow acc-ov-cashflow">
             <header className="acc-dash-card-head">
-              <h2>Cash Flow</h2>
-              <button type="button" className="btn" onClick={() => openSection("reports")}>Open report</button>
+              <h2>Cash flow</h2>
+              <span className="small">{range.from} → {range.to}</span>
             </header>
             <div className="acc-dash-flow-body">
               <AccFlowBar inflow={flow.inflow || 0} outflow={flow.outflow || 0} />
               <ul className="acc-dash-legend">
-                <li><i className="dot muted" /> Cash as on {range.from || "start"}: <strong>{money(flow.opening)}</strong></li>
-                <li><i className="dot green" /> Incoming (+): <strong>{money(flow.inflow)}</strong></li>
-                <li><i className="dot red" /> Outgoing (−): <strong>{money(flow.outflow)}</strong></li>
-                <li><i className="dot blue" /> Cash as on {range.to || "end"} (=): <strong>{money(flow.closing)}</strong></li>
+                <li><i className="dot muted" /> Opening: <strong>{money(flow.opening)}</strong></li>
+                <li><i className="dot green" /> Incoming: <strong>{money(flow.inflow)}</strong></li>
+                <li><i className="dot red" /> Outgoing: <strong>{money(flow.outflow)}</strong></li>
+                <li><i className="dot blue" /> Closing: <strong>{money(flow.closing)}</strong></li>
               </ul>
             </div>
           </section>
 
-          <section className="acc-dash-grid two">
-            <article className="card acc-dash-ie">
-              <header className="acc-dash-card-head">
-                <h2>Income and Expense</h2>
-                <button type="button" className="btn" onClick={() => openSection("pnl")}>P&amp;L</button>
-              </header>
-              <div className="acc-dash-ie-totals">
-                <span><i className="dot green" /> Total Income: <strong>{money(metrics?.income)}</strong></span>
-                <span><i className="dot red" /> Total Expenses: <strong>{money(metrics?.expenses)}</strong></span>
-              </div>
-              <AccFlowBar inflow={metrics?.income || 0} outflow={metrics?.expenses || 0} />
-              <p className="acc-dash-net">Net profit <strong className={metrics?.netProfit < 0 ? "red" : "green"}>{money(metrics?.netProfit)}</strong></p>
-            </article>
-            <article className="card acc-dash-ie">
-              <header className="acc-dash-card-head">
-                <h2>Top Expenses</h2>
-                <button type="button" className="btn" onClick={() => openSection("pnl")}>View all</button>
-              </header>
-              {topExpenses.length ? (
-                <ul className="acc-dash-expense-list">
-                  {topExpenses.map(row => (
-                    <li key={row.id || row.code || row.name}>
-                      <span>{row.name}</span>
-                      <strong>{money(row.amount)}</strong>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="acc-dash-empty-copy">No expense recorded for this period.</p>
-              )}
-            </article>
+          <section className="acc-section">
+            <div className="acc-section-head">
+              <h2 className="acc-section-title">Recent transactions</h2>
+              <button type="button" className="btn" onClick={() => openSection("vouchers")}>View all</button>
+            </div>
+            {recentVouchers.length ? <div className="table acc-table-wrap"><table><thead><tr><th>Date</th><th>Number</th><th>Type</th><th>Narration</th><th className="acc-num">Amount</th></tr></thead><tbody>
+              {recentVouchers.map(voucher => <tr key={voucher.id}><td>{voucher.date}</td><td>{voucher.voucherNumber}</td><td>{VOUCHER_TYPES[voucher.voucherType]?.label || voucher.voucherType}</td><td>{voucher.narration || "—"}</td><td className="acc-num">{money(voucherTotals(voucher.lines).debit)}</td></tr>)}
+            </tbody></table></div> : <AccEmpty title="No transactions yet" copy="Use + New entry in the header to record a sale, purchase, receipt, or payment." />}
           </section>
 
           <section className="acc-section">
-            <h2 className="acc-section-title">Money on hand</h2>
-            <div className="acc-metric-grid three">
-              <AccMetric label="Cash" value={money(metrics?.cash)} tone="gold" />
-              <AccMetric label="Bank" value={money(metrics?.bank)} tone="gold" />
-              <AccMetric label="UPI" value={money(metrics?.upi)} tone="gold" />
-            </div>
-          </section>
-          <section className="acc-section">
-            <h2 className="acc-section-title">Today</h2>
-            <div className="acc-metric-grid">
-              <AccMetric label="Today's sales" value={money(metrics?.todaySales)} />
-              <AccMetric label="Today's purchases" value={money(metrics?.todayPurchases)} />
-              <AccMetric label="Today's receipts" value={money(metrics?.todayReceipts)} tone="green" />
-              <AccMetric label="Today's payments" value={money(metrics?.todayPayments)} tone="red" />
-            </div>
-          </section>
-          <section className="acc-section">
             <h2 className="acc-section-title">Quick actions</h2>
-            <div className="acc-quick-actions">
-              {SIMPLE_ENTRY_KINDS.map(item => <button key={item.id} type="button" className="btn" onClick={() => openSimple(item.id)}>+ {item.label}</button>)}
+            <div className="acc-ov-actions">
+              <button type="button" className="btn" onClick={() => openSection("ledger")}>Ledger</button>
+              <button type="button" className="btn" onClick={() => openSection("reports")}>Reports</button>
+              <button type="button" className="btn" onClick={() => openSection("bank")}>Banking</button>
+              <AccOverviewMore onNavigate={openSection} />
             </div>
-          </section>
-          <section className="acc-section">
-            <h2 className="acc-section-title">Recent transactions</h2>
-            {recentVouchers.length ? <div className="table acc-table-wrap"><table><thead><tr><th>Date</th><th>Number</th><th>Type</th><th>Narration</th><th className="acc-num">Amount</th></tr></thead><tbody>
-              {recentVouchers.map(voucher => <tr key={voucher.id}><td>{voucher.date}</td><td>{voucher.voucherNumber}</td><td>{VOUCHER_TYPES[voucher.voucherType]?.label || voucher.voucherType}</td><td>{voucher.narration || "—"}</td><td className="acc-num">{money(voucherTotals(voucher.lines).debit)}</td></tr>)}
-            </tbody></table></div> : <AccEmpty title="No transactions yet" copy="Record a sale, purchase, receipt, or payment to start the books." actionLabel="+ Create transaction" onAction={() => openSimple("sale")} />}
-          </section>
-          <section className="acc-section">
-            <h2 className="acc-section-title">Go to</h2>
-            <div className="acc-landing-grid">
-            {[
-              ["vouchers", "Transactions", "Guided sale, purchase, expense, receipt and payment. Advanced vouchers stay available."],
-              ["parties", "Customers & suppliers", "Accounts parties are independent of Daily Finance customers and Chit Fund members."],
-              ["receivables", "Receivables", "Invoice outstanding, due dates and status. Finance receivables link only when integration is on."],
-              ["payables", "Payables", "Supplier invoices and balances from purchase vouchers."],
-              ["cashbook", "Finance cashbook", "Opens the Finance cashbook. It is not this Accounts company's ledger."],
-              ["reports", "Reports", "Day Book, Ledger, Trial Balance, P&L, Balance Sheet, Cash Flow, Sales and Purchases."],
-              ["setup", "Company setup", `Books integration is ${settings?.integrationEnabled ? "ON" : "OFF"}. Off by default — it does not turn Cashbook on or off.`],
-            ].map(([id, title, copy]) => (
-              <button key={id} type="button" className="card acc-landing-card" onClick={() => openSection(id)}>
-                <strong>{title}</strong>
-                <p className="small">{copy}</p>
-              </button>
-            ))}
-            </div>
+            <p className="small acc-ov-hint">Create entries with <strong>+ New entry</strong> or <strong>+ Party</strong> in the header. Full navigation is in the sidebar.</p>
           </section>
         </div>}
 

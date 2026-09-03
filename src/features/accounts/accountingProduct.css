@@ -644,13 +644,113 @@ html:has(.accounts-dashboard) .financier-nav {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.accounts-dashboard .acc-dash-aging,
-.accounts-dashboard .acc-dash-flow,
-.accounts-dashboard .acc-dash-ie {
-  padding: 18px 18px 16px;
+.accounts-dashboard .acc-ov-metrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.accounts-dashboard .acc-dash-aging-head,
+.accounts-dashboard .acc-metric-card.clickable {
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.accounts-dashboard .acc-metric-card.clickable:hover,
+.accounts-dashboard .acc-metric-card.clickable:focus-visible {
+  border-color: #3b82f688;
+  box-shadow: 0 0 0 3px #3b82f622;
+  outline: none;
+}
+
+.accounts-dashboard .acc-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.accounts-dashboard .acc-section-head .acc-section-title {
+  margin: 0;
+}
+
+.accounts-dashboard .acc-dash-compare,
+.accounts-dashboard .acc-dash-flow {
+  padding: 18px 18px 16px;
+  margin: 12px 0;
+}
+
+.accounts-dashboard .acc-dash-compare .acc-section-title {
+  margin: 0 0 4px;
+}
+
+.accounts-dashboard .acc-dash-compare-sub {
+  margin: 0 0 14px;
+  color: var(--acc-muted);
+  font-size: 12px;
+}
+
+.accounts-dashboard .acc-compare-row {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+}
+
+.accounts-dashboard .acc-compare-row:last-child {
+  margin-bottom: 0;
+}
+
+.accounts-dashboard .acc-compare-row:hover,
+.accounts-dashboard .acc-compare-row:focus-visible {
+  background: #f4f7fb;
+  border-color: var(--acc-line);
+  outline: none;
+}
+
+.accounts-dashboard .acc-compare-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--acc-muted);
+}
+
+.accounts-dashboard .acc-compare-track {
+  display: block;
+  height: 12px;
+  border-radius: 999px;
+  background: #eef2f7;
+  overflow: hidden;
+}
+
+.accounts-dashboard .acc-compare-track .bar {
+  display: block;
+  height: 100%;
+  min-width: 0;
+  border-radius: 999px;
+}
+
+.accounts-dashboard .acc-compare-track .bar.ar {
+  background: #3b82f6;
+}
+
+.accounts-dashboard .acc-compare-track .bar.ap {
+  background: #f59e0b;
+}
+
+.accounts-dashboard .acc-compare-amt {
+  min-width: 7.5rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+}
+
 .accounts-dashboard .acc-dash-card-head {
   display: flex;
   align-items: center;
@@ -659,60 +759,10 @@ html:has(.accounts-dashboard) .financier-nav {
   margin-bottom: 8px;
 }
 
-.accounts-dashboard .acc-dash-card-head h2,
-.accounts-dashboard .acc-dash-aging-title {
+.accounts-dashboard .acc-dash-card-head h2 {
   margin: 0;
   font: 700 15px/1.2 Syne, sans-serif;
   color: var(--acc-ink);
-  background: none;
-  border: 0;
-  padding: 0;
-  cursor: pointer;
-  text-align: left;
-}
-
-.accounts-dashboard .acc-dash-new {
-  min-height: 32px;
-  padding: 0 12px;
-  font-size: 13px;
-}
-
-.accounts-dashboard .acc-dash-aging-sub {
-  margin: 0 0 4px;
-  color: var(--acc-muted);
-  font-size: 12px;
-}
-
-.accounts-dashboard .acc-dash-aging-total {
-  display: block;
-  width: 100%;
-  margin: 0 0 12px;
-  padding: 0;
-  border: 0;
-  background: none;
-  text-align: left;
-  cursor: pointer;
-  font: 700 28px/1.15 Syne, sans-serif;
-  letter-spacing: -0.03em;
-  color: var(--acc-ink);
-  font-variant-numeric: tabular-nums;
-}
-
-.accounts-dashboard .acc-dash-aging-bar {
-  display: flex;
-  height: 4px;
-  border-radius: 999px;
-  overflow: hidden;
-  background: #e8edf3;
-  margin-bottom: 12px;
-}
-
-.accounts-dashboard .acc-dash-aging-bar .current {
-  background: #3b82f6;
-}
-
-.accounts-dashboard .acc-dash-aging-bar .overdue {
-  background: #f59e0b;
 }
 
 .accounts-dashboard .acc-dash-aging-foot,
@@ -786,40 +836,54 @@ html:has(.accounts-dashboard) .financier-nav {
   border-radius: 999px;
 }
 
-.accounts-dashboard .acc-dash-ie-totals {
-  margin-bottom: 12px;
-}
-
-.accounts-dashboard .acc-dash-net {
-  margin: 12px 0 0;
-  color: var(--acc-muted);
-  font-size: 13px;
-}
-
-.accounts-dashboard .acc-dash-expense-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.accounts-dashboard .acc-dash-expense-list li {
+.accounts-dashboard .acc-ov-actions {
   display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--acc-line);
-  font-size: 14px;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
 }
 
-.accounts-dashboard .acc-dash-expense-list li:last-child {
-  border-bottom: 0;
+.accounts-dashboard .acc-ov-more {
+  position: relative;
 }
 
-.accounts-dashboard .acc-dash-empty-copy {
-  margin: 28px 0 12px;
-  text-align: center;
-  color: var(--acc-muted);
-  font-size: 14px;
+.accounts-dashboard .acc-ov-more-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 8;
+  display: grid;
+  min-width: 180px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border: 1px solid var(--acc-line);
+  border-radius: 12px;
+  background: var(--acc-surface);
+  box-shadow: var(--acc-shadow);
+}
+
+.accounts-dashboard .acc-ov-more-menu button {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  color: var(--acc-ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.accounts-dashboard .acc-ov-more-menu button:hover,
+.accounts-dashboard .acc-ov-more-menu button:focus-visible {
+  background: #f4f7fb;
+  outline: none;
+}
+
+.accounts-dashboard .acc-ov-hint {
+  margin: 10px 0 0;
 }
 
 .accounts-dashboard .acc-metric-card {
@@ -1829,6 +1893,9 @@ html:has(.accounts-dashboard) .financier-nav {
   .accounts-dashboard .acc-dash-flow-body {
     grid-template-columns: 1fr;
   }
+  .accounts-dashboard .acc-ov-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .accounts-dashboard .acc-setup-head {
     grid-template-columns: auto minmax(0, 1fr);
   }
@@ -1909,11 +1976,31 @@ html:has(.accounts-dashboard) .financier-nav {
   .accounts-dashboard .acc-metric-grid,
   .accounts-dashboard .acc-metric-grid.three,
   .accounts-dashboard .acc-skeleton,
-  .accounts-dashboard .acc-dash-grid.two {
-    grid-template-columns: 1fr;
+  .accounts-dashboard .acc-dash-grid.two,
+  .accounts-dashboard .acc-ov-metrics {
+    grid-template-columns: 1fr 1fr;
   }
-  .accounts-dashboard .acc-dash-aging-total {
-    font-size: 24px;
+  .accounts-dashboard .acc-compare-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .accounts-dashboard .acc-compare-amt {
+    min-width: 0;
+    text-align: left;
+  }
+  .accounts-dashboard .acc-ov-actions .btn {
+    flex: 1 1 calc(50% - 8px);
+    min-height: 40px;
+  }
+  .accounts-dashboard .acc-ov-more {
+    flex: 1 1 calc(50% - 8px);
+  }
+  .accounts-dashboard .acc-ov-more > .btn {
+    width: 100%;
+  }
+  .accounts-dashboard .acc-ov-more-menu {
+    left: 0;
+    right: 0;
   }
   .accounts-dashboard .acc-main .title {
     font-size: 22px;
