@@ -37,8 +37,6 @@ import {
   COA_GROUPS,
   MONEY_MODES,
   PARTY_TYPES,
-  GST_RATES,
-  INDIA_STATES,
   SIMPLE_ENTRY_KINDS,
   SIMPLE_EXPENSE_CODES,
   VOUCHER_TYPES,
@@ -52,9 +50,7 @@ import {
   createSubmitLock,
   defaultAccountTypeForGroup,
   filterParties,
-  gstStateFromGstin,
   indianFinancialYear,
-  isIntraGst,
   ledgerHasPostedLines,
   moneyAccounts,
   partyHasAccountingUse,
@@ -67,6 +63,7 @@ import {
   voucherTotals,
 } from "./accountingModel.js";
 import { formatIstDateTime, todayIso } from "./cashbookModel.js";
+import { GST_RATES, INDIA_STATES, gstStateFromGstin, isIntraGst } from "./accountingGst.js";
 import {
   accountLedger,
   balanceSheet,

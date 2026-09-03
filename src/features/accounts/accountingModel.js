@@ -106,7 +106,110 @@ export const SYSTEM_CODES = {
   purchase: "5110",
   professionalFees: "5120",
   otherExpense: "5990",
+  inputCgst: "1140",
+  inputSgst: "1141",
+  inputIgst: "1142",
+  outputCgst: "2210",
+  outputSgst: "2211",
+  outputIgst: "2212",
 };
+
+export { GST_RATES, INDIA_STATES, gstStateFromGstin, isIntraGst } from "./accountingGst.js";
+
+export function gstSplit({ taxable, rate, intra }) {
+  const value = roundMoney(taxable);
+  const tax = roundMoney(value * (Number(rate) || 0) / 100);
+  if (!intra) {
+    return { taxable: value, cgst: 0, sgst: 0, igst: tax, total: roundMoney(value + tax), supplyType: "inter" };
+  }
+  const cgst = roundMoney(tax / 2);
+  const sgst = roundMoney(tax - cgst);
+  return { taxable: value, cgst, sgst, igst: 0, total: roundMoney(value + cgst + sgst), supplyType: "intra" };
+}
+
+export function taxableFromInclusive(inclusive, rate) {
+  const amount = roundMoney(inclusive);
+  const r = Number(rate) || 0;
+  if (r <= 0) return amount;
+  return roundMoney(amount * 100 / (100 + r));
+}
+
+export function prepareGstAmount(amount, gst) {
+  const value = roundMoney(amount);
+  const rate = Number(gst?.rate || 0);
+  const enabled = Boolean(gst?.enabled) && rate > 0;
+  if (!enabled) {
+    return { taxable: value, cgst: 0, sgst: 0, igst: 0, total: value, rate: 0, supplyType: "none", hsnSac: gst?.hsnSac || "", itcEligible: gst?.itcEligible !== false };
+  }
+  const taxable = gst?.taxInclusive ? taxableFromInclusive(value, rate) : value;
+  return { ...gstSplit({ taxable, rate, intra: gst?.intra !== false }), rate, hsnSac: gst?.hsnSac || "", itcEligible: gst?.itcEligible !== false };
+}
+
+export function gstDocumentLine(prepared, description = "") {
+  if (!prepared || prepared.supplyType === "none" || (!prepared.cgst && !prepared.sgst && !prepared.igst)) return null;
+  return {
+    line_no: 1,
+    hsn_sac: prepared.hsnSac || "",
+    description,
+    taxable_amount: prepared.taxable,
+    rate: prepared.rate,
+    cgst_amount: prepared.cgst,
+    sgst_amount: prepared.sgst,
+    igst_amount: prepared.igst,
+    supply_type: prepared.supplyType,
+    itc_eligible: prepared.itcEligible !== false,
+  };
+}
+
+const taxLine = (accounts, code, amount, side, description) => {
+  const value = roundMoney(amount);
+  if (!value) return null;
+  const account = findAccount(accounts, { code });
+  if (!account) throw new Error(`Missing GST ledger ${code}`);
+  return {
+    coaId: account.id,
+    code: account.code,
+    debit: side === "debit" ? value : 0,
+    credit: side === "credit" ? value : 0,
+    description,
+  };
+};
+
+export function gstOutputLines(accounts, prepared, description = "") {
+  if (!prepared || prepared.supplyType === "none") return [];
+  return [
+    taxLine(accounts, SYSTEM_CODES.outputCgst, prepared.cgst, "credit", description),
+    taxLine(accounts, SYSTEM_CODES.outputSgst, prepared.sgst, "credit", description),
+    taxLine(accounts, SYSTEM_CODES.outputIgst, prepared.igst, "credit", description),
+  ].filter(Boolean);
+}
+
+export function gstInputLines(accounts, prepared, description = "") {
+  if (!prepared || prepared.supplyType === "none") return [];
+  return [
+    taxLine(accounts, SYSTEM_CODES.inputCgst, prepared.cgst, "debit", description),
+    taxLine(accounts, SYSTEM_CODES.inputSgst, prepared.sgst, "debit", description),
+    taxLine(accounts, SYSTEM_CODES.inputIgst, prepared.igst, "debit", description),
+  ].filter(Boolean);
+}
+
+export function gstOutputReversalLines(accounts, prepared, description = "") {
+  if (!prepared || prepared.supplyType === "none") return [];
+  return [
+    taxLine(accounts, SYSTEM_CODES.outputCgst, prepared.cgst, "debit", description),
+    taxLine(accounts, SYSTEM_CODES.outputSgst, prepared.sgst, "debit", description),
+    taxLine(accounts, SYSTEM_CODES.outputIgst, prepared.igst, "debit", description),
+  ].filter(Boolean);
+}
+
+export function gstInputReversalLines(accounts, prepared, description = "") {
+  if (!prepared || prepared.supplyType === "none") return [];
+  return [
+    taxLine(accounts, SYSTEM_CODES.inputCgst, prepared.cgst, "credit", description),
+    taxLine(accounts, SYSTEM_CODES.inputSgst, prepared.sgst, "credit", description),
+    taxLine(accounts, SYSTEM_CODES.inputIgst, prepared.igst, "credit", description),
+  ].filter(Boolean);
+}
 
 export const DEFAULT_CHART_OF_ACCOUNTS = [
   { code: "1000", name: "Cash in Hand", groupType: "asset", accountType: "cash", isSystem: true },
@@ -118,8 +221,14 @@ export const DEFAULT_CHART_OF_ACCOUNTS = [
   { code: "1130", name: "Chit Fund Receivable", groupType: "asset", accountType: "receivable", isSystem: true },
   { code: "1200", name: "Loans & Advances", groupType: "asset", accountType: "other", isSystem: false },
   { code: "1300", name: "Fixed Assets", groupType: "asset", accountType: "other", isSystem: false },
+  { code: "1140", name: "Input CGST", groupType: "asset", accountType: "other", isSystem: true },
+  { code: "1141", name: "Input SGST", groupType: "asset", accountType: "other", isSystem: true },
+  { code: "1142", name: "Input IGST", groupType: "asset", accountType: "other", isSystem: true },
   { code: "2000", name: "Accounts Payable", groupType: "liability", accountType: "payable", isSystem: true },
   { code: "2100", name: "Loans Payable", groupType: "liability", accountType: "payable", isSystem: false },
+  { code: "2210", name: "Output CGST", groupType: "liability", accountType: "other", isSystem: true },
+  { code: "2211", name: "Output SGST", groupType: "liability", accountType: "other", isSystem: true },
+  { code: "2212", name: "Output IGST", groupType: "liability", accountType: "other", isSystem: true },
   { code: "3000", name: "Capital", groupType: "equity", accountType: "capital", isSystem: true },
   { code: "3100", name: "Drawings", groupType: "equity", accountType: "drawing", isSystem: true },
   { code: "3200", name: "Retained Earnings", groupType: "equity", accountType: "retained", isSystem: true },
@@ -592,69 +701,76 @@ export function resolveAccountCode(accounts, code, fallbackCode) {
   return findAccount(accounts, { code })?.code || findAccount(accounts, { code: fallbackCode })?.code || fallbackCode;
 }
 
-export function saleLines({ accounts, amount, settlement = "credit", moneyMode = "cash", partyId = null, description = "" }) {
-  const value = roundMoney(amount);
+export function saleLines({ accounts, amount, settlement = "credit", moneyMode = "cash", partyId = null, description = "", gst } = {}) {
+  const prepared = prepareGstAmount(amount, gst);
   const sales = findAccount(accounts, { code: SYSTEM_CODES.sales });
   if (!sales) throw new Error("Missing Sales account");
-  const credit = { coaId: sales.id, code: sales.code, debit: 0, credit: value, description };
+  const credit = { coaId: sales.id, code: sales.code, debit: 0, credit: prepared.taxable, description };
+  const tax = gstOutputLines(accounts, prepared, description);
   if (settlement === "credit") {
     const receivable = findAccount(accounts, { code: SYSTEM_CODES.receivable }) || findAccount(accounts, { accountType: "receivable" });
     if (!receivable) throw new Error("Missing Accounts Receivable");
     return [
-      { coaId: receivable.id, code: receivable.code, partyId, debit: value, credit: 0, description },
+      { coaId: receivable.id, code: receivable.code, partyId, debit: prepared.total, credit: 0, description },
       credit,
+      ...tax,
     ];
   }
-  const split = moneyByMode(moneyMode, value);
+  const split = moneyByMode(moneyMode, prepared.total);
   return [
     moneyLine(accounts, "cash", split.cash, "debit"),
     moneyLine(accounts, "upi", split.upi, "debit"),
     moneyLine(accounts, "bank", split.bank, "debit"),
-  ].filter(Boolean).map(line => ({ ...line, description })).concat(credit);
+  ].filter(Boolean).map(line => ({ ...line, description })).concat(credit, tax);
 }
 
-export function creditNoteLines({ accounts, amount, partyId, description = "" }) {
-  const value = roundMoney(amount);
+export function creditNoteLines({ accounts, amount, partyId, description = "", gst } = {}) {
+  const prepared = prepareGstAmount(amount, gst);
   const sales = findAccount(accounts, { code: SYSTEM_CODES.sales });
   const receivable = findAccount(accounts, { code: SYSTEM_CODES.receivable }) || findAccount(accounts, { accountType: "receivable" });
   if (!sales) throw new Error("Missing Sales account");
   if (!receivable) throw new Error("Missing Accounts Receivable");
   if (!partyId) throw new Error("Choose the customer");
   return [
-    { coaId: sales.id, code: sales.code, debit: value, credit: 0, description },
-    { coaId: receivable.id, code: receivable.code, partyId, debit: 0, credit: value, description },
+    { coaId: sales.id, code: sales.code, debit: prepared.taxable, credit: 0, description },
+    ...gstOutputReversalLines(accounts, prepared, description),
+    { coaId: receivable.id, code: receivable.code, partyId, debit: 0, credit: prepared.total, description },
   ];
 }
 
-export function debitNoteLines({ accounts, amount, partyId, description = "" }) {
-  const value = roundMoney(amount);
+export function debitNoteLines({ accounts, amount, partyId, description = "", gst } = {}) {
+  const prepared = prepareGstAmount(amount, gst);
   const purchase = findAccount(accounts, { code: SYSTEM_CODES.purchase });
   const payable = findAccount(accounts, { code: SYSTEM_CODES.payable }) || findAccount(accounts, { accountType: "payable" });
   if (!purchase) throw new Error("Missing Purchase account");
   if (!payable) throw new Error("Missing Accounts Payable");
   if (!partyId) throw new Error("Choose the supplier");
   return [
-    { coaId: payable.id, code: payable.code, partyId, debit: value, credit: 0, description },
-    { coaId: purchase.id, code: purchase.code, debit: 0, credit: value, description },
+    { coaId: payable.id, code: payable.code, partyId, debit: prepared.total, credit: 0, description },
+    { coaId: purchase.id, code: purchase.code, debit: 0, credit: prepared.taxable, description },
+    ...gstInputReversalLines(accounts, prepared, description),
   ];
 }
 
-export function purchaseLines({ accounts, amount, settlement = "credit", moneyMode = "cash", partyId = null, description = "" }) {
-  const value = roundMoney(amount);
+export function purchaseLines({ accounts, amount, settlement = "credit", moneyMode = "cash", partyId = null, description = "", gst } = {}) {
+  const prepared = prepareGstAmount(amount, gst);
   const purchase = findAccount(accounts, { code: SYSTEM_CODES.purchase });
   if (!purchase) throw new Error("Missing Purchase account");
-  const debit = { coaId: purchase.id, code: purchase.code, debit: value, credit: 0, description };
+  const debit = { coaId: purchase.id, code: purchase.code, debit: prepared.taxable, credit: 0, description };
+  const tax = gstInputLines(accounts, prepared, description);
   if (settlement === "credit") {
     const payable = findAccount(accounts, { code: SYSTEM_CODES.payable }) || findAccount(accounts, { accountType: "payable" });
     if (!payable) throw new Error("Missing Accounts Payable");
     return [
       debit,
-      { coaId: payable.id, code: payable.code, partyId, debit: 0, credit: value, description },
+      ...tax,
+      { coaId: payable.id, code: payable.code, partyId, debit: 0, credit: prepared.total, description },
     ];
   }
-  const split = moneyByMode(moneyMode, value);
+  const split = moneyByMode(moneyMode, prepared.total);
   return [
     debit,
+    ...tax,
     ...[
       moneyLine(accounts, "cash", split.cash, "credit"),
       moneyLine(accounts, "upi", split.upi, "credit"),
@@ -679,6 +795,7 @@ export function simpleEntryDraft({
   dueDate = null,
   narration = "",
   today,
+  gst,
 } = {}) {
   assertVoucherDateNotFuture(date, today);
   const value = roundMoney(amount);
@@ -686,6 +803,7 @@ export function simpleEntryDraft({
   const split = moneyByMode(moneyMode, value);
   const description = String(narration || "").trim();
   const invoiceDue = settlement === "credit" ? (dueDate || addDaysIso(date, 7)) : null;
+  const gstLine = gstDocumentLine(prepareGstAmount(value, gst), description);
 
   if (kind === "sale") {
     if (settlement === "credit" && !partyId) throw new Error("Choose the customer");
@@ -695,7 +813,8 @@ export function simpleEntryDraft({
       dueDate: invoiceDue,
       partyId: partyId || null,
       narration: description || (settlement === "credit" ? "Credit sale" : `${MONEY_MODES.find(mode => mode.id === moneyMode)?.label || "Cash"} sale`),
-      lines: saleLines({ accounts, amount: value, settlement, moneyMode, partyId, description }),
+      lines: saleLines({ accounts, amount: value, settlement, moneyMode, partyId, description, gst }),
+      gstLines: gstLine ? [gstLine] : [],
     };
   }
   if (kind === "purchase") {
@@ -706,7 +825,8 @@ export function simpleEntryDraft({
       dueDate: invoiceDue,
       partyId: partyId || null,
       narration: description || (settlement === "credit" ? "Credit purchase" : `${MONEY_MODES.find(mode => mode.id === moneyMode)?.label || "Cash"} purchase`),
-      lines: purchaseLines({ accounts, amount: value, settlement, moneyMode, partyId, description }),
+      lines: purchaseLines({ accounts, amount: value, settlement, moneyMode, partyId, description, gst }),
+      gstLines: gstLine ? [gstLine] : [],
     };
   }
   if (kind === "expense") {
@@ -747,7 +867,8 @@ export function simpleEntryDraft({
       date,
       partyId,
       narration: description || "Credit note",
-      lines: creditNoteLines({ accounts, amount: value, partyId, description }),
+      lines: creditNoteLines({ accounts, amount: value, partyId, description, gst }),
+      gstLines: gstLine ? [gstLine] : [],
     };
   }
   if (kind === "debit_note") {
@@ -757,7 +878,8 @@ export function simpleEntryDraft({
       date,
       partyId,
       narration: description || "Debit note",
-      lines: debitNoteLines({ accounts, amount: value, partyId, description }),
+      lines: debitNoteLines({ accounts, amount: value, partyId, description, gst }),
+      gstLines: gstLine ? [gstLine] : [],
     };
   }
   if (kind === "transfer") {
