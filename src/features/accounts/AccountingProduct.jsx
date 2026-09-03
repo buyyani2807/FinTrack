@@ -95,6 +95,47 @@ const AccMetric = ({ label, value, tone = "" }) => (
     <div className={`metric-value ${tone}`}>{value}</div>
   </article>
 );
+
+const invoiceAgingTotals = (rows = []) => {
+  let current = 0;
+  let overdue = 0;
+  for (const row of rows) {
+    const amount = Number(row.outstanding || 0);
+    if (row.status === "Overdue") overdue += amount;
+    else current += amount;
+  }
+  return { current, overdue, total: current + overdue };
+};
+
+const AccAgingCard = ({ title, subtitle, total, current, overdue, onNew, onOpen }) => (
+  <article className="card acc-dash-aging">
+    <header className="acc-dash-aging-head">
+      <button type="button" className="acc-dash-aging-title" onClick={onOpen}>{title}</button>
+      <button type="button" className="btn primary acc-dash-new" onClick={onNew}>+ New</button>
+    </header>
+    <p className="acc-dash-aging-sub">{subtitle}</p>
+    <button type="button" className="acc-dash-aging-total" onClick={onOpen}>{money(total)}</button>
+    <div className="acc-dash-aging-bar" aria-hidden="true">
+      <span className="current" style={{ flexGrow: Math.max(current, 0.01) }} />
+      <span className="overdue" style={{ flexGrow: Math.max(overdue, 0.01) }} />
+    </div>
+    <footer className="acc-dash-aging-foot">
+      <span><i className="dot current" /> Current: <strong>{money(current)}</strong></span>
+      <span><i className="dot overdue" /> Overdue: <strong>{money(overdue)}</strong></span>
+    </footer>
+  </article>
+);
+
+const AccFlowBar = ({ inflow, outflow }) => {
+  const max = Math.max(inflow, outflow, 1);
+  return (
+    <div className="acc-dash-flow-bars" aria-hidden="true">
+      <div className="acc-dash-flow-track"><span className="in" style={{ width: `${(inflow / max) * 100}%` }} /></div>
+      <div className="acc-dash-flow-track"><span className="out" style={{ width: `${(outflow / max) * 100}%` }} /></div>
+    </div>
+  );
+};
+
 const AccEmpty = ({ title, copy, actionLabel, onAction }) => (
   <div className="card acc-empty">
     <strong>{title}</strong>
@@ -869,9 +910,9 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
   const reportId = section === "pnl" || section === "balance" || section === "trial" ? section : (section === "reports" ? reportTab : "");
   const wantOverview = section === "overview";
   const wantTrial = reportId === "trial";
-  const wantPnl = reportId === "pnl";
+  const wantPnl = reportId === "pnl" || wantOverview;
   const wantSheet = reportId === "balance";
-  const wantFlow = reportId === "cashflow";
+  const wantFlow = reportId === "cashflow" || wantOverview;
   const wantDayBook = reportId === "daybook" || reportId === "sales" || reportId === "purchases";
   const wantGst = reportId === "gst";
   const wantInvoices = section === "receivables" || section === "payables" || reportId === "receivables" || reportId === "payables";
@@ -925,6 +966,22 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
       ? invoiceRegister(accounts, vouchers, parties, { kind: "payable", today: todayIso(), ...range, outstandingOnly })
       : []),
     [wantInvoices, section, reportId, accounts, vouchers, parties, range, outstandingOnly],
+  );
+  const overviewArAging = useMemo(
+    () => (wantOverview
+      ? invoiceAgingTotals(invoiceRegister(accounts, vouchers, parties, { kind: "receivable", today: todayIso(), ...range, outstandingOnly: true }))
+      : { current: 0, overdue: 0, total: 0 }),
+    [wantOverview, accounts, vouchers, parties, range],
+  );
+  const overviewApAging = useMemo(
+    () => (wantOverview
+      ? invoiceAgingTotals(invoiceRegister(accounts, vouchers, parties, { kind: "payable", today: todayIso(), ...range, outstandingOnly: true }))
+      : { current: 0, overdue: 0, total: 0 }),
+    [wantOverview, accounts, vouchers, parties, range],
+  );
+  const topExpenses = useMemo(
+    () => (wantOverview ? [...(pnl.expenses || [])].filter(row => row.amount > 0).sort((a, b) => b.amount - a.amount).slice(0, 5) : []),
+    [wantOverview, pnl],
   );
   const salesRows = useMemo(() => books.filter(row => row.voucherType === "sales"), [books]);
   const purchaseRows = useMemo(() => books.filter(row => row.voucherType === "purchase"), [books]);
@@ -1468,26 +1525,87 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
             <span className={`acc-chip ${metrics?.equationHolds ? "ok" : "warn"}`}>{metrics?.equationHolds ? "Books in balance" : "Books out of balance"}</span>
             <span className="acc-chip">Integration {settings?.integrationEnabled ? "ON" : "OFF"}</span>
           </div>
+
+          <section className="acc-dash-grid two">
+            <AccAgingCard
+              title="Total Receivables"
+              subtitle="Total unpaid invoices"
+              total={overviewArAging.total}
+              current={overviewArAging.current}
+              overdue={overviewArAging.overdue}
+              onNew={() => openSimple("sale")}
+              onOpen={() => openSection("receivables")}
+            />
+            <AccAgingCard
+              title="Total Payables"
+              subtitle="Total unpaid bills"
+              total={overviewApAging.total}
+              current={overviewApAging.current}
+              overdue={overviewApAging.overdue}
+              onNew={() => openSimple("purchase")}
+              onOpen={() => openSection("payables")}
+            />
+          </section>
+
+          <section className="card acc-dash-flow">
+            <header className="acc-dash-card-head">
+              <h2>Cash Flow</h2>
+              <button type="button" className="btn" onClick={() => openSection("reports")}>Open report</button>
+            </header>
+            <div className="acc-dash-flow-body">
+              <AccFlowBar inflow={flow.inflow || 0} outflow={flow.outflow || 0} />
+              <ul className="acc-dash-legend">
+                <li><i className="dot muted" /> Cash as on {range.from || "start"}: <strong>{money(flow.opening)}</strong></li>
+                <li><i className="dot green" /> Incoming (+): <strong>{money(flow.inflow)}</strong></li>
+                <li><i className="dot red" /> Outgoing (−): <strong>{money(flow.outflow)}</strong></li>
+                <li><i className="dot blue" /> Cash as on {range.to || "end"} (=): <strong>{money(flow.closing)}</strong></li>
+              </ul>
+            </div>
+          </section>
+
+          <section className="acc-dash-grid two">
+            <article className="card acc-dash-ie">
+              <header className="acc-dash-card-head">
+                <h2>Income and Expense</h2>
+                <button type="button" className="btn" onClick={() => openSection("pnl")}>P&amp;L</button>
+              </header>
+              <div className="acc-dash-ie-totals">
+                <span><i className="dot green" /> Total Income: <strong>{money(metrics?.income)}</strong></span>
+                <span><i className="dot red" /> Total Expenses: <strong>{money(metrics?.expenses)}</strong></span>
+              </div>
+              <AccFlowBar inflow={metrics?.income || 0} outflow={metrics?.expenses || 0} />
+              <p className="acc-dash-net">Net profit <strong className={metrics?.netProfit < 0 ? "red" : "green"}>{money(metrics?.netProfit)}</strong></p>
+            </article>
+            <article className="card acc-dash-ie">
+              <header className="acc-dash-card-head">
+                <h2>Top Expenses</h2>
+                <button type="button" className="btn" onClick={() => openSection("pnl")}>View all</button>
+              </header>
+              {topExpenses.length ? (
+                <ul className="acc-dash-expense-list">
+                  {topExpenses.map(row => (
+                    <li key={row.id || row.code || row.name}>
+                      <span>{row.name}</span>
+                      <strong>{money(row.amount)}</strong>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="acc-dash-empty-copy">No expense recorded for this period.</p>
+              )}
+            </article>
+          </section>
+
           <section className="acc-section">
-            <h2 className="acc-section-title">Financial summary</h2>
-            <div className="acc-metric-grid fill">
+            <h2 className="acc-section-title">Money on hand</h2>
+            <div className="acc-metric-grid three">
               <AccMetric label="Cash" value={money(metrics?.cash)} tone="gold" />
               <AccMetric label="Bank" value={money(metrics?.bank)} tone="gold" />
               <AccMetric label="UPI" value={money(metrics?.upi)} tone="gold" />
-              <AccMetric label="Receivables" value={money(metrics?.receivables)} tone="blue" />
-              <AccMetric label="Payables" value={money(metrics?.payables)} />
             </div>
           </section>
           <section className="acc-section">
-            <h2 className="acc-section-title">Performance</h2>
-            <div className="acc-metric-grid three">
-              <AccMetric label="Income" value={money(metrics?.income)} tone="green" />
-              <AccMetric label="Expenses" value={money(metrics?.expenses)} tone="red" />
-              <AccMetric label="Net profit" value={money(metrics?.netProfit)} tone={metrics?.netProfit < 0 ? "red" : "green"} />
-            </div>
-          </section>
-          <section className="acc-section">
-            <h2 className="acc-section-title">Activity</h2>
+            <h2 className="acc-section-title">Today</h2>
             <div className="acc-metric-grid">
               <AccMetric label="Today's sales" value={money(metrics?.todaySales)} />
               <AccMetric label="Today's purchases" value={money(metrics?.todayPurchases)} />
