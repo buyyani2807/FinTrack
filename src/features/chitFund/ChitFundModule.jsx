@@ -44,6 +44,7 @@ import {
 import { buildChitReceipt } from "../receipts/receiptModel.js";
 import { ReceiptActions, ReceiptSuccessModal } from "../receipts/ReceiptActions.jsx";
 import { UpcomingPaymentsSection } from "../receipts/UpcomingPaymentsSection.jsx";
+import { ChitInsightsBrief } from "./ChitInsightsBrief.jsx";
 import { CustomerStatementPage } from "../statements/CustomerStatementPage.jsx";
 import { CreditScoreCard } from "../creditScore/CreditScoreCard.jsx";
 import { LIVE_BID_MODEL, enrollmentPortalId, liveAuctionLimits, liveBidPayout, validateLiveBid, winsForEnrollment } from "./liveBidding";
@@ -1210,6 +1211,7 @@ export function ChitFundPage({ token, close, openSchemeId = null, onOpenSchemeCo
     {error && <p className="red small">{error}</p>}
     {notice && <p className="green small">{notice}</p>}
     {(landing === "schemes" || landing === "payments") && <UpcomingPaymentsSection moduleType="chit" loans={[]} token={token} settings={orgSettings} workspace={workspace} isOwner={workspace?.role !== "staff"} refreshKey={reminderRefresh} />}
+    {landing === "schemes" && <ChitInsightsBrief schemes={schemes} enrollments={enrollments} cycles={cycles} fixedLifts={fixedLifts} predefinedSchedule={predefinedSchedule} token={token} onViewMembers={() => setLanding("members")} />}
     {busy && !schemes.length && <p className="small spacer">Loading Chit Fund schemes…</p>}
     {enriching && !!schemes.length && landing === "schemes" && <p className="small spacer">Loading current bids and member counts…</p>}
     {landing === "schemes" && <>
