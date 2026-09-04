@@ -105,25 +105,68 @@ const AccMetric = ({ label, value, tone = "", onClick, hint = "" }) => (
   </article>
 );
 
-const AccCompareChart = ({ receivables, payables, onReceivables, onPayables }) => {
-  const ar = Number(receivables) || 0;
-  const ap = Number(payables) || 0;
-  const max = Math.max(ar, ap, 1);
+const invoiceAgingTotals = (rows = []) => {
+  let current = 0;
+  let overdue = 0;
+  for (const row of rows) {
+    const amount = Number(row.outstanding || 0);
+    if (row.status === "Overdue") overdue += amount;
+    else current += amount;
+  }
+  return { current, overdue, total: current + overdue };
+};
+
+const AccAgingDonut = ({ current, overdue }) => {
+  const total = Number(current) + Number(overdue);
+  const radius = 18;
+  const circ = 2 * Math.PI * radius;
+  const currentLen = total > 0 ? (Number(current) / total) * circ : 0;
+  const overdueLen = total > 0 ? (Number(overdue) / total) * circ : 0;
   return (
-    <section className="acc-ov-compare" aria-label="Receivables versus payables">
-      <button type="button" className="card acc-ov-compare-side ar" onClick={onReceivables} aria-label={`Receivables ${money(ar)}. Open receivables`}>
-        <span className="acc-ov-compare-kicker">Receivables</span>
-        <strong className="acc-ov-compare-value">{money(ar)}</strong>
-        <span className="acc-ov-compare-track" aria-hidden="true"><span style={{ width: `${(ar / max) * 100}%` }} /></span>
-      </button>
-      <button type="button" className="card acc-ov-compare-side ap" onClick={onPayables} aria-label={`Payables ${money(ap)}. Open payables`}>
-        <span className="acc-ov-compare-kicker">Payables</span>
-        <strong className="acc-ov-compare-value">{money(ap)}</strong>
-        <span className="acc-ov-compare-track" aria-hidden="true"><span style={{ width: `${(ap / max) * 100}%` }} /></span>
-      </button>
-    </section>
+    <svg className="acc-ov-donut" viewBox="0 0 44 44" aria-hidden="true">
+      <circle className="acc-ov-donut-bg" cx="22" cy="22" r={radius} />
+      {total > 0 && (
+        <>
+          <circle className="acc-ov-donut-current" cx="22" cy="22" r={radius} strokeDasharray={`${currentLen} ${circ}`} />
+          <circle className="acc-ov-donut-overdue" cx="22" cy="22" r={radius} strokeDasharray={`${overdueLen} ${circ}`} strokeDashoffset={-currentLen} />
+        </>
+      )}
+    </svg>
   );
 };
+
+const AccAgingCard = ({ title, subtitle, current, overdue, onOpen }) => {
+  const total = Number(current) + Number(overdue);
+  const currentPct = total > 0 ? (Number(current) / total) * 100 : 0;
+  const overduePct = total > 0 ? (Number(overdue) / total) * 100 : 0;
+  return (
+    <button type="button" className="card acc-ov-aging" onClick={onOpen} aria-label={`${title} ${money(total)}. Open`}>
+      <span className="acc-ov-aging-title">{title}</span>
+      <span className="acc-ov-aging-main">
+        <span>
+          <span className="acc-ov-aging-sub">{subtitle}</span>
+          <strong className="acc-ov-aging-value">{money(total)}</strong>
+        </span>
+        <AccAgingDonut current={current} overdue={overdue} />
+      </span>
+      <span className="acc-ov-aging-bar" aria-hidden="true">
+        <span className="current" style={{ width: `${currentPct}%` }} />
+        <span className="overdue" style={{ width: `${overduePct}%` }} />
+      </span>
+      <span className="acc-ov-aging-foot">
+        <span><i className="current" /> Current <b>{money(current)}</b></span>
+        <span><i className="overdue" /> Overdue <b>{money(overdue)}</b></span>
+      </span>
+    </button>
+  );
+};
+
+const AccCompareChart = ({ ar, ap, onReceivables, onPayables }) => (
+  <section className="acc-ov-compare" aria-label="Receivables versus payables">
+    <AccAgingCard title="Total Receivables" subtitle="Total unpaid invoices" current={ar.current} overdue={ar.overdue} onOpen={onReceivables} />
+    <AccAgingCard title="Total Payables" subtitle="Total unpaid bills" current={ap.current} overdue={ap.overdue} onOpen={onPayables} />
+  </section>
+);
 
 function AccOverviewPeriod({ fy, lastFy, from, to, onChange }) {
   const thisFy = from === fy.from && to === fy.to;
@@ -1032,6 +1075,18 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
       : []),
     [wantInvoices, section, reportId, accounts, vouchers, parties, range, outstandingOnly],
   );
+  const overviewArAging = useMemo(
+    () => (wantOverview
+      ? invoiceAgingTotals(invoiceRegister(accounts, vouchers, parties, { kind: "receivable", today: todayIso(), ...range, outstandingOnly: true }))
+      : { current: 0, overdue: 0, total: 0 }),
+    [wantOverview, accounts, vouchers, parties, range],
+  );
+  const overviewApAging = useMemo(
+    () => (wantOverview
+      ? invoiceAgingTotals(invoiceRegister(accounts, vouchers, parties, { kind: "payable", today: todayIso(), ...range, outstandingOnly: true }))
+      : { current: 0, overdue: 0, total: 0 }),
+    [wantOverview, accounts, vouchers, parties, range],
+  );
   const salesRows = useMemo(() => books.filter(row => row.voucherType === "sales"), [books]);
   const purchaseRows = useMemo(() => books.filter(row => row.voucherType === "purchase"), [books]);
   const gstReport = useMemo(
@@ -1571,8 +1626,8 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
           </div>}
 
           <AccCompareChart
-            receivables={metrics?.receivables || 0}
-            payables={metrics?.payables || 0}
+            ar={overviewArAging}
+            ap={overviewApAging}
             onReceivables={() => openSection("receivables")}
             onPayables={() => openSection("payables")}
           />

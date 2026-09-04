@@ -789,73 +789,103 @@ html:has(.accounts-dashboard) .financier-nav {
   gap: 12px;
 }
 
-.accounts-dashboard .acc-ov-compare-side {
+.accounts-dashboard .acc-ov-aging {
   display: grid;
   gap: 12px;
-  padding: 18px 18px 16px;
+  padding: 18px;
   border: 1px solid var(--acc-line);
   border-radius: 14px;
   background: linear-gradient(160deg, #202a3b 0%, #171e2a 100%);
   color: inherit;
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.15s ease;
 }
 
-.accounts-dashboard .acc-ov-compare-side:hover,
-.accounts-dashboard .acc-ov-compare-side:focus-visible {
+.accounts-dashboard .acc-ov-aging:hover,
+.accounts-dashboard .acc-ov-aging:focus-visible {
+  border-color: var(--acc-line-strong);
   outline: none;
 }
 
-.accounts-dashboard .acc-ov-compare-side.ar:hover,
-.accounts-dashboard .acc-ov-compare-side.ar:focus-visible {
-  border-color: #7eb6ff88;
+.accounts-dashboard .acc-ov-aging-title {
+  font: 700 15px/1.2 Syne, sans-serif;
+  color: var(--acc-text);
 }
 
-.accounts-dashboard .acc-ov-compare-side.ap:hover,
-.accounts-dashboard .acc-ov-compare-side.ap:focus-visible {
-  border-color: #f4b94288;
+.accounts-dashboard .acc-ov-aging-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 
-.accounts-dashboard .acc-ov-compare-kicker {
+.accounts-dashboard .acc-ov-aging-sub {
+  display: block;
   color: var(--acc-muted);
   font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
-.accounts-dashboard .acc-ov-compare-value {
+.accounts-dashboard .acc-ov-aging-value {
+  display: block;
+  margin-top: 4px;
   font: 700 28px/1.1 Syne, sans-serif;
   letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
+  color: var(--acc-text);
 }
 
-.accounts-dashboard .acc-ov-compare-side.ar .acc-ov-compare-value { color: var(--acc-blue); }
-.accounts-dashboard .acc-ov-compare-side.ap .acc-ov-compare-value { color: var(--acc-gold); }
+.accounts-dashboard .acc-ov-donut {
+  flex: 0 0 56px;
+  width: 56px;
+  height: 56px;
+}
 
-.accounts-dashboard .acc-ov-compare-track {
-  display: block;
-  height: 8px;
+.accounts-dashboard .acc-ov-donut circle {
+  fill: none;
+  stroke-width: 6;
+  transform: rotate(-90deg);
+  transform-origin: 22px 22px;
+}
+
+.accounts-dashboard .acc-ov-donut-bg { stroke: #0f141d; }
+.accounts-dashboard .acc-ov-donut-current { stroke: var(--acc-blue); stroke-linecap: butt; }
+.accounts-dashboard .acc-ov-donut-overdue { stroke: #f08138; stroke-linecap: butt; }
+
+.accounts-dashboard .acc-ov-aging-bar {
+  display: flex;
+  height: 6px;
+  overflow: hidden;
   border-radius: 999px;
   background: #0f141d;
-  overflow: hidden;
 }
 
-.accounts-dashboard .acc-ov-compare-track > span {
-  display: block;
-  height: 100%;
-  min-width: 0;
-  border-radius: 999px;
+.accounts-dashboard .acc-ov-aging-bar .current { background: var(--acc-blue); }
+.accounts-dashboard .acc-ov-aging-bar .overdue { background: #f08138; }
+
+.accounts-dashboard .acc-ov-aging-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  color: var(--acc-muted);
+  font-size: 12px;
 }
 
-.accounts-dashboard .acc-ov-compare-side.ar .acc-ov-compare-track > span {
-  background: linear-gradient(90deg, #4f8fd9, var(--acc-blue));
+.accounts-dashboard .acc-ov-aging-foot b {
+  color: var(--acc-text);
+  font-variant-numeric: tabular-nums;
 }
 
-.accounts-dashboard .acc-ov-compare-side.ap .acc-ov-compare-track > span {
-  background: linear-gradient(90deg, #c9922f, var(--acc-gold));
+.accounts-dashboard .acc-ov-aging-foot i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 2px;
+  vertical-align: middle;
 }
+
+.accounts-dashboard .acc-ov-aging-foot i.current { background: var(--acc-blue); }
+.accounts-dashboard .acc-ov-aging-foot i.overdue { background: #f08138; }
 
 .accounts-dashboard .acc-ov-recent-card {
   padding: 0;
@@ -2082,7 +2112,7 @@ html:has(.accounts-dashboard) .financier-nav {
   .accounts-dashboard .acc-ov-compare {
     grid-template-columns: 1fr;
   }
-  .accounts-dashboard .acc-ov-compare-value {
+  .accounts-dashboard .acc-ov-aging-value {
     font-size: 24px;
   }
   .accounts-dashboard .acc-ov-recent-row {
