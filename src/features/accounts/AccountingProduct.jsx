@@ -118,57 +118,80 @@ const invoiceAgingTotals = (rows = []) => {
   return { current, overdue, total: current + overdue };
 };
 
-const AccAgingDonut = ({ current, overdue }) => {
-  const total = Number(current) + Number(overdue);
-  const radius = 18;
-  const circ = 2 * Math.PI * radius;
-  const currentLen = total > 0 ? (Number(current) / total) * circ : 0;
-  const overdueLen = total > 0 ? (Number(overdue) / total) * circ : 0;
-  return (
-    <svg className="acc-ov-donut" viewBox="0 0 44 44" aria-hidden="true">
-      <circle className="acc-ov-donut-bg" cx="22" cy="22" r={radius} />
-      {total > 0 && (
-        <>
-          <circle className="acc-ov-donut-current" cx="22" cy="22" r={radius} strokeDasharray={`${currentLen} ${circ}`} />
-          <circle className="acc-ov-donut-overdue" cx="22" cy="22" r={radius} strokeDasharray={`${overdueLen} ${circ}`} strokeDashoffset={-currentLen} />
-        </>
-      )}
-    </svg>
-  );
+const piePoint = (cx, cy, r, angle) => {
+  const rad = (angle - 90) * Math.PI / 180;
+  return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
 };
 
-const AccAgingCard = ({ title, subtitle, current, overdue, onOpen }) => {
-  const total = Number(current) + Number(overdue);
-  const currentPct = total > 0 ? (Number(current) / total) * 100 : 0;
-  const overduePct = total > 0 ? (Number(overdue) / total) * 100 : 0;
-  return (
-    <button type="button" className="card acc-ov-aging" onClick={onOpen} aria-label={`${title} ${money(total)}. Open`}>
-      <span className="acc-ov-aging-title">{title}</span>
-      <span className="acc-ov-aging-main">
-        <span>
-          <span className="acc-ov-aging-sub">{subtitle}</span>
-          <strong className="acc-ov-aging-value">{money(total)}</strong>
-        </span>
-        <AccAgingDonut current={current} overdue={overdue} />
-      </span>
-      <span className="acc-ov-aging-bar" aria-hidden="true">
-        <span className="current" style={{ width: `${currentPct}%` }} />
-        <span className="overdue" style={{ width: `${overduePct}%` }} />
-      </span>
-      <span className="acc-ov-aging-foot">
-        <span><i className="current" /> Current <b>{money(current)}</b></span>
-        <span><i className="overdue" /> Overdue <b>{money(overdue)}</b></span>
-      </span>
-    </button>
-  );
+const pieSlicePath = (cx, cy, r, startPct, endPct) => {
+  const span = Math.max(0, Math.min(1, endPct) - Math.max(0, startPct));
+  if (span <= 0) return "";
+  if (span >= 0.999) {
+    return `M ${cx} ${cy - r} A ${r} ${r} 0 1 1 ${cx} ${cy + r} A ${r} ${r} 0 1 1 ${cx} ${cy - r} Z`;
+  }
+  const start = piePoint(cx, cy, r, startPct * 360);
+  const end = piePoint(cx, cy, r, endPct * 360);
+  return `M ${cx} ${cy} L ${start[0]} ${start[1]} A ${r} ${r} 0 ${span > 0.5 ? 1 : 0} 1 ${end[0]} ${end[1]} Z`;
 };
 
-const AccCompareChart = ({ ar, ap, onReceivables, onPayables }) => (
-  <section className="acc-ov-compare" aria-label="Receivables versus payables">
-    <AccAgingCard title="Total Receivables" subtitle="Total unpaid invoices" current={ar.current} overdue={ar.overdue} onOpen={onReceivables} />
-    <AccAgingCard title="Total Payables" subtitle="Total unpaid bills" current={ap.current} overdue={ap.overdue} onOpen={onPayables} />
-  </section>
-);
+const AccCompareChart = ({ ar, ap, onReceivables, onPayables }) => {
+  const arTotal = Number(ar?.current || 0) + Number(ar?.overdue || 0);
+  const apTotal = Number(ap?.current || 0) + Number(ap?.overdue || 0);
+  const combined = arTotal + apTotal;
+  const arShare = combined > 0 ? arTotal / combined : 0;
+  const arCurrentPct = arTotal > 0 ? (Number(ar.current) / arTotal) * 100 : 0;
+  const arOverduePct = arTotal > 0 ? (Number(ar.overdue) / arTotal) * 100 : 0;
+  const apCurrentPct = apTotal > 0 ? (Number(ap.current) / apTotal) * 100 : 0;
+  const apOverduePct = apTotal > 0 ? (Number(ap.overdue) / apTotal) * 100 : 0;
+  return (
+    <section className="card acc-ov-chart" aria-label="Receivables versus payables">
+      <header className="acc-ov-chart-head">
+        <div>
+          <strong>Receivables & payables</strong>
+          <p className="small">Unpaid invoices versus unpaid bills</p>
+        </div>
+      </header>
+      <div className="acc-ov-chart-body">
+        <svg className="acc-ov-pie" viewBox="0 0 120 120" role="img" aria-label={`Receivables ${money(arTotal)}, payables ${money(apTotal)}`}>
+          <circle cx="60" cy="60" r="46" className="acc-ov-pie-bg" />
+          {combined > 0 ? (
+            <>
+              {arTotal > 0 && (
+                <path className="acc-ov-pie-ar" d={pieSlicePath(60, 60, 46, 0, arShare)} onClick={onReceivables} />
+              )}
+              {apTotal > 0 && (
+                <path className="acc-ov-pie-ap" d={pieSlicePath(60, 60, 46, arShare, 1)} onClick={onPayables} />
+              )}
+            </>
+          ) : null}
+          <circle cx="60" cy="60" r="24" className="acc-ov-pie-hole" />
+        </svg>
+        <div className="acc-ov-chart-bars">
+          <button type="button" className="acc-ov-chart-row kind-ar" onClick={onReceivables} aria-label={`Total receivables ${money(arTotal)}. Open`}>
+            <span className="acc-ov-chart-label"><i className="ar" /> Receivables</span>
+            <strong>{money(arTotal)}</strong>
+            <span className="acc-ov-aging-bar" aria-hidden="true">
+              <span className="current" style={{ width: `${arCurrentPct}%` }} />
+              <span className="overdue" style={{ width: `${arOverduePct}%` }} />
+            </span>
+          </button>
+          <button type="button" className="acc-ov-chart-row kind-ap" onClick={onPayables} aria-label={`Total payables ${money(apTotal)}. Open`}>
+            <span className="acc-ov-chart-label"><i className="ap" /> Payables</span>
+            <strong>{money(apTotal)}</strong>
+            <span className="acc-ov-aging-bar" aria-hidden="true">
+              <span className="current" style={{ width: `${apCurrentPct}%` }} />
+              <span className="overdue" style={{ width: `${apOverduePct}%` }} />
+            </span>
+          </button>
+          <p className="acc-ov-aging-foot">
+            <span><i className="current" /> Current</span>
+            <span><i className="overdue" /> Overdue</span>
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+};
 
 function AccOverviewPeriod({ fy, lastFy, from, to, onChange }) {
   const thisFy = from === fy.from && to === fy.to;

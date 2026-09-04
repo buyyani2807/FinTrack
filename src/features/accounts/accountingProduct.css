@@ -783,98 +783,82 @@ html:has(.accounts-dashboard) .financier-nav {
   font-size: 11px;
 }
 
-.accounts-dashboard .acc-ov-compare {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+.accounts-dashboard .acc-ov-chart {
+  padding: 16px 18px 18px;
 }
 
-.accounts-dashboard .acc-ov-aging {
+.accounts-dashboard .acc-ov-chart-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.accounts-dashboard .acc-ov-chart-head strong {
+  font: 700 15px/1.2 Syne, sans-serif;
+  color: var(--acc-text);
+}
+
+.accounts-dashboard .acc-ov-chart-head .small {
+  margin: 4px 0 0;
+}
+
+.accounts-dashboard .acc-ov-chart-body {
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+}
+
+.accounts-dashboard .acc-ov-pie {
+  width: 148px;
+  height: 148px;
+}
+
+.accounts-dashboard .acc-ov-pie-bg { fill: #0f141d; }
+.accounts-dashboard .acc-ov-pie-hole { fill: #202737; }
+.accounts-dashboard .acc-ov-pie-ar { fill: var(--acc-blue); cursor: pointer; }
+.accounts-dashboard .acc-ov-pie-ap { fill: var(--acc-gold); cursor: pointer; }
+
+.accounts-dashboard .acc-ov-chart-bars {
   display: grid;
   gap: 12px;
-  padding: 18px;
-  border: 1px solid var(--acc-line);
-  border-radius: 14px;
-  background: linear-gradient(160deg, #202a3b 0%, #171e2a 100%);
+  min-width: 0;
+  width: 100%;
+}
+
+.accounts-dashboard .acc-ov-chart-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: inherit;
   text-align: left;
   cursor: pointer;
 }
 
-.accounts-dashboard .acc-ov-aging:hover,
-.accounts-dashboard .acc-ov-aging:focus-visible {
-  border-color: var(--acc-line-strong);
-  outline: none;
+.accounts-dashboard .acc-ov-chart-row:focus-visible {
+  outline: 2px solid var(--acc-gold);
+  outline-offset: 4px;
+  border-radius: 8px;
 }
 
-.accounts-dashboard .acc-ov-aging-title {
-  font: 700 15px/1.2 Syne, sans-serif;
-  color: var(--acc-text);
-}
-
-.accounts-dashboard .acc-ov-aging-main {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.accounts-dashboard .acc-ov-aging-sub {
-  display: block;
-  color: var(--acc-muted);
-  font-size: 12px;
-}
-
-.accounts-dashboard .acc-ov-aging-value {
-  display: block;
-  margin-top: 4px;
-  font: 700 28px/1.1 Syne, sans-serif;
-  letter-spacing: -0.04em;
+.accounts-dashboard .acc-ov-chart-row strong {
+  font: 700 18px/1.1 Syne, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--acc-text);
 }
 
-.accounts-dashboard .acc-ov-donut {
-  flex: 0 0 56px;
-  width: 56px;
-  height: 56px;
-}
-
-.accounts-dashboard .acc-ov-donut circle {
-  fill: none;
-  stroke-width: 6;
-  transform: rotate(-90deg);
-  transform-origin: 22px 22px;
-}
-
-.accounts-dashboard .acc-ov-donut-bg { stroke: #0f141d; }
-.accounts-dashboard .acc-ov-donut-current { stroke: var(--acc-blue); stroke-linecap: butt; }
-.accounts-dashboard .acc-ov-donut-overdue { stroke: #f08138; stroke-linecap: butt; }
-
-.accounts-dashboard .acc-ov-aging-bar {
-  display: flex;
-  height: 6px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: #0f141d;
-}
-
-.accounts-dashboard .acc-ov-aging-bar .current { background: var(--acc-blue); }
-.accounts-dashboard .acc-ov-aging-bar .overdue { background: #f08138; }
-
-.accounts-dashboard .acc-ov-aging-foot {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 18px;
+.accounts-dashboard .acc-ov-chart-label {
   color: var(--acc-muted);
   font-size: 12px;
+  font-weight: 700;
 }
 
-.accounts-dashboard .acc-ov-aging-foot b {
-  color: var(--acc-text);
-  font-variant-numeric: tabular-nums;
-}
-
+.accounts-dashboard .acc-ov-chart-label i,
 .accounts-dashboard .acc-ov-aging-foot i {
   display: inline-block;
   width: 8px;
@@ -882,6 +866,29 @@ html:has(.accounts-dashboard) .financier-nav {
   margin-right: 6px;
   border-radius: 2px;
   vertical-align: middle;
+}
+
+.accounts-dashboard .acc-ov-chart-label i.ar { background: var(--acc-blue); }
+.accounts-dashboard .acc-ov-chart-label i.ap { background: var(--acc-gold); }
+.accounts-dashboard .acc-ov-chart-row .acc-ov-aging-bar { grid-column: 1 / -1; }
+
+.accounts-dashboard .acc-ov-aging-bar {
+  display: flex;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #0f141d;
+}
+
+.accounts-dashboard .acc-ov-chart-row.kind-ap .acc-ov-aging-bar .current { background: var(--acc-gold); }
+
+.accounts-dashboard .acc-ov-aging-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  margin: 2px 0 0;
+  color: var(--acc-muted);
+  font-size: 12px;
 }
 
 .accounts-dashboard .acc-ov-aging-foot i.current { background: var(--acc-blue); }
@@ -2207,11 +2214,9 @@ html:has(.accounts-dashboard) .financier-nav {
   .accounts-dashboard .acc-ov-metrics {
     grid-template-columns: 1fr 1fr;
   }
-  .accounts-dashboard .acc-ov-compare {
+  .accounts-dashboard .acc-ov-chart-body {
     grid-template-columns: 1fr;
-  }
-  .accounts-dashboard .acc-ov-aging-value {
-    font-size: 24px;
+    justify-items: center;
   }
   .accounts-dashboard .acc-ov-recent-row {
     align-items: center;
@@ -2332,7 +2337,7 @@ html:has(.accounts-dashboard) .financier-nav {
 }
 
 @media (max-width: 720px) {
-  .accounts-dashboard .acc-ov-compare {
+  .accounts-dashboard .acc-ov-chart-body {
     grid-template-columns: 1fr;
   }
 }
