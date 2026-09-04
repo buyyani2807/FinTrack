@@ -79,6 +79,8 @@ import {
   trialBalance,
 } from "./accountingReports.js";
 import { LIST_PAGE_SIZE, pageSlice } from "./accountsList.js";
+import { AccIntelligenceBrief } from "./AccIntelligenceBrief.jsx";
+import { previousComparisonRange } from "./accountsIntelligence.js";
 import { downloadAccountsCsv, downloadAccountsExcel, downloadAccountsPdf } from "./accountingExport.js";
 import { formatInr } from "../../lib/formatMoney.js";
 
@@ -858,6 +860,10 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
   const [rangeFrom, setRangeFrom] = useState(fy.from);
   const [rangeTo, setRangeTo] = useState(fy.to);
   const range = useMemo(() => ({ from: rangeFrom, to: rangeTo }), [rangeFrom, rangeTo]);
+  const intelligencePreviousRange = useMemo(
+    () => previousComparisonRange({ from: range.from, to: range.to, fy, lastFy }),
+    [range, fy, lastFy],
+  );
   const submitLock = useMemo(() => createSubmitLock(), []);
   const [saving, setSaving] = useState(false);
   const [showVoucher, setShowVoucher] = useState(false);
@@ -1630,6 +1636,18 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
             ap={overviewApAging}
             onReceivables={() => openSection("receivables")}
             onPayables={() => openSection("payables")}
+          />
+
+          <AccIntelligenceBrief
+            accounts={visibleAccounts}
+            vouchers={vouchers}
+            parties={parties}
+            range={range}
+            previousRange={intelligencePreviousRange}
+            today={todayIso()}
+            companyId={activeCompanyId}
+            companyName={activeCompany?.name || settings?.companyName || ""}
+            onNavigate={openSection}
           />
 
           <section className="acc-section">

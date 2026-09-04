@@ -887,6 +887,104 @@ html:has(.accounts-dashboard) .financier-nav {
 .accounts-dashboard .acc-ov-aging-foot i.current { background: var(--acc-blue); }
 .accounts-dashboard .acc-ov-aging-foot i.overdue { background: #f08138; }
 
+.accounts-dashboard .acc-intel {
+  padding: 16px 18px;
+}
+
+.accounts-dashboard .acc-intel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.accounts-dashboard .acc-intel-kicker {
+  margin: 0;
+  color: var(--acc-gold);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.accounts-dashboard .acc-intel-note,
+.accounts-dashboard .acc-intel-copy,
+.accounts-dashboard .acc-intel-loading,
+.accounts-dashboard .acc-intel-empty,
+.accounts-dashboard .acc-intel-disclaimer {
+  margin: 4px 0 0;
+  color: var(--acc-muted);
+  font-size: 12px;
+}
+
+.accounts-dashboard .acc-intel-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.accounts-dashboard .acc-intel-brief,
+.accounts-dashboard .acc-intel-block ul,
+.accounts-dashboard .acc-intel-cat ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.accounts-dashboard .acc-intel-brief li,
+.accounts-dashboard .acc-intel-block li,
+.accounts-dashboard .acc-intel-cat li {
+  margin: 4px 0;
+  color: var(--acc-text);
+}
+
+.accounts-dashboard .acc-intel-block {
+  margin-top: 12px;
+}
+
+.accounts-dashboard .acc-intel-block strong,
+.accounts-dashboard .acc-intel-cat h3 {
+  margin: 0 0 6px;
+  color: var(--acc-muted);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.accounts-dashboard .acc-intel-details {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--acc-line);
+}
+
+.accounts-dashboard .acc-intel-cat header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.accounts-dashboard .acc-intel-facts {
+  margin: 0 0 6px;
+  color: var(--acc-gold);
+  font-size: 12px;
+}
+
+@media (max-width: 680px) {
+  .accounts-dashboard .acc-intel-head {
+    flex-direction: column;
+  }
+  .accounts-dashboard .acc-intel-tools {
+    width: 100%;
+  }
+  .accounts-dashboard .acc-intel-tools .acc-ov-link-btn {
+    flex: 1;
+  }
+}
+
 .accounts-dashboard .acc-ov-recent-card {
   padding: 0;
   overflow: hidden;
