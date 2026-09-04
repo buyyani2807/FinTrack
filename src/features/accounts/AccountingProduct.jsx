@@ -1588,15 +1588,61 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
     work(reason);
   };
 
+  const invoiceStatusTone = status => {
+    if (status === "Overdue") return "inv-overdue";
+    if (status === "Due") return "inv-due";
+    if (status === "Paid") return "inv-paid";
+    return "inv-current";
+  };
+  const isInvoicePayables = section === "payables";
+  const invoiceAging = invoiceAgingTotals(isInvoicePayables ? apInvoices : arInvoices);
+  const pagedInvoiceRows = isInvoicePayables ? pagedApInvoices : pagedArInvoices;
+  const invoicePartyRows = isInvoicePayables ? ap : ar;
+
   const invoiceTable = (rows, kind) => {
     const emptyTitle = kind === "payable" ? "No outstanding payables" : "No outstanding receivables";
     const emptyCopy = kind === "payable"
       ? "Supplier invoices will appear here after you record a purchase."
       : "Customer invoices will appear here after you record a credit sale.";
-    return <div className="table spacer acc-table-wrap accounts-invoice-table"><table><thead><tr><th>{kind === "payable" ? "Supplier" : "Customer"}</th><th>Invoice</th><th>Invoice date</th><th>Due date</th><th className="acc-num">Amount</th><th className="acc-num">Paid</th><th className="acc-num">Outstanding</th>{kind !== "payable" && <th className="acc-num">Days</th>}<th>Status</th></tr></thead><tbody>
-    {rows.map(row => <tr key={row.id}><td>{row.partyName}</td><td>{row.reference}</td><td>{row.invoiceDate}</td><td>{row.dueDate}</td><td className="acc-num">{money(row.amount)}</td><td className="acc-num">{money(row.paid)}</td><td className="acc-num">{money(row.outstanding)}</td>{kind !== "payable" && <td className="acc-num">{row.daysOutstanding}</td>}<td>{row.status}</td></tr>)}
-    {!rows.length && <tr><td colSpan={kind === "payable" ? 8 : 9}>{emptyTitle}. {emptyCopy}</td></tr>}
-  </tbody></table></div>;
+    if (!rows.length) {
+      return <AccEmpty title={emptyTitle} copy={emptyCopy} />;
+    }
+    return (
+      <div className="table spacer acc-table-wrap accounts-invoice-table">
+        <table>
+          <thead>
+            <tr>
+              <th>{kind === "payable" ? "Supplier" : "Customer"}</th>
+              <th>Invoice</th>
+              <th>Invoice date</th>
+              <th>Due date</th>
+              <th className="acc-num">Amount</th>
+              <th className="acc-num">Paid</th>
+              <th className="acc-num">Outstanding</th>
+              {kind !== "payable" && <th className="acc-num">Days</th>}
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(row => (
+              <tr key={row.id} className={row.status === "Overdue" ? "acc-invoice-overdue" : ""}>
+                <td>
+                  <strong className="acc-invoice-party">{row.partyName}</strong>
+                </td>
+                <td><span className="acc-invoice-ref">{row.reference}</span></td>
+                <td>{row.invoiceDate}</td>
+                <td>{row.dueDate}</td>
+                <td className="acc-num">{money(row.amount)}</td>
+                <td className="acc-num acc-invoice-paid">{money(row.paid)}</td>
+                <td className={`acc-num acc-invoice-out${row.status === "Overdue" ? " is-overdue" : row.outstanding > 0 ? "" : " is-clear"}`}>{money(row.outstanding)}</td>
+                {kind !== "payable" && <td className="acc-num">{row.daysOutstanding}</td>}
+                <td><span className={`acc-status-pill ${invoiceStatusTone(row.status)}`}>{row.status}</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
   };
 
   return <div className={`acc-shell${navExpanded ? " nav-expanded" : ""}`}>
@@ -1747,25 +1793,54 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
           <AccPager page={pagedVouchers.page} pages={pagedVouchers.pages} total={pagedVouchers.total} onPage={setListPage} noun="vouchers" />
         </div>}
 
-        {(section === "receivables" || section === "payables") && <div className="acc-panel">
+        {(section === "receivables" || section === "payables") && <div className="acc-panel acc-invoice-page">
           <ReportRangeBar fy={fy} lastFy={lastFy} from={rangeFrom} to={rangeTo} onChange={setReportRange} />
-          <div className="accounts-action-row">
-            <label className="accounts-filter-field"><span className="small">Outstanding only</span>
-              <input type="checkbox" checked={outstandingOnly} onChange={event => setOutstandingOnly(event.target.checked)} />
-            </label>
-            <button type="button" className="btn" onClick={() => exportReport("csv")}>Export CSV</button>
-            <button type="button" className="btn" onClick={() => exportReport("xlsx")}>Export Excel</button>
-            <button type="button" className="btn" onClick={() => exportReport("pdf")}>Download PDF</button>
+          <div className="acc-invoice-kpis">
+            <article className={`acc-invoice-kpi ${isInvoicePayables ? "tone-gold" : "tone-blue"}`}>
+              <span>Outstanding</span>
+              <strong>{money(invoiceAging.total)}</strong>
+            </article>
+            <article className="acc-invoice-kpi tone-green">
+              <span>Current</span>
+              <strong>{money(invoiceAging.current)}</strong>
+            </article>
+            <article className="acc-invoice-kpi tone-red">
+              <span>Overdue</span>
+              <strong>{money(invoiceAging.overdue)}</strong>
+            </article>
           </div>
-          {invoiceTable(section === "receivables" ? pagedArInvoices.items : pagedApInvoices.items, section === "payables" ? "payable" : "receivable")}
+          <div className="acc-invoice-toolbar">
+            <button
+              type="button"
+              className={`acc-outstanding-toggle${outstandingOnly ? " on" : ""}`}
+              aria-pressed={outstandingOnly}
+              onClick={() => setOutstandingOnly(current => !current)}
+            >
+              <span className="acc-switch" aria-hidden="true"><span className="acc-switch-knob" /></span>
+              Outstanding only
+            </button>
+            <div className="acc-invoice-exports">
+              <button type="button" className="btn" onClick={() => exportReport("csv")}>Export CSV</button>
+              <button type="button" className="btn" onClick={() => exportReport("xlsx")}>Export Excel</button>
+              <button type="button" className="btn" onClick={() => exportReport("pdf")}>Download PDF</button>
+            </div>
+          </div>
+          {invoiceTable(pagedInvoiceRows.items, isInvoicePayables ? "payable" : "receivable")}
           <AccPager
-            page={(section === "receivables" ? pagedArInvoices : pagedApInvoices).page}
-            pages={(section === "receivables" ? pagedArInvoices : pagedApInvoices).pages}
-            total={(section === "receivables" ? pagedArInvoices : pagedApInvoices).total}
+            page={pagedInvoiceRows.page}
+            pages={pagedInvoiceRows.pages}
+            total={pagedInvoiceRows.total}
             onPage={setListPage}
             noun="invoices"
           />
-          <p className="small spacer">Party totals: {(section === "receivables" ? ar : ap).map(row => `${row.name} ${money(row.balance)}`).join(" · ") || "none"}</p>
+          <div className="acc-invoice-parties">
+            <span className="acc-invoice-parties-label">Party totals</span>
+            {invoicePartyRows.length
+              ? invoicePartyRows.map(row => (
+                <span key={row.id || row.name} className="acc-chip">{row.name} <strong>{money(row.balance)}</strong></span>
+              ))
+              : <span className="small">none</span>}
+          </div>
         </div>}
 
         {section === "parties" && <div className="acc-panel acc-party-ledger">

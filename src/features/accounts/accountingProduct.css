@@ -1717,6 +1717,29 @@ html:has(.accounts-dashboard) .financier-nav {
   background: #f4b94214;
 }
 
+.accounts-dashboard .acc-status-pill.inv-current {
+  color: var(--acc-green);
+  border-color: #4fd08d44;
+  background: #4fd08d14;
+}
+
+.accounts-dashboard .acc-status-pill.inv-due {
+  color: var(--acc-gold);
+  border-color: #f4b94255;
+  background: #f4b94214;
+}
+
+.accounts-dashboard .acc-status-pill.inv-overdue {
+  color: var(--acc-red);
+  border-color: #ff7a7a55;
+  background: #ff7a7a14;
+}
+
+.accounts-dashboard .acc-status-pill.inv-paid {
+  color: var(--acc-muted);
+  background: #93a0b514;
+}
+
 .accounts-dashboard .acc-party-meta,
 .accounts-dashboard .acc-party-contact {
   display: block;
@@ -2115,6 +2138,238 @@ html:has(.accounts-dashboard) .financier-nav {
   font-variant-numeric: tabular-nums;
 }
 
+.accounts-dashboard .acc-invoice-page {
+  display: grid;
+  gap: 14px;
+}
+
+.accounts-dashboard .acc-invoice-page .accounts-filter-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px;
+}
+
+.accounts-dashboard .acc-invoice-page .accounts-period-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.accounts-dashboard .acc-invoice-page .accounts-period-pill {
+  width: auto;
+  min-width: 112px;
+  flex: 0 0 auto;
+}
+
+.accounts-dashboard .acc-invoice-page .accounts-custom-range {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.accounts-dashboard .acc-invoice-page .accounts-filter-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.accounts-dashboard .acc-invoice-page .accounts-filter-card > .small {
+  margin: 0;
+  color: var(--acc-muted);
+}
+
+.accounts-dashboard .acc-invoice-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.accounts-dashboard .acc-invoice-kpi {
+  position: relative;
+  overflow: hidden;
+  padding: 14px 16px 14px 18px;
+  border: 1px solid var(--acc-line);
+  border-radius: var(--acc-radius);
+  background: var(--acc-card);
+  box-shadow: var(--acc-shadow);
+}
+
+.accounts-dashboard .acc-invoice-kpi::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--acc-line-strong);
+}
+
+.accounts-dashboard .acc-invoice-kpi.tone-blue::before { background: var(--acc-blue); }
+.accounts-dashboard .acc-invoice-kpi.tone-gold::before { background: var(--acc-gold); }
+.accounts-dashboard .acc-invoice-kpi.tone-green::before { background: var(--acc-green); }
+.accounts-dashboard .acc-invoice-kpi.tone-red::before { background: var(--acc-red); }
+
+.accounts-dashboard .acc-invoice-kpi span {
+  display: block;
+  color: var(--acc-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.accounts-dashboard .acc-invoice-kpi strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--acc-text);
+  font: 700 20px Syne, sans-serif;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.accounts-dashboard .acc-invoice-kpi.tone-blue strong { color: var(--acc-blue); }
+.accounts-dashboard .acc-invoice-kpi.tone-gold strong { color: var(--acc-gold); }
+.accounts-dashboard .acc-invoice-kpi.tone-green strong { color: var(--acc-green); }
+.accounts-dashboard .acc-invoice-kpi.tone-red strong { color: var(--acc-red); }
+
+.accounts-dashboard .acc-invoice-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.accounts-dashboard .acc-invoice-exports {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.accounts-dashboard .acc-outstanding-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 14px 0 8px;
+  border: 1px solid var(--acc-line);
+  border-radius: 999px;
+  background: var(--acc-surface);
+  color: var(--acc-text);
+  font: 700 12px inherit;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.accounts-dashboard .acc-outstanding-toggle:hover {
+  border-color: var(--acc-line-strong);
+}
+
+.accounts-dashboard .acc-outstanding-toggle.on {
+  border-color: #f4b94266;
+  background: #f4b94214;
+  color: var(--acc-gold);
+}
+
+.accounts-dashboard .acc-switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  border: 1px solid var(--acc-line);
+  background: #2a3344;
+}
+
+.accounts-dashboard .acc-outstanding-toggle.on .acc-switch {
+  background: var(--acc-gold);
+  border-color: var(--acc-gold);
+}
+
+.accounts-dashboard .acc-switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #f3f6fb;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+  transition: transform 0.16s ease;
+}
+
+.accounts-dashboard .acc-outstanding-toggle.on .acc-switch-knob {
+  transform: translateX(16px);
+}
+
+.accounts-dashboard .accounts-invoice-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.accounts-dashboard .accounts-invoice-table .acc-invoice-party {
+  display: block;
+  color: var(--acc-text);
+  font-weight: 700;
+}
+
+.accounts-dashboard .accounts-invoice-table .acc-invoice-ref {
+  color: var(--acc-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.accounts-dashboard .accounts-invoice-table .acc-invoice-paid {
+  color: var(--acc-muted);
+}
+
+.accounts-dashboard .accounts-invoice-table .acc-invoice-out {
+  font-weight: 700;
+}
+
+.accounts-dashboard .accounts-invoice-table .acc-invoice-out.is-clear {
+  color: var(--acc-muted);
+  font-weight: 600;
+}
+
+.accounts-dashboard .accounts-invoice-table .acc-invoice-out.is-overdue,
+.accounts-dashboard .accounts-invoice-table tr.acc-invoice-overdue .acc-invoice-out {
+  color: var(--acc-red);
+}
+
+.accounts-dashboard .accounts-invoice-table tr.acc-invoice-overdue td {
+  background: #2a171912;
+}
+
+.accounts-dashboard .acc-invoice-parties {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.accounts-dashboard .acc-invoice-parties-label {
+  margin-right: 4px;
+  color: var(--acc-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.accounts-dashboard .acc-invoice-parties .acc-chip strong {
+  margin-left: 6px;
+  color: var(--acc-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.accounts-dashboard .acc-invoice-page > .acc-empty,
+.accounts-dashboard .acc-invoice-page > .acc-pager {
+  margin-top: 0;
+}
+
 @keyframes acc-pulse {
   0% { background-position: 100% 0; }
   100% { background-position: -100% 0; }
@@ -2206,6 +2461,24 @@ html:has(.accounts-dashboard) .financier-nav {
 }
 
 @media (max-width: 680px) {
+  .accounts-dashboard .acc-invoice-kpis {
+    grid-template-columns: 1fr;
+  }
+  .accounts-dashboard .acc-invoice-page .accounts-custom-range {
+    grid-template-columns: 1fr;
+  }
+  .accounts-dashboard .acc-invoice-toolbar,
+  .accounts-dashboard .acc-invoice-exports {
+    width: 100%;
+  }
+  .accounts-dashboard .acc-invoice-exports .btn {
+    flex: 1 1 0;
+    min-height: 42px;
+  }
+  .accounts-dashboard .acc-outstanding-toggle {
+    width: 100%;
+    justify-content: flex-start;
+  }
   .accounts-dashboard .acc-metric-grid,
   .accounts-dashboard .acc-metric-grid.three,
   .accounts-dashboard .acc-skeleton {
