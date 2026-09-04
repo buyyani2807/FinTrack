@@ -636,17 +636,50 @@ html:has(.accounts-dashboard) .financier-nav {
 
 .accounts-dashboard .acc-overview {
   display: grid;
-  gap: 4px;
+  gap: 16px;
 }
 
-.accounts-dashboard .acc-ov-toolbar {
-  display: grid;
+.accounts-dashboard .acc-ov-metrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.accounts-dashboard .acc-ov-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
   gap: 10px;
-  margin-bottom: 8px;
 }
 
-.accounts-dashboard .acc-ov-toolbar .accounts-filter-card {
+.accounts-dashboard .acc-ov-period {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px;
+}
+
+.accounts-dashboard .acc-ov-period-field {
+  display: grid;
+  gap: 4px;
   margin: 0;
+}
+
+.accounts-dashboard .acc-ov-period-field span {
+  color: var(--acc-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.accounts-dashboard .acc-ov-period-field select,
+.accounts-dashboard .acc-ov-period-field input {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--acc-line);
+  border-radius: 10px;
+  background: var(--acc-surface);
+  color: var(--acc-text);
 }
 
 .accounts-dashboard .acc-ov-block-head {
@@ -680,6 +713,10 @@ html:has(.accounts-dashboard) .financier-nav {
 
 .accounts-dashboard .acc-section-head .acc-section-title {
   margin: 0;
+}
+
+.accounts-dashboard .acc-overview .acc-metric-card {
+  min-height: 84px;
 }
 
 .accounts-dashboard .acc-metric-card {
@@ -746,102 +783,52 @@ html:has(.accounts-dashboard) .financier-nav {
   font-size: 11px;
 }
 
-.accounts-dashboard .acc-ov-compare,
-.accounts-dashboard .acc-ov-flow,
-.accounts-dashboard .acc-ov-recent {
-  margin: 14px 0;
-  padding: 18px;
-}
-
-.accounts-dashboard .acc-overview {
-  gap: 14px;
-}
-
-.accounts-dashboard .acc-ov-toolbar {
-  margin-bottom: 0;
-  padding: 14px 16px;
-  border: 1px solid var(--acc-line);
-  border-radius: 14px;
-  background: linear-gradient(135deg, #1c2535 0%, #161d2a 100%);
-}
-
 .accounts-dashboard .acc-ov-compare {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  margin: 0;
-  padding: 0;
-  background: transparent;
-}
-
-.accounts-dashboard .acc-ov-compare-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
 
 .accounts-dashboard .acc-ov-compare-side {
   display: grid;
   gap: 12px;
-  min-height: 190px;
-  padding: 20px;
+  padding: 18px 18px 16px;
   border: 1px solid var(--acc-line);
   border-radius: 14px;
   background: linear-gradient(160deg, #202a3b 0%, #171e2a 100%);
   color: inherit;
   text-align: left;
   cursor: pointer;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, .12);
-  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+  transition: border-color 0.15s ease;
 }
 
 .accounts-dashboard .acc-ov-compare-side:hover,
 .accounts-dashboard .acc-ov-compare-side:focus-visible {
-  border-color: var(--acc-line-strong);
-  transform: translateY(-2px);
   outline: none;
-}
-
-.accounts-dashboard .acc-ov-compare-heading,
-.accounts-dashboard .acc-ov-compare-foot {
-  display: flex;
-  align-items: center;
-}
-
-.accounts-dashboard .acc-ov-compare-heading {
-  justify-content: space-between;
-  color: var(--acc-text);
-  font: 700 16px/1.2 Syne, sans-serif;
-}
-
-.accounts-dashboard .acc-ov-compare-action {
-  color: var(--acc-blue);
-  font: 600 12px/1 inherit;
 }
 
 .accounts-dashboard .acc-ov-compare-side.ar:hover,
 .accounts-dashboard .acc-ov-compare-side.ar:focus-visible {
-  border-color: #7eb6ff66;
+  border-color: #7eb6ff88;
 }
 
 .accounts-dashboard .acc-ov-compare-side.ap:hover,
 .accounts-dashboard .acc-ov-compare-side.ap:focus-visible {
-  border-color: #f4b94266;
+  border-color: #f4b94288;
 }
 
 .accounts-dashboard .acc-ov-compare-kicker {
   color: var(--acc-muted);
   font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0;
-  text-transform: none;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .accounts-dashboard .acc-ov-compare-value {
   font: 700 28px/1.1 Syne, sans-serif;
   letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
-  color: var(--acc-text);
 }
 
 .accounts-dashboard .acc-ov-compare-side.ar .acc-ov-compare-value { color: var(--acc-blue); }
@@ -849,11 +836,10 @@ html:has(.accounts-dashboard) .financier-nav {
 
 .accounts-dashboard .acc-ov-compare-track {
   display: block;
-  height: 7px;
-  border-radius: 6px;
-  background: rgba(255,255,255,.06);
+  height: 8px;
+  border-radius: 999px;
+  background: #0f141d;
   overflow: hidden;
-  border: 0;
 }
 
 .accounts-dashboard .acc-ov-compare-track > span {
@@ -871,98 +857,54 @@ html:has(.accounts-dashboard) .financier-nav {
   background: linear-gradient(90deg, #c9922f, var(--acc-gold));
 }
 
-.accounts-dashboard .acc-ov-compare-link {
-  color: var(--acc-muted);
-  font-size: 12px;
-}
-
-.accounts-dashboard .acc-ov-compare-foot {
-  gap: 7px;
-  color: var(--acc-muted);
-  font-size: 12px;
-}
-
-.accounts-dashboard .acc-ov-compare-foot b { color: var(--acc-text); font-weight: 650; }
-.accounts-dashboard .acc-ov-compare-foot i { width: 8px; height: 8px; border-radius: 2px; margin-left: 5px; }
-.accounts-dashboard .acc-ov-compare-foot i.current { background: var(--acc-blue); margin-left: 0; }
-.accounts-dashboard .acc-ov-compare-foot i.overdue { background: #f08138; }
-
-.accounts-dashboard .acc-ov-flow {
-  margin: 0;
-  padding: 22px;
-  border-radius: 14px;
-  background: linear-gradient(145deg, #1d2636 0%, #151c28 100%);
-}
-
-.accounts-dashboard .acc-ov-flow-stats > div {
-  background: rgba(8, 13, 21, .26);
-  border-color: rgba(255,255,255,.08);
-}
-
-.accounts-dashboard .acc-ov-compare-side:hover .acc-ov-compare-link {
-  color: var(--acc-text);
-}
-
-.accounts-dashboard .acc-ov-flow-stats {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.accounts-dashboard .acc-ov-flow-stats > div {
-  display: grid;
-  gap: 4px;
-  padding: 12px;
-  border-radius: 10px;
-  background: #121821;
-  border: 1px solid var(--acc-line);
-}
-
-.accounts-dashboard .acc-ov-flow-stats span {
-  color: var(--acc-muted);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.accounts-dashboard .acc-ov-flow-stats strong {
-  font: 700 16px/1.2 Syne, sans-serif;
-  font-variant-numeric: tabular-nums;
-  color: var(--acc-text);
-}
-
-.accounts-dashboard .acc-ov-flow-stats .in strong { color: var(--acc-green); }
-.accounts-dashboard .acc-ov-flow-stats .out strong { color: var(--acc-red); }
-.accounts-dashboard .acc-ov-flow-stats .close strong { color: var(--acc-blue); }
-
-.accounts-dashboard .acc-ov-flow-bars {
-  display: grid;
-  gap: 8px;
-}
-
-.accounts-dashboard .acc-ov-flow-bars .track {
-  height: 8px;
-  border-radius: 999px;
-  background: #0f141d;
-  border: 1px solid var(--acc-line);
+.accounts-dashboard .acc-ov-recent-card {
+  padding: 0;
   overflow: hidden;
 }
 
-.accounts-dashboard .acc-ov-flow-bars .track > span {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
+.accounts-dashboard .acc-ov-recent-toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 0;
+  background: transparent;
+  color: var(--acc-text);
+  font: 700 13px/1 Syne, sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
 }
 
-.accounts-dashboard .acc-ov-flow-bars .track > .in { background: var(--acc-green); }
-.accounts-dashboard .acc-ov-flow-bars .track > .out { background: var(--acc-red); }
+.accounts-dashboard .acc-ov-recent-toggle:hover,
+.accounts-dashboard .acc-ov-recent-toggle:focus-visible {
+  color: var(--acc-gold);
+  outline: none;
+}
+
+.accounts-dashboard .acc-ov-recent-chevron {
+  color: var(--acc-muted);
+  font-size: 11px;
+}
 
 .accounts-dashboard .acc-ov-recent {
   display: grid;
   gap: 0;
-  padding: 6px 8px;
+  padding: 0 8px 12px;
+}
+
+.accounts-dashboard .acc-ov-recent-empty {
+  margin: 0;
+  padding: 4px 16px 16px;
+  color: var(--acc-muted);
+}
+
+.accounts-dashboard .acc-ov-recent-all {
+  justify-self: start;
+  margin: 8px 8px 0;
 }
 
 .accounts-dashboard .acc-ov-recent-row {
@@ -2049,9 +1991,8 @@ html:has(.accounts-dashboard) .financier-nav {
   .accounts-dashboard .acc-skeleton {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .accounts-dashboard .acc-ov-compare-grid,
-  .accounts-dashboard .acc-ov-flow-stats {
-    grid-template-columns: 1fr 1fr;
+  .accounts-dashboard .acc-ov-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .accounts-dashboard .acc-setup-head {
     grid-template-columns: auto minmax(0, 1fr);
@@ -2135,33 +2076,21 @@ html:has(.accounts-dashboard) .financier-nav {
   .accounts-dashboard .acc-skeleton {
     grid-template-columns: 1fr 1fr;
   }
-  .accounts-dashboard .acc-ov-compare-grid,
-  .accounts-dashboard .acc-ov-flow-stats {
+  .accounts-dashboard .acc-ov-metrics {
+    grid-template-columns: 1fr 1fr;
+  }
+  .accounts-dashboard .acc-ov-compare {
     grid-template-columns: 1fr;
   }
   .accounts-dashboard .acc-ov-compare-value {
     font-size: 24px;
   }
   .accounts-dashboard .acc-ov-recent-row {
+    align-items: center;
+  }
+  .accounts-dashboard .acc-ov-meta {
     flex-direction: column;
-    gap: 8px;
-  }
-  .accounts-dashboard .acc-ov-recent-row .narration {
-    max-width: 100%;
-    white-space: normal;
-  }
-  .accounts-dashboard .acc-ov-link-btn {
-    flex: 1 1 calc(50% - 8px);
-  }
-  .accounts-dashboard .acc-ov-more {
-    flex: 1 1 calc(50% - 8px);
-  }
-  .accounts-dashboard .acc-ov-more > .acc-ov-link-btn {
-    width: 100%;
-  }
-  .accounts-dashboard .acc-ov-more-menu {
-    left: 0;
-    right: 0;
+    align-items: stretch;
   }
   .accounts-dashboard .acc-main .title {
     font-size: 22px;
@@ -2277,11 +2206,5 @@ html:has(.accounts-dashboard) .financier-nav {
 @media (max-width: 720px) {
   .accounts-dashboard .acc-ov-compare {
     grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .accounts-dashboard .acc-ov-compare-side {
-    min-height: 166px;
-    padding: 17px;
   }
 }

@@ -110,53 +110,94 @@ const AccCompareChart = ({ receivables, payables, onReceivables, onPayables }) =
   const ap = Number(payables) || 0;
   const max = Math.max(ar, ap, 1);
   return (
-    <section className="acc-ov-compare" aria-label="Receivables and payables">
+    <section className="acc-ov-compare" aria-label="Receivables versus payables">
       <button type="button" className="card acc-ov-compare-side ar" onClick={onReceivables} aria-label={`Receivables ${money(ar)}. Open receivables`}>
-        <span className="acc-ov-compare-heading"><span>Total Receivables</span><span className="acc-ov-compare-action">View →</span></span>
-        <span className="acc-ov-compare-kicker">Total unpaid invoices</span>
+        <span className="acc-ov-compare-kicker">Receivables</span>
         <strong className="acc-ov-compare-value">{money(ar)}</strong>
         <span className="acc-ov-compare-track" aria-hidden="true"><span style={{ width: `${(ar / max) * 100}%` }} /></span>
-        <span className="acc-ov-compare-foot"><i className="current" />Current <b>{money(ar)}</b><i className="overdue" />Overdue <b>{money(0)}</b></span>
       </button>
       <button type="button" className="card acc-ov-compare-side ap" onClick={onPayables} aria-label={`Payables ${money(ap)}. Open payables`}>
-        <span className="acc-ov-compare-heading"><span>Total Payables</span><span className="acc-ov-compare-action">View →</span></span>
-        <span className="acc-ov-compare-kicker">Total unpaid bills</span>
+        <span className="acc-ov-compare-kicker">Payables</span>
         <strong className="acc-ov-compare-value">{money(ap)}</strong>
         <span className="acc-ov-compare-track" aria-hidden="true"><span style={{ width: `${(ap / max) * 100}%` }} /></span>
-        <span className="acc-ov-compare-foot"><i className="current" />Current <b>{money(ap)}</b><i className="overdue" />Overdue <b>{money(0)}</b></span>
       </button>
     </section>
   );
 };
 
-function AccOverviewMore({ onNavigate }) {
-  const [open, setOpen] = useState(false);
-  const root = useRef(null);
-  useEffect(() => {
-    if (!open) return undefined;
-    const onDoc = event => { if (!root.current?.contains(event.target)) setOpen(false); };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [open]);
-  const go = id => { setOpen(false); onNavigate(id); };
+function AccOverviewPeriod({ fy, lastFy, from, to, onChange }) {
+  const thisFy = from === fy.from && to === fy.to;
+  const prevFy = from === lastFy.from && to === lastFy.to;
+  const [customOpen, setCustomOpen] = useState(false);
+  const mode = customOpen || (!thisFy && !prevFy) ? "custom" : thisFy ? "this" : "last";
   return (
-    <div className="acc-ov-more" ref={root}>
-      <button type="button" className="acc-ov-link-btn" aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen(current => !current)}>More ⋯</button>
-      {open && (
-        <menu className="acc-ov-more-menu" role="menu">
-          {[
-            ["parties", "Party ledger"],
-            ["cashbook", "Cashbook"],
-            ["pnl", "Profit & Loss"],
-            ["balance", "Balance Sheet"],
-            ["trial", "Trial Balance"],
-            ["setup", "Setup"],
-          ].map(([id, label]) => (
-            <button key={id} type="button" role="menuitem" onClick={() => go(id)}>{label}</button>
-          ))}
-        </menu>
+    <div className="acc-ov-period">
+      <label className="acc-ov-period-field">
+        <span>Period</span>
+        <select
+          aria-label="Report period"
+          value={mode}
+          onChange={event => {
+            if (event.target.value === "this") {
+              setCustomOpen(false);
+              onChange(fy.from, fy.to);
+            } else if (event.target.value === "last") {
+              setCustomOpen(false);
+              onChange(lastFy.from, lastFy.to);
+            } else {
+              setCustomOpen(true);
+            }
+          }}
+        >
+          <option value="this">{fy.label}</option>
+          <option value="last">{lastFy.label}</option>
+          <option value="custom">Custom</option>
+        </select>
+      </label>
+      {mode === "custom" && (
+        <>
+          <label className="acc-ov-period-field">
+            <span>From</span>
+            <input type="date" value={from} onChange={event => onChange(event.target.value, to)} />
+          </label>
+          <label className="acc-ov-period-field">
+            <span>To</span>
+            <input type="date" value={to} onChange={event => onChange(from, event.target.value)} />
+          </label>
+        </>
       )}
     </div>
+  );
+}
+
+function AccOverviewRecent({ rows, onViewAll }) {
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  return (
+    <section className="card acc-ov-recent-card">
+      <button type="button" className="acc-ov-recent-toggle" aria-expanded={open} aria-controls={panelId} onClick={() => setOpen(current => !current)}>
+        <span>Recent transactions{rows.length ? ` · ${rows.length}` : ""}</span>
+        <span className="acc-ov-recent-chevron" aria-hidden="true">{open ? "▲" : "▼"}</span>
+      </button>
+      <div id={panelId} hidden={!open}>
+        {rows.length ? (
+          <div className="acc-ov-recent">
+            {rows.map(voucher => (
+              <div key={voucher.id} className="acc-ov-recent-row">
+                <div>
+                  <strong>{voucher.voucherNumber}</strong>
+                  <p>{voucher.date} · {VOUCHER_TYPES[voucher.voucherType]?.label || voucher.voucherType}</p>
+                </div>
+                <span className="amt">{money(voucherTotals(voucher.lines).debit)}</span>
+              </div>
+            ))}
+            <button type="button" className="acc-ov-link-btn acc-ov-recent-all" onClick={onViewAll}>View all</button>
+          </div>
+        ) : (
+          <p className="acc-ov-recent-empty">No transactions yet. Use + New entry to record one.</p>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -936,7 +977,7 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
   const wantTrial = reportId === "trial";
   const wantPnl = reportId === "pnl";
   const wantSheet = reportId === "balance";
-  const wantFlow = reportId === "cashflow" || wantOverview;
+  const wantFlow = reportId === "cashflow";
   const wantDayBook = reportId === "daybook" || reportId === "sales" || reportId === "purchases";
   const wantGst = reportId === "gst";
   const wantInvoices = section === "receivables" || section === "payables" || reportId === "receivables" || reportId === "payables";
@@ -1110,7 +1151,7 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
   };
 
   const recentVouchers = useMemo(
-    () => [...vouchers].sort((a, b) => `${b.date}${b.voucherNumber}`.localeCompare(`${a.date}${a.voucherNumber}`)).slice(0, 8),
+    () => [...vouchers].sort((a, b) => `${b.date}${b.voucherNumber}`.localeCompare(`${a.date}${a.voucherNumber}`)).slice(0, 5),
     [vouchers],
   );
 
@@ -1519,13 +1560,6 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
       </nav>
       {loading ? <><p className="copy">Loading Accounts…</p><AccSkeleton /></> : <>
         {section === "overview" && <div className="acc-panel acc-overview">
-          <div className="acc-ov-toolbar">
-            <ReportRangeBar fy={fy} lastFy={lastFy} from={rangeFrom} to={rangeTo} onChange={setReportRange} />
-            <div className="acc-status-row">
-              <span className={`acc-chip ${metrics?.equationHolds ? "ok" : "warn"}`}>{metrics?.equationHolds ? "Books in balance" : "Books out of balance"}</span>
-              <span className="acc-chip">Integration {settings?.integrationEnabled ? "ON" : "OFF"}</span>
-            </div>
-          </div>
           {!settings && <div className="card accounts-form-card">
             <strong>Open the books</strong>
             <p className="copy">Create a chart of accounts for this business. You do not need Daily Finance, Monthly Finance, or Chit Fund records.</p>
@@ -1536,15 +1570,6 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
             <button type="button" className="btn primary" disabled={saving} onClick={() => run(() => initializeAccounting(token, setupForm), "Accounts opened.")}>{saving ? "Saving…" : "Create chart of accounts"}</button>
           </div>}
 
-          <section className="acc-section acc-ov-money">
-            <h2 className="acc-section-title">Money on hand</h2>
-            <div className="acc-metric-grid three">
-              <AccMetric label="Cash" value={money(metrics?.cash)} tone="gold" />
-              <AccMetric label="Bank" value={money(metrics?.bank)} tone="gold" />
-              <AccMetric label="UPI" value={money(metrics?.upi)} tone="gold" />
-            </div>
-          </section>
-
           <AccCompareChart
             receivables={metrics?.receivables || 0}
             payables={metrics?.payables || 0}
@@ -1553,65 +1578,26 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
           />
 
           <section className="acc-section">
-            <h2 className="acc-section-title">Performance</h2>
-            <div className="acc-metric-grid three">
-              <AccMetric label="Income" value={money(metrics?.income)} tone="green" onClick={() => openSection("pnl")} hint="Open P&L" />
-              <AccMetric label="Expenses" value={money(metrics?.expenses)} tone="red" onClick={() => openSection("pnl")} hint="Open P&L" />
+            <h2 className="acc-section-title">Metrics</h2>
+            <div className="acc-metric-grid acc-ov-metrics">
+              <AccMetric label="Cash" value={money(metrics?.cash)} tone="gold" />
+              <AccMetric label="Bank" value={money(metrics?.bank)} tone="gold" />
+              <AccMetric label="UPI" value={money(metrics?.upi)} tone="gold" />
+              <AccMetric label="Income" value={money(metrics?.income)} tone="green" onClick={() => openSection("pnl")} />
+              <AccMetric label="Expenses" value={money(metrics?.expenses)} tone="red" onClick={() => openSection("pnl")} />
               <AccMetric label="Net profit" value={money(metrics?.netProfit)} tone={metrics?.netProfit < 0 ? "red" : "green"} onClick={() => openSection("pnl")} />
             </div>
           </section>
 
-          <section className="card acc-ov-flow">
-            <header className="acc-ov-block-head">
-              <div>
-                <h2>Cash flow</h2>
-                <p>{range.from} to {range.to}</p>
-              </div>
-            </header>
-            <div className="acc-ov-flow-stats">
-              <div><span>Opening</span><strong>{money(flow.opening)}</strong></div>
-              <div className="in"><span>Incoming</span><strong>{money(flow.inflow)}</strong></div>
-              <div className="out"><span>Outgoing</span><strong>{money(flow.outflow)}</strong></div>
-              <div className="close"><span>Closing</span><strong>{money(flow.closing)}</strong></div>
-            </div>
-            <div className="acc-ov-flow-bars" aria-hidden="true">
-              <div className="track"><span className="in" style={{ width: `${((flow.inflow || 0) / Math.max(flow.inflow || 0, flow.outflow || 0, 1)) * 100}%` }} /></div>
-              <div className="track"><span className="out" style={{ width: `${((flow.outflow || 0) / Math.max(flow.inflow || 0, flow.outflow || 0, 1)) * 100}%` }} /></div>
-            </div>
-          </section>
+          <AccOverviewRecent rows={recentVouchers} onViewAll={() => openSection("vouchers")} />
 
-          <section className="acc-section">
-            <div className="acc-section-head">
-              <h2 className="acc-section-title">Recent transactions</h2>
-              <button type="button" className="acc-ov-link-btn" onClick={() => openSection("vouchers")}>View all</button>
+          <div className="acc-ov-meta">
+            <AccOverviewPeriod fy={fy} lastFy={lastFy} from={rangeFrom} to={rangeTo} onChange={setReportRange} />
+            <div className="acc-status-row">
+              <span className={`acc-chip ${metrics?.equationHolds ? "ok" : "warn"}`}>{metrics?.equationHolds ? "Books in balance" : "Books out of balance"}</span>
+              <span className="acc-chip">Integration {settings?.integrationEnabled ? "ON" : "OFF"}</span>
             </div>
-            {recentVouchers.length ? (
-              <div className="card acc-ov-recent">
-                {recentVouchers.map(voucher => (
-                  <div key={voucher.id} className="acc-ov-recent-row">
-                    <div>
-                      <strong>{voucher.voucherNumber}</strong>
-                      <p>{voucher.date} · {VOUCHER_TYPES[voucher.voucherType]?.label || voucher.voucherType}</p>
-                      <p className="narration">{voucher.narration || "—"}</p>
-                    </div>
-                    <span className="amt">{money(voucherTotals(voucher.lines).debit)}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <AccEmpty title="No transactions yet" copy="Use + New entry in the header to record a sale, purchase, receipt, or payment." />
-            )}
-          </section>
-
-          <section className="acc-section acc-ov-links">
-            <h2 className="acc-section-title">Go</h2>
-            <div className="acc-ov-actions">
-              <button type="button" className="acc-ov-link-btn" onClick={() => openSection("ledger")}>Ledger</button>
-              <button type="button" className="acc-ov-link-btn" onClick={() => openSection("reports")}>Reports</button>
-              <button type="button" className="acc-ov-link-btn" onClick={() => openSection("bank")}>Banking</button>
-              <AccOverviewMore onNavigate={openSection} />
-            </div>
-          </section>
+          </div>
         </div>}
 
         {section === "ledger" && <div className="acc-panel">
