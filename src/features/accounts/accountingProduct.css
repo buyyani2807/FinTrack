@@ -753,6 +753,27 @@ html:has(.accounts-dashboard) .financier-nav {
   padding: 18px;
 }
 
+.accounts-dashboard .acc-overview {
+  gap: 14px;
+}
+
+.accounts-dashboard .acc-ov-toolbar {
+  margin-bottom: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--acc-line);
+  border-radius: 14px;
+  background: linear-gradient(135deg, #1c2535 0%, #161d2a 100%);
+}
+
+.accounts-dashboard .acc-ov-compare {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
+
 .accounts-dashboard .acc-ov-compare-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -761,21 +782,41 @@ html:has(.accounts-dashboard) .financier-nav {
 
 .accounts-dashboard .acc-ov-compare-side {
   display: grid;
-  gap: 10px;
-  padding: 16px;
+  gap: 12px;
+  min-height: 190px;
+  padding: 20px;
   border: 1px solid var(--acc-line);
-  border-radius: 12px;
-  background: linear-gradient(180deg, #1d2636 0%, #171e2b 100%);
+  border-radius: 14px;
+  background: linear-gradient(160deg, #202a3b 0%, #171e2a 100%);
   color: inherit;
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, .12);
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
 }
 
 .accounts-dashboard .acc-ov-compare-side:hover,
 .accounts-dashboard .acc-ov-compare-side:focus-visible {
   border-color: var(--acc-line-strong);
+  transform: translateY(-2px);
   outline: none;
+}
+
+.accounts-dashboard .acc-ov-compare-heading,
+.accounts-dashboard .acc-ov-compare-foot {
+  display: flex;
+  align-items: center;
+}
+
+.accounts-dashboard .acc-ov-compare-heading {
+  justify-content: space-between;
+  color: var(--acc-text);
+  font: 700 16px/1.2 Syne, sans-serif;
+}
+
+.accounts-dashboard .acc-ov-compare-action {
+  color: var(--acc-blue);
+  font: 600 12px/1 inherit;
 }
 
 .accounts-dashboard .acc-ov-compare-side.ar:hover,
@@ -791,9 +832,9 @@ html:has(.accounts-dashboard) .financier-nav {
 .accounts-dashboard .acc-ov-compare-kicker {
   color: var(--acc-muted);
   font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .accounts-dashboard .acc-ov-compare-value {
@@ -808,11 +849,11 @@ html:has(.accounts-dashboard) .financier-nav {
 
 .accounts-dashboard .acc-ov-compare-track {
   display: block;
-  height: 8px;
-  border-radius: 999px;
-  background: #0f141d;
+  height: 7px;
+  border-radius: 6px;
+  background: rgba(255,255,255,.06);
   overflow: hidden;
-  border: 1px solid var(--acc-line);
+  border: 0;
 }
 
 .accounts-dashboard .acc-ov-compare-track > span {
@@ -833,6 +874,29 @@ html:has(.accounts-dashboard) .financier-nav {
 .accounts-dashboard .acc-ov-compare-link {
   color: var(--acc-muted);
   font-size: 12px;
+}
+
+.accounts-dashboard .acc-ov-compare-foot {
+  gap: 7px;
+  color: var(--acc-muted);
+  font-size: 12px;
+}
+
+.accounts-dashboard .acc-ov-compare-foot b { color: var(--acc-text); font-weight: 650; }
+.accounts-dashboard .acc-ov-compare-foot i { width: 8px; height: 8px; border-radius: 2px; margin-left: 5px; }
+.accounts-dashboard .acc-ov-compare-foot i.current { background: var(--acc-blue); margin-left: 0; }
+.accounts-dashboard .acc-ov-compare-foot i.overdue { background: #f08138; }
+
+.accounts-dashboard .acc-ov-flow {
+  margin: 0;
+  padding: 22px;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #1d2636 0%, #151c28 100%);
+}
+
+.accounts-dashboard .acc-ov-flow-stats > div {
+  background: rgba(8, 13, 21, .26);
+  border-color: rgba(255,255,255,.08);
 }
 
 .accounts-dashboard .acc-ov-compare-side:hover .acc-ov-compare-link {
@@ -2207,5 +2271,17 @@ html:has(.accounts-dashboard) .financier-nav {
   .accounts-dashboard .acc-shell,
   .accounts-dashboard .acc-shell.nav-expanded {
     grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .accounts-dashboard .acc-ov-compare {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .accounts-dashboard .acc-ov-compare-side {
+    min-height: 166px;
+    padding: 17px;
   }
 }

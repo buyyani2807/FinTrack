@@ -110,31 +110,21 @@ const AccCompareChart = ({ receivables, payables, onReceivables, onPayables }) =
   const ap = Number(payables) || 0;
   const max = Math.max(ar, ap, 1);
   return (
-    <section className="card acc-ov-compare">
-      <header className="acc-ov-block-head">
-        <div>
-          <h2>Receivables vs Payables</h2>
-          <p>Outstanding balances from your books</p>
-        </div>
-      </header>
-      <div className="acc-ov-compare-grid">
-        <button type="button" className="acc-ov-compare-side ar" onClick={onReceivables} aria-label={`Receivables ${money(ar)}`}>
-          <span className="acc-ov-compare-kicker">Receivables</span>
-          <strong className="acc-ov-compare-value">{money(ar)}</strong>
-          <span className="acc-ov-compare-track" aria-hidden="true">
-            <span style={{ width: `${(ar / max) * 100}%` }} />
-          </span>
-          <span className="acc-ov-compare-link">View receivables →</span>
-        </button>
-        <button type="button" className="acc-ov-compare-side ap" onClick={onPayables} aria-label={`Payables ${money(ap)}`}>
-          <span className="acc-ov-compare-kicker">Payables</span>
-          <strong className="acc-ov-compare-value">{money(ap)}</strong>
-          <span className="acc-ov-compare-track" aria-hidden="true">
-            <span style={{ width: `${(ap / max) * 100}%` }} />
-          </span>
-          <span className="acc-ov-compare-link">View payables →</span>
-        </button>
-      </div>
+    <section className="acc-ov-compare" aria-label="Receivables and payables">
+      <button type="button" className="card acc-ov-compare-side ar" onClick={onReceivables} aria-label={`Receivables ${money(ar)}. Open receivables`}>
+        <span className="acc-ov-compare-heading"><span>Total Receivables</span><span className="acc-ov-compare-action">View →</span></span>
+        <span className="acc-ov-compare-kicker">Total unpaid invoices</span>
+        <strong className="acc-ov-compare-value">{money(ar)}</strong>
+        <span className="acc-ov-compare-track" aria-hidden="true"><span style={{ width: `${(ar / max) * 100}%` }} /></span>
+        <span className="acc-ov-compare-foot"><i className="current" />Current <b>{money(ar)}</b><i className="overdue" />Overdue <b>{money(0)}</b></span>
+      </button>
+      <button type="button" className="card acc-ov-compare-side ap" onClick={onPayables} aria-label={`Payables ${money(ap)}. Open payables`}>
+        <span className="acc-ov-compare-heading"><span>Total Payables</span><span className="acc-ov-compare-action">View →</span></span>
+        <span className="acc-ov-compare-kicker">Total unpaid bills</span>
+        <strong className="acc-ov-compare-value">{money(ap)}</strong>
+        <span className="acc-ov-compare-track" aria-hidden="true"><span style={{ width: `${(ap / max) * 100}%` }} /></span>
+        <span className="acc-ov-compare-foot"><i className="current" />Current <b>{money(ap)}</b><i className="overdue" />Overdue <b>{money(0)}</b></span>
+      </button>
     </section>
   );
 };
