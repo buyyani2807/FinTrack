@@ -291,7 +291,7 @@ function PasswordRecovery() {
     finally { setBusy(false); }
   };
   const complete = message.includes("successfully");
-  return <div className="login"><div className="brand" style={{ textAlign: "center" }}>FinTrack</div><p className="sub" style={{ textAlign: "center", marginBottom: 22 }}>Set a new Financier password</p><form className="card" onSubmit={save}><Field label="New password"><input disabled={complete} type="password" minLength="8" autoComplete="new-password" value={password} onChange={event => setPassword(event.target.value)} /></Field><div className="spacer"><Field label="Confirm new password"><input disabled={complete} type="password" minLength="8" autoComplete="new-password" value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} /></Field></div>{message && <p className="small" style={{ color: complete ? C.green : C.red }}>{message}</p>}{complete ? <Button className="primary spacer" style={{ width: "100%" }} type="button" onClick={() => window.location.assign(window.location.pathname)}>Go to sign in</Button> : <Button className="primary spacer" style={{ width: "100%" }} disabled={busy} type="submit">{busy ? "Saving…" : "Save new password"}</Button>}</form></div>;
+  return <div className="login"><div className="brand" style={{ textAlign: "center" }}>FinTrack</div><h1 className="sub" style={{ textAlign: "center", marginBottom: 22, fontSize: 18, fontWeight: 600 }}>Set a new Financier password</h1><form className="card" onSubmit={save}><Field label="New password"><input disabled={complete} type="password" minLength="8" autoComplete="new-password" value={password} onChange={event => setPassword(event.target.value)} /></Field><div className="spacer"><Field label="Confirm new password"><input disabled={complete} type="password" minLength="8" autoComplete="new-password" value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} /></Field></div>{message && <p className="small" style={{ color: complete ? C.green : C.red }}>{message}</p>}{complete ? <Button className="primary spacer" style={{ width: "100%" }} type="button" onClick={() => window.location.assign(window.location.pathname)}>Go to sign in</Button> : <Button className="primary spacer" style={{ width: "100%" }} disabled={busy} type="submit">{busy ? "Saving…" : "Save new password"}</Button>}</form></div>;
 }
 function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin }) {
   const [mode, setMode] = useState("signIn");
@@ -348,6 +348,7 @@ function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin }) {
         }
         onLogin({ role: "financier", authToken: result.access_token, name: fullName, workspace: profile });
       } else {
+        if (!String(email || "").trim() || !password) throw new Error("Enter your business email and password.");
         await signInAndEnter();
       }
     } catch (error) { setMessage(error.message || "Unable to sign in."); }

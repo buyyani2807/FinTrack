@@ -58,6 +58,15 @@ Run these in the Supabase SQL Editor **in order**. Each file is idempotent where
 | 050 | `050_disbursement_payout_mode.sql` | Daily / Monthly money-out can be Cash, UPI, or Cash+UPI (cashbook posts to the matching ledger) |
 | 051 | `051_ft035_ft037_live_bid_and_chit_payout_mode.sql` | **FT-035 / FT-037** — live bids enforce payout min/max %; chit prize cashbook posts by Cash/UPI/Cash+UPI |
 | 052 | `052_fintrack_accounts_double_entry.sql` | **FinTrack Accounts** — standalone double-entry books (chart of accounts, vouchers, audit, period lock). Accounting integration is **OFF by default**. Does not change Cashbook, Daily, Monthly, or Chit Fund. |
+| 053 | `053_accounts_small_business_coa.sql` | Small-business chart of accounts defaults |
+| 059 | `059_accounts_multi_company.sql` | Multi-company Accounts isolation |
+| 060 | `060_accounts_gst.sql` | GST settings, GST lines, GST-aware post |
+| 061 | `061_accounts_query_indexes.sql` | Accounts query indexes |
+| 062 | `062_accounts_gst_integrity.sql` | GST ledger match + reverse GST lines |
+| 063 | `063_accounts_p2_p3.sql` | GSTIN checksum, due-date lock, archive, settings RLS |
+| 064 | `064_accounts_gst_save_fix.sql` | Fix `gstin` / `company_id` PL/pgSQL shadowing on post/due/GST save |
+| 065 | `065_accounts_company_shadow_fix.sql` | Fix remaining `company_id` shadowing (cancel, COA, party, bank, sync). **Must be last of the shadowing fixes.** |
+| 066 | `066_accounts_voucher_attachments.sql` | Voucher attachments (PDF/images ≤ 512 KB) |
 
 After running 041 (and 042 if Save & sync failed), open **Accounts**, set opening balances once on the Cashbook section, then tap **Sync from FinTrack** to backfill historical collections and disbursements. If Cashbook **Delete** does nothing, run 043. After 044, tap **Sync from FinTrack** again so monthly principal disbursements are posted. After 045, existing daily bankrupt `loss_amount` values are rewritten to disbursed − collected.
 
@@ -76,6 +85,8 @@ After **050**, creating or editing a Daily / Monthly account lets you choose **C
 After **051**, live discount bids are rejected when the resulting payout % is outside the scheme min/max (so finalize cannot fail after accepting bids). Chit prize / lift finalize screens let you choose Cash / UPI / Cash+UPI, and cashbook posts to the matching ledger. `/api/auth/signup` provisions the workspace and deletes the Auth user if provisioning fails (needs `SUPABASE_SERVICE_ROLE_KEY` on Vercel). After 051, tap **Sync from FinTrack** once so historical chit prizes re-post with mode columns (existing rows stay Cash).
 
 After **052**, the primary nav is **Dashboard · Daily · Monthly · Chit Fund · Accounts · More**. Open **Accounts** to create a chart of accounts. Cashbook remains the operational money view inside Accounts. Leave **Accounting integration OFF** unless you want Daily / Monthly / Chit / Cashbook transactions to post linked double-entry vouchers automatically. Collection agents do not get Accounts access. Verify with `scripts/verify-migration-052.sql` (each row should show `ok = 1`).
+
+For GST multi-company Accounts, apply **060 through 066 in order**. Stopping before **065** leaves cancel/COA/party/bank RPCs with ambiguous `company_id` filters. Apply **066** for voucher file attachments.
 
 After running 036, verify in Supabase SQL Editor:
 

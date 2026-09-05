@@ -9,7 +9,7 @@ test.describe("Login hub tabs", () => {
     await page.getByRole("button", { name: "Financier sign in" }).click();
     await expect(page.getByText("Business email")).toBeVisible();
     await expect(page.getByText("Password").first()).toBeVisible();
-    await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Forgot password?" })).toBeVisible();
   });
 
@@ -37,7 +37,7 @@ test.describe("Login hub tabs", () => {
 test.describe("Login validation (client-side)", () => {
   test("empty financier sign in shows an error", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(page.getByText(/enter|required|unable/i)).toBeVisible();
   });
 
@@ -59,7 +59,7 @@ test.describe("Password recovery view", () => {
   test("reset-password route renders recovery form", async ({ page }) => {
     await page.goto("/?reset-password=1");
     await expect(page.getByRole("heading", { name: "Set a new Financier password" })).toBeVisible();
-    await expect(page.getByText("New password")).toBeVisible();
-    await expect(page.getByText("Confirm new password")).toBeVisible();
+    await expect(page.getByText("New password", { exact: true })).toBeVisible();
+    await expect(page.getByText("Confirm new password", { exact: true })).toBeVisible();
   });
 });

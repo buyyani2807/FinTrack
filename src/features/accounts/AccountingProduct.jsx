@@ -2,6 +2,7 @@ import { useCallback, useDeferredValue, useEffect, useId, useMemo, useRef, useSt
 import "./accountingProduct.css";
 import {
   addBankStatement,
+  addVoucherAttachment,
   archiveAccountsCompany,
   cancelVoucher,
   createAccountsCompany,
@@ -9,6 +10,7 @@ import {
   createParty,
   deleteChartAccount,
   deleteParty,
+  deleteVoucherAttachment,
   initializeAccounting,
   loadAccountingSettings,
   loadAccountsCompanies,
@@ -17,6 +19,7 @@ import {
   loadChartOfAccounts,
   loadParties,
   loadPeriodLocks,
+  loadVoucherAttachments,
   loadVouchers,
   lockAccountingPeriod,
   matchBankLine as saveBankMatch,
@@ -32,6 +35,13 @@ import {
   updateChartAccount,
   updateParty,
 } from "./accountingRepository.js";
+import {
+  assertVoucherAttachmentMeta,
+  attachmentDownloadHref,
+  normalizeAttachmentContentType,
+  readFileAsBase64,
+  VOUCHER_ATTACHMENT_MAX_BYTES,
+} from "./voucherAttachments.js";
 import {
   ACCOUNT_TYPES_BY_GROUP,
   COA_GROUPS,
@@ -935,6 +945,8 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
   const [gstForm, setGstForm] = useState({ gstRegistration: "unregistered", gstin: "", legalName: "", stateCode: "" });
   const [listPage, setListPage] = useState(1);
   const [expandedVoucherId, setExpandedVoucherId] = useState(null);
+  const [voucherAttachments, setVoucherAttachments] = useState([]);
+  const [attachmentBusy, setAttachmentBusy] = useState(false);
   const deferredSearch = useDeferredValue(search);
   const deferredPartySearch = useDeferredValue(partySearch);
   const sectionRef = useRef(section);
@@ -1019,6 +1031,22 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
   }, [token]);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  useEffect(() => {
+    if (!token || !expandedVoucherId || migrationRequired) {
+      setVoucherAttachments([]);
+      return undefined;
+    }
+    let cancelled = false;
+    loadVoucherAttachments(token, expandedVoucherId)
+      .then(rows => { if (!cancelled) setVoucherAttachments(rows); })
+      .catch(err => {
+        if (cancelled) return;
+        if (err.code === "MIGRATION_REQUIRED") setVoucherAttachments([]);
+        else setError(err.message || "Could not load attachments.");
+      });
+    return () => { cancelled = true; };
+  }, [token, expandedVoucherId, migrationRequired]);
 
   useEffect(() => {
     if (!token || migrationRequired) return undefined;
@@ -1332,6 +1360,52 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
     if (index < 0) return;
     const next = shownVouchers[index + delta];
     if (next) setExpandedVoucherId(next.id);
+  };
+
+  const reloadExpandedAttachments = async voucherId => {
+    const rows = await loadVoucherAttachments(token, voucherId);
+    setVoucherAttachments(rows);
+  };
+
+  const onAttachVoucherFile = async (voucher, file) => {
+    if (!file || attachmentBusy) return;
+    setAttachmentBusy(true);
+    setError("");
+    try {
+      const meta = assertVoucherAttachmentMeta({
+        fileName: file.name,
+        contentType: normalizeAttachmentContentType(file.type, file.name),
+        byteSize: file.size,
+      });
+      const contentBase64 = await readFileAsBase64(file);
+      await addVoucherAttachment(token, {
+        voucherId: voucher.id,
+        fileName: meta.fileName,
+        contentType: meta.contentType,
+        contentBase64,
+      });
+      await reloadExpandedAttachments(voucher.id);
+      setNotice("Attachment saved.");
+    } catch (err) {
+      setError(err.message || "Could not save attachment.");
+    } finally {
+      setAttachmentBusy(false);
+    }
+  };
+
+  const onDeleteAttachment = async (voucherId, attachmentId) => {
+    if (attachmentBusy) return;
+    setAttachmentBusy(true);
+    setError("");
+    try {
+      await deleteVoucherAttachment(token, attachmentId);
+      await reloadExpandedAttachments(voucherId);
+      setNotice("Attachment removed.");
+    } catch (err) {
+      setError(err.message || "Could not remove attachment.");
+    } finally {
+      setAttachmentBusy(false);
+    }
   };
 
   const closeVoucher = () => {
@@ -1736,7 +1810,7 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
       />
       {error && <div className="notice acc-toast error" role="alert">{error}</div>}
       {notice && <div className="notice accounts-notice-ok acc-toast ok" role="status">{notice}</div>}
-      {migrationRequired && <div className="notice">Run <strong>052</strong> through <strong>063_accounts_p2_p3.sql</strong> in the Supabase SQL editor (including <strong>059_accounts_multi_company.sql</strong>), then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
+      {migrationRequired && <div className="notice">Run <strong>052</strong> through <strong>066_accounts_voucher_attachments.sql</strong> in the Supabase SQL editor (including <strong>059</strong>, <strong>064</strong>, and <strong>065</strong>), then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
       <nav className="acc-bottom-nav" aria-label="Accounts">
         {MOBILE_TABS.map(item => (
           <button key={item.id} type="button" className={`acc-bottom-item ${mobileTab === item.id ? "active" : ""}`} onClick={() => openSection(item.id)}>
@@ -1849,6 +1923,38 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
                 <div className="table spacer"><table><thead><tr><th>Account</th><th>Debit</th><th>Credit</th></tr></thead><tbody>
                   {voucher.lines.map(line => <tr key={line.id}><td>{line.code} {line.name}</td><td>{line.debit ? money(line.debit) : ""}</td><td>{line.credit ? money(line.credit) : ""}</td></tr>)}
                 </tbody></table></div>
+                <div className="acc-voucher-attachments spacer">
+                  <div className="row" style={{ justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                    <strong>Attachments</strong>
+                    {(voucher.status === "posted" || voucher.status === "reversed") && (
+                      <label className="btn" style={{ cursor: attachmentBusy ? "wait" : "pointer" }}>
+                        {attachmentBusy ? "Uploading…" : "Add file"}
+                        <input
+                          type="file"
+                          accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp"
+                          hidden
+                          disabled={attachmentBusy}
+                          onChange={event => {
+                            const file = event.target.files?.[0];
+                            event.target.value = "";
+                            if (file) onAttachVoucherFile(voucher, file);
+                          }}
+                        />
+                      </label>
+                    )}
+                  </div>
+                  <p className="small">PDF or image up to {Math.round(VOUCHER_ATTACHMENT_MAX_BYTES / 1024)} KB. Kept with this company’s voucher only.</p>
+                  <ul className="acc-attachment-list">
+                    {voucherAttachments.map(file => (
+                      <li key={file.id} className="acc-attachment-item">
+                        <a className="link-button" href={attachmentDownloadHref(file)} download={file.fileName}>{file.fileName}</a>
+                        <span className="small">{Math.max(1, Math.round(file.byteSize / 1024))} KB</span>
+                        <button type="button" className="btn" disabled={attachmentBusy} onClick={() => onDeleteAttachment(voucher.id, file.id)}>Remove</button>
+                      </li>
+                    ))}
+                    {!voucherAttachments.length && <li className="small">No attachments yet.</li>}
+                  </ul>
+                </div>
               </>}
             </article>)}
             {!shownVouchers.length && <AccEmpty title="No transactions yet" copy="Use a guided entry for everyday work, or an advanced voucher for a custom journal." actionLabel="+ Create transaction" onAction={() => openSimple("sale")} />}
@@ -2409,7 +2515,10 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
               <Field label="From"><input type="date" value={lockForm.from} onChange={event => setLockForm(current => ({ ...current, from: event.target.value }))} /></Field>
               <Field label="To"><input type="date" value={lockForm.to} onChange={event => setLockForm(current => ({ ...current, to: event.target.value }))} /></Field>
             </div>
-            <button type="button" className="btn" disabled={saving} onClick={() => run(() => lockAccountingPeriod(token, lockForm.from, lockForm.to), "Period locked.")}>{saving ? "Saving…" : "Lock period"}</button>
+            <button type="button" className="btn" disabled={saving} onClick={event => {
+              event.currentTarget.scrollIntoView({ block: "center", behavior: "smooth" });
+              run(() => lockAccountingPeriod(token, lockForm.from, lockForm.to), "Period locked.");
+            }}>{saving ? "Saving…" : "Lock period"}</button>
             <div className="table spacer acc-table-wrap"><table><thead><tr><th>Period</th><th>Status</th><th></th></tr></thead><tbody>
               {locks.map(lock => <tr key={lock.id}><td>{lock.periodFrom} to {lock.periodTo}</td><td>{lock.isLocked ? "Locked" : "Reopened"}</td>              <td>{lock.isLocked && <button type="button" className="btn" disabled={saving} onClick={() => askReason("Reopen period", "Reopen", reason => run(() => reopenAccountingPeriod(token, lock.id, reason), "Period reopened."))}>Reopen</button>}</td></tr>)}
             </tbody></table></div>

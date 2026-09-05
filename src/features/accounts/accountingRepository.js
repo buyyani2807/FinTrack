@@ -25,7 +25,7 @@ const accQuery = (path, token) => supabase.query(path, token, accOpts());
 
 const wrap = promise => promise.catch(err => {
   if (isMissing(err)) {
-    const error = new Error("Run migrations 052–063 in the Supabase SQL editor to enable FinTrack Accounts companies and GST.");
+    const error = new Error("Run migrations 052–066 in the Supabase SQL editor to enable FinTrack Accounts companies, GST, and voucher attachments.");
     error.code = "MIGRATION_REQUIRED";
     throw error;
   }
@@ -339,6 +339,32 @@ export const addBankStatement = (token, payload) =>
     input_closing: Number(payload.closingBalance || 0),
     input_lines: payload.lines || [],
   }, token));
+
+export const loadVoucherAttachments = (token, voucherId) => wrap(
+  accQuery(
+    `/rest/v1/acc_voucher_attachments?select=id,voucher_id,file_name,content_type,byte_size,content_base64,created_at&voucher_id=eq.${encodeURIComponent(voucherId)}&order=created_at.desc${companyEq()}`,
+    token,
+  ).then(rows => (rows || []).map(row => ({
+    id: row.id,
+    voucherId: row.voucher_id,
+    fileName: row.file_name,
+    contentType: row.content_type,
+    byteSize: Number(row.byte_size || 0),
+    contentBase64: row.content_base64,
+    createdAt: row.created_at,
+  }))),
+);
+
+export const addVoucherAttachment = (token, { voucherId, fileName, contentType, contentBase64 }) =>
+  wrap(accRpc("acc_add_voucher_attachment", {
+    input_voucher_id: voucherId,
+    input_file_name: fileName,
+    input_content_type: contentType,
+    input_content_base64: contentBase64,
+  }, token));
+
+export const deleteVoucherAttachment = (token, attachmentId) =>
+  wrap(accRpc("acc_delete_voucher_attachment", { input_attachment_id: attachmentId }, token));
 
 export const matchBankLine = (token, lineId, voucherLineId, note) =>
   wrap(accRpc("acc_match_bank_line", {
