@@ -1,6 +1,6 @@
 import { addDaysIso, roundMoney } from "./accountingModel.js";
 import { formatInr } from "../../lib/formatMoney.js";
-import { cashFlow, dashboardMetrics, gstBooksReport, invoiceRegister, profitAndLoss } from "./accountingReports.js";
+import { cashFlow, dashboardMetrics, gstBooksReport, invoiceAgingTotals, invoiceRegister, profitAndLoss } from "./accountingReports.js";
 
 const money = value => formatInr(value);
 const pct = (current, previous) => {
@@ -31,22 +31,17 @@ export function previousComparisonRange({ from, to, fy, lastFy } = {}) {
 }
 
 const agingFromInvoices = (rows = []) => {
-  let current = 0;
-  let overdue = 0;
+  const buckets = invoiceAgingTotals(rows);
   const byParty = new Map();
   for (const row of rows) {
     const amount = Number(row.outstanding || 0);
     if (amount <= 0) continue;
-    if (row.status === "Overdue") overdue += amount;
-    else current += amount;
     const name = row.partyName || "Unassigned";
     byParty.set(name, roundMoney((byParty.get(name) || 0) + amount));
   }
   const largest = [...byParty.entries()].sort((a, b) => b[1] - a[1])[0] || null;
   return {
-    current: roundMoney(current),
-    overdue: roundMoney(overdue),
-    total: roundMoney(current + overdue),
+    ...buckets,
     largestParty: largest ? { name: largest[0], amount: largest[1] } : null,
   };
 };

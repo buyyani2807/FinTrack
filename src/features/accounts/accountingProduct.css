@@ -373,19 +373,41 @@ html:has(.accounts-dashboard) .financier-nav {
 }
 
 .accounts-dashboard .acc-company-setup-item {
-  display: grid;
-  gap: 2px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   text-align: left;
   padding: 10px 12px;
   border: 1px solid var(--acc-line);
   border-radius: 10px;
   background: var(--acc-surface);
   color: inherit;
+}
+
+.accounts-dashboard .acc-company-setup-pick {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
   cursor: pointer;
+}
+
+.accounts-dashboard .acc-company-setup-pick:disabled {
+  cursor: default;
+  opacity: 0.7;
 }
 
 .accounts-dashboard .acc-company-setup-item.current {
   border-color: var(--acc-gold);
+}
+
+.accounts-dashboard .acc-company-setup-item.archived {
+  opacity: 0.75;
 }
 
 .accounts-dashboard .acc-gst-preview {
@@ -2234,6 +2256,39 @@ html:has(.accounts-dashboard) .financier-nav {
 .accounts-dashboard .acc-invoice-kpi.tone-green strong { color: var(--acc-green); }
 .accounts-dashboard .acc-invoice-kpi.tone-red strong { color: var(--acc-red); }
 
+.accounts-dashboard .acc-invoice-aging {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.accounts-dashboard .acc-invoice-aging span {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--acc-line);
+  border-radius: 10px;
+  background: var(--acc-surface);
+  color: var(--acc-text);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+}
+
+.accounts-dashboard .acc-invoice-aging em {
+  font-style: normal;
+  color: var(--acc-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.accounts-dashboard .acc-voucher-nav {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
 .accounts-dashboard .acc-invoice-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -2461,8 +2516,9 @@ html:has(.accounts-dashboard) .financier-nav {
 }
 
 @media (max-width: 680px) {
-  .accounts-dashboard .acc-invoice-kpis {
-    grid-template-columns: 1fr;
+  .accounts-dashboard .acc-invoice-kpis,
+  .accounts-dashboard .acc-invoice-aging {
+    grid-template-columns: 1fr 1fr;
   }
   .accounts-dashboard .acc-invoice-page .accounts-custom-range {
     grid-template-columns: 1fr;

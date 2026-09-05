@@ -11,6 +11,7 @@ import {
   assertCanDeleteLedger,
   assertCanChangePartyType,
   assertCanDeleteParty,
+  assertCoaParent,
   assertGstDocumentMatchesLines,
   buildIntegrationVouchers,
   buildVoucher,
@@ -50,6 +51,7 @@ import {
   dashboardMetrics,
   dayBook,
   gstBooksReport,
+  invoiceAgingTotals,
   invoiceRegister,
   matchBankLine,
   partyBalances,
@@ -347,6 +349,8 @@ test("party search and type filter work together without resetting either", () =
   assert.equal(validatePartyForm({ partyType: "customer", name: "" }), "Enter the party name.");
   assert.equal(validatePartyForm({ partyType: "customer", name: "Ravi", email: "bad" }), "Enter a valid email address, or leave it blank.");
   assert.equal(validatePartyForm({ partyType: "customer", name: "Ravi", email: "ravi@test.com" }), "");
+  assert.equal(validatePartyForm({ partyType: "customer", name: "Ravi", gstin: "36AAAAA0000A1Z5" }), "GSTIN checksum is not valid.");
+  assert.equal(validatePartyForm({ partyType: "customer", name: "Ravi", gstin: "27AAPFU0939F1ZV" }), "");
 });
 
 test("unused ledgers can be deleted and used or system ledgers cannot", () => {
@@ -806,4 +810,71 @@ test("GST document must match posted tax ledgers and reversals copy GST lines", 
   const report = gstBooksReport([sale, reversal], { from: "2026-04-01", to: "2026-04-30" });
   assert.equal(report.outputTax, 0);
   assert.equal(report.netPayable, 0);
+});
+
+test("journal AR and AP party lines appear on the invoice register", () => {
+  const ravi = { id: "ravi", name: "Ravi", partyType: "customer" };
+  const xyz = { id: "xyz", name: "XYZ", partyType: "supplier" };
+  const accrueAr = posted("journal", "2026-04-01", [
+    { coaId: "1100", code: "1100", debit: 8000, credit: 0, partyId: "ravi" },
+    { coaId: "4300", code: "4300", debit: 0, credit: 8000 },
+  ], { n: 1, partyId: "ravi", dueDate: "2026-04-05" });
+  const settleAr = posted("journal", "2026-04-10", [
+    { coaId: "1000", code: "1000", debit: 3000, credit: 0 },
+    { coaId: "1100", code: "1100", debit: 0, credit: 3000, partyId: "ravi" },
+  ], { n: 2, partyId: "ravi" });
+  const accrueAp = posted("journal", "2026-04-02", [
+    { coaId: "5000", code: "5000", debit: 4000, credit: 0 },
+    { coaId: "2000", code: "2000", debit: 0, credit: 4000, partyId: "xyz" },
+  ], { n: 3, partyId: "xyz" });
+  const receivables = invoiceRegister(accounts, [accrueAr, settleAr], [ravi], {
+    kind: "receivable", today: "2026-04-12", from: "2026-04-01", to: "2026-04-30",
+  });
+  assert.equal(receivables.length, 1);
+  assert.equal(receivables[0].amount, 8000);
+  assert.equal(receivables[0].paid, 3000);
+  assert.equal(receivables[0].outstanding, 5000);
+  assert.equal(receivables[0].daysOverdue, 7);
+  assert.equal(receivables[0].status, "Overdue");
+  const payables = invoiceRegister(accounts, [accrueAp], [xyz], {
+    kind: "payable", today: "2026-04-03", from: "2026-04-01", to: "2026-04-30",
+  });
+  assert.equal(payables[0].outstanding, 4000);
+  assert.equal(partyBalances(accounts, [accrueAr, settleAr], [ravi], { kind: "receivable" })[0].balance, 5000);
+});
+
+test("days overdue and aging buckets use the due date", () => {
+  const ravi = { id: "ravi", name: "Ravi", partyType: "customer" };
+  const current = posted("sales", "2026-03-01", saleLines({ accounts, amount: 1000, settlement: "credit", partyId: "ravi" }), { n: 1, partyId: "ravi", dueDate: "2026-04-20" });
+  const d20 = posted("sales", "2026-03-01", saleLines({ accounts, amount: 2000, settlement: "credit", partyId: "ravi" }), { n: 2, partyId: "ravi", dueDate: "2026-03-20" });
+  const d45 = posted("sales", "2026-02-01", saleLines({ accounts, amount: 3000, settlement: "credit", partyId: "ravi" }), { n: 3, partyId: "ravi", dueDate: "2026-02-23" });
+  const d75 = posted("sales", "2026-01-01", saleLines({ accounts, amount: 4000, settlement: "credit", partyId: "ravi" }), { n: 4, partyId: "ravi", dueDate: "2026-01-24" });
+  const d100 = posted("sales", "2025-12-01", saleLines({ accounts, amount: 5000, settlement: "credit", partyId: "ravi" }), { n: 5, partyId: "ravi", dueDate: "2025-12-30" });
+  const rows = invoiceRegister(accounts, [current, d20, d45, d75, d100], [ravi], {
+    kind: "receivable", today: "2026-04-09", from: "2025-12-01", to: "2026-04-30",
+  });
+  assert.equal(rows.find(row => row.amount === 1000).daysOverdue, 0);
+  assert.equal(rows.find(row => row.amount === 2000).daysOverdue, 20);
+  assert.equal(rows.find(row => row.amount === 3000).daysOverdue, 45);
+  assert.equal(rows.find(row => row.amount === 4000).daysOverdue, 75);
+  assert.equal(rows.find(row => row.amount === 5000).daysOverdue, 100);
+  const aging = invoiceAgingTotals(rows);
+  assert.equal(aging.current, 1000);
+  assert.equal(aging.d1_30, 2000);
+  assert.equal(aging.d31_60, 3000);
+  assert.equal(aging.d61_90, 4000);
+  assert.equal(aging.d90, 5000);
+  assert.equal(aging.overdue, 14000);
+  assert.equal(aging.total, 15000);
+});
+
+test("COA parent walk rejects a cycle deeper than one level", () => {
+  const chart = [
+    { id: "a", groupType: "asset", parentId: null },
+    { id: "b", groupType: "asset", parentId: "a" },
+    { id: "c", groupType: "asset", parentId: "b" },
+  ];
+  assert.doesNotThrow(() => assertCoaParent(chart, "c", "b"));
+  assert.throws(() => assertCoaParent(chart, "a", "c"), /Circular parent/);
+  assert.throws(() => assertCoaParent(chart, "a", "a"), /own parent/);
 });

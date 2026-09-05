@@ -2,6 +2,7 @@ import { useCallback, useDeferredValue, useEffect, useId, useMemo, useRef, useSt
 import "./accountingProduct.css";
 import {
   addBankStatement,
+  archiveAccountsCompany,
   cancelVoucher,
   createAccountsCompany,
   createChartAccount,
@@ -45,6 +46,7 @@ import {
   assertCanChangePartyType,
   assertCanDeleteLedger,
   assertCanDeleteParty,
+  assertCoaParent,
   assertVoucherDateNotFuture,
   createSubmitLock,
   defaultAccountTypeForGroup,
@@ -62,7 +64,7 @@ import {
   voucherTotals,
 } from "./accountingModel.js";
 import { formatIstDateTime, todayIso } from "./cashbookModel.js";
-import { GST_RATES, INDIA_STATES, gstStateFromGstin, isIntraGst } from "./accountingGst.js";
+import { GST_RATES, INDIA_STATES, gstStateFromGstin, isIntraGst, validateGstSettings } from "./accountingGst.js";
 import {
   accountLedger,
   balanceSheet,
@@ -72,6 +74,7 @@ import {
   dayBook,
   defaultBankStatementLines,
   gstBooksReport,
+  invoiceAgingTotals,
   invoiceRegister,
   partyBalances,
   partyLedger,
@@ -107,17 +110,6 @@ const AccMetric = ({ label, value, tone = "", onClick, hint = "" }) => (
     {hint ? <div className="metric-hint">{hint}</div> : null}
   </article>
 );
-
-const invoiceAgingTotals = (rows = []) => {
-  let current = 0;
-  let overdue = 0;
-  for (const row of rows) {
-    const amount = Number(row.outstanding || 0);
-    if (row.status === "Overdue") overdue += amount;
-    else current += amount;
-  }
-  return { current, overdue, total: current + overdue };
-};
 
 const piePoint = (cx, cy, r, angle) => {
   const rad = (angle - 90) * Math.PI / 180;
@@ -595,7 +587,7 @@ function AccCompanyBar({ companies, activeId, onSelect, onCreate, gstLabel }) {
           onChange={event => onSelect(event.target.value)}
         >
           {!companies.length && <option value="">No companies yet — run 059 or create one</option>}
-          {companies.map(company => (
+          {companies.filter(company => company.status !== "archived").map(company => (
             <option key={company.id} value={company.id}>
               {company.name}{company.isPrimary ? " · primary" : ""}
             </option>
@@ -843,7 +835,20 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
 
 function CoaFormFields({ form, setForm, accounts = [] }) {
   const types = ACCOUNT_TYPES_BY_GROUP[form.groupType] || ACCOUNT_TYPES_BY_GROUP.expense;
-  const parents = (accounts || []).filter(account => account.groupType === form.groupType && account.id !== form.id);
+  const descendantIds = new Set();
+  if (form.id) {
+    const walk = id => {
+      for (const child of (accounts || []).filter(account => account.parentId === id)) {
+        if (descendantIds.has(child.id)) continue;
+        descendantIds.add(child.id);
+        walk(child.id);
+      }
+    };
+    walk(form.id);
+  }
+  const parents = (accounts || []).filter(account =>
+    account.groupType === form.groupType && account.id !== form.id && !descendantIds.has(account.id),
+  );
   const set = patch => setForm(current => ({ ...current, ...patch }));
   return <div className="form">
     <Field label="Code"><input value={form.code} disabled={Boolean(form.isSystem)} onChange={event => set({ code: event.target.value })} /></Field>
@@ -953,9 +958,10 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
       if (!stored) {
         try { stored = sessionStorage.getItem(COMPANY_STORAGE_KEY) || ""; } catch { stored = ""; }
       }
-      const nextCompany = nextCompanies.find(item => item.id === stored)
-        || nextCompanies.find(item => item.isPrimary)
-        || nextCompanies[0]
+      const activeCompanies = nextCompanies.filter(item => item.status !== "archived");
+      const nextCompany = activeCompanies.find(item => item.id === stored)
+        || activeCompanies.find(item => item.isPrimary)
+        || activeCompanies[0]
         || null;
       if (nextCompany) {
         setActiveAccountsCompanyId(nextCompany.id);
@@ -1209,6 +1215,22 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
     refresh(id);
   };
 
+  const archiveCompany = company => {
+    if (company?.isPrimary) {
+      setError("The primary company cannot be archived.");
+      return;
+    }
+    askReason("Archive company", "Archive company", reason => run(async () => {
+      await archiveAccountsCompany(token, company.id, reason);
+      if (company.id === activeCompanyId) {
+        const fallback = companies.find(item => item.isPrimary)?.id
+          || companies.find(item => item.id !== company.id && item.status !== "archived")?.id
+          || "";
+        try { sessionStorage.setItem(COMPANY_STORAGE_KEY, fallback); } catch { /* ignore */ }
+      }
+    }, "Company archived."));
+  };
+
   const toggleNav = () => {
     setNavExpanded(current => {
       const next = !current;
@@ -1285,6 +1307,31 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
     setVoucherForm(emptyVoucherForm());
     setLines([emptyLine(), emptyLine()]);
     setShowVoucher(true);
+  };
+
+  const duplicateVoucher = voucher => {
+    setVoucherType(voucher.voucherType || "journal");
+    setVoucherForm({
+      date: todayIso(),
+      narration: voucher.narration || "",
+      partyId: voucher.partyId || "",
+      dueDate: addDaysIso(todayIso(), 7),
+    });
+    const copied = (voucher.lines || []).map(line => ({
+      coaId: line.coaId || "",
+      debit: line.debit ? String(line.debit) : "",
+      credit: line.credit ? String(line.credit) : "",
+      description: line.description || "",
+    }));
+    setLines(copied.length >= 2 ? copied : [...copied, emptyLine(), emptyLine()].slice(0, Math.max(2, copied.length)));
+    setShowVoucher(true);
+  };
+
+  const showAdjacentVoucher = (voucherId, delta) => {
+    const index = shownVouchers.findIndex(item => item.id === voucherId);
+    if (index < 0) return;
+    const next = shownVouchers[index + delta];
+    if (next) setExpandedVoucherId(next.id);
   };
 
   const closeVoucher = () => {
@@ -1460,12 +1507,20 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
     setCoaForm(emptyCoaForm());
   };
 
-  const saveCoa = () => run(async () => {
-    if (coaForm.id) await updateChartAccount(token, coaForm);
-    else await createChartAccount(token, coaForm);
-    setShowCoa(false);
-    setCoaForm(emptyCoaForm());
-  }, coaForm.id ? "Account updated." : "Account added.");
+  const saveCoa = () => {
+    try {
+      assertCoaParent(visibleAccounts, coaForm.id, coaForm.parentId);
+    } catch (err) {
+      setError(err.message);
+      return;
+    }
+    run(async () => {
+      if (coaForm.id) await updateChartAccount(token, coaForm);
+      else await createChartAccount(token, coaForm);
+      setShowCoa(false);
+      setCoaForm(emptyCoaForm());
+    }, coaForm.id ? "Account updated." : "Account added.");
+  };
 
   const removeCoa = account => {
     try {
@@ -1527,10 +1582,10 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
       return { filename: `fintrack-day-book-${stamp}`, rows: [["Date", "Number", "Type", "Narration", "Amount"], ...books.map(row => [row.date, row.voucherNumber, row.voucherType, row.narration, row.debit])] };
     }
     if (active === "receivables") {
-      return { filename: `fintrack-receivables-${stamp}`, rows: [["Customer", "Invoice", "Invoice date", "Due date", "Amount", "Paid", "Outstanding", "Days", "Status"], ...arInvoices.map(row => [row.partyName, row.reference, row.invoiceDate, row.dueDate, row.amount, row.paid, row.outstanding, row.daysOutstanding, row.status])] };
+      return { filename: `fintrack-receivables-${stamp}`, rows: [["Customer", "Invoice", "Invoice date", "Due date", "Amount", "Paid", "Outstanding", "Days outstanding", "Days overdue", "Status"], ...arInvoices.map(row => [row.partyName, row.reference, row.invoiceDate, row.dueDate, row.amount, row.paid, row.outstanding, row.daysOutstanding, row.daysOverdue, row.status])] };
     }
     if (active === "payables") {
-      return { filename: `fintrack-payables-${stamp}`, rows: [["Supplier", "Invoice", "Invoice date", "Due date", "Amount", "Paid", "Outstanding", "Status"], ...apInvoices.map(row => [row.partyName, row.reference, row.invoiceDate, row.dueDate, row.amount, row.paid, row.outstanding, row.status])] };
+      return { filename: `fintrack-payables-${stamp}`, rows: [["Supplier", "Invoice", "Invoice date", "Due date", "Amount", "Paid", "Outstanding", "Days overdue", "Status"], ...apInvoices.map(row => [row.partyName, row.reference, row.invoiceDate, row.dueDate, row.amount, row.paid, row.outstanding, row.daysOverdue, row.status])] };
     }
     if (active === "sales") {
       return { filename: `fintrack-sales-${stamp}`, rows: [["Date", "Number", "Narration", "Amount"], ...salesRows.map(row => [row.date, row.voucherNumber, row.narration, row.debit])] };
@@ -1620,7 +1675,7 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
               <th className="acc-num">Amount</th>
               <th className="acc-num">Paid</th>
               <th className="acc-num">Outstanding</th>
-              {kind !== "payable" && <th className="acc-num">Days</th>}
+              <th className="acc-num">Days overdue</th>
               <th>Status</th>
             </tr>
           </thead>
@@ -1636,7 +1691,7 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
                 <td className="acc-num">{money(row.amount)}</td>
                 <td className="acc-num acc-invoice-paid">{money(row.paid)}</td>
                 <td className={`acc-num acc-invoice-out${row.status === "Overdue" ? " is-overdue" : row.outstanding > 0 ? "" : " is-clear"}`}>{money(row.outstanding)}</td>
-                {kind !== "payable" && <td className="acc-num">{row.daysOutstanding}</td>}
+                <td className="acc-num">{row.daysOverdue || 0}</td>
                 <td><span className={`acc-status-pill ${invoiceStatusTone(row.status)}`}>{row.status}</span></td>
               </tr>
             ))}
@@ -1681,7 +1736,7 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
       />
       {error && <div className="notice acc-toast error" role="alert">{error}</div>}
       {notice && <div className="notice accounts-notice-ok acc-toast ok" role="status">{notice}</div>}
-      {migrationRequired && <div className="notice">Run <strong>052</strong> through <strong>060_accounts_gst.sql</strong> in the Supabase SQL editor (including <strong>059_accounts_multi_company.sql</strong>), then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
+      {migrationRequired && <div className="notice">Run <strong>052</strong> through <strong>063_accounts_p2_p3.sql</strong> in the Supabase SQL editor (including <strong>059_accounts_multi_company.sql</strong>), then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
       <nav className="acc-bottom-nav" aria-label="Accounts">
         {MOBILE_TABS.map(item => (
           <button key={item.id} type="button" className={`acc-bottom-item ${mobileTab === item.id ? "active" : ""}`} onClick={() => openSection(item.id)}>
@@ -1779,15 +1834,22 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
                 <div className="accounts-entry-amounts">
                   <span>{money(voucherTotals(voucher.lines).debit)}</span>
                   <button type="button" className="btn" onClick={() => setExpandedVoucherId(current => current === voucher.id ? null : voucher.id)}>{expandedVoucherId === voucher.id ? "Hide lines" : "Lines"}</button>
+                  <button type="button" className="btn" onClick={() => duplicateVoucher(voucher)}>Duplicate</button>
                   {voucher.status === "posted" && <>
                     <button type="button" className="btn" disabled={saving} onClick={() => askReason("Reverse voucher", "Post reversal", reason => run(() => reverseVoucher(token, voucher.id, todayIso(), reason), "Reversal posted."))}>Reverse</button>
                     <button type="button" className="btn danger" disabled={saving} onClick={() => askReason("Cancel voucher", "Cancel voucher", reason => run(() => cancelVoucher(token, voucher.id, reason), "Voucher cancelled."))}>Cancel</button>
                   </>}
                 </div>
               </div>
-              {expandedVoucherId === voucher.id && <div className="table spacer"><table><thead><tr><th>Account</th><th>Debit</th><th>Credit</th></tr></thead><tbody>
-                {voucher.lines.map(line => <tr key={line.id}><td>{line.code} {line.name}</td><td>{line.debit ? money(line.debit) : ""}</td><td>{line.credit ? money(line.credit) : ""}</td></tr>)}
-              </tbody></table></div>}
+              {expandedVoucherId === voucher.id && <>
+                <div className="acc-voucher-nav">
+                  <button type="button" className="btn" disabled={shownVouchers.findIndex(item => item.id === voucher.id) <= 0} onClick={() => showAdjacentVoucher(voucher.id, -1)}>Previous</button>
+                  <button type="button" className="btn" disabled={shownVouchers.findIndex(item => item.id === voucher.id) >= shownVouchers.length - 1} onClick={() => showAdjacentVoucher(voucher.id, 1)}>Next</button>
+                </div>
+                <div className="table spacer"><table><thead><tr><th>Account</th><th>Debit</th><th>Credit</th></tr></thead><tbody>
+                  {voucher.lines.map(line => <tr key={line.id}><td>{line.code} {line.name}</td><td>{line.debit ? money(line.debit) : ""}</td><td>{line.credit ? money(line.credit) : ""}</td></tr>)}
+                </tbody></table></div>
+              </>}
             </article>)}
             {!shownVouchers.length && <AccEmpty title="No transactions yet" copy="Use a guided entry for everyday work, or an advanced voucher for a custom journal." actionLabel="+ Create transaction" onAction={() => openSimple("sale")} />}
           </div>
@@ -1809,6 +1871,12 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
               <span>Overdue</span>
               <strong>{money(invoiceAging.overdue)}</strong>
             </article>
+          </div>
+          <div className="acc-invoice-aging" aria-label="Aging buckets">
+            <span><em>1–30</em> {money(invoiceAging.d1_30 || 0)}</span>
+            <span><em>31–60</em> {money(invoiceAging.d31_60 || 0)}</span>
+            <span><em>61–90</em> {money(invoiceAging.d61_90 || 0)}</span>
+            <span><em>90+</em> {money(invoiceAging.d90 || 0)}</span>
           </div>
           <div className="acc-invoice-toolbar">
             <button
@@ -2163,15 +2231,28 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
             <div className="acc-company-setup-list spacer">
               <p className="small">Each company has its own books. Switching never mixes vouchers.</p>
               {companies.map(company => (
-                <button
+                <div
                   key={company.id}
-                  type="button"
-                  className={`acc-company-setup-item${company.id === activeCompanyId ? " current" : ""}`}
-                  onClick={() => company.id !== activeCompanyId && switchCompany(company.id)}
+                  className={`acc-company-setup-item${company.id === activeCompanyId ? " current" : ""}${company.status === "archived" ? " archived" : ""}`}
                 >
-                  <strong>{company.name}</strong>
-                  <span className="small">{company.isPrimary ? "Primary" : "Company"}{company.id === activeCompanyId ? " · current" : ""} · {gstStatusLabel(company)}</span>
-                </button>
+                  <button
+                    type="button"
+                    className="acc-company-setup-pick"
+                    disabled={company.status === "archived"}
+                    onClick={() => company.id !== activeCompanyId && company.status !== "archived" && switchCompany(company.id)}
+                  >
+                    <strong>{company.name}</strong>
+                    <span className="small">
+                      {company.isPrimary ? "Primary" : "Company"}
+                      {company.status === "archived" ? " · archived" : ""}
+                      {company.id === activeCompanyId ? " · current" : ""}
+                      {` · ${gstStatusLabel(company)}`}
+                    </span>
+                  </button>
+                  {company.status !== "archived" && !company.isPrimary && (
+                    <button type="button" className="btn" disabled={saving} onClick={() => archiveCompany(company)}>Archive</button>
+                  )}
+                </div>
               ))}
               <button type="button" className="btn" onClick={() => { setCompanyDraft({ name: "", booksStartedOn: todayIso() }); setShowCreateCompany(true); }}>+ Create company</button>
             </div>
@@ -2185,7 +2266,7 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
                   <option value="composition">Composition</option>
                 </select>
               </Field>
-              <Field label="GSTIN"><input value={gstForm.gstin} placeholder="e.g. 36AAAAA0000A1Z5" onChange={event => setGstForm(current => ({ ...current, gstin: event.target.value, stateCode: gstStateFromGstin(event.target.value) || current.stateCode }))} /></Field>
+              <Field label="GSTIN"><input value={gstForm.gstin} placeholder="e.g. 36AAAAA0000A1Z3" onChange={event => setGstForm(current => ({ ...current, gstin: event.target.value, stateCode: gstStateFromGstin(event.target.value) || current.stateCode }))} /></Field>
               <Field label="Legal name"><input value={gstForm.legalName} onChange={event => setGstForm(current => ({ ...current, legalName: event.target.value }))} /></Field>
               <Field label="State">
                 <select value={gstForm.stateCode} onChange={event => setGstForm(current => ({ ...current, stateCode: event.target.value }))}>
@@ -2194,7 +2275,11 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
                 </select>
               </Field>
             </div>
-            <button type="button" className="btn primary" disabled={saving} onClick={() => run(() => saveGstSettings(token, { ...gstForm, stateName: INDIA_STATES.find(state => state.code === gstForm.stateCode)?.name || "" }), "GST settings saved.")}>{saving ? "Saving…" : "Save GST"}</button>
+            <button type="button" className="btn primary" disabled={saving} onClick={() => {
+              const message = validateGstSettings(gstForm);
+              if (message) { setError(message); return; }
+              run(() => saveGstSettings(token, { ...gstForm, stateName: INDIA_STATES.find(state => state.code === gstForm.stateCode)?.name || "" }), "GST settings saved.");
+            }}>{saving ? "Saving…" : "Save GST"}</button>
           </AccSetupSection>
           <AccSetupSection
             icon="#"

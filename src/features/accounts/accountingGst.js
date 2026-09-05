@@ -24,8 +24,65 @@ export const INDIA_STATES = [
   { code: "19", name: "West Bengal" },
 ];
 
+const GSTIN_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+
+export function normalizeGstin(gstin) {
+  return String(gstin || "").trim().toUpperCase();
+}
+
+export function gstinChecksum(body14) {
+  const body = normalizeGstin(body14);
+  let factor = 1;
+  let sum = 0;
+  for (let index = 0; index < 14; index += 1) {
+    const codePoint = GSTIN_CHARS.indexOf(body[index] || "");
+    if (codePoint < 0) return "";
+    const product = factor * codePoint;
+    factor = factor === 2 ? 1 : 2;
+    sum += Math.floor(product / 36) + (product % 36);
+  }
+  return GSTIN_CHARS[(36 - (sum % 36)) % 36];
+}
+
+export function gstinValidationMessage(gstin) {
+  const raw = normalizeGstin(gstin);
+  if (!raw) return "";
+  if (raw.length !== 15 || !GSTIN_PATTERN.test(raw)) return "Enter a valid 15-character GSTIN.";
+  if (gstinChecksum(raw.slice(0, 14)) !== raw.slice(14)) return "GSTIN checksum is not valid.";
+  return "";
+}
+
+export function isValidGstin(gstin) {
+  return !gstinValidationMessage(gstin);
+}
+
+export function assertValidGstin(gstin, { required = false } = {}) {
+  const raw = normalizeGstin(gstin);
+  if (!raw) {
+    if (required) throw new Error("GSTIN is required for a registered company.");
+    return "";
+  }
+  const message = gstinValidationMessage(raw);
+  if (message) throw new Error(message);
+  return raw;
+}
+
+export function validateGstSettings(form) {
+  const reg = String(form?.gstRegistration || "unregistered").trim() || "unregistered";
+  if (reg !== "unregistered") {
+    if (!normalizeGstin(form?.gstin)) return "GSTIN is required for a registered company.";
+    const gstinMessage = gstinValidationMessage(form?.gstin);
+    if (gstinMessage) return gstinMessage;
+    if (!String(form?.stateCode || "").trim()) return "State is required for GST.";
+  } else if (normalizeGstin(form?.gstin)) {
+    return gstinValidationMessage(form.gstin);
+  }
+  return "";
+}
+
 export function gstStateFromGstin(gstin) {
-  const raw = String(gstin || "").trim().toUpperCase();
+  const raw = normalizeGstin(gstin);
   return /^\d{2}/.test(raw) ? raw.slice(0, 2) : "";
 }
 

@@ -189,6 +189,12 @@ test("ABC Traders standalone books stay in equation through the full operating c
   assert.ok(creditPurchase);
   assert.equal(creditPurchase.outstanding, 10000);
 
+  const martInvoices = invoiceRegister(chart, books, parties, { kind: "payable", today: "2026-04-20", ...fy, partyId: "mart" });
+  assert.equal(martInvoices.length, 1);
+  assert.equal(martInvoices[0].voucherType, "journal");
+  assert.equal(martInvoices[0].outstanding, 5000);
+  assert.equal(roundMoney(party(books, "mart", "payable")), 5000);
+
   const abcLedger = partyLedger(chart, books, parties[1], fy);
   assert.equal(abcLedger.outstanding, 19000);
 

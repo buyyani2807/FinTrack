@@ -281,6 +281,28 @@ export function invoiceStatus({ outstanding, dueDate, invoiceDate, today }) {
   return "Overdue";
 }
 
+export function invoiceAgingTotals(rows = []) {
+  const buckets = { current: 0, overdue: 0, d1_30: 0, d31_60: 0, d61_90: 0, d90: 0, total: 0 };
+  for (const row of rows || []) {
+    const amount = Number(row.outstanding || 0);
+    if (amount <= 0) continue;
+    buckets.total += amount;
+    const daysOverdue = Number.isFinite(Number(row.daysOverdue))
+      ? Number(row.daysOverdue)
+      : row.status === "Overdue" ? 1 : 0;
+    if (daysOverdue <= 0) {
+      buckets.current += amount;
+      continue;
+    }
+    buckets.overdue += amount;
+    if (daysOverdue <= 30) buckets.d1_30 += amount;
+    else if (daysOverdue <= 60) buckets.d31_60 += amount;
+    else if (daysOverdue <= 90) buckets.d61_90 += amount;
+    else buckets.d90 += amount;
+  }
+  return Object.fromEntries(Object.entries(buckets).map(([key, value]) => [key, roundMoney(value)]));
+}
+
 export function dashboardMetrics(accounts, vouchers, parties, { today, from, to } = {}) {
   const range = { from, to };
   const balances = ledgerBalances(accounts, vouchers, range);
@@ -445,6 +467,39 @@ export function invoiceRegister(accounts, vouchers, parties = [], { kind = "rece
     if ((voucher.voucherType === settleType || voucher.voucherType === noteType || isReversalVoucher(voucher)) && hitsLedger) {
       if (to && voucher.date > to) continue;
       enqueue(voucherPartyId, amount);
+      continue;
+    }
+    if (isReversalVoucher(voucher)) continue;
+    const byParty = new Map();
+    for (const line of voucher.lines || []) {
+      if (!lineHitsType(accounts, line, ledgerType)) continue;
+      const linePartyId = line.partyId || voucher.partyId || null;
+      if (!linePartyId) continue;
+      if (!byParty.has(linePartyId)) byParty.set(linePartyId, { debit: 0, credit: 0 });
+      const bucket = byParty.get(linePartyId);
+      bucket.debit = roundMoney(bucket.debit + Number(line.debit || 0));
+      bucket.credit = roundMoney(bucket.credit + Number(line.credit || 0));
+    }
+    for (const [linePartyId, sides] of byParty) {
+      const increase = isAr
+        ? roundMoney(sides.debit - sides.credit)
+        : roundMoney(sides.credit - sides.debit);
+      if (increase > 0) {
+        invoices.push({
+          id: `${voucher.id}:${linePartyId}`,
+          partyId: linePartyId,
+          partyName: partyById[linePartyId]?.name || linePartyId,
+          partyType: partyById[linePartyId]?.partyType || (isAr ? "customer" : "supplier"),
+          reference: voucher.voucherNumber,
+          invoiceDate: voucher.date,
+          dueDate: voucher.dueDate || addDaysIso(voucher.date, 7),
+          amount: increase,
+          paid: 0,
+          voucherType: voucher.voucherType,
+        });
+      } else if (increase < 0 && (!to || voucher.date <= to)) {
+        enqueue(linePartyId, -increase);
+      }
     }
   }
 
@@ -463,12 +518,14 @@ export function invoiceRegister(accounts, vouchers, parties = [], { kind = "rece
       }
       invoice.outstanding = remaining;
     }
-    invoice.daysOutstanding = invoice.outstanding > 0 ? Math.max(0, daysBetween(invoice.invoiceDate, today || invoice.invoiceDate)) : 0;
+    const asOf = today || invoice.invoiceDate;
+    invoice.daysOutstanding = invoice.outstanding > 0 ? Math.max(0, daysBetween(invoice.invoiceDate, asOf)) : 0;
+    invoice.daysOverdue = invoice.outstanding > 0 ? Math.max(0, daysBetween(invoice.dueDate, asOf)) : 0;
     invoice.status = invoiceStatus({
       outstanding: invoice.outstanding,
       dueDate: invoice.dueDate,
       invoiceDate: invoice.invoiceDate,
-      today: today || invoice.invoiceDate,
+      today: asOf,
     });
   }
 

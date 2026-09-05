@@ -1,4 +1,4 @@
-import { assertGstDocumentMatchesLines } from "./accountingGst.js";
+import { assertGstDocumentMatchesLines, gstinValidationMessage } from "./accountingGst.js";
 
 export const VOUCHER_TYPES = {
   receipt: { id: "receipt", code: "RCPT", label: "Receipt" },
@@ -116,7 +116,7 @@ export const SYSTEM_CODES = {
   outputIgst: "2212",
 };
 
-export { GST_RATES, INDIA_STATES, assertGstDocumentMatchesLines, gstStateFromGstin, isIntraGst } from "./accountingGst.js";
+export { GST_RATES, INDIA_STATES, assertGstDocumentMatchesLines, gstStateFromGstin, isIntraGst, validateGstSettings } from "./accountingGst.js";
 
 export function gstSplit({ taxable, rate, intra }) {
   const value = roundMoney(taxable);
@@ -314,6 +314,25 @@ export const assertCanDeleteLedger = (account, vouchers = []) => {
   if (ledgerHasPostedLines(account, vouchers)) throw new Error("Cannot delete an account that has transactions");
 };
 
+export function assertCoaParent(accounts = [], accountId, parentId) {
+  if (!parentId) return;
+  if (parentId === accountId) throw new Error("An account cannot be its own parent");
+  const byId = Object.fromEntries((accounts || []).map(account => [account.id, account]));
+  const parent = byId[parentId];
+  const current = accountId ? byId[accountId] : null;
+  if (parent && current && parent.groupType && current.groupType && parent.groupType !== current.groupType) {
+    throw new Error("Parent must be in the same group");
+  }
+  const seen = new Set();
+  let walk = parent;
+  while (walk) {
+    if (accountId && walk.id === accountId) throw new Error("Circular parent is not allowed");
+    if (seen.has(walk.id)) break;
+    seen.add(walk.id);
+    walk = walk.parentId ? byId[walk.parentId] : null;
+  }
+}
+
 export function partyHasAccountingUse(partyId, vouchers = []) {
   if (!partyId) return false;
   return (vouchers || []).some(voucher =>
@@ -343,6 +362,8 @@ export function validatePartyForm(form) {
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Enter a valid email address, or leave it blank.";
   const phone = String(form?.phone || "").trim();
   if (phone && !/^[\d+\-\s()]{6,20}$/.test(phone)) return "Enter a valid phone number, or leave it blank.";
+  const gstinMessage = gstinValidationMessage(form?.gstin);
+  if (gstinMessage) return gstinMessage;
   return "";
 }
 

@@ -25,7 +25,7 @@ const accQuery = (path, token) => supabase.query(path, token, accOpts());
 
 const wrap = promise => promise.catch(err => {
   if (isMissing(err)) {
-    const error = new Error("Run migrations 052–060 in the Supabase SQL editor to enable FinTrack Accounts companies and GST.");
+    const error = new Error("Run migrations 052–063 in the Supabase SQL editor to enable FinTrack Accounts companies and GST.");
     error.code = "MIGRATION_REQUIRED";
     throw error;
   }
@@ -95,6 +95,12 @@ export const createAccountsCompany = (token, payload) =>
     input_name: payload.name,
     input_books_started_on: payload.booksStartedOn || null,
     input_fy_start_month: payload.fyStartMonth || 4,
+  }, token));
+
+export const archiveAccountsCompany = (token, id, reason) =>
+  wrap(supabase.rpc("acc_archive_company", {
+    input_company_id: id,
+    input_reason: reason || null,
   }, token));
 
 export const loadAccountingSettings = token => wrap(

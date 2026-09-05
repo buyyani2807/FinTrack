@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { assembleVouchers } from "../src/features/accounts/accountsVoucherAssembly.js";
 import { pageSlice, groupByKey } from "../src/features/accounts/accountsList.js";
-import { dashboardMetrics } from "../src/features/accounts/accountingReports.js";
+import { dashboardMetrics, invoiceRegister, partyBalances } from "../src/features/accounts/accountingReports.js";
 import { DEFAULT_CHART_OF_ACCOUNTS } from "../src/features/accounts/accountingModel.js";
 
 const accounts = DEFAULT_CHART_OF_ACCOUNTS.map(row => ({ ...row, id: row.code }));
@@ -47,3 +47,34 @@ test("dashboardMetrics stays accurate on synthetic books", () => {
   assert.equal(metrics.todayReceipts, 20000);
   assert.equal(metrics.equationHolds, true);
 });
+
+test("invoice register and party balances stay accurate on 10k sales", () => {
+  const ravi = { id: "ravi", name: "Ravi", partyType: "customer" };
+  const vouchers = Array.from({ length: 10000 }, (_, index) => ({
+    id: `s-${index}`,
+    voucherType: "sales",
+    voucherNumber: `SAL-${String(index + 1).padStart(6, "0")}`,
+    date: "2026-04-01",
+    status: "posted",
+    partyId: "ravi",
+    dueDate: "2026-04-08",
+    lines: [
+      { coaId: "1100", code: "1100", debit: 100, credit: 0, partyId: "ravi" },
+      { coaId: "4300", code: "4300", debit: 0, credit: 100 },
+    ],
+  }));
+  const started = Date.now();
+  const invoices = invoiceRegister(accounts, vouchers, [ravi], {
+    kind: "receivable",
+    today: "2026-04-20",
+    from: "2026-04-01",
+    to: "2026-04-30",
+  });
+  const balances = partyBalances(accounts, vouchers, [ravi], { kind: "receivable", from: "2026-04-01", to: "2026-04-30" });
+  const elapsed = Date.now() - started;
+  assert.equal(invoices.length, 10000);
+  assert.equal(invoices.reduce((sum, row) => sum + row.outstanding, 0), 1000000);
+  assert.equal(balances.find(row => row.id === "ravi").balance, 1000000);
+  assert.ok(elapsed < 15000, `10k soak took ${elapsed}ms`);
+});
+
