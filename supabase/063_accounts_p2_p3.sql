@@ -75,16 +75,16 @@ create or replace function public.acc_save_gst_settings(
   input_state_name text default null,
   input_company_id uuid default null
 ) returns void language plpgsql security definer set search_path = public as $$
-declare org_id uuid; company_id uuid; reg text; gstin text;
+declare org_id uuid; active_company_id uuid; reg text; normalized_gstin text;
 begin
   org_id := public.acc_require_owner();
-  company_id := public.acc_require_company(input_company_id);
+  active_company_id := public.acc_require_company(input_company_id);
   reg := coalesce(nullif(trim(input_gst_registration), ''), 'unregistered');
   if reg not in ('unregistered', 'regular', 'composition') then
     raise exception 'Choose a valid GST registration type';
   end if;
-  gstin := case when reg = 'unregistered' then null else public.acc_assert_gstin(input_gstin) end;
-  if reg <> 'unregistered' and gstin is null then
+  normalized_gstin := case when reg = 'unregistered' then null else public.acc_assert_gstin(input_gstin) end;
+  if reg <> 'unregistered' and normalized_gstin is null then
     raise exception 'GSTIN is required for a registered company';
   end if;
   if reg <> 'unregistered' and coalesce(nullif(trim(input_state_code), ''), '') is null then
@@ -92,14 +92,14 @@ begin
   end if;
   update public.acc_companies
     set gst_registration = reg,
-        gstin = gstin,
+        gstin = normalized_gstin,
         legal_name = nullif(trim(input_legal_name), ''),
         state_code = case when reg = 'unregistered' then null else nullif(trim(input_state_code), '') end,
         state_name = case when reg = 'unregistered' then null else nullif(trim(input_state_name), '') end,
         updated_at = now()
-    where id = company_id and organization_id = org_id;
-  perform public.acc_seed_gst_coa(org_id, company_id);
-  perform public.acc_write_audit(org_id, 'company', company_id, 'gst', null, jsonb_build_object('gst_registration', reg, 'gstin', gstin), 'GST settings saved', company_id);
+    where id = active_company_id and organization_id = org_id;
+  perform public.acc_seed_gst_coa(org_id, active_company_id);
+  perform public.acc_write_audit(org_id, 'company', active_company_id, 'gst', null, jsonb_build_object('gst_registration', reg, 'gstin', normalized_gstin), 'GST settings saved', active_company_id);
 end;
 $$;
 
@@ -108,13 +108,15 @@ $$;
 -- ---------------------------------------------------------------------------
 create or replace function public.acc_set_voucher_due(input_voucher_id uuid, input_due date, input_company_id uuid default null)
 returns void language plpgsql security definer set search_path = public as $$
-declare org_id uuid; company_id uuid; voucher public.acc_vouchers;
+declare org_id uuid; active_company_id uuid; voucher public.acc_vouchers;
 begin
   org_id := public.acc_require_owner();
-  company_id := public.acc_require_company(input_company_id);
-  select * into voucher from public.acc_vouchers where id = input_voucher_id and organization_id = org_id and company_id = company_id;
+  active_company_id := public.acc_require_company(input_company_id);
+  select * into voucher
+    from public.acc_vouchers v
+    where v.id = input_voucher_id and v.organization_id = org_id and v.company_id = active_company_id;
   if voucher.id is null then raise exception 'Voucher not found'; end if;
-  perform public.acc_assert_period_open(org_id, voucher.voucher_date, company_id);
+  perform public.acc_assert_period_open(org_id, voucher.voucher_date, active_company_id);
   update public.acc_vouchers set due_date = input_due where id = voucher.id;
 end;
 $$;
@@ -135,22 +137,22 @@ create or replace function public.acc_set_coa_parent(input_id uuid, input_parent
 returns void language plpgsql security definer set search_path = public as $$
 declare
   org_id uuid;
-  company_id uuid;
+  active_company_id uuid;
   account public.acc_coa;
   parent public.acc_coa;
   walk_id uuid;
   hops integer := 0;
 begin
   org_id := public.acc_require_owner();
-  company_id := public.acc_require_company(input_company_id);
-  select * into account from public.acc_coa where id = input_id and organization_id = org_id and company_id = company_id;
+  active_company_id := public.acc_require_company(input_company_id);
+  select * into account from public.acc_coa a where a.id = input_id and a.organization_id = org_id and a.company_id = active_company_id;
   if account.id is null then raise exception 'Account not found'; end if;
   if input_parent_id is null then
     update public.acc_coa set parent_id = null where id = account.id;
     return;
   end if;
   if input_parent_id = account.id then raise exception 'An account cannot be its own parent'; end if;
-  select * into parent from public.acc_coa where id = input_parent_id and organization_id = org_id and company_id = company_id;
+  select * into parent from public.acc_coa a where a.id = input_parent_id and a.organization_id = org_id and a.company_id = active_company_id;
   if parent.id is null then raise exception 'Parent account not found'; end if;
   if parent.group_type <> account.group_type then raise exception 'Parent must be in the same group'; end if;
   walk_id := parent.parent_id;
@@ -158,9 +160,9 @@ begin
     if walk_id = account.id then raise exception 'Circular parent is not allowed'; end if;
     hops := hops + 1;
     if hops > 50 then raise exception 'Parent chain is too deep'; end if;
-    select parent_id into walk_id
-    from public.acc_coa
-    where id = walk_id and organization_id = org_id and company_id = company_id;
+    select a.parent_id into walk_id
+    from public.acc_coa a
+    where a.id = walk_id and a.organization_id = org_id and a.company_id = active_company_id;
   end loop;
   update public.acc_coa set parent_id = parent.id where id = account.id;
 end;
