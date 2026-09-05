@@ -50,16 +50,16 @@ create or replace function public.acc_reverse_voucher(input_voucher_id uuid, inp
 returns uuid language plpgsql security definer set search_path = public as $$
 declare
   org_id uuid;
-  company_id uuid;
+  active_company_id uuid;
   voucher public.acc_vouchers;
   lines jsonb;
   gst jsonb;
   new_id uuid;
 begin
   org_id := public.acc_require_owner();
-  company_id := public.acc_require_company(input_company_id);
-  select * into voucher from public.acc_vouchers
-    where id = input_voucher_id and organization_id = org_id and company_id = company_id;
+  active_company_id := public.acc_require_company(input_company_id);
+  select * into voucher from public.acc_vouchers v
+    where v.id = input_voucher_id and v.organization_id = org_id and v.company_id = active_company_id;
   if voucher.id is null then raise exception 'Voucher not found'; end if;
   if voucher.status <> 'posted' then raise exception 'Only posted vouchers can be reversed'; end if;
   if voucher.reversed_voucher_id is not null then raise exception 'Voucher is already reversed'; end if;
@@ -92,7 +92,7 @@ begin
   update public.acc_vouchers set original_voucher_id = voucher.id where id = new_id;
   perform public.acc_write_audit(org_id, 'voucher', voucher.id, 'reverse',
     jsonb_build_object('voucher_number', voucher.voucher_number),
-    jsonb_build_object('reversal_id', new_id), input_reason, company_id);
+    jsonb_build_object('reversal_id', new_id), input_reason, active_company_id);
   return new_id;
 end;
 $$;

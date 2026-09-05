@@ -200,15 +200,15 @@ $$;
 
 create or replace function public.acc_assert_period_open(input_org_id uuid, input_date date, input_company_id uuid default null)
 returns void language plpgsql stable security definer set search_path = public as $$
-declare company_id uuid;
+declare active_company_id uuid;
 begin
-  company_id := coalesce(input_company_id, public.acc_request_company_id());
+  active_company_id := coalesce(input_company_id, public.acc_request_company_id());
   if exists (
-    select 1 from public.acc_period_locks
-    where organization_id = input_org_id
-      and company_id = company_id
-      and is_locked
-      and input_date between period_from and period_to
+    select 1 from public.acc_period_locks l
+    where l.organization_id = input_org_id
+      and l.company_id = active_company_id
+      and l.is_locked
+      and input_date between l.period_from and l.period_to
   ) then
     raise exception 'This accounting period is locked';
   end if;
