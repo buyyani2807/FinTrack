@@ -196,6 +196,18 @@ const AccCompareChart = ({ ar, ap, onReceivables, onPayables }) => {
   );
 };
 
+const formatOverviewDate = iso => {
+  if (!iso) return "—";
+  const [year, month, day] = String(iso).split("-").map(Number);
+  if (!year || !month || !day) return String(iso);
+  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+};
+
 function AccOverviewPeriod({ fy, lastFy, from, to, onChange }) {
   const thisFy = from === fy.from && to === fy.to;
   const prevFy = from === lastFy.from && to === lastFy.to;
@@ -238,6 +250,15 @@ function AccOverviewPeriod({ fy, lastFy, from, to, onChange }) {
         </>
       )}
     </div>
+  );
+}
+
+function AccOverviewRange({ from, to }) {
+  return (
+    <p className="acc-ov-range" aria-live="polite">
+      <span className="acc-ov-range-label">Dates</span>
+      <span className="acc-ov-range-value">{formatOverviewDate(from)} → {formatOverviewDate(to)}</span>
+    </p>
   );
 }
 
@@ -1865,6 +1886,7 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
 
           <div className="acc-ov-meta">
             <AccOverviewPeriod fy={fy} lastFy={lastFy} from={rangeFrom} to={rangeTo} onChange={setReportRange} />
+            <AccOverviewRange from={rangeFrom} to={rangeTo} />
             <div className="acc-status-row">
               <span className={`acc-chip ${metrics?.equationHolds ? "ok" : "warn"}`}>{metrics?.equationHolds ? "Books in balance" : "Books out of balance"}</span>
               <span className="acc-chip">Integration {settings?.integrationEnabled ? "ON" : "OFF"}</span>
