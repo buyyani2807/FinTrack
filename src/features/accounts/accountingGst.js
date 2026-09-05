@@ -32,3 +32,40 @@ export function gstStateFromGstin(gstin) {
 export function isIntraGst(companyState, partyState) {
   return Boolean(companyState && partyState && companyState === partyState);
 }
+
+export const GST_CGST_CODES = new Set(["1140", "2210"]);
+export const GST_SGST_CODES = new Set(["1141", "2211"]);
+export const GST_IGST_CODES = new Set(["1142", "2212"]);
+
+const lineAmount = line => Math.round((Math.abs(Number(line?.debit || 0)) + Math.abs(Number(line?.credit || 0))) * 100) / 100;
+const money = value => Math.round((Number(value) || 0) * 100) / 100;
+
+export function gstDocumentTotals(gstLines = []) {
+  return (gstLines || []).reduce((sum, line) => ({
+    cgst: money(sum.cgst + Number(line.cgst ?? line.cgst_amount ?? 0)),
+    sgst: money(sum.sgst + Number(line.sgst ?? line.sgst_amount ?? 0)),
+    igst: money(sum.igst + Number(line.igst ?? line.igst_amount ?? 0)),
+  }), { cgst: 0, sgst: 0, igst: 0 });
+}
+
+export function gstLedgerTotals(lines = []) {
+  return (lines || []).reduce((sum, line) => {
+    const code = String(line.code || "");
+    const amount = lineAmount(line);
+    if (GST_CGST_CODES.has(code)) sum.cgst = money(sum.cgst + amount);
+    if (GST_SGST_CODES.has(code)) sum.sgst = money(sum.sgst + amount);
+    if (GST_IGST_CODES.has(code)) sum.igst = money(sum.igst + amount);
+    return sum;
+  }, { cgst: 0, sgst: 0, igst: 0 });
+}
+
+export function assertGstDocumentMatchesLines(lines = [], gstLines = []) {
+  if (!gstLines?.length) return;
+  const document = gstDocumentTotals(gstLines);
+  const ledgers = gstLedgerTotals(lines);
+  if (document.cgst !== ledgers.cgst || document.sgst !== ledgers.sgst || document.igst !== ledgers.igst) {
+    throw new Error(
+      `GST document does not match tax ledgers. CGST ${document.cgst} / ${ledgers.cgst} · SGST ${document.sgst} / ${ledgers.sgst} · IGST ${document.igst} / ${ledgers.igst}`,
+    );
+  }
+}

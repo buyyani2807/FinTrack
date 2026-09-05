@@ -75,6 +75,7 @@ import {
   invoiceRegister,
   partyBalances,
   partyLedger,
+  partyTotalsFromInvoices,
   profitAndLoss,
   trialBalance,
 } from "./accountingReports.js";
@@ -1597,7 +1598,7 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
   const isInvoicePayables = section === "payables";
   const invoiceAging = invoiceAgingTotals(isInvoicePayables ? apInvoices : arInvoices);
   const pagedInvoiceRows = isInvoicePayables ? pagedApInvoices : pagedArInvoices;
-  const invoicePartyRows = isInvoicePayables ? ap : ar;
+  const invoicePartyRows = partyTotalsFromInvoices(isInvoicePayables ? apInvoices : arInvoices);
 
   const invoiceTable = (rows, kind) => {
     const emptyTitle = kind === "payable" ? "No outstanding payables" : "No outstanding receivables";

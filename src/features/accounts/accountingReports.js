@@ -28,24 +28,32 @@ export function dayBook(vouchers = [], { from, to } = {}) {
 
 export function accountLedger(accounts, vouchers, coaId, { from, to } = {}) {
   const account = (accounts || []).find(item => item.id === coaId || item.code === coaId);
-  if (!account) return { account: null, rows: [] };
+  if (!account) return { account: null, rows: [], opening: 0, closing: 0 };
   const rows = [];
   let running = signedBalance(
     account.groupType,
     account.openingDebit || (account.openingSide === "debit" ? account.openingBalance : 0) || 0,
     account.openingCredit || (account.openingSide === "credit" ? account.openingBalance : 0) || 0,
   );
+  let opening = running;
+  let closing = running;
   const posted = (vouchers || [])
     .filter(voucher => affectsLedgers(voucher))
     .sort((a, b) => `${a.date}${a.voucherNumber}`.localeCompare(`${b.date}${b.voucherNumber}`));
   for (const voucher of posted) {
+    if (to && voucher.date > to) continue;
+    const beforeRange = Boolean(from && voucher.date < from);
     for (const line of voucher.lines || []) {
       if ((line.coaId || line.code) !== (account.id || account.code) && line.coaId !== account.id && line.code !== account.code) continue;
       const debit = roundMoney(line.debit);
       const credit = roundMoney(line.credit);
-      running = signedBalance(account.groupType, debit, credit) + running;
-      running = roundMoney(running);
-      if (!inRange(voucher.date, from, to)) continue;
+      running = roundMoney(signedBalance(account.groupType, debit, credit) + running);
+      if (beforeRange) {
+        opening = running;
+        closing = running;
+        continue;
+      }
+      closing = running;
       rows.push({
         date: voucher.date,
         voucherNumber: voucher.voucherNumber,
@@ -61,7 +69,7 @@ export function accountLedger(accounts, vouchers, coaId, { from, to } = {}) {
       });
     }
   }
-  return { account, rows, closing: running };
+  return { account, rows, opening, closing };
 }
 
 export function trialBalance(accounts, vouchers, range = {}) {
@@ -141,20 +149,20 @@ export function cashFlow(accounts, vouchers, range = {}) {
       outflow = roundMoney(outflow + Number(line.credit || 0));
     }
   }
-  const opening = roundMoney(money.reduce((sum, account) => {
-    const openDebit = account.openingDebit || (account.openingSide === "debit" ? account.openingBalance : 0) || 0;
-    const openCredit = account.openingCredit || (account.openingSide === "credit" ? account.openingBalance : 0) || 0;
-    return sum + signedBalance("asset", openDebit, openCredit);
-  }, 0));
-  const closingRows = ledgerBalances(accounts, vouchers, range).filter(row => isMoneyAccount(row));
-  const closing = roundMoney(closingRows.reduce((sum, row) => sum + row.balance, 0));
+  const ledgers = money.map(account => accountLedger(accounts, vouchers, account.id || account.code, range));
+  const opening = roundMoney(ledgers.reduce((sum, ledger) => sum + Number(ledger.opening || 0), 0));
+  const closing = roundMoney(ledgers.reduce((sum, ledger) => sum + Number(ledger.closing || 0), 0));
+  const closingRows = ledgers.map((ledger, index) => ({
+    ...money[index],
+    balance: ledger.closing,
+  }));
   return {
     opening,
     inflow,
     outflow,
     transfers,
     net: roundMoney(inflow - outflow),
-    closing: closing || roundMoney(opening + inflow - outflow),
+    closing,
     byAccount: closingRows,
   };
 }
@@ -168,7 +176,7 @@ export function partyBalances(accounts, vouchers, parties = [], { kind = "receiv
     byParty.set(party.id, { ...party, debit: 0, credit: 0, balance: 0 });
   }
   for (const voucher of vouchers || []) {
-    if (!affectsLedgers(voucher) || !inRange(voucher.date, from, to)) continue;
+    if (!affectsLedgers(voucher) || (to && voucher.date > to)) continue;
     for (const line of voucher.lines || []) {
       if (!ledgerIds.has(line.coaId) && !ledgerIds.has(line.code)) continue;
       const partyId = line.partyId || voucher.partyId || "unassigned";
@@ -355,8 +363,9 @@ export function partyLedger(accounts, vouchers, party, { from, to, voucherType }
     const debit = roundMoney(lines.reduce((sum, line) => sum + Number(line.debit || 0), 0));
     const credit = roundMoney(lines.reduce((sum, line) => sum + Number(line.credit || 0), 0));
     if (!debit && !credit) continue;
+    if (to && voucher.date > to) continue;
     running = roundMoney(running + debit - credit);
-    if (!inRange(voucher.date, from, to)) continue;
+    if (from && voucher.date < from) continue;
     rows.push({
       date: voucher.date,
       voucherNumber: voucher.voucherNumber,
@@ -367,16 +376,31 @@ export function partyLedger(accounts, vouchers, party, { from, to, voucherType }
       balance: running,
     });
   }
+  const openingRunning = rows.length ? roundMoney(rows[0].balance - rows[0].debit + rows[0].credit) : running;
   const position = partyPosition(party.partyType, running);
+  const openingPosition = partyPosition(party.partyType, openingRunning);
   return {
     party,
-    opening: 0,
+    opening: openingPosition.closing,
     closing: position.closing,
     outstanding: position.outstanding,
     due: position.due,
     advance: position.advance,
     rows,
   };
+}
+
+export function partyTotalsFromInvoices(invoices = []) {
+  const byParty = new Map();
+  for (const row of invoices || []) {
+    const id = row.partyId || row.partyName || "unassigned";
+    if (!byParty.has(id)) byParty.set(id, { id, name: row.partyName || id, balance: 0 });
+    const item = byParty.get(id);
+    item.balance = roundMoney(item.balance + Number(row.outstanding || 0));
+  }
+  return [...byParty.values()]
+    .filter(row => row.balance !== 0)
+    .sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
 }
 
 export function invoiceRegister(accounts, vouchers, parties = [], { kind = "receivable", today, from, to, partyId, outstandingOnly = false } = {}) {
@@ -419,6 +443,7 @@ export function invoiceRegister(accounts, vouchers, parties = [], { kind = "rece
       continue;
     }
     if ((voucher.voucherType === settleType || voucher.voucherType === noteType || isReversalVoucher(voucher)) && hitsLedger) {
+      if (to && voucher.date > to) continue;
       enqueue(voucherPartyId, amount);
     }
   }

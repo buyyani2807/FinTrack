@@ -1,4 +1,5 @@
 -- Query indexes for FinTrack Accounts list and report loads.
+-- Requires 060_accounts_gst.sql before the acc_gst_lines index.
 -- Safe to re-run. Does not change posting, balances, or RLS.
 
 create index if not exists acc_voucher_lines_company_voucher_idx

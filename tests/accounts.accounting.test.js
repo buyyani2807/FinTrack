@@ -11,6 +11,7 @@ import {
   assertCanDeleteLedger,
   assertCanChangePartyType,
   assertCanDeleteParty,
+  assertGstDocumentMatchesLines,
   buildIntegrationVouchers,
   buildVoucher,
   cancelVoucher,
@@ -42,6 +43,7 @@ import {
   voucherTotals,
 } from "../src/features/accounts/accountingModel.js";
 import {
+  accountLedger,
   balanceSheet,
   bankVoucherLines,
   cashFlow,
@@ -52,6 +54,7 @@ import {
   matchBankLine,
   partyBalances,
   partyLedger,
+  partyTotalsFromInvoices,
   profitAndLoss,
   trialBalance,
 } from "../src/features/accounts/accountingReports.js";
@@ -727,4 +730,80 @@ test("rate 0 or missing GST keeps the old two-line sale", () => {
   assert.equal(zero.length, 2);
   assert.equal(none.find(line => line.code === SYSTEM_CODES.sales).credit, 10000);
   assert.equal(zero.find(line => line.code === SYSTEM_CODES.receivable).debit, 10000);
+});
+
+test("account ledger closing stops at the To date", () => {
+  const april = posted("sales", "2026-04-01", saleLines({ accounts, amount: 1000, settlement: "paid", moneyMode: "cash" }), { n: 1 });
+  const may = posted("sales", "2026-05-01", saleLines({ accounts, amount: 4000, settlement: "paid", moneyMode: "cash" }), { n: 2 });
+  const ledger = accountLedger(accounts, [april, may], "1000", { from: "2026-04-01", to: "2026-04-30" });
+  assert.equal(ledger.rows.at(-1).balance, 1000);
+  assert.equal(ledger.closing, 1000);
+  assert.equal(ledger.opening, 0);
+});
+
+test("cash flow opening includes cash movement before the range", () => {
+  const capital = posted("journal", "2026-04-01", [
+    { coaId: "1000", code: "1000", debit: 10000, credit: 0 },
+    { coaId: "3000", code: "3000", debit: 0, credit: 10000 },
+  ], { n: 1 });
+  const sale = posted("sales", "2026-05-02", saleLines({ accounts, amount: 2000, settlement: "paid", moneyMode: "cash" }), { n: 1 });
+  const flow = cashFlow(accounts, [capital, sale], { from: "2026-05-01", to: "2026-05-31" });
+  assert.equal(flow.opening, 10000);
+  assert.equal(flow.inflow, 2000);
+  assert.equal(flow.closing, 12000);
+});
+
+test("party ledger opening is the brought-forward balance for a mid-period window", () => {
+  const ravi = { id: "ravi", name: "Ravi", partyType: "customer" };
+  const sale = posted("sales", "2026-04-01", saleLines({ accounts, amount: 9000, settlement: "credit", partyId: "ravi" }), { n: 1, partyId: "ravi" });
+  const receipt = posted("receipt", "2026-05-02", receiptLines({ accounts, cash: 1000, partyId: "ravi" }), { n: 1, partyId: "ravi" });
+  const ledger = partyLedger(accounts, [sale, receipt], ravi, { from: "2026-05-01", to: "2026-05-31" });
+  assert.equal(ledger.opening, 9000);
+  assert.equal(ledger.rows[0].balance, 8000);
+  assert.equal(ledger.outstanding, 8000);
+  assert.equal(ledger.closing, 8000);
+});
+
+test("party outstanding as of To matches invoice outstanding in the same window", () => {
+  const ravi = { id: "ravi", name: "Ravi", partyType: "customer" };
+  const sale = posted("sales", "2026-04-01", saleLines({ accounts, amount: 10000, settlement: "credit", partyId: "ravi" }), { n: 1, partyId: "ravi" });
+  const receipt = posted("receipt", "2026-05-02", receiptLines({ accounts, cash: 4000, partyId: "ravi" }), { n: 1, partyId: "ravi" });
+  const books = [sale, receipt];
+  const mayParties = partyBalances(accounts, books, [ravi], { kind: "receivable", from: "2026-05-01", to: "2026-05-31" });
+  const invoices = invoiceRegister(accounts, books, [ravi], {
+    kind: "receivable", today: "2026-05-03", from: "2026-04-01", to: "2026-05-31",
+  });
+  assert.equal(mayParties.find(row => row.id === "ravi").balance, 6000);
+  assert.equal(invoices[0].outstanding, 6000);
+  assert.equal(partyTotalsFromInvoices(invoices).find(row => row.id === "ravi").balance, 6000);
+  const aprilInvoices = invoiceRegister(accounts, books, [ravi], {
+    kind: "receivable", today: "2026-04-30", from: "2026-04-01", to: "2026-04-30",
+  });
+  assert.equal(aprilInvoices[0].outstanding, 10000);
+  assert.equal(partyBalances(accounts, books, [ravi], { kind: "receivable", to: "2026-04-30" })[0].balance, 10000);
+});
+
+test("GST document must match posted tax ledgers and reversals copy GST lines", () => {
+  const draft = simpleEntryDraft({ kind: "sale", accounts, date: "2026-04-08", amount: 10000, partyId: "ravi", settlement: "credit", gst: gst18Intra });
+  assert.throws(
+    () => assertGstDocumentMatchesLines(
+      [{ code: SYSTEM_CODES.receivable, debit: 10000, credit: 0 }, { code: SYSTEM_CODES.sales, debit: 0, credit: 10000 }],
+      draft.gstLines,
+    ),
+    /GST document does not match tax ledgers/,
+  );
+  const sale = buildVoucher({
+    voucherType: "sales",
+    voucherNumber: "SALE-0099",
+    date: "2026-04-08",
+    lines: draft.lines,
+    gstLines: draft.gstLines,
+    partyId: "ravi",
+  });
+  const reversal = reverseVoucher(sale, { date: "2026-04-09", sequence: 100, reason: "Wrong GST invoice" });
+  assert.equal(reversal.gstLines.length, 1);
+  assert.equal(reversal.gstLines[0].cgst_amount ?? reversal.gstLines[0].cgst, 900);
+  const report = gstBooksReport([sale, reversal], { from: "2026-04-01", to: "2026-04-30" });
+  assert.equal(report.outputTax, 0);
+  assert.equal(report.netPayable, 0);
 });

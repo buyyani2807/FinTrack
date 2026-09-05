@@ -1,3 +1,5 @@
+import { assertGstDocumentMatchesLines } from "./accountingGst.js";
+
 export const VOUCHER_TYPES = {
   receipt: { id: "receipt", code: "RCPT", label: "Receipt" },
   payment: { id: "payment", code: "PAY", label: "Payment" },
@@ -114,7 +116,7 @@ export const SYSTEM_CODES = {
   outputIgst: "2212",
 };
 
-export { GST_RATES, INDIA_STATES, gstStateFromGstin, isIntraGst } from "./accountingGst.js";
+export { GST_RATES, INDIA_STATES, assertGstDocumentMatchesLines, gstStateFromGstin, isIntraGst } from "./accountingGst.js";
 
 export function gstSplit({ taxable, rate, intra }) {
   const value = roundMoney(taxable);
@@ -466,6 +468,7 @@ export function buildVoucher({
   date,
   narration = "",
   lines,
+  gstLines = null,
   status = VOUCHER_STATUS.posted,
   partyId = null,
   dueDate = null,
@@ -479,6 +482,7 @@ export function buildVoucher({
   if (!VOUCHER_TYPES[voucherType]) throw new Error("Unknown voucher type");
   assertVoucherDateNotFuture(date, today);
   assertBalancedVoucher(lines);
+  if (gstLines?.length) assertGstDocumentMatchesLines(lines, gstLines);
   return {
     id,
     voucherType,
@@ -495,6 +499,7 @@ export function buildVoucher({
       credit: roundMoney(line.credit),
       description: line.description || narration,
     })),
+    gstLines: gstLines?.length ? gstLines : [],
     status,
     partyId,
     sourceModule,
@@ -538,6 +543,7 @@ export function reverseVoucher(voucher, { date, reason = "", locks = [], sequenc
     date: date || voucher.date,
     narration: reason || `Reversal of ${voucher.voucherNumber}`,
     lines: reversalLines,
+    gstLines: voucher.gstLines?.length ? voucher.gstLines : null,
     status: VOUCHER_STATUS.posted,
     partyId: voucher.partyId,
     sourceModule: "accounts",
