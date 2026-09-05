@@ -2,7 +2,50 @@
 -- Live errors seen in owner smoke:
 --   column reference "gstin" is ambiguous       (acc_save_gst_settings)
 --   column reference "company_id" is ambiguous  (acc_post_voucher party/coa checks)
+--   column reference "company_id" is ambiguous  (acc_set_voucher_due after credit sale)
 -- Apply after 063_accounts_p2_p3.sql on the linked Supabase project.
+--
+-- After running this file, verify in SQL Editor (expect one row, post_fixed=true, post_still_buggy=false):
+--   select p.oid::regprocedure::text as sig,
+--     position('active_company_id' in pg_get_functiondef(p.oid)) > 0 as post_fixed,
+--     position('company_id = company_id' in pg_get_functiondef(p.oid)) > 0 as post_still_buggy
+--   from pg_proc p
+--   join pg_namespace n on n.oid = p.pronamespace
+--   where n.nspname = 'public' and p.proname = 'acc_post_voucher';
+--
+-- Also list every overload (should be exactly one):
+--   select p.oid::regprocedure::text
+--   from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+--   where n.nspname = 'public' and p.proname = 'acc_post_voucher';
+--
+-- Find any remaining Accounts RPC that still has company_id = company_id:
+--   select p.oid::regprocedure::text as still_buggy
+--   from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+--   where n.nspname = 'public' and p.proname like 'acc_%'
+--     and position('company_id = company_id' in pg_get_functiondef(p.oid)) > 0;
+--
+-- After apply, refresh PostgREST:
+--   notify pgrst, 'reload schema';
+
+-- ---------------------------------------------------------------------------
+-- Helper: require company without shadowing column names
+-- ---------------------------------------------------------------------------
+create or replace function public.acc_require_company(input_company_id uuid default null)
+returns uuid language plpgsql stable security definer set search_path = public as $$
+declare org_id uuid; active_company_id uuid;
+begin
+  org_id := public.acc_require_owner();
+  active_company_id := coalesce(input_company_id, public.acc_request_company_id());
+  if active_company_id is null then raise exception 'Choose an Accounts company'; end if;
+  if not exists (
+    select 1 from public.acc_companies c
+    where c.id = active_company_id and c.organization_id = org_id and c.status = 'active'
+  ) then
+    raise exception 'Accounts company not found';
+  end if;
+  return active_company_id;
+end;
+$$;
 
 -- ---------------------------------------------------------------------------
 -- GST settings: rename locals so UPDATE ... SET gstin = ... is unambiguous
@@ -111,8 +154,12 @@ $$;
 grant execute on function public.acc_update_party(uuid, text, text, text, text, text, text, text, uuid, text, text) to authenticated;
 
 -- ---------------------------------------------------------------------------
--- Post voucher: party/coa membership checks used company_id = company_id
+-- Post voucher: drop ALL known overloads so PostgREST cannot call a stale body
 -- ---------------------------------------------------------------------------
+drop function if exists public.acc_post_voucher(text, date, text, jsonb, uuid, text, text, uuid);
+drop function if exists public.acc_post_voucher(text, date, text, jsonb, uuid, text, text, uuid, uuid);
+drop function if exists public.acc_post_voucher(text, date, text, jsonb, uuid, text, text, uuid, uuid, jsonb);
+
 create or replace function public.acc_post_voucher(
   input_voucher_type text,
   input_date date,
@@ -255,6 +302,29 @@ $$;
 grant execute on function public.acc_post_voucher(text, date, text, jsonb, uuid, text, text, uuid, uuid, jsonb) to authenticated;
 
 -- ---------------------------------------------------------------------------
+-- Due date after post: drop old overloads, then recreate without shadowing
+-- ---------------------------------------------------------------------------
+drop function if exists public.acc_set_voucher_due(uuid, date);
+drop function if exists public.acc_set_voucher_due(uuid, date, uuid);
+
+create or replace function public.acc_set_voucher_due(input_voucher_id uuid, input_due date, input_company_id uuid default null)
+returns void language plpgsql security definer set search_path = public as $$
+declare org_id uuid; active_company_id uuid; voucher public.acc_vouchers;
+begin
+  org_id := public.acc_require_owner();
+  active_company_id := public.acc_require_company(input_company_id);
+  select * into voucher
+    from public.acc_vouchers v
+    where v.id = input_voucher_id and v.organization_id = org_id and v.company_id = active_company_id;
+  if voucher.id is null then raise exception 'Voucher not found'; end if;
+  perform public.acc_assert_period_open(org_id, voucher.voucher_date, active_company_id);
+  update public.acc_vouchers set due_date = input_due where id = voucher.id;
+end;
+$$;
+
+grant execute on function public.acc_set_voucher_due(uuid, date, uuid) to authenticated;
+
+-- ---------------------------------------------------------------------------
 -- Reopen period: WHERE company_id = company_id was ambiguous
 -- ---------------------------------------------------------------------------
 create or replace function public.acc_reopen_period(input_lock_id uuid, input_reason text, input_company_id uuid default null)
@@ -276,3 +346,5 @@ end;
 $$;
 
 grant execute on function public.acc_reopen_period(uuid, text, uuid) to authenticated;
+
+notify pgrst, 'reload schema';
