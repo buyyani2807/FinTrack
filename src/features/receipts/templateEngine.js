@@ -34,6 +34,25 @@ Please make the payment on or before the due date.
 Thank you,
 {company_name}
 {company_phone}`,
+  sales_invoice: `Hi {customer_name},
+Thank you for your purchase.
+Invoice No: {invoice_number}
+Date: {invoice_date}
+Amount: {amount}
+Due date: {due_date}
+Settlement: {settlement}
+Thank you,
+{company_name}
+{company_phone}`,
+  ar_reminder: `Hi {customer_name},
+This is a reminder that invoice {invoice_number} for {amount} is outstanding.
+Due date: {due_date}
+Outstanding: {outstanding}
+Days overdue: {days_overdue}
+Please arrange payment at the earliest.
+Thank you,
+{company_name}
+{company_phone}`,
 };
 
 export function resolveWhatsAppTemplate(settings = {}, key = "payment_receipt") {

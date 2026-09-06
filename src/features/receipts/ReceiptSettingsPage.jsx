@@ -86,11 +86,13 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved }) {
       </div>
       <strong className="spacer">WhatsApp templates</strong>
       <p className="small">WhatsApp sends a short message from these templates. View/PDF shows the full receipt.</p>
-      <p className="small">Variables: {"{customer_name} {amount} {receipt_number} {account_id} {payment_date} {payment_mode} {remaining_balance} {company_name} {company_phone} {due_date} {scheme_name} {chit_type} {month_number} {total_months}"}</p>
+      <p className="small">Variables: {"{customer_name} {amount} {receipt_number} {account_id} {payment_date} {payment_mode} {remaining_balance} {company_name} {company_phone} {due_date} {scheme_name} {chit_type} {month_number} {total_months} {invoice_number} {invoice_date} {outstanding} {days_overdue} {settlement}"}</p>
       <div className="form spacer">
         <Field className="span" label="Payment receipt"><textarea rows={8} value={form.whatsappTemplates.payment_receipt || ""} onChange={e => setTemplate("payment_receipt", e.target.value)} /></Field>
         <Field className="span" label="Monthly finance reminder"><textarea rows={7} value={form.whatsappTemplates.monthly_reminder || ""} onChange={e => setTemplate("monthly_reminder", e.target.value)} /></Field>
         <Field className="span" label="Chit fund reminder"><textarea rows={8} value={form.whatsappTemplates.chit_reminder || ""} onChange={e => setTemplate("chit_reminder", e.target.value)} /></Field>
+        <Field className="span" label="Accounts sales invoice"><textarea rows={8} value={form.whatsappTemplates.sales_invoice || ""} onChange={e => setTemplate("sales_invoice", e.target.value)} /></Field>
+        <Field className="span" label="Accounts receivable reminder"><textarea rows={7} value={form.whatsappTemplates.ar_reminder || ""} onChange={e => setTemplate("ar_reminder", e.target.value)} /></Field>
       </div>
       <strong className="spacer">Payment reminders</strong>
       <div className="grid two spacer">

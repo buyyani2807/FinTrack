@@ -2502,6 +2502,22 @@ html:has(.accounts-dashboard) .financier-nav {
   padding-top: 4px;
 }
 
+.accounts-dashboard .acc-sales-invoice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.accounts-dashboard .acc-invoice-remind {
+  white-space: nowrap;
+}
+
+.accounts-dashboard .acc-invoice-remind .btn.whatsapp {
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
 .accounts-dashboard .acc-invoice-parties-label {
   margin-right: 4px;
   color: var(--acc-muted);

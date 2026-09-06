@@ -97,6 +97,9 @@ import { AccIntelligenceBrief } from "./AccIntelligenceBrief.jsx";
 import { previousComparisonRange } from "./accountsIntelligence.js";
 import { downloadAccountsCsv, downloadAccountsExcel, downloadAccountsPdf } from "./accountingExport.js";
 import { formatInr } from "../../lib/formatMoney.js";
+import { loadOrganizationSettings } from "../../lib/financeRepository.js";
+import { buildSalesInvoice } from "./salesInvoiceModel.js";
+import { ArReminderButton, SalesInvoiceActions, SalesInvoiceSuccessModal, SalesInvoiceViewerModal } from "./SalesInvoiceActions.jsx";
 
 const money = formatInr;
 const Field = ({ label, children, required, className }) => (
@@ -924,13 +927,17 @@ function CoaFormFields({ form, setForm, accounts = [] }) {
   </div>;
 }
 
-export function AccountsModule({ token, close, logout, workspace = {} }) {
+export function AccountsModule({ token, close, logout, workspace = {}, orgSettings: orgSettingsProp = null }) {
   const [section, setSection] = useState("overview");
   const [reportTab, setReportTab] = useState("daybook");
   const [navExpanded, setNavExpanded] = useState(() => {
     try { return sessionStorage.getItem(NAV_STORAGE_KEY) === "expanded"; } catch { return false; }
   });
   const [settings, setSettings] = useState(null);
+  const [orgSettings, setOrgSettings] = useState(orgSettingsProp || {});
+  const [pendingSalesInvoiceId, setPendingSalesInvoiceId] = useState(null);
+  const [salesInvoiceSuccess, setSalesInvoiceSuccess] = useState(null);
+  const [salesInvoiceView, setSalesInvoiceView] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [parties, setParties] = useState([]);
   const [vouchers, setVouchers] = useState([]);
@@ -1080,6 +1087,36 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
   }, [token]);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  useEffect(() => {
+    if (orgSettingsProp && Object.keys(orgSettingsProp).length) setOrgSettings(orgSettingsProp);
+  }, [orgSettingsProp]);
+
+  useEffect(() => {
+    if (!token || (orgSettingsProp && Object.keys(orgSettingsProp).length)) return undefined;
+    let cancelled = false;
+    loadOrganizationSettings(token)
+      .then(next => { if (!cancelled && next) setOrgSettings(next); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [token, orgSettingsProp]);
+
+  useEffect(() => {
+    if (!pendingSalesInvoiceId) return;
+    const voucher = vouchers.find(item => item.id === pendingSalesInvoiceId);
+    if (!voucher || voucher.voucherType !== "sales") return;
+    const party = parties.find(item => item.id === voucher.partyId) || null;
+    const company = companies.find(item => item.id === activeCompanyId) || companies[0] || null;
+    setSalesInvoiceSuccess(buildSalesInvoice({
+      voucher,
+      party,
+      accounts,
+      company,
+      settings: orgSettings,
+      workspace,
+    }));
+    setPendingSalesInvoiceId(null);
+  }, [pendingSalesInvoiceId, vouchers, parties, accounts, companies, activeCompanyId, orgSettings, workspace]);
 
   useEffect(() => {
     if (!token || !expandedVoucherId || migrationRequired) {
@@ -1374,10 +1411,11 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
       })),
     };
     assertBalancedVoucher(payload.lines);
-    await postVoucher(token, payload);
+    const voucherId = await postVoucher(token, payload);
     setShowVoucher(false);
     setVoucherForm(emptyVoucherForm());
     setLines([emptyLine(), emptyLine()]);
+    if (voucherType === "sales") setPendingSalesInvoiceId(voucherId);
   }, "Voucher saved successfully");
 
   const openVoucher = () => {
@@ -1600,11 +1638,24 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
         itcEligible: simpleKind === "purchase" || simpleKind === "debit_note",
       } : undefined,
     });
-    await postVoucher(token, draft);
+    const voucherId = await postVoucher(token, draft);
     setShowSimple(false);
     setSimpleForm(emptySimpleForm());
+    if (simpleKind === "sale") setPendingSalesInvoiceId(voucherId);
   }, `${SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry"} saved successfully`);
 
+  const openSalesInvoice = voucher => {
+    if (!voucher || voucher.voucherType !== "sales") return;
+    const party = parties.find(item => item.id === voucher.partyId) || null;
+    setSalesInvoiceView(buildSalesInvoice({
+      voucher,
+      party,
+      accounts,
+      company: activeCompany,
+      settings: orgSettings,
+      workspace,
+    }));
+  };
   const openCoa = account => {
     if (account) {
       setCoaForm({
@@ -1800,6 +1851,7 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
               <th className="acc-num">Outstanding</th>
               <th className="acc-num">Days overdue</th>
               <th>Status</th>
+              {kind !== "payable" && <th>Remind</th>}
             </tr>
           </thead>
           <tbody>
@@ -1816,6 +1868,11 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
                 <td className={`acc-num acc-invoice-out${row.status === "Overdue" ? " is-overdue" : row.outstanding > 0 ? "" : " is-clear"}`}>{money(row.outstanding)}</td>
                 <td className="acc-num">{row.daysOverdue || 0}</td>
                 <td><span className={`acc-status-pill ${invoiceStatusTone(row.status)}`}>{row.status}</span></td>
+                {kind !== "payable" && (
+                  <td className="acc-invoice-remind">
+                    <ArReminderButton row={row} settings={orgSettings} company={activeCompany} compact />
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -1959,6 +2016,9 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
                 <div className="accounts-entry-amounts">
                   <span>{money(voucherTotals(voucher.lines).debit)}</span>
                   <button type="button" className="btn" onClick={() => setExpandedVoucherId(current => current === voucher.id ? null : voucher.id)}>{expandedVoucherId === voucher.id ? "Hide lines" : "Lines"}</button>
+                  {voucher.voucherType === "sales" && voucher.status === "posted" && (
+                    <button type="button" className="btn" onClick={() => openSalesInvoice(voucher)}>Invoice</button>
+                  )}
                   <button type="button" className="btn" onClick={() => duplicateVoucher(voucher)}>Duplicate</button>
                   {voucher.status === "posted" && <>
                     <button type="button" className="btn" disabled={saving} onClick={() => askReason("Reverse voucher", "Post reversal", reason => run(() => reverseVoucher(token, voucher.id, todayIso(), reason), "Reversal posted."))}>Reverse</button>
@@ -1971,6 +2031,22 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
                   <button type="button" className="btn" disabled={shownVouchers.findIndex(item => item.id === voucher.id) <= 0} onClick={() => showAdjacentVoucher(voucher.id, -1)}>Previous</button>
                   <button type="button" className="btn" disabled={shownVouchers.findIndex(item => item.id === voucher.id) >= shownVouchers.length - 1} onClick={() => showAdjacentVoucher(voucher.id, 1)}>Next</button>
                 </div>
+                {voucher.voucherType === "sales" && (
+                  <div className="acc-sales-invoice-actions spacer">
+                    <SalesInvoiceActions
+                      invoice={buildSalesInvoice({
+                        voucher,
+                        party: parties.find(item => item.id === voucher.partyId) || null,
+                        accounts,
+                        company: activeCompany,
+                        settings: orgSettings,
+                        workspace,
+                      })}
+                      settings={orgSettings}
+                      compact
+                    />
+                  </div>
+                )}
                 <div className="table spacer"><table><thead><tr><th>Account</th><th>Debit</th><th>Credit</th></tr></thead><tbody>
                   {voucher.lines.map(line => <tr key={line.id}><td>{line.code} {line.name}</td><td>{line.debit ? money(line.debit) : ""}</td><td>{line.credit ? money(line.credit) : ""}</td></tr>)}
                 </tbody></table></div>
@@ -2633,6 +2709,20 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
         onClose={() => { setReasonDialog(null); setReasonText(""); }}
         onConfirm={submitReason}
       />}
+      {salesInvoiceSuccess && (
+        <SalesInvoiceSuccessModal
+          invoice={salesInvoiceSuccess}
+          settings={orgSettings}
+          close={() => setSalesInvoiceSuccess(null)}
+        />
+      )}
+      {salesInvoiceView && (
+        <SalesInvoiceViewerModal
+          invoice={salesInvoiceView}
+          settings={orgSettings}
+          close={() => setSalesInvoiceView(null)}
+        />
+      )}
       {confirmLogout && <Modal title="Log out of Accounts?" close={() => !signingOut && setConfirmLogout(false)} actions={<div className="tabs spacer"><button type="button" className="btn" disabled={signingOut} onClick={() => setConfirmLogout(false)}>Stay signed in</button><button type="button" className="btn danger" disabled={signingOut} onClick={confirmAccountsLogout}>{signingOut ? "Signing out…" : "Log out"}</button></div>}>
         <p className="copy">This ends your FinTrack session. You will need to sign in again to open Accounts or any other module.</p>
       </Modal>}
