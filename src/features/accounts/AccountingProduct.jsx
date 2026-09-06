@@ -1508,6 +1508,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
   );
 
   const run = async (work, success) => {
+    let ok = false;
     const outcome = await submitLock.run(async () => {
       setSaving(true);
       setError("");
@@ -1516,13 +1517,15 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
         await work();
         setNotice(success);
         await refresh();
+        ok = true;
       } catch (err) {
         setError(err.message || "Could not save.");
       } finally {
         setSaving(false);
       }
     });
-    if (outcome.skipped) return;
+    if (outcome.skipped) return false;
+    return ok;
   };
 
   const submitVoucher = () => run(async () => {
@@ -2821,7 +2824,10 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
               onSaveItem={form => run(() => upsertItem(token, form), form.id ? "Item updated." : "Item created.")}
               onDeleteItem={item => run(() => deleteItem(token, item.id), "Item deleted.")}
               onSetItemActive={(id, active) => run(() => setItemActive(token, id, active), active ? "Item reactivated." : "Item deactivated.")}
-              onSaveCategory={payload => run(() => upsertItemCategory(token, payload), "Category saved.")}
+              onSaveCategory={async payload => {
+                const ok = await run(() => upsertItemCategory(token, payload), "Category saved.");
+                if (!ok) throw new Error("Could not create category. Confirm migration 067 is applied, then try again.");
+              }}
               onDeleteCategory={id => run(() => deleteItemCategory(token, id), "Category deleted.")}
               onAdjustStock={payload => run(() => adjustStock(token, payload), "Stock adjustment saved.")}
             />

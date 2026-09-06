@@ -38,6 +38,7 @@ export function AccItemsSetup({
   const [showForm, setShowForm] = useState(false);
   const [detailId, setDetailId] = useState(null);
   const [categoryName, setCategoryName] = useState("");
+  const [categoryError, setCategoryError] = useState("");
   const [adjust, setAdjust] = useState({ itemId: "", date: todayIso(), quantityDelta: "", reasonNote: "" });
   const [error, setError] = useState("");
 
@@ -189,12 +190,51 @@ export function AccItemsSetup({
       </div>
 
       <div className="acc-items-side-grid">
-        <div className="card">
+        <div className="card acc-item-categories-card">
           <strong>Categories</strong>
-          <div className="row spacer">
-            <input value={categoryName} placeholder="e.g. Construction Materials" onChange={event => setCategoryName(event.target.value)} />
-            <button type="button" className="btn" disabled={saving || !categoryName.trim()} onClick={async () => { await onSaveCategory({ name: categoryName.trim() }); setCategoryName(""); }}>Add</button>
-          </div>
+          <p className="small">Create a category here, then assign it when you add an item.</p>
+          <label className="accounts-filter-field acc-category-create">
+            <span className="small">New category name</span>
+            <div className="acc-category-create-row">
+              <input
+                value={categoryName}
+                placeholder="e.g. Construction Materials"
+                onChange={event => { setCategoryName(event.target.value); setCategoryError(""); }}
+                onKeyDown={async event => {
+                  if (event.key !== "Enter") return;
+                  event.preventDefault();
+                  const name = categoryName.trim();
+                  if (!name || saving) return;
+                  setCategoryError("");
+                  try {
+                    await onSaveCategory({ name });
+                    setCategoryName("");
+                  } catch (err) {
+                    setCategoryError(err?.message || "Could not create category. Apply migration 067 if Items RPCs are missing.");
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="btn primary"
+                disabled={saving || !categoryName.trim()}
+                onClick={async () => {
+                  const name = categoryName.trim();
+                  if (!name) return;
+                  setCategoryError("");
+                  try {
+                    await onSaveCategory({ name });
+                    setCategoryName("");
+                  } catch (err) {
+                    setCategoryError(err?.message || "Could not create category. Apply migration 067 if Items RPCs are missing.");
+                  }
+                }}
+              >
+                Create category
+              </button>
+            </div>
+          </label>
+          {categoryError && <p className="red small">{categoryError}</p>}
           <ul className="acc-item-cat-list">
             {categories.map(category => (
               <li key={category.id}>
@@ -202,7 +242,7 @@ export function AccItemsSetup({
                 <button type="button" className="btn danger" disabled={saving} onClick={() => onDeleteCategory(category.id)}>Delete</button>
               </li>
             ))}
-            {!categories.length && <li className="small">No categories yet.</li>}
+            {!categories.length && <li className="small">No categories yet — type a name above and click Create category.</li>}
           </ul>
         </div>
 

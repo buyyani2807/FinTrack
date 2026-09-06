@@ -2528,10 +2528,32 @@ html:has(.accounts-dashboard) .financier-nav {
   margin-top: 12px;
 }
 
-.accounts-dashboard .acc-item-cat-list,
-.accounts-dashboard .acc-low-stock ul {
-  margin: 8px 0 0;
-  padding-left: 18px;
+.accounts-dashboard .acc-category-create {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 8px;
+}
+
+.accounts-dashboard .acc-category-create-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.accounts-dashboard .acc-category-create-row input {
+  flex: 1 1 160px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--acc-line);
+  border-radius: 10px;
+  background: var(--acc-surface);
+  color: var(--acc-text);
+}
+
+.accounts-dashboard .acc-category-create-row .btn.primary {
+  min-height: 40px;
+  white-space: nowrap;
 }
 
 .accounts-dashboard .acc-item-cat-list li {
