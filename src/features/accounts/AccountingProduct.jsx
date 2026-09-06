@@ -208,37 +208,74 @@ const formatOverviewDate = iso => {
   });
 };
 
-function AccOverviewPeriod({ fy, lastFy, from, to, onChange }) {
+function AccOverviewContextBar({ fy, lastFy, from, to, onChange, equationHolds, integrationEnabled }) {
   const thisFy = from === fy.from && to === fy.to;
   const prevFy = from === lastFy.from && to === lastFy.to;
   const [customOpen, setCustomOpen] = useState(false);
   const mode = customOpen || (!thisFy && !prevFy) ? "custom" : thisFy ? "this" : "last";
+
+  const setMode = next => {
+    if (next === "this") {
+      setCustomOpen(false);
+      onChange(fy.from, fy.to);
+      return;
+    }
+    if (next === "last") {
+      setCustomOpen(false);
+      onChange(lastFy.from, lastFy.to);
+      return;
+    }
+    setCustomOpen(true);
+  };
+
   return (
-    <div className="acc-ov-period">
-      <label className="acc-ov-period-field">
-        <span>Period</span>
-        <select
-          aria-label="Report period"
-          value={mode}
-          onChange={event => {
-            if (event.target.value === "this") {
-              setCustomOpen(false);
-              onChange(fy.from, fy.to);
-            } else if (event.target.value === "last") {
-              setCustomOpen(false);
-              onChange(lastFy.from, lastFy.to);
-            } else {
-              setCustomOpen(true);
-            }
-          }}
-        >
-          <option value="this">{fy.label}</option>
-          <option value="last">{lastFy.label}</option>
-          <option value="custom">Custom</option>
-        </select>
-      </label>
+    <section className="acc-ov-context" aria-label="Overview reporting window">
+      <div className="acc-ov-context-main">
+        <div className="acc-ov-context-period">
+          <span className="acc-ov-context-kicker">Report period</span>
+          <div className="acc-ov-seg" role="group" aria-label="Report period">
+            <button type="button" className={mode === "this" ? "active" : ""} aria-pressed={mode === "this"} onClick={() => setMode("this")}>
+              {fy.label}
+            </button>
+            <button type="button" className={mode === "last" ? "active" : ""} aria-pressed={mode === "last"} onClick={() => setMode("last")}>
+              {lastFy.label}
+            </button>
+            <button type="button" className={mode === "custom" ? "active" : ""} aria-pressed={mode === "custom"} onClick={() => setMode("custom")}>
+              Custom
+            </button>
+          </div>
+        </div>
+
+        <div className="acc-ov-context-dates" aria-live="polite">
+          <span className="acc-ov-context-kicker">Date range</span>
+          <strong>
+            <time dateTime={from}>{formatOverviewDate(from)}</time>
+            <span className="acc-ov-context-arrow" aria-hidden="true">→</span>
+            <time dateTime={to}>{formatOverviewDate(to)}</time>
+          </strong>
+        </div>
+
+        <div className="acc-ov-context-status" aria-label="Books status">
+          <span
+            className={`acc-chip ${equationHolds ? "ok" : "warn"}`}
+            title={equationHolds ? "Assets equal liabilities plus equity for these books." : "Assets do not equal liabilities plus equity. Check recent vouchers."}
+          >
+            <span className="acc-chip-dot" aria-hidden="true" />
+            {equationHolds ? "Books balanced" : "Out of balance"}
+          </span>
+          <span
+            className={`acc-chip ${integrationEnabled ? "info" : ""}`}
+            title={integrationEnabled
+              ? "Daily, Monthly, Chit, and Cashbook can sync into the primary Accounts company."
+              : "Accounts stays independent. Finance modules are not syncing into these books."}
+          >
+            {integrationEnabled ? "Finance sync on" : "Finance sync off"}
+          </span>
+        </div>
+      </div>
+
       {mode === "custom" && (
-        <>
+        <div className="acc-ov-context-custom">
           <label className="acc-ov-period-field">
             <span>From</span>
             <input type="date" value={from} onChange={event => onChange(event.target.value, to)} />
@@ -247,18 +284,9 @@ function AccOverviewPeriod({ fy, lastFy, from, to, onChange }) {
             <span>To</span>
             <input type="date" value={to} onChange={event => onChange(from, event.target.value)} />
           </label>
-        </>
+        </div>
       )}
-    </div>
-  );
-}
-
-function AccOverviewRange({ from, to }) {
-  return (
-    <p className="acc-ov-range" aria-live="polite">
-      <span className="acc-ov-range-label">Dates</span>
-      <span className="acc-ov-range-value">{formatOverviewDate(from)} → {formatOverviewDate(to)}</span>
-    </p>
+    </section>
   );
 }
 
@@ -1851,6 +1879,16 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
             <button type="button" className="btn primary" disabled={saving} onClick={() => run(() => initializeAccounting(token, setupForm), "Accounts opened.")}>{saving ? "Saving…" : "Create chart of accounts"}</button>
           </div>}
 
+          <AccOverviewContextBar
+            fy={fy}
+            lastFy={lastFy}
+            from={rangeFrom}
+            to={rangeTo}
+            onChange={setReportRange}
+            equationHolds={Boolean(metrics?.equationHolds)}
+            integrationEnabled={Boolean(settings?.integrationEnabled)}
+          />
+
           <AccCompareChart
             ar={overviewArAging}
             ap={overviewApAging}
@@ -1883,15 +1921,6 @@ export function AccountsModule({ token, close, logout, workspace = {} }) {
           </section>
 
           <AccOverviewRecent rows={recentVouchers} onViewAll={() => openSection("vouchers")} />
-
-          <div className="acc-ov-meta">
-            <AccOverviewPeriod fy={fy} lastFy={lastFy} from={rangeFrom} to={rangeTo} onChange={setReportRange} />
-            <AccOverviewRange from={rangeFrom} to={rangeTo} />
-            <div className="acc-status-row">
-              <span className={`acc-chip ${metrics?.equationHolds ? "ok" : "warn"}`}>{metrics?.equationHolds ? "Books in balance" : "Books out of balance"}</span>
-              <span className="acc-chip">Integration {settings?.integrationEnabled ? "ON" : "OFF"}</span>
-            </div>
-          </div>
         </div>}
 
         {section === "ledger" && <div className="acc-panel">
