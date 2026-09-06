@@ -16,6 +16,7 @@ export function SalesInvoiceViewerModal({ invoice, settings = {}, close }) {
             <strong>{invoice.companyName}</strong>
             <span>SALES INVOICE</span>
           </div>
+          {invoice.companyLegalName && <p className="small">Legal name: {invoice.companyLegalName}</p>}
           {invoice.companyAddress && <p className="small">{invoice.companyAddress}</p>}
           {invoice.companyGstin && <p className="small">GSTIN: {invoice.companyGstin}</p>}
           {(invoice.companyPhone || invoice.companyEmail) && (
@@ -35,6 +36,14 @@ export function SalesInvoiceViewerModal({ invoice, settings = {}, close }) {
             {invoice.customerAddress && <p className="small">{invoice.customerAddress}</p>}
           </section>
           <hr />
+          {invoice.itemLines?.length ? (
+            <section>
+              <strong>ITEMS</strong>
+              {invoice.itemLines.map((line, index) => (
+                <p key={index}>{line.quantity} {line.unit} × {line.name} @ {m(line.rate)} = {m(line.amount)}</p>
+              ))}
+            </section>
+          ) : null}
           <section>
             <strong>AMOUNT</strong>
             {invoice.tax > 0 && <>

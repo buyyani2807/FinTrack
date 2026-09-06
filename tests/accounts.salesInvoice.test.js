@@ -16,7 +16,7 @@ const accounts = [
   { id: "cash", code: "1000", name: "Cash", accountType: "cash", groupType: "asset" },
 ];
 
-test("sales invoice branding uses Accounts company, not Finance org settings", () => {
+test("sales invoice branding uses Accounts company name, not GST legal name or Finance org", () => {
   const invoice = buildSalesInvoice({
     voucher: {
       id: "v1",
@@ -37,7 +37,7 @@ test("sales invoice branding uses Accounts company, not Finance org settings", (
     accounts,
     company: {
       name: "SRIHITHA INFRA",
-      legalName: "SRIHITHA INFRA",
+      legalName: "Decathlon Sports India Pvt Ltd",
       gstin: "36AAAAA0000A1Z5",
       stateName: "Telangana",
       stateCode: "36",
@@ -46,11 +46,13 @@ test("sales invoice branding uses Accounts company, not Finance org settings", (
   });
 
   assert.equal(invoice.companyName, "SRIHITHA INFRA");
+  assert.equal(invoice.companyLegalName, "Decathlon Sports India Pvt Ltd");
   assert.equal(invoice.companyGstin, "36AAAAA0000A1Z5");
   assert.equal(invoice.customerName, "Initial Coatings");
-  assert.doesNotMatch(invoice.receiptFooter, /Sudheer Finance/i);
-  assert.doesNotMatch(invoice.receiptTerms, /Sudheer Finance/i);
-  assert.match(invoice.receiptTerms, /SRIHITHA INFRA/);
+  assert.doesNotMatch(invoice.companyName, /Decathlon/i);
+  assert.doesNotMatch(invoice.receiptFooter, /Sudheer Finance|Decathlon/i);
+  assert.match(invoice.receiptFooter, /SRIHITHA INFRA/);
+  assert.doesNotMatch(invoice.receiptFooter, /—|\?/);
 
   const message = buildSalesInvoiceMessage(invoice, {
     companyName: "Sudheer Finance",
@@ -59,7 +61,7 @@ test("sales invoice branding uses Accounts company, not Finance org settings", (
     },
   });
   assert.match(message, /From SRIHITHA INFRA to Initial Coatings/);
-  assert.doesNotMatch(message, /Sudheer Finance/);
+  assert.doesNotMatch(message, /Sudheer Finance|Decathlon/);
 });
 
 test("cash sale settlement label", () => {

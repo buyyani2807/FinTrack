@@ -59,6 +59,7 @@ function layoutSalesInvoice(invoice) {
   y -= 18;
   commands.push(text("F2", 12, PAGE.left, y, "SALES INVOICE"));
   y -= 24;
+  if (invoice.companyLegalName) { commands.push(text("F1", 9, PAGE.left, y, `Legal name: ${invoice.companyLegalName}`)); y -= 12; }
   if (invoice.companyAddress) { commands.push(text("F1", 9, PAGE.left, y, invoice.companyAddress)); y -= 12; }
   if (invoice.companyGstin) { commands.push(text("F1", 9, PAGE.left, y, `GSTIN: ${invoice.companyGstin}`)); y -= 12; }
   if (invoice.companyPhone) { commands.push(text("F1", 9, PAGE.left, y, `Phone: ${invoice.companyPhone}`)); y -= 12; }
@@ -93,6 +94,15 @@ function layoutSalesInvoice(invoice) {
     y -= 8;
     commands.push(text("F2", 10, PAGE.left, y, "Narration")); y -= 14;
     commands.push(text("F1", 10, PAGE.left, y, invoice.narration)); y -= 18;
+  }
+  if (invoice.itemLines?.length) {
+    y -= 4;
+    commands.push(text("F2", 11, PAGE.left, y, "ITEMS")); y -= 16;
+    for (const line of invoice.itemLines.slice(0, 18)) {
+      commands.push(text("F1", 9, PAGE.left, y, `${line.quantity} ${line.unit || ""} ${line.name} @ ${m(line.rate)} = ${m(line.amount)}`));
+      y -= 12;
+      if (y < 80) break;
+    }
   }
   y -= 8;
   commands.push(line(PAGE.left, y, PAGE.right, y)); y -= 16;

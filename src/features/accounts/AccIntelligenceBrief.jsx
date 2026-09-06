@@ -12,6 +12,9 @@ export function AccIntelligenceBrief({
   today,
   companyId,
   companyName,
+  items = [],
+  stockMovements = [],
+  voucherItemLines = [],
   onNavigate,
 }) {
   const [open, setOpen] = useState(false);
@@ -29,11 +32,14 @@ export function AccIntelligenceBrief({
         today,
         companyId,
         companyName,
+        items,
+        stockMovements,
+        voucherItemLines,
       });
     } catch {
       return { failed: true };
     }
-  }, [accounts, vouchers, parties, range, previousRange, today, companyId, companyName, nonce]);
+  }, [accounts, vouchers, parties, range, previousRange, today, companyId, companyName, items, stockMovements, voucherItemLines, nonce]);
 
   const refresh = () => {
     setBusy(true);

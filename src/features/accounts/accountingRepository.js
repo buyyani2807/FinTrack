@@ -25,7 +25,7 @@ const accQuery = (path, token) => supabase.query(path, token, accOpts());
 
 const wrap = promise => promise.catch(err => {
   if (isMissing(err)) {
-    const error = new Error("Run migrations 052–066 in the Supabase SQL editor to enable FinTrack Accounts companies, GST, and voucher attachments.");
+    const error = new Error("Run migrations 052–067 in the Supabase SQL editor to enable FinTrack Accounts companies, GST, attachments, and items.");
     error.code = "MIGRATION_REQUIRED";
     throw error;
   }
@@ -303,6 +303,14 @@ export const postVoucher = async (token, payload) => {
     input_gst_lines: payload.gstLines?.length ? payload.gstLines : null,
   }, token));
   if (payload.dueDate) await setVoucherDueDate(token, id, payload.dueDate);
+  if (payload.itemLines?.length) {
+    try {
+      await saveVoucherItemLines(token, id, payload.itemLines);
+    } catch (err) {
+      try { await cancelVoucher(token, id, "Item lines failed; voucher cancelled"); } catch { /* best effort */ }
+      throw err;
+    }
+  }
   return id;
 };
 
@@ -312,16 +320,19 @@ export const setVoucherDueDate = (token, id, dueDate) =>
     input_due: dueDate || null,
   }, token));
 
-export const cancelVoucher = (token, id, reason) =>
-  wrap(accRpc("acc_cancel_voucher", { input_voucher_id: id, input_reason: reason }, token));
+export const cancelVoucher = async (token, id, reason) => {
+  await wrap(accRpc("acc_cancel_voucher", { input_voucher_id: id, input_reason: reason }, token));
+  await ignoreMissing(accRpc("acc_reverse_voucher_stock", { input_voucher_id: id }, token));
+};
 
-export const reverseVoucher = (token, id, date, reason) =>
-  wrap(accRpc("acc_reverse_voucher", {
+export const reverseVoucher = async (token, id, date, reason) => {
+  await wrap(accRpc("acc_reverse_voucher", {
     input_voucher_id: id,
     input_date: date,
     input_reason: reason,
   }, token));
-
+  await ignoreMissing(accRpc("acc_reverse_voucher_stock", { input_voucher_id: id }, token));
+};
 export const lockAccountingPeriod = (token, from, to) =>
   wrap(accRpc("acc_lock_period", { input_from: from, input_to: to }, token));
 
@@ -371,4 +382,132 @@ export const matchBankLine = (token, lineId, voucherLineId, note) =>
     input_line_id: lineId,
     input_voucher_line_id: voucherLineId || null,
     input_note: note || null,
+  }, token));
+
+const mapItemCategory = row => ({
+  id: row.id,
+  name: row.name,
+  isActive: row.is_active !== false,
+});
+
+const mapItem = row => ({
+  id: row.id,
+  itemType: row.item_type || "product",
+  name: row.name,
+  sku: row.sku,
+  categoryId: row.category_id || null,
+  unit: row.unit || "Nos",
+  description: row.description || "",
+  sellingPrice: Number(row.selling_price || 0),
+  purchasePrice: Number(row.purchase_price || 0),
+  gstRate: Number(row.gst_rate || 0),
+  hsnSac: row.hsn_sac || "",
+  openingStock: Number(row.opening_stock || 0),
+  openingStockDate: row.opening_stock_date || null,
+  reorderLevel: Number(row.reorder_level || 0),
+  isActive: row.is_active !== false,
+});
+
+const mapVoucherItemLine = row => ({
+  id: row.id,
+  voucherId: row.voucher_id,
+  lineNo: row.line_no,
+  itemId: row.item_id || null,
+  itemName: row.item_name,
+  itemSku: row.item_sku || "",
+  itemType: row.item_type || "product",
+  unit: row.unit || "Nos",
+  quantity: Number(row.quantity || 0),
+  rate: Number(row.rate || 0),
+  amount: Number(row.amount || 0),
+  gstRate: Number(row.gst_rate || 0),
+  hsnSac: row.hsn_sac || "",
+  taxableAmount: Number(row.taxable_amount || 0),
+  cgstAmount: Number(row.cgst_amount || 0),
+  sgstAmount: Number(row.sgst_amount || 0),
+  igstAmount: Number(row.igst_amount || 0),
+});
+
+const mapStockMovement = row => ({
+  id: row.id,
+  itemId: row.item_id,
+  movementDate: row.movement_date,
+  quantityDelta: Number(row.quantity_delta || 0),
+  reason: row.reason,
+  note: row.note || "",
+  voucherId: row.voucher_id || null,
+  voucherItemLineId: row.voucher_item_line_id || null,
+  voucherNumber: row.voucher_number || "",
+  createdAt: row.created_at,
+});
+
+export const loadItemCategories = token => wrap(
+  accQuery(`/rest/v1/acc_item_categories?select=id,name,is_active&order=name.asc${companyEq()}`, token)
+    .then(rows => (rows || []).map(mapItemCategory)),
+);
+
+export const loadItems = token => wrap(
+  accQuery(
+    `/rest/v1/acc_items?select=id,item_type,name,sku,category_id,unit,description,selling_price,purchase_price,gst_rate,hsn_sac,opening_stock,opening_stock_date,reorder_level,is_active&order=name.asc${companyEq()}`,
+    token,
+  ).then(rows => (rows || []).map(mapItem)),
+);
+
+export const loadVoucherItemLines = token => wrap(
+  accQuery(
+    `/rest/v1/acc_voucher_item_lines?select=id,voucher_id,line_no,item_id,item_name,item_sku,item_type,unit,quantity,rate,amount,gst_rate,hsn_sac,taxable_amount,cgst_amount,sgst_amount,igst_amount&order=line_no.asc&limit=20000${companyEq()}`,
+    token,
+  ).then(rows => (rows || []).map(mapVoucherItemLine)),
+);
+
+export const loadStockMovements = token => wrap(
+  accQuery(
+    `/rest/v1/acc_stock_movements?select=id,item_id,movement_date,quantity_delta,reason,note,voucher_id,voucher_item_line_id,voucher_number,created_at&order=movement_date.desc,created_at.desc&limit=20000${companyEq()}`,
+    token,
+  ).then(rows => (rows || []).map(mapStockMovement)),
+);
+
+export const upsertItemCategory = (token, { id = null, name }) =>
+  wrap(accRpc("acc_upsert_item_category", { input_id: id, input_name: name }, token));
+
+export const deleteItemCategory = (token, id) =>
+  wrap(accRpc("acc_delete_item_category", { input_id: id }, token));
+
+export const upsertItem = (token, form) =>
+  wrap(accRpc("acc_upsert_item", {
+    input_id: form.id || null,
+    input_item_type: form.itemType || "product",
+    input_name: form.name,
+    input_sku: form.sku,
+    input_category_id: form.categoryId || null,
+    input_unit: form.unit || "Nos",
+    input_description: form.description || null,
+    input_selling_price: Number(form.sellingPrice || 0),
+    input_purchase_price: Number(form.purchasePrice || 0),
+    input_gst_rate: Number(form.gstRate || 0),
+    input_hsn_sac: form.hsnSac || null,
+    input_opening_stock: Number(form.openingStock || 0),
+    input_opening_stock_date: form.openingStockDate || null,
+    input_reorder_level: Number(form.reorderLevel || 0),
+    input_is_active: form.isActive !== false,
+  }, token));
+
+export const setItemActive = (token, id, isActive) =>
+  wrap(accRpc("acc_set_item_active", { input_id: id, input_active: isActive !== false }, token));
+
+export const deleteItem = (token, id) =>
+  wrap(accRpc("acc_delete_item", { input_id: id }, token));
+
+export const adjustStock = (token, { itemId, date, quantityDelta, reasonNote }) =>
+  wrap(accRpc("acc_adjust_stock", {
+    input_item_id: itemId,
+    input_date: date,
+    input_quantity_delta: Number(quantityDelta),
+    input_reason_note: reasonNote,
+  }, token));
+
+export const saveVoucherItemLines = (token, voucherId, lines) =>
+  wrap(accRpc("acc_save_voucher_item_lines", {
+    input_voucher_id: voucherId,
+    input_lines: lines,
   }, token));

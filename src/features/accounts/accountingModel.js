@@ -729,7 +729,7 @@ export function resolveAccountCode(accounts, code, fallbackCode) {
 }
 
 export function saleLines({ accounts, amount, settlement = "credit", moneyMode = "cash", partyId = null, description = "", gst } = {}) {
-  const prepared = prepareGstAmount(amount, gst);
+  const prepared = gst?.preparedOverride || prepareGstAmount(amount, gst);
   const sales = findAccount(accounts, { code: SYSTEM_CODES.sales });
   if (!sales) throw new Error("Missing Sales account");
   const credit = { coaId: sales.id, code: sales.code, debit: 0, credit: prepared.taxable, description };
@@ -780,7 +780,7 @@ export function debitNoteLines({ accounts, amount, partyId, description = "", gs
 }
 
 export function purchaseLines({ accounts, amount, settlement = "credit", moneyMode = "cash", partyId = null, description = "", gst } = {}) {
-  const prepared = prepareGstAmount(amount, gst);
+  const prepared = gst?.preparedOverride || prepareGstAmount(amount, gst);
   const purchase = findAccount(accounts, { code: SYSTEM_CODES.purchase });
   if (!purchase) throw new Error("Missing Purchase account");
   const debit = { coaId: purchase.id, code: purchase.code, debit: prepared.taxable, credit: 0, description };

@@ -2502,10 +2502,59 @@ html:has(.accounts-dashboard) .financier-nav {
   padding-top: 4px;
 }
 
-.accounts-dashboard .acc-sales-invoice-actions {
+.accounts-dashboard .acc-items-toolbar {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.accounts-dashboard .acc-items-toolbar .accounts-search {
+  flex: 1 1 180px;
+  min-width: 160px;
+}
+
+.accounts-dashboard .acc-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.accounts-dashboard .acc-items-side-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.accounts-dashboard .acc-item-cat-list,
+.accounts-dashboard .acc-low-stock ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.accounts-dashboard .acc-item-cat-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.accounts-dashboard .acc-low-stock {
+  margin-bottom: 12px;
+  border-color: #f4b94255;
+}
+
+.accounts-dashboard .acc-item-lines .acc-table-wrap {
+  margin-bottom: 8px;
+}
+
+@media (max-width: 900px) {
+  .accounts-dashboard .acc-items-side-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .accounts-dashboard .acc-invoice-remind {

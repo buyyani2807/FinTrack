@@ -1,6 +1,7 @@
 import { addDaysIso, roundMoney } from "./accountingModel.js";
 import { formatInr } from "../../lib/formatMoney.js";
 import { cashFlow, dashboardMetrics, gstBooksReport, invoiceAgingTotals, invoiceRegister, profitAndLoss } from "./accountingReports.js";
+import { currentStockForItem, itemSalesReport, stockStatus } from "./inventoryModel.js";
 
 const money = value => formatInr(value);
 const pct = (current, previous) => {
@@ -74,6 +75,9 @@ export function buildAccountsFacts({
   today,
   companyId,
   companyName,
+  items = [],
+  stockMovements = [],
+  voucherItemLines = [],
 } = {}) {
   const currentRange = { from: range.from, to: range.to };
   const priorRange = { from: previousRange.from, to: previousRange.to };
@@ -100,6 +104,17 @@ export function buildAccountsFacts({
     return { name: row.name, amount: row.amount, change: pct(row.amount, priorExpenseById[key]) };
   });
   const amounts = currentPosted.map(row => voucherTotalsSafe(row));
+  const itemSales = itemSalesReport(voucherItemLines, vouchers, currentRange);
+  const topItem = itemSales[0] || null;
+  const lowStockItems = (items || [])
+    .filter(item => item.itemType === "product" && item.isActive !== false)
+    .map(item => ({
+      name: item.name,
+      stock: currentStockForItem(item, stockMovements),
+      reorderLevel: item.reorderLevel,
+      unit: item.unit,
+    }))
+    .filter(row => stockStatus(row.stock, row.reorderLevel) === "low");
   return {
     companyId: companyId || null,
     companyName: companyName || "",
@@ -140,6 +155,10 @@ export function buildAccountsFacts({
     gstNet: gst.netPayable,
     priorGstOutput: priorGst.outputTax,
     priorGstInput: priorGst.inputTax,
+    topItemName: topItem?.name || "",
+    topItemAmount: topItem?.amount || 0,
+    lowStockCount: lowStockItems.length,
+    lowStockNames: lowStockItems.slice(0, 5).map(row => row.name),
     posted: currentPosted.map(row => ({
       id: row.id,
       date: row.date,
@@ -183,6 +202,10 @@ export function interpretAccountsFacts(facts) {
   if (facts.payablesDue15 > 0) actions.push("Plan for payable obligations due in the next 15 days.");
   if (expenseChange != null && expenseChange >= 15) actions.push("Review the recent increase in operating expenses.");
   if (facts.outflow > facts.inflow) actions.push("Monitor cash availability against upcoming payables.");
+  if (facts.lowStockCount > 0) {
+    watch.push(`${facts.lowStockCount} product${facts.lowStockCount === 1 ? " is" : "s are"} below reorder level.`);
+    actions.push("Review low-stock items in Setup → Items.");
+  }
 
   const brief = [
     facts.hasPriorActivity && incomeChange != null
@@ -192,6 +215,9 @@ export function interpretAccountsFacts(facts) {
     facts.payablesDue15 > 0
       ? `Payables of ${money(facts.payablesDue15)} are due in the next 15 days.`
       : `Payables currently stand at ${money(facts.payables)}.`,
+    facts.topItemName
+      ? `Top selling item this period is ${facts.topItemName} (${money(facts.topItemAmount)}).`
+      : null,
   ].filter(Boolean);
 
   const categories = {

@@ -7,21 +7,25 @@ const money = formatInr;
 
 const accountById = (accounts = []) => Object.fromEntries((accounts || []).map(account => [account.id, account]));
 
-/** Branding for Accounts documents — always the active books company, never Finance org receipt settings. */
+/** Branding for Accounts documents — active books company name, never Finance org settings. */
 export function accountsCompanyBranding(company = null, workspace = {}) {
-  const companyName = String(company?.legalName || company?.name || workspace.businessName || "FinTrack").trim();
+  const booksName = String(company?.name || workspace.businessName || "FinTrack").trim();
+  const legalName = String(company?.legalName || "").trim();
+  // Header uses the company shown in Accounts (books name). Legal name is only a GST subtitle when different.
+  const companyName = booksName;
   const stateLine = [company?.stateName, company?.stateCode ? `(${company.stateCode})` : ""]
     .map(part => String(part || "").trim())
     .filter(Boolean)
     .join(" ");
   return {
     companyName,
+    companyLegalName: legalName && legalName.toLowerCase() !== booksName.toLowerCase() ? legalName : "",
     companyGstin: company?.gstin || "",
     companyAddress: stateLine,
     companyPhone: "",
     companyEmail: "",
     companyLogoUrl: "",
-    receiptFooter: `Thank you for your business.${companyName ? ` — ${companyName}` : ""}`,
+    receiptFooter: `Thank you for your business.${companyName ? ` - ${companyName}` : ""}`,
     receiptTerms: company?.gstin
       ? `Issued by ${companyName} (GSTIN ${company.gstin}). Please retain this invoice for your records.`
       : `Issued by ${companyName}. Please retain this invoice for your records.`,
@@ -41,6 +45,7 @@ export function buildSalesInvoice({
   company = null,
   workspace = {},
   outstanding = null,
+  itemLines = [],
 }) {
   if (!voucher) return null;
   const totals = voucherTotals(voucher.lines || []);
@@ -82,6 +87,16 @@ export function buildSalesInvoice({
     hsnSac: gst.hsnSac,
     supplyType: gst.supplyType,
     outstanding: outstanding == null ? amount : Number(outstanding || 0),
+    itemLines: (itemLines || []).map(line => ({
+      name: line.itemName || line.name || "",
+      sku: line.itemSku || line.sku || "",
+      quantity: Number(line.quantity || 0),
+      unit: line.unit || "",
+      rate: Number(line.rate || 0),
+      amount: Number(line.taxableAmount ?? line.amount ?? 0),
+      gstRate: Number(line.gstRate || 0),
+      hsnSac: line.hsnSac || "",
+    })),
     lines: (voucher.lines || []).map(line => ({
       name: [line.code, line.name].filter(Boolean).join(" ") || line.description || "Line",
       debit: Number(line.debit || 0),

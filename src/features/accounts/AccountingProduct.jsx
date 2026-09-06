@@ -21,6 +21,10 @@ import {
   loadPeriodLocks,
   loadVoucherAttachments,
   loadVouchers,
+  loadItemCategories,
+  loadItems,
+  loadStockMovements,
+  loadVoucherItemLines,
   lockAccountingPeriod,
   matchBankLine as saveBankMatch,
   postVoucher,
@@ -30,10 +34,16 @@ import {
   saveGstSettings,
   setAccountingIntegration,
   setActiveAccountsCompanyId,
+  setItemActive,
   setPartyActive,
   syncAccountingOperations,
   updateChartAccount,
   updateParty,
+  upsertItem,
+  upsertItemCategory,
+  deleteItem,
+  deleteItemCategory,
+  adjustStock,
 } from "./accountingRepository.js";
 import {
   assertVoucherAttachmentMeta,
@@ -100,6 +110,16 @@ import { formatInr } from "../../lib/formatMoney.js";
 import { loadOrganizationSettings } from "../../lib/financeRepository.js";
 import { buildSalesInvoice } from "./salesInvoiceModel.js";
 import { ArReminderButton, SalesInvoiceActions, SalesInvoiceSuccessModal, SalesInvoiceViewerModal } from "./SalesInvoiceActions.jsx";
+import { AccItemsSetup } from "./AccItemsSetup.jsx";
+import {
+  aggregateItemizedGst,
+  currentStockForItem,
+  emptyItemLine,
+  itemPurchasesReport,
+  itemSalesReport,
+  itemizedEntryDraft,
+  stockMovementReport,
+} from "./inventoryModel.js";
 
 const money = formatInr;
 const Field = ({ label, children, required, className }) => (
@@ -709,6 +729,8 @@ const emptySimpleForm = () => ({
   gstRate: "18",
   hsnSac: "",
   taxInclusive: false,
+  entryMode: "items",
+  itemLines: [emptyItemLine()],
 });
 const emptyCoaForm = () => ({
   id: null,
@@ -771,6 +793,9 @@ const REPORT_TABS = [
   { id: "purchases", label: "Purchases" },
   { id: "gst", label: "GST" },
   { id: "ledger", label: "Ledger" },
+  { id: "item_sales", label: "Item Sales" },
+  { id: "item_purchases", label: "Item Purchases" },
+  { id: "stock_moves", label: "Stock Movement" },
 ];
 
 const MOBILE_TABS = [
@@ -835,7 +860,7 @@ function VoucherForm({ accounts, parties, voucherType, setVoucherType, form, set
   </>;
 }
 
-function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, saving, maxDate, gstCompany, onGstSetup }) {
+function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, saving, maxDate, gstCompany, onGstSetup, items = [], stockByItem = {} }) {
   const customers = parties.filter(party => party.partyType === "customer" && (party.isActive !== false || party.id === form.partyId));
   const suppliers = parties.filter(party => party.partyType === "supplier" && (party.isActive !== false || party.id === form.partyId));
   const expenseOptions = SIMPLE_EXPENSE_CODES.filter(([code]) => accounts.some(account => account.code === code) || code === "5990");
@@ -850,12 +875,47 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
   const selectedParty = parties.find(party => party.id === form.partyId);
   const partyState = selectedParty?.stateCode || gstStateFromGstin(selectedParty?.gstin);
   const intra = isIntraGst(gstCompany?.stateCode, partyState);
-  const gstPreview = gstOn ? prepareGstAmount(form.amount, { enabled: Number(form.gstRate) > 0, rate: form.gstRate, intra, taxInclusive: form.taxInclusive, hsnSac: form.hsnSac }) : null;
+  const itemMode = (kind === "sale" || kind === "purchase") && form.entryMode !== "amount";
+  const activeItems = items.filter(item => item.isActive !== false || (form.itemLines || []).some(line => line.itemId === item.id));
+  const itemPreview = itemMode
+    ? aggregateItemizedGst(form.itemLines || [], { intra, taxInclusive: false })
+    : null;
+  const gstPreview = !itemMode && gstOn
+    ? prepareGstAmount(form.amount, { enabled: Number(form.gstRate) > 0, rate: form.gstRate, intra, taxInclusive: form.taxInclusive, hsnSac: form.hsnSac })
+    : null;
   const noteCopy = kind === "credit_note"
     ? "Reduces the customer balance and sales. Original invoices stay in Day Book."
     : kind === "debit_note"
       ? "Reduces the supplier balance and purchases. Original invoices stay in Day Book."
       : "FinTrack posts the balanced voucher for you. Open + Voucher if you need a custom journal.";
+
+  const patchItemLine = (index, patch) => {
+    setForm(current => {
+      const itemLines = [...(current.itemLines || [emptyItemLine()])];
+      itemLines[index] = { ...itemLines[index], ...patch };
+      return { ...current, itemLines };
+    });
+  };
+
+  const selectItem = (index, itemId) => {
+    const item = items.find(row => row.id === itemId);
+    if (!item) {
+      patchItemLine(index, { itemId: "", itemName: "", itemSku: "", itemType: "product", unit: "Nos" });
+      return;
+    }
+    const defaultRate = kind === "sale" ? item.sellingPrice : item.purchasePrice;
+    patchItemLine(index, {
+      itemId: item.id,
+      itemName: item.name,
+      itemSku: item.sku,
+      itemType: item.itemType,
+      unit: item.unit,
+      gstRate: String(item.gstRate ?? 0),
+      hsnSac: item.hsnSac || "",
+      rate: form.itemLines?.[index]?.rateTouched ? form.itemLines[index].rate : String(defaultRate || ""),
+    });
+  };
+
   return <>
     <p className="copy">{noteCopy}</p>
     <div className="form">
@@ -869,8 +929,16 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
         <Field label="To"><select value={form.toAccountId || ""} onChange={event => set({ toAccountId: event.target.value })}><option value="">Select account</option>{transferAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</select></Field>
       </>}
       {needsParty && <Field label={needsParty === "supplier" ? "Supplier" : "Customer"}><select value={form.partyId} onChange={event => set({ partyId: event.target.value })}><option value="">Select</option>{partyList.map(party => <option key={party.id} value={party.id}>{party.name}</option>)}</select></Field>}
-      <Field required label="Amount"><input type="number" min="0" step="0.01" value={form.amount} placeholder="0.00" onChange={event => set({ amount: event.target.value })} /></Field>
-      {gstKinds && gstOn && <>
+      {(kind === "sale" || kind === "purchase") && (
+        <Field label="Entry">
+          <select value={itemMode ? "items" : "amount"} onChange={event => set({ entryMode: event.target.value })}>
+            <option value="items">Line items</option>
+            <option value="amount">Single amount</option>
+          </select>
+        </Field>
+      )}
+      {!itemMode && <Field required label="Amount"><input type="number" min="0" step="0.01" value={form.amount} placeholder="0.00" onChange={event => set({ amount: event.target.value })} /></Field>}
+      {!itemMode && gstKinds && gstOn && <>
         <Field label="GST rate"><select value={form.gstRate} onChange={event => set({ gstRate: event.target.value })}>{GST_RATES.map(rate => <option key={rate} value={String(rate)}>{rate}%</option>)}</select></Field>
         <Field label="Price"><select value={form.taxInclusive ? "incl" : "excl"} onChange={event => set({ taxInclusive: event.target.value === "incl" })}><option value="excl">Tax exclusive</option><option value="incl">Tax inclusive</option></select></Field>
         <Field label="HSN / SAC"><input value={form.hsnSac} placeholder="optional" onChange={event => set({ hsnSac: event.target.value })} /></Field>
@@ -884,6 +952,49 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
       )}
       <Field className="span" label="Note (optional)"><input value={form.narration} onChange={event => set({ narration: event.target.value })} placeholder="Received from Ravi" /></Field>
     </div>
+
+    {itemMode && (
+      <div className="acc-item-lines spacer">
+        <div className="table acc-table-wrap"><table><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>GST%</th><th className="acc-num">Amount</th><th></th></tr></thead><tbody>
+          {(form.itemLines || [emptyItemLine()]).map((line, index) => {
+            const qty = Number(line.quantity || 0);
+            const rate = Number(line.rate || 0);
+            const stock = line.itemId ? stockByItem[line.itemId] : null;
+            return (
+              <tr key={index}>
+                <td>
+                  <select value={line.itemId || ""} onChange={event => selectItem(index, event.target.value)}>
+                    <option value="">Search / select item</option>
+                    {activeItems.map(item => (
+                      <option key={item.id} value={item.id}>
+                        {item.name} · {item.sku}{item.itemType === "product" && stockByItem[item.id] != null ? ` · stock ${stockByItem[item.id]} ${item.unit}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  {stock != null && <div className="small">Stock {stock} {line.unit || ""}</div>}
+                </td>
+                <td><input type="number" min="0" step="0.001" value={line.quantity} onChange={event => patchItemLine(index, { quantity: event.target.value })} /></td>
+                <td><input type="number" min="0" step="0.01" value={line.rate} onChange={event => patchItemLine(index, { rate: event.target.value, rateTouched: true })} /></td>
+                <td><input type="number" min="0" max="100" step="0.01" value={line.gstRate} onChange={event => patchItemLine(index, { gstRate: event.target.value })} /></td>
+                <td className="acc-num">{money(qty * rate)}</td>
+                <td>{(form.itemLines || []).length > 1 && <button type="button" className="btn danger" onClick={() => setForm(current => ({ ...current, itemLines: current.itemLines.filter((_, i) => i !== index) }))}>Remove</button>}</td>
+              </tr>
+            );
+          })}
+        </tbody></table></div>
+        <button type="button" className="btn" onClick={() => setForm(current => ({ ...current, itemLines: [...(current.itemLines || []), emptyItemLine()] }))}>+ Add item</button>
+        {itemPreview && (
+          <p className="small acc-gst-preview">
+            Subtotal {money(itemPreview.taxable)}
+            {gstOn && itemPreview.tax > 0 ? (itemPreview.igst > 0
+              ? ` · IGST ${money(itemPreview.igst)}`
+              : ` · CGST ${money(itemPreview.cgst)} · SGST ${money(itemPreview.sgst)}`) : ""}
+            {` · Total ${money(gstOn ? itemPreview.total : itemPreview.taxable)}`}
+          </p>
+        )}
+      </div>
+    )}
+
     {gstPreview && Number(form.amount) > 0 && Number(form.gstRate) > 0 && (
       <p className="small acc-gst-preview">
         Taxable {money(gstPreview.taxable)}
@@ -941,6 +1052,10 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
   const [accounts, setAccounts] = useState([]);
   const [parties, setParties] = useState([]);
   const [vouchers, setVouchers] = useState([]);
+  const [items, setItems] = useState([]);
+  const [itemCategories, setItemCategories] = useState([]);
+  const [stockMovements, setStockMovements] = useState([]);
+  const [voucherItemLines, setVoucherItemLines] = useState([]);
   const [audit, setAudit] = useState([]);
   const [locks, setLocks] = useState([]);
   const [statements, setStatements] = useState([]);
@@ -1045,11 +1160,15 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
         setActiveAccountsCompanyId(null);
         setActiveCompanyId("");
       }
-      const [nextSettings, nextAccounts, nextParties, nextVouchers] = await Promise.all([
+      const [nextSettings, nextAccounts, nextParties, nextVouchers, nextItems, nextCategories, nextMovements, nextVoucherItemLines] = await Promise.all([
         loadAccountingSettings(token),
         loadChartOfAccounts(token),
         loadParties(token),
         loadVouchers(token),
+        loadItems(token).catch(err => { if (err.code === "MIGRATION_REQUIRED") return []; throw err; }),
+        loadItemCategories(token).catch(err => { if (err.code === "MIGRATION_REQUIRED") return []; throw err; }),
+        loadStockMovements(token).catch(err => { if (err.code === "MIGRATION_REQUIRED") return []; throw err; }),
+        loadVoucherItemLines(token).catch(err => { if (err.code === "MIGRATION_REQUIRED") return []; throw err; }),
       ]);
       if (gen !== refreshGen.current) return;
       const mergedSettings = {
@@ -1062,6 +1181,10 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
       setAccounts(nextAccounts);
       setParties(nextParties);
       setVouchers(nextVouchers);
+      setItems(nextItems || []);
+      setItemCategories(nextCategories || []);
+      setStockMovements(nextMovements || []);
+      setVoucherItemLines(nextVoucherItemLines || []);
       setMigrationRequired(false);
       if (mergedSettings.companyName || mergedSettings.booksStartedOn) {
         setSetupForm({ companyName: mergedSettings.companyName, booksStartedOn: mergedSettings.booksStartedOn || todayIso() });
@@ -1113,9 +1236,10 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
       accounts,
       company,
       workspace,
+      itemLines: voucherItemLines.filter(line => line.voucherId === voucher.id),
     }));
     setPendingSalesInvoiceId(null);
-  }, [pendingSalesInvoiceId, vouchers, parties, accounts, companies, activeCompanyId, workspace]);
+  }, [pendingSalesInvoiceId, vouchers, parties, accounts, companies, activeCompanyId, workspace, voucherItemLines]);
 
   useEffect(() => {
     if (!token || !expandedVoucherId || migrationRequired) {
@@ -1243,6 +1367,14 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
     [wantGst, vouchers, range],
   );
   const activeCompany = useMemo(() => companies.find(item => item.id === activeCompanyId) || companies[0] || null, [companies, activeCompanyId]);
+  const stockByItem = useMemo(() => {
+    const map = {};
+    for (const item of items) map[item.id] = currentStockForItem(item, stockMovements);
+    return map;
+  }, [items, stockMovements]);
+  const itemSalesRows = useMemo(() => itemSalesReport(voucherItemLines, vouchers, range), [voucherItemLines, vouchers, range]);
+  const itemPurchaseRows = useMemo(() => itemPurchasesReport(voucherItemLines, vouchers, range), [voucherItemLines, vouchers, range]);
+  const stockMoveRows = useMemo(() => stockMovementReport(stockMovements, items, range).slice(0, 200), [stockMovements, items, range]);
   const focusedParty = useMemo(() => parties.find(party => party.id === partyFocusId) || parties[0] || null, [parties, partyFocusId]);
   const setupParties = useMemo(
     () => filterParties(parties, { type: partyTypeFilter, search: deferredPartySearch }),
@@ -1613,30 +1745,47 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
     const selectedParty = parties.find(party => party.id === simpleForm.partyId);
     const gstOn = activeCompany?.gstRegistration === "regular" && ["sale", "purchase", "credit_note", "debit_note"].includes(simpleKind);
     const partyState = selectedParty?.stateCode || gstStateFromGstin(selectedParty?.gstin);
-    const draft = simpleEntryDraft({
-      kind: simpleKind,
-      accounts,
-      date: simpleForm.date,
-      amount: simpleForm.amount,
-      partyId: simpleForm.partyId || null,
-      moneyMode: simpleForm.moneyMode,
-      settlement: simpleForm.settlement,
-      expenseCode: simpleForm.expenseCode,
-      fromType: simpleForm.fromType,
-      toType: simpleForm.toType,
-      fromAccountId: simpleForm.fromAccountId || null,
-      toAccountId: simpleForm.toAccountId || null,
-      dueDate: simpleForm.dueDate || null,
-      narration: simpleForm.narration,
-      gst: gstOn ? {
-        enabled: Number(simpleForm.gstRate) > 0,
-        rate: simpleForm.gstRate,
-        intra: isIntraGst(activeCompany?.stateCode, partyState),
-        taxInclusive: simpleForm.taxInclusive,
-        hsnSac: simpleForm.hsnSac,
-        itcEligible: simpleKind === "purchase" || simpleKind === "debit_note",
-      } : undefined,
-    });
+    const intra = isIntraGst(activeCompany?.stateCode, partyState);
+    const useItems = (simpleKind === "sale" || simpleKind === "purchase") && simpleForm.entryMode !== "amount";
+    const draft = useItems
+      ? itemizedEntryDraft({
+        kind: simpleKind,
+        accounts,
+        date: simpleForm.date,
+        partyId: simpleForm.partyId || null,
+        moneyMode: simpleForm.moneyMode,
+        settlement: simpleForm.settlement,
+        dueDate: simpleForm.dueDate || null,
+        narration: simpleForm.narration,
+        itemLines: simpleForm.itemLines || [],
+        intra,
+        taxInclusive: false,
+        gstEnabled: gstOn,
+      })
+      : simpleEntryDraft({
+        kind: simpleKind,
+        accounts,
+        date: simpleForm.date,
+        amount: simpleForm.amount,
+        partyId: simpleForm.partyId || null,
+        moneyMode: simpleForm.moneyMode,
+        settlement: simpleForm.settlement,
+        expenseCode: simpleForm.expenseCode,
+        fromType: simpleForm.fromType,
+        toType: simpleForm.toType,
+        fromAccountId: simpleForm.fromAccountId || null,
+        toAccountId: simpleForm.toAccountId || null,
+        dueDate: simpleForm.dueDate || null,
+        narration: simpleForm.narration,
+        gst: gstOn ? {
+          enabled: Number(simpleForm.gstRate) > 0,
+          rate: simpleForm.gstRate,
+          intra,
+          taxInclusive: simpleForm.taxInclusive,
+          hsnSac: simpleForm.hsnSac,
+          itcEligible: simpleKind === "purchase" || simpleKind === "debit_note",
+        } : undefined,
+      });
     const voucherId = await postVoucher(token, draft);
     setShowSimple(false);
     setSimpleForm(emptySimpleForm());
@@ -1652,6 +1801,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
       accounts,
       company: activeCompany,
       workspace,
+      itemLines: voucherItemLines.filter(line => line.voucherId === voucher.id),
     }));
   };
   const openCoa = account => {
@@ -1914,7 +2064,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
       />
       {error && <div className="notice acc-toast error" role="alert">{error}</div>}
       {notice && <div className="notice accounts-notice-ok acc-toast ok" role="status">{notice}</div>}
-      {migrationRequired && <div className="notice">Run <strong>052</strong> through <strong>066_accounts_voucher_attachments.sql</strong> in the Supabase SQL editor (including <strong>059</strong>, <strong>064</strong>, and <strong>065</strong>), then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
+      {migrationRequired && <div className="notice">Run <strong>052</strong> through <strong>067_accounts_items_inventory.sql</strong> in the Supabase SQL editor (including <strong>059</strong>, <strong>064</strong>, <strong>065</strong>, and <strong>066</strong>), then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
       <nav className="acc-bottom-nav" aria-label="Accounts">
         {MOBILE_TABS.map(item => (
           <button key={item.id} type="button" className={`acc-bottom-item ${mobileTab === item.id ? "active" : ""}`} onClick={() => openSection(item.id)}>
@@ -1960,6 +2110,9 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
             today={todayIso()}
             companyId={activeCompanyId}
             companyName={activeCompany?.name || settings?.companyName || ""}
+            items={items}
+            stockMovements={stockMovements}
+            voucherItemLines={voucherItemLines}
             onNavigate={openSection}
           />
 
@@ -2038,6 +2191,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
                         accounts,
                         company: activeCompany,
                         workspace,
+                        itemLines: voucherItemLines.filter(line => line.voucherId === voucher.id),
                       })}
                       settings={orgSettings}
                       compact
@@ -2336,6 +2490,24 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
               {!ledger.rows.length && <tr><td colSpan="6">No postings on this ledger in this period.</td></tr>}
             </tbody></table></div>
           </>}
+          {section === "reports" && reportTab === "item_sales" && (
+            <div className="table spacer acc-table-wrap"><table><thead><tr><th>Item</th><th>SKU</th><th className="acc-num">Qty sold</th><th className="acc-num">Sales amount</th></tr></thead><tbody>
+              {itemSalesRows.map(row => <tr key={row.itemId || row.name}><td>{row.name}</td><td>{row.sku || "—"}</td><td className="acc-num">{row.quantity}</td><td className="acc-num">{money(row.amount)}</td></tr>)}
+              {!itemSalesRows.length && <tr><td colSpan="4">No itemized sales in this period. Use Line items on a Sale entry.</td></tr>}
+            </tbody></table></div>
+          )}
+          {section === "reports" && reportTab === "item_purchases" && (
+            <div className="table spacer acc-table-wrap"><table><thead><tr><th>Item</th><th>SKU</th><th className="acc-num">Qty bought</th><th className="acc-num">Purchase amount</th></tr></thead><tbody>
+              {itemPurchaseRows.map(row => <tr key={row.itemId || row.name}><td>{row.name}</td><td>{row.sku || "—"}</td><td className="acc-num">{row.quantity}</td><td className="acc-num">{money(row.amount)}</td></tr>)}
+              {!itemPurchaseRows.length && <tr><td colSpan="4">No itemized purchases in this period.</td></tr>}
+            </tbody></table></div>
+          )}
+          {section === "reports" && reportTab === "stock_moves" && (
+            <div className="table spacer acc-table-wrap"><table><thead><tr><th>Date</th><th>Item</th><th>Direction</th><th className="acc-num">Qty</th><th>Reason</th><th>Voucher</th></tr></thead><tbody>
+              {stockMoveRows.map(row => <tr key={row.id}><td>{row.movementDate}</td><td>{row.itemName}</td><td>{row.direction}</td><td className="acc-num">{row.quantityDelta}</td><td>{row.reason}</td><td>{row.voucherNumber || "—"}</td></tr>)}
+              {!stockMoveRows.length && <tr><td colSpan="6">No stock movements in this period.</td></tr>}
+            </tbody></table></div>
+          )}
         </div>}
 
         {section === "bank" && <div className="acc-panel acc-bank">
@@ -2634,6 +2806,26 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
               {settings?.integrationEnabled && <button type="button" className="btn" disabled={saving} onClick={() => run(() => syncAccountingOperations(token), "Linked vouchers synced from operations.")}>Sync linked vouchers</button>}
             </div>
           </AccSetupSection>
+          <AccSetupSection
+            icon="I"
+            title="Items"
+            copy="Products and services for itemized sales/purchases and basic stock. Stock is company-scoped and does not change double-entry ledgers."
+          >
+            <AccItemsSetup
+              items={items}
+              categories={itemCategories}
+              movements={stockMovements}
+              voucherItemLines={voucherItemLines}
+              vouchers={vouchers}
+              saving={saving}
+              onSaveItem={form => run(() => upsertItem(token, form), form.id ? "Item updated." : "Item created.")}
+              onDeleteItem={item => run(() => deleteItem(token, item.id), "Item deleted.")}
+              onSetItemActive={(id, active) => run(() => setItemActive(token, id, active), active ? "Item reactivated." : "Item deactivated.")}
+              onSaveCategory={payload => run(() => upsertItemCategory(token, payload), "Category saved.")}
+              onDeleteCategory={id => run(() => deleteItemCategory(token, id), "Category deleted.")}
+              onAdjustStock={payload => run(() => adjustStock(token, payload), "Stock adjustment saved.")}
+            />
+          </AccSetupSection>
           <AccSetupSection icon="L" title="Period locking" copy="Lock a closed period so posted vouchers in that range cannot be changed.">
             <div className="form spacer">
               <Field label="From"><input type="date" value={lockForm.from} onChange={event => setLockForm(current => ({ ...current, from: event.target.value }))} /></Field>
@@ -2679,7 +2871,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
         </div>
       </Modal>}
       {showSimple && <Modal title={SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry"} close={closeSimple}>
-        <SimpleEntryForm kind={simpleKind} accounts={visibleAccounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} maxDate={todayIso()} gstCompany={activeCompany} onGstSetup={() => { setShowSimple(false); openSection("setup"); }} />
+        <SimpleEntryForm kind={simpleKind} accounts={visibleAccounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} maxDate={todayIso()} gstCompany={activeCompany} onGstSetup={() => { setShowSimple(false); openSection("setup"); }} items={items} stockByItem={stockByItem} />
       </Modal>}
       {showParty && <Modal title={partyForm.id ? "Edit party" : "Add party"} close={closeParty} actions={<div className="tabs spacer"><button type="button" className="btn" disabled={saving} onClick={closeParty}>Cancel</button><button type="button" className="btn primary" disabled={saving} onClick={saveParty}>{saving ? "Saving…" : partyForm.id ? "Save changes" : "Save party"}</button></div>}>
         <p className="copy">{partyForm.id ? "Updates this party only. Existing vouchers and ledgers stay attached to the same party." : "Accounts parties are independent of Daily Finance customers and Chit Fund members."}</p>
