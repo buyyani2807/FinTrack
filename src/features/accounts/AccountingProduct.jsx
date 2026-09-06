@@ -1112,11 +1112,10 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
       party,
       accounts,
       company,
-      settings: orgSettings,
       workspace,
     }));
     setPendingSalesInvoiceId(null);
-  }, [pendingSalesInvoiceId, vouchers, parties, accounts, companies, activeCompanyId, orgSettings, workspace]);
+  }, [pendingSalesInvoiceId, vouchers, parties, accounts, companies, activeCompanyId, workspace]);
 
   useEffect(() => {
     if (!token || !expandedVoucherId || migrationRequired) {
@@ -1652,7 +1651,6 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
       party,
       accounts,
       company: activeCompany,
-      settings: orgSettings,
       workspace,
     }));
   };
@@ -1870,7 +1868,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
                 <td><span className={`acc-status-pill ${invoiceStatusTone(row.status)}`}>{row.status}</span></td>
                 {kind !== "payable" && (
                   <td className="acc-invoice-remind">
-                    <ArReminderButton row={row} settings={orgSettings} company={activeCompany} compact />
+                    <ArReminderButton row={row} settings={orgSettings} company={activeCompany} workspace={workspace} compact />
                   </td>
                 )}
               </tr>
@@ -2039,7 +2037,6 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
                         party: parties.find(item => item.id === voucher.partyId) || null,
                         accounts,
                         company: activeCompany,
-                        settings: orgSettings,
                         workspace,
                       })}
                       settings={orgSettings}

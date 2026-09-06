@@ -1,11 +1,32 @@
 import { formatInr } from "../../lib/formatMoney.js";
 import { applyTemplate, resolveWhatsAppTemplate } from "../receipts/templateEngine.js";
-import { formatReceiptDate, withReceiptBranding } from "../receipts/receiptModel.js";
+import { formatReceiptDate } from "../receipts/receiptModel.js";
 import { voucherTotals } from "./accountingModel.js";
 
 const money = formatInr;
 
 const accountById = (accounts = []) => Object.fromEntries((accounts || []).map(account => [account.id, account]));
+
+/** Branding for Accounts documents — always the active books company, never Finance org receipt settings. */
+export function accountsCompanyBranding(company = null, workspace = {}) {
+  const companyName = String(company?.legalName || company?.name || workspace.businessName || "FinTrack").trim();
+  const stateLine = [company?.stateName, company?.stateCode ? `(${company.stateCode})` : ""]
+    .map(part => String(part || "").trim())
+    .filter(Boolean)
+    .join(" ");
+  return {
+    companyName,
+    companyGstin: company?.gstin || "",
+    companyAddress: stateLine,
+    companyPhone: "",
+    companyEmail: "",
+    companyLogoUrl: "",
+    receiptFooter: `Thank you for your business.${companyName ? ` — ${companyName}` : ""}`,
+    receiptTerms: company?.gstin
+      ? `Issued by ${companyName} (GSTIN ${company.gstin}). Please retain this invoice for your records.`
+      : `Issued by ${companyName}. Please retain this invoice for your records.`,
+  };
+}
 
 export function salesSettlementLabel(accounts = [], voucher = {}) {
   const byId = accountById(accounts);
@@ -18,7 +39,6 @@ export function buildSalesInvoice({
   party = null,
   accounts = [],
   company = null,
-  settings = {},
   workspace = {},
   outstanding = null,
 }) {
@@ -36,15 +56,7 @@ export function buildSalesInvoice({
   const amount = Number(totals.debit || 0);
   const tax = gst.cgst + gst.sgst + gst.igst;
   const taxable = gst.taxable || Math.max(0, amount - tax);
-  const branding = withReceiptBranding({
-    companyName: company?.name || settings.companyName || workspace.businessName || "FinTrack",
-    companyAddress: settings.companyAddress || "",
-    companyPhone: settings.companyPhone || "",
-    companyEmail: settings.companyEmail || "",
-    companyLogoUrl: settings.companyLogoUrl || "",
-    receiptFooter: settings.receiptFooter || "Thank you for your business.",
-    receiptTerms: settings.receiptTerms || "",
-  }, settings);
+  const branding = accountsCompanyBranding(company, workspace);
 
   return {
     kind: "sales_invoice",
@@ -98,14 +110,14 @@ export function salesInvoiceWhatsAppVariables(invoice) {
 }
 
 export function buildSalesInvoiceMessage(invoice, settings = {}) {
-  const branded = withReceiptBranding(invoice, settings);
-  return applyTemplate(resolveWhatsAppTemplate(settings, "sales_invoice"), salesInvoiceWhatsAppVariables(branded));
+  // Templates may come from org receipt settings; company_* variables stay on the Accounts company.
+  return applyTemplate(resolveWhatsAppTemplate(settings, "sales_invoice"), salesInvoiceWhatsAppVariables(invoice));
 }
 
-export function buildArReminderMessage(row, settings = {}, company = {}) {
-  const branded = withReceiptBranding({
-    companyName: company.name || settings.companyName || "FinTrack",
-    companyPhone: settings.companyPhone || "",
+export function buildArReminderMessage(row, settings = {}, company = {}, workspace = {}) {
+  const branding = accountsCompanyBranding(company, workspace);
+  const invoice = {
+    ...branding,
     customerName: row.partyName,
     invoiceNumber: row.reference,
     invoiceDate: row.invoiceDate,
@@ -114,11 +126,11 @@ export function buildArReminderMessage(row, settings = {}, company = {}) {
     outstanding: row.outstanding,
     daysOverdue: row.daysOverdue || 0,
     money,
-  }, settings);
-  return applyTemplate(resolveWhatsAppTemplate(settings, "ar_reminder"), salesInvoiceWhatsAppVariables(branded));
+  };
+  return applyTemplate(resolveWhatsAppTemplate(settings, "ar_reminder"), salesInvoiceWhatsAppVariables(invoice));
 }
 
-export function buildSalesInvoiceFromRegisterRow({ row, voucher, party, accounts, company, settings, workspace }) {
+export function buildSalesInvoiceFromRegisterRow({ row, voucher, party, accounts, company, workspace }) {
   const invoice = buildSalesInvoice({
     voucher: voucher || {
       id: row.id,
@@ -135,7 +147,6 @@ export function buildSalesInvoiceFromRegisterRow({ row, voucher, party, accounts
     party: party || (row.partyPhone || row.partyName ? { name: row.partyName, phone: row.partyPhone } : null),
     accounts,
     company,
-    settings,
     workspace,
     outstanding: row.outstanding,
   });

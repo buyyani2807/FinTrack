@@ -60,6 +60,7 @@ function layoutSalesInvoice(invoice) {
   commands.push(text("F2", 12, PAGE.left, y, "SALES INVOICE"));
   y -= 24;
   if (invoice.companyAddress) { commands.push(text("F1", 9, PAGE.left, y, invoice.companyAddress)); y -= 12; }
+  if (invoice.companyGstin) { commands.push(text("F1", 9, PAGE.left, y, `GSTIN: ${invoice.companyGstin}`)); y -= 12; }
   if (invoice.companyPhone) { commands.push(text("F1", 9, PAGE.left, y, `Phone: ${invoice.companyPhone}`)); y -= 12; }
   if (invoice.companyEmail) { commands.push(text("F1", 9, PAGE.left, y, `Email: ${invoice.companyEmail}`)); y -= 16; }
   commands.push(line(PAGE.left, y, PAGE.right, y)); y -= 18;

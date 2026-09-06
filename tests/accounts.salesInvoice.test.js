@@ -16,40 +16,50 @@ const accounts = [
   { id: "cash", code: "1000", name: "Cash", accountType: "cash", groupType: "asset" },
 ];
 
-test("sales invoice builds credit sale with GST and WhatsApp message", () => {
+test("sales invoice branding uses Accounts company, not Finance org settings", () => {
   const invoice = buildSalesInvoice({
     voucher: {
       id: "v1",
-      voucherNumber: "SAL-0001",
-      date: "2026-09-01",
-      dueDate: "2026-09-08",
-      narration: "Steel supply",
+      voucherNumber: "SALE-000028",
+      date: "2026-09-06",
+      dueDate: "2026-09-12",
+      narration: "Credit sale",
       partyId: "p1",
       voucherType: "sales",
       status: "posted",
       lines: [
-        { coaId: "ar", debit: 1180, credit: 0, code: "1100", name: "Accounts Receivable" },
-        { coaId: "sales", debit: 0, credit: 1000, code: "4100", name: "Sales" },
+        { coaId: "ar", debit: 11564, credit: 0, code: "1100", name: "Accounts Receivable" },
+        { coaId: "sales", debit: 0, credit: 9800, code: "4100", name: "Sales" },
       ],
-      gstLines: [{ taxable: 1000, cgst: 90, sgst: 90, igst: 0, rate: 18, hsnSac: "7208", supplyType: "intra" }],
+      gstLines: [{ taxable: 9800, cgst: 0, sgst: 0, igst: 1764, rate: 18, hsnSac: "7208", supplyType: "inter" }],
     },
-    party: { id: "p1", name: "Acme Traders", phone: "9876543210", gstin: "36AAAAA0000A1Z5", address: "Hyderabad" },
+    party: { id: "p1", name: "Initial Coatings", phone: "9848626699", gstin: "36AAACL9861H1Z7" },
     accounts,
-    company: { name: "QA Company B" },
-    settings: { companyPhone: "9000000000" },
+    company: {
+      name: "SRIHITHA INFRA",
+      legalName: "SRIHITHA INFRA",
+      gstin: "36AAAAA0000A1Z5",
+      stateName: "Telangana",
+      stateCode: "36",
+    },
+    workspace: { businessName: "Sudheer Finance" },
   });
 
-  assert.equal(invoice.invoiceNumber, "SAL-0001");
-  assert.equal(invoice.settlement, "Credit");
-  assert.equal(invoice.amount, 1180);
-  assert.equal(invoice.taxable, 1000);
-  assert.equal(invoice.customerPhone, "9876543210");
+  assert.equal(invoice.companyName, "SRIHITHA INFRA");
+  assert.equal(invoice.companyGstin, "36AAAAA0000A1Z5");
+  assert.equal(invoice.customerName, "Initial Coatings");
+  assert.doesNotMatch(invoice.receiptFooter, /Sudheer Finance/i);
+  assert.doesNotMatch(invoice.receiptTerms, /Sudheer Finance/i);
+  assert.match(invoice.receiptTerms, /SRIHITHA INFRA/);
 
-  const message = buildSalesInvoiceMessage(invoice, {});
-  assert.match(message, /Acme Traders/);
-  assert.match(message, /SAL-0001/);
-  assert.match(message, /QA Company B/);
-  assert.doesNotMatch(message, /\{invoice_number\}/);
+  const message = buildSalesInvoiceMessage(invoice, {
+    companyName: "Sudheer Finance",
+    whatsappTemplates: {
+      sales_invoice: "From {company_name} to {customer_name} invoice {invoice_number}",
+    },
+  });
+  assert.match(message, /From SRIHITHA INFRA to Initial Coatings/);
+  assert.doesNotMatch(message, /Sudheer Finance/);
 });
 
 test("cash sale settlement label", () => {
@@ -71,11 +81,12 @@ test("AR reminder template includes outstanding and overdue days", () => {
     amount: 5000,
     outstanding: 2000,
     daysOverdue: 12,
-  }, {}, { name: "Srihitha Infra" });
+  }, { companyName: "Sudheer Finance" }, { name: "Srihitha Infra" });
   assert.match(message, /Ravi/);
   assert.match(message, /SAL-0009/);
   assert.match(message, /Days overdue: 12/);
   assert.match(message, /Srihitha Infra/);
+  assert.doesNotMatch(message, /Sudheer Finance/);
 });
 
 test("invoice register exposes party phone for WhatsApp reminders", () => {
