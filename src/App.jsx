@@ -257,6 +257,7 @@ function PayoutModeFields({ mode, cash, upi, onMode, onCash, onUpi }) {
       <select value={mode || "cash"} onChange={event => onMode(event.target.value)}>
         <option value="cash">Cash</option>
         <option value="upi">UPI</option>
+        <option value="bank">Bank transfer</option>
         <option value="cash_upi">Cash + UPI</option>
       </select>
     </Field>
