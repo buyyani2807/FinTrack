@@ -16,12 +16,12 @@ import { collectionDetailVisibility, financeRolesAligned, ownerChromeAllowed, se
 import { ChitCustomerPortal, ChitFundPage } from "./features/chitFund/ChitFundModule";
 import { LegalPage, legalViewFromLocation, openLegalView } from "./features/legal/LegalPage.jsx";
 import { isPublicSignupAllowed, signupInviteRequired, validateSignupInvite } from "./lib/signupGate.js";
-import { assignCollectionAgents, chitCustomerPortalLogin, claimTransactionConfirmation, createCollectionAgent, createFinanceAccount, customerPortalLogin, deleteFinanceAccount, deleteFinancePayment, enableCustomerPortal, loadActiveChitSchemes, loadChitSchemeDetails, loadChitSchemes, loadCustomerKyc, loadFinanceAccounts, loadManagedAgents, loadPaymentReminderLog, loadTransactionConfirmationLog, loadWorkspace, logReceiptActivity, recordPayment, recordTransactionConfirmationResend, resetCustomerPortalPin, saveCustomerKyc, setAccountStatus, saveCollectionOrder, updateCollectionAgent, updateFinanceAccount, updateFinancePayment, updatePaymentNotes, updateTransactionConfirmationStatus } from "./lib/financeRepository";
+import { assignCollectionAgents, chitCustomerPortalLogin, claimTransactionConfirmation, createCollectionAgent, createFinanceAccount, customerPortalLogin, deleteFinanceAccount, deleteFinancePayment, enableCustomerPortal, loadActiveChitSchemes, loadChitSchemeDetails, loadChitSchemes, loadCustomerKyc, loadFinanceAccounts, loadManagedAgents, loadPaymentReminderLog, loadTransactionConfirmationLog, loadUpcomingChitPayments, loadWorkspace, logReceiptActivity, recordPayment, recordTransactionConfirmationResend, resetCustomerPortalPin, saveCustomerKyc, setAccountStatus, saveCollectionOrder, updateCollectionAgent, updateFinanceAccount, updateFinancePayment, updatePaymentNotes, updateTransactionConfirmationStatus } from "./lib/financeRepository";
 import { buildFinanceReceipt, formatReceiptDate, nextMonthlyPayment } from "./features/receipts/receiptModel.js";
 import { ReceiptActions, ReceiptSuccessModal } from "./features/receipts/ReceiptActions.jsx";
 import { ReceiptSettingsPage } from "./features/receipts/ReceiptSettingsPage.jsx";
 import { UpcomingPaymentsSection, UpcomingPaymentCard } from "./features/receipts/UpcomingPaymentsSection.jsx";
-import { buildMonthlyUpcoming } from "./features/receipts/upcomingPayments.js";
+import { buildChitUpcomingRows, buildMonthlyUpcoming } from "./features/receipts/upcomingPayments.js";
 import {
   buildDailyAccountOpenedVariables,
   buildMonthlyAccountOpenedVariables,
@@ -33,7 +33,7 @@ import {
 import { CustomerStatementPage } from "./features/statements/CustomerStatementPage.jsx";
 import { AccountsSummaryCard, CashbookWorkspace } from "./features/accounts/AccountsModule.jsx";
 import { AttentionCenterCard } from "./features/intelligence/AttentionCenterCard.jsx";
-import { buildAttentionCenter } from "./features/intelligence/attentionCenter.js";
+import { buildAttentionCenter, buildChitAttentionItems } from "./features/intelligence/attentionCenter.js";
 import { isModuleEnabled } from "./features/commercial/featurePacks.js";
 import { trackProductEvent } from "./features/commercial/productAnalytics.js";
 const AccountsModule = lazy(() => import("./features/accounts/AccountingProduct.jsx").then(module => ({ default: module.AccountsModule })));
@@ -1027,12 +1027,28 @@ function Financier({
   const [reminderLogState, setReminderLogState] = useState([]);
   const [confirmationLogState, setConfirmationLogState] = useState([]);
   const [statementLoan, setStatementLoan] = useState(null);
+  const [chitAttention, setChitAttention] = useState([]);
   const isOwner = role === "owner";
   useEffect(() => {
     if (!authToken) return;
     loadPaymentReminderLog(authToken).then(setReminderLogState).catch(() => setReminderLogState([]));
     loadTransactionConfirmationLog(authToken).then(setConfirmationLogState).catch(() => setConfirmationLogState([]));
   }, [authToken, loans]);
+  useEffect(() => {
+    if (!isOwner || !authToken) {
+      setChitAttention([]);
+      return undefined;
+    }
+    let cancelled = false;
+    loadUpcomingChitPayments(authToken)
+      .then(rows => {
+        if (!cancelled) setChitAttention(buildChitAttentionItems(buildChitUpcomingRows(rows || [])));
+      })
+      .catch(() => {
+        if (!cancelled) setChitAttention([]);
+      });
+    return () => { cancelled = true; };
+  }, [isOwner, authToken, activeChitSchemes]);
   const runFinanceConfirmation = async (loanLike, { resend = false } = {}) => {
     const eventType = eventTypeForFinanceLoan(loanLike);
     const variables = eventType === CONFIRMATION_EVENTS.monthly
@@ -1196,10 +1212,20 @@ function Financier({
     const attention = buildAttentionCenter({
       dailyLoans: dailyCustomers,
       monthlyLoans: monthlyCustomers.map(loan => ({ ...loan, attentionDueAmount: monthlyInterestPending(loan) })),
+      chitAttention,
       today: today(),
     });
     return <main className="shell dashboard-home"><header className="top"><div><div className="brand">{businessName || "My Finance Business"}</div><div className="sub">{isOwner ? "Financier dashboard" : "Collection agent dashboard"}</div></div><div className="top-actions"><Button onClick={logout}>Log out</Button></div></header><div className="toolbar"><div><h1 className="title">Dashboard</h1><p className="copy">Overview of your active finance customers and Chit Fund schemes.</p></div></div>{isOwner && <AttentionCenterCard attention={attention} onNavigate={href => {
       trackProductEvent("attention_navigate", { module: href?.panel || "" });
+      if (href?.panel === "chit") {
+        window.dispatchEvent(new CustomEvent("fintrack-open-chit"));
+        return;
+      }
+      if (href?.panel === "accounts") {
+        sessionStorage.setItem("fintrack-open-accounts", "1");
+        window.dispatchEvent(new CustomEvent("fintrack-open-accounts"));
+        return;
+      }
       if (href?.panel === "daily" || href?.panel === "monthly") {
         if (href.detailId) setDetail(loans.find(loan => loan.id === href.detailId) || null);
         else onModuleChange?.(href.panel);
@@ -1515,13 +1541,19 @@ function FinancierTools({ loans, token, activeChitSchemes = [], onCreateAgent, o
     const showCustomers = () => setPanel("customers");
     const showAgents = () => setPanel("agents");
     const showCashbook = () => setPanel("cashbook");
+    const showChit = () => setPanel("chit");
+    const showAccounts = () => setPanel("accounts");
     window.addEventListener("fintrack-open-customers", showCustomers);
     window.addEventListener("fintrack-open-agents", showAgents);
     window.addEventListener("fintrack-open-cashbook", showCashbook);
+    window.addEventListener("fintrack-open-chit", showChit);
+    window.addEventListener("fintrack-open-accounts", showAccounts);
     return () => {
       window.removeEventListener("fintrack-open-customers", showCustomers);
       window.removeEventListener("fintrack-open-agents", showAgents);
       window.removeEventListener("fintrack-open-cashbook", showCashbook);
+      window.removeEventListener("fintrack-open-chit", showChit);
+      window.removeEventListener("fintrack-open-accounts", showAccounts);
     };
   }, []);
   useEffect(() => {

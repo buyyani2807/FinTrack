@@ -391,6 +391,11 @@ export const setAccountsUserRole = (token, userId, role) =>
     input_role: role || null,
   }, token));
 
+export const loadAccountsAccessRole = token =>
+  ignoreMissing(supabase.rpc("accounts_access_role", {}, token))
+    .then(role => (role == null || role === "" ? null : String(role)))
+    .catch(() => null);
+
 export const loadVoucherAttachments = (token, voucherId) => wrap(
   accQuery(
     `/rest/v1/acc_voucher_attachments?select=id,voucher_id,file_name,content_type,byte_size,content_base64,created_at&voucher_id=eq.${encodeURIComponent(voucherId)}&order=created_at.desc${companyEq()}`,

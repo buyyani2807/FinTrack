@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { formatReceiptDate } from "../receipts/receiptModel.js";
 import { canWhatsAppShare, openWhatsAppShare } from "../receipts/receiptWhatsApp.js";
-import { buildArReminderMessage, buildPaymentAdviceMessage, buildSalesInvoiceMessage } from "./salesInvoiceModel.js";
+import { buildArReminderMessage, buildOutstandingSummaryMessage, buildPartyStatementMessage, buildPaymentAdviceMessage, buildPurchaseDocumentMessage, buildSalesInvoiceMessage } from "./salesInvoiceModel.js";
 import { downloadSalesInvoicePdf } from "./salesInvoicePdf.js";
 
 export function SalesInvoiceViewerModal({ invoice, settings = {}, close }) {
@@ -194,6 +194,99 @@ export function PaymentAdviceButton({ row, settings = {}, company = {}, workspac
       })}
     >
       {compact ? "Advice" : "Payment advice"}
+    </button>
+  );
+}
+
+export function PurchaseDocumentButton({ voucher, party, settings = {}, company = {}, workspace = {}, compact = false }) {
+  if (!voucher || voucher.voucherType !== "purchase") return null;
+  const phone = party?.phone || "";
+  if (!canWhatsAppShare(phone)) {
+    return compact ? null : <span className="small muted">No WhatsApp phone</span>;
+  }
+  return (
+    <button
+      type="button"
+      className="btn whatsapp"
+      title="Share purchase document on WhatsApp"
+      onClick={() => openWhatsAppShare({
+        phone,
+        message: buildPurchaseDocumentMessage(voucher, party, settings, company, workspace),
+      })}
+    >
+      {compact ? "WhatsApp" : "Share purchase"}
+    </button>
+  );
+}
+
+export function PartyStatementButton({
+  party,
+  partyBook,
+  periodFrom,
+  periodTo,
+  settings = {},
+  company = {},
+  workspace = {},
+  compact = false,
+}) {
+  if (!party) return null;
+  const phone = party.phone || "";
+  if (!canWhatsAppShare(phone)) {
+    return compact ? null : <span className="small muted">Add party phone for WhatsApp</span>;
+  }
+  return (
+    <button
+      type="button"
+      className="btn whatsapp"
+      title="Send party statement on WhatsApp"
+      onClick={() => openWhatsAppShare({
+        phone,
+        message: buildPartyStatementMessage({
+          party,
+          partyBook,
+          periodFrom,
+          periodTo,
+          settings,
+          company,
+          workspace,
+        }),
+      })}
+    >
+      {compact ? "Statement" : "WhatsApp statement"}
+    </button>
+  );
+}
+
+export function OutstandingWhatsAppButton({
+  party,
+  outstanding = 0,
+  kind = "receivable",
+  settings = {},
+  company = {},
+  workspace = {},
+  compact = false,
+}) {
+  if (!party || Number(outstanding || 0) <= 0) return null;
+  const phone = party.phone || "";
+  if (!canWhatsAppShare(phone)) return compact ? null : <span className="small muted">No WhatsApp phone</span>;
+  return (
+    <button
+      type="button"
+      className="btn whatsapp"
+      title={kind === "payable" ? "WhatsApp outstanding payable" : "WhatsApp outstanding receivable"}
+      onClick={() => openWhatsAppShare({
+        phone,
+        message: buildOutstandingSummaryMessage({
+          party,
+          outstanding,
+          kind,
+          settings,
+          company,
+          workspace,
+        }),
+      })}
+    >
+      {compact ? "Outstanding" : "WhatsApp outstanding"}
     </button>
   );
 }

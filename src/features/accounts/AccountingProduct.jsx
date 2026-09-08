@@ -16,6 +16,7 @@ import {
   loadAccountingSettings,
   loadAccountsCompanies,
   loadAccountsRoles,
+  loadAccountsAccessRole,
   loadAuditLog,
   loadBankStatements,
   loadChartOfAccounts,
@@ -56,11 +57,14 @@ import {
   readBankStatementFile,
 } from "./bankStatementImport.js";
 import {
-  assertBackupCompanyMatch,
   backupDownloadFilename,
   buildAccountsCompanyBackup,
   parseAccountsCompanyBackup,
 } from "./accountsBackup.js";
+import {
+  assertBackupRestorable,
+  restoreAccountsCompanyBackup,
+} from "./accountsRestore.js";
 import {
   buildGstr1Preparation,
   buildGstr3bPreparation,
@@ -134,7 +138,7 @@ import { downloadAccountsCsv, downloadAccountsExcel, downloadAccountsPdf } from 
 import { formatInr } from "../../lib/formatMoney.js";
 import { loadOrganizationSettings } from "../../lib/financeRepository.js";
 import { buildSalesInvoice } from "./salesInvoiceModel.js";
-import { ArReminderButton, PaymentAdviceButton, SalesInvoiceActions, SalesInvoiceSuccessModal, SalesInvoiceViewerModal } from "./SalesInvoiceActions.jsx";
+import { ArReminderButton, OutstandingWhatsAppButton, PartyStatementButton, PaymentAdviceButton, PurchaseDocumentButton, SalesInvoiceActions, SalesInvoiceSuccessModal, SalesInvoiceViewerModal } from "./SalesInvoiceActions.jsx";
 import { AccItemsSetup } from "./AccItemsSetup.jsx";
 import {
   aggregateItemizedGst,
@@ -377,13 +381,13 @@ const AccEmpty = ({ title, copy, actionLabel, onAction }) => (
   </div>
 );
 
-const bankMatchLabel = status => (status === "matched" ? "Matched" : status === "suggested" ? "Suggested" : status === "ignored" ? "Ignored" : "Unmatched");
+const bankMatchLabel = status => (status === "matched" ? "Reconciled" : status === "suggested" ? "Suggested" : status === "ignored" ? "Ignored" : "Unmatched");
 const bankMatchTone = status => (status === "matched" ? "active" : status === "suggested" ? "suggested" : status === "ignored" ? "inactive" : "inactive");
 
-const BankMatchControls = ({ line, selected, options, saving, onSelect, onMatch, onUnmatch, onIgnore }) => (
+const BankMatchControls = ({ line, selected, options, saving, canWrite = true, onSelect, onMatch, onUnmatch, onIgnore, onCreate }) => (
   <>
     {line.matchHint ? <p className="small acc-bank-match-hint">{line.matchHint}</p> : null}
-    <select value={selected} onChange={event => onSelect(event.target.value)} disabled={line.matchStatus === "matched" || line.matchStatus === "ignored"}>
+    <select value={selected} onChange={event => onSelect(event.target.value)} disabled={!canWrite || line.matchStatus === "matched" || line.matchStatus === "ignored"}>
       <option value="">Choose books line</option>
       {(line.matchCandidates?.length ? line.matchCandidates : options).map(item => (
         <option key={item.id} value={item.id}>
@@ -395,13 +399,14 @@ const BankMatchControls = ({ line, selected, options, saving, onSelect, onMatch,
       ))}
     </select>
     {line.matchStatus === "matched"
-      ? <button type="button" className="btn" disabled={saving} onClick={onUnmatch}>Unmatch</button>
+      ? (canWrite ? <button type="button" className="btn" disabled={saving} onClick={onUnmatch}>Unmatch</button> : null)
       : line.matchStatus === "ignored"
-        ? <button type="button" className="btn" disabled={saving} onClick={onUnmatch}>Restore</button>
-        : <>
+        ? (canWrite ? <button type="button" className="btn" disabled={saving} onClick={onUnmatch}>Restore</button> : null)
+        : canWrite ? <>
           <button type="button" className="btn primary" disabled={saving || !selected} onClick={onMatch}>Match</button>
           <button type="button" className="btn" disabled={saving} onClick={onIgnore}>Ignore</button>
-        </>}
+          {onCreate ? <button type="button" className="btn" disabled={saving} onClick={onCreate}>Create entry</button> : null}
+        </> : null}
   </>
 );
 
@@ -1134,8 +1139,12 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
   const [bankImport, setBankImport] = useState(null);
   const [bankImportMapping, setBankImportMapping] = useState({});
   const [matchChoice, setMatchChoice] = useState({});
+  const [pendingBankMatch, setPendingBankMatch] = useState(null);
   const [accountsRoles, setAccountsRoles] = useState([]);
+  const [accountsAccessRole, setAccountsAccessRole] = useState(workspace?.role === "owner" ? "owner" : null);
   const [roleDraft, setRoleDraft] = useState({ userId: "", role: "accountant" });
+  const [restoreDraft, setRestoreDraft] = useState(null);
+  const [restoreBusy, setRestoreBusy] = useState(false);
   const [showSimple, setShowSimple] = useState(false);
   const [simpleKind, setSimpleKind] = useState("sale");
   const [simpleForm, setSimpleForm] = useState(emptySimpleForm);
@@ -1257,6 +1266,23 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
   }, [token]);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  useEffect(() => {
+    if (!token) return undefined;
+    let cancelled = false;
+    loadAccountsAccessRole(token).then(role => {
+      if (cancelled) return;
+      if (role) setAccountsAccessRole(role);
+      else if (workspace?.role === "owner") setAccountsAccessRole("owner");
+    }).catch(() => {
+      if (!cancelled && workspace?.role === "owner") setAccountsAccessRole("owner");
+    });
+    return () => { cancelled = true; };
+  }, [token, workspace?.role]);
+
+  const canWrite = accountsAccessRole === "owner" || accountsAccessRole === "accountant";
+  const canAdmin = accountsAccessRole === "owner";
+  const readOnly = Boolean(accountsAccessRole) && !canWrite;
 
   useEffect(() => {
     if (orgSettingsProp && Object.keys(orgSettingsProp).length) setOrgSettings(orgSettingsProp);
@@ -1630,7 +1656,11 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
     if (voucherType === "sales") setPendingSalesInvoiceId(voucherId);
   }, "Voucher saved successfully");
 
-  const openVoucher = () => {
+const openVoucher = () => {
+    if (!canWrite) {
+      setError("Your Accounts role is view-only.");
+      return;
+    }
     setVoucherForm(emptyVoucherForm());
     setLines([emptyLine(), emptyLine()]);
     setShowVoucher(true);
@@ -1715,7 +1745,12 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
   };
 
   const openSimple = kind => {
+    if (!canWrite) {
+      setError("Your Accounts role is view-only. Ask the owner for accountant access to post entries.");
+      return;
+    }
     const money = moneyAccounts(visibleAccounts);
+    setPendingBankMatch(null);
     setSimpleKind(kind);
     setSimpleForm({
       ...emptySimpleForm(),
@@ -1725,9 +1760,38 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
     setShowSimple(true);
   };
 
+  const openSimpleFromBankLine = (line, statement) => {
+    if (!canWrite) {
+      setError("Your Accounts role is view-only.");
+      return;
+    }
+    const kind = line.direction === "out" ? "payment" : "receipt";
+    const moneyRows = moneyAccounts(visibleAccounts);
+    setSimpleKind(kind);
+    setPendingBankMatch({
+      lineId: line.id,
+      coaId: statement?.coaId || "",
+      amount: Number(line.amount || 0),
+      direction: line.direction || "in",
+    });
+    setSimpleForm({
+      ...emptySimpleForm(),
+      date: line.lineDate || todayIso(),
+      amount: String(line.amount || ""),
+      moneyMode: "bank",
+      settlement: "cash",
+      narration: [line.description, line.reference].filter(Boolean).join(" · ") || "Bank statement entry",
+      fromAccountId: moneyRows.find(account => account.accountType === "cash")?.id || moneyRows[0]?.id || "",
+      toAccountId: statement?.coaId || moneyRows.find(account => account.accountType === "bank")?.id || "",
+    });
+    setShowSimple(true);
+    setNotice("Select the party, then save. FinTrack will suggest matching this bank line after posting.");
+  };
+
   const closeSimple = () => {
     if (saving) return;
     setShowSimple(false);
+    setPendingBankMatch(null);
     setSimpleForm(emptySimpleForm());
   };
 
@@ -1868,9 +1932,25 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
         } : undefined,
       });
     const voucherId = await postVoucher(token, draft);
+    const pending = pendingBankMatch;
     setShowSimple(false);
     setSimpleForm(emptySimpleForm());
+    setPendingBankMatch(null);
     if (simpleKind === "sale") setPendingSalesInvoiceId(voucherId);
+    if (pending?.lineId && voucherId) {
+      try {
+        const nextVouchers = await loadVouchers(token);
+        const created = (nextVouchers || []).find(item => item.id === voucherId);
+        const bankLines = bankVoucherLines(accounts, created ? [created] : nextVouchers, pending.coaId, parties);
+        const matchLine = bankLines.find(item => Math.abs(Number(item.amount || 0) - Number(pending.amount || 0)) < 0.01)
+          || bankLines[0];
+        if (matchLine?.id) {
+          await saveBankMatch(token, pending.lineId, matchLine.id, "Created from bank statement");
+        }
+      } catch {
+        /* posting succeeded; match can be done manually */
+      }
+    }
   }, `${SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry"} saved successfully`);
 
   const openSalesInvoice = voucher => {
@@ -2039,11 +2119,34 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
     try {
       const backup = parseAccountsCompanyBackup(await file.text());
       const active = companies.find(row => row.id === activeCompanyId);
-      assertBackupCompanyMatch(backup, active || { id: activeCompanyId, name: settings.companyName });
-      setNotice(`Backup verified for ${backup.company.name} (${backup.counts?.vouchers || 0} vouchers). Restore applies only after a confirmed server import in a later release — file was validated without changing books.`);
+      assertBackupRestorable(backup, { activeCompany: active || { id: activeCompanyId, name: settings.companyName }, vouchers });
+      setRestoreDraft(backup);
+      setNotice(`Backup ready for ${backup.company.name}: ${backup.counts?.vouchers || 0} vouchers, ${backup.counts?.parties || 0} parties. Confirm restore to import into this empty company.`);
     } catch (err) {
+      setRestoreDraft(null);
       setError(err.message || "Invalid backup file.");
     }
+  };
+
+  const confirmCompanyRestore = () => {
+    if (!restoreDraft || !canAdmin) return;
+    const active = companies.find(row => row.id === activeCompanyId);
+    run(async () => {
+      setRestoreBusy(true);
+      try {
+        const result = await restoreAccountsCompanyBackup(token, restoreDraft, {
+          activeCompany: active || { id: activeCompanyId, name: settings?.companyName },
+          existingAccounts: accounts,
+          existingVouchers: vouchers,
+          onProgress: message => setNotice(message),
+        });
+        setRestoreDraft(null);
+        trackProductEvent("accounts_backup_restored", { vouchers: result.vouchers || 0 });
+        setNotice(`Restore finished: ${result.parties} parties, ${result.vouchers} vouchers, ${result.statements} statements. Voucher numbers were reassigned.`);
+      } finally {
+        setRestoreBusy(false);
+      }
+    }, "Company backup restored into this company only.");
   };
 
   const mobileTab = ["overview", "vouchers", "parties", "reports"].includes(section)
@@ -2212,7 +2315,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
           onCreate={() => { setCompanyDraft({ name: "", booksStartedOn: todayIso() }); setShowCreateCompany(true); }}
           gstLabel={gstStatusLabel(activeCompany)}
         />}
-        extras={<>
+        extras={canWrite ? <>
           <select className="acc-new-entry" defaultValue="" aria-label="New entry" onChange={event => {
             if (event.target.value) {
               openSimple(event.target.value);
@@ -2224,11 +2327,12 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
           </select>
           <button type="button" className="btn primary" onClick={openVoucher}>+ Voucher</button>
           <button type="button" className="btn" onClick={openParty}>+ Party</button>
-        </>}
+        </> : <span className="small">View-only · {accountsAccessRole || "viewer"}</span>}
       />
       {error && <div className="notice acc-toast error" role="alert">{error}</div>}
       {notice && <div className="notice accounts-notice-ok acc-toast ok" role="status">{notice}</div>}
-      {migrationRequired && <div className="notice">Run <strong>052</strong> through <strong>067_accounts_items_inventory.sql</strong> in the Supabase SQL editor (including <strong>059</strong>, <strong>064</strong>, <strong>065</strong>, and <strong>066</strong>), then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
+      {readOnly && <div className="notice">Accounts access: <strong>viewer</strong>. You can review books and reports, but posting and setup changes are blocked.</div>}
+      {migrationRequired && <div className="notice">Run <strong>052</strong> through <strong>071_accounts_access_role_client.sql</strong> in the Supabase SQL editor (including <strong>059</strong>, <strong>064</strong>, <strong>065</strong>, <strong>066</strong>, <strong>070</strong>, and <strong>071</strong>), then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
       <nav className="acc-bottom-nav" aria-label="Accounts">
         {MOBILE_TABS.map(item => (
           <button key={item.id} type="button" className={`acc-bottom-item ${mobileTab === item.id ? "active" : ""}`} onClick={() => openSection(item.id)}>
@@ -2319,12 +2423,12 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
         </div>}
 
         {section === "vouchers" && <div className="acc-panel">
-          <div className="acc-quick-actions">
+          {canWrite && <div className="acc-quick-actions">
             {SIMPLE_ENTRY_KINDS.map(item => <button key={item.id} type="button" className="btn" onClick={() => openSimple(item.id)}>+ {item.label}</button>)}
-          </div>
+          </div>}
           <div className="accounts-action-row spacer">
             <input className="accounts-search" placeholder="Search voucher number or narration" value={search} onChange={event => setSearch(event.target.value)} />
-            <button type="button" className="btn primary" onClick={openVoucher}>+ Advanced voucher</button>
+            {canWrite && <button type="button" className="btn primary" onClick={openVoucher}>+ Advanced voucher</button>}
           </div>
           <div className="accounts-entry-list spacer">
             {pagedVouchers.items.map(voucher => <article key={voucher.id} className="card accounts-entry-row">
@@ -2340,8 +2444,8 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
                   {voucher.voucherType === "sales" && voucher.status === "posted" && (
                     <button type="button" className="btn" onClick={() => openSalesInvoice(voucher)}>Invoice</button>
                   )}
-                  <button type="button" className="btn" onClick={() => duplicateVoucher(voucher)}>Duplicate</button>
-                  {voucher.status === "posted" && <>
+                  {canWrite && <button type="button" className="btn" onClick={() => duplicateVoucher(voucher)}>Duplicate</button>}
+                  {canWrite && voucher.status === "posted" && <>
                     <button type="button" className="btn" disabled={saving} onClick={() => askReason("Reverse voucher", "Post reversal", reason => run(() => reverseVoucher(token, voucher.id, todayIso(), reason), "Reversal posted."))}>Reverse</button>
                     <button type="button" className="btn danger" disabled={saving} onClick={() => askReason("Cancel voucher", "Cancel voucher", reason => run(() => cancelVoucher(token, voucher.id, reason), "Voucher cancelled."))}>Cancel</button>
                   </>}
@@ -2364,6 +2468,18 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
                         itemLines: voucherItemLines.filter(line => line.voucherId === voucher.id),
                       })}
                       settings={orgSettings}
+                      compact
+                    />
+                  </div>
+                )}
+                {voucher.voucherType === "purchase" && (
+                  <div className="acc-sales-invoice-actions spacer">
+                    <PurchaseDocumentButton
+                      voucher={voucher}
+                      party={parties.find(item => item.id === voucher.partyId) || null}
+                      settings={orgSettings}
+                      company={activeCompany}
+                      workspace={workspace}
                       compact
                     />
                   </div>
@@ -2470,7 +2586,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
           <div className="acc-party-ledger-toolbar">
             <p className="copy">Accounting customers and suppliers are independent of Daily Finance customers and Chit Fund members.</p>
             <div className="acc-party-ledger-links">
-              <button type="button" className="btn primary" onClick={openParty}>+ Party</button>
+              {canWrite && <button type="button" className="btn primary" onClick={openParty}>+ Party</button>}
               <button type="button" className="btn" onClick={() => openSection("receivables")}>Receivables</button>
               <button type="button" className="btn" onClick={() => openSection("payables")}>Payables</button>
             </div>
@@ -2517,6 +2633,25 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
                 </article>
               </div>
             </div>
+            <div className="accounts-action-row spacer">
+              <PartyStatementButton
+                party={focusedParty}
+                partyBook={partyBook}
+                periodFrom={partyFrom}
+                periodTo={partyTo}
+                settings={orgSettings}
+                company={activeCompany}
+                workspace={workspace}
+              />
+              <OutstandingWhatsAppButton
+                party={focusedParty}
+                outstanding={partyBook.advance > 0 ? 0 : partyBook.outstanding}
+                kind={focusedParty.partyType === "supplier" ? "payable" : "receivable"}
+                settings={orgSettings}
+                company={activeCompany}
+                workspace={workspace}
+              />
+            </div>
             <div className="table acc-table-wrap acc-party-ledger-table"><table><thead><tr><th>Date</th><th>Voucher</th><th>Type</th><th>Narration</th><th className="acc-num">Debit</th><th className="acc-num">Credit</th><th className="acc-num">Balance</th></tr></thead><tbody>
               {pagedPartyBook.items.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}>
                 <td>{row.date}</td>
@@ -2547,7 +2682,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
               ))}
               {!partyBook.rows.length && <p className="copy">No transactions for this party in the selected dates.</p>}
             </div>
-          </> : <AccEmpty title="No customers or suppliers yet" copy="Accounts parties are independent of Daily Finance customers and Chit Fund members." actionLabel="+ Add party" onAction={openParty} />}
+          </> : <AccEmpty title="No customers or suppliers yet" copy="Accounts parties are independent of Daily Finance customers and Chit Fund members." actionLabel={canWrite ? "+ Add party" : ""} onAction={canWrite ? openParty : undefined} />}
         </div>}
 
         {section === "more" && <div className="acc-panel">
@@ -2776,7 +2911,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
                 <div className="acc-bank-statement-stats">
                   <span>Opening <strong>{money(statement.openingBalance)}</strong></span>
                   <span>Closing <strong>{money(statement.closingBalance)}</strong></span>
-                  <span className={`acc-status-pill ${unmatched ? "inactive" : "active"}`}>{unmatched ? `${unmatched} unmatched` : "All matched"}</span>
+                  <span className={`acc-status-pill ${unmatched ? "inactive" : "active"}`}>{unmatched ? `${unmatched} unmatched` : "Reconciled"}</span>
                 </div>
               </header>
               <div className="table acc-table-wrap acc-bank-match-table"><table><thead><tr><th>Date</th><th>Description</th><th className="acc-num">Amount</th><th>Status</th><th>Match to books</th></tr></thead><tbody>
@@ -2794,10 +2929,12 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
                         selected={selected}
                         options={options}
                         saving={saving}
+                        canWrite={canWrite}
                         onSelect={value => setMatchChoice(current => ({ ...current, [line.id]: value }))}
-                        onMatch={() => run(() => saveBankMatch(token, line.id, selected, "Matched"), "Line matched. Books unchanged.")}
+                        onMatch={() => run(() => saveBankMatch(token, line.id, selected, "Matched"), "Line reconciled. Books unchanged.")}
                         onUnmatch={() => run(() => saveBankMatch(token, line.id, null, "Unmatched"), "Line unmatched. Books unchanged.")}
                         onIgnore={() => run(() => ignoreBankLine(token, line.id, "Ignored from statement"), "Line ignored. Books unchanged.")}
+                        onCreate={() => openSimpleFromBankLine(line, statement)}
                       />
                     </td>
                   </tr>;
@@ -2819,10 +2956,12 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
                         selected={selected}
                         options={options}
                         saving={saving}
+                        canWrite={canWrite}
                         onSelect={value => setMatchChoice(current => ({ ...current, [line.id]: value }))}
-                        onMatch={() => run(() => saveBankMatch(token, line.id, selected, "Matched"), "Line matched. Books unchanged.")}
+                        onMatch={() => run(() => saveBankMatch(token, line.id, selected, "Matched"), "Line reconciled. Books unchanged.")}
                         onUnmatch={() => run(() => saveBankMatch(token, line.id, null, "Unmatched"), "Line unmatched. Books unchanged.")}
                         onIgnore={() => run(() => ignoreBankLine(token, line.id, "Ignored from statement"), "Line ignored. Books unchanged.")}
+                        onCreate={() => openSimpleFromBankLine(line, statement)}
                       />
                     </article>
                   );
@@ -2843,12 +2982,20 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
             <button type="button" className="btn primary" disabled={saving} onClick={() => run(() => saveAccountingSettings(token, { ...setupForm, fyStartMonth: 4 }), "Company details saved.")}>{saving ? "Saving…" : "Save company"}</button>
             <div className="accounts-action-row spacer">
               <button type="button" className="btn" onClick={downloadCompanyBackup}>Download company backup</button>
-              <label className="btn">
-                Validate restore file
+              {canAdmin && <label className="btn">
+                Choose restore file
                 <input type="file" accept="application/json,.json" hidden onChange={previewCompanyRestore} />
-              </label>
+              </label>}
+              {canAdmin && restoreDraft && (
+                <button type="button" className="btn primary" disabled={saving || restoreBusy} onClick={confirmCompanyRestore}>
+                  {restoreBusy ? "Restoring…" : `Confirm restore into ${activeCompany?.name || "this company"}`}
+                </button>
+              )}
+              {canAdmin && restoreDraft && (
+                <button type="button" className="btn" disabled={restoreBusy} onClick={() => setRestoreDraft(null)}>Cancel restore</button>
+              )}
             </div>
-            <p className="small">Backups are company-isolated. A backup from Company A cannot overwrite Company B.</p>
+            <p className="small">Backups are company-isolated. Restore only works into the same company when it has no vouchers yet. Cross-company overwrite is blocked.</p>
             <div className="acc-company-setup-list spacer">
               <p className="small">Each company has its own books. Switching never mixes vouchers.</p>
               {companies.map(company => (
@@ -3061,10 +3208,10 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
               {locks.map(lock => <tr key={lock.id}><td>{lock.periodFrom} to {lock.periodTo}</td><td>{lock.isLocked ? "Locked" : "Reopened"}</td>              <td>{lock.isLocked && <button type="button" className="btn" disabled={saving} onClick={() => askReason("Reopen period", "Reopen", reason => run(() => reopenAccountingPeriod(token, lock.id, reason), "Period reopened."))}>Reopen</button>}</td></tr>)}
             </tbody></table></div>
           </AccSetupSection>
-          <AccSetupSection
+          {canAdmin && <AccSetupSection
             icon="R"
             title="Accounts access roles"
-            copy="Owner assigns accountant (can post) or viewer (read-only). Collection agents are separate. Requires migration 070."
+            copy="Owner assigns accountant (can post) or viewer (read-only). Collection agents are separate. Requires migrations 070–071."
             collapsible
             summary={`${accountsRoles.length} assigned`}
           >
@@ -3097,7 +3244,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
               ))}
               {!accountsRoles.length && <tr><td colSpan="3">No accountant or viewer roles assigned yet. Owner keeps full access.</td></tr>}
             </tbody></table></div>
-          </AccSetupSection>
+          </AccSetupSection>}
           <AccSetupSection
             icon="A"
             title="Audit trail"

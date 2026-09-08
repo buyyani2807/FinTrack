@@ -73,6 +73,15 @@ export function assertBackupCompanyMatch(backup, activeCompany) {
   }
 }
 
+export function assertBackupRestorable(backup, { activeCompany, vouchers = [] } = {}) {
+  assertBackupCompanyMatch(backup, activeCompany);
+  if ((vouchers || []).length > 0) {
+    throw new Error(
+      "Restore is only allowed into a company with no vouchers yet. Create a fresh company or clear books before restore.",
+    );
+  }
+}
+
 export function backupDownloadFilename(company) {
   const stamp = new Date().toISOString().slice(0, 10);
   const safe = String(company?.name || "company").replace(/[^\w\-]+/g, "_").slice(0, 40);

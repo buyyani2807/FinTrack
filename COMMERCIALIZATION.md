@@ -39,14 +39,15 @@ GSTR-1 / GSTR-3B helpers export **books preparation** with `filingStatus: "not_f
 
 ## Backup isolation rules
 
-Company-scoped Accounts backups (`accountsBackup.js`):
+Company-scoped Accounts backups (`accountsBackup.js` / `accountsRestore.js`):
 
 1. Format `fintrack-accounts-company-backup`, version pinned (`ACCOUNTS_BACKUP_VERSION`).
 2. Backup always embeds company `id` + `name` (and books/GST identity fields).
 3. **Restore only into the matching active company** — `assertBackupCompanyMatch` rejects cross-company overwrite.
-4. Export / validate are safe to run widely; restore must require explicit user confirmation in the UI (parent wiring).
-5. Do not merge one company’s vouchers, COA, or parties into another company under any circumstance.
+4. **Empty books only** — restore requires the target company to have **zero vouchers** (`assertBackupRestorable`).
+5. Client restore remaps IDs via existing create/post RPCs; voucher numbers are reassigned by the server.
+6. Export / validate are safe to run widely; restore requires explicit UI confirmation.
 
-## Related migration
+## Related migrations
 
-Run `supabase/070_commercialization_foundations.sql` after **069** (see `MIGRATION_CHECKLIST.md`).
+Run `supabase/070_commercialization_foundations.sql` after **069**, then `supabase/071_accounts_access_role_client.sql` (see `MIGRATION_CHECKLIST.md`).

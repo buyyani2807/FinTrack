@@ -68,6 +68,41 @@ export function buildAttentionCenter({
   };
 }
 
+/** Build chit attention items from upcoming payment rows (same shape as UpcomingPayments). */
+export function buildChitAttentionItems(upcomingRows = []) {
+  const rows = upcomingRows || [];
+  const overdue = rows.filter(row => String(row.status || "").toLowerCase() === "overdue" || Number(row.daysOverdue || 0) > 0);
+  const pending = rows.filter(row => {
+    const status = String(row.status || "").toLowerCase();
+    return status === "pending" || status === "due" || status === "partial" || status === "approaching";
+  });
+  const items = [];
+  if (overdue.length) {
+    const amount = overdue.reduce((sum, row) => sum + Number(row.amount || row.dueAmount || row.balance || 0), 0);
+    items.push({
+      id: "chit-overdue",
+      module: "chit",
+      severity: "high",
+      title: `${overdue.length} Chit Fund installment${overdue.length === 1 ? "" : "s"} overdue`,
+      detail: amount > 0 ? `About ₹${Math.round(amount).toLocaleString("en-IN")} past due.` : "Overdue chit collections need follow-up.",
+      actionLabel: "Open Chit Fund",
+      href: { panel: "chit" },
+    });
+  }
+  if (pending.length) {
+    items.push({
+      id: "chit-pending",
+      module: "chit",
+      severity: "medium",
+      title: `${pending.length} Chit Fund installment${pending.length === 1 ? "" : "s"} pending`,
+      detail: "Upcoming or due chit collections.",
+      actionLabel: "Open Chit Fund",
+      href: { panel: "chit" },
+    });
+  }
+  return items;
+}
+
 export function buildAccountsAttentionItems({
   overdueReceivables = 0,
   overdueInvoiceCount = 0,

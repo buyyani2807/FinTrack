@@ -159,6 +159,79 @@ export function buildPaymentAdviceMessage(row, settings = {}, company = {}, work
   });
 }
 
+export function buildPurchaseDocumentMessage(voucher, party = {}, settings = {}, company = {}, workspace = {}) {
+  const branding = accountsCompanyBranding(company, workspace);
+  const amount = (voucher?.lines || []).reduce((sum, line) => sum + Number(line.debit || 0), 0);
+  return applyTemplate(resolveWhatsAppTemplate(settings, "purchase_document"), {
+    supplier_name: party.name || "Supplier",
+    document_number: voucher?.voucherNumber || "",
+    document_date: formatReceiptDate(voucher?.date),
+    amount: money(amount),
+    due_date: formatReceiptDate(voucher?.dueDate || voucher?.date),
+    notes: voucher?.narration || "",
+    company_name: branding.companyName || "",
+    company_phone: branding.companyPhone || "",
+  });
+}
+
+export function buildPartyStatementMessage({
+  party,
+  partyBook = {},
+  periodFrom = "",
+  periodTo = "",
+  settings = {},
+  company = {},
+  workspace = {},
+} = {}) {
+  const branding = accountsCompanyBranding(company, workspace);
+  const closing = Number(partyBook.closing ?? partyBook.outstanding ?? partyBook.advance ?? 0);
+  return applyTemplate(resolveWhatsAppTemplate(settings, "party_statement"), {
+    party_name: party?.name || "Party",
+    period_from: periodFrom || "",
+    period_to: periodTo || "",
+    opening_balance: money(partyBook.opening || 0),
+    closing_balance: money(Math.abs(closing)),
+    company_name: branding.companyName || "",
+    company_phone: branding.companyPhone || "",
+  });
+}
+
+export function buildOutstandingSummaryMessage({
+  party,
+  outstanding = 0,
+  kind = "receivable",
+  settings = {},
+  company = {},
+  workspace = {},
+} = {}) {
+  const branding = accountsCompanyBranding(company, workspace);
+  if (kind === "payable") {
+    return applyTemplate(resolveWhatsAppTemplate(settings, "payment_advice"), {
+      supplier_name: party?.name || "Supplier",
+      amount: money(outstanding),
+      payment_date: formatReceiptDate(new Date().toISOString().slice(0, 10)),
+      payment_mode: "As agreed",
+      payment_reference: "Outstanding balance",
+      voucher_number: "",
+      company_name: branding.companyName || "",
+      company_phone: branding.companyPhone || "",
+    });
+  }
+  return applyTemplate(resolveWhatsAppTemplate(settings, "ar_reminder"), {
+    customer_name: party?.name || "Customer",
+    amount: money(outstanding),
+    invoice_number: "Outstanding",
+    invoice_date: "",
+    due_date: "",
+    outstanding: money(outstanding),
+    days_overdue: "",
+    company_name: branding.companyName || "",
+    company_phone: branding.companyPhone || "",
+    settlement: "",
+    gstin: party?.gstin || "",
+  });
+}
+
 export function buildSalesInvoiceFromRegisterRow({ row, voucher, party, accounts, company, workspace }) {
   const invoice = buildSalesInvoice({
     voucher: voucher || {
