@@ -153,6 +153,7 @@ create table if not exists public.product_events (
 );
 alter table public.product_events enable row level security;
 drop policy if exists product_events_owner on public.product_events;
+drop policy if exists product_events_owner_read on public.product_events;
 create policy product_events_owner on public.product_events
   for insert to authenticated
   with check (organization_id = public.current_organization_id());
