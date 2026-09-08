@@ -19,9 +19,37 @@ test("confirmation templates exist in defaults", () => {
   assert.match(DEFAULT_WHATSAPP_TEMPLATES.chit_lift_confirmation, /lifted/);
 });
 
+test("daily account confirmation uses portal ID when available", () => {
+  const vars = buildDailyAccountOpenedVariables({
+    id: "2055dc6f-bda8-42f1-b91c-ff10a019519b",
+    portalId: "U7K2M9",
+    customerName: "Ravi",
+    collectionAmount: 10000,
+    disbursedAmount: 8500,
+    dailyCollection: 100,
+    startDate: "2026-09-08",
+  }, { companyName: "Srihitha" });
+  assert.equal(vars.account_number, "U7K2M9");
+  assert.equal(vars.account_id, "U7K2M9");
+});
+
+test("daily account confirmation falls back to DF- short code without portal", () => {
+  const vars = buildDailyAccountOpenedVariables({
+    id: "2055dc6f-bda8-42f1-b91c-ff10a019519b",
+    kind: "daily",
+    customerName: "Ravi",
+    collectionAmount: 10000,
+    disbursedAmount: 8500,
+    dailyCollection: 100,
+    startDate: "2026-09-08",
+  });
+  assert.equal(vars.account_number, "DF-2055DC6F");
+});
+
 test("daily account confirmation uses stored amounts and 100-day schedule", () => {
   const vars = buildDailyAccountOpenedVariables({
     id: "acc-1",
+    kind: "daily",
     customerName: "Ravi",
     collectionAmount: 10000,
     disbursedAmount: 8500,
@@ -29,7 +57,7 @@ test("daily account confirmation uses stored amounts and 100-day schedule", () =
     startDate: "2026-09-08",
   }, { companyName: "Srihitha" });
   assert.equal(vars.customer_name, "Ravi");
-  assert.equal(vars.account_number, "acc-1");
+  assert.equal(vars.account_number, "DF-ACC-1");
   assert.equal(vars.financed_amount, "₹10,000");
   assert.equal(vars.amount_paid, "₹8,500");
   assert.equal(vars.interest_amount, "₹1,500");

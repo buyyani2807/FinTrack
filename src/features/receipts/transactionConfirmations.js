@@ -1,6 +1,6 @@
 import { applyTemplate, resolveWhatsAppTemplate } from "./templateEngine.js";
 import { canWhatsAppShare, openWhatsAppShare } from "./receiptWhatsApp.js";
-import { formatReceiptDate } from "./receiptModel.js";
+import { financeAccountId, formatReceiptDate } from "./receiptModel.js";
 import { addDays, addMonths } from "../finance/loanState.js";
 import { dailyInstallmentAmount, monthlyInterestOnBalance } from "../finance/calculations.js";
 import { fixedChitPostLiftMonthlyPayment } from "../chitFund/fixedChit.js";
@@ -61,10 +61,11 @@ export function buildDailyAccountOpenedVariables(loan, settings = {}, workspace 
   const rate = paid > 0 ? ((interest / paid) * 100) : 0;
   const daily = Number(loan.dailyCollection || dailyInstallmentAmount(financed) || 0);
   const completion = loan.startDate ? addDays(loan.startDate, 99) : "";
+  const accountNo = financeAccountId(loan);
   return {
     customer_name: loan.customerName || "",
-    account_number: loan.id || "",
-    account_id: loan.id || "",
+    account_number: accountNo,
+    account_id: accountNo,
     financed_amount: formatConfirmationMoney(financed),
     amount_paid: formatConfirmationMoney(paid),
     interest_amount: formatConfirmationMoney(interest),
@@ -89,10 +90,11 @@ export function buildMonthlyAccountOpenedVariables(loan, settings = {}, workspac
   const rate = Number(loan.annualRate || 0);
   const firstInterest = monthlyInterestOnBalance(principal, rate);
   const firstDue = loan.startDate ? addMonths(loan.startDate, 1) : "";
+  const accountNo = financeAccountId(loan);
   return {
     customer_name: loan.customerName || "",
-    account_number: loan.id || "",
-    account_id: loan.id || "",
+    account_number: accountNo,
+    account_id: accountNo,
     financed_amount: formatConfirmationMoney(principal),
     amount_paid: formatConfirmationMoney(principal),
     interest_amount: formatConfirmationMoney(firstInterest),

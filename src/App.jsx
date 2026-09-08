@@ -1024,7 +1024,7 @@ function Financier({
   const createAccount = async loan => {
     const result = await onCreateLoan(loan);
     setModal(null);
-    const savedLoan = { ...loan, id: result?.accountId || loan.id };
+    const savedLoan = { ...loan, id: result?.accountId || loan.id, portalId: result?.portalId || "" };
     let whatsAppNotice = "";
     try {
       whatsAppNotice = await runFinanceConfirmation(savedLoan);
