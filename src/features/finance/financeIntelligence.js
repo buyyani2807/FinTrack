@@ -2,7 +2,7 @@ import { formatInr } from "../../lib/formatMoney.js";
 import { paymentValue } from "../receipts/receiptModel.js";
 import { buildMonthlyUpcoming } from "../receipts/upcomingPayments.js";
 import { compactCreditScore } from "../creditScore/creditScoreModel.js";
-import { addDays, collectedOn, loanBalance, loanStatus, missedMonths, monthlyInterestPending } from "./loanState.js";
+import { addDays, collectedOn, dailyCollectionPendingOn, dailyFirstDueDate, isDailyCollectionDueOn, loanBalance, loanStatus, missedMonths, monthlyInterestPending } from "./loanState.js";
 
 const money = value => formatInr(value);
 const monthKey = iso => String(iso || "").slice(0, 7);
@@ -25,9 +25,10 @@ const receivedInMonth = (loan, key) => (loan.transactions || [])
 
 const missedRecentDailyDays = (loan, asOf, lookback = 7) => {
   let missed = 0;
+  const firstDue = dailyFirstDueDate(loan.startDate) || loan.startDate;
   for (let i = 1; i <= lookback; i += 1) {
     const date = addDays(asOf, -i);
-    if (date < loan.startDate) continue;
+    if (date < firstDue) continue;
     if (!collectedOn(loan, date)) missed += 1;
   }
   return missed;
@@ -44,11 +45,12 @@ const scoreForLoan = (loan, asOf) => {
 export function buildDailyFinanceFacts(loans = [], { asOf, isOwner = true } = {}) {
   const today = asOf;
   const rows = collectableDaily(loans);
-  const expectedToday = rows.reduce((sum, loan) => sum + Number(loan.dailyCollection || 0), 0);
-  const collectedToday = rows.reduce((sum, loan) => sum + receivedOn(loan, today), 0);
+  const dueTodayRows = rows.filter(loan => isDailyCollectionDueOn(loan, today));
+  const expectedToday = dueTodayRows.reduce((sum, loan) => sum + Number(loan.dailyCollection || 0), 0);
+  const collectedToday = dueTodayRows.reduce((sum, loan) => sum + receivedOn(loan, today), 0);
   const pendingToday = Math.max(0, expectedToday - collectedToday);
-  const collectedCount = rows.filter(loan => collectedOn(loan, today)).length;
-  const pendingCustomers = rows.filter(loan => !collectedOn(loan, today)).map(loan => {
+  const collectedCount = dueTodayRows.filter(loan => collectedOn(loan, today)).length;
+  const pendingCustomers = dueTodayRows.filter(loan => dailyCollectionPendingOn(loan, today)).map(loan => {
     const outstanding = loanBalance(loan);
     const missedDays = missedRecentDailyDays(loan, today);
     const status = loanStatus(loan);

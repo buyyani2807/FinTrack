@@ -32,6 +32,22 @@ export const dailyProgress = loan => {
 
 export const collectedOn = (loan, date = today()) => loan.transactions.some(transaction => transaction.date === date && paymentValue(loan, transaction) > 0);
 
+/** Daily Finance: first repayment is the calendar day after start/disbursement (Asia/Kolkata dates). */
+export const dailyFirstDueDate = startDate => {
+  if (!startDate) return "";
+  return addDays(startDate, 1);
+};
+
+/** True when a Daily Finance account is eligible for collection on the given India business date. */
+export const isDailyCollectionDueOn = (loan, date = today()) => {
+  if (!loan?.startDate) return true;
+  return date >= dailyFirstDueDate(loan.startDate);
+};
+
+/** Daily unpaid for today: due on this date and no collection recorded yet. */
+export const dailyCollectionPendingOn = (loan, date = today()) =>
+  isDailyCollectionDueOn(loan, date) && !collectedOn(loan, date);
+
 export const accountOutcome = loan => {
   const status = loanStatus(loan);
   if (!["completed", "closed", "bankrupt"].includes(status)) return null;

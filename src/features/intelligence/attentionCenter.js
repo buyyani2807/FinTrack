@@ -3,6 +3,8 @@
  * Advisory only: never invents balances or writes accounting data.
  */
 
+import { dailyCollectionPendingOn } from "../finance/loanState.js";
+
 export function buildAttentionCenter({
   dailyLoans = [],
   monthlyLoans = [],
@@ -14,18 +16,16 @@ export function buildAttentionCenter({
 
   for (const loan of dailyLoans) {
     if (loan.status && loan.status !== "active") continue;
-    const collectedToday = (loan.transactions || []).some(row => row.date === today);
-    if (!collectedToday) {
-      items.push({
-        id: `daily-unpaid-${loan.id}`,
-        module: "daily",
-        severity: "high",
-        title: `${loan.customerName || "Customer"} has not paid today`,
-        detail: "Daily Finance collection pending for today.",
-        actionLabel: "Open Daily Finance",
-        href: { panel: "daily", detailId: loan.id },
-      });
-    }
+    if (!dailyCollectionPendingOn(loan, today)) continue;
+    items.push({
+      id: `daily-unpaid-${loan.id}`,
+      module: "daily",
+      severity: "high",
+      title: `${loan.customerName || "Customer"} has not paid today`,
+      detail: "Daily Finance collection pending for today.",
+      actionLabel: "Open Daily Finance",
+      href: { panel: "daily", detailId: loan.id },
+    });
   }
 
   let monthlyDue = 0;

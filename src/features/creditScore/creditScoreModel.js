@@ -5,6 +5,7 @@
  * Weights (0–1) can be adjusted later without rewriting allocation logic.
  */
 import { monthlyRateOnDate } from "../finance/calculations.js";
+import { dailyFirstDueDate as sharedDailyFirstDueDate } from "../finance/loanState.js";
 
 export const SCORE_MIN = 300;
 export const SCORE_MAX = 900;
@@ -170,7 +171,7 @@ function classifyInstallment(dueDate, expected, paid, lastPayDate, asOf) {
 
 /** Daily collections are due from the day after the collection start date. */
 export function dailyFirstDueDate(startDate) {
-  return addDays(iso(startDate), 1);
+  return sharedDailyFirstDueDate(iso(startDate));
 }
 
 export function dailyDueCount(startDate, asOf) {

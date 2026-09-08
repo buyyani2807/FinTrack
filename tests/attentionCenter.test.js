@@ -13,6 +13,7 @@ test("attention center aggregates daily unpaid and accounts items", () => {
       id: "d1",
       customerName: "Ravi",
       status: "active",
+      startDate: "2026-09-01",
       transactions: [{ date: "2026-09-07", amount: 100 }],
     }],
     monthlyLoans: [{
@@ -39,4 +40,19 @@ test("attention center aggregates daily unpaid and accounts items", () => {
 test("accounts attention stays empty when nothing is flagged", () => {
   const items = buildAccountsAttentionItems({});
   assert.equal(items.length, 0);
+});
+
+test("daily finance created today is not flagged unpaid in attention center", () => {
+  const today = "2026-09-08";
+  const center = buildAttentionCenter({
+    today,
+    dailyLoans: [{
+      id: "d-today",
+      customerName: "Sai Buyyani",
+      status: "active",
+      startDate: today,
+      transactions: [],
+    }],
+  });
+  assert.equal(center.items.some(item => item.id === "daily-unpaid-d-today"), false);
 });
