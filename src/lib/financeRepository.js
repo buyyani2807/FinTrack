@@ -60,7 +60,11 @@ const mapOrganizationSettings = organization => ({
   receiptFooter: organization?.receipt_footer || "",
   receiptTerms: organization?.receipt_terms || "",
   whatsappTemplates: organization?.whatsapp_templates || {},
-  reminderSettings: organization?.reminder_settings || { monthly: { 7: true, 3: true, 1: true, 0: true }, chit: { 7: true, 3: true, 1: true, 0: true } },
+  reminderSettings: organization?.reminder_settings || {
+    monthly: { 7: true, 3: true, 1: true, 0: true },
+    chit: { 7: true, 3: true, 1: true, 0: true },
+    confirmations: { daily_account: true, monthly_account: true, chit_lift: true },
+  },
 });
 
 const ORG_RECEIPT_SETTINGS_SELECT = "name,company_address,company_phone,company_email,company_logo_url,receipt_footer,receipt_terms,whatsapp_templates,reminder_settings";
@@ -133,6 +137,58 @@ export const markPaymentReminderSent = (token, reminderSource, sourceId, cycleKe
   input_cycle_key: cycleKey,
   input_days_before: daysBefore,
 }, token);
+
+export const claimTransactionConfirmation = async (token, eventType, sourceId) => {
+  try {
+    return Boolean(await supabase.rpc("claim_transaction_confirmation", {
+      input_event_type: eventType,
+      input_source_id: sourceId,
+    }, token));
+  } catch (error) {
+    if (isMissingSchemaError(error)) return true; // allow open when migration not applied yet
+    throw error;
+  }
+};
+
+export const updateTransactionConfirmationStatus = async (token, eventType, sourceId, status, errorText = null) => {
+  try {
+    await supabase.rpc("update_transaction_confirmation_status", {
+      input_event_type: eventType,
+      input_source_id: sourceId,
+      input_status: status,
+      input_error: errorText,
+    }, token);
+  } catch (error) {
+    if (isMissingSchemaError(error)) return;
+    throw error;
+  }
+};
+
+export const recordTransactionConfirmationResend = async (token, eventType, sourceId, status = "opened", errorText = null) => {
+  try {
+    await supabase.rpc("record_transaction_confirmation_resend", {
+      input_event_type: eventType,
+      input_source_id: sourceId,
+      input_status: status,
+      input_error: errorText,
+    }, token);
+  } catch (error) {
+    if (isMissingSchemaError(error)) return;
+    throw error;
+  }
+};
+
+export const loadTransactionConfirmationLog = async token => {
+  try {
+    return await supabase.query(
+      "/rest/v1/transaction_confirmation_log?select=event_type,source_id,status,sent_at,resend_count,last_resent_at,last_error&order=created_at.desc",
+      token,
+    );
+  } catch (error) {
+    if (isMissingSchemaError(error)) return [];
+    throw error;
+  }
+};
 
 export const loadPaymentReminderLog = async token => {
   try {

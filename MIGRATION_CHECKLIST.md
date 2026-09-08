@@ -68,6 +68,8 @@ Run these in the Supabase SQL Editor **in order**. Each file is idempotent where
 | 065 | `065_accounts_company_shadow_fix.sql` | Fix remaining `company_id` shadowing (cancel, COA, party, bank, sync). **Must be last of the shadowing fixes.** |
 | 066 | `066_accounts_voucher_attachments.sql` | Voucher attachments (PDF/images ≤ 512 KB) |
 | 067 | `067_accounts_items_inventory.sql` | Items/products master, voucher item lines, basic stock movements |
+| 068 | `068_transaction_whatsapp_confirmations.sql` | Auto WhatsApp confirmations for new finance accounts and chit lifts (idempotent log + settings toggles) |
+| 069 | `069_finance_disbursement_bank_mode.sql` | Persist finance Paid out by **Bank transfer** (create/update no longer coerce bank → cash); re-sync on edit |
 
 After running 041 (and 042 if Save & sync failed), open **Accounts**, set opening balances once on the Cashbook section, then tap **Sync from FinTrack** to backfill historical collections and disbursements. If Cashbook **Delete** does nothing, run 043. After 044, tap **Sync from FinTrack** again so monthly principal disbursements are posted. After 045, existing daily bankrupt `loss_amount` values are rewritten to disbursed − collected.
 
@@ -87,7 +89,7 @@ After **051**, live discount bids are rejected when the resulting payout % is ou
 
 After **052**, the primary nav is **Dashboard · Daily · Monthly · Chit Fund · Accounts · More**. Open **Accounts** to create a chart of accounts. Cashbook remains the operational money view inside Accounts. Leave **Accounting integration OFF** unless you want Daily / Monthly / Chit / Cashbook transactions to post linked double-entry vouchers automatically. Collection agents do not get Accounts access. Verify with `scripts/verify-migration-052.sql` (each row should show `ok = 1`).
 
-For GST multi-company Accounts, apply **060 through 066 in order**. Stopping before **065** leaves cancel/COA/party/bank RPCs with ambiguous `company_id` filters. Apply **066** for voucher file attachments. Apply **067** for Items / basic inventory.
+For GST multi-company Accounts, apply **060 through 066 in order**. Stopping before **065** leaves cancel/COA/party/bank RPCs with ambiguous `company_id` filters. Apply **066** for voucher file attachments. Apply **067** for Items / basic inventory. Apply **068** for automatic WhatsApp confirmations on new Daily/Monthly accounts and chit lifts (extends existing `wa.me` templates; does not add a WhatsApp Business API). Apply **069** so finance **Paid out by → Bank transfer** is saved (previously coerced to Cash). For accounts already posted as Cash by mistake: Edit account → Paid out by **Bank transfer** → Save (re-syncs cashbook; bank balance drops, cash rises).
 
 After running 036, verify in Supabase SQL Editor:
 

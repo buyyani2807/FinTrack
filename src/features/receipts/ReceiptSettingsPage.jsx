@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { DEFAULT_WHATSAPP_TEMPLATES } from "./templateEngine.js";
+import { defaultConfirmationSettings } from "./transactionConfirmations.js";
 import { loadOrganizationSettings, saveOrganizationSettings } from "../../lib/financeRepository.js";
 
 const Field = ({ label, children, className = "" }) => <label className={`field ${className}`}><span>{label}</span>{children}</label>;
@@ -7,6 +8,7 @@ const Field = ({ label, children, className = "" }) => <label className={`field 
 const defaultReminderSettings = () => ({
   monthly: { 7: true, 3: true, 1: true, 0: true },
   chit: { 7: true, 3: true, 1: true, 0: true },
+  confirmations: defaultConfirmationSettings(),
 });
 
 export function ReceiptSettingsPage({ token, close, onSettingsSaved }) {
@@ -33,9 +35,18 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved }) {
         || /days.?remaining/i.test(chitReminder)
         || !/\{chit_type\}/i.test(chitReminder)
         || !/\{scheme_name\}/i.test(chitReminder);
+      const reminderSettings = {
+        ...defaultReminderSettings(),
+        ...(settings.reminderSettings || {}),
+        confirmations: {
+          ...defaultConfirmationSettings(),
+          ...(settings.reminderSettings?.confirmations || {}),
+        },
+      };
       setForm(current => ({
         ...current,
         ...settings,
+        reminderSettings,
         whatsappTemplates: {
           ...DEFAULT_WHATSAPP_TEMPLATES,
           ...savedTemplates,
@@ -57,6 +68,17 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved }) {
       [group]: { ...current.reminderSettings[group], [day]: !current.reminderSettings[group]?.[day] },
     },
   }));
+  const toggleConfirmation = key => setForm(current => ({
+    ...current,
+    reminderSettings: {
+      ...current.reminderSettings,
+      confirmations: {
+        ...defaultConfirmationSettings(),
+        ...(current.reminderSettings?.confirmations || {}),
+        [key]: !(current.reminderSettings?.confirmations?.[key] !== false),
+      },
+    },
+  }));
 
   const submit = async event => {
     event.preventDefault();
@@ -72,6 +94,11 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved }) {
     }
   };
 
+  const confirmations = {
+    ...defaultConfirmationSettings(),
+    ...(form.reminderSettings?.confirmations || {}),
+  };
+
   return <main className="shell"><div className="toolbar"><div><button type="button" className="btn" onClick={close}>← Back</button><h1 className="title spacer">Settings</h1><p className="copy">Company branding, receipt footer, WhatsApp templates, and payment reminders.</p></div></div>
     <form onSubmit={submit} className="card spacer">
       <strong>Company branding</strong>
@@ -85,14 +112,24 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved }) {
         <Field className="span" label="Terms / notes"><textarea rows={3} value={form.receiptTerms} onChange={e => set("receiptTerms", e.target.value)} /></Field>
       </div>
       <strong className="spacer">WhatsApp templates</strong>
-      <p className="small">WhatsApp sends a short message from these templates. View/PDF shows the full receipt.</p>
-      <p className="small">Variables: {"{customer_name} {amount} {receipt_number} {account_id} {payment_date} {payment_mode} {remaining_balance} {company_name} {company_phone} {due_date} {scheme_name} {chit_type} {month_number} {total_months} {invoice_number} {invoice_date} {outstanding} {days_overdue} {settlement}"}</p>
+      <p className="small">WhatsApp opens a short message from these templates. View/PDF shows the full receipt.</p>
+      <p className="small">Variables: {"{customer_name} {member_name} {amount} {receipt_number} {account_id} {account_number} {financed_amount} {amount_paid} {interest_amount} {interest_rate} {total_repayment} {daily_installment} {monthly_installment} {repayment_days} {start_date} {completion_date} {first_payment_date} {scheme_name} {chit_value} {chit_type} {month_number} {winning_bid} {amount_lifted} {commission} {discount} {dividend} {remaining_months} {lift_date} {company_name} {company_phone}"}</p>
       <div className="form spacer">
         <Field className="span" label="Payment receipt"><textarea rows={8} value={form.whatsappTemplates.payment_receipt || ""} onChange={e => setTemplate("payment_receipt", e.target.value)} /></Field>
         <Field className="span" label="Monthly finance reminder"><textarea rows={7} value={form.whatsappTemplates.monthly_reminder || ""} onChange={e => setTemplate("monthly_reminder", e.target.value)} /></Field>
         <Field className="span" label="Chit fund reminder"><textarea rows={8} value={form.whatsappTemplates.chit_reminder || ""} onChange={e => setTemplate("chit_reminder", e.target.value)} /></Field>
+        <Field className="span" label="Daily account opened confirmation"><textarea rows={10} value={form.whatsappTemplates.daily_account_opened || ""} onChange={e => setTemplate("daily_account_opened", e.target.value)} /></Field>
+        <Field className="span" label="Monthly account opened confirmation"><textarea rows={10} value={form.whatsappTemplates.monthly_account_opened || ""} onChange={e => setTemplate("monthly_account_opened", e.target.value)} /></Field>
+        <Field className="span" label="Chit lift confirmation"><textarea rows={10} value={form.whatsappTemplates.chit_lift_confirmation || ""} onChange={e => setTemplate("chit_lift_confirmation", e.target.value)} /></Field>
         <Field className="span" label="Accounts sales invoice"><textarea rows={8} value={form.whatsappTemplates.sales_invoice || ""} onChange={e => setTemplate("sales_invoice", e.target.value)} /></Field>
         <Field className="span" label="Accounts receivable reminder"><textarea rows={7} value={form.whatsappTemplates.ar_reminder || ""} onChange={e => setTemplate("ar_reminder", e.target.value)} /></Field>
+      </div>
+      <strong className="spacer">Automatic WhatsApp confirmations</strong>
+      <p className="small">After a successful save, FinTrack can open WhatsApp with the confirmation message (same wa.me flow as receipts). Account/chit save always succeeds even if WhatsApp cannot open.</p>
+      <div className="card spacer">
+        <label className="row small"><input type="checkbox" checked={confirmations.daily_account !== false} onChange={() => toggleConfirmation("daily_account")} /> Daily Finance — new account confirmation</label>
+        <label className="row small"><input type="checkbox" checked={confirmations.monthly_account !== false} onChange={() => toggleConfirmation("monthly_account")} /> Monthly Finance — new account confirmation</label>
+        <label className="row small"><input type="checkbox" checked={confirmations.chit_lift !== false} onChange={() => toggleConfirmation("chit_lift")} /> Chit Fund — lift confirmation</label>
       </div>
       <strong className="spacer">Payment reminders</strong>
       <div className="grid two spacer">

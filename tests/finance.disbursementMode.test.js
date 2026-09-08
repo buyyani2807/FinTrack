@@ -11,10 +11,15 @@ test("daily payout total is paid to customer; monthly is principal", () => {
   assert.equal(disbursementPayoutTotal("monthly", 8500, 100000), 100000);
 });
 
-test("payout split supports cash, upi, and cash+upi", () => {
+test("payout split supports cash, upi, bank, and cash+upi", () => {
   assert.deepEqual(disbursementPayoutSplit("cash", 8500), { mode: "cash", cashAmount: 8500, upiAmount: 0 });
   assert.deepEqual(disbursementPayoutSplit("upi", 800), { mode: "upi", cashAmount: 0, upiAmount: 800 });
+  assert.deepEqual(disbursementPayoutSplit("bank", 12000), { mode: "bank", cashAmount: 0, upiAmount: 0 });
   assert.deepEqual(disbursementPayoutSplit("cash_upi", 9000, 5000, 4000), { mode: "cash_upi", cashAmount: 5000, upiAmount: 4000 });
+});
+
+test("bank payout is accepted without cash/upi split amounts", () => {
+  assert.equal(disbursementPayoutError("bank", 12000), "");
 });
 
 test("cash+upi payout is rejected until both sides equal the total", () => {

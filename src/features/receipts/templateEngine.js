@@ -53,6 +53,47 @@ Please arrange payment at the earliest.
 Thank you,
 {company_name}
 {company_phone}`,
+  daily_account_opened: `Hello {customer_name},
+Your Daily Finance account has been successfully opened.
+Account No: {account_number}
+Financed Amount: {financed_amount}
+Amount Paid to Customer: {amount_paid}
+Interest: {interest_amount}
+Interest Rate: {interest_rate}
+Total Repayment: {total_repayment}
+Daily Payment: {daily_installment}
+Repayment Period: {repayment_days} days
+Start Date: {start_date}
+Expected Completion: {completion_date}
+Thank you,
+{company_name}`,
+  monthly_account_opened: `Hello {customer_name},
+Your Monthly Finance account has been successfully opened.
+Account No: {account_number}
+Financed Amount: {financed_amount}
+Amount Paid to Customer: {amount_paid}
+Interest Rate: {interest_rate}
+First Month Interest: {interest_amount}
+Monthly Payment: {monthly_installment}
+Start Date: {start_date}
+First Payment Date: {first_payment_date}
+Thank you,
+{company_name}`,
+  chit_lift_confirmation: `Hello {member_name},
+Congratulations! Your chit has been successfully lifted.
+Scheme: {scheme_name}
+Chit Type: {chit_type}
+Chit Value: {chit_value}
+Month: Month {month_number}
+Winning Bid / Amount Lifted: {amount_lifted}
+Commission: {commission}
+Discount: {discount}
+Dividend: {dividend}
+Monthly Installment: {monthly_installment}
+Remaining Period: {remaining_months} months
+Date: {lift_date}
+Thank you,
+{company_name}`,
 };
 
 export function resolveWhatsAppTemplate(settings = {}, key = "payment_receipt") {
