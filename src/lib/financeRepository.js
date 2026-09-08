@@ -65,9 +65,16 @@ const mapOrganizationSettings = organization => ({
     chit: { 7: true, 3: true, 1: true, 0: true },
     confirmations: { daily_account: true, monthly_account: true, chit_lift: true },
   },
+  featurePacks: Array.isArray(organization?.feature_packs) ? organization.feature_packs : ["full"],
+  moduleOverrides: organization?.module_overrides && typeof organization.module_overrides === "object"
+    ? organization.module_overrides
+    : {},
+  einvoiceSettings: organization?.einvoice_settings && typeof organization.einvoice_settings === "object"
+    ? organization.einvoice_settings
+    : {},
 });
 
-const ORG_RECEIPT_SETTINGS_SELECT = "name,company_address,company_phone,company_email,company_logo_url,receipt_footer,receipt_terms,whatsapp_templates,reminder_settings";
+const ORG_RECEIPT_SETTINGS_SELECT = "name,company_address,company_phone,company_email,company_logo_url,receipt_footer,receipt_terms,whatsapp_templates,reminder_settings,feature_packs,module_overrides,einvoice_settings";
 
 const isMissingSchemaError = error => {
   const message = String(error?.message || error || "").toLowerCase();

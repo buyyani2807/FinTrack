@@ -94,6 +94,30 @@ Remaining Period: {remaining_months} months
 Date: {lift_date}
 Thank you,
 {company_name}`,
+  payment_advice: `Hi {supplier_name},
+Please find payment advice for {amount}.
+Payment Date: {payment_date}
+Payment Mode: {payment_mode}
+Reference: {payment_reference}
+Voucher / Bill: {voucher_number}
+Thank you,
+{company_name}
+{company_phone}`,
+  purchase_document: `Hi {supplier_name},
+Purchase document {document_number} dated {document_date}.
+Amount: {amount}
+Due date: {due_date}
+Items / notes: {notes}
+Thank you,
+{company_name}
+{company_phone}`,
+  party_statement: `Hi {party_name},
+Please find your statement from {company_name}.
+Period: {period_from} to {period_to}
+Opening: {opening_balance}
+Closing: {closing_balance}
+Please review and confirm.
+{company_phone}`,
 };
 
 export function resolveWhatsAppTemplate(settings = {}, key = "payment_receipt") {

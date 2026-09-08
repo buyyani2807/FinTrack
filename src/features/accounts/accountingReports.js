@@ -199,32 +199,101 @@ export function partyBalances(accounts, vouchers, parties = [], { kind = "receiv
     .sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
 }
 
-export function matchBankLine(statementLine, voucherLines = []) {
+export function matchBankLine(statementLine, voucherLines = [], options = {}) {
+  if (statementLine.matchStatus === "ignored") {
+    return { ...statementLine, matchStatus: "ignored", matchConfidence: 0, matchCandidates: [] };
+  }
   if (statementLine.matchedVoucherLineId) {
-    return { ...statementLine, matchStatus: "matched" };
+    return { ...statementLine, matchStatus: "matched", matchConfidence: 100, matchCandidates: [] };
   }
   const amount = roundMoney(statementLine.amount);
-  const candidates = voucherLines.filter(line => {
-    if (line.matched) return false;
-    const lineAmount = roundMoney(Number(line.debit || 0) + Number(line.credit || 0));
-    return lineAmount === amount && (!statementLine.lineDate || line.date === statementLine.lineDate);
-  });
-  if (candidates.length === 1) {
+  const dateWindow = Number(options.dateWindowDays ?? 3);
+  const statementDate = statementLine.lineDate || "";
+  const description = String(statementLine.description || "").toLowerCase();
+  const reference = String(statementLine.reference || "").toLowerCase();
+
+  const scored = [];
+  for (const line of voucherLines || []) {
+    if (line.matched) continue;
+    const lineAmount = roundMoney(Number(line.debit || 0) + Number(line.credit || 0) || Number(line.amount || 0));
+    if (lineAmount !== amount) continue;
+    let score = 55;
+    const reasons = ["amount"];
+    if (statementDate && line.date === statementDate) {
+      score += 30;
+      reasons.push("exact date");
+    } else if (statementDate && line.date && absDaysBetween(statementDate, line.date) <= dateWindow) {
+      score += 15;
+      reasons.push("near date");
+    }
+    const narration = String(line.narration || line.voucherNumber || "").toLowerCase();
+    const party = String(line.partyName || "").toLowerCase();
+    if (reference && (narration.includes(reference) || String(line.voucherNumber || "").toLowerCase().includes(reference))) {
+      score += 12;
+      reasons.push("reference");
+    }
+    if (party && description.includes(party)) {
+      score += 10;
+      reasons.push("party");
+    }
+    if (description && narration) {
+      const overlap = tokenOverlap(description, narration);
+      if (overlap >= 0.35) {
+        score += 8;
+        reasons.push("description");
+      }
+    }
+    scored.push({
+      ...line,
+      confidence: Math.min(99, score),
+      reasons,
+    });
+  }
+
+  scored.sort((a, b) => b.confidence - a.confidence || String(a.date).localeCompare(String(b.date)));
+  const best = scored[0];
+  if (best && best.confidence >= 70 && (scored.length === 1 || best.confidence >= (scored[1]?.confidence || 0) + 8)) {
     return {
       ...statementLine,
-      matchedVoucherLineId: candidates[0].id,
+      matchedVoucherLineId: best.id,
       matchStatus: "suggested",
+      matchConfidence: best.confidence,
+      matchCandidates: scored.slice(0, 5),
+      matchHint: `${best.voucherNumber || "Voucher"} · ${best.confidence}% (${best.reasons.join(", ")})`,
     };
   }
-  return { ...statementLine, matchStatus: statementLine.matchStatus || "unmatched" };
+  return {
+    ...statementLine,
+    matchStatus: statementLine.matchStatus || "unmatched",
+    matchConfidence: best?.confidence || 0,
+    matchCandidates: scored.slice(0, 5),
+    matchHint: scored.length ? `${scored.length} possible · top ${best.confidence}%` : "",
+  };
 }
 
-export const defaultBankStatementLines = (lines = [], voucherLines = []) =>
-  lines.map(line => matchBankLine(line, voucherLines));
+function absDaysBetween(a, b) {
+  const left = new Date(`${a}T00:00:00`);
+  const right = new Date(`${b}T00:00:00`);
+  if (Number.isNaN(left.getTime()) || Number.isNaN(right.getTime())) return 999;
+  return Math.abs(Math.round((left - right) / 86400000));
+}
 
-export function bankVoucherLines(accounts, vouchers, coaId) {
+function tokenOverlap(a, b) {
+  const left = new Set(String(a).split(/[^a-z0-9]+/i).filter(token => token.length > 2));
+  const right = new Set(String(b).split(/[^a-z0-9]+/i).filter(token => token.length > 2));
+  if (!left.size || !right.size) return 0;
+  let hit = 0;
+  for (const token of left) if (right.has(token)) hit += 1;
+  return hit / Math.max(left.size, right.size);
+}
+
+export const defaultBankStatementLines = (lines = [], voucherLines = [], options = {}) =>
+  lines.map(line => matchBankLine(line, voucherLines, options));
+
+export function bankVoucherLines(accounts, vouchers, coaId, parties = []) {
   const account = (accounts || []).find(item => item.id === coaId || item.code === coaId);
   if (!account) return [];
+  const partyById = new Map((parties || []).map(party => [party.id, party.name]));
   const rows = [];
   for (const voucher of vouchers || []) {
     if (!affectsLedgers(voucher)) continue;
@@ -235,6 +304,7 @@ export function bankVoucherLines(accounts, vouchers, coaId) {
         date: voucher.date,
         voucherNumber: voucher.voucherNumber,
         narration: line.description || voucher.narration,
+        partyName: partyById.get(voucher.partyId) || "",
         debit: roundMoney(line.debit),
         credit: roundMoney(line.credit),
         amount: roundMoney(Number(line.debit || 0) + Number(line.credit || 0)),

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { formatReceiptDate } from "../receipts/receiptModel.js";
 import { canWhatsAppShare, openWhatsAppShare } from "../receipts/receiptWhatsApp.js";
-import { buildArReminderMessage, buildSalesInvoiceMessage } from "./salesInvoiceModel.js";
+import { buildArReminderMessage, buildPaymentAdviceMessage, buildSalesInvoiceMessage } from "./salesInvoiceModel.js";
 import { downloadSalesInvoicePdf } from "./salesInvoicePdf.js";
 
 export function SalesInvoiceViewerModal({ invoice, settings = {}, close }) {
@@ -173,6 +173,27 @@ export function ArReminderButton({ row, settings = {}, company = {}, workspace =
       })}
     >
       Remind
+    </button>
+  );
+}
+
+export function PaymentAdviceButton({ row, settings = {}, company = {}, workspace = {}, compact = false }) {
+  if (!row || Number(row.outstanding || 0) <= 0) return null;
+  const phone = row.partyPhone || "";
+  if (!canWhatsAppShare(phone)) {
+    return compact ? null : <span className="small muted">No WhatsApp phone</span>;
+  }
+  return (
+    <button
+      type="button"
+      className="btn whatsapp"
+      title="Open WhatsApp payment advice"
+      onClick={() => openWhatsAppShare({
+        phone,
+        message: buildPaymentAdviceMessage(row, settings, company, workspace),
+      })}
+    >
+      {compact ? "Advice" : "Payment advice"}
     </button>
   );
 }

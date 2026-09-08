@@ -159,7 +159,11 @@ export const loadPeriodLocks = token => wrap(
 export const loadBankStatements = token => wrap(
   Promise.all([
     accQuery(`/rest/v1/acc_bank_statements?select=id,coa_id,statement_date,opening_balance,closing_balance,acc_coa(name,code)&order=statement_date.desc${companyEq()}`, token),
-    accQuery(`/rest/v1/acc_bank_statement_lines?select=id,statement_id,line_date,description,amount,direction,matched_voucher_line_id,match_status&order=line_date.asc${companyEq()}`, token),
+    accQuery(`/rest/v1/acc_bank_statement_lines?select=id,statement_id,line_date,description,reference,amount,direction,matched_voucher_line_id,match_status&order=line_date.asc${companyEq()}`, token)
+      .catch(err => {
+        if (!isMissing(err) && !/reference/i.test(String(err?.message || ""))) throw err;
+        return accQuery(`/rest/v1/acc_bank_statement_lines?select=id,statement_id,line_date,description,amount,direction,matched_voucher_line_id,match_status&order=line_date.asc${companyEq()}`, token);
+      }),
   ]).then(([statements, lines]) => {
     const linesBy = groupByKey(lines, "statement_id");
     return statements.map(row => ({
@@ -173,6 +177,7 @@ export const loadBankStatements = token => wrap(
         id: line.id,
         lineDate: line.line_date,
         description: line.description,
+        ...(line.reference != null ? { reference: line.reference || "" } : {}),
         amount: Number(line.amount || 0),
         direction: line.direction,
         matchedVoucherLineId: line.matched_voucher_line_id,
@@ -348,7 +353,42 @@ export const addBankStatement = (token, payload) =>
     input_statement_date: payload.statementDate,
     input_opening: Number(payload.openingBalance || 0),
     input_closing: Number(payload.closingBalance || 0),
-    input_lines: payload.lines || [],
+    input_lines: (payload.lines || []).map(line => ({
+      line_date: line.line_date || line.lineDate,
+      description: line.description || "",
+      amount: Number(line.amount || 0),
+      direction: line.direction || "in",
+      reference: line.reference || "",
+    })),
+  }, token));
+
+export const ignoreBankLine = (token, lineId, note) =>
+  wrap(accRpc("acc_ignore_bank_line", {
+    input_line_id: lineId,
+    input_note: note || null,
+  }, token));
+
+export const trackProductEventRpc = (token, eventName, properties = {}) =>
+  ignoreMissing(supabase.rpc("track_product_event", {
+    input_event_name: eventName,
+    input_properties: properties || {},
+  }, token));
+
+export const loadAccountsRoles = token =>
+  ignoreMissing(
+    accQuery("/rest/v1/acc_user_roles?select=id,user_id,role,created_at&order=created_at.asc", token)
+      .then(rows => (rows || []).map(row => ({
+        id: row.id,
+        userId: row.user_id,
+        role: row.role,
+        createdAt: row.created_at,
+      }))),
+  ).then(rows => rows || []);
+
+export const setAccountsUserRole = (token, userId, role) =>
+  wrap(supabase.rpc("acc_set_user_role", {
+    input_user_id: userId,
+    input_role: role || null,
   }, token));
 
 export const loadVoucherAttachments = (token, voucherId) => wrap(

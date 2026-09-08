@@ -145,6 +145,20 @@ export function buildArReminderMessage(row, settings = {}, company = {}, workspa
   return applyTemplate(resolveWhatsAppTemplate(settings, "ar_reminder"), salesInvoiceWhatsAppVariables(invoice));
 }
 
+export function buildPaymentAdviceMessage(row, settings = {}, company = {}, workspace = {}) {
+  const branding = accountsCompanyBranding(company, workspace);
+  return applyTemplate(resolveWhatsAppTemplate(settings, "payment_advice"), {
+    supplier_name: row.partyName || "Supplier",
+    amount: money(row.outstanding || row.amount || 0),
+    payment_date: formatReceiptDate(row.invoiceDate || row.dueDate),
+    payment_mode: row.paymentMode || "Bank / UPI",
+    payment_reference: row.reference || "",
+    voucher_number: row.reference || "",
+    company_name: branding.companyName || "",
+    company_phone: branding.companyPhone || "",
+  });
+}
+
 export function buildSalesInvoiceFromRegisterRow({ row, voucher, party, accounts, company, workspace }) {
   const invoice = buildSalesInvoice({
     voucher: voucher || {

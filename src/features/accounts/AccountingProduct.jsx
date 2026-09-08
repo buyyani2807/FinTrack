@@ -11,9 +11,11 @@ import {
   deleteChartAccount,
   deleteParty,
   deleteVoucherAttachment,
+  ignoreBankLine,
   initializeAccounting,
   loadAccountingSettings,
   loadAccountsCompanies,
+  loadAccountsRoles,
   loadAuditLog,
   loadBankStatements,
   loadChartOfAccounts,
@@ -34,9 +36,11 @@ import {
   saveGstSettings,
   setAccountingIntegration,
   setActiveAccountsCompanyId,
+  setAccountsUserRole,
   setItemActive,
   setPartyActive,
   syncAccountingOperations,
+  trackProductEventRpc,
   updateChartAccount,
   updateParty,
   upsertItem,
@@ -45,6 +49,27 @@ import {
   deleteItemCategory,
   adjustStock,
 } from "./accountingRepository.js";
+import {
+  BANK_IMPORT_FIELDS,
+  guessColumnMapping,
+  mapBankImportRows,
+  readBankStatementFile,
+} from "./bankStatementImport.js";
+import {
+  assertBackupCompanyMatch,
+  backupDownloadFilename,
+  buildAccountsCompanyBackup,
+  parseAccountsCompanyBackup,
+} from "./accountsBackup.js";
+import {
+  buildGstr1Preparation,
+  buildGstr3bPreparation,
+  EINVOICE_INTEGRATION_STUB,
+  gstrPrepToCsvRows,
+} from "./gstPrepExport.js";
+import { buildAccountsAttentionItems } from "../intelligence/attentionCenter.js";
+import { AttentionCenterCard } from "../intelligence/AttentionCenterCard.jsx";
+import { trackProductEvent } from "../commercial/productAnalytics.js";
 import {
   assertVoucherAttachmentMeta,
   attachmentDownloadHref,
@@ -109,7 +134,7 @@ import { downloadAccountsCsv, downloadAccountsExcel, downloadAccountsPdf } from 
 import { formatInr } from "../../lib/formatMoney.js";
 import { loadOrganizationSettings } from "../../lib/financeRepository.js";
 import { buildSalesInvoice } from "./salesInvoiceModel.js";
-import { ArReminderButton, SalesInvoiceActions, SalesInvoiceSuccessModal, SalesInvoiceViewerModal } from "./SalesInvoiceActions.jsx";
+import { ArReminderButton, PaymentAdviceButton, SalesInvoiceActions, SalesInvoiceSuccessModal, SalesInvoiceViewerModal } from "./SalesInvoiceActions.jsx";
 import { AccItemsSetup } from "./AccItemsSetup.jsx";
 import {
   aggregateItemizedGst,
@@ -352,18 +377,31 @@ const AccEmpty = ({ title, copy, actionLabel, onAction }) => (
   </div>
 );
 
-const bankMatchLabel = status => (status === "matched" ? "Matched" : status === "suggested" ? "Suggested" : "Unmatched");
-const bankMatchTone = status => (status === "matched" ? "active" : status === "suggested" ? "suggested" : "inactive");
+const bankMatchLabel = status => (status === "matched" ? "Matched" : status === "suggested" ? "Suggested" : status === "ignored" ? "Ignored" : "Unmatched");
+const bankMatchTone = status => (status === "matched" ? "active" : status === "suggested" ? "suggested" : status === "ignored" ? "inactive" : "inactive");
 
-const BankMatchControls = ({ line, selected, options, saving, onSelect, onMatch, onUnmatch }) => (
+const BankMatchControls = ({ line, selected, options, saving, onSelect, onMatch, onUnmatch, onIgnore }) => (
   <>
-    <select value={selected} onChange={event => onSelect(event.target.value)} disabled={line.matchStatus === "matched"}>
+    {line.matchHint ? <p className="small acc-bank-match-hint">{line.matchHint}</p> : null}
+    <select value={selected} onChange={event => onSelect(event.target.value)} disabled={line.matchStatus === "matched" || line.matchStatus === "ignored"}>
       <option value="">Choose books line</option>
-      {options.map(item => <option key={item.id} value={item.id}>{item.date} · {item.voucherNumber} · {money(item.amount)}</option>)}
+      {(line.matchCandidates?.length ? line.matchCandidates : options).map(item => (
+        <option key={item.id} value={item.id}>
+          {item.date} · {item.voucherNumber} · {money(item.amount)}{item.confidence != null ? ` · ${item.confidence}%` : ""}
+        </option>
+      ))}
+      {options.filter(item => !(line.matchCandidates || []).some(candidate => candidate.id === item.id)).map(item => (
+        <option key={item.id} value={item.id}>{item.date} · {item.voucherNumber} · {money(item.amount)}</option>
+      ))}
     </select>
     {line.matchStatus === "matched"
       ? <button type="button" className="btn" disabled={saving} onClick={onUnmatch}>Unmatch</button>
-      : <button type="button" className="btn primary" disabled={saving || !selected} onClick={onMatch}>Match</button>}
+      : line.matchStatus === "ignored"
+        ? <button type="button" className="btn" disabled={saving} onClick={onUnmatch}>Restore</button>
+        : <>
+          <button type="button" className="btn primary" disabled={saving || !selected} onClick={onMatch}>Match</button>
+          <button type="button" className="btn" disabled={saving} onClick={onIgnore}>Ignore</button>
+        </>}
   </>
 );
 
@@ -710,7 +748,7 @@ function AccPageHeader({ backLabel, onBack, title, copy, trail, extras, companyB
   </>;
 }
 const emptyLine = () => ({ coaId: "", debit: "", credit: "", description: "" });
-const emptyBankLine = () => ({ lineDate: todayIso(), description: "", amount: "", direction: "in" });
+const emptyBankLine = () => ({ lineDate: todayIso(), description: "", reference: "", amount: "", direction: "in" });
 const emptyPartyForm = () => ({ id: null, partyType: "customer", name: "", phone: "", email: "", address: "", gstin: "", stateCode: "", gstRegistration: "", notes: "" });
 const emptyVoucherForm = () => ({ date: todayIso(), narration: "", partyId: "", dueDate: addDaysIso(todayIso(), 7) });
 const emptySimpleForm = () => ({
@@ -1093,7 +1131,11 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
     closingBalance: "",
     lines: [emptyBankLine()],
   });
+  const [bankImport, setBankImport] = useState(null);
+  const [bankImportMapping, setBankImportMapping] = useState({});
   const [matchChoice, setMatchChoice] = useState({});
+  const [accountsRoles, setAccountsRoles] = useState([]);
+  const [roleDraft, setRoleDraft] = useState({ userId: "", role: "accountant" });
   const [showSimple, setShowSimple] = useState(false);
   const [simpleKind, setSimpleKind] = useState("sale");
   const [simpleForm, setSimpleForm] = useState(emptySimpleForm);
@@ -1190,15 +1232,20 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
         setSetupForm({ companyName: mergedSettings.companyName, booksStartedOn: mergedSettings.booksStartedOn || todayIso() });
       }
       if (sectionRef.current === "setup") {
-        const [nextAudit, nextLocks] = await Promise.all([loadAuditLog(token), loadPeriodLocks(token)]);
+        const [nextAudit, nextLocks, nextRoles] = await Promise.all([
+          loadAuditLog(token),
+          loadPeriodLocks(token),
+          loadAccountsRoles(token).catch(() => []),
+        ]);
         if (gen !== refreshGen.current) return;
         setAudit(nextAudit);
         setLocks(nextLocks);
+        setAccountsRoles(nextRoles || []);
       }
-      if (sectionRef.current === "bank") {
-        const nextStatements = await loadBankStatements(token);
+      if (sectionRef.current === "bank" || sectionRef.current === "overview") {
+        const nextStatements = await loadBankStatements(token).catch(() => []);
         if (gen !== refreshGen.current) return;
-        setStatements(nextStatements);
+        setStatements(nextStatements || []);
       }
     } catch (err) {
       if (gen !== refreshGen.current) return;
@@ -1367,6 +1414,37 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
     [wantGst, vouchers, range],
   );
   const activeCompany = useMemo(() => companies.find(item => item.id === activeCompanyId) || companies[0] || null, [companies, activeCompanyId]);
+  const accountsAttention = useMemo(() => {
+    if (!wantOverview) return null;
+    const overdueInvoices = invoiceRegister(accounts, vouchers, parties, {
+      kind: "receivable",
+      today: todayIso(),
+      ...range,
+      outstandingOnly: true,
+    }).filter(row => Number(row.daysOverdue || 0) > 0);
+    const lowStockCount = items.filter(item => {
+      const stock = currentStockForItem(item, stockMovements);
+      const reorder = Number(item.reorderLevel || 0);
+      return reorder > 0 && stock < reorder;
+    }).length;
+    const unmatchedBankLines = (statements || []).reduce((sum, statement) => {
+      const lines = statement.lines || [];
+      return sum + lines.filter(line => line.matchStatus !== "matched" && line.matchStatus !== "ignored").length;
+    }, 0);
+    const itemsList = buildAccountsAttentionItems({
+      overdueReceivables: overdueInvoices.reduce((sum, row) => sum + Number(row.outstanding || 0), 0),
+      overdueInvoiceCount: overdueInvoices.length,
+      lowStockCount,
+      unmatchedBankLines,
+      gstNeedsReview: Boolean(activeCompany?.gstRegistration && activeCompany.gstRegistration !== "unregistered"),
+    });
+    return {
+      summary: itemsList.length ? `${itemsList.length} Accounts item${itemsList.length === 1 ? "" : "s"} need review` : "Accounts look clear",
+      count: itemsList.length,
+      items: itemsList,
+      disclaimer: "Advisory only — never changes books.",
+    };
+  }, [wantOverview, accounts, vouchers, parties, range, items, stockMovements, statements, activeCompany]);
   const stockByItem = useMemo(() => {
     const map = {};
     for (const item of items) map[item.id] = currentStockForItem(item, stockMovements);
@@ -1871,6 +1949,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
       .map(line => ({
         line_date: line.lineDate,
         description: line.description,
+        reference: line.reference || "",
         amount: Number(line.amount),
         direction: line.direction,
       }));
@@ -1882,8 +1961,90 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
       closingBalance: bankForm.closingBalance,
       lines,
     });
+    trackProductEvent("bank_statement_saved", { lines: lines.length });
+    trackProductEventRpc(token, "bank_statement_saved", { lines: lines.length }).catch(() => {});
     setBankForm(current => ({ ...current, lines: [emptyBankLine()], openingBalance: "", closingBalance: "" }));
+    setBankImport(null);
+    setBankImportMapping({});
   }, "Bank statement saved. Accounting balances were not changed.");
+
+  const onBankImportFile = async event => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      const parsed = await readBankStatementFile(file);
+      const mapping = guessColumnMapping(parsed.headers);
+      setBankImport(parsed);
+      setBankImportMapping(mapping);
+      trackProductEvent("bank_statement_import_parsed", { rows: parsed.rows.length });
+    } catch (err) {
+      setError(err.message || "Could not read bank statement file.");
+    }
+  };
+
+  const applyBankImportMapping = () => {
+    if (!bankImport) return;
+    const mapped = mapBankImportRows({ ...bankImport, mapping: bankImportMapping });
+    if (mapped.errors.length) {
+      setError(mapped.errors.slice(0, 3).join(" "));
+    }
+    if (!mapped.lines.length) {
+      setError("No statement lines found with the current column mapping.");
+      return;
+    }
+    setBankForm(current => ({
+      ...current,
+      openingBalance: mapped.openingBalance || current.openingBalance,
+      closingBalance: mapped.closingBalance || current.closingBalance,
+      lines: mapped.lines.length ? mapped.lines : [emptyBankLine()],
+    }));
+    setNotice(`Imported ${mapped.lines.length} line(s). Review, then Save statement.`);
+  };
+
+  const downloadCompanyBackup = () => {
+    try {
+      const backup = buildAccountsCompanyBackup({
+        company: companies.find(row => row.id === activeCompanyId) || { id: activeCompanyId, name: settings.companyName },
+        settings,
+        accounts,
+        parties,
+        items,
+        vouchers,
+        gstLines: [],
+        voucherItemLines,
+        stockMovements,
+        statements,
+        audit,
+        periodLocks: locks,
+      });
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = backupDownloadFilename(backup.company);
+      anchor.click();
+      URL.revokeObjectURL(url);
+      trackProductEvent("accounts_backup_downloaded", { vouchers: vouchers.length });
+      setNotice("Company backup downloaded. Keep it offline and company-specific.");
+    } catch (err) {
+      setError(err.message || "Backup failed.");
+    }
+  };
+
+  const previewCompanyRestore = async event => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      const backup = parseAccountsCompanyBackup(await file.text());
+      const active = companies.find(row => row.id === activeCompanyId);
+      assertBackupCompanyMatch(backup, active || { id: activeCompanyId, name: settings.companyName });
+      setNotice(`Backup verified for ${backup.company.name} (${backup.counts?.vouchers || 0} vouchers). Restore applies only after a confirmed server import in a later release — file was validated without changing books.`);
+    } catch (err) {
+      setError(err.message || "Invalid backup file.");
+    }
+  };
 
   const mobileTab = ["overview", "vouchers", "parties", "reports"].includes(section)
     ? section
@@ -2002,7 +2163,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
               <th className="acc-num">Outstanding</th>
               <th className="acc-num">Days overdue</th>
               <th>Status</th>
-              {kind !== "payable" && <th>Remind</th>}
+              <th>{kind === "payable" ? "Advice" : "Remind"}</th>
             </tr>
           </thead>
           <tbody>
@@ -2019,11 +2180,11 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
                 <td className={`acc-num acc-invoice-out${row.status === "Overdue" ? " is-overdue" : row.outstanding > 0 ? "" : " is-clear"}`}>{money(row.outstanding)}</td>
                 <td className="acc-num">{row.daysOverdue || 0}</td>
                 <td><span className={`acc-status-pill ${invoiceStatusTone(row.status)}`}>{row.status}</span></td>
-                {kind !== "payable" && (
-                  <td className="acc-invoice-remind">
-                    <ArReminderButton row={row} settings={orgSettings} company={activeCompany} workspace={workspace} compact />
-                  </td>
-                )}
+                <td className="acc-invoice-remind">
+                  {kind === "payable"
+                    ? <PaymentAdviceButton row={row} settings={orgSettings} company={activeCompany} workspace={workspace} compact />
+                    : <ArReminderButton row={row} settings={orgSettings} company={activeCompany} workspace={workspace} compact />}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -2096,6 +2257,12 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
             equationHolds={Boolean(metrics?.equationHolds)}
             integrationEnabled={Boolean(settings?.integrationEnabled)}
           />
+
+          {accountsAttention?.count > 0 && <AttentionCenterCard attention={accountsAttention} onNavigate={href => {
+            trackProductEvent("accounts_attention_navigate", { section: href?.section || "" });
+            if (href?.section) openSection(href.section);
+            if (href?.reportTab) setReportTab(href.reportTab);
+          }} />}
 
           <AccCompareChart
             ar={overviewArAging}
@@ -2454,7 +2621,24 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
             {!purchaseRows.length && <tr><td colSpan="4">No purchase vouchers in this period.</td></tr>}
           </tbody></table></div>}
           {section === "reports" && reportTab === "gst" && <div className="acc-gst-reports">
-            <p className="copy">GST figures are from this company’s books for the selected dates. They are not a filed GSTR-1 or GSTR-3B.</p>
+            <p className="copy">GST figures are from this company’s books for the selected dates. They are <strong>calculated</strong> data — not a filed GSTR-1 or GSTR-3B.</p>
+            <div className="accounts-action-row spacer">
+              <button type="button" className="btn" onClick={() => {
+                const prep = buildGstr1Preparation({ vouchers, parties, range });
+                downloadAccountsCsv(`fintrack-gstr1-prep-${todayIso()}.csv`, gstrPrepToCsvRows(prep));
+                trackProductEvent("gstr1_prep_export");
+                setNotice("GSTR-1 preparation CSV downloaded (calculated / not filed).");
+              }}>Export GSTR-1 prep (calculated)</button>
+              <button type="button" className="btn" onClick={() => {
+                const prep = buildGstr3bPreparation({ vouchers, range });
+                downloadAccountsCsv(`fintrack-gstr3b-prep-${todayIso()}.csv`, gstrPrepToCsvRows(prep));
+                trackProductEvent("gstr3b_prep_export");
+                setNotice("GSTR-3B preparation CSV downloaded (calculated / not filed).");
+              }}>Export GSTR-3B prep (calculated)</button>
+            </div>
+            <div className="notice spacer">
+              <strong>e-Invoice / e-Way:</strong> {EINVOICE_INTEGRATION_STUB.note} Configure credentials later — FinTrack will not invent IRNs.
+            </div>
             <div className="acc-metric-grid three">
               <AccMetric label="Output GST" value={money(gstReport.outputTax)} />
               <AccMetric label="Eligible ITC" value={money(gstReport.inputTax)} />
@@ -2515,7 +2699,31 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
 
         {section === "bank" && <div className="acc-panel acc-bank">
           <p className="acc-bank-note">Matching marks statement lines against posted voucher lines. It never changes cash, bank, P&amp;L, or the trial balance.</p>
-          <AccSetupSection icon="B" title="Add bank statement" copy="Enter the statement totals first, then each line from the bank. Save before matching.">
+          <AccSetupSection icon="B" title="Add bank statement" copy="Import a CSV from net banking, map columns, then save. PDF is not auto-parsed yet.">
+            <h3 className="acc-section-title">Import file (CSV / Excel text export)</h3>
+            <div className="accounts-action-row acc-bank-actions">
+              <label className="btn">
+                Choose statement file
+                <input type="file" accept=".csv,.txt,.tsv,.xls,.xlsx" hidden onChange={onBankImportFile} />
+              </label>
+            </div>
+            {bankImport && <>
+              <p className="small">Map columns from your bank file, then apply. Amounts are not posted to ledgers until you create vouchers separately.</p>
+              <div className="acc-bank-meta">
+                {BANK_IMPORT_FIELDS.map(field => (
+                  <Field key={field.id} label={field.label}>
+                    <select
+                      value={bankImportMapping[field.id] ?? ""}
+                      onChange={event => setBankImportMapping(current => ({ ...current, [field.id]: event.target.value === "" ? undefined : Number(event.target.value) }))}
+                    >
+                      <option value="">Ignore</option>
+                      {bankImport.headers.map((header, index) => <option key={`${header}-${index}`} value={index}>{header}</option>)}
+                    </select>
+                  </Field>
+                ))}
+              </div>
+              <button type="button" className="btn primary" onClick={applyBankImportMapping}>Apply mapping to draft lines</button>
+            </>}
             <h3 className="acc-section-title">Statement details</h3>
             <div className="acc-bank-meta">
               <Field label="Bank account"><select value={bankForm.coaId || bankAccounts[0]?.id || ""} onChange={event => setBankForm(current => ({ ...current, coaId: event.target.value }))}><option value="">Select bank</option>{bankAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</select></Field>
@@ -2553,12 +2761,12 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
           </AccSetupSection>
           <h3 className="acc-section-title">Saved statements</h3>
           {statements.map(statement => {
-            const voucherLines = bankVoucherLines(accounts, vouchers, statement.coaId).map(line => ({
+            const voucherLines = bankVoucherLines(accounts, vouchers, statement.coaId, parties).map(line => ({
               ...line,
               matched: matchedLineIds.has(line.id),
             }));
             const displayLines = defaultBankStatementLines(statement.lines, voucherLines);
-            const unmatched = displayLines.filter(line => line.matchStatus !== "matched").length;
+            const unmatched = displayLines.filter(line => line.matchStatus !== "matched" && line.matchStatus !== "ignored").length;
             return <article key={statement.id} className="card acc-bank-statement">
               <header className="acc-bank-statement-head">
                 <div>
@@ -2573,11 +2781,11 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
               </header>
               <div className="table acc-table-wrap acc-bank-match-table"><table><thead><tr><th>Date</th><th>Description</th><th className="acc-num">Amount</th><th>Status</th><th>Match to books</th></tr></thead><tbody>
                 {displayLines.map(line => {
-                  const options = bankVoucherLines(accounts, vouchers, statement.coaId).filter(item => !matchedLineIds.has(item.id) || item.id === line.matchedVoucherLineId);
+                  const options = bankVoucherLines(accounts, vouchers, statement.coaId, parties).filter(item => !matchedLineIds.has(item.id) || item.id === line.matchedVoucherLineId);
                   const selected = matchChoice[line.id] || line.matchedVoucherLineId || "";
                   return <tr key={line.id}>
                     <td>{line.lineDate}</td>
-                    <td>{line.description || "—"}</td>
+                    <td>{line.description || "—"}{line.reference ? <span className="small"> · {line.reference}</span> : null}</td>
                     <td className="acc-num">{money(line.amount)} <span className={`acc-voucher-chip ${line.direction === "out" ? "out" : "in"}`}>{line.direction === "out" ? "Out" : "In"}</span></td>
                     <td><span className={`acc-status-pill ${bankMatchTone(line.matchStatus)}`}>{bankMatchLabel(line.matchStatus)}</span></td>
                     <td className="acc-bank-match-select">
@@ -2589,6 +2797,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
                         onSelect={value => setMatchChoice(current => ({ ...current, [line.id]: value }))}
                         onMatch={() => run(() => saveBankMatch(token, line.id, selected, "Matched"), "Line matched. Books unchanged.")}
                         onUnmatch={() => run(() => saveBankMatch(token, line.id, null, "Unmatched"), "Line unmatched. Books unchanged.")}
+                        onIgnore={() => run(() => ignoreBankLine(token, line.id, "Ignored from statement"), "Line ignored. Books unchanged.")}
                       />
                     </td>
                   </tr>;
@@ -2596,7 +2805,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
               </tbody></table></div>
               <div className="acc-bank-match-cards">
                 {displayLines.map(line => {
-                  const options = bankVoucherLines(accounts, vouchers, statement.coaId).filter(item => !matchedLineIds.has(item.id) || item.id === line.matchedVoucherLineId);
+                  const options = bankVoucherLines(accounts, vouchers, statement.coaId, parties).filter(item => !matchedLineIds.has(item.id) || item.id === line.matchedVoucherLineId);
                   const selected = matchChoice[line.id] || line.matchedVoucherLineId || "";
                   return (
                     <article key={line.id} className="card acc-bank-match-card">
@@ -2605,17 +2814,16 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
                         <span className={`acc-status-pill ${bankMatchTone(line.matchStatus)}`}>{bankMatchLabel(line.matchStatus)}</span>
                       </div>
                       <p className="small">{line.lineDate} · {money(line.amount)} · {line.direction === "out" ? "Out" : "In"}</p>
-                      <div className="acc-bank-match-card-actions">
-                        <BankMatchControls
-                          line={line}
-                          selected={selected}
-                          options={options}
-                          saving={saving}
-                          onSelect={value => setMatchChoice(current => ({ ...current, [line.id]: value }))}
-                          onMatch={() => run(() => saveBankMatch(token, line.id, selected, "Matched"), "Line matched. Books unchanged.")}
-                          onUnmatch={() => run(() => saveBankMatch(token, line.id, null, "Unmatched"), "Line unmatched. Books unchanged.")}
-                        />
-                      </div>
+                      <BankMatchControls
+                        line={line}
+                        selected={selected}
+                        options={options}
+                        saving={saving}
+                        onSelect={value => setMatchChoice(current => ({ ...current, [line.id]: value }))}
+                        onMatch={() => run(() => saveBankMatch(token, line.id, selected, "Matched"), "Line matched. Books unchanged.")}
+                        onUnmatch={() => run(() => saveBankMatch(token, line.id, null, "Unmatched"), "Line unmatched. Books unchanged.")}
+                        onIgnore={() => run(() => ignoreBankLine(token, line.id, "Ignored from statement"), "Line ignored. Books unchanged.")}
+                      />
                     </article>
                   );
                 })}
@@ -2633,6 +2841,14 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
               <Field label="Books start date"><input type="date" value={setupForm.booksStartedOn} onChange={event => setSetupForm(current => ({ ...current, booksStartedOn: event.target.value }))} /></Field>
             </div>
             <button type="button" className="btn primary" disabled={saving} onClick={() => run(() => saveAccountingSettings(token, { ...setupForm, fyStartMonth: 4 }), "Company details saved.")}>{saving ? "Saving…" : "Save company"}</button>
+            <div className="accounts-action-row spacer">
+              <button type="button" className="btn" onClick={downloadCompanyBackup}>Download company backup</button>
+              <label className="btn">
+                Validate restore file
+                <input type="file" accept="application/json,.json" hidden onChange={previewCompanyRestore} />
+              </label>
+            </div>
+            <p className="small">Backups are company-isolated. A backup from Company A cannot overwrite Company B.</p>
             <div className="acc-company-setup-list spacer">
               <p className="small">Each company has its own books. Switching never mixes vouchers.</p>
               {companies.map(company => (
@@ -2846,15 +3062,58 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
             </tbody></table></div>
           </AccSetupSection>
           <AccSetupSection
+            icon="R"
+            title="Accounts access roles"
+            copy="Owner assigns accountant (can post) or viewer (read-only). Collection agents are separate. Requires migration 070."
+            collapsible
+            summary={`${accountsRoles.length} assigned`}
+          >
+            <div className="form spacer">
+              <Field label="User ID (auth UUID)"><input value={roleDraft.userId} onChange={event => setRoleDraft(current => ({ ...current, userId: event.target.value.trim() }))} placeholder="Paste Supabase auth user UUID" /></Field>
+              <Field label="Role">
+                <select value={roleDraft.role} onChange={event => setRoleDraft(current => ({ ...current, role: event.target.value }))}>
+                  <option value="accountant">Accountant (read + write)</option>
+                  <option value="viewer">Viewer (read only)</option>
+                </select>
+              </Field>
+            </div>
+            <div className="accounts-action-row">
+              <button type="button" className="btn primary" disabled={saving || !roleDraft.userId} onClick={() => run(async () => {
+                await setAccountsUserRole(token, roleDraft.userId, roleDraft.role);
+                setRoleDraft({ userId: "", role: "accountant" });
+                setAccountsRoles(await loadAccountsRoles(token));
+              }, "Accounts role saved.")}>{saving ? "Saving…" : "Assign role"}</button>
+            </div>
+            <div className="table spacer acc-table-wrap"><table><thead><tr><th>User ID</th><th>Role</th><th></th></tr></thead><tbody>
+              {accountsRoles.map(row => (
+                <tr key={row.id}>
+                  <td className="small">{row.userId}</td>
+                  <td>{row.role}</td>
+                  <td><button type="button" className="btn" disabled={saving} onClick={() => run(async () => {
+                    await setAccountsUserRole(token, row.userId, null);
+                    setAccountsRoles(await loadAccountsRoles(token));
+                  }, "Accounts role cleared.")}>Remove</button></td>
+                </tr>
+              ))}
+              {!accountsRoles.length && <tr><td colSpan="3">No accountant or viewer roles assigned yet. Owner keeps full access.</td></tr>}
+            </tbody></table></div>
+          </AccSetupSection>
+          <AccSetupSection
             icon="A"
             title="Audit trail"
             copy="Owner actions on books, parties, and settings. Posted amounts are not edited here."
             collapsible
             summary={`${audit.length} ${audit.length === 1 ? "event" : "events"}`}
           >
-            <div className="table spacer acc-table-wrap"><table><thead><tr><th>When (IST)</th><th>Action</th><th>Entity</th><th>Reason</th></tr></thead><tbody>
-              {pagedAudit.items.map(row => <tr key={row.id}><td>{formatIstDateTime(row.createdAt)}</td><td>{row.action}</td><td>{row.entityType}</td><td>{row.reason || "—"}</td></tr>)}
-              {!audit.length && <tr><td colSpan="4">No accounting audit events yet.</td></tr>}
+            <div className="table spacer acc-table-wrap"><table><thead><tr><th>When (IST)</th><th>Action</th><th>Entity</th><th>Before → After</th><th>Reason</th></tr></thead><tbody>
+              {pagedAudit.items.map(row => <tr key={row.id}>
+                <td>{formatIstDateTime(row.createdAt)}</td>
+                <td>{row.action}</td>
+                <td>{row.entityType}</td>
+                <td className="small">{row.oldValue || row.newValue ? `${JSON.stringify(row.oldValue || {})} → ${JSON.stringify(row.newValue || {})}` : "—"}</td>
+                <td>{row.reason || "—"}</td>
+              </tr>)}
+              {!audit.length && <tr><td colSpan="5">No accounting audit events yet.</td></tr>}
             </tbody></table></div>
             <AccPager page={pagedAudit.page} pages={pagedAudit.pages} total={pagedAudit.total} onPage={setListPage} noun="events" />
           </AccSetupSection>
