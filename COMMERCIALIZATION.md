@@ -23,7 +23,9 @@ Default pilot entitlements (`DEFAULT_ENTITLEMENTS`) stay on `pro_pilot` with the
   - Read: owner / accountant / viewer (`can_accounts_read`)
   - Write / post: owner / accountant (`can_accounts_write` / `acc_require_owner` writers)
   - Admin (GST save, period lock, create/archive company, company settings, role assignment): owner only (`can_accounts_admin` / `acc_require_admin`)
+  - **Email invites** (migration **075**): owner invites CA/accountant/viewer by email; pending invites auto-claim on signup via `acc_claim_team_invites`. UUID paste remains as fallback.
 - Company isolation remains via `x-acc-company-id` / `company_id`; roles do not bypass company scope.
+- **Recurring templates** (migration **075**): schedule sale/expense/etc.; “Run now” opens a guided entry and advances `next_run_on` after post — not auto-posting cron.
 - Product analytics (`track_product_event` / client `trackProductEvent`) must stay **non-PII** — no phones, GSTIN, tokens, or secrets in event properties.
 - Attention Center and GST prep are **advisory / calculated only** — they never invent balances or claim government filing.
 - Live RLS/API checks: `npm run test:accounts-live` (skipped unless `SUPABASE_URL` + role JWTs are set). See `scripts/live-accounts-rls.mjs`.
@@ -56,4 +58,4 @@ Company-scoped Accounts backups (`accountsBackup.js` / `accountsRestore.js`):
 
 ## Related migrations
 
-Run `supabase/070_commercialization_foundations.sql` after **069**, then `supabase/071_accounts_access_role_client.sql` (see `MIGRATION_CHECKLIST.md`).
+Run `supabase/070_commercialization_foundations.sql` after **069**, then `071`–`075` in order (see `MIGRATION_CHECKLIST.md`). Wave 1 client features need **075** live for invites and recurring templates.

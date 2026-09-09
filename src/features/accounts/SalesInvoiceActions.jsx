@@ -3,6 +3,7 @@ import { formatReceiptDate } from "../receipts/receiptModel.js";
 import { canWhatsAppShare, openWhatsAppShare } from "../receipts/receiptWhatsApp.js";
 import { buildArReminderMessage, buildOutstandingSummaryMessage, buildPartyStatementMessage, buildPaymentAdviceMessage, buildPurchaseDocumentMessage, buildSalesInvoiceMessage } from "./salesInvoiceModel.js";
 import { downloadSalesInvoicePdf } from "./salesInvoicePdf.js";
+import { downloadPartyStatementPdf } from "./partyStatementPdf.js";
 
 export function SalesInvoiceViewerModal({ invoice, settings = {}, close }) {
   const whatsAppAvailable = canWhatsAppShare(invoice?.customerPhone);
@@ -228,32 +229,50 @@ export function PartyStatementButton({
   company = {},
   workspace = {},
   compact = false,
+  money,
 }) {
   if (!party) return null;
   const phone = party.phone || "";
-  if (!canWhatsAppShare(phone)) {
-    return compact ? null : <span className="small muted">Add party phone for WhatsApp</span>;
-  }
+  const whatsAppAvailable = canWhatsAppShare(phone);
   return (
-    <button
-      type="button"
-      className="btn whatsapp"
-      title="Send party statement on WhatsApp"
-      onClick={() => openWhatsAppShare({
-        phone,
-        message: buildPartyStatementMessage({
+    <>
+      <button
+        type="button"
+        className="btn"
+        title="Download party statement PDF"
+        onClick={() => downloadPartyStatementPdf({
           party,
           partyBook,
           periodFrom,
           periodTo,
-          settings,
           company,
-          workspace,
-        }),
-      })}
-    >
-      {compact ? "Statement" : "WhatsApp statement"}
-    </button>
+          money,
+        })}
+      >
+        {compact ? "PDF" : "Statement PDF"}
+      </button>
+      {whatsAppAvailable ? (
+        <button
+          type="button"
+          className="btn whatsapp"
+          title="Send party statement on WhatsApp"
+          onClick={() => openWhatsAppShare({
+            phone,
+            message: buildPartyStatementMessage({
+              party,
+              partyBook,
+              periodFrom,
+              periodTo,
+              settings,
+              company,
+              workspace,
+            }),
+          })}
+        >
+          {compact ? "WhatsApp" : "WhatsApp statement"}
+        </button>
+      ) : (compact ? null : <span className="small muted">Add party phone for WhatsApp</span>)}
+    </>
   );
 }
 

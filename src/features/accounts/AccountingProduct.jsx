@@ -50,7 +50,20 @@ import {
   deleteItem,
   deleteItemCategory,
   adjustStock,
+  claimTeamInvites,
+  inviteTeamMember,
+  listTeamInvites,
+  revokeTeamInvite,
+  loadRecurringTemplates,
+  upsertRecurringTemplate,
+  deleteRecurringTemplate,
+  markRecurringRun,
 } from "./accountingRepository.js";
+import {
+  AccOnboardingWizard,
+  isAccountsOnboardingDone,
+  markAccountsOnboardingDone,
+} from "./AccOnboardingWizard.jsx";
 import {
   BANK_IMPORT_FIELDS,
   guessColumnMapping,
@@ -761,6 +774,31 @@ function AccPageHeader({ backLabel, onBack, title, copy, trail, extras, companyB
 const emptyLine = () => ({ coaId: "", debit: "", credit: "", description: "" });
 const emptyBankLine = () => ({ lineDate: todayIso(), description: "", reference: "", amount: "", direction: "in" });
 const emptyPartyForm = () => ({ id: null, partyType: "customer", name: "", phone: "", email: "", address: "", gstin: "", stateCode: "", gstRegistration: "", notes: "" });
+const emptyRecurringDraft = () => ({
+  id: null,
+  name: "",
+  kind: "sale",
+  frequency: "monthly",
+  nextRunOn: todayIso(),
+  amount: "",
+  partyId: "",
+  narration: "",
+  mode: "cash",
+  isActive: true,
+});
+const RECURRING_KINDS = [
+  { id: "sale", label: "Sale" },
+  { id: "expense", label: "Expense" },
+  { id: "purchase", label: "Purchase" },
+  { id: "receipt", label: "Receipt" },
+  { id: "payment", label: "Payment" },
+];
+const RECURRING_FREQUENCIES = [
+  { id: "weekly", label: "Weekly" },
+  { id: "monthly", label: "Monthly" },
+  { id: "quarterly", label: "Quarterly" },
+  { id: "yearly", label: "Yearly" },
+];
 const emptyVoucherForm = () => ({ date: todayIso(), narration: "", partyId: "", dueDate: addDaysIso(todayIso(), 7) });
 const emptySimpleForm = () => ({
   date: todayIso(),
@@ -1224,6 +1262,12 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
   const [accountsRoles, setAccountsRoles] = useState([]);
   const [accountsAccessRole, setAccountsAccessRole] = useState(workspace?.role === "owner" ? "owner" : null);
   const [roleDraft, setRoleDraft] = useState({ userId: "", role: "accountant" });
+  const [inviteDraft, setInviteDraft] = useState({ email: "", role: "viewer", note: "" });
+  const [teamInvites, setTeamInvites] = useState([]);
+  const [recurringTemplates, setRecurringTemplates] = useState([]);
+  const [recurringDraft, setRecurringDraft] = useState(() => emptyRecurringDraft());
+  const [pendingRecurringId, setPendingRecurringId] = useState(null);
+  const [onboardingDismissed, setOnboardingDismissed] = useState(false);
   const [restoreDraft, setRestoreDraft] = useState(null);
   const [restoreBusy, setRestoreBusy] = useState(false);
   const [showSimple, setShowSimple] = useState(false);
@@ -1322,20 +1366,29 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
         setSetupForm({ companyName: mergedSettings.companyName, booksStartedOn: mergedSettings.booksStartedOn || todayIso() });
       }
       if (sectionRef.current === "setup") {
-        const [nextAudit, nextLocks, nextRoles] = await Promise.all([
+        const [nextAudit, nextLocks, nextRoles, nextInvites, nextRecurring] = await Promise.all([
           loadAuditLog(token),
           loadPeriodLocks(token),
           loadAccountsRoles(token).catch(() => []),
+          listTeamInvites(token).catch(() => []),
+          loadRecurringTemplates(token).catch(() => []),
         ]);
         if (gen !== refreshGen.current) return;
         setAudit(nextAudit);
         setLocks(nextLocks);
         setAccountsRoles(nextRoles || []);
+        setTeamInvites(nextInvites || []);
+        setRecurringTemplates(nextRecurring || []);
       }
       if (sectionRef.current === "bank" || sectionRef.current === "overview") {
         const nextStatements = await loadBankStatements(token).catch(() => []);
         if (gen !== refreshGen.current) return;
         setStatements(nextStatements || []);
+      }
+      if (sectionRef.current === "overview" || sectionRef.current === "bank") {
+        const nextRecurring = await loadRecurringTemplates(token).catch(() => []);
+        if (gen !== refreshGen.current) return;
+        setRecurringTemplates(nextRecurring || []);
       }
     } catch (err) {
       if (gen !== refreshGen.current) return;
@@ -1347,6 +1400,22 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
   }, [token]);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  useEffect(() => {
+    if (!token) return undefined;
+    let cancelled = false;
+    claimTeamInvites(token).then(result => {
+      if (cancelled) return;
+      const claimed = Number(result?.claimed || 0);
+      if (claimed > 0) {
+        setNotice(`Accounts access claimed for ${claimed} invite${claimed === 1 ? "" : "s"}.`);
+        loadAccountsAccessRole(token).then(role => {
+          if (!cancelled && role) setAccountsAccessRole(role);
+        }).catch(() => {});
+      }
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [token]);
 
   useEffect(() => {
     if (!token) return undefined;
@@ -1364,6 +1433,14 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
   const canWrite = accountsAccessRole === "owner" || accountsAccessRole === "accountant";
   const canAdmin = accountsAccessRole === "owner";
   const readOnly = Boolean(accountsAccessRole) && !canWrite;
+  const showOnboarding = Boolean(
+    settings
+    && activeCompanyId
+    && !migrationRequired
+    && !loading
+    && !onboardingDismissed
+    && !isAccountsOnboardingDone(activeCompanyId),
+  );
 
   useEffect(() => {
     if (orgSettingsProp && Object.keys(orgSettingsProp).length) setOrgSettings(orgSettingsProp);
@@ -1651,6 +1728,9 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
     setLocks([]);
     setLedgerId("");
     setMatchChoice({});
+    setTeamInvites([]);
+    setRecurringTemplates([]);
+    setOnboardingDismissed(false);
     refresh(id);
   };
 
@@ -1844,6 +1924,7 @@ const openVoucher = () => {
     }
     const money = moneyAccounts(visibleAccounts);
     setPendingBankMatch(null);
+    setPendingRecurringId(null);
     setSimpleKind(kind);
     setSimpleRequestId(newClientRequestId());
     setSimpleForm({
@@ -1863,6 +1944,7 @@ const openVoucher = () => {
     const moneyRows = moneyAccounts(visibleAccounts);
     setSimpleKind(kind);
     setSimpleRequestId(newClientRequestId());
+    setPendingRecurringId(null);
     setPendingBankMatch({
       lineId: line.id,
       coaId: statement?.coaId || "",
@@ -1883,10 +1965,60 @@ const openVoucher = () => {
     setNotice("Select the party, then save. FinTrack will suggest matching this bank line after posting.");
   };
 
+  const openSimpleFromRecurring = template => {
+    if (!canWrite) {
+      setError("Your Accounts role is view-only.");
+      return;
+    }
+    if (!template?.id) return;
+    const moneyRows = moneyAccounts(visibleAccounts);
+    setPendingBankMatch(null);
+    setPendingRecurringId(template.id);
+    setSimpleKind(template.kind || "sale");
+    setSimpleRequestId(newClientRequestId());
+    setSimpleForm({
+      ...emptySimpleForm(),
+      date: template.nextRunOn || todayIso(),
+      amount: String(template.amount || ""),
+      partyId: template.partyId || "",
+      moneyMode: template.mode === "bank" || template.mode === "upi" ? template.mode : "cash",
+      narration: template.narration || template.name || "Recurring entry",
+      fromAccountId: moneyRows.find(account => account.accountType === "cash")?.id || moneyRows[0]?.id || "",
+      toAccountId: moneyRows.find(account => account.accountType === "bank")?.id || moneyRows.find(account => account.id !== moneyRows[0]?.id)?.id || "",
+    });
+    setShowSimple(true);
+    setNotice("Review the recurring entry, then save. Next run date advances after posting.");
+  };
+
+  const acceptSuggestedBankMatches = (displayLines = []) => {
+    if (!canWrite) {
+      setError("Your Accounts role is view-only.");
+      return;
+    }
+    const suggested = displayLines.filter(line => line.matchStatus === "suggested" && (matchChoice[line.id] || line.matchedVoucherLineId));
+    if (!suggested.length) {
+      setNotice("No high-confidence suggestions to accept.");
+      return;
+    }
+    run(async () => {
+      const used = new Set();
+      let accepted = 0;
+      for (const line of suggested) {
+        const voucherLineId = matchChoice[line.id] || line.matchedVoucherLineId;
+        if (!voucherLineId || used.has(voucherLineId)) continue;
+        used.add(voucherLineId);
+        await saveBankMatch(token, line.id, voucherLineId, "Accepted suggestion");
+        accepted += 1;
+      }
+      if (!accepted) throw new Error("Could not accept suggestions — candidates may already be matched.");
+    }, `Accepted ${suggested.length} bank match suggestion${suggested.length === 1 ? "" : "s"}.`);
+  };
+
   const closeSimple = () => {
     if (saving) return;
     setShowSimple(false);
     setPendingBankMatch(null);
+    setPendingRecurringId(null);
     setSimpleForm(emptySimpleForm());
   };
 
@@ -2034,11 +2166,20 @@ const openVoucher = () => {
         : undefined,
     });
     const pending = pendingBankMatch;
+    const recurringId = pendingRecurringId;
     setShowSimple(false);
     setSimpleForm(emptySimpleForm());
     setSimpleRequestId(newClientRequestId());
     setPendingBankMatch(null);
+    setPendingRecurringId(null);
     if (simpleKind === "sale") setPendingSalesInvoiceId(voucherId);
+    if (recurringId) {
+      try {
+        await markRecurringRun(token, recurringId, todayIso());
+      } catch {
+        /* posting succeeded; schedule can be advanced manually */
+      }
+    }
     if (pending?.lineId && voucherId) {
       try {
         const nextVouchers = await loadVouchers(token);
@@ -2439,7 +2580,7 @@ const openVoucher = () => {
       {error && <div className="notice acc-toast error" role="alert">{error}</div>}
       {notice && <div className="notice accounts-notice-ok acc-toast ok" role="status">{notice}</div>}
       {readOnly && <div className="notice">Accounts access: <strong>viewer</strong>. You can review books and reports, but posting and setup changes are blocked.</div>}
-      {migrationRequired && <div className="notice">Run <strong>052</strong> through <strong>074_acc_list_companies_gst_fields.sql</strong> in the Supabase SQL editor (including <strong>059</strong>, <strong>064–067</strong>, <strong>070–074</strong>), then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
+      {migrationRequired && <div className="notice">Run <strong>052</strong> through <strong>075_accounts_wave1_invites_recurring.sql</strong> in the Supabase SQL editor (including <strong>059</strong>, <strong>064–067</strong>, <strong>070–075</strong>), then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
       <nav className="acc-bottom-nav" aria-label="Accounts">
         {MOBILE_TABS.map(item => (
           <button key={item.id} type="button" className={`acc-bottom-item ${mobileTab === item.id ? "active" : ""}`} onClick={() => openSection(item.id)}>
@@ -2458,6 +2599,48 @@ const openVoucher = () => {
             </div>
             <button type="button" className="btn primary" disabled={saving} onClick={() => run(() => initializeAccounting(token, setupForm), "Accounts opened.")}>{saving ? "Saving…" : "Create chart of accounts"}</button>
           </div>}
+
+          {showOnboarding && (
+            <AccOnboardingWizard
+              company={activeCompany}
+              canAdmin={canAdmin}
+              canWrite={canWrite}
+              saving={saving}
+              onSaveCompany={async ({ companyName, booksStartedOn }) => {
+                const ok = await run(() => saveAccountingSettings(token, { companyName, booksStartedOn }), "Company saved.");
+                if (!ok) throw new Error("Could not save company.");
+              }}
+              onSaveGst={async payload => {
+                const ok = await run(() => saveGstSettings(token, {
+                  ...payload,
+                  stateName: INDIA_STATES.find(state => state.code === payload.stateCode)?.name || "",
+                }), "GST settings saved.");
+                if (!ok) throw new Error("Could not save GST.");
+              }}
+              onCreateParty={async payload => {
+                const ok = await run(() => createParty(token, {
+                  ...emptyPartyForm(),
+                  ...payload,
+                }), "Party created.");
+                if (!ok) throw new Error("Could not create party.");
+              }}
+              onInviteCa={async ({ email, role }) => {
+                const ok = await run(async () => {
+                  await inviteTeamMember(token, { email, role });
+                }, `Invite processed for ${email}.`);
+                if (!ok) throw new Error("Could not invite. Apply migration 075 if this is the first invite.");
+              }}
+              onFinish={() => {
+                markAccountsOnboardingDone(activeCompanyId);
+                setOnboardingDismissed(true);
+                setNotice("Accounts setup complete.");
+              }}
+              onSkip={() => {
+                markAccountsOnboardingDone(activeCompanyId);
+                setOnboardingDismissed(true);
+              }}
+            />
+          )}
 
           <AccOverviewContextBar
             fy={fy}
@@ -2776,6 +2959,7 @@ const openVoucher = () => {
                 settings={orgSettings}
                 company={activeCompany}
                 workspace={workspace}
+                money={money}
               />
               <OutstandingWhatsAppButton
                 party={focusedParty}
@@ -3060,6 +3244,7 @@ const openVoucher = () => {
             }));
             const displayLines = defaultBankStatementLines(statement.lines, voucherLines);
             const unmatched = displayLines.filter(line => line.matchStatus !== "matched" && line.matchStatus !== "ignored").length;
+            const suggested = displayLines.filter(line => line.matchStatus === "suggested").length;
             return <article key={statement.id} className="card acc-bank-statement">
               <header className="acc-bank-statement-head">
                 <div>
@@ -3069,7 +3254,18 @@ const openVoucher = () => {
                 <div className="acc-bank-statement-stats">
                   <span>Opening <strong>{money(statement.openingBalance)}</strong></span>
                   <span>Closing <strong>{money(statement.closingBalance)}</strong></span>
+                  {suggested > 0 ? <span className="acc-status-pill suggested">{suggested} suggested</span> : null}
                   <span className={`acc-status-pill ${unmatched ? "inactive" : "active"}`}>{unmatched ? `${unmatched} unmatched` : "Reconciled"}</span>
+                  {canWrite && suggested > 0 ? (
+                    <button
+                      type="button"
+                      className="btn primary"
+                      disabled={saving}
+                      onClick={() => acceptSuggestedBankMatches(displayLines)}
+                    >
+                      Accept all suggestions
+                    </button>
+                  ) : null}
                 </div>
               </header>
               <div className="table acc-table-wrap acc-bank-match-table"><table><thead><tr><th>Date</th><th>Description</th><th className="acc-num">Amount</th><th>Status</th><th>Match to books</th></tr></thead><tbody>
@@ -3385,10 +3581,47 @@ const openVoucher = () => {
           {canAdmin && <AccSetupSection
             icon="R"
             title="Accounts access roles"
-            copy="Owner assigns accountant (can post) or viewer (read-only). Collection agents are separate. Requires migrations 070–074."
+            copy="Invite your CA by email (viewer recommended), or paste a user UUID. Requires migrations 070–075."
             collapsible
-            summary={`${accountsRoles.length} assigned`}
+            summary={`${accountsRoles.length} assigned · ${teamInvites.filter(row => row.status === "pending").length} pending`}
           >
+            <h4 className="acc-subsection-title">Invite by email</h4>
+            <div className="form spacer">
+              <Field label="Email"><input type="email" value={inviteDraft.email} onChange={event => setInviteDraft(current => ({ ...current, email: event.target.value }))} placeholder="ca@example.com" /></Field>
+              <Field label="Role">
+                <select value={inviteDraft.role} onChange={event => setInviteDraft(current => ({ ...current, role: event.target.value }))}>
+                  <option value="viewer">Viewer (read only)</option>
+                  <option value="accountant">Accountant (can post)</option>
+                </select>
+              </Field>
+              <Field label="Note (optional)"><input value={inviteDraft.note} onChange={event => setInviteDraft(current => ({ ...current, note: event.target.value }))} placeholder="e.g. FY 2026-27 review" /></Field>
+            </div>
+            <div className="accounts-action-row">
+              <button type="button" className="btn primary" disabled={saving || !inviteDraft.email.trim()} onClick={() => run(async () => {
+                const result = await inviteTeamMember(token, inviteDraft);
+                setInviteDraft({ email: "", role: "viewer", note: "" });
+                setTeamInvites(await listTeamInvites(token));
+                setAccountsRoles(await loadAccountsRoles(token));
+                if (result?.status === "assigned") {
+                  setNotice(`Assigned ${result.role} to ${result.email}.`);
+                }
+              }, inviteDraft.email ? `Invite processed for ${inviteDraft.email.trim()}.` : "Invite saved.")}>{saving ? "Saving…" : "Send invite"}</button>
+            </div>
+            <div className="table spacer acc-table-wrap"><table><thead><tr><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody>
+              {teamInvites.map(row => (
+                <tr key={row.id}>
+                  <td>{row.email}</td>
+                  <td>{row.role}</td>
+                  <td>{row.status}</td>
+                  <td>{row.status === "pending" ? <button type="button" className="btn" disabled={saving} onClick={() => run(async () => {
+                    await revokeTeamInvite(token, row.id);
+                    setTeamInvites(await listTeamInvites(token));
+                  }, "Invite revoked.")}>Revoke</button> : null}</td>
+                </tr>
+              ))}
+              {!teamInvites.length && <tr><td colSpan="4">No email invites yet.</td></tr>}
+            </tbody></table></div>
+            <h4 className="acc-subsection-title">Assign by user ID</h4>
             <div className="form spacer">
               <Field label="User ID (auth UUID)"><input value={roleDraft.userId} onChange={event => setRoleDraft(current => ({ ...current, userId: event.target.value.trim() }))} placeholder="Paste Supabase auth user UUID" /></Field>
               <Field label="Role">
@@ -3417,6 +3650,83 @@ const openVoucher = () => {
                 </tr>
               ))}
               {!accountsRoles.length && <tr><td colSpan="3">No accountant or viewer roles assigned yet. Owner keeps full access.</td></tr>}
+            </tbody></table></div>
+          </AccSetupSection>}
+          {canWrite && <AccSetupSection
+            icon="↻"
+            title="Recurring entries"
+            copy="Templates for monthly rent, retainers, or standing expenses. Run now opens a pre-filled entry; posting advances the next run date. Requires migration 075."
+            collapsible
+            summary={`${recurringTemplates.filter(row => row.isActive).length} active`}
+          >
+            <div className="form spacer">
+              <Field label="Name"><input value={recurringDraft.name} onChange={event => setRecurringDraft(current => ({ ...current, name: event.target.value }))} placeholder="e.g. Office rent" /></Field>
+              <Field label="Kind">
+                <select value={recurringDraft.kind} onChange={event => setRecurringDraft(current => ({ ...current, kind: event.target.value }))}>
+                  {RECURRING_KINDS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
+                </select>
+              </Field>
+              <Field label="Frequency">
+                <select value={recurringDraft.frequency} onChange={event => setRecurringDraft(current => ({ ...current, frequency: event.target.value }))}>
+                  {RECURRING_FREQUENCIES.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
+                </select>
+              </Field>
+              <Field label="Next run"><input type="date" value={recurringDraft.nextRunOn} onChange={event => setRecurringDraft(current => ({ ...current, nextRunOn: event.target.value }))} /></Field>
+              <Field label="Amount"><input className="acc-num-input" type="number" min="0" step="0.01" value={recurringDraft.amount} onChange={event => setRecurringDraft(current => ({ ...current, amount: event.target.value }))} /></Field>
+              <Field label="Party">
+                <select value={recurringDraft.partyId} onChange={event => setRecurringDraft(current => ({ ...current, partyId: event.target.value }))}>
+                  <option value="">Optional</option>
+                  {parties.filter(party => party.isActive !== false).map(party => <option key={party.id} value={party.id}>{party.name}</option>)}
+                </select>
+              </Field>
+              <Field label="Mode">
+                <select value={recurringDraft.mode} onChange={event => setRecurringDraft(current => ({ ...current, mode: event.target.value }))}>
+                  {MONEY_MODES.map(mode => <option key={mode.id} value={mode.id}>{mode.label}</option>)}
+                </select>
+              </Field>
+              <Field className="span" label="Narration"><input value={recurringDraft.narration} onChange={event => setRecurringDraft(current => ({ ...current, narration: event.target.value }))} /></Field>
+            </div>
+            <div className="accounts-action-row">
+              <button type="button" className="btn primary" disabled={saving || !recurringDraft.name.trim() || !recurringDraft.nextRunOn} onClick={() => run(async () => {
+                await upsertRecurringTemplate(token, {
+                  ...recurringDraft,
+                  amount: Number(recurringDraft.amount || 0),
+                  partyId: recurringDraft.partyId || null,
+                });
+                setRecurringDraft(emptyRecurringDraft());
+                setRecurringTemplates(await loadRecurringTemplates(token));
+              }, recurringDraft.id ? "Recurring template updated." : "Recurring template saved.")}>{saving ? "Saving…" : recurringDraft.id ? "Update template" : "Save template"}</button>
+              {recurringDraft.id ? <button type="button" className="btn" disabled={saving} onClick={() => setRecurringDraft(emptyRecurringDraft())}>Clear</button> : null}
+            </div>
+            <div className="table spacer acc-table-wrap"><table><thead><tr><th>Name</th><th>Kind</th><th>Next</th><th className="acc-num">Amount</th><th></th></tr></thead><tbody>
+              {recurringTemplates.map(row => (
+                <tr key={row.id}>
+                  <td>{row.name}{row.isActive === false ? " · inactive" : ""}</td>
+                  <td>{RECURRING_KINDS.find(item => item.id === row.kind)?.label || row.kind} · {row.frequency}</td>
+                  <td>{row.nextRunOn || "—"}</td>
+                  <td className="acc-num">{money(row.amount)}</td>
+                  <td className="accounts-action-row">
+                    <button type="button" className="btn primary" disabled={saving || !canWrite} onClick={() => openSimpleFromRecurring(row)}>Run now</button>
+                    <button type="button" className="btn" disabled={saving} onClick={() => setRecurringDraft({
+                      id: row.id,
+                      name: row.name,
+                      kind: row.kind,
+                      frequency: row.frequency,
+                      nextRunOn: row.nextRunOn || todayIso(),
+                      amount: String(row.amount || ""),
+                      partyId: row.partyId || "",
+                      narration: row.narration || "",
+                      mode: row.mode || "cash",
+                      isActive: row.isActive !== false,
+                    })}>Edit</button>
+                    <button type="button" className="btn danger" disabled={saving} onClick={() => run(async () => {
+                      await deleteRecurringTemplate(token, row.id);
+                      setRecurringTemplates(await loadRecurringTemplates(token));
+                    }, "Template deleted.")}>Delete</button>
+                  </td>
+                </tr>
+              ))}
+              {!recurringTemplates.length && <tr><td colSpan="5">No recurring templates yet.</td></tr>}
             </tbody></table></div>
           </AccSetupSection>}
           <AccSetupSection

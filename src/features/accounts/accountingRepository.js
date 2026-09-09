@@ -25,7 +25,7 @@ const accQuery = (path, token) => supabase.query(path, token, accOpts());
 
 const wrap = promise => promise.catch(err => {
   if (isMissing(err)) {
-    const error = new Error("Run migrations 052–073 in the Supabase SQL editor to enable FinTrack Accounts companies, GST, attachments, items, QA hardening, and bill-wise settlements.");
+    const error = new Error("Run migrations 052–075 in the Supabase SQL editor to enable FinTrack Accounts companies, GST, attachments, items, QA hardening, bill-wise settlements, team invites, and recurring templates.");
     error.code = "MIGRATION_REQUIRED";
     throw error;
   }
@@ -592,4 +592,74 @@ export const saveVoucherItemLines = (token, voucherId, lines) =>
   wrap(accRpc("acc_save_voucher_item_lines", {
     input_voucher_id: voucherId,
     input_lines: lines,
+  }, token));
+
+export const claimTeamInvites = token =>
+  ignoreMissing(supabase.rpc("acc_claim_team_invites", {}, token))
+    .then(result => result || { claimed: 0 });
+
+export const inviteTeamMember = (token, { email, role, note } = {}) =>
+  wrap(supabase.rpc("acc_invite_team_member", {
+    input_email: email,
+    input_role: role || "viewer",
+    input_note: note || null,
+  }, token));
+
+export const listTeamInvites = token =>
+  ignoreMissing(supabase.rpc("acc_list_team_invites", {}, token))
+    .then(rows => {
+      if (Array.isArray(rows)) return rows;
+      if (rows == null) return [];
+      return [];
+    });
+
+export const revokeTeamInvite = (token, inviteId) =>
+  wrap(supabase.rpc("acc_revoke_team_invite", { input_invite_id: inviteId }, token));
+
+const mapRecurringTemplate = row => ({
+  id: row.id,
+  companyId: row.company_id,
+  name: row.name,
+  kind: row.kind,
+  frequency: row.frequency,
+  nextRunOn: row.next_run_on,
+  amount: Number(row.amount || 0),
+  partyId: row.party_id || null,
+  narration: row.narration || "",
+  mode: row.mode || "cash",
+  isActive: row.is_active !== false,
+  lastRunOn: row.last_run_on || null,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+export const loadRecurringTemplates = token =>
+  ignoreMissing(
+    accQuery(
+      `/rest/v1/acc_recurring_templates?select=id,company_id,name,kind,frequency,next_run_on,amount,party_id,narration,mode,is_active,last_run_on,created_at,updated_at&order=next_run_on.asc${companyEq()}`,
+      token,
+    ),
+  ).then(rows => (rows || []).map(mapRecurringTemplate));
+
+export const upsertRecurringTemplate = (token, form) =>
+  wrap(accRpc("acc_upsert_recurring_template", {
+    input_id: form.id || null,
+    input_name: form.name,
+    input_kind: form.kind || "sale",
+    input_frequency: form.frequency || "monthly",
+    input_next_run_on: form.nextRunOn,
+    input_amount: Number(form.amount || 0),
+    input_party_id: form.partyId || null,
+    input_narration: form.narration || null,
+    input_mode: form.mode || "cash",
+    input_is_active: form.isActive !== false,
+  }, token));
+
+export const deleteRecurringTemplate = (token, id) =>
+  wrap(accRpc("acc_delete_recurring_template", { input_id: id }, token));
+
+export const markRecurringRun = (token, id, runOn = null) =>
+  wrap(accRpc("acc_mark_recurring_run", {
+    input_id: id,
+    input_run_on: runOn || null,
   }, token));

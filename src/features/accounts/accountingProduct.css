@@ -2894,3 +2894,32 @@ html:has(.accounts-dashboard) .financier-nav {
     grid-template-columns: 1fr;
   }
 }
+
+.accounts-dashboard .acc-onboarding-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.accounts-dashboard .acc-onboarding .accounts-action-row {
+  flex-wrap: wrap;
+}
+
+.accounts-dashboard .acc-subsection-title {
+  margin: 12px 0 8px;
+  font-size: 0.95rem;
+}
+
+.accounts-dashboard .acc-bank-statement-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.accounts-dashboard .acc-party-ledger-identity + .accounts-action-row {
+  flex-wrap: wrap;
+  gap: 8px;
+}
