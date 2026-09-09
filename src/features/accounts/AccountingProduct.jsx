@@ -2439,7 +2439,7 @@ const openVoucher = () => {
       {error && <div className="notice acc-toast error" role="alert">{error}</div>}
       {notice && <div className="notice accounts-notice-ok acc-toast ok" role="status">{notice}</div>}
       {readOnly && <div className="notice">Accounts access: <strong>viewer</strong>. You can review books and reports, but posting and setup changes are blocked.</div>}
-      {migrationRequired && <div className="notice">Run <strong>052</strong> through <strong>073_accounts_market_ready.sql</strong> in the Supabase SQL editor (including <strong>059</strong>, <strong>064–067</strong>, <strong>070–073</strong>), then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
+      {migrationRequired && <div className="notice">Run <strong>052</strong> through <strong>074_acc_list_companies_gst_fields.sql</strong> in the Supabase SQL editor (including <strong>059</strong>, <strong>064–067</strong>, <strong>070–074</strong>), then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
       <nav className="acc-bottom-nav" aria-label="Accounts">
         {MOBILE_TABS.map(item => (
           <button key={item.id} type="button" className={`acc-bottom-item ${mobileTab === item.id ? "active" : ""}`} onClick={() => openSection(item.id)}>
@@ -3385,7 +3385,7 @@ const openVoucher = () => {
           {canAdmin && <AccSetupSection
             icon="R"
             title="Accounts access roles"
-            copy="Owner assigns accountant (can post) or viewer (read-only). Collection agents are separate. Requires migrations 070–073."
+            copy="Owner assigns accountant (can post) or viewer (read-only). Collection agents are separate. Requires migrations 070–074."
             collapsible
             summary={`${accountsRoles.length} assigned`}
           >
