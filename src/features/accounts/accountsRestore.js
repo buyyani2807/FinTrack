@@ -149,6 +149,7 @@ export async function restoreAccountsCompanyBackup(token, rawBackup, {
       dueDate: voucher.dueDate || null,
       narration: voucher.narration || `Restored ${voucher.voucherNumber || ""}`.trim(),
       partyId: voucher.partyId ? partyMap.get(voucher.partyId) || null : null,
+      clientRequestId: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : undefined,
       lines,
       gstLines: (voucher.gstLines || []).map(line => ({
         hsnSac: line.hsnSac || "",

@@ -228,7 +228,7 @@ export function itemSalesReport(voucherItemLines = [], vouchers = [], { from, to
   const map = new Map();
   for (const line of voucherItemLines || []) {
     const voucher = byVoucher[line.voucherId];
-    if (!voucher || voucher.voucherType !== "sales" || voucher.status === "cancelled") continue;
+    if (!voucher || voucher.voucherType !== "sales" || voucher.status !== "posted") continue;
     if (from && voucher.date < from) continue;
     if (to && voucher.date > to) continue;
     const key = line.itemId || line.itemSku || line.itemName;
@@ -245,7 +245,7 @@ export function itemPurchasesReport(voucherItemLines = [], vouchers = [], { from
   const map = new Map();
   for (const line of voucherItemLines || []) {
     const voucher = byVoucher[line.voucherId];
-    if (!voucher || voucher.voucherType !== "purchase" || voucher.status === "cancelled") continue;
+    if (!voucher || voucher.voucherType !== "purchase" || voucher.status !== "posted") continue;
     if (from && voucher.date < from) continue;
     if (to && voucher.date > to) continue;
     const key = line.itemId || line.itemSku || line.itemName;

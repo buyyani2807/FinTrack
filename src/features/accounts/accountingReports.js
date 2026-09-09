@@ -496,6 +496,8 @@ export function partyTotalsFromInvoices(invoices = []) {
 }
 
 export function invoiceRegister(accounts, vouchers, parties = [], { kind = "receivable", today, from, to, partyId, outstandingOnly = false } = {}) {
+  // Settlement is party-level FIFO pool allocation (not bill-to-bill linked).
+  // Outstanding totals reconcile to party ledger; individual invoice "paid" is approximate.
   const isAr = kind !== "payable";
   const invoiceType = isAr ? "sales" : "purchase";
   const settleType = isAr ? "receipt" : "payment";

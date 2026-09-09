@@ -25,7 +25,7 @@ const accQuery = (path, token) => supabase.query(path, token, accOpts());
 
 const wrap = promise => promise.catch(err => {
   if (isMissing(err)) {
-    const error = new Error("Run migrations 052–067 in the Supabase SQL editor to enable FinTrack Accounts companies, GST, attachments, and items.");
+    const error = new Error("Run migrations 052–072 in the Supabase SQL editor to enable FinTrack Accounts companies, GST, attachments, items, and QA hardening.");
     error.code = "MIGRATION_REQUIRED";
     throw error;
   }
@@ -290,6 +290,22 @@ export const setPartyActive = (token, id, isActive) =>
   }, token));
 
 export const postVoucher = async (token, payload) => {
+  const itemLines = (payload.itemLines || []).map(line => ({
+    item_id: line.itemId || null,
+    item_name: line.itemName || line.name || "",
+    item_sku: line.itemSku || line.sku || "",
+    item_type: line.itemType || "product",
+    unit: line.unit || "Nos",
+    quantity: Number(line.quantity || 0),
+    rate: Number(line.rate || 0),
+    amount: Number(line.amount || 0),
+    gst_rate: Number(line.gstRate || 0),
+    hsn_sac: line.hsnSac || "",
+    taxable_amount: Number(line.taxableAmount ?? line.amount ?? 0),
+    cgst_amount: Number(line.cgstAmount || 0),
+    sgst_amount: Number(line.sgstAmount || 0),
+    igst_amount: Number(line.igstAmount || 0),
+  }));
   const id = await wrap(accRpc("acc_post_voucher", {
     input_voucher_type: payload.voucherType,
     input_date: payload.date,
@@ -306,9 +322,12 @@ export const postVoucher = async (token, payload) => {
     input_source_type: payload.sourceType || null,
     input_source_transaction_id: payload.sourceTransactionId || null,
     input_gst_lines: payload.gstLines?.length ? payload.gstLines : null,
+    input_client_request_id: payload.clientRequestId || null,
+    input_item_lines: itemLines.length ? itemLines : null,
   }, token));
   if (payload.dueDate) await setVoucherDueDate(token, id, payload.dueDate);
-  if (payload.itemLines?.length) {
+  // Legacy path: older DBs without input_item_lines still accept a follow-up save.
+  if (itemLines.length && payload.forceSeparateItemSave) {
     try {
       await saveVoucherItemLines(token, id, payload.itemLines);
     } catch (err) {
@@ -327,6 +346,7 @@ export const setVoucherDueDate = (token, id, dueDate) =>
 
 export const cancelVoucher = async (token, id, reason) => {
   await wrap(accRpc("acc_cancel_voucher", { input_voucher_id: id, input_reason: reason }, token));
+  // Stock reversal is performed inside acc_cancel_voucher (072+); keep best-effort for older DBs.
   await ignoreMissing(accRpc("acc_reverse_voucher_stock", { input_voucher_id: id }, token));
 };
 

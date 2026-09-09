@@ -114,5 +114,6 @@ export const EINVOICE_INTEGRATION_STUB = {
   providers: ["GSTN e-Invoice (IRP)", "GSP / ASP partner"],
   requiredSecrets: ["GSTIN", "IRP username", "IRP password / client secret", "GSP credentials (if used)"],
   outputs: ["IRN", "Signed QR", "Ack number", "e-Way Bill (separate API)"],
-  note: "FinTrack stores configuration only. Live IRN / e-Way generation requires verified government or GSP credentials and must not be faked.",
+  note: "FinTrack Accounts supports books + GSTR-1/3B preparation CSV only. Live IRN / e-Way / portal filing is not implemented and must not be marketed as available.",
+  marketingClaim: "GSTR preparation from books — not filing, not e-Invoice.",
 };

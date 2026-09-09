@@ -401,13 +401,53 @@ export const financialYearContaining = (isoDate, fyStartMonth = 4) => {
   const startYear = month >= fyStartMonth ? year : year - 1;
   const endYear = startYear + 1;
   const pad = n => String(n).padStart(2, "0");
+  const endMonth = fyStartMonth === 1 ? 12 : fyStartMonth - 1;
+  const endYearForMonth = fyStartMonth === 1 ? endYear - 1 : endYear;
+  const lastDay = new Date(Date.UTC(endYearForMonth, endMonth, 0)).getUTCDate();
   return {
     startYear,
     label: `FY ${startYear}–${String(endYear).slice(-2)}`,
     from: `${startYear}-${pad(fyStartMonth)}-01`,
-    to: `${endYear}-${pad(fyStartMonth)}-01`,
+    to: `${endYearForMonth}-${pad(endMonth)}-${pad(lastDay)}`,
   };
 };
+
+/** Opening balances across the chart must net Debit = Credit for a balanced TB. */
+export function chartOpeningTotals(accounts = []) {
+  let debit = 0;
+  let credit = 0;
+  for (const account of accounts || []) {
+    const amount = roundMoney(Number(account.openingBalance || account.openingDebit || account.openingCredit || 0));
+    if (!(amount > 0)) continue;
+    const side = account.openingSide
+      || (Number(account.openingCredit || 0) > 0 ? "credit" : "debit");
+    if (side === "credit") credit = roundMoney(credit + amount);
+    else debit = roundMoney(debit + amount);
+  }
+  return { debit, credit, balanced: debit === credit };
+}
+
+export function assertChartOpeningsBalanced(accounts = [], nextAccount = null) {
+  const rows = (accounts || []).map(account => ({ ...account }));
+  if (nextAccount) {
+    const index = rows.findIndex(account => account.id && nextAccount.id && account.id === nextAccount.id);
+    if (index >= 0) rows[index] = { ...rows[index], ...nextAccount };
+    else rows.push(nextAccount);
+  }
+  const totals = chartOpeningTotals(rows);
+  if (!totals.balanced) {
+    throw new Error(`Opening balances are unbalanced. Debits ${totals.debit} · Credits ${totals.credit}.`);
+  }
+  return totals;
+}
+
+export function newClientRequestId() {
+  if (typeof globalThis.crypto?.randomUUID === "function") return globalThis.crypto.randomUUID();
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, ch => {
+    const n = Math.random() * 16 | 0;
+    return (ch === "x" ? n : (n & 0x3 | 0x8)).toString(16);
+  });
+}
 
 export const accountNormalSide = groupType =>
   groupType === "asset" || groupType === "expense" ? "debit" : "credit";

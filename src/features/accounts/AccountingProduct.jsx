@@ -96,6 +96,7 @@ import {
   assertCanDeleteLedger,
   assertCanDeleteParty,
   assertCoaParent,
+  assertChartOpeningsBalanced,
   assertVoucherDateNotFuture,
   createSubmitLock,
   defaultAccountTypeForGroup,
@@ -103,6 +104,7 @@ import {
   indianFinancialYear,
   ledgerHasPostedLines,
   moneyAccounts,
+  newClientRequestId,
   partyHasAccountingUse,
   prepareGstAmount,
   previousIndianFinancialYear,
@@ -1649,7 +1651,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
       })),
     };
     assertBalancedVoucher(payload.lines);
-    const voucherId = await postVoucher(token, payload);
+    const voucherId = await postVoucher(token, { ...payload, clientRequestId: newClientRequestId() });
     setShowVoucher(false);
     setVoucherForm(emptyVoucherForm());
     setLines([emptyLine(), emptyLine()]);
@@ -1931,7 +1933,7 @@ const openVoucher = () => {
           itcEligible: simpleKind === "purchase" || simpleKind === "debit_note",
         } : undefined,
       });
-    const voucherId = await postVoucher(token, draft);
+    const voucherId = await postVoucher(token, { ...draft, clientRequestId: newClientRequestId() });
     const pending = pendingBankMatch;
     setShowSimple(false);
     setSimpleForm(emptySimpleForm());
@@ -1993,6 +1995,11 @@ const openVoucher = () => {
   const saveCoa = () => {
     try {
       assertCoaParent(visibleAccounts, coaForm.id, coaForm.parentId);
+      assertChartOpeningsBalanced(visibleAccounts, {
+        id: coaForm.id || `new-${coaForm.code}`,
+        openingBalance: Number(coaForm.openingBalance || 0),
+        openingSide: coaForm.openingSide || "debit",
+      });
     } catch (err) {
       setError(err.message);
       return;
@@ -2548,6 +2555,7 @@ const openVoucher = () => {
             <span><em>61–90</em> {money(invoiceAging.d61_90 || 0)}</span>
             <span><em>90+</em> {money(invoiceAging.d90 || 0)}</span>
           </div>
+          <p className="small">Invoice paid amounts use party-level FIFO allocation. Party outstanding totals match the party ledger; bill-to-bill linking is not used.</p>
           <div className="acc-invoice-toolbar">
             <button
               type="button"
@@ -3017,37 +3025,39 @@ const openVoucher = () => {
                       {` · ${gstStatusLabel(company)}`}
                     </span>
                   </button>
-                  {company.status !== "archived" && !company.isPrimary && (
+                  {canAdmin && company.status !== "archived" && !company.isPrimary && (
                     <button type="button" className="btn" disabled={saving} onClick={() => archiveCompany(company)}>Archive</button>
                   )}
                 </div>
               ))}
-              <button type="button" className="btn" onClick={() => { setCompanyDraft({ name: "", booksStartedOn: todayIso() }); setShowCreateCompany(true); }}>+ Create company</button>
+              {canAdmin && <button type="button" className="btn" onClick={() => { setCompanyDraft({ name: "", booksStartedOn: todayIso() }); setShowCreateCompany(true); }}>+ Create company</button>}
+              {!canAdmin && <p className="small">Only the owner can create or archive Accounts companies.</p>}
             </div>
           </AccSetupSection>
-          <AccSetupSection icon="GST" title={`GST${activeCompany?.name ? ` · ${activeCompany.name}` : ""}`} copy="GST is per company. These settings never apply to another Accounts company or to Daily / Monthly Finance. Books reports only — not GST portal filing.">
+          <AccSetupSection icon="GST" title={`GST${activeCompany?.name ? ` · ${activeCompany.name}` : ""}`} copy="GST is per company. These settings never apply to another Accounts company or to Daily / Monthly Finance. Books reports only — not GST portal filing. Owner manages GST registration.">
+            {!canAdmin && <p className="small">View GST details below. Only the owner can change GST registration settings.</p>}
             <div className="form spacer">
               <Field label="Registration">
-                <select value={gstForm.gstRegistration} onChange={event => setGstForm(current => ({ ...current, gstRegistration: event.target.value }))}>
+                <select value={gstForm.gstRegistration} disabled={!canAdmin} onChange={event => setGstForm(current => ({ ...current, gstRegistration: event.target.value }))}>
                   <option value="unregistered">Unregistered</option>
                   <option value="regular">Regular</option>
                   <option value="composition">Composition</option>
                 </select>
               </Field>
-              <Field label="GSTIN"><input value={gstForm.gstin} placeholder="e.g. 36AAAAA0000A1Z3" onChange={event => setGstForm(current => ({ ...current, gstin: event.target.value, stateCode: gstStateFromGstin(event.target.value) || current.stateCode }))} /></Field>
-              <Field label="Legal name"><input value={gstForm.legalName} onChange={event => setGstForm(current => ({ ...current, legalName: event.target.value }))} /></Field>
+              <Field label="GSTIN"><input value={gstForm.gstin} disabled={!canAdmin} placeholder="e.g. 36AAAAA0000A1Z3" onChange={event => setGstForm(current => ({ ...current, gstin: event.target.value, stateCode: gstStateFromGstin(event.target.value) || current.stateCode }))} /></Field>
+              <Field label="Legal name"><input value={gstForm.legalName} disabled={!canAdmin} onChange={event => setGstForm(current => ({ ...current, legalName: event.target.value }))} /></Field>
               <Field label="State">
-                <select value={gstForm.stateCode} onChange={event => setGstForm(current => ({ ...current, stateCode: event.target.value }))}>
+                <select value={gstForm.stateCode} disabled={!canAdmin} onChange={event => setGstForm(current => ({ ...current, stateCode: event.target.value }))}>
                   <option value="">Select state</option>
                   {INDIA_STATES.map(state => <option key={state.code} value={state.code}>{state.code} · {state.name}</option>)}
                 </select>
               </Field>
             </div>
-            <button type="button" className="btn primary" disabled={saving} onClick={() => {
+            {canAdmin && <button type="button" className="btn primary" disabled={saving} onClick={() => {
               const message = validateGstSettings(gstForm);
               if (message) { setError(message); return; }
               run(() => saveGstSettings(token, { ...gstForm, stateName: INDIA_STATES.find(state => state.code === gstForm.stateCode)?.name || "" }), "GST settings saved.");
-            }}>{saving ? "Saving…" : "Save GST"}</button>
+            }}>{saving ? "Saving…" : "Save GST"}</button>}
           </AccSetupSection>
           <AccSetupSection
             icon="#"
@@ -3175,7 +3185,7 @@ const openVoucher = () => {
           <AccSetupSection
             icon="I"
             title="Items"
-            copy="Products and services for itemized sales/purchases and basic stock. Stock is company-scoped and does not change double-entry ledgers."
+            copy="Products and services for itemized sales/purchases and quantity stock. Stock is company-scoped quantity tracking only — it does not post Inventory/COGS ledgers (not perpetual inventory accounting)."
           >
             <AccItemsSetup
               items={items}
@@ -3195,7 +3205,9 @@ const openVoucher = () => {
               onAdjustStock={payload => run(() => adjustStock(token, payload), "Stock adjustment saved.")}
             />
           </AccSetupSection>
-          <AccSetupSection icon="L" title="Period locking" copy="Lock a closed period so posted vouchers in that range cannot be changed.">
+          <AccSetupSection icon="L" title="Period locking" copy="Lock a closed period so posted vouchers in that range cannot be changed. Owner only.">
+            {!canAdmin && <p className="small">Only the business owner can lock or reopen periods.</p>}
+            {canAdmin && <>
             <div className="form spacer">
               <Field label="From"><input type="date" value={lockForm.from} onChange={event => setLockForm(current => ({ ...current, from: event.target.value }))} /></Field>
               <Field label="To"><input type="date" value={lockForm.to} onChange={event => setLockForm(current => ({ ...current, to: event.target.value }))} /></Field>
@@ -3207,6 +3219,11 @@ const openVoucher = () => {
             <div className="table spacer acc-table-wrap"><table><thead><tr><th>Period</th><th>Status</th><th></th></tr></thead><tbody>
               {locks.map(lock => <tr key={lock.id}><td>{lock.periodFrom} to {lock.periodTo}</td><td>{lock.isLocked ? "Locked" : "Reopened"}</td>              <td>{lock.isLocked && <button type="button" className="btn" disabled={saving} onClick={() => askReason("Reopen period", "Reopen", reason => run(() => reopenAccountingPeriod(token, lock.id, reason), "Period reopened."))}>Reopen</button>}</td></tr>)}
             </tbody></table></div>
+            </>}
+            {!canAdmin && <div className="table spacer acc-table-wrap"><table><thead><tr><th>Period</th><th>Status</th></tr></thead><tbody>
+              {locks.map(lock => <tr key={lock.id}><td>{lock.periodFrom} to {lock.periodTo}</td><td>{lock.isLocked ? "Locked" : "Reopened"}</td></tr>)}
+              {!locks.length && <tr><td colSpan="2">No period locks yet.</td></tr>}
+            </tbody></table></div>}
           </AccSetupSection>
           {canAdmin && <AccSetupSection
             icon="R"
