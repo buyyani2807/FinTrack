@@ -129,6 +129,8 @@ import {
   standaloneVisibleAccounts,
   validatePartyForm,
   voucherTotals,
+  salePaymentSummary,
+  assertMoneyModeSplit,
 } from "./accountingModel.js";
 import { formatIstDateTime, todayIso } from "./cashbookModel.js";
 import { GST_RATES, INDIA_STATES, gstStateFromGstin, isIntraGst, validateGstSettings } from "./accountingGst.js";
@@ -819,6 +821,9 @@ const emptySimpleForm = () => ({
   entryMode: "items",
   itemLines: [emptyItemLine()],
   settlements: [],
+  amountReceived: "",
+  receivedCash: "",
+  receivedUpi: "",
 });
 const emptyCoaForm = () => ({
   id: null,
@@ -980,11 +985,39 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
   const gstPreview = !itemMode && gstOn
     ? prepareGstAmount(form.amount, { enabled: Number(form.gstRate) > 0, rate: form.gstRate, intra, taxInclusive: form.taxInclusive, hsnSac: form.hsnSac })
     : null;
+  const invoiceTotalPreview = kind === "sale"
+    ? (itemMode
+      ? (gstOn ? Number(itemPreview?.total || itemPreview?.taxable || 0) : Number(itemPreview?.taxable || 0))
+      : (gstOn && Number(form.gstRate) > 0 ? Number(gstPreview?.total || 0) : Number(form.amount || 0)))
+    : 0;
+  const amountReceivedNow = kind === "sale" && form.settlement === "credit"
+    ? Number(form.amountReceived || 0)
+    : kind === "sale" && form.settlement === "paid"
+      ? invoiceTotalPreview
+      : 0;
+  const saleSummary = kind === "sale" && invoiceTotalPreview > 0
+    ? (() => {
+      try {
+        return salePaymentSummary({
+          invoiceTotal: invoiceTotalPreview,
+          amountReceived: amountReceivedNow,
+        });
+      } catch {
+        return null;
+      }
+    })()
+    : null;
+  const showReceivedOnCredit = kind === "sale" && form.settlement === "credit";
+  const showMoneyMode = kind !== "transfer" && kind !== "credit_note" && kind !== "debit_note"
+    && (kind === "expense" || kind === "receipt" || kind === "payment" || form.settlement === "paid"
+      || (showReceivedOnCredit && Number(form.amountReceived || 0) > 0));
   const noteCopy = kind === "credit_note"
     ? "Reduces the customer balance and sales. Original invoices stay in Day Book."
     : kind === "debit_note"
       ? "Reduces the supplier balance and purchases. Original invoices stay in Day Book."
-      : "FinTrack posts the balanced voucher for you. Open + Voucher if you need a custom journal.";
+      : kind === "sale"
+        ? "Sale value is always the full invoice. Amount received is a separate collection against that invoice — never a reduced sale."
+        : "FinTrack posts the balanced voucher for you. Open + Voucher if you need a custom journal.";
 
   const patchItemLine = (index, patch) => {
     setForm(current => {
@@ -1017,8 +1050,24 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
     <p className="copy">{noteCopy}</p>
     <div className="form">
       <Field label="Date"><input type="date" max={maxDate} value={form.date} onChange={event => set({ date: event.target.value })} /></Field>
-      {(kind === "sale" || kind === "purchase") && <Field label="Payment"><select value={form.settlement} onChange={event => set({ settlement: event.target.value })}><option value="credit">Credit</option><option value="paid">Paid now</option></select></Field>}
-      {(kind !== "transfer" && kind !== "credit_note" && kind !== "debit_note" && (kind === "expense" || kind === "receipt" || kind === "payment" || form.settlement === "paid")) && <Field label="Mode"><select value={form.moneyMode} onChange={event => set({ moneyMode: event.target.value })}>{MONEY_MODES.map(mode => <option key={mode.id} value={mode.id}>{mode.label}</option>)}</select></Field>}
+      {(kind === "sale" || kind === "purchase") && (
+        <Field label="Payment">
+          <select value={form.settlement} onChange={event => set({
+            settlement: event.target.value,
+            amountReceived: event.target.value === "paid" ? "" : form.amountReceived,
+          })}>
+            <option value="credit">Credit / invoice</option>
+            <option value="paid">Paid in full now</option>
+          </select>
+        </Field>
+      )}
+      {showMoneyMode && (
+        <Field label="Mode">
+          <select value={form.moneyMode} onChange={event => set({ moneyMode: event.target.value })}>
+            {MONEY_MODES.map(mode => <option key={mode.id} value={mode.id}>{mode.label}</option>)}
+          </select>
+        </Field>
+      )}
       {(kind === "sale" || kind === "purchase") && form.settlement === "credit" && <Field label="Due date"><input type="date" value={form.dueDate || addDaysIso(form.date, 7)} onChange={event => set({ dueDate: event.target.value })} /></Field>}
       {kind === "expense" && <Field label="Expense"><select value={form.expenseCode} onChange={event => set({ expenseCode: event.target.value })}>{expenseOptions.map(([code, name]) => <option key={code} value={code}>{name}</option>)}</select></Field>}
       {kind === "transfer" && <>
@@ -1040,13 +1089,31 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
           </select>
         </Field>
       )}
-      {!itemMode && <Field required label="Amount"><input type="number" min="0" step="0.01" value={form.amount} placeholder="0.00" onChange={event => {
+      {!itemMode && <Field required label={kind === "sale" ? "Sale value (invoice)" : "Amount"}><input type="number" min="0" step="0.01" value={form.amount} placeholder="0.00" onChange={event => {
         const amount = event.target.value;
         set({
           amount,
           settlements: settlementKinds ? syncSettlements(form.partyId, amount) : form.settlements,
         });
       }} /></Field>}
+      {showReceivedOnCredit && (
+        <Field label="Amount received now">
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={form.amountReceived}
+            placeholder="0.00 — leave blank if unpaid"
+            onChange={event => set({ amountReceived: event.target.value })}
+          />
+        </Field>
+      )}
+      {showMoneyMode && form.moneyMode === "cash_upi" && (
+        <>
+          <Field label="Cash portion"><input type="number" min="0" step="0.01" value={form.receivedCash} placeholder="0.00" onChange={event => set({ receivedCash: event.target.value })} /></Field>
+          <Field label="UPI portion"><input type="number" min="0" step="0.01" value={form.receivedUpi} placeholder="0.00" onChange={event => set({ receivedUpi: event.target.value })} /></Field>
+        </>
+      )}
       {!itemMode && gstKinds && gstOn && <>
         <Field label="GST rate"><select value={form.gstRate} onChange={event => set({ gstRate: event.target.value })}>{GST_RATES.map(rate => <option key={rate} value={String(rate)}>{rate}%</option>)}</select></Field>
         <Field label="Price"><select value={form.taxInclusive ? "incl" : "excl"} onChange={event => set({ taxInclusive: event.target.value === "incl" })}><option value="excl">Tax exclusive</option><option value="incl">Tax inclusive</option></select></Field>
@@ -1112,6 +1179,22 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
       </p>
     )}
 
+    {saleSummary && (
+      <div className="card acc-sale-summary spacer" aria-label="Sale summary">
+        <h3 className="acc-section-title">Sale summary</h3>
+        <p className="small">Sale value is the full invoice recorded in the books. Amount received is money collected against that invoice.</p>
+        <dl className="acc-sale-summary-grid">
+          <div><dt>Invoice total (sale value)</dt><dd>{money(saleSummary.invoiceTotal)}</dd></div>
+          <div><dt>Amount received</dt><dd>{money(saleSummary.amountReceived)}</dd></div>
+          <div><dt>Outstanding receivable</dt><dd className={saleSummary.outstanding > 0 ? "due" : "ok"}>{money(saleSummary.outstanding)}</dd></div>
+          <div><dt>Payment status</dt><dd><span className={`acc-status-pill ${saleSummary.paymentStatus === "Paid" ? "inv-paid" : saleSummary.paymentStatus === "Partially Paid" ? "inv-partial" : "inv-current"}`}>{saleSummary.paymentStatus}</span></dd></div>
+        </dl>
+        {form.settlement === "credit" && saleSummary.amountReceived > saleSummary.invoiceTotal + 0.001 ? (
+          <p className="small red" role="alert">Amount received cannot exceed the invoice total.</p>
+        ) : null}
+      </div>
+    )}
+
     {settlementKinds && form.partyId && (
       <div className="acc-billwise spacer">
         <h3 className="acc-section-title">Allocate against invoices</h3>
@@ -1162,7 +1245,7 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
       </div>
     )}
 
-    <div className="tabs spacer"><button type="button" className="btn primary" disabled={saving || (settlementKinds && settlementTotal > Number(form.amount || 0) + 0.001)} onClick={onSubmit}>{saving ? "Saving…" : "Save"}</button></div>
+    <div className="tabs spacer"><button type="button" className="btn primary" disabled={saving || (settlementKinds && settlementTotal > Number(form.amount || 0) + 0.001) || (saleSummary && saleSummary.amountReceived > saleSummary.invoiceTotal + 0.001)} onClick={onSubmit}>{saving ? "Saving…" : "Save"}</button></div>
   </>;
 }
 
@@ -2119,6 +2202,9 @@ const openVoucher = () => {
     const partyState = selectedParty?.stateCode || gstStateFromGstin(selectedParty?.gstin);
     const intra = isIntraGst(activeCompany?.stateCode, partyState);
     const useItems = (simpleKind === "sale" || simpleKind === "purchase") && simpleForm.entryMode !== "amount";
+    const moneyParts = simpleForm.moneyMode === "cash_upi"
+      ? { cash: Number(simpleForm.receivedCash || 0), upi: Number(simpleForm.receivedUpi || 0) }
+      : null;
     const draft = useItems
       ? itemizedEntryDraft({
         kind: simpleKind,
@@ -2126,6 +2212,7 @@ const openVoucher = () => {
         date: simpleForm.date,
         partyId: simpleForm.partyId || null,
         moneyMode: simpleForm.moneyMode,
+        moneyParts,
         settlement: simpleForm.settlement,
         dueDate: simpleForm.dueDate || null,
         narration: simpleForm.narration,
@@ -2141,6 +2228,7 @@ const openVoucher = () => {
         amount: simpleForm.amount,
         partyId: simpleForm.partyId || null,
         moneyMode: simpleForm.moneyMode,
+        moneyParts,
         settlement: simpleForm.settlement,
         expenseCode: simpleForm.expenseCode,
         fromType: simpleForm.fromType,
@@ -2158,6 +2246,19 @@ const openVoucher = () => {
           itcEligible: simpleKind === "purchase" || simpleKind === "debit_note",
         } : undefined,
       });
+
+    // Credit sale with amount received now: always post the FULL invoice, then a linked receipt.
+    // Never shrink sales / GST / stock to the cash collected.
+    let amountReceivedNow = 0;
+    if (simpleKind === "sale" && simpleForm.settlement === "credit") {
+      amountReceivedNow = roundMoney(Number(simpleForm.amountReceived || 0));
+      const invoiceTotal = voucherTotals(draft.lines).debit;
+      salePaymentSummary({ invoiceTotal, amountReceived: amountReceivedNow });
+      if (amountReceivedNow > 0 && simpleForm.moneyMode === "cash_upi") {
+        assertMoneyModeSplit(simpleForm.moneyMode, amountReceivedNow, moneyParts || {});
+      }
+    }
+
     const voucherId = await postVoucher(token, {
       ...draft,
       clientRequestId: simpleRequestId,
@@ -2165,6 +2266,27 @@ const openVoucher = () => {
         ? (simpleForm.settlements || []).filter(link => Number(link.amount || 0) > 0 && link.invoiceVoucherId)
         : undefined,
     });
+
+    if (simpleKind === "sale" && simpleForm.settlement === "credit" && amountReceivedNow > 0 && voucherId) {
+      const receiptDraft = simpleEntryDraft({
+        kind: "receipt",
+        accounts,
+        date: simpleForm.date,
+        amount: amountReceivedNow,
+        partyId: simpleForm.partyId,
+        moneyMode: simpleForm.moneyMode,
+        moneyParts,
+        narration: simpleForm.narration
+          ? `Receipt against sale · ${simpleForm.narration}`
+          : "Receipt against sale",
+      });
+      await postVoucher(token, {
+        ...receiptDraft,
+        clientRequestId: newClientRequestId(),
+        settlements: [{ invoiceVoucherId: voucherId, amount: amountReceivedNow }],
+      });
+    }
+
     const pending = pendingBankMatch;
     const recurringId = pendingRecurringId;
     setShowSimple(false);
@@ -2485,6 +2607,7 @@ const openVoucher = () => {
     if (status === "Overdue") return "inv-overdue";
     if (status === "Due") return "inv-due";
     if (status === "Paid") return "inv-paid";
+    if (status === "Partially Paid") return "inv-partial";
     return "inv-current";
   };
   const isInvoicePayables = section === "payables";
@@ -2943,6 +3066,14 @@ const openVoucher = () => {
                 <article>
                   <span>Opening</span>
                   <strong>{money(partyBook.opening)}</strong>
+                </article>
+                <article>
+                  <span>Invoices (period)</span>
+                  <strong>{money(partyBook.rows.reduce((sum, row) => sum + Number(row.debit || 0), 0))}</strong>
+                </article>
+                <article>
+                  <span>Payments (period)</span>
+                  <strong>{money(partyBook.rows.reduce((sum, row) => sum + Number(row.credit || 0), 0))}</strong>
                 </article>
                 <article>
                   <span>{partyBook.advance > 0 ? "Advance" : "Outstanding"}</span>

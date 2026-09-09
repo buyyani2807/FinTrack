@@ -1,4 +1,4 @@
-import { prepareGstAmount, roundMoney, gstDocumentLine, saleLines, purchaseLines, assertVoucherDateNotFuture, addDaysIso } from "./accountingModel.js";
+import { prepareGstAmount, roundMoney, gstDocumentLine, saleLines, purchaseLines, assertVoucherDateNotFuture, addDaysIso, assertMoneyModeSplit } from "./accountingModel.js";
 
 export const ITEM_UNITS = [
   "Nos", "Kg", "Gram", "Litre", "Meter", "Box", "Pack", "Bag", "Piece", "Set", "Hour", "Day",
@@ -146,6 +146,7 @@ export function itemizedEntryDraft({
   date,
   partyId = null,
   moneyMode = "cash",
+  moneyParts = null,
   settlement = "credit",
   dueDate = null,
   narration = "",
@@ -171,9 +172,11 @@ export function itemizedEntryDraft({
     : undefined;
   // Pass taxable as amount with preparedOverride so COA matches summed item GST.
   const amount = aggregate.taxable;
+  const totalForMoney = gstEnabled ? roundMoney(aggregate.prepared?.total ?? aggregate.total) : aggregate.taxable;
+  const split = moneyParts ? assertMoneyModeSplit(moneyMode, totalForMoney, moneyParts) : null;
   const lines = kind === "sale"
-    ? saleLines({ accounts, amount, settlement, moneyMode, partyId, description, gst: gstForLines })
-    : purchaseLines({ accounts, amount, settlement, moneyMode, partyId, description, gst: gstForLines });
+    ? saleLines({ accounts, amount, settlement, moneyMode, moneyParts: split, partyId, description, gst: gstForLines })
+    : purchaseLines({ accounts, amount, settlement, moneyMode, moneyParts: split, partyId, description, gst: gstForLines });
 
   return {
     voucherType: kind === "sale" ? "sales" : "purchase",

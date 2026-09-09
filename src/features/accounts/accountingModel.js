@@ -30,6 +30,7 @@ export const MONEY_MODES = [
   { id: "cash", label: "Cash" },
   { id: "upi", label: "UPI" },
   { id: "bank", label: "Bank" },
+  { id: "cash_upi", label: "Cash + UPI" },
 ];
 
 export const SIMPLE_ENTRY_KINDS = [
@@ -755,8 +756,16 @@ export function contraLines({ accounts, fromType, toType, fromAccountId, toAccou
   ];
 }
 
-export function moneyByMode(mode, amount) {
+export function moneyByMode(mode, amount, parts = {}) {
   const value = roundMoney(amount);
+  if (mode === "cash_upi") {
+    const cash = roundMoney(parts.cash ?? 0);
+    const upi = roundMoney(parts.upi ?? 0);
+    if (value > 0 && cash <= 0 && upi <= 0) {
+      return { cash: value, upi: 0, bank: 0 };
+    }
+    return { cash, upi, bank: 0 };
+  }
   return {
     cash: mode === "cash" ? value : 0,
     upi: mode === "upi" ? value : 0,
@@ -764,11 +773,46 @@ export function moneyByMode(mode, amount) {
   };
 }
 
+/**
+ * Invoice total stays on the books; amount received is a separate collection.
+ * Never use received amount to shrink sales / GST / stock.
+ */
+export function salePaymentSummary({ invoiceTotal = 0, amountReceived = 0 } = {}) {
+  const total = roundMoney(invoiceTotal);
+  const received = roundMoney(amountReceived);
+  if (received < 0) throw new Error("Amount received cannot be negative");
+  if (total > 0 && received > total) {
+    throw new Error("Amount received cannot exceed the invoice total");
+  }
+  const outstanding = roundMoney(Math.max(0, total - received));
+  let paymentStatus = "Unpaid";
+  if (total > 0 && outstanding <= 0) paymentStatus = "Paid";
+  else if (received > 0 && outstanding > 0) paymentStatus = "Partially Paid";
+  return {
+    invoiceTotal: total,
+    amountReceived: received,
+    outstanding,
+    paymentStatus,
+  };
+}
+
+export function assertMoneyModeSplit(moneyMode, amount, parts = {}) {
+  const value = roundMoney(amount);
+  if (moneyMode !== "cash_upi" || !(value > 0)) return moneyByMode(moneyMode, value, parts);
+  const cash = roundMoney(parts.cash ?? 0);
+  const upi = roundMoney(parts.upi ?? 0);
+  if (cash < 0 || upi < 0) throw new Error("Cash and UPI amounts cannot be negative");
+  if (roundMoney(cash + upi) !== value) {
+    throw new Error("Cash + UPI must equal the amount received");
+  }
+  return { cash, upi, bank: 0 };
+}
+
 export function resolveAccountCode(accounts, code, fallbackCode) {
   return findAccount(accounts, { code })?.code || findAccount(accounts, { code: fallbackCode })?.code || fallbackCode;
 }
 
-export function saleLines({ accounts, amount, settlement = "credit", moneyMode = "cash", partyId = null, description = "", gst } = {}) {
+export function saleLines({ accounts, amount, settlement = "credit", moneyMode = "cash", moneyParts = null, partyId = null, description = "", gst } = {}) {
   const prepared = gst?.preparedOverride || prepareGstAmount(amount, gst);
   const sales = findAccount(accounts, { code: SYSTEM_CODES.sales });
   if (!sales) throw new Error("Missing Sales account");
@@ -783,7 +827,7 @@ export function saleLines({ accounts, amount, settlement = "credit", moneyMode =
       ...tax,
     ];
   }
-  const split = moneyByMode(moneyMode, prepared.total);
+  const split = moneyParts || moneyByMode(moneyMode, prepared.total, moneyParts || {});
   return [
     moneyLine(accounts, "cash", split.cash, "debit"),
     moneyLine(accounts, "upi", split.upi, "debit"),
@@ -819,7 +863,7 @@ export function debitNoteLines({ accounts, amount, partyId, description = "", gs
   ];
 }
 
-export function purchaseLines({ accounts, amount, settlement = "credit", moneyMode = "cash", partyId = null, description = "", gst } = {}) {
+export function purchaseLines({ accounts, amount, settlement = "credit", moneyMode = "cash", moneyParts = null, partyId = null, description = "", gst } = {}) {
   const prepared = gst?.preparedOverride || prepareGstAmount(amount, gst);
   const purchase = findAccount(accounts, { code: SYSTEM_CODES.purchase });
   if (!purchase) throw new Error("Missing Purchase account");
@@ -834,7 +878,7 @@ export function purchaseLines({ accounts, amount, settlement = "credit", moneyMo
       { coaId: payable.id, code: payable.code, partyId, debit: 0, credit: prepared.total, description },
     ];
   }
-  const split = moneyByMode(moneyMode, prepared.total);
+  const split = moneyParts || moneyByMode(moneyMode, prepared.total, moneyParts || {});
   return [
     debit,
     ...tax,
@@ -853,6 +897,7 @@ export function simpleEntryDraft({
   amount,
   partyId = null,
   moneyMode = "cash",
+  moneyParts = null,
   settlement = "credit",
   expenseCode = SYSTEM_CODES.otherExpense,
   fromType = "cash",
@@ -867,7 +912,9 @@ export function simpleEntryDraft({
   assertVoucherDateNotFuture(date, today);
   const value = roundMoney(amount);
   if (value <= 0) throw new Error("Enter an amount greater than zero");
-  const split = moneyByMode(moneyMode, value);
+  const split = moneyParts
+    ? assertMoneyModeSplit(moneyMode, value, moneyParts)
+    : moneyByMode(moneyMode, value, moneyParts || {});
   const description = String(narration || "").trim();
   const invoiceDue = settlement === "credit" ? (dueDate || addDaysIso(date, 7)) : null;
   const gstLine = gstDocumentLine(prepareGstAmount(value, gst), description);
@@ -880,7 +927,7 @@ export function simpleEntryDraft({
       dueDate: invoiceDue,
       partyId: partyId || null,
       narration: description || (settlement === "credit" ? "Credit sale" : `${MONEY_MODES.find(mode => mode.id === moneyMode)?.label || "Cash"} sale`),
-      lines: saleLines({ accounts, amount: value, settlement, moneyMode, partyId, description, gst }),
+      lines: saleLines({ accounts, amount: value, settlement, moneyMode, moneyParts: split, partyId, description, gst }),
       gstLines: gstLine ? [gstLine] : [],
     };
   }
@@ -892,7 +939,7 @@ export function simpleEntryDraft({
       dueDate: invoiceDue,
       partyId: partyId || null,
       narration: description || (settlement === "credit" ? "Credit purchase" : `${MONEY_MODES.find(mode => mode.id === moneyMode)?.label || "Cash"} purchase`),
-      lines: purchaseLines({ accounts, amount: value, settlement, moneyMode, partyId, description, gst }),
+      lines: purchaseLines({ accounts, amount: value, settlement, moneyMode, moneyParts: split, partyId, description, gst }),
       gstLines: gstLine ? [gstLine] : [],
     };
   }

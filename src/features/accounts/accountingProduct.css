@@ -1859,6 +1859,43 @@ html:has(.accounts-dashboard) .financier-nav {
   background: #93a0b514;
 }
 
+.accounts-dashboard .acc-status-pill.inv-partial {
+  color: var(--acc-gold);
+  border-color: #f4b94255;
+  background: #f4b94214;
+}
+
+.accounts-dashboard .acc-sale-summary {
+  padding: 14px 16px;
+}
+
+.accounts-dashboard .acc-sale-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin: 10px 0 0;
+}
+
+.accounts-dashboard .acc-sale-summary-grid dt {
+  font-size: 0.75rem;
+  color: var(--acc-muted);
+  margin: 0 0 4px;
+}
+
+.accounts-dashboard .acc-sale-summary-grid dd {
+  margin: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.accounts-dashboard .acc-sale-summary-grid dd.due {
+  color: var(--acc-red);
+}
+
+.accounts-dashboard .acc-sale-summary-grid dd.ok {
+  color: var(--acc-green);
+}
+
 .accounts-dashboard .acc-party-meta,
 .accounts-dashboard .acc-party-contact {
   display: block;

@@ -343,12 +343,14 @@ const daysBetween = (from, to) => {
   return Math.round((end - start) / 86400000);
 };
 
-export function invoiceStatus({ outstanding, dueDate, invoiceDate, today }) {
+export function invoiceStatus({ outstanding, paid = 0, dueDate, invoiceDate, today }) {
   if (roundMoney(outstanding) <= 0) return "Paid";
   const due = dueDate || invoiceDate;
-  if (today < due) return "Current";
+  const isOverdue = due && today > due;
+  if (isOverdue) return "Overdue";
+  if (roundMoney(paid) > 0) return "Partially Paid";
   if (today === due) return "Due";
-  return "Overdue";
+  return "Unpaid";
 }
 
 export function invoiceAgingTotals(rows = []) {
@@ -647,6 +649,7 @@ export function invoiceRegister(accounts, vouchers, parties = [], { kind = "rece
     invoice.daysOverdue = invoice.outstanding > 0 ? Math.max(0, daysBetween(invoice.dueDate, asOf)) : 0;
     invoice.status = invoiceStatus({
       outstanding: invoice.outstanding,
+      paid: invoice.paid,
       dueDate: invoice.dueDate,
       invoiceDate: invoice.invoiceDate,
       today: asOf,
