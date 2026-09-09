@@ -24,6 +24,16 @@ const mapVoucherLine = line => ({
   name: line.acc_coa?.name,
 });
 
+const mapSettlements = raw => {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map(item => ({
+      invoiceVoucherId: item.invoiceVoucherId || item.invoice_voucher_id || null,
+      amount: Number(item.amount || 0),
+    }))
+    .filter(item => item.invoiceVoucherId && item.amount > 0);
+};
+
 const mapVoucher = (row, lines = [], gstLines = []) => ({
   id: row.id,
   voucherType: row.voucher_type,
@@ -37,6 +47,7 @@ const mapVoucher = (row, lines = [], gstLines = []) => ({
   sourceTransactionId: row.source_transaction_id,
   cancelReason: row.cancel_reason || "",
   dueDate: row.due_date || null,
+  settlements: mapSettlements(row.settlements),
   createdAt: row.created_at,
   postedAt: row.posted_at,
   gstLines: gstLines.map(mapGstLine),

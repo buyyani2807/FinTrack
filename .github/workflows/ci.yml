@@ -31,3 +31,15 @@ jobs:
 
       - name: E2E tests
         run: npm run test:e2e
+
+      - name: Accounts live RLS (opt-in)
+        if: ${{ secrets.ACCOUNTS_LIVE_OWNER_JWT != '' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          ACCOUNTS_LIVE_OWNER_JWT: ${{ secrets.ACCOUNTS_LIVE_OWNER_JWT }}
+          ACCOUNTS_LIVE_ACCOUNTANT_JWT: ${{ secrets.ACCOUNTS_LIVE_ACCOUNTANT_JWT }}
+          ACCOUNTS_LIVE_VIEWER_JWT: ${{ secrets.ACCOUNTS_LIVE_VIEWER_JWT }}
+          ACCOUNTS_LIVE_COMPANY_A: ${{ secrets.ACCOUNTS_LIVE_COMPANY_A }}
+          ACCOUNTS_LIVE_COMPANY_B: ${{ secrets.ACCOUNTS_LIVE_COMPANY_B }}
+        run: npm run test:accounts-live

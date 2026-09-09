@@ -495,9 +495,35 @@ export function partyTotalsFromInvoices(invoices = []) {
     .sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
 }
 
+/** Suggest bill-wise links against open invoices (oldest first). */
+export function suggestBillWiseAllocations(openInvoices = [], amount = 0) {
+  let remaining = roundMoney(Number(amount || 0));
+  const links = [];
+  if (!(remaining > 0)) return links;
+  const ordered = [...(openInvoices || [])]
+    .filter(row => roundMoney(Number(row.outstanding ?? row.amount ?? 0) - Number(row.paid || 0)) > 0 || Number(row.outstanding || 0) > 0)
+    .sort((a, b) => `${a.invoiceDate || a.date || ""}${a.reference || ""}`.localeCompare(`${b.invoiceDate || b.date || ""}${b.reference || ""}`));
+  for (const invoice of ordered) {
+    if (remaining <= 0) break;
+    const open = roundMoney(
+      Number(invoice.outstanding != null
+        ? invoice.outstanding
+        : Number(invoice.amount || 0) - Number(invoice.paid || 0)),
+    );
+    if (!(open > 0)) continue;
+    const apply = Math.min(remaining, open);
+    links.push({
+      invoiceVoucherId: invoice.id,
+      reference: invoice.reference || "",
+      amount: apply,
+    });
+    remaining = roundMoney(remaining - apply);
+  }
+  return links;
+}
+
 export function invoiceRegister(accounts, vouchers, parties = [], { kind = "receivable", today, from, to, partyId, outstandingOnly = false } = {}) {
-  // Settlement is party-level FIFO pool allocation (not bill-to-bill linked).
-  // Outstanding totals reconcile to party ledger; individual invoice "paid" is approximate.
+  // Prefer bill-wise settlement links when present; leftover / legacy receipts use party FIFO.
   const isAr = kind !== "payable";
   const invoiceType = isAr ? "sales" : "purchase";
   const settleType = isAr ? "receipt" : "payment";
@@ -506,6 +532,7 @@ export function invoiceRegister(accounts, vouchers, parties = [], { kind = "rece
   const partyById = Object.fromEntries((parties || []).map(party => [party.id, party]));
   const invoices = [];
   const pool = new Map();
+  const billLinks = [];
   const posted = (vouchers || [])
     .filter(affectsLedgers)
     .sort((a, b) => `${a.date}${a.voucherNumber}`.localeCompare(`${b.date}${b.voucherNumber}`));
@@ -534,12 +561,23 @@ export function invoiceRegister(accounts, vouchers, parties = [], { kind = "rece
         amount,
         paid: hitsLedger ? 0 : amount,
         voucherType: voucher.voucherType,
+        allocation: "open",
       });
       continue;
     }
     if ((voucher.voucherType === settleType || voucher.voucherType === noteType || isReversalVoucher(voucher)) && hitsLedger) {
       if (to && voucher.date > to) continue;
-      enqueue(voucherPartyId, amount);
+      const links = Array.isArray(voucher.settlements) ? voucher.settlements : [];
+      let linked = 0;
+      for (const link of links) {
+        const linkAmount = roundMoney(Number(link.amount || 0));
+        const invoiceVoucherId = link.invoiceVoucherId || link.invoice_voucher_id;
+        if (!invoiceVoucherId || !(linkAmount > 0)) continue;
+        billLinks.push({ invoiceVoucherId, amount: linkAmount });
+        linked = roundMoney(linked + linkAmount);
+      }
+      const leftover = roundMoney(amount - linked);
+      if (leftover > 0) enqueue(voucherPartyId, leftover);
       continue;
     }
     if (isReversalVoucher(voucher)) continue;
@@ -577,6 +615,17 @@ export function invoiceRegister(accounts, vouchers, parties = [], { kind = "rece
     }
   }
 
+  const invoiceById = new Map(invoices.map(row => [row.id, row]));
+  for (const link of billLinks) {
+    const invoice = invoiceById.get(link.invoiceVoucherId);
+    if (!invoice) continue;
+    const room = roundMoney(invoice.amount - invoice.paid);
+    if (!(room > 0)) continue;
+    const apply = Math.min(room, link.amount);
+    invoice.paid = roundMoney(invoice.paid + apply);
+    invoice.allocation = "bill_wise";
+  }
+
   for (const invoice of invoices) {
     if (invoice.paid >= invoice.amount) {
       invoice.outstanding = 0;
@@ -589,6 +638,7 @@ export function invoiceRegister(accounts, vouchers, parties = [], { kind = "rece
         remaining = roundMoney(remaining - apply);
         item.amount = roundMoney(item.amount - apply);
         invoice.paid = roundMoney(invoice.paid + apply);
+        if (!invoice.allocation || invoice.allocation === "open") invoice.allocation = "fifo";
       }
       invoice.outstanding = remaining;
     }

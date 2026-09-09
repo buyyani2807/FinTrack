@@ -25,7 +25,7 @@ const accQuery = (path, token) => supabase.query(path, token, accOpts());
 
 const wrap = promise => promise.catch(err => {
   if (isMissing(err)) {
-    const error = new Error("Run migrations 052–072 in the Supabase SQL editor to enable FinTrack Accounts companies, GST, attachments, items, and QA hardening.");
+    const error = new Error("Run migrations 052–073 in the Supabase SQL editor to enable FinTrack Accounts companies, GST, attachments, items, QA hardening, and bill-wise settlements.");
     error.code = "MIGRATION_REQUIRED";
     throw error;
   }
@@ -123,7 +123,11 @@ export const loadParties = token => wrap(
 
 export const loadVouchers = token => wrap(
   Promise.all([
-    accQuery(`/rest/v1/acc_vouchers?select=id,voucher_type,voucher_number,voucher_date,narration,status,party_id,source_module,source_type,source_transaction_id,cancel_reason,due_date,created_at,posted_at&order=voucher_date.desc,voucher_number.desc&limit=2000${companyEq()}`, token),
+    accQuery(`/rest/v1/acc_vouchers?select=id,voucher_type,voucher_number,voucher_date,narration,status,party_id,source_module,source_type,source_transaction_id,cancel_reason,due_date,settlements,created_at,posted_at&order=voucher_date.desc,voucher_number.desc&limit=2000${companyEq()}`, token)
+      .catch(err => {
+        if (!isMissing(err) && !/settlements/i.test(String(err?.message || ""))) throw err;
+        return accQuery(`/rest/v1/acc_vouchers?select=id,voucher_type,voucher_number,voucher_date,narration,status,party_id,source_module,source_type,source_transaction_id,cancel_reason,due_date,created_at,posted_at&order=voucher_date.desc,voucher_number.desc&limit=2000${companyEq()}`, token);
+      }),
     accQuery(`/rest/v1/acc_voucher_lines?select=id,voucher_id,line_no,coa_id,party_id,debit,credit,description,acc_coa(code,name)&order=line_no.asc&limit=20000${companyEq()}`, token),
     accQuery(`/rest/v1/acc_gst_lines?select=id,voucher_id,line_no,hsn_sac,description,taxable_amount,rate,cgst_amount,sgst_amount,igst_amount,supply_type,itc_eligible&order=line_no.asc&limit=20000${companyEq()}`, token).catch(() => []),
   ]).then(([vouchers, lines, gstLines]) => assembleVouchers(vouchers, lines, gstLines || [])),
@@ -306,7 +310,7 @@ export const postVoucher = async (token, payload) => {
     sgst_amount: Number(line.sgstAmount || 0),
     igst_amount: Number(line.igstAmount || 0),
   }));
-  const id = await wrap(accRpc("acc_post_voucher", {
+  const args = {
     input_voucher_type: payload.voucherType,
     input_date: payload.date,
     input_narration: payload.narration || "",
@@ -324,7 +328,14 @@ export const postVoucher = async (token, payload) => {
     input_gst_lines: payload.gstLines?.length ? payload.gstLines : null,
     input_client_request_id: payload.clientRequestId || null,
     input_item_lines: itemLines.length ? itemLines : null,
-  }, token));
+  };
+  if ((payload.settlements || []).length) {
+    args.input_settlements = payload.settlements.map(link => ({
+      invoice_voucher_id: link.invoiceVoucherId || link.invoice_voucher_id,
+      amount: Number(link.amount || 0),
+    }));
+  }
+  const id = await wrap(accRpc("acc_post_voucher", args, token));
   if (payload.dueDate) await setVoucherDueDate(token, id, payload.dueDate);
   // Legacy path: older DBs without input_item_lines still accept a follow-up save.
   if (itemLines.length && payload.forceSeparateItemSave) {
@@ -337,6 +348,12 @@ export const postVoucher = async (token, payload) => {
   }
   return id;
 };
+
+export const queueEinvoicePayload = (token, voucherId, payload) =>
+  wrap(accRpc("acc_queue_einvoice_payload", {
+    input_voucher_id: voucherId,
+    input_payload: payload,
+  }, token));
 
 export const setVoucherDueDate = (token, id, dueDate) =>
   ignoreMissing(accRpc("acc_set_voucher_due", {

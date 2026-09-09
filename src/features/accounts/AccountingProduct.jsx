@@ -31,6 +31,7 @@ import {
   lockAccountingPeriod,
   matchBankLine as saveBankMatch,
   postVoucher,
+  queueEinvoicePayload,
   reopenAccountingPeriod,
   reverseVoucher,
   saveAccountingSettings,
@@ -66,10 +67,12 @@ import {
   restoreAccountsCompanyBackup,
 } from "./accountsRestore.js";
 import {
+  buildEinvoiceOutboundPayload,
   buildGstr1Preparation,
   buildGstr3bPreparation,
   EINVOICE_INTEGRATION_STUB,
   gstrPrepToCsvRows,
+  gstrPrepToJson,
 } from "./gstPrepExport.js";
 import { buildAccountsAttentionItems } from "../intelligence/attentionCenter.js";
 import { AttentionCenterCard } from "../intelligence/AttentionCenterCard.jsx";
@@ -127,6 +130,7 @@ import {
   gstBooksReport,
   invoiceAgingTotals,
   invoiceRegister,
+  suggestBillWiseAllocations,
   partyBalances,
   partyLedger,
   partyTotalsFromInvoices,
@@ -776,6 +780,7 @@ const emptySimpleForm = () => ({
   taxInclusive: false,
   entryMode: "items",
   itemLines: [emptyItemLine()],
+  settlements: [],
 });
 const emptyCoaForm = () => ({
   id: null,
@@ -905,7 +910,7 @@ function VoucherForm({ accounts, parties, voucherType, setVoucherType, form, set
   </>;
 }
 
-function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, saving, maxDate, gstCompany, onGstSetup, items = [], stockByItem = {} }) {
+function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, saving, maxDate, gstCompany, onGstSetup, items = [], stockByItem = {}, openInvoices = [] }) {
   const customers = parties.filter(party => party.partyType === "customer" && (party.isActive !== false || party.id === form.partyId));
   const suppliers = parties.filter(party => party.partyType === "supplier" && (party.isActive !== false || party.id === form.partyId));
   const expenseOptions = SIMPLE_EXPENSE_CODES.filter(([code]) => accounts.some(account => account.code === code) || code === "5990");
@@ -921,6 +926,15 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
   const partyState = selectedParty?.stateCode || gstStateFromGstin(selectedParty?.gstin);
   const intra = isIntraGst(gstCompany?.stateCode, partyState);
   const itemMode = (kind === "sale" || kind === "purchase") && form.entryMode !== "amount";
+  const settlementKinds = kind === "receipt" || kind === "payment" || kind === "credit_note" || kind === "debit_note";
+  const partyOpenInvoices = settlementKinds && form.partyId
+    ? (openInvoices || []).filter(row => row.partyId === form.partyId && Number(row.outstanding || 0) > 0)
+    : [];
+  const settlementTotal = roundMoney((form.settlements || []).reduce((sum, link) => sum + Number(link.amount || 0), 0));
+  const syncSettlements = (partyId, amount) => {
+    const open = (openInvoices || []).filter(row => row.partyId === partyId && Number(row.outstanding || 0) > 0);
+    return suggestBillWiseAllocations(open, amount);
+  };
   const activeItems = items.filter(item => item.isActive !== false || (form.itemLines || []).some(line => line.itemId === item.id));
   const itemPreview = itemMode
     ? aggregateItemizedGst(form.itemLines || [], { intra, taxInclusive: false })
@@ -973,7 +987,13 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
         <Field label="From"><select value={form.fromAccountId || ""} onChange={event => set({ fromAccountId: event.target.value })}><option value="">Select account</option>{transferAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</select></Field>
         <Field label="To"><select value={form.toAccountId || ""} onChange={event => set({ toAccountId: event.target.value })}><option value="">Select account</option>{transferAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</select></Field>
       </>}
-      {needsParty && <Field label={needsParty === "supplier" ? "Supplier" : "Customer"}><select value={form.partyId} onChange={event => set({ partyId: event.target.value })}><option value="">Select</option>{partyList.map(party => <option key={party.id} value={party.id}>{party.name}</option>)}</select></Field>}
+      {needsParty && <Field label={needsParty === "supplier" ? "Supplier" : "Customer"}><select value={form.partyId} onChange={event => {
+        const partyId = event.target.value;
+        set({
+          partyId,
+          settlements: settlementKinds ? syncSettlements(partyId, form.amount) : form.settlements,
+        });
+      }}><option value="">Select</option>{partyList.map(party => <option key={party.id} value={party.id}>{party.name}</option>)}</select></Field>}
       {(kind === "sale" || kind === "purchase") && (
         <Field label="Entry">
           <select value={itemMode ? "items" : "amount"} onChange={event => set({ entryMode: event.target.value })}>
@@ -982,7 +1002,13 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
           </select>
         </Field>
       )}
-      {!itemMode && <Field required label="Amount"><input type="number" min="0" step="0.01" value={form.amount} placeholder="0.00" onChange={event => set({ amount: event.target.value })} /></Field>}
+      {!itemMode && <Field required label="Amount"><input type="number" min="0" step="0.01" value={form.amount} placeholder="0.00" onChange={event => {
+        const amount = event.target.value;
+        set({
+          amount,
+          settlements: settlementKinds ? syncSettlements(form.partyId, amount) : form.settlements,
+        });
+      }} /></Field>}
       {!itemMode && gstKinds && gstOn && <>
         <Field label="GST rate"><select value={form.gstRate} onChange={event => set({ gstRate: event.target.value })}>{GST_RATES.map(rate => <option key={rate} value={String(rate)}>{rate}%</option>)}</select></Field>
         <Field label="Price"><select value={form.taxInclusive ? "incl" : "excl"} onChange={event => set({ taxInclusive: event.target.value === "incl" })}><option value="excl">Tax exclusive</option><option value="incl">Tax inclusive</option></select></Field>
@@ -1047,7 +1073,58 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
         {` · Total ${money(gstPreview.total)}`}
       </p>
     )}
-    <div className="tabs spacer"><button type="button" className="btn primary" disabled={saving} onClick={onSubmit}>{saving ? "Saving…" : "Save"}</button></div>
+
+    {settlementKinds && form.partyId && (
+      <div className="acc-billwise spacer">
+        <h3 className="acc-section-title">Allocate against invoices</h3>
+        <p className="small">Bill-wise links are saved with this voucher. Suggested oldest-first; edit amounts as needed. Unallocated remainder still reduces party balance.</p>
+        {partyOpenInvoices.length ? (
+          <div className="table acc-table-wrap"><table><thead><tr><th>Invoice</th><th>Date</th><th className="acc-num">Outstanding</th><th className="acc-num">Allocate</th></tr></thead><tbody>
+            {partyOpenInvoices.map(invoice => {
+              const link = (form.settlements || []).find(row => row.invoiceVoucherId === invoice.id);
+              return (
+                <tr key={invoice.id}>
+                  <td>{invoice.reference}</td>
+                  <td>{invoice.invoiceDate}</td>
+                  <td className="acc-num">{money(invoice.outstanding)}</td>
+                  <td className="acc-num">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={link ? String(link.amount) : ""}
+                      placeholder="0"
+                      onChange={event => {
+                        const value = Number(event.target.value || 0);
+                        setForm(current => {
+                          const rest = (current.settlements || []).filter(row => row.invoiceVoucherId !== invoice.id);
+                          if (!(value > 0)) return { ...current, settlements: rest };
+                          return {
+                            ...current,
+                            settlements: [...rest, {
+                              invoiceVoucherId: invoice.id,
+                              reference: invoice.reference,
+                              amount: roundMoney(Math.min(value, invoice.outstanding)),
+                            }],
+                          };
+                        });
+                      }}
+                    />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody></table></div>
+        ) : <p className="small">No open invoices for this party — receipt/payment will still post to the party ledger.</p>}
+        <p className={`small ${settlementTotal > Number(form.amount || 0) + 0.001 ? "red" : ""}`}>
+          Allocated {money(settlementTotal)} of {money(form.amount || 0)}
+          {settlementTotal > Number(form.amount || 0) + 0.001 ? " · reduce allocations to match the amount" : ""}
+        </p>
+        <button type="button" className="btn" onClick={() => set({ settlements: syncSettlements(form.partyId, form.amount) })}>Auto-allocate oldest first</button>
+      </div>
+    )}
+
+    <div className="tabs spacer"><button type="button" className="btn primary" disabled={saving || (settlementKinds && settlementTotal > Number(form.amount || 0) + 0.001)} onClick={onSubmit}>{saving ? "Saving…" : "Save"}</button></div>
   </>;
 }
 
@@ -1126,6 +1203,8 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
   const [showCoa, setShowCoa] = useState(false);
   const [voucherType, setVoucherType] = useState("receipt");
   const [voucherForm, setVoucherForm] = useState(emptyVoucherForm);
+  const [voucherRequestId, setVoucherRequestId] = useState(() => newClientRequestId());
+  const [simpleRequestId, setSimpleRequestId] = useState(() => newClientRequestId());
   const [lines, setLines] = useState([emptyLine(), emptyLine()]);
   const [partyForm, setPartyForm] = useState(emptyPartyForm);
   const [coaForm, setCoaForm] = useState(emptyCoaForm);
@@ -1442,6 +1521,15 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
     [wantGst, vouchers, range],
   );
   const activeCompany = useMemo(() => companies.find(item => item.id === activeCompanyId) || companies[0] || null, [companies, activeCompanyId]);
+  const settlementOpenInvoices = useMemo(() => {
+    if (!showSimple || !["receipt", "payment", "credit_note", "debit_note"].includes(simpleKind)) return [];
+    const kind = simpleKind === "receipt" || simpleKind === "credit_note" ? "receivable" : "payable";
+    return invoiceRegister(accounts, vouchers, parties, {
+      kind,
+      today: todayIso(),
+      outstandingOnly: true,
+    });
+  }, [showSimple, simpleKind, accounts, vouchers, parties]);
   const accountsAttention = useMemo(() => {
     if (!wantOverview) return null;
     const overdueInvoices = invoiceRegister(accounts, vouchers, parties, {
@@ -1651,10 +1739,11 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
       })),
     };
     assertBalancedVoucher(payload.lines);
-    const voucherId = await postVoucher(token, { ...payload, clientRequestId: newClientRequestId() });
+    const voucherId = await postVoucher(token, { ...payload, clientRequestId: voucherRequestId });
     setShowVoucher(false);
     setVoucherForm(emptyVoucherForm());
     setLines([emptyLine(), emptyLine()]);
+    setVoucherRequestId(newClientRequestId());
     if (voucherType === "sales") setPendingSalesInvoiceId(voucherId);
   }, "Voucher saved successfully");
 
@@ -1665,6 +1754,7 @@ const openVoucher = () => {
     }
     setVoucherForm(emptyVoucherForm());
     setLines([emptyLine(), emptyLine()]);
+    setVoucherRequestId(newClientRequestId());
     setShowVoucher(true);
   };
 
@@ -1683,6 +1773,7 @@ const openVoucher = () => {
       description: line.description || "",
     }));
     setLines(copied.length >= 2 ? copied : [...copied, emptyLine(), emptyLine()].slice(0, Math.max(2, copied.length)));
+    setVoucherRequestId(newClientRequestId());
     setShowVoucher(true);
   };
 
@@ -1754,6 +1845,7 @@ const openVoucher = () => {
     const money = moneyAccounts(visibleAccounts);
     setPendingBankMatch(null);
     setSimpleKind(kind);
+    setSimpleRequestId(newClientRequestId());
     setSimpleForm({
       ...emptySimpleForm(),
       fromAccountId: money.find(account => account.accountType === "cash")?.id || money[0]?.id || "",
@@ -1770,6 +1862,7 @@ const openVoucher = () => {
     const kind = line.direction === "out" ? "payment" : "receipt";
     const moneyRows = moneyAccounts(visibleAccounts);
     setSimpleKind(kind);
+    setSimpleRequestId(newClientRequestId());
     setPendingBankMatch({
       lineId: line.id,
       coaId: statement?.coaId || "",
@@ -1933,10 +2026,17 @@ const openVoucher = () => {
           itcEligible: simpleKind === "purchase" || simpleKind === "debit_note",
         } : undefined,
       });
-    const voucherId = await postVoucher(token, { ...draft, clientRequestId: newClientRequestId() });
+    const voucherId = await postVoucher(token, {
+      ...draft,
+      clientRequestId: simpleRequestId,
+      settlements: (simpleKind === "receipt" || simpleKind === "payment" || simpleKind === "credit_note" || simpleKind === "debit_note")
+        ? (simpleForm.settlements || []).filter(link => Number(link.amount || 0) > 0 && link.invoiceVoucherId)
+        : undefined,
+    });
     const pending = pendingBankMatch;
     setShowSimple(false);
     setSimpleForm(emptySimpleForm());
+    setSimpleRequestId(newClientRequestId());
     setPendingBankMatch(null);
     if (simpleKind === "sale") setPendingSalesInvoiceId(voucherId);
     if (pending?.lineId && voucherId) {
@@ -2339,7 +2439,7 @@ const openVoucher = () => {
       {error && <div className="notice acc-toast error" role="alert">{error}</div>}
       {notice && <div className="notice accounts-notice-ok acc-toast ok" role="status">{notice}</div>}
       {readOnly && <div className="notice">Accounts access: <strong>viewer</strong>. You can review books and reports, but posting and setup changes are blocked.</div>}
-      {migrationRequired && <div className="notice">Run <strong>052</strong> through <strong>071_accounts_access_role_client.sql</strong> in the Supabase SQL editor (including <strong>059</strong>, <strong>064</strong>, <strong>065</strong>, <strong>066</strong>, <strong>070</strong>, and <strong>071</strong>), then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
+      {migrationRequired && <div className="notice">Run <strong>052</strong> through <strong>073_accounts_market_ready.sql</strong> in the Supabase SQL editor (including <strong>059</strong>, <strong>064–067</strong>, <strong>070–073</strong>), then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
       <nav className="acc-bottom-nav" aria-label="Accounts">
         {MOBILE_TABS.map(item => (
           <button key={item.id} type="button" className={`acc-bottom-item ${mobileTab === item.id ? "active" : ""}`} onClick={() => openSection(item.id)}>
@@ -2477,6 +2577,32 @@ const openVoucher = () => {
                       settings={orgSettings}
                       compact
                     />
+                    {canWrite && activeCompany?.gstRegistration === "regular" && (
+                      <button
+                        type="button"
+                        className="btn"
+                        disabled={saving}
+                        onClick={() => run(async () => {
+                          const party = parties.find(item => item.id === voucher.partyId) || null;
+                          const payload = buildEinvoiceOutboundPayload({
+                            voucher,
+                            party,
+                            company: activeCompany,
+                            workspace,
+                          });
+                          await queueEinvoicePayload(token, voucher.id, payload);
+                          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement("a");
+                          a.href = url;
+                          a.download = `fintrack-einvoice-payload-${voucher.voucherNumber || voucher.id}.json`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        }, "E-invoice payload queued (not submitted) and downloaded.")}
+                      >
+                        Queue e-invoice payload
+                      </button>
+                    )}
                   </div>
                 )}
                 {voucher.voucherType === "purchase" && (
@@ -2555,7 +2681,7 @@ const openVoucher = () => {
             <span><em>61–90</em> {money(invoiceAging.d61_90 || 0)}</span>
             <span><em>90+</em> {money(invoiceAging.d90 || 0)}</span>
           </div>
-          <p className="small">Invoice paid amounts use party-level FIFO allocation. Party outstanding totals match the party ledger; bill-to-bill linking is not used.</p>
+          <p className="small">New receipts and payments store bill-wise links against selected invoices. Older vouchers without links still use party-level FIFO for remaining allocation.</p>
           <div className="acc-invoice-toolbar">
             <button
               type="button"
@@ -2771,16 +2897,40 @@ const openVoucher = () => {
                 downloadAccountsCsv(`fintrack-gstr1-prep-${todayIso()}.csv`, gstrPrepToCsvRows(prep));
                 trackProductEvent("gstr1_prep_export");
                 setNotice("GSTR-1 preparation CSV downloaded (calculated / not filed).");
-              }}>Export GSTR-1 prep (calculated)</button>
+              }}>Export GSTR-1 prep CSV</button>
+              <button type="button" className="btn" onClick={() => {
+                const prep = buildGstr1Preparation({ vouchers, parties, range });
+                const blob = new Blob([JSON.stringify(gstrPrepToJson(prep), null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `fintrack-gstr1-prep-${todayIso()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                trackProductEvent("gstr1_prep_json_export");
+                setNotice("GSTR-1 preparation JSON downloaded (calculated / not filed).");
+              }}>Export GSTR-1 prep JSON</button>
               <button type="button" className="btn" onClick={() => {
                 const prep = buildGstr3bPreparation({ vouchers, range });
                 downloadAccountsCsv(`fintrack-gstr3b-prep-${todayIso()}.csv`, gstrPrepToCsvRows(prep));
                 trackProductEvent("gstr3b_prep_export");
                 setNotice("GSTR-3B preparation CSV downloaded (calculated / not filed).");
-              }}>Export GSTR-3B prep (calculated)</button>
+              }}>Export GSTR-3B prep CSV</button>
+              <button type="button" className="btn" onClick={() => {
+                const prep = buildGstr3bPreparation({ vouchers, range });
+                const blob = new Blob([JSON.stringify(gstrPrepToJson(prep), null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `fintrack-gstr3b-prep-${todayIso()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                trackProductEvent("gstr3b_prep_json_export");
+                setNotice("GSTR-3B preparation JSON downloaded (calculated / not filed).");
+              }}>Export GSTR-3B prep JSON</button>
             </div>
             <div className="notice spacer">
-              <strong>e-Invoice / e-Way:</strong> {EINVOICE_INTEGRATION_STUB.note} Configure credentials later — FinTrack will not invent IRNs.
+              <strong>e-Invoice / e-Way:</strong> {EINVOICE_INTEGRATION_STUB.note} Queue a payload from a posted sales voucher — FinTrack will not invent IRNs or call the portal.
             </div>
             <div className="acc-metric-grid three">
               <AccMetric label="Output GST" value={money(gstReport.outputTax)} />
@@ -2987,7 +3137,14 @@ const openVoucher = () => {
               <Field label="Business name"><input value={setupForm.companyName} onChange={event => setSetupForm(current => ({ ...current, companyName: event.target.value }))} /></Field>
               <Field label="Books start date"><input type="date" value={setupForm.booksStartedOn} onChange={event => setSetupForm(current => ({ ...current, booksStartedOn: event.target.value }))} /></Field>
             </div>
-            <button type="button" className="btn primary" disabled={saving} onClick={() => run(() => saveAccountingSettings(token, { ...setupForm, fyStartMonth: 4 }), "Company details saved.")}>{saving ? "Saving…" : "Save company"}</button>
+            <button type="button" className="btn primary" disabled={!canAdmin || saving} onClick={() => {
+              if (!canAdmin) {
+                setError("Only the business owner can change company settings.");
+                return;
+              }
+              run(() => saveAccountingSettings(token, { ...setupForm, fyStartMonth: 4 }), "Company details saved.");
+            }}>{saving ? "Saving…" : "Save company"}</button>
+            {!canAdmin && <p className="small">Only the business owner can change company name / books start settings.</p>}
             <div className="accounts-action-row spacer">
               <button type="button" className="btn" onClick={downloadCompanyBackup}>Download company backup</button>
               {canAdmin && <label className="btn">
@@ -3228,7 +3385,7 @@ const openVoucher = () => {
           {canAdmin && <AccSetupSection
             icon="R"
             title="Accounts access roles"
-            copy="Owner assigns accountant (can post) or viewer (read-only). Collection agents are separate. Requires migrations 070–071."
+            copy="Owner assigns accountant (can post) or viewer (read-only). Collection agents are separate. Requires migrations 070–073."
             collapsible
             summary={`${accountsRoles.length} assigned`}
           >
@@ -3300,7 +3457,7 @@ const openVoucher = () => {
         </div>
       </Modal>}
       {showSimple && <Modal title={SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry"} close={closeSimple}>
-        <SimpleEntryForm kind={simpleKind} accounts={visibleAccounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} maxDate={todayIso()} gstCompany={activeCompany} onGstSetup={() => { setShowSimple(false); openSection("setup"); }} items={items} stockByItem={stockByItem} />
+        <SimpleEntryForm kind={simpleKind} accounts={visibleAccounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} maxDate={todayIso()} gstCompany={activeCompany} onGstSetup={() => { setShowSimple(false); openSection("setup"); }} items={items} stockByItem={stockByItem} openInvoices={settlementOpenInvoices} />
       </Modal>}
       {showParty && <Modal title={partyForm.id ? "Edit party" : "Add party"} close={closeParty} actions={<div className="tabs spacer"><button type="button" className="btn" disabled={saving} onClick={closeParty}>Cancel</button><button type="button" className="btn primary" disabled={saving} onClick={saveParty}>{saving ? "Saving…" : partyForm.id ? "Save changes" : "Save party"}</button></div>}>
         <p className="copy">{partyForm.id ? "Updates this party only. Existing vouchers and ledgers stay attached to the same party." : "Accounts parties are independent of Daily Finance customers and Chit Fund members."}</p>

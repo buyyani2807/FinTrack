@@ -1,0 +1,4 @@
+-- Accounts roles live in migration 070 (`acc_user_roles`) with client grants in 071.
+-- Admin RPC hardening is in 072/073 (`acc_require_admin` for GST, lock, company, settings).
+-- See COMMERCIALIZATION.md for the owner / accountant / viewer matrix.
+-- Do not use this file as a migration; it is documentation only.

@@ -19,13 +19,14 @@ Default pilot entitlements (`DEFAULT_ENTITLEMENTS`) stay on `pro_pilot` with the
 
 ## Security notes
 
-- **Accounts roles** (migration **070**): `owner` (financier owner), `accountant`, `viewer` via `acc_user_roles` + `accounts_access_role()`.
+- **Accounts roles** (migration **070** + **072/073** admin gates): `owner` (financier owner), `accountant`, `viewer` via `acc_user_roles` + `accounts_access_role()`.
   - Read: owner / accountant / viewer (`can_accounts_read`)
-  - Write / post: owner / accountant (`can_accounts_write`)
-  - Admin (role assignment, etc.): owner only (`can_accounts_admin` / `acc_set_user_role`)
+  - Write / post: owner / accountant (`can_accounts_write` / `acc_require_owner` writers)
+  - Admin (GST save, period lock, create/archive company, company settings, role assignment): owner only (`can_accounts_admin` / `acc_require_admin`)
 - Company isolation remains via `x-acc-company-id` / `company_id`; roles do not bypass company scope.
 - Product analytics (`track_product_event` / client `trackProductEvent`) must stay **non-PII** — no phones, GSTIN, tokens, or secrets in event properties.
 - Attention Center and GST prep are **advisory / calculated only** — they never invent balances or claim government filing.
+- Live RLS/API checks: `npm run test:accounts-live` (skipped unless `SUPABASE_URL` + role JWTs are set). See `scripts/live-accounts-rls.mjs`.
 
 ## E-invoice stub
 
@@ -34,8 +35,13 @@ Default pilot entitlements (`DEFAULT_ENTITLEMENTS`) stay on `pro_pilot` with the
 - **Not enabled** by default; no IRN / e-Way / GSP live calls.
 - Required secrets (GSTIN, IRP credentials, optional GSP) must come from verified government or GSP partners.
 - Do not fake IRN, signed QR, or ack numbers.
+- Migration **073** stores queued outbound payloads in `acc_einvoice_payloads` with status `not_submitted`.
 
-GSTR-1 / GSTR-3B helpers export **books preparation** with `filingStatus: "not_filed"` and an explicit disclaimer.
+GSTR-1 / GSTR-3B helpers export **books preparation** as CSV **and JSON** with `filingStatus: "not_filed"` and an explicit disclaimer.
+
+## Bill-wise AR/AP
+
+Receipts, payments, and notes may store `settlements` links (`invoice_voucher_id` + amount) on the voucher (migration **073**). Reports prefer bill-wise links; leftover / legacy vouchers still allocate with party FIFO.
 
 ## Backup isolation rules
 
