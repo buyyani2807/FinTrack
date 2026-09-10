@@ -4,6 +4,7 @@ import {
   aggregateItemizedGst,
   currentStockForItem,
   itemizedEntryDraft,
+  mapVoucherItemLinesForRpc,
   stockStatus,
   validateItemForm,
   validateItemLines,
@@ -70,6 +71,9 @@ test("itemized sale draft keeps double-entry balanced with GST", () => {
   assert.equal(debit, credit);
   assert.equal(draft.voucherType, "sales");
   assert.equal(draft.itemLines.length, 1);
+  assert.equal(draft.itemLines[0].itemName, "Cement 50kg");
+  assert.equal(draft.itemLines[0].itemId, "i1");
+  assert.equal(draft.itemLines[0].item_name, undefined);
   assert.ok(draft.totals.total > draft.totals.taxable);
   assert.ok(draft.gstLines.length >= 1);
 });
@@ -92,4 +96,19 @@ test("aggregate GST supports mixed lines", () => {
   assert.ok(agg.cgst > 0);
   assert.ok(agg.sgst > 0);
   assert.equal(agg.igst, 0);
+});
+
+test("RPC item-line mapper accepts camelCase and snake_case", () => {
+  const fromCamel = mapVoucherItemLinesForRpc([
+    { itemId: "i1", itemName: "Widget", quantity: 2, rate: 50, gstRate: 18, itemType: "product" },
+  ]);
+  assert.equal(fromCamel[0].item_id, "i1");
+  assert.equal(fromCamel[0].item_name, "Widget");
+  assert.equal(fromCamel[0].quantity, 2);
+  const fromSnake = mapVoucherItemLinesForRpc([
+    { item_id: "i2", item_name: "Service", quantity: 1, rate: 100, gst_rate: 18, item_type: "service" },
+  ]);
+  assert.equal(fromSnake[0].item_id, "i2");
+  assert.equal(fromSnake[0].item_name, "Service");
+  assert.equal(fromSnake[0].item_type, "service");
 });

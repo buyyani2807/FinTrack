@@ -2740,7 +2740,7 @@ const openVoucher = () => {
       {error && <div className="notice acc-toast error" role="alert">{error}</div>}
       {notice && <div className="notice accounts-notice-ok acc-toast ok" role="status">{notice}</div>}
       {readOnly && <div className="notice">Accounts access: <strong>viewer</strong>. You can review books and reports, but posting and setup changes are blocked.</div>}
-      {migrationRequired && <div className="notice">Run <strong>052</strong> through <strong>075_accounts_wave1_invites_recurring.sql</strong> in the Supabase SQL editor (including <strong>059</strong>, <strong>064–067</strong>, <strong>070–075</strong>), then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
+      {migrationRequired && <div className="notice">Run <strong>052</strong> through <strong>076_fix_ambiguous_item_type.sql</strong> in the Supabase SQL editor (including <strong>059</strong>, <strong>064–067</strong>, <strong>070–076</strong>), then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
       <nav className="acc-bottom-nav" aria-label="Accounts">
         {MOBILE_TABS.map(item => (
           <button key={item.id} type="button" className={`acc-bottom-item ${mobileTab === item.id ? "active" : ""}`} onClick={() => openSection(item.id)}>
@@ -3749,7 +3749,7 @@ const openVoucher = () => {
           {canAdmin && <AccSetupSection
             icon="R"
             title="Accounts access roles"
-            copy="Invite your CA by email (viewer recommended), or paste a user UUID. Requires migrations 070–075."
+            copy="Invite your CA by email (viewer recommended), or paste a user UUID. Requires migrations 070–076."
             collapsible
             summary={`${accountsRoles.length} assigned · ${teamInvites.filter(row => row.status === "pending").length} pending`}
           >

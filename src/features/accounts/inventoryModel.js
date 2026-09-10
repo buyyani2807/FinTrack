@@ -69,6 +69,25 @@ export function normalizeItemLine(line = {}) {
   };
 }
 
+export function mapVoucherItemLinesForRpc(lines = []) {
+  return (lines || []).map(line => ({
+    item_id: line.itemId || line.item_id || null,
+    item_name: line.itemName || line.item_name || line.name || "",
+    item_sku: line.itemSku || line.item_sku || line.sku || "",
+    item_type: line.itemType || line.item_type || "product",
+    unit: line.unit || "Nos",
+    quantity: Number(line.quantity || 0),
+    rate: Number(line.rate || 0),
+    amount: Number(line.amount || line.taxableAmount || line.taxable_amount || 0),
+    gst_rate: Number(line.gstRate ?? line.gst_rate ?? 0),
+    hsn_sac: line.hsnSac || line.hsn_sac || "",
+    taxable_amount: Number(line.taxableAmount ?? line.taxable_amount ?? line.amount ?? 0),
+    cgst_amount: Number(line.cgstAmount ?? line.cgst_amount ?? 0),
+    sgst_amount: Number(line.sgstAmount ?? line.sgst_amount ?? 0),
+    igst_amount: Number(line.igstAmount ?? line.igst_amount ?? 0),
+  })).filter(line => String(line.item_name || "").trim() || line.item_id);
+}
+
 export function validateItemLines(lines = []) {
   if (!lines.length) return "Add at least one item.";
   const seen = new Set();
@@ -187,20 +206,20 @@ export function itemizedEntryDraft({
     lines,
     gstLines: gstEnabled ? aggregate.gstLines : [],
     itemLines: aggregate.lines.map(line => ({
-      item_id: line.itemId,
-      item_name: line.itemName,
-      item_sku: line.itemSku,
-      item_type: line.itemType,
+      itemId: line.itemId,
+      itemName: line.itemName,
+      itemSku: line.itemSku,
+      itemType: line.itemType,
       unit: line.unit,
       quantity: line.quantity,
       rate: line.rate,
       amount: line.amount,
-      gst_rate: line.gstRate,
-      hsn_sac: line.hsnSac,
-      taxable_amount: line.taxableAmount,
-      cgst_amount: line.cgstAmount,
-      sgst_amount: line.sgstAmount,
-      igst_amount: line.igstAmount,
+      gstRate: line.gstRate,
+      hsnSac: line.hsnSac,
+      taxableAmount: line.taxableAmount,
+      cgstAmount: line.cgstAmount,
+      sgstAmount: line.sgstAmount,
+      igstAmount: line.igstAmount,
     })),
     totals: {
       taxable: aggregate.taxable,

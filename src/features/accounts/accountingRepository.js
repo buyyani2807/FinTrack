@@ -1,8 +1,9 @@
 import { supabase } from "../../lib/supabase";
 import { groupByKey } from "./accountsList.js";
 import { assembleVouchers } from "./accountsVoucherAssembly.js";
+import { mapVoucherItemLinesForRpc } from "./inventoryModel.js";
 
-export { assembleVouchers };
+export { assembleVouchers, mapVoucherItemLinesForRpc };
 
 const isMissing = err => /could not find|does not exist|schema cache|404|PGRST202/i.test(String(err?.message || err?.code || ""));
 
@@ -25,7 +26,7 @@ const accQuery = (path, token) => supabase.query(path, token, accOpts());
 
 const wrap = promise => promise.catch(err => {
   if (isMissing(err)) {
-    const error = new Error("Run migrations 052–075 in the Supabase SQL editor to enable FinTrack Accounts companies, GST, attachments, items, QA hardening, bill-wise settlements, team invites, and recurring templates.");
+    const error = new Error("Run migrations 052–076 in the Supabase SQL editor to enable FinTrack Accounts companies, GST, attachments, items, QA hardening, bill-wise settlements, team invites, and recurring templates.");
     error.code = "MIGRATION_REQUIRED";
     throw error;
   }
@@ -294,22 +295,7 @@ export const setPartyActive = (token, id, isActive) =>
   }, token));
 
 export const postVoucher = async (token, payload) => {
-  const itemLines = (payload.itemLines || []).map(line => ({
-    item_id: line.itemId || null,
-    item_name: line.itemName || line.name || "",
-    item_sku: line.itemSku || line.sku || "",
-    item_type: line.itemType || "product",
-    unit: line.unit || "Nos",
-    quantity: Number(line.quantity || 0),
-    rate: Number(line.rate || 0),
-    amount: Number(line.amount || 0),
-    gst_rate: Number(line.gstRate || 0),
-    hsn_sac: line.hsnSac || "",
-    taxable_amount: Number(line.taxableAmount ?? line.amount ?? 0),
-    cgst_amount: Number(line.cgstAmount || 0),
-    sgst_amount: Number(line.sgstAmount || 0),
-    igst_amount: Number(line.igstAmount || 0),
-  }));
+  const itemLines = mapVoucherItemLinesForRpc(payload.itemLines);
   const args = {
     input_voucher_type: payload.voucherType,
     input_date: payload.date,
@@ -591,7 +577,7 @@ export const adjustStock = (token, { itemId, date, quantityDelta, reasonNote }) 
 export const saveVoucherItemLines = (token, voucherId, lines) =>
   wrap(accRpc("acc_save_voucher_item_lines", {
     input_voucher_id: voucherId,
-    input_lines: lines,
+    input_lines: mapVoucherItemLinesForRpc(lines),
   }, token));
 
 export const claimTeamInvites = token =>
