@@ -1525,11 +1525,13 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
   const deferredPartySearch = useDeferredValue(partySearch);
   const sectionRef = useRef(section);
   const refreshGen = useRef(0);
+  const hasLoadedRef = useRef(false);
   sectionRef.current = section;
 
   const refresh = useCallback(async (preferredCompanyId) => {
     const gen = ++refreshGen.current;
-    setLoading(true);
+    // Soft refresh after first load — avoid full-page skeleton that unmounts onboarding mid-flow.
+    if (!hasLoadedRef.current) setLoading(true);
     setError("");
     try {
       let nextCompanies = [];
@@ -1622,7 +1624,10 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
       if (err.code === "MIGRATION_REQUIRED") setMigrationRequired(true);
       else setError(err.message || "Could not load Accounts.");
     } finally {
-      if (gen === refreshGen.current) setLoading(false);
+      if (gen === refreshGen.current) {
+        hasLoadedRef.current = true;
+        setLoading(false);
+      }
     }
   }, [token]);
 
@@ -2898,7 +2903,7 @@ const openVoucher = () => {
           </button>
         ))}
       </nav>
-      {loading ? <><p className="copy">Loading Accounts…</p><AccSkeleton /></> : <>
+      {loading && !settings ? <><p className="copy">Loading Accounts…</p><AccSkeleton /></> : <>
         {section === "overview" && <div className="acc-panel acc-overview">
           {!settings && <div className="card accounts-form-card">
             <strong>Open the books</strong>
@@ -2912,6 +2917,7 @@ const openVoucher = () => {
 
           {showOnboarding && (
             <AccOnboardingWizard
+              key={activeCompanyId || "onboarding"}
               company={activeCompany}
               canAdmin={canAdmin}
               canWrite={canWrite}

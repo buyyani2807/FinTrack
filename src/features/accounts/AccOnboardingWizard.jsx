@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { INDIA_STATES } from "./accountingGst.js";
 
 const STEPS = [
@@ -9,6 +9,37 @@ const STEPS = [
   { id: "invite", title: "Invite CA" },
   { id: "done", title: "Done" },
 ];
+
+const stepStorageKey = companyId => `fintrack-accounts-onboarding-step-v1:${companyId || "none"}`;
+
+const readStoredStep = companyId => {
+  if (!companyId || typeof sessionStorage === "undefined") return 0;
+  try {
+    const raw = Number(sessionStorage.getItem(stepStorageKey(companyId)));
+    if (!Number.isFinite(raw) || raw < 0) return 0;
+    return Math.min(raw, STEPS.length - 1);
+  } catch {
+    return 0;
+  }
+};
+
+const writeStoredStep = (companyId, stepIndex) => {
+  if (!companyId || typeof sessionStorage === "undefined") return;
+  try {
+    sessionStorage.setItem(stepStorageKey(companyId), String(stepIndex));
+  } catch {
+    /* ignore quota */
+  }
+};
+
+const clearStoredStep = companyId => {
+  if (!companyId || typeof sessionStorage === "undefined") return;
+  try {
+    sessionStorage.removeItem(stepStorageKey(companyId));
+  } catch {
+    /* ignore */
+  }
+};
 
 /**
  * First-run Accounts onboarding. Parent owns persistence via callbacks.
@@ -25,7 +56,8 @@ export function AccOnboardingWizard({
   onFinish,
   onSkip,
 }) {
-  const [stepIndex, setStepIndex] = useState(0);
+  const companyId = company?.id || "";
+  const [stepIndex, setStepIndex] = useState(() => readStoredStep(companyId));
   const [companyName, setCompanyName] = useState(company?.name || "");
   const [booksStartedOn, setBooksStartedOn] = useState(company?.booksStartedOn || "2026-04-01");
   const [gstRegistration, setGstRegistration] = useState(company?.gstRegistration || "unregistered");
@@ -39,12 +71,26 @@ export function AccOnboardingWizard({
   const [inviteRole, setInviteRole] = useState("viewer");
   const [localError, setLocalError] = useState("");
 
+  useEffect(() => {
+    writeStoredStep(companyId, stepIndex);
+  }, [companyId, stepIndex]);
+
   const step = STEPS[stepIndex] || STEPS[0];
-  const progress = useMemo(() => `${stepIndex + 1} / ${STEPS.length}`, [stepIndex]);
+  const progress = useMemo(() => `${stepIndex + 1} of ${STEPS.length}`, [stepIndex]);
 
   const goNext = () => {
     setLocalError("");
     setStepIndex(index => Math.min(index + 1, STEPS.length - 1));
+  };
+
+  const finishWizard = () => {
+    clearStoredStep(companyId);
+    if (onFinish) onFinish();
+  };
+
+  const skipWizard = () => {
+    clearStoredStep(companyId);
+    if (onSkip) onSkip();
   };
 
   const runStep = async () => {
@@ -73,7 +119,7 @@ export function AccOnboardingWizard({
         await onInviteCa({ email: inviteEmail.trim(), role: inviteRole });
       }
       if (step.id === "done") {
-        if (onFinish) onFinish();
+        finishWizard();
         return;
       }
       goNext();
@@ -89,12 +135,12 @@ export function AccOnboardingWizard({
           <strong>Set up Accounts</strong>
           <p className="small">Step {progress}: {step.title}</p>
         </div>
-        {onSkip ? <button type="button" className="btn" disabled={saving} onClick={onSkip}>Skip for now</button> : null}
+        {onSkip ? <button type="button" className="btn" disabled={saving} onClick={skipWizard}>Skip for now</button> : null}
       </div>
 
       {step.id === "welcome" && (
         <div className="spacer">
-          <p className="copy">This short setup walks you through six screens: welcome, company details, GST, optional first party, optional CA invite, then done.</p>
+          <p className="copy">Six steps: welcome → company → GST → optional party → optional CA invite → done. Use Continue on each screen; optional steps have Skip.</p>
           <p className="small">Daily Finance, Monthly Finance, and Chit Fund stay separate. This only configures trade books for this company.</p>
         </div>
       )}
@@ -216,6 +262,7 @@ export function markAccountsOnboardingDone(companyId) {
   if (!companyId || typeof localStorage === "undefined") return;
   try {
     localStorage.setItem(accountsOnboardingStorageKey(companyId), "done");
+    clearStoredStep(companyId);
   } catch {
     /* ignore quota */
   }
