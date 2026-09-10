@@ -722,7 +722,8 @@ const gstStatusLabel = company => {
   return "GST unregistered";
 };
 
-function AccCompanyBar({ companies, activeId, onSelect, onCreate, gstLabel }) {
+function AccCompanyBar({ companies, activeId, onSelect, onCreate, gstLabel, fyLabel = "", booksStartedOn = "" }) {
+  const active = companies.find(company => company.id === activeId);
   return (
     <div className="acc-company-bar">
       <label className="acc-company-bar-field">
@@ -741,6 +742,12 @@ function AccCompanyBar({ companies, activeId, onSelect, onCreate, gstLabel }) {
           ))}
         </select>
       </label>
+      <div className="acc-company-bar-meta" aria-label="Company books context">
+        {fyLabel ? <span className="acc-company-chip"><em>FY</em> {fyLabel}</span> : null}
+        {(booksStartedOn || active?.booksStartedOn) ? (
+          <span className="acc-company-chip"><em>Books from</em> {booksStartedOn || active.booksStartedOn}</span>
+        ) : null}
+      </div>
       <button type="button" className="btn" onClick={onCreate}>+ Create company</button>
       {gstLabel ? <span className="small acc-company-bar-gst">{gstLabel}</span> : null}
     </div>
@@ -751,7 +758,7 @@ function AccPageHeader({ backLabel, onBack, title, copy, trail, extras, companyB
   return <>
     <header className="acc-page-head">
       <div className="acc-page-head-start">
-        <button type="button" className="btn" onClick={onBack}>{backLabel}</button>
+        <button type="button" className="btn ghost" onClick={onBack}>{backLabel}</button>
       </div>
       <p className="acc-kicker acc-page-head-brand">FinTrack Accounts</p>
       <div className="acc-page-head-end">
@@ -839,29 +846,48 @@ const emptyCoaForm = () => ({
 });
 
 function ReportRangeBar({ fy, lastFy, from, to, onChange }) {
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const thisFy = from === fy.from && to === fy.to;
   const prevFy = from === lastFy.from && to === lastFy.to;
-  return <div className="card accounts-filter-card">
-    <div className="accounts-period-pills">
-      <button type="button" className={`btn accounts-period-pill ${thisFy ? "active" : ""}`} onClick={() => onChange(fy.from, fy.to)}>This FY</button>
-      <button type="button" className={`btn accounts-period-pill ${prevFy ? "active" : ""}`} onClick={() => onChange(lastFy.from, lastFy.to)}>Last FY</button>
+  const body = (
+    <>
+      <div className="accounts-period-pills">
+        <button type="button" className={`btn accounts-period-pill ${thisFy ? "active" : ""}`} onClick={() => onChange(fy.from, fy.to)}>This FY</button>
+        <button type="button" className={`btn accounts-period-pill ${prevFy ? "active" : ""}`} onClick={() => onChange(lastFy.from, lastFy.to)}>Last FY</button>
+      </div>
+      <div className="accounts-custom-range">
+        <label className="accounts-filter-field"><span className="small">From</span>
+          <input type="date" value={from} onChange={event => onChange(event.target.value, to)} />
+        </label>
+        <label className="accounts-filter-field"><span className="small">To</span>
+          <input type="date" value={to} onChange={event => onChange(from, event.target.value)} />
+        </label>
+      </div>
+      <p className="small">Reports use this date range. Changing it does not rewrite posted vouchers.</p>
+      <button type="button" className="btn primary acc-filter-done" onClick={() => setFiltersOpen(false)}>Done</button>
+    </>
+  );
+  return (
+    <div className={`card accounts-filter-card acc-report-filters-wrap${filtersOpen ? " is-open" : ""}`}>
+      <div className="acc-filter-summary">
+        <div>
+          <span className="acc-filter-summary-label">Period</span>
+          <strong className="acc-filter-summary-value">{from} → {to}</strong>
+        </div>
+        <button type="button" className="btn" onClick={() => setFiltersOpen(true)} aria-expanded={filtersOpen}>
+          Filters{thisFy || prevFy ? " (1)" : " (2)"}
+        </button>
+      </div>
+      <div className="acc-filter-body">{body}</div>
+      {filtersOpen ? <button type="button" className="acc-filter-sheet-bg" aria-label="Close filters" onClick={() => setFiltersOpen(false)} /> : null}
     </div>
-    <div className="accounts-custom-range">
-      <label className="accounts-filter-field"><span className="small">From</span>
-        <input type="date" value={from} onChange={event => onChange(event.target.value, to)} />
-      </label>
-      <label className="accounts-filter-field"><span className="small">To</span>
-        <input type="date" value={to} onChange={event => onChange(from, event.target.value)} />
-      </label>
-    </div>
-    <p className="small">Reports use this date range. Changing it does not rewrite posted vouchers.</p>
-  </div>;
+  );
 }
 
 const SECTIONS = [
   { id: "overview", label: "Overview", group: "Books" },
   { id: "ledger", label: "Ledger", group: "Books" },
-  { id: "vouchers", label: "Vouchers", group: "Books" },
+  { id: "vouchers", label: "Transactions", group: "Books" },
   { id: "cashbook", label: "Cashbook", group: "Books" },
   { id: "receivables", label: "Receivables", group: "Parties" },
   { id: "payables", label: "Payables", group: "Parties" },
@@ -914,7 +940,18 @@ const MORE_LINKS = [
 ];
 
 function Modal({ title, close, children, actions }) {
-  return <div className="modal-bg"><div className="modal acc-modal"><div className="row"><h2 className="title">{title}</h2><button type="button" className="btn" onClick={close}>Close</button></div>{children}{actions}</div></div>;
+  return (
+    <div className="modal-bg" role="presentation" onClick={event => { if (event.target === event.currentTarget) close(); }}>
+      <div className="modal acc-modal" role="dialog" aria-modal="true" aria-label={title}>
+        <div className="row">
+          <h2 className="title">{title}</h2>
+          <button type="button" className="btn ghost" aria-label="Close" onClick={close}>Close</button>
+        </div>
+        {children}
+        {actions ? <div className="acc-modal-actions">{actions}</div> : null}
+      </div>
+    </div>
+  );
 }
 
 function ReasonModal({ title, label, value, onChange, onConfirm, onClose, saving, confirmLabel = "Continue" }) {
@@ -1061,98 +1098,110 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
 
   return <>
     <p className="copy">{noteCopy}</p>
-    <div className="form">
-      <Field label="Date"><input type="date" max={maxDate} value={form.date} onChange={event => set({ date: event.target.value })} /></Field>
-      {(kind === "sale" || kind === "purchase") && (
-        <Field label="Payment">
-          <select value={form.settlement} onChange={event => set({
-            settlement: event.target.value,
-            amountReceived: event.target.value === "paid" ? "" : form.amountReceived,
-          })}>
-            <option value="credit">Credit / invoice</option>
-            <option value="paid">Paid in full now</option>
-          </select>
-        </Field>
-      )}
-      {showMoneyMode && (
-        <Field label="Payment mode">
-          <select value={form.moneyMode} onChange={event => set({ moneyMode: event.target.value, receivedCash: "", receivedUpi: "" })}>
-            {MONEY_MODES.map(mode => <option key={mode.id} value={mode.id}>{mode.label}</option>)}
-          </select>
-        </Field>
-      )}
-      {(kind === "sale" || kind === "purchase") && form.settlement === "credit" && <Field label="Due date"><input type="date" value={form.dueDate || addDaysIso(form.date, 7)} onChange={event => set({ dueDate: event.target.value })} /></Field>}
-      {kind === "expense" && <Field label="Expense"><select value={form.expenseCode} onChange={event => set({ expenseCode: event.target.value })}>{expenseOptions.map(([code, name]) => <option key={code} value={code}>{name}</option>)}</select></Field>}
-      {kind === "transfer" && <>
-        <Field label="From"><select value={form.fromAccountId || ""} onChange={event => set({ fromAccountId: event.target.value })}><option value="">Select account</option>{transferAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</select></Field>
-        <Field label="To"><select value={form.toAccountId || ""} onChange={event => set({ toAccountId: event.target.value })}><option value="">Select account</option>{transferAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</select></Field>
-      </>}
-      {needsParty && <Field label={needsParty === "supplier" ? "Supplier" : "Customer"}><select value={form.partyId} onChange={event => {
-        const partyId = event.target.value;
-        set({
-          partyId,
-          settlements: settlementKinds ? syncSettlements(partyId, form.amount) : form.settlements,
-        });
-      }}><option value="">Select</option>{partyList.map(party => <option key={party.id} value={party.id}>{party.name}</option>)}</select></Field>}
-      {(kind === "sale" || kind === "purchase") && (
-        <Field label="Entry">
-          <select value={itemMode ? "items" : "amount"} onChange={event => set({ entryMode: event.target.value })}>
-            <option value="items">Line items</option>
-            <option value="amount">Single amount</option>
-          </select>
-        </Field>
-      )}
-      {!itemMode && <Field required label={kind === "sale" ? "Sale value (invoice)" : "Amount"}><input type="number" min="0" step="0.01" value={form.amount} placeholder="0.00" onChange={event => {
-        const amount = event.target.value;
-        set({
-          amount,
-          settlements: settlementKinds ? syncSettlements(form.partyId, amount) : form.settlements,
-        });
-      }} /></Field>}
-      {showReceivedOnCredit && (
-        <Field label="Amount received now">
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={form.amountReceived}
-            placeholder="0.00 — leave blank if unpaid"
-            onChange={event => set({ amountReceived: event.target.value })}
-          />
-        </Field>
-      )}
-      {showMoneyMode && form.moneyMode === "cash_upi" && (
-        <>
-          <Field label="Cash amount (₹)">
-            <input type="number" min="0" step="0.01" value={form.receivedCash} placeholder="0.00" onChange={event => set({ receivedCash: event.target.value })} />
+    <section className="acc-form-section">
+      <h3 className="acc-form-section-title">Details</h3>
+      <div className="form">
+        <Field label="Date"><input type="date" max={maxDate} value={form.date} onChange={event => set({ date: event.target.value })} /></Field>
+        {(kind === "sale" || kind === "purchase") && (
+          <Field label="Payment">
+            <select value={form.settlement} onChange={event => set({
+              settlement: event.target.value,
+              amountReceived: event.target.value === "paid" ? "" : form.amountReceived,
+            })}>
+              <option value="credit">Credit / invoice</option>
+              <option value="paid">Paid in full now</option>
+            </select>
           </Field>
-          <Field label="UPI amount (₹)">
-            <input type="number" min="0" step="0.01" value={form.receivedUpi} placeholder="0.00" onChange={event => set({ receivedUpi: event.target.value })} />
+        )}
+        {showMoneyMode && (
+          <Field label="Payment mode">
+            <select value={form.moneyMode} onChange={event => set({ moneyMode: event.target.value, receivedCash: "", receivedUpi: "" })}>
+              {MONEY_MODES.map(mode => <option key={mode.id} value={mode.id}>{mode.label}</option>)}
+            </select>
           </Field>
-          <p className={`small span ${cashUpiValid ? "" : "red"}`}>
-            Cash + UPI must equal {money(splitTargetAmount)}
-            {splitEntered > 0 ? ` · entered ${money(splitEntered)}` : ""}
-            {!cashUpiValid && splitTargetAmount > 0 ? " · enter both amounts" : ""}
-          </p>
-        </>
-      )}
-      {!itemMode && gstKinds && gstOn && <>
-        <Field label="GST rate"><select value={form.gstRate} onChange={event => set({ gstRate: event.target.value })}>{GST_RATES.map(rate => <option key={rate} value={String(rate)}>{rate}%</option>)}</select></Field>
-        <Field label="Price"><select value={form.taxInclusive ? "incl" : "excl"} onChange={event => set({ taxInclusive: event.target.value === "incl" })}><option value="excl">Tax exclusive</option><option value="incl">Tax inclusive</option></select></Field>
-        <Field label="HSN / SAC"><input value={form.hsnSac} placeholder="optional" onChange={event => set({ hsnSac: event.target.value })} /></Field>
-        <Field label="Supply">{intra ? "Intra-state (CGST + SGST)" : partyState ? "Inter-state (IGST)" : "Set party state for CGST/SGST vs IGST"}</Field>
-      </>}
-      {gstKinds && !gstOn && (
-        <div className="acc-gst-setup-hint span">
-          <p className="copy">GST is off for {gstCompany?.name || "this company"} ({gstStatusLabel(gstCompany)}). This {kind.replaceAll("_", " ")} posts without tax until you choose Regular in Setup and save GSTIN + state.</p>
-          {onGstSetup ? <button type="button" className="btn" onClick={onGstSetup}>Open GST setup</button> : null}
+        )}
+        {(kind === "sale" || kind === "purchase") && form.settlement === "credit" && <Field label="Due date"><input type="date" value={form.dueDate || addDaysIso(form.date, 7)} onChange={event => set({ dueDate: event.target.value })} /></Field>}
+        {kind === "expense" && <Field label="Expense"><select value={form.expenseCode} onChange={event => set({ expenseCode: event.target.value })}>{expenseOptions.map(([code, name]) => <option key={code} value={code}>{name}</option>)}</select></Field>}
+        {kind === "transfer" && <>
+          <Field label="From"><select value={form.fromAccountId || ""} onChange={event => set({ fromAccountId: event.target.value })}><option value="">Select account</option>{transferAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</select></Field>
+          <Field label="To"><select value={form.toAccountId || ""} onChange={event => set({ toAccountId: event.target.value })}><option value="">Select account</option>{transferAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</select></Field>
+        </>}
+        {needsParty && <Field label={needsParty === "supplier" ? "Supplier" : "Customer"}><select value={form.partyId} onChange={event => {
+          const partyId = event.target.value;
+          set({
+            partyId,
+            settlements: settlementKinds ? syncSettlements(partyId, form.amount) : form.settlements,
+          });
+        }}><option value="">Select</option>{partyList.map(party => <option key={party.id} value={party.id}>{party.name}</option>)}</select></Field>}
+        {(kind === "sale" || kind === "purchase") && (
+          <Field label="Entry">
+            <select value={itemMode ? "items" : "amount"} onChange={event => set({ entryMode: event.target.value })}>
+              <option value="items">Line items</option>
+              <option value="amount">Single amount</option>
+            </select>
+          </Field>
+        )}
+      </div>
+    </section>
+
+    {!itemMode && (
+      <section className="acc-form-section">
+        <h3 className="acc-form-section-title">{kind === "sale" ? "Invoice amount" : "Amount"}</h3>
+        <div className="form">
+          <Field required label={kind === "sale" ? "Sale value (invoice)" : "Amount"}><input type="number" min="0" step="0.01" value={form.amount} placeholder="0.00" onChange={event => {
+            const amount = event.target.value;
+            set({
+              amount,
+              settlements: settlementKinds ? syncSettlements(form.partyId, amount) : form.settlements,
+            });
+          }} /></Field>
+          {showReceivedOnCredit && (
+            <Field label="Amount received now">
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.amountReceived}
+                placeholder="0.00 — leave blank if unpaid"
+                onChange={event => set({ amountReceived: event.target.value })}
+              />
+            </Field>
+          )}
+          {showMoneyMode && form.moneyMode === "cash_upi" && (
+            <>
+              <Field label="Cash amount (₹)">
+                <input type="number" min="0" step="0.01" value={form.receivedCash} placeholder="0.00" onChange={event => set({ receivedCash: event.target.value })} />
+              </Field>
+              <Field label="UPI amount (₹)">
+                <input type="number" min="0" step="0.01" value={form.receivedUpi} placeholder="0.00" onChange={event => set({ receivedUpi: event.target.value })} />
+              </Field>
+              <p className={`small span ${cashUpiValid ? "" : "red"}`}>
+                Cash + UPI must equal {money(splitTargetAmount)}
+                {splitEntered > 0 ? ` · entered ${money(splitEntered)}` : ""}
+                {!cashUpiValid && splitTargetAmount > 0 ? " · enter both amounts" : ""}
+              </p>
+            </>
+          )}
+          {!itemMode && gstKinds && gstOn && <>
+            <Field label="GST rate"><select value={form.gstRate} onChange={event => set({ gstRate: event.target.value })}>{GST_RATES.map(rate => <option key={rate} value={String(rate)}>{rate}%</option>)}</select></Field>
+            <Field label="Price"><select value={form.taxInclusive ? "incl" : "excl"} onChange={event => set({ taxInclusive: event.target.value === "incl" })}><option value="excl">Tax exclusive</option><option value="incl">Tax inclusive</option></select></Field>
+            <Field label="HSN / SAC"><input value={form.hsnSac} placeholder="optional" onChange={event => set({ hsnSac: event.target.value })} /></Field>
+            <Field label="Supply">{intra ? "Intra-state (CGST + SGST)" : partyState ? "Inter-state (IGST)" : "Set party state for CGST/SGST vs IGST"}</Field>
+          </>}
+          {gstKinds && !gstOn && (
+            <div className="acc-gst-setup-hint span">
+              <p className="copy">GST is off for {gstCompany?.name || "this company"} ({gstStatusLabel(gstCompany)}). This {kind.replaceAll("_", " ")} posts without tax until you choose Regular in Setup and save GSTIN + state.</p>
+              {onGstSetup ? <button type="button" className="btn" onClick={onGstSetup}>Open GST setup</button> : null}
+            </div>
+          )}
+          <Field className="span" label="Note (optional)"><input value={form.narration} onChange={event => set({ narration: event.target.value })} placeholder="Received from Ravi" /></Field>
         </div>
-      )}
-      <Field className="span" label="Note (optional)"><input value={form.narration} onChange={event => set({ narration: event.target.value })} placeholder="Received from Ravi" /></Field>
-    </div>
+      </section>
+    )}
 
     {itemMode && (
-      <div className="acc-item-lines spacer">
+      <section className="acc-form-section acc-item-lines">
+        <h3 className="acc-form-section-title">Line items</h3>
         <div className="table acc-table-wrap"><table><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>GST%</th><th className="acc-num">Amount</th><th></th></tr></thead><tbody>
           {(form.itemLines || [emptyItemLine()]).map((line, index) => {
             const qty = Number(line.quantity || 0);
@@ -1180,6 +1229,48 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
             );
           })}
         </tbody></table></div>
+        <div className="acc-item-line-cards">
+          {(form.itemLines || [emptyItemLine()]).map((line, index) => {
+            const qty = Number(line.quantity || 0);
+            const rate = Number(line.rate || 0);
+            const stock = line.itemId ? stockByItem[line.itemId] : null;
+            const lineName = activeItems.find(item => item.id === line.itemId)?.name || "Select item";
+            return (
+              <article key={index} className="acc-item-line-card">
+                <div className="acc-item-line-card-top">
+                  <strong>{lineName}</strong>
+                  <span className="acc-item-line-amount">{money(qty * rate)}</span>
+                </div>
+                <label className="accounts-filter-field">
+                  <span className="small">Item</span>
+                  <select value={line.itemId || ""} onChange={event => selectItem(index, event.target.value)}>
+                    <option value="">Search / select item</option>
+                    {activeItems.map(item => (
+                      <option key={item.id} value={item.id}>
+                        {item.name} · {item.sku}{item.itemType === "product" && stockByItem[item.id] != null ? ` · stock ${stockByItem[item.id]} ${item.unit}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {stock != null && <p className="small">Stock {stock} {line.unit || ""}</p>}
+                <div className="acc-item-line-card-grid">
+                  <label className="accounts-filter-field"><span className="small">Qty</span>
+                    <input type="number" min="0" step="0.001" value={line.quantity} onChange={event => patchItemLine(index, { quantity: event.target.value })} />
+                  </label>
+                  <label className="accounts-filter-field"><span className="small">Rate</span>
+                    <input type="number" min="0" step="0.01" value={line.rate} onChange={event => patchItemLine(index, { rate: event.target.value, rateTouched: true })} />
+                  </label>
+                  <label className="accounts-filter-field"><span className="small">GST %</span>
+                    <input type="number" min="0" max="100" step="0.01" value={line.gstRate} onChange={event => patchItemLine(index, { gstRate: event.target.value })} />
+                  </label>
+                </div>
+                {(form.itemLines || []).length > 1 && (
+                  <button type="button" className="btn danger" onClick={() => setForm(current => ({ ...current, itemLines: current.itemLines.filter((_, i) => i !== index) }))}>Remove</button>
+                )}
+              </article>
+            );
+          })}
+        </div>
         <button type="button" className="btn" onClick={() => setForm(current => ({ ...current, itemLines: [...(current.itemLines || []), emptyItemLine()] }))}>+ Add item</button>
         {itemPreview && (
           <p className="small acc-gst-preview">
@@ -1190,7 +1281,38 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
             {` · Total ${money(gstOn ? itemPreview.total : itemPreview.taxable)}`}
           </p>
         )}
-      </div>
+        {showReceivedOnCredit && (
+          <div className="form spacer">
+            <Field label="Amount received now">
+              <input type="number" min="0" step="0.01" value={form.amountReceived} placeholder="0.00 — leave blank if unpaid" onChange={event => set({ amountReceived: event.target.value })} />
+            </Field>
+          </div>
+        )}
+        {showMoneyMode && form.moneyMode === "cash_upi" && (
+          <div className="form spacer">
+            <Field label="Cash amount (₹)">
+              <input type="number" min="0" step="0.01" value={form.receivedCash} placeholder="0.00" onChange={event => set({ receivedCash: event.target.value })} />
+            </Field>
+            <Field label="UPI amount (₹)">
+              <input type="number" min="0" step="0.01" value={form.receivedUpi} placeholder="0.00" onChange={event => set({ receivedUpi: event.target.value })} />
+            </Field>
+            <p className={`small span ${cashUpiValid ? "" : "red"}`}>
+              Cash + UPI must equal {money(splitTargetAmount)}
+              {splitEntered > 0 ? ` · entered ${money(splitEntered)}` : ""}
+              {!cashUpiValid && splitTargetAmount > 0 ? " · enter both amounts" : ""}
+            </p>
+          </div>
+        )}
+        {gstKinds && !gstOn && (
+          <div className="acc-gst-setup-hint">
+            <p className="copy">GST is off for {gstCompany?.name || "this company"} ({gstStatusLabel(gstCompany)}). This {kind.replaceAll("_", " ")} posts without tax until you choose Regular in Setup and save GSTIN + state.</p>
+            {onGstSetup ? <button type="button" className="btn" onClick={onGstSetup}>Open GST setup</button> : null}
+          </div>
+        )}
+        <div className="form">
+          <Field className="span" label="Note (optional)"><input value={form.narration} onChange={event => set({ narration: event.target.value })} placeholder="Received from Ravi" /></Field>
+        </div>
+      </section>
     )}
 
     {gstPreview && Number(form.amount) > 0 && Number(form.gstRate) > 0 && (
@@ -1218,8 +1340,8 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
     )}
 
     {settlementKinds && form.partyId && (
-      <div className="acc-billwise spacer">
-        <h3 className="acc-section-title">Allocate against invoices</h3>
+      <div className="acc-billwise spacer acc-form-section">
+        <h3 className="acc-form-section-title">Allocate against invoices</h3>
         <p className="small">Bill-wise links are saved with this voucher. Suggested oldest-first; edit amounts as needed. Unallocated remainder still reduces party balance.</p>
         {partyOpenInvoices.length ? (
           <div className="table acc-table-wrap"><table><thead><tr><th>Invoice</th><th>Date</th><th className="acc-num">Outstanding</th><th className="acc-num">Allocate</th></tr></thead><tbody>
@@ -2661,46 +2783,71 @@ const openVoucher = () => {
       return <AccEmpty title={emptyTitle} copy={emptyCopy} />;
     }
     return (
-      <div className="table spacer acc-table-wrap accounts-invoice-table">
-        <table>
-          <thead>
-            <tr>
-              <th>{kind === "payable" ? "Supplier" : "Customer"}</th>
-              <th>Invoice</th>
-              <th>Invoice date</th>
-              <th>Due date</th>
-              <th className="acc-num">Amount</th>
-              <th className="acc-num">Paid</th>
-              <th className="acc-num">Outstanding</th>
-              <th className="acc-num">Days overdue</th>
-              <th>Status</th>
-              <th>{kind === "payable" ? "Advice" : "Remind"}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(row => (
-              <tr key={row.id} className={row.status === "Overdue" ? "acc-invoice-overdue" : ""}>
-                <td>
-                  <strong className="acc-invoice-party">{row.partyName}</strong>
-                </td>
-                <td><span className="acc-invoice-ref">{row.reference}</span></td>
-                <td>{row.invoiceDate}</td>
-                <td>{row.dueDate}</td>
-                <td className="acc-num">{money(row.amount)}</td>
-                <td className="acc-num acc-invoice-paid">{money(row.paid)}</td>
-                <td className={`acc-num acc-invoice-out${row.status === "Overdue" ? " is-overdue" : row.outstanding > 0 ? "" : " is-clear"}`}>{money(row.outstanding)}</td>
-                <td className="acc-num">{row.daysOverdue || 0}</td>
-                <td><span className={`acc-status-pill ${invoiceStatusTone(row.status)}`}>{row.status}</span></td>
-                <td className="acc-invoice-remind">
-                  {kind === "payable"
-                    ? <PaymentAdviceButton row={row} settings={orgSettings} company={activeCompany} workspace={workspace} compact />
-                    : <ArReminderButton row={row} settings={orgSettings} company={activeCompany} workspace={workspace} compact />}
-                </td>
+      <>
+        <div className="table spacer acc-table-wrap accounts-invoice-table acc-invoice-desktop">
+          <table>
+            <thead>
+              <tr>
+                <th>{kind === "payable" ? "Supplier" : "Customer"}</th>
+                <th>Invoice</th>
+                <th>Invoice date</th>
+                <th>Due date</th>
+                <th className="acc-num">Amount</th>
+                <th className="acc-num">Paid</th>
+                <th className="acc-num">Outstanding</th>
+                <th className="acc-num">Days overdue</th>
+                <th>Status</th>
+                <th>{kind === "payable" ? "Advice" : "Remind"}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {rows.map(row => (
+                <tr key={row.id} className={row.status === "Overdue" ? "acc-invoice-overdue" : ""}>
+                  <td>
+                    <strong className="acc-invoice-party">{row.partyName}</strong>
+                  </td>
+                  <td><span className="acc-invoice-ref">{row.reference}</span></td>
+                  <td>{row.invoiceDate}</td>
+                  <td>{row.dueDate}</td>
+                  <td className="acc-num">{money(row.amount)}</td>
+                  <td className="acc-num acc-invoice-paid">{money(row.paid)}</td>
+                  <td className={`acc-num acc-invoice-out${row.status === "Overdue" ? " is-overdue" : row.outstanding > 0 ? "" : " is-clear"}`}>{money(row.outstanding)}</td>
+                  <td className="acc-num">{row.daysOverdue || 0}</td>
+                  <td><span className={`acc-status-pill ${invoiceStatusTone(row.status)}`}>{row.status}</span></td>
+                  <td className="acc-invoice-remind">
+                    {kind === "payable"
+                      ? <PaymentAdviceButton row={row} settings={orgSettings} company={activeCompany} workspace={workspace} compact />
+                      : <ArReminderButton row={row} settings={orgSettings} company={activeCompany} workspace={workspace} compact />}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="acc-invoice-cards spacer">
+          {rows.map(row => (
+            <article key={row.id} className={`card acc-invoice-card${row.status === "Overdue" ? " is-overdue" : ""}`}>
+              <div className="acc-invoice-card-top">
+                <div>
+                  <strong>{row.partyName}</strong>
+                  <p className="small">{row.reference} · due {row.dueDate}</p>
+                </div>
+                <span className={`acc-status-pill ${invoiceStatusTone(row.status)}`}>{row.status}</span>
+              </div>
+              <p className="acc-ledger-card-amounts">
+                <span>Amount <strong>{money(row.amount)}</strong></span>
+                <span>Paid <strong>{money(row.paid)}</strong></span>
+                <span>Outstanding <strong>{money(row.outstanding)}</strong></span>
+              </p>
+              <div className="acc-invoice-remind">
+                {kind === "payable"
+                  ? <PaymentAdviceButton row={row} settings={orgSettings} company={activeCompany} workspace={workspace} compact />
+                  : <ArReminderButton row={row} settings={orgSettings} company={activeCompany} workspace={workspace} compact />}
+              </div>
+            </article>
+          ))}
+        </div>
+      </>
     );
   };
 
@@ -2722,6 +2869,8 @@ const openVoucher = () => {
           onSelect={switchCompany}
           onCreate={() => { setCompanyDraft({ name: "", booksStartedOn: todayIso() }); setShowCreateCompany(true); }}
           gstLabel={gstStatusLabel(activeCompany)}
+          fyLabel={fy?.label || ""}
+          booksStartedOn={activeCompany?.booksStartedOn || settings?.booksStartedOn || ""}
         />}
         extras={canWrite ? <>
           <select className="acc-new-entry" defaultValue="" aria-label="New entry" onChange={event => {
@@ -2843,12 +2992,14 @@ const openVoucher = () => {
           <section className="acc-section">
             <h2 className="acc-section-title">Metrics</h2>
             <div className="acc-metric-grid acc-ov-metrics">
-              <AccMetric label="Cash" value={money(metrics?.cash)} tone="gold" />
-              <AccMetric label="Bank" value={money(metrics?.bank)} tone="gold" />
-              <AccMetric label="UPI" value={money(metrics?.upi)} tone="gold" />
-              <AccMetric label="Income" value={money(metrics?.income)} tone="green" onClick={() => openSection("pnl")} />
-              <AccMetric label="Expenses" value={money(metrics?.expenses)} tone="red" onClick={() => openSection("pnl")} />
-              <AccMetric label="Net profit" value={money(metrics?.netProfit)} tone={metrics?.netProfit < 0 ? "red" : "green"} onClick={() => openSection("pnl")} />
+              <AccMetric label="Cash" value={money(metrics?.cash)} tone="gold" hint="On hand" />
+              <AccMetric label="Bank" value={money(metrics?.bank)} tone="gold" hint="In bank" />
+              <AccMetric label="UPI" value={money(metrics?.upi)} tone="gold" hint="UPI balance" />
+              <AccMetric label="Receivables" value={money(metrics?.receivables)} tone="blue" hint="Customer outstanding" onClick={() => openSection("receivables")} />
+              <AccMetric label="Payables" value={money(metrics?.payables)} tone="gold" hint="Supplier outstanding" onClick={() => openSection("payables")} />
+              <AccMetric label="Income" value={money(metrics?.income)} tone="green" onClick={() => openSection("pnl")} hint="Selected period" />
+              <AccMetric label="Expenses" value={money(metrics?.expenses)} tone="red" onClick={() => openSection("pnl")} hint="Selected period" />
+              <AccMetric label="Net profit" value={money(metrics?.netProfit)} tone={metrics?.netProfit < 0 ? "red" : "green"} onClick={() => openSection("pnl")} hint="Income − expenses" />
             </div>
           </section>
 
@@ -2865,16 +3016,42 @@ const openVoucher = () => {
             <button type="button" className="btn" onClick={() => downloadAccountsExcel(`fintrack-ledger-${todayIso()}.xlsx`, [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])])}>Export Excel</button>
             <button type="button" className="btn" onClick={() => downloadAccountsPdf(`fintrack-ledger-${todayIso()}.pdf`, { title: "Ledger", subtitle: `${ledger.account?.code || ""} ${ledger.account?.name || ""}`, rows: [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])] })}>Download PDF</button>
           </div>
-          <div className="table spacer acc-table-wrap"><table><thead><tr><th>Date</th><th>Voucher</th><th>Narration</th><th className="acc-num">Debit</th><th className="acc-num">Credit</th><th className="acc-num">Balance</th></tr></thead><tbody>
+          <div className="table spacer acc-table-wrap acc-ledger-table"><table><thead><tr><th>Date</th><th>Voucher</th><th>Narration</th><th className="acc-num">Debit</th><th className="acc-num">Credit</th><th className="acc-num">Balance</th></tr></thead><tbody>
             {pagedLedger.items.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.narration}</td><td className="acc-num">{row.debit ? money(row.debit) : ""}</td><td className="acc-num">{row.credit ? money(row.credit) : ""}</td><td className="acc-num">{money(row.balance)}</td></tr>)}
             {!ledger.rows.length && <tr><td colSpan="6">No postings on this ledger yet. Post a voucher to see movement here.</td></tr>}
           </tbody></table></div>
+          <div className="acc-ledger-cards spacer">
+            {pagedLedger.items.map((row, index) => (
+              <article key={`${row.voucherNumber}-${index}`} className="acc-ledger-card">
+                <div className="acc-ledger-card-top">
+                  <strong>{row.voucherNumber}</strong>
+                  <span className="small">{row.date}</span>
+                </div>
+                {row.narration ? <p className="small">{row.narration}</p> : null}
+                <p className="acc-ledger-card-amounts">
+                  {row.debit ? <span>Debit <strong>{money(row.debit)}</strong></span> : null}
+                  {row.credit ? <span>Credit <strong>{money(row.credit)}</strong></span> : null}
+                  <span>Balance <strong>{money(row.balance)}</strong></span>
+                </p>
+              </article>
+            ))}
+            {!ledger.rows.length && <p className="copy">No postings on this ledger yet. Post a voucher to see movement here.</p>}
+          </div>
           <AccPager page={pagedLedger.page} pages={pagedLedger.pages} total={pagedLedger.total} onPage={setListPage} noun="postings" />
         </div>}
 
         {section === "vouchers" && <div className="acc-panel">
           {canWrite && <div className="acc-quick-actions">
-            {SIMPLE_ENTRY_KINDS.map(item => <button key={item.id} type="button" className="btn" onClick={() => openSimple(item.id)}>+ {item.label}</button>)}
+            {SIMPLE_ENTRY_KINDS.map((item, index) => (
+              <button
+                key={item.id}
+                type="button"
+                className={`btn${index < 2 ? " primary" : ""}`}
+                onClick={() => openSimple(item.id)}
+              >
+                + {item.label}
+              </button>
+            ))}
           </div>}
           <div className="accounts-action-row spacer">
             <input className="accounts-search" placeholder="Search voucher number or narration" value={search} onChange={event => setSearch(event.target.value)} />
@@ -3197,10 +3374,17 @@ const openVoucher = () => {
             <button type="button" className="btn" onClick={() => exportReport("xlsx")}>Export Excel</button>
             <button type="button" className="btn" onClick={() => exportReport("pdf")}>Download PDF</button>
           </div>
-          {(section === "trial" || reportTab === "trial") && section !== "pnl" && section !== "balance" && <div className="table spacer acc-table-wrap"><table><thead><tr><th>Code</th><th>Account</th><th className="acc-num">Debit</th><th className="acc-num">Credit</th></tr></thead><tbody>
+          {(section === "trial" || reportTab === "trial") && section !== "pnl" && section !== "balance" && <>
+            <div className="acc-metric-grid three spacer">
+              <AccMetric label="Total debit" value={money(tb.totalDebit)} />
+              <AccMetric label="Total credit" value={money(tb.totalCredit)} />
+              <AccMetric label="Difference" value={money(Math.abs(Number(tb.totalDebit || 0) - Number(tb.totalCredit || 0)))} tone={Math.abs(Number(tb.totalDebit || 0) - Number(tb.totalCredit || 0)) < 0.01 ? "green" : "red"} />
+            </div>
+            <div className="table spacer acc-table-wrap"><table><thead><tr><th>Code</th><th>Account</th><th className="acc-num">Debit</th><th className="acc-num">Credit</th></tr></thead><tbody>
             {tb.rows.map(row => <tr key={row.id}><td>{row.code}</td><td>{row.name}</td><td className="acc-num">{row.debit ? money(row.debit) : ""}</td><td className="acc-num">{row.credit ? money(row.credit) : ""}</td></tr>)}
             <tr><td></td><td><strong>Total</strong></td><td className="acc-num"><strong>{money(tb.totalDebit)}</strong></td><td className="acc-num"><strong>{money(tb.totalCredit)}</strong></td></tr>
-          </tbody></table></div>}
+          </tbody></table></div>
+          </>}
           {(section === "pnl" || reportTab === "pnl") && section !== "trial" && section !== "balance" && <div className="grid two spacer">
             <div className="card"><strong>Income</strong>{pnl.income.filter(row => row.amount).map(row => <p key={row.id} className="row spacer"><span>{row.name}</span><strong>{money(row.amount)}</strong></p>)}<p className="row"><span>Total income</span><strong className="green">{money(pnl.totalIncome)}</strong></p></div>
             <div className="card"><strong>Expenses</strong>{pnl.expenses.filter(row => row.amount).map(row => <p key={row.id} className="row spacer"><span>{row.name}</span><strong>{money(row.amount)}</strong></p>)}<p className="row"><span>Total expenses</span><strong className="red">{money(pnl.totalExpense)}</strong></p></div>
@@ -3215,10 +3399,23 @@ const openVoucher = () => {
             </div>
           </div>}
           {section === "reports" && reportTab === "daybook" && <>
-            <div className="table spacer acc-table-wrap"><table><thead><tr><th>Date</th><th>Number</th><th>Type</th><th>Narration</th><th className="acc-num">Amount</th></tr></thead><tbody>
+            <div className="table spacer acc-table-wrap acc-daybook-table"><table><thead><tr><th>Date</th><th>Number</th><th>Type</th><th>Narration</th><th className="acc-num">Amount</th></tr></thead><tbody>
             {pagedBooks.items.map(row => <tr key={row.id}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.voucherType}</td><td>{row.narration}</td><td className="acc-num">{money(row.debit)}</td></tr>)}
             {!books.length && <tr><td colSpan="5">No posted vouchers in this period. Change the date range or record a transaction.</td></tr>}
           </tbody></table></div>
+            <div className="acc-ledger-cards spacer">
+              {pagedBooks.items.map(row => (
+                <article key={row.id} className="acc-ledger-card">
+                  <div className="acc-ledger-card-top">
+                    <strong>{row.voucherNumber}</strong>
+                    <span className="acc-voucher-chip">{row.voucherType}</span>
+                  </div>
+                  <p className="small">{row.date}{row.narration ? ` · ${row.narration}` : ""}</p>
+                  <p className="acc-ledger-card-amounts"><span>Amount <strong>{money(row.debit)}</strong></span></p>
+                </article>
+              ))}
+              {!books.length && <p className="copy">No posted vouchers in this period. Change the date range or record a transaction.</p>}
+            </div>
             <AccPager page={pagedBooks.page} pages={pagedBooks.pages} total={pagedBooks.total} onPage={setListPage} noun="vouchers" />
           </>}
           {section === "reports" && reportTab === "cashflow" && <>

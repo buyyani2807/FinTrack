@@ -86,13 +86,13 @@ export function AccIntelligenceBrief({
             {report.brief.map(line => <li key={line}>{line}</li>)}
           </ul>
           {report.watch.length ? (
-            <div className="acc-intel-block">
+            <div className="acc-intel-block acc-intel-watch">
               <strong>Areas to watch</strong>
-              <ul>{report.watch.slice(0, 3).map(item => <li key={item}>{item}</li>)}</ul>
+              <ul>{report.watch.slice(0, 3).map(item => <li key={item}><span className="acc-intel-priority" aria-hidden="true">!</span>{item}</li>)}</ul>
             </div>
           ) : null}
           {report.actions.length ? (
-            <div className="acc-intel-block">
+            <div className="acc-intel-block acc-intel-actions">
               <strong>Recommended actions</strong>
               <ul>{report.actions.slice(0, 3).map(item => <li key={item}>{item}</li>)}</ul>
             </div>

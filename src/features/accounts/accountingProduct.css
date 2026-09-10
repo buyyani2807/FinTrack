@@ -1,30 +1,42 @@
 /* Scoped to Accounts. Does not restyle Daily, Monthly, or Chit modules. */
 .accounts-dashboard {
-  --acc-bg: #0c1018;
-  --acc-surface: #141a24;
-  --acc-card: #1a2230;
-  --acc-line: #2c3648;
-  --acc-line-strong: #3d4b63;
-  --acc-text: #f3f6fb;
-  --acc-muted: #93a0b5;
-  --acc-gold: #f4b942;
-  --acc-gold-ink: #211907;
-  --acc-green: #4fd08d;
-  --acc-red: #ff7a7a;
-  --acc-blue: #7eb6ff;
-  --acc-control-h: 36px;
-  --acc-input-h: 40px;
-  --acc-compact-h: 32px;
-  --acc-radius-ctrl: 10px;
-  --acc-radius: 14px;
-  --acc-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-  --acc-font: 13px;
+  --acc-bg: #0b1220;
+  --acc-surface: #121a27;
+  --acc-card: #172131;
+  --acc-card-elevated: #1c2738;
+  --acc-line: #2a3548;
+  --acc-line-strong: #3d4d66;
+  --acc-text: #f4f7fb;
+  --acc-muted: #8b9bb0;
+  --acc-gold: #e8b84a;
+  --acc-gold-ink: #1a1408;
+  --acc-green: #3dcc8c;
+  --acc-red: #f07178;
+  --acc-blue: #6eafff;
+  --acc-control-h: 40px;
+  --acc-input-h: 44px;
+  --acc-compact-h: 36px;
+  --acc-btn-h: 40px;
+  --acc-touch: 44px;
+  --acc-radius-ctrl: 12px;
+  --acc-radius: 16px;
+  --acc-radius-sm: 10px;
+  --acc-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+  --acc-shadow-soft: 0 4px 14px rgba(0, 0, 0, 0.14);
+  --acc-font: 14px;
+  --acc-space-1: 4px;
+  --acc-space-2: 8px;
+  --acc-space-3: 12px;
+  --acc-space-4: 16px;
+  --acc-space-5: 24px;
   color: var(--acc-text);
   font-size: var(--acc-font);
   background:
-    radial-gradient(900px 420px at 8% -12%, #1d283c 0%, transparent 62%),
+    radial-gradient(1000px 480px at 6% -14%, #1a2740 0%, transparent 58%),
+    radial-gradient(700px 360px at 100% 0%, #152033 0%, transparent 50%),
     var(--acc-bg);
   padding-left: 0 !important;
+  -webkit-font-smoothing: antialiased;
 }
 
 html:has(.accounts-dashboard) .financier-nav {
@@ -2959,4 +2971,697 @@ html:has(.accounts-dashboard) .financier-nav {
 .accounts-dashboard .acc-party-ledger-identity + .accounts-action-row {
   flex-wrap: wrap;
   gap: 8px;
+}
+
+/* ===== Accounts UX modernization (presentation only) ===== */
+
+.accounts-dashboard .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: var(--acc-btn-h);
+  height: auto;
+  padding: 0 14px;
+  border-radius: var(--acc-radius-ctrl);
+  border: 1px solid var(--acc-line);
+  background: var(--acc-surface);
+  color: var(--acc-text);
+  font: 600 13px/1.2 inherit;
+  letter-spacing: 0.01em;
+  box-shadow: none;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+
+.accounts-dashboard .btn:hover {
+  transform: none;
+  border-color: var(--acc-line-strong);
+  background: var(--acc-card-elevated);
+}
+
+.accounts-dashboard .btn:focus-visible {
+  outline: 2px solid var(--acc-gold);
+  outline-offset: 2px;
+}
+
+.accounts-dashboard .btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.accounts-dashboard .btn.primary {
+  background: var(--acc-gold);
+  border-color: var(--acc-gold);
+  color: var(--acc-gold-ink);
+  font-weight: 700;
+}
+
+.accounts-dashboard .btn.primary:hover {
+  filter: brightness(1.05);
+  background: var(--acc-gold);
+}
+
+.accounts-dashboard .btn.danger {
+  border-color: #8f3d44;
+  color: var(--acc-red);
+  background: #2a1518;
+}
+
+.accounts-dashboard .btn.danger:hover {
+  background: #3a1b20;
+}
+
+.accounts-dashboard .btn.ghost,
+.accounts-dashboard .btn.linkish {
+  border-color: transparent;
+  background: transparent;
+  color: var(--acc-muted);
+}
+
+.accounts-dashboard .card {
+  border: 1px solid var(--acc-line);
+  border-radius: var(--acc-radius);
+  background: var(--acc-card);
+  box-shadow: var(--acc-shadow-soft);
+}
+
+.accounts-dashboard .acc-metric-card {
+  padding: 14px 16px;
+  min-height: 88px;
+}
+
+.accounts-dashboard .acc-metric-card .metric-label {
+  color: var(--acc-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.accounts-dashboard .acc-metric-card .metric-value {
+  margin-top: 6px;
+  font: 700 22px/1.15 Syne, sans-serif;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.accounts-dashboard .acc-metric-card .metric-hint {
+  margin-top: 4px;
+  color: var(--acc-muted);
+  font-size: 12px;
+}
+
+.accounts-dashboard .acc-metric-card.clickable:hover {
+  transform: translateY(-1px);
+  border-color: var(--acc-line-strong);
+}
+
+.accounts-dashboard .field > span,
+.accounts-dashboard .accounts-filter-field > span {
+  color: var(--acc-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.accounts-dashboard .field input,
+.accounts-dashboard .field select,
+.accounts-dashboard .field textarea,
+.accounts-dashboard .accounts-filter-field input,
+.accounts-dashboard .accounts-filter-field select,
+.accounts-dashboard .accounts-search,
+.accounts-dashboard .acc-new-entry {
+  min-height: var(--acc-input-h);
+  height: var(--acc-input-h);
+  border-radius: var(--acc-radius-ctrl);
+  border: 1px solid var(--acc-line);
+  background: var(--acc-surface);
+  color: var(--acc-text);
+  padding: 0 12px;
+  font: inherit;
+}
+
+.accounts-dashboard .field input:focus,
+.accounts-dashboard .field select:focus,
+.accounts-dashboard .accounts-filter-field input:focus,
+.accounts-dashboard .accounts-filter-field select:focus,
+.accounts-dashboard .accounts-search:focus {
+  outline: none;
+  border-color: var(--acc-gold);
+  box-shadow: 0 0 0 3px #e8b84a22;
+}
+
+.accounts-dashboard .acc-empty {
+  text-align: center;
+  padding: 28px 20px;
+  max-width: 420px;
+  margin: 16px auto;
+}
+
+.accounts-dashboard .acc-empty strong {
+  display: block;
+  font: 700 18px Syne, sans-serif;
+  margin-bottom: 8px;
+}
+
+.accounts-dashboard .acc-empty .copy {
+  color: var(--acc-muted);
+  margin: 0 0 16px;
+}
+
+.accounts-dashboard .acc-toast,
+.accounts-dashboard .notice.acc-toast {
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin: 0 0 12px;
+}
+
+.accounts-dashboard .acc-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.accounts-dashboard .acc-quick-actions .btn {
+  flex: 1 1 auto;
+  min-width: min(140px, 100%);
+}
+
+.accounts-dashboard .accounts-section-nav {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+
+.accounts-dashboard .accounts-section-nav .btn,
+.accounts-dashboard .accounts-section-tab {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  white-space: nowrap;
+}
+
+.accounts-dashboard .acc-form-section {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 14px;
+  border: 1px solid var(--acc-line);
+  border-radius: var(--acc-radius);
+  background: #141c29;
+}
+
+.accounts-dashboard .acc-form-section-title {
+  margin: 0;
+  font: 700 12px/1.2 inherit;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--acc-muted);
+}
+
+.accounts-dashboard .acc-form-section .form {
+  margin: 0;
+}
+
+.accounts-dashboard .acc-item-line-cards {
+  display: none;
+  gap: 10px;
+}
+
+.accounts-dashboard .acc-item-line-card {
+  padding: 12px;
+  border: 1px solid var(--acc-line);
+  border-radius: var(--acc-radius-sm);
+  background: var(--acc-surface);
+  display: grid;
+  gap: 10px;
+}
+
+.accounts-dashboard .acc-item-line-card-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.accounts-dashboard .acc-item-line-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.accounts-dashboard .acc-item-line-amount {
+  font: 700 16px/1.2 Syne, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.accounts-dashboard .acc-ledger-cards {
+  display: none;
+  gap: 10px;
+}
+
+.accounts-dashboard .acc-ledger-card {
+  padding: 12px 14px;
+  border: 1px solid var(--acc-line);
+  border-radius: var(--acc-radius-sm);
+  background: var(--acc-card);
+}
+
+.accounts-dashboard .acc-ledger-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.accounts-dashboard .acc-ledger-card-amounts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.accounts-dashboard .accounts-entry-row {
+  padding: 14px;
+}
+
+.accounts-dashboard .accounts-entry-main {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.accounts-dashboard .accounts-entry-amounts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.accounts-dashboard .accounts-entry-amounts > span {
+  font: 700 16px/1 Syne, sans-serif;
+  font-variant-numeric: tabular-nums;
+  min-width: 5.5rem;
+  text-align: right;
+}
+
+.accounts-dashboard .acc-modal {
+  width: min(720px, calc(100vw - 24px));
+  max-height: min(90svh, 900px);
+  overflow: auto;
+  border-radius: var(--acc-radius);
+  padding: 16px;
+}
+
+.accounts-dashboard .acc-modal .row {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--acc-card);
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+}
+
+.accounts-dashboard .acc-modal .tabs.spacer:last-child,
+.accounts-dashboard .acc-modal-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: linear-gradient(180deg, transparent, var(--acc-card) 28%);
+  padding-top: 12px;
+}
+
+.accounts-dashboard .acc-report-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: end;
+}
+
+.accounts-dashboard .acc-num,
+.accounts-dashboard .acc-num-input,
+.accounts-dashboard td.acc-num,
+.accounts-dashboard th.acc-num {
+  font-variant-numeric: tabular-nums;
+}
+
+.accounts-dashboard .acc-panel > .copy,
+.accounts-dashboard .acc-setup-lead {
+  color: var(--acc-muted);
+  max-width: 62ch;
+}
+
+.accounts-dashboard .acc-landing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.accounts-dashboard .acc-landing-card {
+  text-align: left;
+  padding: 16px;
+  min-height: 72px;
+  border: 1px solid var(--acc-line);
+  border-radius: var(--acc-radius);
+  background: var(--acc-card);
+  color: var(--acc-text);
+  cursor: pointer;
+}
+
+.accounts-dashboard .acc-landing-card:hover {
+  border-color: var(--acc-gold);
+}
+
+.accounts-dashboard .acc-landing-card strong {
+  font: 700 14px Syne, sans-serif;
+}
+
+@media (max-width: 1050px) {
+  .accounts-dashboard .acc-bottom-nav {
+    backdrop-filter: blur(12px);
+    background: #121925f2;
+  }
+  .accounts-dashboard .acc-page-head-end .btn,
+  .accounts-dashboard .acc-page-head-end .acc-new-entry {
+    min-height: var(--acc-touch);
+  }
+  .accounts-dashboard .acc-company-bar {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 680px) {
+  .accounts-dashboard .acc-item-lines .acc-table-wrap {
+    display: none;
+  }
+  .accounts-dashboard .acc-item-line-cards {
+    display: grid;
+  }
+  .accounts-dashboard .acc-ledger-table {
+    display: none;
+  }
+  .accounts-dashboard .acc-ledger-cards {
+    display: grid;
+  }
+  .accounts-dashboard .acc-modal-bg,
+  .accounts-dashboard .modal-bg {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .accounts-dashboard .acc-modal,
+  .accounts-dashboard .modal-bg > .modal.acc-modal {
+    width: 100%;
+    max-width: none;
+    max-height: min(92svh, 920px);
+    margin: 0;
+    border-radius: 18px 18px 0 0;
+    padding: 14px 14px calc(14px + env(safe-area-inset-bottom, 0px));
+  }
+  .accounts-dashboard .accounts-entry-amounts {
+    width: 100%;
+    justify-content: stretch;
+  }
+  .accounts-dashboard .accounts-entry-amounts .btn {
+    flex: 1 1 calc(50% - 8px);
+    min-height: var(--acc-touch);
+  }
+  .accounts-dashboard .accounts-entry-amounts > span {
+    width: 100%;
+    text-align: left;
+    margin-bottom: 4px;
+  }
+  .accounts-dashboard .acc-quick-actions .btn {
+    min-height: var(--acc-touch);
+  }
+  .accounts-dashboard .acc-form-section {
+    padding: 12px;
+  }
+  .accounts-dashboard .acc-metric-card .metric-value {
+    font-size: 20px;
+  }
+  .accounts-dashboard .acc-ov-metrics {
+    grid-template-columns: 1fr 1fr;
+  }
+  .accounts-dashboard .accounts-filter-card .form,
+  .accounts-dashboard .card.accounts-filter-card {
+    display: grid;
+    gap: 10px;
+  }
+  .accounts-dashboard .acc-invoice-remind .btn,
+  .accounts-dashboard .accounts-action-row .btn {
+    min-height: var(--acc-touch);
+  }
+}
+
+@media (max-width: 380px) {
+  .accounts-dashboard .acc-bottom-item {
+    font-size: 10px;
+    padding: 6px 2px;
+  }
+  .accounts-dashboard .acc-metric-card .metric-value {
+    font-size: 18px;
+  }
+}
+
+/* ===== Accounts UX follow-up: filters, invoice cards, company meta ===== */
+
+.accounts-dashboard .acc-filter-summary {
+  display: none;
+}
+
+.accounts-dashboard .acc-filter-done {
+  display: none;
+}
+
+.accounts-dashboard .acc-filter-sheet-bg {
+  display: none;
+}
+
+.accounts-dashboard .acc-filter-body {
+  display: grid;
+  gap: 10px;
+}
+
+.accounts-dashboard .acc-company-bar-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.accounts-dashboard .acc-company-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--acc-line);
+  background: var(--acc-surface);
+  font-size: 12px;
+  color: var(--acc-text);
+}
+
+.accounts-dashboard .acc-company-chip em {
+  font-style: normal;
+  color: var(--acc-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 10px;
+}
+
+.accounts-dashboard .acc-invoice-cards {
+  display: none;
+  gap: 10px;
+}
+
+.accounts-dashboard .acc-invoice-card {
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.accounts-dashboard .acc-invoice-card.is-overdue {
+  border-color: #8f3d44;
+}
+
+.accounts-dashboard .acc-invoice-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.accounts-dashboard .acc-intel {
+  border-color: #3a4a63;
+  background:
+    linear-gradient(135deg, #1a2436 0%, #172131 55%, #151d2c 100%);
+}
+
+.accounts-dashboard .acc-intel-kicker {
+  letter-spacing: 0.1em;
+}
+
+.accounts-dashboard .acc-report-exports {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 680px) {
+  .accounts-dashboard .acc-filter-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .accounts-dashboard .acc-filter-summary-label {
+    display: block;
+    color: var(--acc-muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .accounts-dashboard .acc-filter-summary-value {
+    display: block;
+    margin-top: 2px;
+    font-size: 13px;
+  }
+
+  .accounts-dashboard .acc-report-filters-wrap .acc-filter-body {
+    display: none;
+  }
+
+  .accounts-dashboard .acc-report-filters-wrap.is-open .acc-filter-body {
+    display: grid;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    max-height: min(78svh, 640px);
+    overflow: auto;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    border-radius: 18px 18px 0 0;
+    border: 1px solid var(--acc-line);
+    background: var(--acc-card);
+    box-shadow: var(--acc-shadow);
+  }
+
+  .accounts-dashboard .acc-report-filters-wrap.is-open .acc-filter-done {
+    display: inline-flex;
+    min-height: var(--acc-touch);
+  }
+
+  .accounts-dashboard .acc-report-filters-wrap.is-open .acc-filter-sheet-bg {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 39;
+    border: 0;
+    background: rgba(6, 10, 18, 0.55);
+  }
+
+  .accounts-dashboard .acc-invoice-desktop {
+    display: none;
+  }
+
+  .accounts-dashboard .acc-invoice-cards {
+    display: grid;
+  }
+
+  .accounts-dashboard .acc-daybook-table {
+    display: none;
+  }
+
+  .accounts-dashboard .accounts-action-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .accounts-dashboard .accounts-section-nav {
+    width: 100%;
+  }
+
+  .accounts-dashboard .acc-company-bar {
+    display: grid;
+    gap: 10px;
+  }
+
+  .accounts-dashboard .acc-company-bar .btn {
+    width: 100%;
+    min-height: var(--acc-touch);
+  }
+}
+
+.accounts-dashboard .acc-item-cards {
+  display: none;
+  gap: 10px;
+}
+
+.accounts-dashboard .acc-item-card {
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.accounts-dashboard .acc-item-card .acc-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.accounts-dashboard .acc-items-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.accounts-dashboard .acc-items-toolbar .accounts-search {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+@media (max-width: 680px) {
+  .accounts-dashboard .acc-items-desktop {
+    display: none;
+  }
+
+  .accounts-dashboard .acc-item-cards {
+    display: grid;
+  }
+
+  .accounts-dashboard .acc-items-toolbar select,
+  .accounts-dashboard .acc-items-toolbar .btn {
+    min-height: var(--acc-touch);
+  }
+}
+
+.accounts-dashboard .acc-intel-watch li {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.accounts-dashboard .acc-intel-priority {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: #3a1b20;
+  color: var(--acc-red);
+  font: 700 12px/18px inherit;
+  text-align: center;
 }

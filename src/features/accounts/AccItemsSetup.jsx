@@ -145,7 +145,7 @@ export function AccItemsSetup({
         <button type="button" className="btn primary" onClick={openCreate}>+ Item</button>
       </div>
 
-      <div className="table spacer acc-table-wrap">
+      <div className="table spacer acc-table-wrap acc-items-desktop">
         <table>
           <thead>
             <tr>
@@ -187,6 +187,34 @@ export function AccItemsSetup({
             {!filtered.length && <tr><td colSpan="9">No items yet. Create Cement 50kg or a service to start.</td></tr>}
           </tbody>
         </table>
+      </div>
+      <div className="acc-item-cards spacer">
+        {filtered.map(item => {
+          const stock = stockByItem[item.id];
+          const status = stockStatus(stock, item.reorderLevel);
+          return (
+            <article key={item.id} className="card acc-item-card">
+              <div className="acc-item-line-card-top">
+                <div>
+                  <strong>{item.name}</strong>
+                  <p className="small">{item.sku} · {item.itemType}</p>
+                </div>
+                <span className="small">{item.isActive === false ? "Inactive" : status === "low" ? "Low stock" : "Active"}</span>
+              </div>
+              <p className="acc-ledger-card-amounts">
+                <span>Sell <strong>{money(item.sellingPrice)}</strong></span>
+                <span>Buy <strong>{money(item.purchasePrice)}</strong></span>
+                <span>Stock <strong>{stock == null ? "—" : `${stock} ${item.unit}`}</strong></span>
+              </p>
+              <div className="acc-item-actions">
+                <button type="button" className="btn" onClick={() => setDetailId(item.id)}>View</button>
+                <button type="button" className="btn" disabled={saving} onClick={() => openEdit(item)}>Edit</button>
+                <button type="button" className="btn danger" disabled={saving} onClick={() => onDeleteItem(item)}>Delete</button>
+              </div>
+            </article>
+          );
+        })}
+        {!filtered.length && <p className="copy">No items yet. Create Cement 50kg or a service to start.</p>}
       </div>
 
       <div className="acc-items-side-grid">
