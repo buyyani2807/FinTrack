@@ -29,9 +29,13 @@ export const PARTY_TYPES = [
 export const MONEY_MODES = [
   { id: "cash", label: "Cash" },
   { id: "upi", label: "UPI" },
-  { id: "bank", label: "Bank" },
   { id: "cash_upi", label: "Cash + UPI" },
+  { id: "bank", label: "Bank transfer" },
 ];
+
+export function moneyModeLabel(mode) {
+  return MONEY_MODES.find(item => item.id === mode)?.label || mode || "Cash";
+}
 
 export const SIMPLE_ENTRY_KINDS = [
   { id: "sale", label: "Sale", voucherType: "sales" },
@@ -802,10 +806,23 @@ export function assertMoneyModeSplit(moneyMode, amount, parts = {}) {
   const cash = roundMoney(parts.cash ?? 0);
   const upi = roundMoney(parts.upi ?? 0);
   if (cash < 0 || upi < 0) throw new Error("Cash and UPI amounts cannot be negative");
+  if (!(cash > 0) || !(upi > 0)) {
+    throw new Error("Enter both Cash and UPI amounts for Cash + UPI");
+  }
   if (roundMoney(cash + upi) !== value) {
-    throw new Error("Cash + UPI must equal the amount received");
+    throw new Error("Cash + UPI must equal the total amount");
   }
   return { cash, upi, bank: 0 };
+}
+
+export function cashUpiSplitIsValid(moneyMode, amount, parts = {}) {
+  try {
+    if (moneyMode !== "cash_upi") return Number(amount) > 0;
+    assertMoneyModeSplit(moneyMode, amount, parts);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function resolveAccountCode(accounts, code, fallbackCode) {

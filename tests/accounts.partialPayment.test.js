@@ -177,6 +177,7 @@ test("Cash + UPI split equals amount received", () => {
     cash: 50000, upi: 150000, bank: 0,
   });
   assert.throws(() => assertMoneyModeSplit("cash_upi", 200000, { cash: 50000, upi: 50000 }), /must equal/);
+  assert.throws(() => assertMoneyModeSplit("cash_upi", 200000, { cash: 200000, upi: 0 }), /both Cash and UPI/);
   assert.deepEqual(moneyByMode("cash_upi", 100, {}), { cash: 100, upi: 0, bank: 0 });
 });
 

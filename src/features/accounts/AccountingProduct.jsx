@@ -131,6 +131,7 @@ import {
   voucherTotals,
   salePaymentSummary,
   assertMoneyModeSplit,
+  cashUpiSplitIsValid,
 } from "./accountingModel.js";
 import { formatIstDateTime, todayIso } from "./cashbookModel.js";
 import { GST_RATES, INDIA_STATES, gstStateFromGstin, isIntraGst, validateGstSettings } from "./accountingGst.js";
@@ -1011,6 +1012,18 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
   const showMoneyMode = kind !== "transfer" && kind !== "credit_note" && kind !== "debit_note"
     && (kind === "expense" || kind === "receipt" || kind === "payment" || form.settlement === "paid"
       || (showReceivedOnCredit && Number(form.amountReceived || 0) > 0));
+  const splitTargetAmount = showReceivedOnCredit
+    ? Number(form.amountReceived || 0)
+    : ((kind === "sale" || kind === "purchase") && form.settlement === "paid"
+      ? invoiceTotalPreview
+      : Number(form.amount || 0));
+  const splitEntered = roundMoney(Number(form.receivedCash || 0) + Number(form.receivedUpi || 0));
+  const cashUpiValid = form.moneyMode !== "cash_upi"
+    || !(splitTargetAmount > 0)
+    || cashUpiSplitIsValid(form.moneyMode, splitTargetAmount, {
+      cash: Number(form.receivedCash || 0),
+      upi: Number(form.receivedUpi || 0),
+    });
   const noteCopy = kind === "credit_note"
     ? "Reduces the customer balance and sales. Original invoices stay in Day Book."
     : kind === "debit_note"
@@ -1062,8 +1075,8 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
         </Field>
       )}
       {showMoneyMode && (
-        <Field label="Mode">
-          <select value={form.moneyMode} onChange={event => set({ moneyMode: event.target.value })}>
+        <Field label="Payment mode">
+          <select value={form.moneyMode} onChange={event => set({ moneyMode: event.target.value, receivedCash: "", receivedUpi: "" })}>
             {MONEY_MODES.map(mode => <option key={mode.id} value={mode.id}>{mode.label}</option>)}
           </select>
         </Field>
@@ -1110,8 +1123,17 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
       )}
       {showMoneyMode && form.moneyMode === "cash_upi" && (
         <>
-          <Field label="Cash portion"><input type="number" min="0" step="0.01" value={form.receivedCash} placeholder="0.00" onChange={event => set({ receivedCash: event.target.value })} /></Field>
-          <Field label="UPI portion"><input type="number" min="0" step="0.01" value={form.receivedUpi} placeholder="0.00" onChange={event => set({ receivedUpi: event.target.value })} /></Field>
+          <Field label="Cash amount (₹)">
+            <input type="number" min="0" step="0.01" value={form.receivedCash} placeholder="0.00" onChange={event => set({ receivedCash: event.target.value })} />
+          </Field>
+          <Field label="UPI amount (₹)">
+            <input type="number" min="0" step="0.01" value={form.receivedUpi} placeholder="0.00" onChange={event => set({ receivedUpi: event.target.value })} />
+          </Field>
+          <p className={`small span ${cashUpiValid ? "" : "red"}`}>
+            Cash + UPI must equal {money(splitTargetAmount)}
+            {splitEntered > 0 ? ` · entered ${money(splitEntered)}` : ""}
+            {!cashUpiValid && splitTargetAmount > 0 ? " · enter both amounts" : ""}
+          </p>
         </>
       )}
       {!itemMode && gstKinds && gstOn && <>
@@ -1245,7 +1267,7 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
       </div>
     )}
 
-    <div className="tabs spacer"><button type="button" className="btn primary" disabled={saving || (settlementKinds && settlementTotal > Number(form.amount || 0) + 0.001) || (saleSummary && saleSummary.amountReceived > saleSummary.invoiceTotal + 0.001)} onClick={onSubmit}>{saving ? "Saving…" : "Save"}</button></div>
+    <div className="tabs spacer"><button type="button" className="btn primary" disabled={saving || (settlementKinds && settlementTotal > Number(form.amount || 0) + 0.001) || (saleSummary && saleSummary.amountReceived > saleSummary.invoiceTotal + 0.001) || (showMoneyMode && form.moneyMode === "cash_upi" && splitTargetAmount > 0 && !cashUpiValid)} onClick={onSubmit}>{saving ? "Saving…" : "Save"}</button></div>
   </>;
 }
 
@@ -2064,7 +2086,9 @@ const openVoucher = () => {
       date: template.nextRunOn || todayIso(),
       amount: String(template.amount || ""),
       partyId: template.partyId || "",
-      moneyMode: template.mode === "bank" || template.mode === "upi" ? template.mode : "cash",
+      moneyMode: ["cash", "upi", "bank", "cash_upi"].includes(template.mode) ? template.mode : "cash",
+      receivedCash: "",
+      receivedUpi: "",
       narration: template.narration || template.name || "Recurring entry",
       fromAccountId: moneyRows.find(account => account.accountType === "cash")?.id || moneyRows[0]?.id || "",
       toAccountId: moneyRows.find(account => account.accountType === "bank")?.id || moneyRows.find(account => account.id !== moneyRows[0]?.id)?.id || "",
@@ -2205,6 +2229,19 @@ const openVoucher = () => {
     const moneyParts = simpleForm.moneyMode === "cash_upi"
       ? { cash: Number(simpleForm.receivedCash || 0), upi: Number(simpleForm.receivedUpi || 0) }
       : null;
+    const needsMoneySplit = simpleForm.moneyMode === "cash_upi" && (
+      simpleKind === "receipt"
+      || simpleKind === "payment"
+      || simpleKind === "expense"
+      || ((simpleKind === "sale" || simpleKind === "purchase") && simpleForm.settlement === "paid")
+      || (simpleKind === "sale" && simpleForm.settlement === "credit" && Number(simpleForm.amountReceived || 0) > 0)
+    );
+    if (needsMoneySplit) {
+      const splitAmount = simpleKind === "sale" && simpleForm.settlement === "credit"
+        ? Number(simpleForm.amountReceived || 0)
+        : null; // validated after draft for paid sales (GST-inclusive total)
+      if (splitAmount != null) assertMoneyModeSplit("cash_upi", splitAmount, moneyParts || {});
+    }
     const draft = useItems
       ? itemizedEntryDraft({
         kind: simpleKind,
@@ -3810,7 +3847,7 @@ const openVoucher = () => {
                   {parties.filter(party => party.isActive !== false).map(party => <option key={party.id} value={party.id}>{party.name}</option>)}
                 </select>
               </Field>
-              <Field label="Mode">
+              <Field label="Payment mode">
                 <select value={recurringDraft.mode} onChange={event => setRecurringDraft(current => ({ ...current, mode: event.target.value }))}>
                   {MONEY_MODES.map(mode => <option key={mode.id} value={mode.id}>{mode.label}</option>)}
                 </select>

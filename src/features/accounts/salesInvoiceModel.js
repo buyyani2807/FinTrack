@@ -34,8 +34,15 @@ export function accountsCompanyBranding(company = null, workspace = {}) {
 
 export function salesSettlementLabel(accounts = [], voucher = {}) {
   const byId = accountById(accounts);
-  const hitsReceivable = (voucher.lines || []).some(line => byId[line.coaId]?.accountType === "receivable");
-  return hitsReceivable ? "Credit" : "Cash";
+  const lines = voucher.lines || [];
+  if (lines.some(line => byId[line.coaId]?.accountType === "receivable")) return "Credit";
+  const cash = lines.some(line => byId[line.coaId]?.accountType === "cash" && Number(line.debit || 0) > 0);
+  const upi = lines.some(line => byId[line.coaId]?.accountType === "upi" && Number(line.debit || 0) > 0);
+  const bank = lines.some(line => byId[line.coaId]?.accountType === "bank" && Number(line.debit || 0) > 0);
+  if (cash && upi) return "Cash + UPI";
+  if (upi) return "UPI";
+  if (bank) return "Bank transfer";
+  return "Cash";
 }
 
 export function buildSalesInvoice({
