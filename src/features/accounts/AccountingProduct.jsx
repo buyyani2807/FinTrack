@@ -64,6 +64,7 @@ import {
   isAccountsOnboardingDone,
   markAccountsOnboardingDone,
 } from "./AccOnboardingWizard.jsx";
+import { AccMoreMenu, AccToolbar } from "./AccUi.jsx";
 import {
   BANK_IMPORT_FIELDS,
   guessColumnMapping,
@@ -2340,10 +2341,17 @@ const openVoucher = () => {
   };
 
   const partyActions = party => (
-    <div className="acc-party-actions">
+    <div className="acc-party-actions acc-btn-group">
       <button type="button" className="btn" disabled={saving} onClick={() => openParty(party)}>Edit</button>
-      <button type="button" className="btn danger" disabled={saving} onClick={() => requestDeleteParty(party)}>Delete</button>
-      {party.isActive === false && <button type="button" className="btn" disabled={saving} onClick={() => setPartyActiveState(party, true)}>Reactivate</button>}
+      <AccMoreMenu
+        label="More"
+        items={[
+          party.isActive === false
+            ? { id: "reactivate", label: "Reactivate", disabled: saving, onClick: () => setPartyActiveState(party, true) }
+            : null,
+          { id: "delete", label: "Delete", danger: true, disabled: saving, onClick: () => requestDeleteParty(party) },
+        ]}
+      />
     </div>
   );
 
@@ -2888,8 +2896,16 @@ const openVoucher = () => {
             <option value="">+ New entry</option>
             {SIMPLE_ENTRY_KINDS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
           </select>
-          <button type="button" className="btn primary" onClick={openVoucher}>+ Voucher</button>
-          <button type="button" className="btn" onClick={openParty}>+ Party</button>
+          <button type="button" className="btn primary acc-hide-mobile" onClick={openVoucher}>+ Voucher</button>
+          <button type="button" className="btn acc-hide-mobile" onClick={openParty}>+ Party</button>
+          <AccMoreMenu
+            className="acc-show-mobile"
+            label="More"
+            items={[
+              { id: "voucher", label: "+ Advanced voucher", onClick: openVoucher },
+              { id: "party", label: "+ Party", onClick: openParty },
+            ]}
+          />
         </> : <span className="small">View-only · {accountsAccessRole || "viewer"}</span>}
       />
       {error && <div className="notice acc-toast error" role="alert">{error}</div>}
@@ -2998,15 +3014,15 @@ const openVoucher = () => {
 
           <section className="acc-section">
             <h2 className="acc-section-title">Metrics</h2>
-            <div className="acc-metric-grid acc-ov-metrics">
-              <AccMetric label="Cash" value={money(metrics?.cash)} tone="gold" hint="On hand" />
-              <AccMetric label="Bank" value={money(metrics?.bank)} tone="gold" hint="In bank" />
-              <AccMetric label="UPI" value={money(metrics?.upi)} tone="gold" hint="UPI balance" />
-              <AccMetric label="Receivables" value={money(metrics?.receivables)} tone="blue" hint="Customer outstanding" onClick={() => openSection("receivables")} />
-              <AccMetric label="Payables" value={money(metrics?.payables)} tone="gold" hint="Supplier outstanding" onClick={() => openSection("payables")} />
-              <AccMetric label="Income" value={money(metrics?.income)} tone="green" onClick={() => openSection("pnl")} hint="Selected period" />
-              <AccMetric label="Expenses" value={money(metrics?.expenses)} tone="red" onClick={() => openSection("pnl")} hint="Selected period" />
-              <AccMetric label="Net profit" value={money(metrics?.netProfit)} tone={metrics?.netProfit < 0 ? "red" : "green"} onClick={() => openSection("pnl")} hint="Income − expenses" />
+            <div className="acc-metric-grid acc-ov-metrics acc-metric-compact">
+              <AccMetric label="Cash" value={money(metrics?.cash)} tone="gold" />
+              <AccMetric label="Bank" value={money(metrics?.bank)} tone="gold" />
+              <AccMetric label="UPI" value={money(metrics?.upi)} tone="gold" />
+              <AccMetric label="Receivables" value={money(metrics?.receivables)} tone="blue" onClick={() => openSection("receivables")} />
+              <AccMetric label="Payables" value={money(metrics?.payables)} tone="gold" onClick={() => openSection("payables")} />
+              <AccMetric label="Income" value={money(metrics?.income)} tone="green" onClick={() => openSection("pnl")} />
+              <AccMetric label="Expenses" value={money(metrics?.expenses)} tone="red" onClick={() => openSection("pnl")} />
+              <AccMetric label="Net profit" value={money(metrics?.netProfit)} tone={metrics?.netProfit < 0 ? "red" : "green"} onClick={() => openSection("pnl")} />
             </div>
           </section>
 
@@ -3019,9 +3035,20 @@ const openVoucher = () => {
             <label className="accounts-filter-field"><span className="small">Account</span>
               <select value={ledgerId} onChange={event => setLedgerId(event.target.value)}>{visibleAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</select>
             </label>
-            <button type="button" className="btn" onClick={() => downloadAccountsCsv(`fintrack-ledger-${todayIso()}.csv`, [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])])}>Export CSV</button>
-            <button type="button" className="btn" onClick={() => downloadAccountsExcel(`fintrack-ledger-${todayIso()}.xlsx`, [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])])}>Export Excel</button>
-            <button type="button" className="btn" onClick={() => downloadAccountsPdf(`fintrack-ledger-${todayIso()}.pdf`, { title: "Ledger", subtitle: `${ledger.account?.code || ""} ${ledger.account?.name || ""}`, rows: [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])] })}>Download PDF</button>
+            <div className="acc-btn-group">
+              <button type="button" className="btn acc-hide-mobile" onClick={() => downloadAccountsCsv(`fintrack-ledger-${todayIso()}.csv`, [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])])}>Export CSV</button>
+              <button type="button" className="btn acc-hide-mobile" onClick={() => downloadAccountsExcel(`fintrack-ledger-${todayIso()}.xlsx`, [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])])}>Export Excel</button>
+              <button type="button" className="btn acc-hide-mobile" onClick={() => downloadAccountsPdf(`fintrack-ledger-${todayIso()}.pdf`, { title: "Ledger", subtitle: `${ledger.account?.code || ""} ${ledger.account?.name || ""}`, rows: [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])] })}>Download PDF</button>
+              <AccMoreMenu
+                className="acc-show-mobile"
+                label="Export"
+                items={[
+                  { id: "csv", label: "Export CSV", onClick: () => downloadAccountsCsv(`fintrack-ledger-${todayIso()}.csv`, [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])]) },
+                  { id: "xlsx", label: "Export Excel", onClick: () => downloadAccountsExcel(`fintrack-ledger-${todayIso()}.xlsx`, [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])]) },
+                  { id: "pdf", label: "Download PDF", onClick: () => downloadAccountsPdf(`fintrack-ledger-${todayIso()}.pdf`, { title: "Ledger", subtitle: `${ledger.account?.code || ""} ${ledger.account?.name || ""}`, rows: [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])] }) },
+                ]}
+              />
+            </div>
           </div>
           <div className="table spacer acc-table-wrap acc-ledger-table"><table><thead><tr><th>Date</th><th>Voucher</th><th>Narration</th><th className="acc-num">Debit</th><th className="acc-num">Credit</th><th className="acc-num">Balance</th></tr></thead><tbody>
             {pagedLedger.items.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.narration}</td><td className="acc-num">{row.debit ? money(row.debit) : ""}</td><td className="acc-num">{row.credit ? money(row.credit) : ""}</td><td className="acc-num">{money(row.balance)}</td></tr>)}
@@ -3048,22 +3075,38 @@ const openVoucher = () => {
         </div>}
 
         {section === "vouchers" && <div className="acc-panel">
-          {canWrite && <div className="acc-quick-actions">
-            {SIMPLE_ENTRY_KINDS.map((item, index) => (
-              <button
-                key={item.id}
-                type="button"
-                className={`btn${index < 2 ? " primary" : ""}`}
-                onClick={() => openSimple(item.id)}
-              >
-                + {item.label}
-              </button>
-            ))}
-          </div>}
-          <div className="accounts-action-row spacer">
-            <input className="accounts-search" placeholder="Search voucher number or narration" value={search} onChange={event => setSearch(event.target.value)} />
-            {canWrite && <button type="button" className="btn primary" onClick={openVoucher}>+ Advanced voucher</button>}
-          </div>
+          {canWrite && (
+            <AccToolbar
+              className="spacer"
+              start={(
+                <div className="acc-btn-group">
+                  <button type="button" className="btn primary" onClick={() => openSimple("sale")}>+ Sale</button>
+                  <button type="button" className="btn" onClick={() => openSimple("purchase")}>+ Purchase</button>
+                  <AccMoreMenu
+                    label="More"
+                    items={[
+                      ...SIMPLE_ENTRY_KINDS
+                        .filter(item => !["sale", "purchase"].includes(item.id))
+                        .map(item => ({
+                          id: item.id,
+                          label: `+ ${item.label}`,
+                          onClick: () => openSimple(item.id),
+                        })),
+                      { id: "advanced", label: "+ Advanced voucher", onClick: openVoucher },
+                    ]}
+                  />
+                </div>
+              )}
+              end={(
+                <input className="accounts-search" placeholder="Search voucher or narration" value={search} onChange={event => setSearch(event.target.value)} />
+              )}
+            />
+          )}
+          {!canWrite && (
+            <div className="accounts-action-row spacer">
+              <input className="accounts-search" placeholder="Search voucher or narration" value={search} onChange={event => setSearch(event.target.value)} />
+            </div>
+          )}
           <div className="accounts-entry-list spacer">
             {pagedVouchers.items.map(voucher => <article key={voucher.id} className="card accounts-entry-row">
               <div className="accounts-entry-main">
@@ -3074,15 +3117,35 @@ const openVoucher = () => {
                 </div>
                 <div className="accounts-entry-amounts">
                   <span>{money(voucherTotals(voucher.lines).debit)}</span>
-                  <button type="button" className="btn" onClick={() => setExpandedVoucherId(current => current === voucher.id ? null : voucher.id)}>{expandedVoucherId === voucher.id ? "Hide lines" : "Lines"}</button>
-                  {voucher.voucherType === "sales" && voucher.status === "posted" && (
-                    <button type="button" className="btn" onClick={() => openSalesInvoice(voucher)}>Invoice</button>
-                  )}
-                  {canWrite && <button type="button" className="btn" onClick={() => duplicateVoucher(voucher)}>Duplicate</button>}
-                  {canWrite && voucher.status === "posted" && <>
-                    <button type="button" className="btn" disabled={saving} onClick={() => askReason("Reverse voucher", "Post reversal", reason => run(() => reverseVoucher(token, voucher.id, todayIso(), reason), "Reversal posted."))}>Reverse</button>
-                    <button type="button" className="btn danger" disabled={saving} onClick={() => askReason("Cancel voucher", "Cancel voucher", reason => run(() => cancelVoucher(token, voucher.id, reason), "Voucher cancelled."))}>Cancel</button>
-                  </>}
+                  <button type="button" className="btn" onClick={() => setExpandedVoucherId(current => current === voucher.id ? null : voucher.id)}>{expandedVoucherId === voucher.id ? "Hide" : "Lines"}</button>
+                  <AccMoreMenu
+                    label="More"
+                    items={[
+                      voucher.voucherType === "sales" && voucher.status === "posted"
+                        ? { id: "invoice", label: "Invoice", onClick: () => openSalesInvoice(voucher) }
+                        : null,
+                      canWrite
+                        ? { id: "duplicate", label: "Duplicate", onClick: () => duplicateVoucher(voucher) }
+                        : null,
+                      canWrite && voucher.status === "posted"
+                        ? {
+                          id: "reverse",
+                          label: "Reverse",
+                          disabled: saving,
+                          onClick: () => askReason("Reverse voucher", "Post reversal", reason => run(() => reverseVoucher(token, voucher.id, todayIso(), reason), "Reversal posted.")),
+                        }
+                        : null,
+                      canWrite && voucher.status === "posted"
+                        ? {
+                          id: "cancel",
+                          label: "Cancel voucher",
+                          danger: true,
+                          disabled: saving,
+                          onClick: () => askReason("Cancel voucher", "Cancel voucher", reason => run(() => cancelVoucher(token, voucher.id, reason), "Voucher cancelled.")),
+                        }
+                        : null,
+                    ]}
+                  />
                 </div>
               </div>
               {expandedVoucherId === voucher.id && <>
@@ -3220,9 +3283,18 @@ const openVoucher = () => {
               Outstanding only
             </button>
             <div className="acc-invoice-exports">
-              <button type="button" className="btn" onClick={() => exportReport("csv")}>Export CSV</button>
-              <button type="button" className="btn" onClick={() => exportReport("xlsx")}>Export Excel</button>
-              <button type="button" className="btn" onClick={() => exportReport("pdf")}>Download PDF</button>
+              <button type="button" className="btn acc-hide-mobile" onClick={() => exportReport("csv")}>Export CSV</button>
+              <button type="button" className="btn acc-hide-mobile" onClick={() => exportReport("xlsx")}>Export Excel</button>
+              <button type="button" className="btn acc-hide-mobile" onClick={() => exportReport("pdf")}>Download PDF</button>
+              <AccMoreMenu
+                className="acc-show-mobile"
+                label="Export"
+                items={[
+                  { id: "csv", label: "Export CSV", onClick: () => exportReport("csv") },
+                  { id: "xlsx", label: "Export Excel", onClick: () => exportReport("xlsx") },
+                  { id: "pdf", label: "Download PDF", onClick: () => exportReport("pdf") },
+                ]}
+              />
             </div>
           </div>
           {invoiceTable(pagedInvoiceRows.items, isInvoicePayables ? "payable" : "receivable")}
@@ -3377,9 +3449,20 @@ const openVoucher = () => {
               else { setSection("reports"); setReportTab(item.id); }
             }}>{item.label}</button>)}
             </div>
-            <button type="button" className="btn" onClick={() => exportReport("csv")}>Export CSV</button>
-            <button type="button" className="btn" onClick={() => exportReport("xlsx")}>Export Excel</button>
-            <button type="button" className="btn" onClick={() => exportReport("pdf")}>Download PDF</button>
+            <div className="acc-btn-group">
+              <button type="button" className="btn acc-hide-mobile" onClick={() => exportReport("csv")}>Export CSV</button>
+              <button type="button" className="btn acc-hide-mobile" onClick={() => exportReport("xlsx")}>Export Excel</button>
+              <button type="button" className="btn acc-hide-mobile" onClick={() => exportReport("pdf")}>Download PDF</button>
+              <AccMoreMenu
+                className="acc-show-mobile"
+                label="Export"
+                items={[
+                  { id: "csv", label: "Export CSV", onClick: () => exportReport("csv") },
+                  { id: "xlsx", label: "Export Excel", onClick: () => exportReport("xlsx") },
+                  { id: "pdf", label: "Download PDF", onClick: () => exportReport("pdf") },
+                ]}
+              />
+            </div>
           </div>
           {(section === "trial" || reportTab === "trial") && section !== "pnl" && section !== "balance" && <>
             <div className="acc-metric-grid three spacer">

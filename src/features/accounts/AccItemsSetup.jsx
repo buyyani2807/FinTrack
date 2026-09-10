@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { formatInr } from "../../lib/formatMoney.js";
 import { todayIso } from "./cashbookModel.js";
+import { AccMoreMenu } from "./AccUi.jsx";
 import {
   ITEM_TYPES,
   ITEM_UNITS,
@@ -176,10 +177,15 @@ export function AccItemsSetup({
                   <td>{item.isActive === false ? "Inactive" : status === "low" ? "Low stock" : "Active"}</td>
                   <td className="acc-item-actions">
                     <button type="button" className="btn" disabled={saving} onClick={() => openEdit(item)}>Edit</button>
-                    {item.isActive !== false
-                      ? <button type="button" className="btn" disabled={saving} onClick={() => onSetItemActive(item.id, false)}>Deactivate</button>
-                      : <button type="button" className="btn" disabled={saving} onClick={() => onSetItemActive(item.id, true)}>Reactivate</button>}
-                    <button type="button" className="btn danger" disabled={saving} onClick={() => onDeleteItem(item)}>Delete</button>
+                    <AccMoreMenu
+                      label="More"
+                      items={[
+                        item.isActive !== false
+                          ? { id: "deactivate", label: "Deactivate", disabled: saving, onClick: () => onSetItemActive(item.id, false) }
+                          : { id: "reactivate", label: "Reactivate", disabled: saving, onClick: () => onSetItemActive(item.id, true) },
+                        { id: "delete", label: "Delete", danger: true, disabled: saving, onClick: () => onDeleteItem(item) },
+                      ]}
+                    />
                   </td>
                 </tr>
               );
@@ -209,7 +215,15 @@ export function AccItemsSetup({
               <div className="acc-item-actions">
                 <button type="button" className="btn" onClick={() => setDetailId(item.id)}>View</button>
                 <button type="button" className="btn" disabled={saving} onClick={() => openEdit(item)}>Edit</button>
-                <button type="button" className="btn danger" disabled={saving} onClick={() => onDeleteItem(item)}>Delete</button>
+                <AccMoreMenu
+                  label="More"
+                  items={[
+                    item.isActive !== false
+                      ? { id: "deactivate", label: "Deactivate", disabled: saving, onClick: () => onSetItemActive(item.id, false) }
+                      : { id: "reactivate", label: "Reactivate", disabled: saving, onClick: () => onSetItemActive(item.id, true) },
+                    { id: "delete", label: "Delete", danger: true, disabled: saving, onClick: () => onDeleteItem(item) },
+                  ]}
+                />
               </div>
             </article>
           );
