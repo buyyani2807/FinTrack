@@ -493,7 +493,7 @@ function AccSetupSection({ icon, title, copy, actions, children, collapsible = f
         aria-labelledby={collapsible ? toggleId : undefined}
         hidden={collapsible && !open}
       >
-        {children}
+        <div className="acc-setup-stack">{children}</div>
       </div>
     </section>
   );
@@ -3686,7 +3686,7 @@ const openVoucher = () => {
                 </article>
               ))}
             </div>
-            <div className="accounts-action-row acc-bank-actions">
+            <div className="accounts-action-row acc-bank-actions acc-form-actions">
               <button type="button" className="btn" onClick={() => setBankForm(current => ({ ...current, lines: [...current.lines, emptyBankLine()] }))}>+ Add line</button>
               <button type="button" className="btn primary" disabled={saving} onClick={submitBankStatement}>{saving ? "Saving…" : "Save statement"}</button>
             </div>
@@ -3784,19 +3784,18 @@ const openVoucher = () => {
         {section === "setup" && <div className="acc-panel acc-setup">
           <p className="copy acc-setup-lead">Books, chart, parties, GST, and locks for {activeCompany?.name || "this Accounts company"} only. Daily Finance, Monthly Finance, and Chit Fund stay on the Finance workspace.</p>
           <AccSetupSection icon="FY" title="Company / financial year" copy="Indian financial year is 1 April to 31 March. Saving the name here updates the current Accounts company, not Finance.">
-            <div className="form spacer">
+            <div className="form">
               <Field label="Business name"><input value={setupForm.companyName} onChange={event => setSetupForm(current => ({ ...current, companyName: event.target.value }))} /></Field>
               <Field label="Books start date"><input type="date" value={setupForm.booksStartedOn} onChange={event => setSetupForm(current => ({ ...current, booksStartedOn: event.target.value }))} /></Field>
             </div>
-            <button type="button" className="btn primary" disabled={!canAdmin || saving} onClick={() => {
-              if (!canAdmin) {
-                setError("Only the business owner can change company settings.");
-                return;
-              }
-              run(() => saveAccountingSettings(token, { ...setupForm, fyStartMonth: 4 }), "Company details saved.");
-            }}>{saving ? "Saving…" : "Save company"}</button>
-            {!canAdmin && <p className="small">Only the business owner can change company name / books start settings.</p>}
-            <div className="accounts-action-row spacer">
+            <div className="acc-form-actions">
+              <button type="button" className="btn primary" disabled={!canAdmin || saving} onClick={() => {
+                if (!canAdmin) {
+                  setError("Only the business owner can change company settings.");
+                  return;
+                }
+                run(() => saveAccountingSettings(token, { ...setupForm, fyStartMonth: 4 }), "Company details saved.");
+              }}>{saving ? "Saving…" : "Save company"}</button>
               <button type="button" className="btn" onClick={downloadCompanyBackup}>Download company backup</button>
               {canAdmin && <label className="btn">
                 Choose restore file
@@ -3811,8 +3810,9 @@ const openVoucher = () => {
                 <button type="button" className="btn" disabled={restoreBusy} onClick={() => setRestoreDraft(null)}>Cancel restore</button>
               )}
             </div>
+            {!canAdmin && <p className="small">Only the business owner can change company name / books start settings.</p>}
             <p className="small">Backups are company-isolated. Restore only works into the same company when it has no vouchers yet. Cross-company overwrite is blocked.</p>
-            <div className="acc-company-setup-list spacer">
+            <div className="acc-company-setup-list">
               <p className="small">Each company has its own books. Switching never mixes vouchers.</p>
               {companies.map(company => (
                 <div
@@ -3844,7 +3844,7 @@ const openVoucher = () => {
           </AccSetupSection>
           <AccSetupSection icon="GST" title={`GST${activeCompany?.name ? ` · ${activeCompany.name}` : ""}`} copy="GST is per company. These settings never apply to another Accounts company or to Daily / Monthly Finance. Books reports only — not GST portal filing. Owner manages GST registration.">
             {!canAdmin && <p className="small">View GST details below. Only the owner can change GST registration settings.</p>}
-            <div className="form spacer">
+            <div className="form">
               <Field label="Registration">
                 <select value={gstForm.gstRegistration} disabled={!canAdmin} onChange={event => setGstForm(current => ({ ...current, gstRegistration: event.target.value }))}>
                   <option value="unregistered">Unregistered</option>
@@ -3861,11 +3861,15 @@ const openVoucher = () => {
                 </select>
               </Field>
             </div>
-            {canAdmin && <button type="button" className="btn primary" disabled={saving} onClick={() => {
-              const message = validateGstSettings(gstForm);
-              if (message) { setError(message); return; }
-              run(() => saveGstSettings(token, { ...gstForm, stateName: INDIA_STATES.find(state => state.code === gstForm.stateCode)?.name || "" }), "GST settings saved.");
-            }}>{saving ? "Saving…" : "Save GST"}</button>}
+            {canAdmin && (
+              <div className="acc-form-actions">
+                <button type="button" className="btn primary" disabled={saving} onClick={() => {
+                  const message = validateGstSettings(gstForm);
+                  if (message) { setError(message); return; }
+                  run(() => saveGstSettings(token, { ...gstForm, stateName: INDIA_STATES.find(state => state.code === gstForm.stateCode)?.name || "" }), "GST settings saved.");
+                }}>{saving ? "Saving…" : "Save GST"}</button>
+              </div>
+            )}
           </AccSetupSection>
           <AccSetupSection
             icon="#"
@@ -4016,15 +4020,17 @@ const openVoucher = () => {
           <AccSetupSection icon="L" title="Period locking" copy="Lock a closed period so posted vouchers in that range cannot be changed. Owner only.">
             {!canAdmin && <p className="small">Only the business owner can lock or reopen periods.</p>}
             {canAdmin && <>
-            <div className="form spacer">
+            <div className="form">
               <Field label="From"><input type="date" value={lockForm.from} onChange={event => setLockForm(current => ({ ...current, from: event.target.value }))} /></Field>
               <Field label="To"><input type="date" value={lockForm.to} onChange={event => setLockForm(current => ({ ...current, to: event.target.value }))} /></Field>
             </div>
-            <button type="button" className="btn" disabled={saving} onClick={event => {
-              event.currentTarget.scrollIntoView({ block: "center", behavior: "smooth" });
-              run(() => lockAccountingPeriod(token, lockForm.from, lockForm.to), "Period locked.");
-            }}>{saving ? "Saving…" : "Lock period"}</button>
-            <div className="table spacer acc-table-wrap"><table><thead><tr><th>Period</th><th>Status</th><th></th></tr></thead><tbody>
+            <div className="acc-form-actions">
+              <button type="button" className="btn primary" disabled={saving} onClick={event => {
+                event.currentTarget.scrollIntoView({ block: "center", behavior: "smooth" });
+                run(() => lockAccountingPeriod(token, lockForm.from, lockForm.to), "Period locked.");
+              }}>{saving ? "Saving…" : "Lock period"}</button>
+            </div>
+            <div className="table acc-table-wrap"><table><thead><tr><th>Period</th><th>Status</th><th></th></tr></thead><tbody>
               {locks.map(lock => <tr key={lock.id}><td>{lock.periodFrom} to {lock.periodTo}</td><td>{lock.isLocked ? "Locked" : "Reopened"}</td>              <td>{lock.isLocked && <button type="button" className="btn" disabled={saving} onClick={() => askReason("Reopen period", "Reopen", reason => run(() => reopenAccountingPeriod(token, lock.id, reason), "Period reopened."))}>Reopen</button>}</td></tr>)}
             </tbody></table></div>
             </>}
@@ -4041,7 +4047,7 @@ const openVoucher = () => {
             summary={`${accountsRoles.length} assigned · ${teamInvites.filter(row => row.status === "pending").length} pending`}
           >
             <h4 className="acc-subsection-title">Invite by email</h4>
-            <div className="form spacer">
+            <div className="form">
               <Field label="Email"><input type="email" value={inviteDraft.email} onChange={event => setInviteDraft(current => ({ ...current, email: event.target.value }))} placeholder="ca@example.com" /></Field>
               <Field label="Role">
                 <select value={inviteDraft.role} onChange={event => setInviteDraft(current => ({ ...current, role: event.target.value }))}>
@@ -4051,7 +4057,7 @@ const openVoucher = () => {
               </Field>
               <Field label="Note (optional)"><input value={inviteDraft.note} onChange={event => setInviteDraft(current => ({ ...current, note: event.target.value }))} placeholder="e.g. FY 2026-27 review" /></Field>
             </div>
-            <div className="accounts-action-row">
+            <div className="acc-form-actions">
               <button type="button" className="btn primary" disabled={saving || !inviteDraft.email.trim()} onClick={() => run(async () => {
                 const result = await inviteTeamMember(token, inviteDraft);
                 setInviteDraft({ email: "", role: "viewer", note: "" });
@@ -4077,7 +4083,7 @@ const openVoucher = () => {
               {!teamInvites.length && <tr><td colSpan="4">No email invites yet.</td></tr>}
             </tbody></table></div>
             <h4 className="acc-subsection-title">Assign by user ID</h4>
-            <div className="form spacer">
+            <div className="form">
               <Field label="User ID (auth UUID)"><input value={roleDraft.userId} onChange={event => setRoleDraft(current => ({ ...current, userId: event.target.value.trim() }))} placeholder="Paste Supabase auth user UUID" /></Field>
               <Field label="Role">
                 <select value={roleDraft.role} onChange={event => setRoleDraft(current => ({ ...current, role: event.target.value }))}>
@@ -4086,7 +4092,7 @@ const openVoucher = () => {
                 </select>
               </Field>
             </div>
-            <div className="accounts-action-row">
+            <div className="acc-form-actions">
               <button type="button" className="btn primary" disabled={saving || !roleDraft.userId} onClick={() => run(async () => {
                 await setAccountsUserRole(token, roleDraft.userId, roleDraft.role);
                 setRoleDraft({ userId: "", role: "accountant" });
@@ -4114,7 +4120,7 @@ const openVoucher = () => {
             collapsible
             summary={`${recurringTemplates.filter(row => row.isActive).length} active`}
           >
-            <div className="form spacer">
+            <div className="form">
               <Field label="Name"><input value={recurringDraft.name} onChange={event => setRecurringDraft(current => ({ ...current, name: event.target.value }))} placeholder="e.g. Office rent" /></Field>
               <Field label="Kind">
                 <select value={recurringDraft.kind} onChange={event => setRecurringDraft(current => ({ ...current, kind: event.target.value }))}>
@@ -4141,7 +4147,7 @@ const openVoucher = () => {
               </Field>
               <Field className="span" label="Narration"><input value={recurringDraft.narration} onChange={event => setRecurringDraft(current => ({ ...current, narration: event.target.value }))} /></Field>
             </div>
-            <div className="accounts-action-row">
+            <div className="acc-form-actions">
               <button type="button" className="btn primary" disabled={saving || !recurringDraft.name.trim() || !recurringDraft.nextRunOn} onClick={() => run(async () => {
                 await upsertRecurringTemplate(token, {
                   ...recurringDraft,

@@ -3950,3 +3950,98 @@ html:has(.accounts-dashboard) .financier-nav {
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== Form / setup action alignment system ===== */
+
+.accounts-dashboard .form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+.accounts-dashboard .form > .span {
+  grid-column: 1 / -1;
+}
+
+.accounts-dashboard .acc-setup-body {
+  width: 100%;
+}
+
+.accounts-dashboard .acc-setup-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+}
+
+/* Kill uneven .spacer margins inside setup stacks */
+.accounts-dashboard .acc-setup-stack > .spacer,
+.accounts-dashboard .acc-setup-stack > .form.spacer,
+.accounts-dashboard .acc-setup-stack > .accounts-action-row.spacer,
+.accounts-dashboard .acc-setup-stack > .table.spacer {
+  margin-top: 0;
+}
+
+.accounts-dashboard .acc-form-actions,
+.accounts-dashboard .acc-setup-stack > .accounts-action-row,
+.accounts-dashboard .acc-setup-stack > .acc-bank-actions,
+.accounts-dashboard .acc-modal-actions,
+.accounts-dashboard .acc-modal-actions .tabs,
+.accounts-dashboard .acc-modal .tabs.spacer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.accounts-dashboard .acc-form-actions > .btn,
+.accounts-dashboard .acc-form-actions > label.btn,
+.accounts-dashboard .acc-setup-stack > .accounts-action-row > .btn,
+.accounts-dashboard .acc-setup-stack > .accounts-action-row > label.btn,
+.accounts-dashboard .acc-modal-actions .btn {
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+/* Primary save actions share the same left edge as form fields */
+.accounts-dashboard .acc-setup-stack > .form + .acc-form-actions,
+.accounts-dashboard .acc-setup-stack > .form + .accounts-action-row {
+  margin-top: 0;
+}
+
+.accounts-dashboard .acc-company-setup-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.accounts-dashboard .acc-subsection-title {
+  margin: 4px 0 0;
+}
+
+@media (max-width: 680px) {
+  .accounts-dashboard .form {
+    grid-template-columns: 1fr;
+  }
+
+  .accounts-dashboard .form > .span {
+    grid-column: auto;
+  }
+
+  .accounts-dashboard .acc-form-actions {
+    gap: 8px;
+  }
+
+  .accounts-dashboard .acc-form-actions > .btn.primary {
+    flex: 1 1 auto;
+    min-width: min(100%, 160px);
+  }
+}
