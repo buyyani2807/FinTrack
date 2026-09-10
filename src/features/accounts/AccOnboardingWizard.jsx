@@ -94,8 +94,8 @@ export function AccOnboardingWizard({
 
       {step.id === "welcome" && (
         <div className="spacer">
-          <p className="copy">In a few steps you will confirm the company, GST, optionally add a customer, and invite your CA as viewer.</p>
-          <p className="small">Daily Finance, Monthly Finance, and Chit Fund stay separate. This only opens trade books.</p>
+          <p className="copy">This short setup walks you through six screens: welcome, company details, GST, optional first party, optional CA invite, then done.</p>
+          <p className="small">Daily Finance, Monthly Finance, and Chit Fund stay separate. This only configures trade books for this company.</p>
         </div>
       )}
 

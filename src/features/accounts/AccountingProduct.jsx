@@ -1660,11 +1660,12 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
   const canWrite = accountsAccessRole === "owner" || accountsAccessRole === "accountant";
   const canAdmin = accountsAccessRole === "owner";
   const readOnly = Boolean(accountsAccessRole) && !canWrite;
+  // Keep the wizard mounted across refresh()/loading so Continue does not
+  // unmount mid-flow (that looked like “Step 1/6 finishes in 2 steps”).
   const showOnboarding = Boolean(
     settings
     && activeCompanyId
     && !migrationRequired
-    && !loading
     && !onboardingDismissed
     && !isAccountsOnboardingDone(activeCompanyId),
   );
