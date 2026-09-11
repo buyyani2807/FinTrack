@@ -90,7 +90,7 @@ function layoutReceipt(receipt) {
     const progress = receipt.chitFields.totalMonths
       ? `Month ${receipt.chitFields.month} of ${receipt.chitFields.totalMonths}`
       : `Month ${receipt.chitFields.month}`;
-    row("Payment Month:", calendar ? `${calendar} · ${progress}` : progress, y).forEach(c => commands.push(c)); y -= 14;
+    row("Payment Month:", calendar ? `${calendar} - ${progress}` : progress, y).forEach(c => commands.push(c)); y -= 14;
   }
   row("Previous Balance:", m(receipt.previousBalance), y).forEach(c => commands.push(c)); y -= 14;
   row("Remaining Balance:", m(receipt.remainingBalance), y).forEach(c => commands.push(c)); y -= 14;
