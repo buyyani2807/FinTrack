@@ -15,6 +15,20 @@ Payment Mode: {payment_mode}
 Remaining Balance: {remaining_balance}
 Thank you.
 {company_name}`,
+  chit_payment_receipt: `Hi {customer_name},
+
+We have received your payment of {amount}.
+
+Receipt No: {receipt_number}
+Account: {account_id}
+Payment Date: {payment_date}
+Payment Mode: {payment_mode}
+Payment Month: {payment_month}
+Remaining Balance: {remaining_balance}
+
+Thank you for your payment.
+{company_name}
+Bachupally | {company_phone}`,
   monthly_reminder: `Hi {customer_name},
 This is a reminder that your Monthly Finance payment of {amount} is due on {due_date}.
 Account: {account_id}

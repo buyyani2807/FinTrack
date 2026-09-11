@@ -76,9 +76,6 @@ function layoutReceipt(receipt) {
   commands.push(text("F1", 10, PAGE.left, y, `Finance Type: ${receipt.financeType}`)); y -= 18;
   if (receipt.schemeName) {
     commands.push(text("F1", 10, PAGE.left, y, `Scheme: ${receipt.schemeName}`)); y -= 14;
-    if (receipt.chitFields?.month) {
-      commands.push(text("F1", 10, PAGE.left, y, `Month: ${receipt.chitFields.month} of ${receipt.chitFields.totalMonths}`)); y -= 14;
-    }
   }
   commands.push(line(PAGE.left, y, PAGE.right, y)); y -= 18;
   commands.push(text("F2", 11, PAGE.left, y, "PAYMENT")); y -= 18;
@@ -88,6 +85,13 @@ function layoutReceipt(receipt) {
     row("UPI:", m(receipt.upiAmount), y).forEach(c => commands.push(c)); y -= 14;
   }
   row("Payment Mode:", receipt.paymentMode, y).forEach(c => commands.push(c)); y -= 14;
+  if (receipt.chitFields?.month) {
+    const calendar = receipt.chitFields.monthLabel || "";
+    const progress = receipt.chitFields.totalMonths
+      ? `Month ${receipt.chitFields.month} of ${receipt.chitFields.totalMonths}`
+      : `Month ${receipt.chitFields.month}`;
+    row("Payment Month:", calendar ? `${calendar} · ${progress}` : progress, y).forEach(c => commands.push(c)); y -= 14;
+  }
   row("Previous Balance:", m(receipt.previousBalance), y).forEach(c => commands.push(c)); y -= 14;
   row("Remaining Balance:", m(receipt.remainingBalance), y).forEach(c => commands.push(c)); y -= 14;
   if (receipt.dailyFields) {

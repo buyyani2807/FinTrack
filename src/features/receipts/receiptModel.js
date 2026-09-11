@@ -98,6 +98,27 @@ export function buildFinanceReceipt({ loan, transaction, settings = {}, workspac
   };
 }
 
+const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** Calendar month for a chit installment, e.g. "Sep 26" from scheme start + month number. */
+export function chitInstallmentMonthLabel(startDate, monthNumber) {
+  const month = Number(monthNumber);
+  if (!month) return "";
+  const base = new Date(`${String(startDate || "").slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(base.getTime())) return `Month ${month}`;
+  base.setMonth(base.getMonth() + (month - 1));
+  return `${MONTH_LABELS[base.getMonth()]} ${String(base.getFullYear()).slice(-2)}`;
+}
+
+export function formatChitPaymentMonth(chitFields = {}) {
+  const month = Number(chitFields.month || 0);
+  if (!month) return "";
+  const calendar = chitFields.monthLabel || "";
+  const total = Number(chitFields.totalMonths || 0);
+  const progress = total ? `Month ${month} of ${total}` : `Month ${month}`;
+  return calendar ? `${calendar} (${progress})` : progress;
+}
+
 export function buildChitReceipt({
   source,
   paymentRow,
@@ -105,6 +126,7 @@ export function buildChitReceipt({
   memberPhone,
   schemeName,
   schemeDuration,
+  schemeStartDate = "",
   settings = {},
   workspace = {},
   collectorName,
@@ -142,7 +164,12 @@ export function buildChitReceipt({
     remainingBalance: Math.max(0, due - amount),
     totalFinanced: due,
     schemeName,
-    chitFields: { month, totalMonths: schemeDuration, installmentDue: due },
+    chitFields: {
+      month,
+      totalMonths: schemeDuration,
+      installmentDue: due,
+      monthLabel: chitInstallmentMonthLabel(schemeStartDate, month),
+    },
     reference: paymentRow.payment_reference || paymentRow.reference || "",
     notes: paymentRow.notes || "",
     money,
@@ -166,6 +193,7 @@ export function receiptWhatsAppVariables(receipt) {
     chit_type: receipt.chitType || "",
     month_number: receipt.chitFields?.month ? String(receipt.chitFields.month) : "",
     total_months: receipt.chitFields?.totalMonths ? String(receipt.chitFields.totalMonths) : "",
+    payment_month: formatChitPaymentMonth(receipt.chitFields),
   };
 }
 

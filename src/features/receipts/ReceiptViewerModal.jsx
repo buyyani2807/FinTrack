@@ -27,7 +27,7 @@ export function ReceiptViewerModal({ receipt, settings, token, onLogAction, clos
       </div>
       <hr />
       <section><strong>CUSTOMER</strong><p>{receipt.customerName}</p>{receipt.customerPhone && <p className="small">Phone: {receipt.customerPhone}</p>}</section>
-      <section><strong>ACCOUNT</strong><p>Account ID: {receipt.accountId}</p><p>Finance Type: {receipt.financeType}</p>{receipt.schemeName && <p>Scheme: {receipt.schemeName}</p>}</section>
+      <section><strong>ACCOUNT</strong><p>Account ID: {receipt.accountId}</p><p>Finance Type: {receipt.financeType}</p>{receipt.schemeName && <p>Scheme: {receipt.schemeName}</p>}{receipt.chitFields?.month ? <p>Payment Month: {receipt.chitFields.monthLabel ? `${receipt.chitFields.monthLabel} · ` : ""}Month {receipt.chitFields.month}{receipt.chitFields.totalMonths ? ` of ${receipt.chitFields.totalMonths}` : ""}</p> : null}</section>
       <hr />
       <section><strong>PAYMENT</strong>
         <p>Amount Paid: {m(receipt.amount)}</p>

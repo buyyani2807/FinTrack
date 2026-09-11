@@ -247,6 +247,7 @@ function ChitReceiptCell({ source, paymentRow, memberName, memberPhone, scheme, 
       memberPhone,
       schemeName: scheme?.name || "",
       schemeDuration: scheme?.duration_months || 0,
+      schemeStartDate: scheme?.start_date || "",
       settings: orgSettings,
       workspace,
     })}
@@ -429,6 +430,7 @@ function ChitPaymentModal({ token, installment, memberName, memberPhone, scheme,
           memberPhone,
           schemeName: scheme?.name || "",
           schemeDuration: scheme?.duration_months || 0,
+          schemeStartDate: scheme?.start_date || "",
           settings: orgSettings,
           workspace,
         }));
@@ -670,6 +672,7 @@ function FixedChitPaymentModal({ token, payment, memberName, memberPhone, scheme
           memberPhone,
           schemeName: scheme?.name || "",
           schemeDuration: scheme?.duration_months || 0,
+          schemeStartDate: scheme?.start_date || "",
           settings: orgSettings,
           workspace,
         }));
@@ -848,6 +851,7 @@ function PredefinedPaymentModal({ token, payment, memberName, memberPhone, schem
           memberPhone,
           schemeName: scheme?.name || "",
           schemeDuration: scheme?.duration_months || 0,
+          schemeStartDate: scheme?.start_date || "",
           settings: orgSettings,
           workspace,
         }));

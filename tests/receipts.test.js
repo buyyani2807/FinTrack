@@ -220,6 +220,39 @@ test("buildChitUpcomingRows includes overdue predefined bid members from 50L sch
   assert.ok(items.every(item => item.amount === 152000));
 });
 
+test("chit payment WhatsApp and receipt include the installment month", () => {
+  const receipt = buildChitReceipt({
+    source: "chit_fixed",
+    paymentRow: {
+      id: "p1",
+      enrollment_id: "en-abc",
+      amount_paid: 49500,
+      amount_due: 49500,
+      paid_date: "2026-09-11",
+      payment_mode: "cash",
+      receipt_number: "FT-2026-000120",
+      payment_month: 3,
+    },
+    memberName: "Ellaiah",
+    memberPhone: "9160710101",
+    schemeName: "5 Lakh",
+    schemeDuration: 20,
+    schemeStartDate: "2026-07-01",
+    settings: { companyName: "Sudheer Finance", companyPhone: "9160710101" },
+    workspace: { fullName: "Shiva P", role: "owner" },
+  });
+  assert.equal(receipt.chitFields.month, 3);
+  assert.equal(receipt.chitFields.monthLabel, "Sep 26");
+  const message = buildWhatsAppMessage(receipt, {
+    companyName: "Sudheer Finance",
+    companyPhone: "9160710101",
+  });
+  assert.match(message, /Hi Ellaiah/);
+  assert.match(message, /Payment Month: Sep 26 \(Month 3 of 20\)/);
+  assert.match(message, /Receipt No: FT-2026-000120/);
+  assert.match(message, /Bachupally \| 9160710101/);
+});
+
 test("chit receipts use the signed-in collector, not a hardcoded Financier label", () => {
   const receipt = buildChitReceipt({
     source: "chit_fixed",
