@@ -176,6 +176,13 @@ export function buildChitReceipt({
   };
 }
 
+export function formatDailyDayProgress(dailyFields) {
+  if (!dailyFields || dailyFields.daysCompleted == null) return "";
+  const done = Number(dailyFields.daysCompleted);
+  const left = Number(dailyFields.daysRemaining ?? Math.max(0, 100 - done));
+  return `Day ${done} of 100 · ${left} days remaining`;
+}
+
 export function receiptWhatsAppVariables(receipt) {
   return {
     customer_name: receipt.customerName,
@@ -188,7 +195,10 @@ export function receiptWhatsAppVariables(receipt) {
     company_name: receipt.companyName,
     company_phone: receipt.companyPhone || "",
     due_date: formatReceiptDate(receipt.dueDate || receipt.paymentDate),
-    days_remaining: receipt.daysRemaining != null ? String(receipt.daysRemaining) : "",
+    days_remaining: receipt.dailyFields?.daysRemaining != null
+      ? String(receipt.dailyFields.daysRemaining)
+      : (receipt.daysRemaining != null ? String(receipt.daysRemaining) : ""),
+    day_progress: formatDailyDayProgress(receipt.dailyFields),
     scheme_name: receipt.schemeName || "",
     chit_type: receipt.chitType || "",
     month_number: receipt.chitFields?.month ? String(receipt.chitFields.month) : "",

@@ -4,9 +4,13 @@ import { receiptWhatsAppVariables, withReceiptBranding } from "./receiptModel.js
 
 export function buildWhatsAppMessage(receipt, settings = {}, templateKey = "payment_receipt") {
   const brandedReceipt = withReceiptBranding(receipt, settings);
-  const key = String(receipt?.source || "").startsWith("chit") && templateKey === "payment_receipt"
-    ? "chit_payment_receipt"
-    : templateKey;
+  const key = templateKey !== "payment_receipt"
+    ? templateKey
+    : String(receipt?.source || "").startsWith("chit")
+      ? "chit_payment_receipt"
+      : receipt?.dailyFields
+        ? "daily_payment_receipt"
+        : templateKey;
   const template = resolveWhatsAppTemplate(settings, key);
   return applyTemplate(template, receiptWhatsAppVariables(brandedReceipt));
 }

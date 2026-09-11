@@ -253,6 +253,29 @@ test("chit payment WhatsApp and receipt include the installment month", () => {
   assert.match(message, /Bachupally \| 9160710101/);
 });
 
+test("daily finance WhatsApp includes day progress and days remaining", () => {
+  const message = buildWhatsAppMessage({
+    source: "finance",
+    customerName: "Devender",
+    amount: 100,
+    receiptNumber: "FT-2026-000112",
+    accountId: "FT-F59269CF",
+    paymentDate: "2026-09-11",
+    paymentMode: "Cash",
+    remainingBalance: 8050,
+    companyName: "Sudheer Finance",
+    companyPhone: "9160710101",
+    dailyFields: { daysCompleted: 28, daysRemaining: 72 },
+    money: n => `₹${Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`,
+  }, {
+    companyName: "Sudheer Finance",
+    companyPhone: "9160710101",
+  });
+  assert.match(message, /Hi Devender/);
+  assert.match(message, /Day 28 of 100 · 72 days remaining/);
+  assert.match(message, /Remaining Balance: ₹8,050/);
+});
+
 test("chit receipts use the signed-in collector, not a hardcoded Financier label", () => {
   const receipt = buildChitReceipt({
     source: "chit_fixed",

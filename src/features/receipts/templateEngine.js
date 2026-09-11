@@ -15,6 +15,20 @@ Payment Mode: {payment_mode}
 Remaining Balance: {remaining_balance}
 Thank you.
 {company_name}`,
+  daily_payment_receipt: `Hi {customer_name},
+
+We have received your payment of {amount}.
+
+Receipt No: {receipt_number}
+Account: {account_id}
+Payment Date: {payment_date}
+Payment Mode: {payment_mode}
+{day_progress}
+Remaining Balance: {remaining_balance}
+
+Thank you for your payment.
+{company_name}
+Bachupally | {company_phone}`,
   chit_payment_receipt: `Hi {customer_name},
 
 We have received your payment of {amount}.
