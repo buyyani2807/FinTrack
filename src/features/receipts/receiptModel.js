@@ -215,15 +215,16 @@ export function formatReceiptDate(value = "") {
 
 export function withReceiptBranding(receipt, settings = {}) {
   if (!receipt) return receipt;
+  const branding = settings || {};
   return {
     ...receipt,
-    companyName: settings.companyName || receipt.companyName || "FinTrack",
-    companyAddress: settings.companyAddress ?? receipt.companyAddress ?? "",
-    companyPhone: settings.companyPhone ?? receipt.companyPhone ?? "",
-    companyEmail: settings.companyEmail ?? receipt.companyEmail ?? "",
-    companyLogoUrl: settings.companyLogoUrl ?? receipt.companyLogoUrl ?? "",
-    receiptFooter: settings.receiptFooter || receipt.receiptFooter || "Thank you for your payment.",
-    receiptTerms: settings.receiptTerms ?? receipt.receiptTerms ?? "",
+    companyName: branding.companyName || receipt.companyName || "FinTrack",
+    companyAddress: branding.companyAddress ?? receipt.companyAddress ?? "",
+    companyPhone: branding.companyPhone ?? receipt.companyPhone ?? "",
+    companyEmail: branding.companyEmail ?? receipt.companyEmail ?? "",
+    companyLogoUrl: branding.companyLogoUrl ?? receipt.companyLogoUrl ?? "",
+    receiptFooter: branding.receiptFooter || receipt.receiptFooter || "Thank you for your payment.",
+    receiptTerms: branding.receiptTerms ?? receipt.receiptTerms ?? "",
   };
 }
 

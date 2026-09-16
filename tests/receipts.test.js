@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { hasWhatsAppPhone, normalizeWhatsAppPhone } from "../src/features/receipts/phoneNormalize.js";
 import { applyTemplate, DEFAULT_WHATSAPP_TEMPLATES, resolveWhatsAppTemplate } from "../src/features/receipts/templateEngine.js";
 import { buildChitUpcomingRows, flattenSchemePaymentsForReminders } from "../src/features/receipts/upcomingPayments.js";
-import { buildWhatsAppMessage } from "../src/features/receipts/receiptWhatsApp.js";
+import { buildWhatsAppMessage, openManualWhatsAppShare, whatsAppShareUrl } from "../src/features/receipts/receiptWhatsApp.js";
 import { buildChitReceipt } from "../src/features/receipts/receiptModel.js";
 
 test("normalizes 10-digit Indian numbers", () => {
@@ -274,6 +274,34 @@ test("daily finance WhatsApp includes day progress and days remaining", () => {
   assert.match(message, /Hi Devender/);
   assert.match(message, /Day 28 of 100 · 72 days remaining/);
   assert.match(message, /Remaining Balance: ₹8,050/);
+});
+
+test("manual WhatsApp works without saved settings and keeps the built-in message", () => {
+  const receipt = {
+    source: "finance",
+    customerName: "Ravi",
+    customerPhone: "9876543210",
+    amount: 5000,
+    receiptNumber: "FT-2026-000125",
+    accountId: "DF-1025",
+    paymentDate: "2026-08-28",
+    paymentMode: "UPI",
+    remainingBalance: 40000,
+    money: n => `₹${Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`,
+  };
+  const message = buildWhatsAppMessage(receipt, null);
+  const savedMessage = buildWhatsAppMessage(receipt, {});
+  assert.equal(message, savedMessage);
+  assert.match(message, /Hi Ravi/);
+  assert.match(message, /Receipt No: FT-2026-000125/);
+  assert.match(message, /Thank you\./);
+  assert.doesNotMatch(message, /\{customer_name\}/);
+
+  const url = whatsAppShareUrl(receipt.customerPhone, message);
+  assert.match(url, /^https:\/\/wa\.me\/919876543210\?text=/);
+  assert.match(decodeURIComponent(url), /Hi Ravi/);
+  assert.equal(openManualWhatsAppShare({ phone: "", message }).reason, "no_phone");
+  assert.equal(openManualWhatsAppShare({ phone: "9876543210", message }).reason, "open_failed");
 });
 
 test("chit receipts use the signed-in collector, not a hardcoded Financier label", () => {
