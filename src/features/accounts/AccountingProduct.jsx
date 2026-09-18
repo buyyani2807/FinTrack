@@ -64,6 +64,7 @@ import {
   isAccountsOnboardingDone,
   markAccountsOnboardingDone,
 } from "./AccOnboardingWizard.jsx";
+import { INDUSTRY_TEMPLATES } from "./AccOnboardingWizard.jsx";
 import { AccMoreMenu, AccToolbar } from "./AccUi.jsx";
 import {
   BANK_IMPORT_FIELDS,
@@ -1527,7 +1528,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
   const [companies, setCompanies] = useState([]);
   const [activeCompanyId, setActiveCompanyId] = useState("");
   const [showCreateCompany, setShowCreateCompany] = useState(false);
-  const [companyDraft, setCompanyDraft] = useState({ name: "", booksStartedOn: todayIso() });
+  const [companyDraft, setCompanyDraft] = useState({ name: "", booksStartedOn: todayIso(), industry: "retail" });
   const [gstForm, setGstForm] = useState({ gstRegistration: "unregistered", gstin: "", legalName: "", stateCode: "" });
   const [listPage, setListPage] = useState(1);
   const [expandedVoucherId, setExpandedVoucherId] = useState(null);
@@ -2892,7 +2893,7 @@ const openVoucher = () => {
           companies={companies}
           activeId={activeCompanyId}
           onSelect={switchCompany}
-          onCreate={() => { setCompanyDraft({ name: "", booksStartedOn: todayIso() }); setShowCreateCompany(true); }}
+          onCreate={() => { setCompanyDraft({ name: "", booksStartedOn: todayIso(), industry: "retail" }); setShowCreateCompany(true); }}
           gstLabel={gstStatusLabel(activeCompany)}
           fyLabel={fy?.label || ""}
           booksStartedOn={activeCompany?.booksStartedOn || settings?.booksStartedOn || ""}
@@ -3849,7 +3850,7 @@ const openVoucher = () => {
                   )}
                 </div>
               ))}
-              {canAdmin && <button type="button" className="btn" onClick={() => { setCompanyDraft({ name: "", booksStartedOn: todayIso() }); setShowCreateCompany(true); }}>+ Create company</button>}
+              {canAdmin && <button type="button" className="btn" onClick={() => { setCompanyDraft({ name: "", booksStartedOn: todayIso(), industry: "retail" }); setShowCreateCompany(true); }}>+ Create company</button>}
               {!canAdmin && <p className="small">Only the owner can create or archive Accounts companies.</p>}
             </div>
           </AccSetupSection>
@@ -4236,6 +4237,7 @@ const openVoucher = () => {
         <div className="form">
           <Field required label="Company name"><input value={companyDraft.name} onChange={event => setCompanyDraft(current => ({ ...current, name: event.target.value }))} placeholder="e.g. ABC Traders" /></Field>
           <Field label="Books start date"><input type="date" value={companyDraft.booksStartedOn} onChange={event => setCompanyDraft(current => ({ ...current, booksStartedOn: event.target.value }))} /></Field>
+          <Field label="Industry template"><select value={companyDraft.industry || "retail"} onChange={event => setCompanyDraft(current => ({ ...current, industry: event.target.value }))}>{INDUSTRY_TEMPLATES.map(template => <option key={template.id} value={template.id}>{template.label}</option>)}</select><span className="small">{INDUSTRY_TEMPLATES.find(template => template.id === (companyDraft.industry || "retail"))?.hint}</span></Field>
         </div>
       </Modal>}
       {showSimple && <Modal title={SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry"} close={closeSimple}>
