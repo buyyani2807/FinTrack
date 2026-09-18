@@ -904,6 +904,7 @@ function ReportRangeBar({ fy, lastFy, from, to, onChange }) {
 
 const SECTIONS = [
   { id: "overview", label: "Overview", group: "Books" },
+  { id: "manufacturing", label: "Manufacturing", group: "Industry" },
   { id: "ledger", label: "Ledger", group: "Books" },
   { id: "vouchers", label: "Transactions", group: "Books" },
   { id: "cashbook", label: "Cashbook", group: "Books" },
@@ -954,6 +955,22 @@ const REPORT_HUB_CARDS = [
   { id: "gst", label: "GST books", copy: "Calculated GST for review — not portal filing." },
   { id: "cashflow", label: "Cash Flow", copy: "Money in and out (simplified)." },
 ];
+
+function ManufacturingWorkspace({ items = [], stockMovements = [], onItems, onTransactions }) {
+  const rawMaterials = items.filter(item => /raw|material/i.test(`${item.name} ${item.categoryName || ""}`)).length;
+  const finishedGoods = items.filter(item => /finished|product/i.test(`${item.name} ${item.categoryName || ""}`)).length;
+  return <div className="acc-panel manufacturing-workspace">
+    <div className="accounts-panel-head"><div><h1 className="accounts-panel-title">Manufacturing</h1><p className="copy">Plan production, control materials, and track finished goods.</p></div><span className="accounts-industry-badge">Manufacturing template</span></div>
+    <div className="acc-metric-grid three spacer"><AccMetric label="Raw material items" value={rawMaterials} /><AccMetric label="Finished goods" value={finishedGoods} /><AccMetric label="Stock movements" value={stockMovements.length} /></div>
+    <div className="manufacturing-flow-grid spacer">
+      <button type="button" className="card manufacturing-flow-card" onClick={() => onItems?.()}><span className="manufacturing-flow-icon">▦</span><strong>1. Materials & items</strong><p className="copy">Create raw materials, WIP, and finished-goods items.</p></button>
+      <button type="button" className="card manufacturing-flow-card" onClick={() => onTransactions?.()}><span className="manufacturing-flow-icon">▣</span><strong>2. Purchases & costs</strong><p className="copy">Record material purchases, labour, power, and production expenses.</p></button>
+      <button type="button" className="card manufacturing-flow-card" onClick={() => onTransactions?.()}><span className="manufacturing-flow-icon">→</span><strong>3. Production run</strong><p className="copy">Use stock adjustments and vouchers to record material consumption and output.</p></button>
+      <button type="button" className="card manufacturing-flow-card" onClick={() => onTransactions?.()}><span className="manufacturing-flow-icon">₹</span><strong>4. Sell & analyse</strong><p className="copy">Invoice finished goods and review margin, stock, and production costs.</p></button>
+    </div>
+    <div className="notice">Dedicated BOM and production-run automation can be added later. Existing inventory, vouchers, and reports remain the source of truth.</div>
+  </div>;
+}
 
 const MORE_LINKS = [
   ["ledger", "Ledger", "One account’s full movement"],
@@ -1694,6 +1711,10 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
   const canWrite = accountsAccessRole === "owner" || accountsAccessRole === "accountant";
   const canAdmin = accountsAccessRole === "owner";
   const readOnly = Boolean(accountsAccessRole) && !canWrite;
+  const manufacturingEnabled = (() => {
+    if (!activeCompanyId || typeof localStorage === "undefined") return false;
+    try { return localStorage.getItem(`fintrack-accounts-industry-v1:${activeCompanyId}`) === "manufacturing"; } catch { return false; }
+  })();
   // Keep the wizard mounted across refresh()/loading so Continue does not
   // unmount mid-flow (that looked like “Step 1/6 finishes in 2 steps”).
   const showOnboarding = Boolean(
@@ -3457,9 +3478,12 @@ const openVoucher = () => {
           </> : <AccEmpty title="No customers or suppliers yet" copy="Accounts parties are independent of Daily Finance customers and Chit Fund members." actionLabel={canWrite ? "+ Add party" : ""} onAction={canWrite ? openParty : undefined} />}
         </div>}
 
+        {section === "manufacturing" && manufacturingEnabled && <ManufacturingWorkspace items={items} stockMovements={stockMovements} onItems={() => openSection("setup")} onTransactions={() => openSection("vouchers")} />}
+
         {section === "more" && <div className="acc-panel">
           <p className="copy">Ledger, banking, statements and setup. Day-to-day work stays on Home, Transactions, Parties and Reports.</p>
           <div className="acc-landing-grid spacer">
+            {manufacturingEnabled && <button type="button" className="card acc-landing-card manufacturing-landing-card" onClick={() => openSection("manufacturing")}><strong>Manufacturing</strong><p className="small">Materials, production flow and finished goods</p></button>}
             {moreLinks.map(([id, title]) => (
               <button key={id} type="button" className="card acc-landing-card" onClick={() => openSection(id)}>
                 <strong>{title}</strong>
