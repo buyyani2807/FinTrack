@@ -11,12 +11,12 @@ const STEPS = [
 ];
 
 export const INDUSTRY_TEMPLATES = [
-  { id: "retail", label: "Retail shop", hint: "Sales, stock, cash and customer balances" },
-  { id: "wholesale", label: "Wholesale / distribution", hint: "Credit sales, suppliers and inventory movement" },
-  { id: "manufacturing", label: "Manufacturing", hint: "Raw materials, production costs, finished goods and stock" },
-  { id: "services", label: "Service business", hint: "Projects, invoices, expenses and receivables" },
-  { id: "finance", label: "Finance / collections", hint: "Customer repayments, collection staff and finance accounts" },
-  { id: "chit", label: "Chit Fund operator", hint: "Schemes, members, auctions, dividends and payouts" },
+  { id: "retail", label: "Retail shop", hint: "Sales, stock, cash and customer balances", features: ["Sales invoices", "Fast stock lookup", "Cash and UPI receipts"] },
+  { id: "wholesale", label: "Wholesale / distribution", hint: "Credit sales, suppliers and inventory movement", features: ["Customer credit", "Supplier balances", "Bulk inventory"] },
+  { id: "manufacturing", label: "Manufacturing", hint: "Raw materials, production costs, finished goods and stock", features: ["Raw materials", "Work in progress", "Finished goods", "Production costing"] },
+  { id: "services", label: "Service business", hint: "Projects, invoices, expenses and receivables", features: ["Service invoices", "Project expenses", "Receivables"] },
+  { id: "finance", label: "Finance / collections", hint: "Customer repayments, collection staff and finance accounts", features: ["Daily finance", "Monthly interest", "Collection staff"] },
+  { id: "chit", label: "Chit Fund operator", hint: "Schemes, members, auctions, dividends and payouts", features: ["Schemes", "Monthly auctions", "Dividends and payouts"] },
 ];
 
 const industryStorageKey = companyId => `fintrack-accounts-industry-v1:${companyId || "none"}`;
@@ -93,6 +93,7 @@ export function AccOnboardingWizard({
 
   const step = STEPS[stepIndex] || STEPS[0];
   const progress = useMemo(() => `${stepIndex + 1} of ${STEPS.length}`, [stepIndex]);
+  const selectedTemplate = INDUSTRY_TEMPLATES.find(template => template.id === industry) || INDUSTRY_TEMPLATES[0];
 
   const goNext = () => {
     setLocalError("");
@@ -175,6 +176,7 @@ export function AccOnboardingWizard({
               {INDUSTRY_TEMPLATES.map(template => <option key={template.id} value={template.id}>{template.label}</option>)}
             </select>
             <span className="small">{INDUSTRY_TEMPLATES.find(template => template.id === industry)?.hint}</span>
+            <span className="accounts-template-features">{selectedTemplate.features.map(feature => <span key={feature}>{feature}</span>)}</span>
           </label>
         </div>
       )}
