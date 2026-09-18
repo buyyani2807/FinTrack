@@ -65,6 +65,22 @@ import {
   markAccountsOnboardingDone,
 } from "./AccOnboardingWizard.jsx";
 import { INDUSTRY_TEMPLATES } from "./AccOnboardingWizard.jsx";
+
+function IndustryTemplateCard({ companyId }) {
+  const [industry, setIndustry] = useState("retail");
+  useEffect(() => {
+    if (!companyId) return;
+    try {
+      setIndustry(localStorage.getItem(`fintrack-accounts-industry-v1:${companyId}`) || "retail");
+    } catch { /* ignore storage access errors */ }
+  }, [companyId]);
+  const template = INDUSTRY_TEMPLATES.find(item => item.id === industry) || INDUSTRY_TEMPLATES[0];
+  return <div className="card accounts-industry-card">
+    <div className="accounts-industry-head"><div><span className="small">Industry setup</span><h2>{template.label}</h2></div><span className="accounts-industry-badge">Template</span></div>
+    <p className="copy">Recommended workflows for this company.</p>
+    <div className="accounts-template-features">{template.features.map(feature => <span key={feature}>{feature}</span>)}</div>
+  </div>;
+}
 import { AccMoreMenu, AccToolbar } from "./AccUi.jsx";
 import {
   BANK_IMPORT_FIELDS,
@@ -2995,6 +3011,8 @@ const openVoucher = () => {
             equationHolds={Boolean(metrics?.equationHolds)}
             integrationEnabled={Boolean(settings?.integrationEnabled)}
           />
+
+          <IndustryTemplateCard companyId={activeCompanyId} />
 
           {accountsAttention?.count > 0 && <AttentionCenterCard attention={accountsAttention} onNavigate={href => {
             trackProductEvent("accounts_attention_navigate", { section: href?.section || "" });
