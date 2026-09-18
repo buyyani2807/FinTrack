@@ -920,24 +920,35 @@ const REPORT_TABS = [
 ];
 
 const MOBILE_TABS = [
-  { id: "overview", label: "Overview" },
-  { id: "vouchers", label: "Transactions" },
+  { id: "overview", label: "Home" },
+  { id: "vouchers", label: "Books" },
   { id: "parties", label: "Parties" },
   { id: "reports", label: "Reports" },
   { id: "more", label: "More" },
 ];
 
+const REPORT_HUB_CARDS = [
+  { id: "daybook", label: "Day Book", copy: "Every sale, purchase, receipt and payment in the period." },
+  { id: "receivables", label: "Receivables", copy: "Who still owes you — overdue first." },
+  { id: "payables", label: "Payables", copy: "What you owe suppliers." },
+  { id: "pnl", label: "Profit & Loss", copy: "Income and expenses for the selected dates." },
+  { id: "balance", label: "Balance Sheet", copy: "Assets, liabilities and equity snapshot." },
+  { id: "trial", label: "Trial Balance", copy: "Check that debits still equal credits." },
+  { id: "gst", label: "GST books", copy: "Calculated GST for review — not portal filing." },
+  { id: "cashflow", label: "Cash Flow", copy: "Money in and out (simplified)." },
+];
+
 const MORE_LINKS = [
-  ["ledger", "Ledger"],
-  ["receivables", "Receivables"],
-  ["payables", "Payables"],
-  ["bank", "Bank Reconciliation"],
-  ["trial", "Trial Balance"],
-  ["pnl", "Profit & Loss"],
-  ["balance", "Balance Sheet"],
-  ["cashbook", "Cashbook"],
-  ["gst", "GST"],
-  ["setup", "Setup"],
+  ["ledger", "Ledger", "One account’s full movement"],
+  ["receivables", "Receivables", "Customer outstanding"],
+  ["payables", "Payables", "Supplier outstanding"],
+  ["bank", "Bank Reconciliation", "Match statement lines"],
+  ["trial", "Trial Balance", "Debit vs credit check"],
+  ["pnl", "Profit & Loss", "Income and expenses"],
+  ["balance", "Balance Sheet", "Assets and liabilities"],
+  ["cashbook", "Cashbook", "Operational cash"],
+  ["gst", "GST", "Books preparation only"],
+  ["setup", "Setup", "Company, GST, locks, backup"],
 ];
 
 function Modal({ title, close, children, actions }) {

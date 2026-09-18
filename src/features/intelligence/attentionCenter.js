@@ -68,6 +68,56 @@ export function buildAttentionCenter({
   };
 }
 
+const SEVERITY_RANK = { high: 0, medium: 1, low: 2 };
+
+/**
+ * Home "Today's actions" list — same verified data as Attention Center,
+ * prioritized for daily collection work. Advisory only.
+ */
+export function buildTodaysActionList(input = {}) {
+  const center = buildAttentionCenter(input);
+  const dailyItems = center.items.filter(item => item.module === "daily");
+  const otherItems = center.items.filter(item => item.module !== "daily");
+  const dailyCap = 5;
+  const items = [];
+
+  if (dailyItems.length > dailyCap) {
+    items.push({
+      id: "daily-collections-today",
+      module: "daily",
+      severity: "high",
+      title: `${dailyItems.length} Daily Finance collections pending today`,
+      detail: "Open today’s collection route to record cash / UPI payments.",
+      actionLabel: "Today’s collections",
+      href: { panel: "daily", section: "collections" },
+    });
+    items.push(...dailyItems.slice(0, dailyCap).map(item => ({
+      ...item,
+      actionLabel: "Collect",
+    })));
+  } else {
+    items.push(...dailyItems.map(item => ({
+      ...item,
+      actionLabel: item.actionLabel === "Open Daily Finance" ? "Collect" : item.actionLabel,
+    })));
+  }
+
+  items.push(...otherItems);
+  items.sort((a, b) => (SEVERITY_RANK[a.severity] ?? 9) - (SEVERITY_RANK[b.severity] ?? 9));
+
+  const capped = items.slice(0, 40);
+  return {
+    ...center,
+    kicker: "Today's actions",
+    count: capped.length,
+    summary: capped.length
+      ? `${capped.length} action${capped.length === 1 ? "" : "s"} for today`
+      : "No actions for today — you’re clear",
+    items: capped,
+    disclaimer: "Built from verified FinTrack records only. Opening an action never changes books until you save a payment or voucher.",
+  };
+}
+
 /** Build chit attention items from upcoming payment rows (same shape as UpcomingPayments). */
 export function buildChitAttentionItems(upcomingRows = []) {
   const rows = upcomingRows || [];

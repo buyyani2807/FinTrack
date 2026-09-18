@@ -279,6 +279,7 @@ export function buildCustomerStatementBundle({
   asOf = todayIso(),
   settings = {},
 } = {}) {
+  const branding = settings || {};
   const related = relatedFinanceAccounts(loans, focusLoan);
   const accounts = related.map(loan => buildFinanceAccountStatement(loan, asOf));
   const selected = selectedAccountId === "all"
@@ -292,11 +293,11 @@ export function buildCustomerStatementBundle({
     phone: customer.phone || "",
     address: customer.address || "",
     customerId: customer.portalId || customer.customerId || financeAccountId(customer),
-    companyName: settings.companyName || "FinTrack",
-    companyPhone: settings.companyPhone || "",
-    companyAddress: settings.companyAddress || "",
-    companyEmail: settings.companyEmail || "",
-    receiptFooter: settings.receiptFooter || "Thank you for your business.",
+    companyName: branding.companyName || "FinTrack",
+    companyPhone: branding.companyPhone || "",
+    companyAddress: branding.companyAddress || "",
+    companyEmail: branding.companyEmail || "",
+    receiptFooter: branding.receiptFooter || "Thank you for your business.",
     accounts: selected,
     allAccounts: accounts,
     money: moneyFn,
@@ -314,6 +315,7 @@ export function buildChitStatementBundle({
   asOf = todayIso(),
   settings = {},
 } = {}) {
+  const branding = settings || {};
   const account = buildChitMemberStatement({
     scheme, enrollment, payments, cycles, bids, lift, predefinedItem, asOf,
   });
@@ -324,11 +326,11 @@ export function buildChitStatementBundle({
     phone: account.phone,
     address: account.address,
     customerId: account.customerId,
-    companyName: settings.companyName || "FinTrack",
-    companyPhone: settings.companyPhone || "",
-    companyAddress: settings.companyAddress || "",
-    companyEmail: settings.companyEmail || "",
-    receiptFooter: settings.receiptFooter || "Thank you for your business.",
+    companyName: branding.companyName || "FinTrack",
+    companyPhone: branding.companyPhone || "",
+    companyAddress: branding.companyAddress || "",
+    companyEmail: branding.companyEmail || "",
+    receiptFooter: branding.receiptFooter || "Thank you for your business.",
     accounts: [account],
     allAccounts: [account],
     money: moneyFn,

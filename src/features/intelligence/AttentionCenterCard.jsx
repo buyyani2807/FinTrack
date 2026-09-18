@@ -1,15 +1,16 @@
 /** Advisory attention list — navigates only; never mutates books. */
 
-export function AttentionCenterCard({ attention, onNavigate }) {
+export function AttentionCenterCard({ attention, onNavigate, kicker }) {
   if (!attention) return null;
 
   const items = attention.items || [];
+  const heading = kicker || attention.kicker || "Attention center";
 
   return (
     <section className="card attention-center">
       <header className="attention-center-head">
         <div>
-          <p className="attention-center-kicker">Attention center</p>
+          <p className="attention-center-kicker">{heading}</p>
           <p className="attention-center-summary">{attention.summary}</p>
         </div>
         {attention.count ? <span className="attention-center-count">{attention.count}</span> : null}

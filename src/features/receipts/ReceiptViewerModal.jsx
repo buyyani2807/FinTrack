@@ -1,5 +1,5 @@
 import { downloadReceiptPdf } from "./receiptPdf.js";
-import { buildWhatsAppMessage, canWhatsAppShare, openWhatsAppShare } from "./receiptWhatsApp.js";
+import { buildWhatsAppMessage, canWhatsAppShare, openManualWhatsAppShare } from "./receiptWhatsApp.js";
 import { formatReceiptDate, withReceiptBranding } from "./receiptModel.js";
 
 export function ReceiptViewerModal({ receipt, settings, token, onLogAction, close }) {
@@ -48,7 +48,7 @@ export function ReceiptViewerModal({ receipt, settings, token, onLogAction, clos
     </div>
     <div className="row spacer">
       <button type="button" className="btn" onClick={async () => { await log("downloaded"); downloadReceiptPdf(receipt); }}>Download PDF</button>
-      {whatsAppAvailable && <button type="button" className="btn whatsapp" onClick={async () => { await log("whatsapp_clicked"); openWhatsAppShare({ phone: receipt.customerPhone, message: buildWhatsAppMessage(brandedReceipt, settings) }); }}>WhatsApp</button>}
+      {whatsAppAvailable && <button type="button" className="btn whatsapp" onClick={() => { openManualWhatsAppShare({ phone: receipt.customerPhone, message: buildWhatsAppMessage(brandedReceipt, settings) }); log("whatsapp_clicked"); }}>WhatsApp</button>}
       <button type="button" className="btn primary" onClick={close}>Close</button>
     </div>
   </div></div>;

@@ -7,7 +7,7 @@ import {
   todayIso,
 } from "./statementModel.js";
 import { downloadCustomerStatementPdf } from "./statementPdf.js";
-import { canWhatsAppShare, openWhatsAppShare } from "../receipts/receiptWhatsApp.js";
+import { canWhatsAppShare, openManualWhatsAppShare } from "../receipts/receiptWhatsApp.js";
 import { formatInr } from "../../lib/formatMoney.js";
 
 const money = formatInr;
@@ -132,7 +132,7 @@ export function CustomerStatementPage({
 
   const shareWhatsApp = () => {
     if (!canWhatsAppShare(bundle.phone)) return;
-    openWhatsAppShare({ phone: bundle.phone, message: statementWhatsAppMessage(bundle) });
+    openManualWhatsAppShare({ phone: bundle.phone, message: statementWhatsAppMessage(bundle) });
   };
 
   return <main className="shell customer-statement-page">

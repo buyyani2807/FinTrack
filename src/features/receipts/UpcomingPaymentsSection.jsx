@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useState } from "react";
 import { buildChitUpcomingRows, buildMonthlyUpcoming, buildReminderReceipt, filterUpcomingPayments, formatDueDate, formatDueLabel } from "./upcomingPayments.js";
-import { buildReminderMessage, canWhatsAppShare, openWhatsAppShare } from "./receiptWhatsApp.js";
+import { buildReminderMessage, canWhatsAppShare, openManualWhatsAppShare } from "./receiptWhatsApp.js";
 import { loadPaymentReminderLog, loadUpcomingChitPayments, markPaymentReminderSent } from "../../lib/financeRepository.js";
 import { formatInr } from "../../lib/formatMoney.js";
 
@@ -10,7 +10,7 @@ const reminderKey = item => `${item.type}-${item.sourceId}-${item.cycleKey}-${it
 const openReminderWhatsApp = (item, settings) => {
   const templateKey = item.type === "monthly" ? "monthly_reminder" : "chit_reminder";
   const receipt = buildReminderReceipt(item, settings);
-  openWhatsAppShare({ phone: item.phone, message: buildReminderMessage(receipt, settings, templateKey) });
+  return openManualWhatsAppShare({ phone: item.phone, message: buildReminderMessage(receipt, settings, templateKey) });
 };
 
 const MONTHLY_FILTERS = [["7days", "7 days"], ["3days", "3 days"], ["today", "Due today"], ["all", "All"]];
@@ -81,7 +81,8 @@ export function UpcomingPaymentsSection({ loans = [], token, settings, workspace
 
   const sendReminder = item => {
     if (!canWhatsAppShare(item.phone)) return;
-    openReminderWhatsApp(item, settings);
+    const opened = openReminderWhatsApp(item, settings);
+    if (!opened?.opened) return;
     setOpenedKeys(current => ({ ...current, [reminderKey(item)]: true }));
   };
 
@@ -200,8 +201,8 @@ export function UpcomingPaymentCard({ item, settings, token, reminderLog = [], o
   const [opened, setOpened] = useState(false);
   const sendReminder = () => {
     if (!canWhatsAppShare(item.phone)) return;
-    openReminderWhatsApp(item, settings);
-    setOpened(true);
+    const opened = openReminderWhatsApp(item, settings);
+    if (opened?.opened) setOpened(true);
   };
   const confirmSent = async () => {
     await markPaymentReminderSent(token, item.type === "monthly" ? "monthly_finance" : "chit_fund", item.sourceId, item.cycleKey, item.daysRemaining);

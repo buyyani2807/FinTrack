@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { formatReceiptDate } from "../receipts/receiptModel.js";
-import { canWhatsAppShare, openWhatsAppShare } from "../receipts/receiptWhatsApp.js";
+import { canWhatsAppShare, openManualWhatsAppShare } from "../receipts/receiptWhatsApp.js";
 import { buildArReminderMessage, buildOutstandingSummaryMessage, buildPartyStatementMessage, buildPaymentAdviceMessage, buildPurchaseDocumentMessage, buildSalesInvoiceMessage } from "./salesInvoiceModel.js";
 import { downloadSalesInvoicePdf } from "./salesInvoicePdf.js";
 import { downloadPartyStatementPdf } from "./partyStatementPdf.js";
@@ -71,7 +71,7 @@ export function SalesInvoiceViewerModal({ invoice, settings = {}, close }) {
             <button
               type="button"
               className="btn whatsapp"
-              onClick={() => openWhatsAppShare({
+              onClick={() => openManualWhatsAppShare({
                 phone: invoice.customerPhone,
                 message: buildSalesInvoiceMessage(invoice, settings),
               })}
@@ -101,7 +101,7 @@ export function SalesInvoiceActions({ invoice, settings = {}, compact = false })
             <button
               type="button"
               className="btn whatsapp"
-              onClick={() => openWhatsAppShare({
+              onClick={() => openManualWhatsAppShare({
                 phone: invoice.customerPhone,
                 message: buildSalesInvoiceMessage(invoice, settings),
               })}
@@ -137,7 +137,7 @@ export function SalesInvoiceSuccessModal({ invoice, settings = {}, close }) {
                 <button
                   type="button"
                   className="btn whatsapp"
-                  onClick={() => openWhatsAppShare({
+                  onClick={() => openManualWhatsAppShare({
                     phone: invoice.customerPhone,
                     message: buildSalesInvoiceMessage(invoice, settings),
                   })}
@@ -168,7 +168,7 @@ export function ArReminderButton({ row, settings = {}, company = {}, workspace =
       type="button"
       className="btn whatsapp"
       title="Open WhatsApp payment reminder"
-      onClick={() => openWhatsAppShare({
+      onClick={() => openManualWhatsAppShare({
         phone,
         message: buildArReminderMessage(row, settings, company, workspace),
       })}
@@ -189,7 +189,7 @@ export function PaymentAdviceButton({ row, settings = {}, company = {}, workspac
       type="button"
       className="btn whatsapp"
       title="Open WhatsApp payment advice"
-      onClick={() => openWhatsAppShare({
+      onClick={() => openManualWhatsAppShare({
         phone,
         message: buildPaymentAdviceMessage(row, settings, company, workspace),
       })}
@@ -210,7 +210,7 @@ export function PurchaseDocumentButton({ voucher, party, settings = {}, company 
       type="button"
       className="btn whatsapp"
       title="Share purchase document on WhatsApp"
-      onClick={() => openWhatsAppShare({
+      onClick={() => openManualWhatsAppShare({
         phone,
         message: buildPurchaseDocumentMessage(voucher, party, settings, company, workspace),
       })}
@@ -256,7 +256,7 @@ export function PartyStatementButton({
           type="button"
           className="btn whatsapp"
           title="Send party statement on WhatsApp"
-          onClick={() => openWhatsAppShare({
+          onClick={() => openManualWhatsAppShare({
             phone,
             message: buildPartyStatementMessage({
               party,
@@ -293,7 +293,7 @@ export function OutstandingWhatsAppButton({
       type="button"
       className="btn whatsapp"
       title={kind === "payable" ? "WhatsApp outstanding payable" : "WhatsApp outstanding receivable"}
-      onClick={() => openWhatsAppShare({
+      onClick={() => openManualWhatsAppShare({
         phone,
         message: buildOutstandingSummaryMessage({
           party,

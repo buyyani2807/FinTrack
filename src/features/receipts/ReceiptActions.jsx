@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { downloadReceiptPdf } from "./receiptPdf.js";
-import { buildWhatsAppMessage, canWhatsAppShare, openWhatsAppShare } from "./receiptWhatsApp.js";
+import { buildWhatsAppMessage, canWhatsAppShare, openManualWhatsAppShare } from "./receiptWhatsApp.js";
 import { formatReceiptDate, withReceiptBranding } from "./receiptModel.js";
 import { ReceiptViewerModal } from "./ReceiptViewerModal.jsx";
 
@@ -25,13 +25,13 @@ export function ReceiptActions({ receipt, settings, token, onLogAction, compact 
     downloadReceiptPdf(brandedReceipt);
   };
 
-  const shareWhatsApp = async () => {
+  const shareWhatsApp = () => {
     if (!whatsAppAvailable) return;
-    await log("whatsapp_clicked");
-    openWhatsAppShare({
+    openManualWhatsAppShare({
       phone: receipt.customerPhone,
       message: buildWhatsAppMessage(brandedReceipt, settings),
     });
+    log("whatsapp_clicked");
   };
 
   if (!receipt?.receiptNumber) return <span className="small">—</span>;
@@ -61,10 +61,10 @@ export function ReceiptSuccessModal({ receipt, settings, token, onLogAction, clo
 
   const viewReceipt = async () => { await log("viewed"); setViewOpen(true); };
   const downloadPdf = async () => { await log("downloaded"); downloadReceiptPdf(brandedReceipt); };
-  const shareWhatsApp = async () => {
+  const shareWhatsApp = () => {
     if (!whatsAppAvailable) return;
-    await log("whatsapp_clicked");
-    openWhatsAppShare({ phone: receipt.customerPhone, message: buildWhatsAppMessage(brandedReceipt, settings) });
+    openManualWhatsAppShare({ phone: receipt.customerPhone, message: buildWhatsAppMessage(brandedReceipt, settings) });
+    log("whatsapp_clicked");
   };
 
   return <>

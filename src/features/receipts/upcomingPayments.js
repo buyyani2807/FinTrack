@@ -210,6 +210,7 @@ export function reminderStatusLabel(daysBefore, sent = false) {
 }
 
 export function buildReminderReceipt(item, settings = {}) {
+  const branding = settings || {};
   return {
     customerName: item.customerName,
     customerPhone: item.phone,
@@ -220,7 +221,7 @@ export function buildReminderReceipt(item, settings = {}) {
     schemeName: item.schemeName || "",
     chitType: item.chitTypeLabel || chitTypeLabel(item.chitType) || "",
     chitFields: item.type === "chit" ? { month: item.monthNumber, totalMonths: item.totalMonths } : null,
-    companyName: settings.companyName || "FinTrack",
+    companyName: branding.companyName || "FinTrack",
     money: formatInr,
   };
 }
