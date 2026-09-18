@@ -10,6 +10,21 @@ const STEPS = [
   { id: "done", title: "Done" },
 ];
 
+export const INDUSTRY_TEMPLATES = [
+  { id: "retail", label: "Retail shop", hint: "Sales, stock, cash and customer balances" },
+  { id: "wholesale", label: "Wholesale / distribution", hint: "Credit sales, suppliers and inventory movement" },
+  { id: "manufacturing", label: "Manufacturing", hint: "Raw materials, production costs, finished goods and stock" },
+  { id: "services", label: "Service business", hint: "Projects, invoices, expenses and receivables" },
+  { id: "finance", label: "Finance / collections", hint: "Customer repayments, collection staff and finance accounts" },
+  { id: "chit", label: "Chit Fund operator", hint: "Schemes, members, auctions, dividends and payouts" },
+];
+
+const industryStorageKey = companyId => `fintrack-accounts-industry-v1:${companyId || "none"}`;
+const readIndustry = companyId => {
+  if (!companyId || typeof localStorage === "undefined") return "retail";
+  try { return localStorage.getItem(industryStorageKey(companyId)) || "retail"; } catch { return "retail"; }
+};
+
 const stepStorageKey = companyId => `fintrack-accounts-onboarding-step-v1:${companyId || "none"}`;
 
 const readStoredStep = companyId => {
@@ -59,6 +74,7 @@ export function AccOnboardingWizard({
   const companyId = company?.id || "";
   const [stepIndex, setStepIndex] = useState(() => readStoredStep(companyId));
   const [companyName, setCompanyName] = useState(company?.name || "");
+  const [industry, setIndustry] = useState(() => readIndustry(companyId));
   const [booksStartedOn, setBooksStartedOn] = useState(company?.booksStartedOn || "2026-04-01");
   const [gstRegistration, setGstRegistration] = useState(company?.gstRegistration || "unregistered");
   const [gstin, setGstin] = useState(company?.gstin || "");
@@ -98,7 +114,8 @@ export function AccOnboardingWizard({
     try {
       if (step.id === "company") {
         if (!String(companyName || "").trim()) throw new Error("Business name is required.");
-        if (onSaveCompany) await onSaveCompany({ companyName: companyName.trim(), booksStartedOn });
+        try { localStorage.setItem(industryStorageKey(companyId), industry); } catch { /* ignore */ }
+        if (onSaveCompany) await onSaveCompany({ companyName: companyName.trim(), booksStartedOn, industry });
       }
       if (step.id === "gst" && canAdmin && onSaveGst) {
         await onSaveGst({
@@ -152,6 +169,12 @@ export function AccOnboardingWizard({
           </label>
           <label className="accounts-filter-field"><span className="small">Books start date</span>
             <input type="date" value={booksStartedOn} onChange={event => setBooksStartedOn(event.target.value)} />
+          </label>
+          <label className="accounts-filter-field span"><span className="small">Industry template</span>
+            <select value={industry} onChange={event => setIndustry(event.target.value)}>
+              {INDUSTRY_TEMPLATES.map(template => <option key={template.id} value={template.id}>{template.label}</option>)}
+            </select>
+            <span className="small">{INDUSTRY_TEMPLATES.find(template => template.id === industry)?.hint}</span>
           </label>
         </div>
       )}
