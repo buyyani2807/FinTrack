@@ -192,7 +192,8 @@ import {
 import { buildAccountsAttentionItems } from "../intelligence/attentionCenter.js";
 import { AttentionCenterCard } from "../intelligence/AttentionCenterCard.jsx";
 import { trackProductEvent } from "../commercial/productAnalytics.js";
-import { resolveEntitlements, SAAS_TIER_BLUEPRINT } from "../commercial/entitlements.js";
+import { resolveEntitlements } from "../commercial/entitlements.js";
+import { SAAS_TIER_BLUEPRINT } from "../commercial/featurePacks.js";
 import {
   assertVoucherAttachmentMeta,
   attachmentDownloadHref,
