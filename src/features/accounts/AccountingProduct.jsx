@@ -82,7 +82,7 @@ function IndustryTemplateCard({ companyId }) {
   </div>;
 }
 
-function AccountsBusinessPulse({ metrics, receivables, payables, items, stockMovements, onNavigate }) {
+function AccountsBusinessPulse({ metrics, receivables, payables, items, stockMovements, attention, onNavigate }) {
   const lowStockCount = useMemo(() => (items || []).filter(item => {
     const current = Number(item.current_stock ?? item.stock ?? item.quantity ?? 0);
     const reorder = Number(item.reorder_level ?? item.reorderPoint ?? 0);
@@ -111,6 +111,11 @@ function AccountsBusinessPulse({ metrics, receivables, payables, items, stockMov
       <span className="small">Quick actions</span>
       {actions.map(action => <button key={action.label} type="button" className={`accounts-business-action ${action.tone}`} onClick={() => onNavigate(action.section)}>{action.label}<span aria-hidden="true">→</span></button>)}
     </div>
+    {attention?.count > 0 && <div className="accounts-business-alert" role="status">
+      <span className="accounts-business-alert-icon" aria-hidden="true">!</span>
+      <div><strong>{attention.summary}</strong><span className="small"> Review the most urgent item to keep your books moving.</span></div>
+      <button type="button" className="btn" onClick={() => onNavigate(attention.items?.[0]?.href || "reports")}>Review now →</button>
+    </div>}
   </section>;
 }
 import { AccMoreMenu, AccToolbar } from "./AccUi.jsx";
@@ -3073,7 +3078,14 @@ const openVoucher = () => {
             payables={overviewApAging}
             items={items}
             stockMovements={stockMovements}
-            onNavigate={openSection}
+            attention={accountsAttention}
+            onNavigate={target => {
+              if (typeof target === "string") openSection(target);
+              else if (target?.section) {
+                openSection(target.section);
+                if (target.reportTab) setReportTab(target.reportTab);
+              }
+            }}
           />
 
           {accountsAttention?.count > 0 && <AttentionCenterCard attention={accountsAttention} onNavigate={href => {
