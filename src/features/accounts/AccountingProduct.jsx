@@ -1648,6 +1648,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
   const [accountsAccessRole, setAccountsAccessRole] = useState(workspace?.role === "owner" ? "owner" : null);
   const [roleDraft, setRoleDraft] = useState({ userId: "", role: "accountant" });
   const [inviteDraft, setInviteDraft] = useState({ email: "", role: "viewer", note: "" });
+  const [inviteEmailDraft, setInviteEmailDraft] = useState(null);
   const [teamInvites, setTeamInvites] = useState([]);
   const [recurringTemplates, setRecurringTemplates] = useState([]);
   const [recurringDraft, setRecurringDraft] = useState(() => emptyRecurringDraft());
@@ -4284,11 +4285,13 @@ const openVoucher = () => {
                 setInviteDraft({ email: "", role: "viewer", note: "" });
                 setTeamInvites(await listTeamInvites(token));
                 setAccountsRoles(await loadAccountsRoles(token));
+                if (result?.status === "pending") setInviteEmailDraft({ email: result.email, role: result.role, expiresAt: result.expiresAt });
                 if (result?.status === "assigned") {
                   setNotice(`Assigned ${result.role} to ${result.email}.`);
                 }
               }, inviteDraft.email ? `Invite processed for ${inviteDraft.email.trim()}.` : "Invite saved.")}>{saving ? "Saving…" : "Send invite"}</button>
             </div>
+            {inviteEmailDraft && <div className="notice accounts-invite-email" role="status"><strong>Invite recorded for {inviteEmailDraft.email}</strong><p className="small">The current backend does not send email automatically. Use your email client to send the instructions below; after the user signs up with this email, the invite is claimed automatically.</p><button type="button" className="btn" onClick={() => { const subject = encodeURIComponent(`FinTrack Accounts access · ${inviteEmailDraft.role}`); const body = encodeURIComponent(`You have been invited to FinTrack Accounts as ${inviteEmailDraft.role}. Sign up or sign in using this email address. Your Accounts access will be activated automatically after sign-in.`); window.location.href = `mailto:${inviteEmailDraft.email}?subject=${subject}&body=${body}`; }}>Open email draft</button><button type="button" className="btn" onClick={() => setInviteEmailDraft(null)}>Dismiss</button></div>}
             <div className="table spacer acc-table-wrap"><table><thead><tr><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody>
               {teamInvites.map(row => (
                 <tr key={row.id}>
