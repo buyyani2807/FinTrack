@@ -95,6 +95,22 @@ function parsePartyCsv(text) {
   }).filter(row => row.name.trim());
 }
 
+const CRM_STAGES = ["Lead", "Contacted", "Quoted", "Won", "Lost"];
+function CustomerPipeline({ companyId, parties = [] }) {
+  const storageKey = `fintrack-accounts-crm-v1:${companyId || "default"}`;
+  const [stages, setStages] = useState({});
+  useEffect(() => { try { setStages(JSON.parse(localStorage.getItem(storageKey) || "{}")); } catch { setStages({}); } }, [storageKey]);
+  const customers = parties.filter(party => party.partyType === "customer" && party.isActive !== false);
+  const setStage = (id, stage) => setStages(current => { const next = { ...current, [id]: stage }; try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* ignore storage errors */ } return next; });
+  return <div className="acc-panel acc-crm-panel">
+    <div className="accounts-panel-head"><div><h1 className="accounts-panel-title">Customer pipeline</h1><p className="copy">Track customer conversations from first contact to won or lost. Pipeline stages never change accounting balances.</p></div><span className="accounts-industry-badge">CRM</span></div>
+    <div className="crm-pipeline-grid">{CRM_STAGES.map(stage => {
+      const rows = customers.filter(customer => (stages[customer.id] || "Lead") === stage);
+      return <section className="card crm-stage" key={stage}><div className="crm-stage-head"><strong>{stage}</strong><span>{rows.length}</span></div>{rows.map(customer => <article className="crm-customer-card" key={customer.id}><strong>{customer.name}</strong><span className="small">{customer.phone || customer.email || "No contact details"}</span><select value={stage} onChange={event => setStage(customer.id, event.target.value)} aria-label={`Stage for ${customer.name}`}>{CRM_STAGES.map(option => <option key={option}>{option}</option>)}</select></article>)}{!rows.length && <p className="small">No customers here.</p>}</section>;
+    })}</div>
+  </div>;
+}
+
 function AccountsBusinessPulse({ metrics, receivables, payables, items, stockMovements, attention, onNavigate, onOpenCollections }) {
   const lowStockCount = useMemo(() => (items || []).filter(item => {
     const current = Number(item.current_stock ?? item.stock ?? item.quantity ?? 0);
@@ -962,6 +978,7 @@ const SECTIONS = [
   { id: "receivables", label: "Receivables", group: "Parties" },
   { id: "payables", label: "Payables", group: "Parties" },
   { id: "parties", label: "Party Ledger", group: "Parties" },
+  { id: "crm", label: "Customer Pipeline", group: "Parties" },
   { id: "reports", label: "Reports", group: "Reports" },
   { id: "bank", label: "Bank Reconciliation", group: "Reports" },
   { id: "pnl", label: "Profit & Loss", group: "Reports" },
@@ -1054,6 +1071,7 @@ const MORE_LINKS = [
   ["pnl", "Profit & Loss", "Income and expenses"],
   ["balance", "Balance Sheet", "Assets and liabilities"],
   ["cashbook", "Cashbook", "Operational cash"],
+  ["crm", "Customer Pipeline", "Follow up customer opportunities"],
   ["gst", "GST", "Books preparation only"],
   ["setup", "Setup", "Company, GST, locks, backup"],
 ];
@@ -3943,6 +3961,8 @@ const openVoucher = () => {
           {!statements.length && <AccEmpty title="No bank statements yet" copy="Add opening, closing, and statement lines above. Matching never changes the books." />}
         </div>}
 
+        {section === "crm" && <CustomerPipeline companyId={activeCompanyId} parties={parties} />}
+
         {section === "setup" && <div className="acc-panel acc-setup">
           <p className="copy acc-setup-lead">Books, chart, parties, GST, and locks for {activeCompany?.name || "this Accounts company"} only. Daily Finance, Monthly Finance, and Chit Fund stay on the Finance workspace.</p>
           <AccSetupSection icon="FY" title="Company / financial year" copy="Indian financial year is 1 April to 31 March. Saving the name here updates the current Accounts company, not Finance.">
@@ -4146,6 +4166,14 @@ const openVoucher = () => {
               <AccPager page={pagedSetupParties.page} pages={pagedSetupParties.pages} total={pagedSetupParties.total} onPage={setListPage} noun="parties" />
             </>}
           </AccSetupSection>
+          <AccSetupSection icon="✓" title="Production readiness" copy="A practical checklist for running FinTrack safely in production." collapsible summary="Operational safeguards">
+            <div className="production-readiness-grid">
+              <div className="card"><strong>Backups</strong><p className="small">Download a company backup after each important month-end and store it outside the browser.</p><button type="button" className="btn" onClick={downloadCompanyBackup}>Download backup now</button></div>
+              <div className="card"><strong>Restore drill</strong><p className="small">Test restore in a separate empty company before relying on a backup. Existing restore safeguards prevent overwriting posted books.</p><span className="acc-chip ok">Protected workflow</span></div>
+              <div className="card"><strong>Period control</strong><p className="small">Lock completed periods so posted vouchers cannot be changed accidentally.</p><button type="button" className="btn" onClick={() => document.getElementById("accounts-period-lock")?.scrollIntoView({ behavior: "smooth" })}>Open period locks</button></div>
+              <div className="card"><strong>Scale safely</strong><p className="small">Use date filters, company separation, and regular exports as transaction volume grows.</p><span className="acc-chip">Company isolated</span></div>
+            </div>
+          </AccSetupSection>
           <AccSetupSection
             icon="↔"
             title="Accounting integration"
@@ -4180,7 +4208,7 @@ const openVoucher = () => {
               onAdjustStock={payload => run(() => adjustStock(token, payload), "Stock adjustment saved.")}
             />
           </AccSetupSection>
-          <AccSetupSection icon="L" title="Period locking" copy="Lock a closed period so posted vouchers in that range cannot be changed. Owner only.">
+          <div id="accounts-period-lock"><AccSetupSection icon="L" title="Period locking" copy="Lock a closed period so posted vouchers in that range cannot be changed. Owner only.">
             {!canAdmin && <p className="small">Only the business owner can lock or reopen periods.</p>}
             {canAdmin && <>
             <div className="form">
@@ -4201,7 +4229,7 @@ const openVoucher = () => {
               {locks.map(lock => <tr key={lock.id}><td>{lock.periodFrom} to {lock.periodTo}</td><td>{lock.isLocked ? "Locked" : "Reopened"}</td></tr>)}
               {!locks.length && <tr><td colSpan="2">No period locks yet.</td></tr>}
             </tbody></table></div>}
-          </AccSetupSection>
+          </AccSetupSection></div>
           {canAdmin && <AccSetupSection
             icon="R"
             title="Accounts access roles"
