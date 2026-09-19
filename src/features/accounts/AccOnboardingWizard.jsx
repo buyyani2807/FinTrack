@@ -13,10 +13,14 @@ const STEPS = [
 export const INDUSTRY_TEMPLATES = [
   { id: "retail", label: "Retail shop", hint: "Sales, stock, cash and customer balances", features: ["Sales invoices", "Fast stock lookup", "Cash and UPI receipts"] },
   { id: "wholesale", label: "Wholesale / distribution", hint: "Credit sales, suppliers and inventory movement", features: ["Customer credit", "Supplier balances", "Bulk inventory"] },
+  { id: "hardware", label: "Hardware store", hint: "Fast-moving inventory, suppliers and credit sales", features: ["Item categories", "Supplier purchases", "Receivables"] },
+  { id: "jewellery", label: "Jewellery business", hint: "High-value items, customer balances and detailed sales", features: ["Item details", "Customer ledger", "High-value sales"] },
   { id: "manufacturing", label: "Manufacturing", hint: "Raw materials, production costs, finished goods and stock", features: ["Raw materials", "Work in progress", "Finished goods", "Production costing"] },
   { id: "services", label: "Service business", hint: "Projects, invoices, expenses and receivables", features: ["Service invoices", "Project expenses", "Receivables"] },
   { id: "finance", label: "Finance / collections", hint: "Customer repayments, collection staff and finance accounts", features: ["Daily finance", "Monthly interest", "Collection staff"] },
   { id: "chit", label: "Chit Fund operator", hint: "Schemes, members, auctions, dividends and payouts", features: ["Schemes", "Monthly auctions", "Dividends and payouts"] },
+  { id: "school", label: "School / coaching centre", hint: "Student fees, expenses and outstanding balances", features: ["Student parties", "Fee receipts", "Outstanding fees"] },
+  { id: "medical", label: "Medical / pharmacy", hint: "Item stock, purchases, sales and expiry-aware workflows", features: ["Stock items", "Purchase tracking", "Sales and receivables"] },
 ];
 
 const industryStorageKey = companyId => `fintrack-accounts-industry-v1:${companyId || "none"}`;
