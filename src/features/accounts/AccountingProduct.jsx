@@ -82,6 +82,19 @@ function IndustryTemplateCard({ companyId }) {
   </div>;
 }
 
+function parsePartyCsv(text) {
+  const rows = String(text || "").split(/\r?\n/).map(row => row.trim()).filter(Boolean);
+  if (!rows.length) return [];
+  const cells = row => row.match(/(?:"(?:[^"]|"")*"|[^,])+/g)?.map(value => value.trim().replace(/^"|"$/g, "").replace(/""/g, '"')) || [];
+  const headers = cells(rows[0]).map(value => value.toLowerCase().replace(/[^a-z0-9]+/g, ""));
+  const index = name => headers.findIndex(value => value === name || value.includes(name));
+  const at = (values, names) => { const position = names.map(index).find(value => value >= 0); return position >= 0 ? values[position] || "" : ""; };
+  return rows.slice(1).map(row => {
+    const values = cells(row);
+    return { partyType: (at(values, ["type", "partytype"]) || "customer").toLowerCase(), name: at(values, ["name", "partyname"]), phone: at(values, ["phone", "mobile"]), email: at(values, ["email"]), address: at(values, ["address"]), gstin: at(values, ["gstin"]), notes: at(values, ["notes", "note"]) };
+  }).filter(row => row.name.trim());
+}
+
 function AccountsBusinessPulse({ metrics, receivables, payables, items, stockMovements, attention, onNavigate, onOpenCollections }) {
   const lowStockCount = useMemo(() => (items || []).filter(item => {
     const current = Number(item.current_stock ?? item.stock ?? item.quantity ?? 0);
@@ -1578,6 +1591,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
   const [simpleRequestId, setSimpleRequestId] = useState(() => newClientRequestId());
   const [lines, setLines] = useState([emptyLine(), emptyLine()]);
   const [partyForm, setPartyForm] = useState(emptyPartyForm);
+  const [partyImportStatus, setPartyImportStatus] = useState("");
   const [coaForm, setCoaForm] = useState(emptyCoaForm);
   const [setupForm, setSetupForm] = useState({ companyName: "", booksStartedOn: todayIso() });
   const [lockForm, setLockForm] = useState({ from: fy.from, to: fy.to, reason: "" });
@@ -2412,6 +2426,23 @@ const openVoucher = () => {
       setShowParty(false);
       setPartyForm(emptyPartyForm());
     }, partyForm.id ? "Party updated successfully" : createdLabel);
+  };
+
+  const importParties = async event => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    const rows = parsePartyCsv(await file.text());
+    if (!rows.length) { setError("No valid party rows found. Use a CSV with a Name column."); return; }
+    setPartyImportStatus(`Importing ${rows.length} parties…`);
+    try {
+      for (const row of rows) await createParty(token, { ...emptyPartyForm(), ...row, partyType: ["customer", "supplier", "employee", "agent", "other"].includes(row.partyType) ? row.partyType : "customer" });
+      setPartyImportStatus(`${rows.length} parties imported.`);
+      await refresh();
+    } catch (err) {
+      setError(err?.message || "Could not import parties.");
+      setPartyImportStatus("");
+    }
   };
 
   const requestDeleteParty = party => {
@@ -4030,7 +4061,7 @@ const openVoucher = () => {
             icon="P"
             title="Parties"
             copy="Customers, suppliers, employees, agents, and others used only by Accounts. They do not have to exist in Daily Finance, Monthly Finance, or Chit Fund."
-            actions={<button type="button" className="btn primary" onClick={() => openParty()}>+ Add Party</button>}
+            actions={<div className="acc-btn-group"><label className="btn">Import CSV<input type="file" accept=".csv,text/csv" hidden onChange={importParties} /></label><button type="button" className="btn primary" onClick={() => openParty()}>+ Add Party</button></div>}
             collapsible
             summary={`${parties.length} ${parties.length === 1 ? "party" : "parties"}`}
           >
@@ -4063,6 +4094,7 @@ const openVoucher = () => {
                 ? `${setupParties.length} of ${parties.length} ${parties.length === 1 ? "party" : "parties"}`
                 : `${parties.length} ${parties.length === 1 ? "party" : "parties"}`}
             </p>
+            {partyImportStatus && <p className="small accounts-notice-ok" role="status">{partyImportStatus}</p>}
             {!parties.length ? (
               <AccEmpty title="No parties yet" copy="Add customers and suppliers to start managing your accounting relationships." actionLabel="+ Add Party" onAction={() => openParty()} />
             ) : !setupParties.length ? (
