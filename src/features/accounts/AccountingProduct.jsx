@@ -4209,6 +4209,10 @@ const openVoucher = () => {
             collapsible
             summary={`${accountsRoles.length} assigned · ${teamInvites.filter(row => row.status === "pending").length} pending`}
           >
+            <div className="accounts-collab-guide">
+              <div><strong>Recommended collaboration setup</strong><p className="small">Give your accountant <b>Accountant</b> access to post and reconcile. Give an external reviewer <b>Viewer</b> access. The owner remains the only user who can manage roles, lock periods, or change company settings.</p></div>
+              <span className="acc-chip ok">Owner controlled</span>
+            </div>
             <h4 className="acc-subsection-title">Invite by email</h4>
             <div className="form">
               <Field label="Email"><input type="email" value={inviteDraft.email} onChange={event => setInviteDraft(current => ({ ...current, email: event.target.value }))} placeholder="ca@example.com" /></Field>
