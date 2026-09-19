@@ -122,6 +122,14 @@ export const loadParties = token => wrap(
   accQuery(`/rest/v1/acc_parties?select=id,party_type,name,phone,email,address,gstin,state_code,gst_registration,notes,is_active&order=name.asc${companyEq()}`, token).then(rows => rows.map(mapParty)),
 );
 
+export const loadPartyPipeline = token => wrap(
+  supabase.rpc("acc_list_party_pipeline", { input_company_id: activeCompanyId }, token).then(rows => (Array.isArray(rows) ? rows : []).map(row => ({ partyId: row.party_id, stage: row.stage }))),
+);
+
+export const setPartyPipelineStage = (token, partyId, stage) => wrap(
+  supabase.rpc("acc_set_party_pipeline", { input_company_id: activeCompanyId, input_party_id: partyId, input_stage: stage }, token),
+);
+
 export const loadVouchers = token => wrap(
   Promise.all([
     accQuery(`/rest/v1/acc_vouchers?select=id,voucher_type,voucher_number,voucher_date,narration,status,party_id,source_module,source_type,source_transaction_id,cancel_reason,due_date,settlements,created_at,posted_at&order=voucher_date.desc,voucher_number.desc&limit=2000${companyEq()}`, token)

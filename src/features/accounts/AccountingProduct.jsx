@@ -21,6 +21,7 @@ import {
   loadBankStatements,
   loadChartOfAccounts,
   loadParties,
+  loadPartyPipeline,
   loadPeriodLocks,
   loadVoucherAttachments,
   loadVouchers,
@@ -37,6 +38,7 @@ import {
   saveAccountingSettings,
   saveGstSettings,
   setAccountingIntegration,
+  setPartyPipelineStage,
   setActiveAccountsCompanyId,
   setAccountsUserRole,
   setItemActive,
@@ -96,17 +98,15 @@ function parsePartyCsv(text) {
 }
 
 const CRM_STAGES = ["Lead", "Contacted", "Quoted", "Won", "Lost"];
-function CustomerPipeline({ companyId, parties = [] }) {
-  const storageKey = `fintrack-accounts-crm-v1:${companyId || "default"}`;
-  const [stages, setStages] = useState({});
-  useEffect(() => { try { setStages(JSON.parse(localStorage.getItem(storageKey) || "{}")); } catch { setStages({}); } }, [storageKey]);
+function CustomerPipeline({ companyId, parties = [], pipeline = {}, onStageChange, saving = false }) {
+  const stages = pipeline;
   const customers = parties.filter(party => party.partyType === "customer" && party.isActive !== false);
-  const setStage = (id, stage) => setStages(current => { const next = { ...current, [id]: stage }; try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* ignore storage errors */ } return next; });
+  const setStage = (id, stage) => onStageChange?.(id, stage);
   return <div className="acc-panel acc-crm-panel">
     <div className="accounts-panel-head"><div><h1 className="accounts-panel-title">Customer pipeline</h1><p className="copy">Track customer conversations from first contact to won or lost. Pipeline stages never change accounting balances.</p></div><span className="accounts-industry-badge">CRM</span></div>
     <div className="crm-pipeline-grid">{CRM_STAGES.map(stage => {
       const rows = customers.filter(customer => (stages[customer.id] || "Lead") === stage);
-      return <section className="card crm-stage" key={stage}><div className="crm-stage-head"><strong>{stage}</strong><span>{rows.length}</span></div>{rows.map(customer => <article className="crm-customer-card" key={customer.id}><strong>{customer.name}</strong><span className="small">{customer.phone || customer.email || "No contact details"}</span><select value={stage} onChange={event => setStage(customer.id, event.target.value)} aria-label={`Stage for ${customer.name}`}>{CRM_STAGES.map(option => <option key={option}>{option}</option>)}</select></article>)}{!rows.length && <p className="small">No customers here.</p>}</section>;
+      return <section className="card crm-stage" key={stage}><div className="crm-stage-head"><strong>{stage}</strong><span>{rows.length}</span></div>{rows.map(customer => <article className="crm-customer-card" key={customer.id}><strong>{customer.name}</strong><span className="small">{customer.phone || customer.email || "No contact details"}</span><select disabled={saving} value={stage} onChange={event => setStage(customer.id, event.target.value)} aria-label={`Stage for ${customer.name}`}>{CRM_STAGES.map(option => <option key={option}>{option}</option>)}</select></article>)}{!rows.length && <p className="small">No customers here.</p>}</section>;
     })}</div>
   </div>;
 }
@@ -1575,6 +1575,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
   const [salesInvoiceView, setSalesInvoiceView] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [parties, setParties] = useState([]);
+  const [partyPipeline, setPartyPipeline] = useState({});
   const [vouchers, setVouchers] = useState([]);
   const [items, setItems] = useState([]);
   const [itemCategories, setItemCategories] = useState([]);
@@ -1703,10 +1704,11 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
         setActiveAccountsCompanyId(null);
         setActiveCompanyId("");
       }
-      const [nextSettings, nextAccounts, nextParties, nextVouchers, nextItems, nextCategories, nextMovements, nextVoucherItemLines] = await Promise.all([
+      const [nextSettings, nextAccounts, nextParties, nextPipeline, nextVouchers, nextItems, nextCategories, nextMovements, nextVoucherItemLines] = await Promise.all([
         loadAccountingSettings(token),
         loadChartOfAccounts(token),
         loadParties(token),
+        loadPartyPipeline(token).catch(err => { if (err.code === "MIGRATION_REQUIRED") return []; throw err; }),
         loadVouchers(token),
         loadItems(token).catch(err => { if (err.code === "MIGRATION_REQUIRED") return []; throw err; }),
         loadItemCategories(token).catch(err => { if (err.code === "MIGRATION_REQUIRED") return []; throw err; }),
@@ -1723,6 +1725,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
       setSettings(Object.keys(mergedSettings).length ? mergedSettings : nextSettings);
       setAccounts(nextAccounts);
       setParties(nextParties);
+      setPartyPipeline(Object.fromEntries((nextPipeline || []).map(row => [row.partyId, row.stage])));
       setVouchers(nextVouchers);
       setItems(nextItems || []);
       setItemCategories(nextCategories || []);
@@ -3961,7 +3964,10 @@ const openVoucher = () => {
           {!statements.length && <AccEmpty title="No bank statements yet" copy="Add opening, closing, and statement lines above. Matching never changes the books." />}
         </div>}
 
-        {section === "crm" && <CustomerPipeline companyId={activeCompanyId} parties={parties} />}
+        {section === "crm" && <CustomerPipeline companyId={activeCompanyId} parties={parties} pipeline={partyPipeline} saving={saving} onStageChange={(partyId, stage) => run(async () => {
+          await setPartyPipelineStage(token, partyId, stage);
+          setPartyPipeline(current => ({ ...current, [partyId]: stage }));
+        }, "Pipeline stage saved.")} />}
 
         {section === "setup" && <div className="acc-panel acc-setup">
           <p className="copy acc-setup-lead">Books, chart, parties, GST, and locks for {activeCompany?.name || "this Accounts company"} only. Daily Finance, Monthly Finance, and Chit Fund stay on the Finance workspace.</p>
