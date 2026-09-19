@@ -82,7 +82,7 @@ function IndustryTemplateCard({ companyId }) {
   </div>;
 }
 
-function AccountsBusinessPulse({ metrics, receivables, payables, items, stockMovements, attention, onNavigate }) {
+function AccountsBusinessPulse({ metrics, receivables, payables, items, stockMovements, attention, onNavigate, onOpenCollections }) {
   const lowStockCount = useMemo(() => (items || []).filter(item => {
     const current = Number(item.current_stock ?? item.stock ?? item.quantity ?? 0);
     const reorder = Number(item.reorder_level ?? item.reorderPoint ?? 0);
@@ -110,6 +110,7 @@ function AccountsBusinessPulse({ metrics, receivables, payables, items, stockMov
     <div className="accounts-business-actions" aria-label="Quick actions">
       <span className="small">Quick actions</span>
       {actions.map(action => <button key={action.label} type="button" className={`accounts-business-action ${action.tone}`} onClick={() => onNavigate(action.section)}>{action.label}<span aria-hidden="true">→</span></button>)}
+      {onOpenCollections && <button type="button" className="accounts-business-action purple" onClick={onOpenCollections}>Open collections<span aria-hidden="true">→</span></button>}
     </div>
     {attention?.count > 0 && <div className="accounts-business-alert" role="status">
       <span className="accounts-business-alert-icon" aria-hidden="true">!</span>
@@ -3079,6 +3080,7 @@ const openVoucher = () => {
             items={items}
             stockMovements={stockMovements}
             attention={accountsAttention}
+            onOpenCollections={close}
             onNavigate={target => {
               if (typeof target === "string") openSection(target);
               else if (target?.section) {
