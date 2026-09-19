@@ -81,6 +81,38 @@ function IndustryTemplateCard({ companyId }) {
     <div className="accounts-template-features">{template.features.map(feature => <span key={feature}>{feature}</span>)}</div>
   </div>;
 }
+
+function AccountsBusinessPulse({ metrics, receivables, payables, items, stockMovements, onNavigate }) {
+  const lowStockCount = useMemo(() => (items || []).filter(item => {
+    const current = Number(item.current_stock ?? item.stock ?? item.quantity ?? 0);
+    const reorder = Number(item.reorder_level ?? item.reorderPoint ?? 0);
+    return reorder > 0 && current <= reorder;
+  }).length, [items]);
+  const actions = [
+    { label: "Record sale", section: "vouchers", tone: "green" },
+    { label: "Add expense", section: "vouchers", tone: "red" },
+    { label: "View receivables", section: "receivables", tone: "blue" },
+    { label: "View payables", section: "payables", tone: "gold" },
+  ];
+  return <section className="acc-section accounts-business-pulse">
+    <div className="accounts-business-pulse-head">
+      <div><span className="small">Business pulse</span><h2 className="acc-section-title">Today at a glance</h2></div>
+      <span className="small">Live from your books</span>
+    </div>
+    <div className="accounts-business-kpis">
+      <AccMetric label="Cash in hand" value={money(metrics?.cash)} tone="gold" />
+      <AccMetric label="Receivables due" value={money(receivables?.total)} tone="blue" onClick={() => onNavigate("receivables")} />
+      <AccMetric label="Payables due" value={money(payables?.total)} tone="red" onClick={() => onNavigate("payables")} />
+      <AccMetric label="Profit this period" value={money(metrics?.netProfit)} tone={Number(metrics?.netProfit) < 0 ? "red" : "green"} onClick={() => onNavigate("pnl")} />
+      <AccMetric label="Low-stock items" value={String(lowStockCount)} tone={lowStockCount ? "red" : "green"} onClick={() => onNavigate("setup")} />
+      <AccMetric label="Stock movements" value={String((stockMovements || []).length)} tone="blue" onClick={() => onNavigate("setup")} />
+    </div>
+    <div className="accounts-business-actions" aria-label="Quick actions">
+      <span className="small">Quick actions</span>
+      {actions.map(action => <button key={action.label} type="button" className={`accounts-business-action ${action.tone}`} onClick={() => onNavigate(action.section)}>{action.label}<span aria-hidden="true">→</span></button>)}
+    </div>
+  </section>;
+}
 import { AccMoreMenu, AccToolbar } from "./AccUi.jsx";
 import {
   BANK_IMPORT_FIELDS,
@@ -3034,6 +3066,15 @@ const openVoucher = () => {
           />
 
           <IndustryTemplateCard companyId={activeCompanyId} />
+
+          <AccountsBusinessPulse
+            metrics={metrics}
+            receivables={overviewArAging}
+            payables={overviewApAging}
+            items={items}
+            stockMovements={stockMovements}
+            onNavigate={openSection}
+          />
 
           {accountsAttention?.count > 0 && <AttentionCenterCard attention={accountsAttention} onNavigate={href => {
             trackProductEvent("accounts_attention_navigate", { section: href?.section || "" });
