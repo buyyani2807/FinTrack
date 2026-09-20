@@ -40,20 +40,21 @@ const AccountsModule = lazy(() => import("./features/accounts/AccountingProduct.
 import { CreditScoreCard } from "./features/creditScore/CreditScoreCard.jsx";
 import { buildChitMonthStatement, currentSchemeMonth, monthLabel as chitMonthLabel } from "./features/chitFund/monthStatement";
 import { downloadChitMonthStatementPdf } from "./features/chitFund/monthStatementPdf";
+import { fintrackLightTheme } from "./fintrackLightTheme.js";
 
 // FinTrack MVP. This browser-only build is for testing; add a secure backend,
 // authentication, audit trails, and local compliance review before production.
 const C = {
-  bg: "#0e1118",
-  surface: "#171c27",
-  card: "#202737",
-  line: "#303a4d",
-  text: "#f4f6fb",
-  muted: "#9ba9bd",
-  gold: "#f4b942",
-  green: "#4fd08d",
-  red: "#ff7373",
-  blue: "#72aaff"
+  bg: "#f6f8fb",
+  surface: "#f8fafc",
+  card: "#ffffff",
+  line: "#dbe3ee",
+  text: "#172033",
+  muted: "#667085",
+  gold: "#b7791f",
+  green: "#168a63",
+  red: "#d14355",
+  blue: "#356fc4"
 };
 const generateCustomerPortalPin = () => String(100000 + Math.floor(Math.random() * 900000));
 const money = formatInr;
@@ -1843,10 +1844,10 @@ export default function App() {
   const showOwnerChrome = ownerChromeAllowed(user?.role, workspace?.role);
   const waitingForWorkspaceRole = financeSession && !financeRolesAligned(user?.role, workspace?.role);
   if (legalView) {
-    return <div className="app"><style>{styles + enhancements + homeReportHide + visualRefresh + mobileCollections + roadmapStyles + mobileLayout}</style><LegalPage view={legalView} /></div>;
+    return <div className="app"><style>{styles + enhancements + homeReportHide + visualRefresh + mobileCollections + roadmapStyles + mobileLayout + fintrackLightTheme}</style><LegalPage view={legalView} /></div>;
   }
   if ((!authReady || waitingForWorkspaceRole) && !isPasswordRecovery) {
-    return <div className="app"><style>{styles + enhancements + homeReportHide + visualRefresh + mobileCollections + roadmapStyles + mobileLayout}</style><div className="login"><p className="sub" style={{ textAlign: "center" }}>Loading FinTrack…</p></div></div>;
+    return <div className="app"><style>{styles + enhancements + homeReportHide + visualRefresh + mobileCollections + roadmapStyles + mobileLayout + fintrackLightTheme}</style><div className="login"><p className="sub" style={{ textAlign: "center" }}>Loading FinTrack…</p></div></div>;
   }
-  return <div className="app"><style>{styles + enhancements + homeReportHide + visualRefresh + accountsStyles + accountingProductStyles + creditScoreStyles + mobileCollections + roadmapStyles + mobileLayout + receiptStyles + accountsTopAlign + accountsUxStyles + moduleIntelStyles + accountActionsStyles + attentionCenterStyles + `.phone-link{color:${C.blue};text-decoration:none}.phone-link:hover{text-decoration:underline}`}</style>{isPasswordRecovery ? <PasswordRecovery /> : !user ? <FinancierAuth onLogin={enterSession} onCustomerLogin={loan => setUser({ role: "customer", loan })} onChitCustomerLogin={session => setUser({ role: "chitCustomer", session })} /> : user.role === "financier" || user.role === "agent" ? <>{dataError && <div className="notice" style={{ position: "fixed", top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 20 }}>{dataError}</div>}<Financier loans={loans} businessName={workspace?.businessName} setLoans={setLoans} onCreateLoan={createLoan} onRecordPayment={savePayment} onUpdateLoan={updateLoan} onDeleteLoan={removeLoan} onSaveCustomerPortal={saveCustomerPortal} onLoadKyc={getKyc} onSaveKyc={updateKyc} onStatusChange={changeStatus} onPaymentNoteChange={changePaymentNotes} onPaymentCorrect={correctPayment} onPaymentDelete={removePayment} onCollectionOrderChange={changeCollectionOrder} role={showOwnerChrome ? "owner" : "staff"} logout={logout} authToken={user.authToken} orgSettings={workspace?.organizationSettings || {}} workspace={workspace || {}} onLogReceipt={logReceipt} module={financeModule} onModuleChange={setFinanceModule} />{showOwnerChrome && <FinancierTools loans={loans} token={user.authToken} orgSettings={workspace?.organizationSettings || {}} workspace={workspace || {}} onLogReceipt={logReceipt} onSettingsSaved={() => refreshWorkspace()} selectedModule={financeModule} onModuleChange={setFinanceModule} onCreateAgent={addCollectionAgent} onLoadAgents={getManagedAgents} onAssignAgent={updateAgentAssignment} onUpdateAgent={saveCollectionStaff} logout={logout} />}</> : user.role === "chitCustomer" ? <ChitCustomerPortal session={user.session} logout={logout} /> : <><Customer loan={customerLoan} logout={logout} /><CustomerReportDownload loan={customerLoan} /></>}</div>;
+  return <div className="app"><style>{styles + enhancements + homeReportHide + visualRefresh + accountsStyles + accountingProductStyles + creditScoreStyles + mobileCollections + roadmapStyles + mobileLayout + receiptStyles + accountsTopAlign + accountsUxStyles + moduleIntelStyles + accountActionsStyles + attentionCenterStyles + `.phone-link{color:${C.blue};text-decoration:none}.phone-link:hover{text-decoration:underline}` + fintrackLightTheme}</style>{isPasswordRecovery ? <PasswordRecovery /> : !user ? <FinancierAuth onLogin={enterSession} onCustomerLogin={loan => setUser({ role: "customer", loan })} onChitCustomerLogin={session => setUser({ role: "chitCustomer", session })} /> : user.role === "financier" || user.role === "agent" ? <>{dataError && <div className="notice" style={{ position: "fixed", top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 20 }}>{dataError}</div>}<Financier loans={loans} businessName={workspace?.businessName} setLoans={setLoans} onCreateLoan={createLoan} onRecordPayment={savePayment} onUpdateLoan={updateLoan} onDeleteLoan={removeLoan} onSaveCustomerPortal={saveCustomerPortal} onLoadKyc={getKyc} onSaveKyc={updateKyc} onStatusChange={changeStatus} onPaymentNoteChange={changePaymentNotes} onPaymentCorrect={correctPayment} onPaymentDelete={removePayment} onCollectionOrderChange={changeCollectionOrder} role={showOwnerChrome ? "owner" : "staff"} logout={logout} authToken={user.authToken} orgSettings={workspace?.organizationSettings || {}} workspace={workspace || {}} onLogReceipt={logReceipt} module={financeModule} onModuleChange={setFinanceModule} />{showOwnerChrome && <FinancierTools loans={loans} token={user.authToken} orgSettings={workspace?.organizationSettings || {}} workspace={workspace || {}} onLogReceipt={logReceipt} onSettingsSaved={() => refreshWorkspace()} selectedModule={financeModule} onModuleChange={setFinanceModule} onCreateAgent={addCollectionAgent} onLoadAgents={getManagedAgents} onAssignAgent={updateAgentAssignment} onUpdateAgent={saveCollectionStaff} logout={logout} />}</> : user.role === "chitCustomer" ? <ChitCustomerPortal session={user.session} logout={logout} /> : <><Customer loan={customerLoan} logout={logout} /><CustomerReportDownload loan={customerLoan} /></>}</div>;
 }
