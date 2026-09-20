@@ -4055,3 +4055,131 @@ html:has(.accounts-dashboard) .financier-nav {
 .production-readiness-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.75rem}.production-readiness-grid .card{padding:.85rem}.production-readiness-grid .card p{min-height:54px}@media(max-width:900px){.production-readiness-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:620px){.production-readiness-grid{grid-template-columns:1fr}}
 .commercial-status-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem}.commercial-status-grid .card{padding:.85rem}.commercial-status-grid strong{display:block;margin-top:.25rem;text-transform:capitalize}.commercial-status-grid p{margin:.35rem 0 0}@media(max-width:680px){.commercial-status-grid{grid-template-columns:1fr}}
 .accounts-invite-email{margin:1rem 0;padding:1rem}.accounts-invite-email p{max-width:70ch;margin:.4rem 0 .75rem}.accounts-invite-email .btn{margin-right:.5rem}
+
+/*
+ * Light-theme initial-paint guard.
+ * Accounts is code-split, so this lives in the same async stylesheet as the
+ * legacy rules. The browser receives the light cascade atomically and never
+ * paints the legacy dark surfaces while the feature chunk is loading.
+ */
+.accounts-dashboard {
+  --acc-bg: var(--ft-bg, #f6f8fb) !important;
+  --acc-surface: var(--ft-surface, #fff) !important;
+  --acc-card: var(--ft-surface, #fff) !important;
+  --acc-card-elevated: var(--ft-surface-subtle, #f8fafc) !important;
+  --acc-line: var(--ft-border, #dbe3ee) !important;
+  --acc-line-strong: var(--ft-border-strong, #c8d3e1) !important;
+  --acc-text: var(--ft-text, #172033) !important;
+  --acc-muted: var(--ft-muted, #667085) !important;
+  --acc-gold: var(--ft-warning, #b7791f) !important;
+  --acc-gold-ink: #fff !important;
+  --acc-green: var(--ft-success, #168a63) !important;
+  --acc-red: var(--ft-danger, #d14355) !important;
+  --acc-blue: var(--ft-info, #356fc4) !important;
+  --acc-shadow: var(--ft-shadow, 0 8px 24px rgba(16, 24, 40, .07)) !important;
+  --acc-shadow-soft: var(--ft-shadow-sm, 0 1px 2px rgba(16, 24, 40, .04)) !important;
+  background: var(--acc-bg) !important;
+  color: var(--acc-text) !important;
+}
+
+.accounts-dashboard .acc-sidebar,
+.accounts-dashboard .acc-page-head,
+.accounts-dashboard .acc-company-bar,
+.accounts-dashboard .acc-ov-context-bar,
+.accounts-dashboard .accounts-filter-card,
+.accounts-dashboard .card,
+.accounts-dashboard .acc-setup-section,
+.accounts-dashboard .acc-ov-chart,
+.accounts-dashboard .attention-center,
+.accounts-dashboard .acc-intelligence-card,
+.accounts-dashboard .acc-nav-flyout,
+.accounts-dashboard .acc-user-menu,
+.accounts-dashboard .acc-gst-setup-hint,
+.accounts-dashboard .acc-gst-preview,
+.accounts-dashboard .acc-form-section,
+.accounts-dashboard .acc-metric-card,
+.accounts-dashboard .accounts-balance-item,
+.accounts-dashboard .accounts-closing-stats > div,
+.accounts-dashboard .acc-invoice-kpi {
+  background: var(--acc-card) !important;
+  border-color: var(--acc-line) !important;
+  color: var(--acc-text) !important;
+  box-shadow: var(--acc-shadow-soft) !important;
+}
+
+.accounts-dashboard .acc-ov-context {
+  background: linear-gradient(135deg, #f7faff 0%, #fff 58%, #fff9ed 100%) !important;
+  border-color: var(--acc-line) !important;
+  box-shadow: var(--acc-shadow-soft) !important;
+}
+
+.accounts-dashboard .accounts-industry-card {
+  background: linear-gradient(135deg, #f0f6ff, #fff8e9) !important;
+  border-color: #d9e5f4 !important;
+}
+
+.accounts-dashboard .accounts-business-pulse {
+  background: linear-gradient(145deg, #fff, #f7faff) !important;
+}
+
+.accounts-dashboard .accounts-business-action,
+.accounts-dashboard input,
+.accounts-dashboard select,
+.accounts-dashboard textarea,
+.accounts-dashboard .acc-new-entry {
+  background: var(--acc-surface) !important;
+  color: var(--acc-text) !important;
+  border-color: var(--acc-line-strong) !important;
+}
+
+.accounts-dashboard h1,
+.accounts-dashboard h2,
+.accounts-dashboard h3,
+.accounts-dashboard h4,
+.accounts-dashboard .accounts-panel-title,
+.accounts-dashboard .acc-sidebar-brand strong,
+.accounts-dashboard .accounts-industry-head h2,
+.accounts-dashboard .manufacturing-flow-card,
+.accounts-dashboard .accounts-ledger-name,
+.accounts-dashboard .accounts-ledger-balance {
+  color: var(--acc-text) !important;
+}
+
+.accounts-dashboard .acc-nav-item,
+.accounts-dashboard .acc-nav-sub,
+.accounts-dashboard .acc-nav-toggle,
+.accounts-dashboard .acc-bottom-item {
+  color: #475467 !important;
+}
+
+.accounts-dashboard .acc-nav-item:hover,
+.accounts-dashboard .acc-nav-item.active,
+.accounts-dashboard .acc-nav-sub.active,
+.accounts-dashboard .acc-bottom-item.active {
+  background: #eaf1ff !important;
+  color: #315fba !important;
+}
+
+.accounts-dashboard .acc-table-wrap th,
+.accounts-dashboard .acc-table-wrap td {
+  border-color: #e7ecf3 !important;
+}
+
+.accounts-dashboard .acc-table-wrap th {
+  background: #f8fafc !important;
+  color: var(--acc-muted) !important;
+}
+
+.accounts-dashboard .acc-table-wrap tbody tr:hover,
+.accounts-dashboard .acc-ov-more-menu button:hover,
+.accounts-dashboard .acc-ov-more-menu button:focus-visible {
+  background: #f3f7fc !important;
+}
+
+@media (max-width: 1050px) {
+  .accounts-dashboard .acc-bottom-nav {
+    background: rgba(255, 255, 255, .97) !important;
+    border-color: var(--acc-line) !important;
+    box-shadow: 0 -8px 30px rgba(16, 24, 40, .08) !important;
+  }
+}
