@@ -2169,7 +2169,10 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
       setError("");
       setNotice("");
       try {
-        const preferredCompanyId = await work();
+        const workResult = await work();
+        // Only a returned company UUID is meaningful to the refresh helper.
+        // Other save actions may return payloads for their own callers.
+        const preferredCompanyId = typeof workResult === "string" && workResult ? workResult : undefined;
         setNotice(success);
         await refresh(preferredCompanyId || undefined);
         ok = true;
@@ -4424,9 +4427,10 @@ const openVoucher = () => {
         <VoucherForm accounts={visibleAccounts} parties={parties} voucherType={voucherType} setVoucherType={setVoucherType} form={voucherForm} setForm={setVoucherForm} lines={lines} setLines={setLines} onSubmit={submitVoucher} saving={saving} maxDate={todayIso()} />
       </Modal>}
       {showCreateCompany && <Modal title="Create company" close={() => !saving && setShowCreateCompany(false)} actions={<div className="tabs spacer"><button type="button" className="btn" disabled={saving} onClick={() => setShowCreateCompany(false)}>Cancel</button><button type="button" className="btn primary" disabled={saving || !String(companyDraft.name || "").trim()} onClick={() => run(async () => {
-        const id = await createAccountsCompany(token, companyDraft);
+        const created = await createAccountsCompany(token, companyDraft);
+        const id = Array.isArray(created) ? created[0] : created;
         setShowCreateCompany(false);
-        return id;
+        return typeof id === "string" ? id : undefined;
       }, "Company created. This company’s books start empty.")}>{saving ? "Saving…" : "Create company"}</button></div>}>
         <p className="copy">A new company has its own chart, parties, vouchers, bank, GST, and locks. It does not copy SriHitha Infra or any other company.</p>
         <div className="form">
