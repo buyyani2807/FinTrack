@@ -1755,26 +1755,9 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
       if (mergedSettings.companyName || mergedSettings.booksStartedOn) {
         setSetupForm({ companyName: mergedSettings.companyName, booksStartedOn: mergedSettings.booksStartedOn || todayIso() });
       }
-      if (sectionRef.current === "setup") {
-        const [nextAudit, nextLocks, nextRoles, nextInvites, nextRecurring] = await Promise.all([
-          loadAuditLog(token),
-          loadPeriodLocks(token),
-          loadAccountsRoles(token).catch(() => []),
-          listTeamInvites(token).catch(() => []),
-          loadRecurringTemplates(token).catch(() => []),
-        ]);
-        if (gen !== refreshGen.current) return;
-        setAudit(nextAudit);
-        setLocks(nextLocks);
-        setAccountsRoles(nextRoles || []);
-        setTeamInvites(nextInvites || []);
-        setRecurringTemplates(nextRecurring || []);
-      }
-      if (sectionRef.current === "bank" || sectionRef.current === "overview") {
-        const nextStatements = await loadBankStatements(token).catch(() => []);
-        if (gen !== refreshGen.current) return;
-        setStatements(nextStatements || []);
-      }
+      // Audit/lock and bank-statement data are loaded by the section-specific
+      // effect below. Keeping them out of the core refresh prevents duplicate
+      // requests whenever the Accounts shell mounts or changes company.
       if (sectionRef.current === "overview" || sectionRef.current === "bank") {
         const nextRecurring = await loadRecurringTemplates(token).catch(() => []);
         if (gen !== refreshGen.current) return;
@@ -2186,9 +2169,9 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
       setError("");
       setNotice("");
       try {
-        await work();
+        const preferredCompanyId = await work();
         setNotice(success);
-        await refresh();
+        await refresh(preferredCompanyId || undefined);
         ok = true;
       } catch (err) {
         setError(err.message || "Could not save.");
@@ -4443,7 +4426,7 @@ const openVoucher = () => {
       {showCreateCompany && <Modal title="Create company" close={() => !saving && setShowCreateCompany(false)} actions={<div className="tabs spacer"><button type="button" className="btn" disabled={saving} onClick={() => setShowCreateCompany(false)}>Cancel</button><button type="button" className="btn primary" disabled={saving || !String(companyDraft.name || "").trim()} onClick={() => run(async () => {
         const id = await createAccountsCompany(token, companyDraft);
         setShowCreateCompany(false);
-        await refresh(id);
+        return id;
       }, "Company created. This company’s books start empty.")}>{saving ? "Saving…" : "Create company"}</button></div>}>
         <p className="copy">A new company has its own chart, parties, vouchers, bank, GST, and locks. It does not copy SriHitha Infra or any other company.</p>
         <div className="form">

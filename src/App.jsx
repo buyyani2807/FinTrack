@@ -1040,7 +1040,7 @@ function Financier({
     if (!authToken) return;
     loadPaymentReminderLog(authToken).then(setReminderLogState).catch(() => setReminderLogState([]));
     loadTransactionConfirmationLog(authToken).then(setConfirmationLogState).catch(() => setConfirmationLogState([]));
-  }, [authToken, loans]);
+  }, [authToken]);
   useEffect(() => {
     if (!isOwner || !authToken) {
       setChitAttention([]);
