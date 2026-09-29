@@ -664,7 +664,85 @@ const COMPANY_STORAGE_KEY = "fintrack-accounts-company";
 // Last loaded books, kept in memory only for this tab and session token, so
 // reopening Accounts renders immediately while refresh() revalidates.
 let accountsSnapshot = null;
+let accountsPrefetch = null;
 const readAccountsSnapshot = token => (token && accountsSnapshot?.token === token ? accountsSnapshot : null);
+const orEmptyWhenMigrating = promise => promise.catch(err => { if (err.code === "MIGRATION_REQUIRED") return []; throw err; });
+
+async function fetchAccountsBundle(token, { preferredCompanyId, wantRecurring = true } = {}) {
+  let companies = [];
+  try {
+    companies = await loadAccountsCompanies(token);
+  } catch (err) {
+    if (err.code !== "MIGRATION_REQUIRED") throw err;
+  }
+  let stored = "";
+  try { stored = sessionStorage.getItem(COMPANY_STORAGE_KEY) || ""; } catch { stored = ""; }
+  const activeCompanies = companies.filter(item => item.status !== "archived");
+  const company = (preferredCompanyId && activeCompanies.find(item => item.id === preferredCompanyId))
+    || activeCompanies.find(item => item.id === stored)
+    || activeCompanies.find(item => item.isPrimary)
+    || activeCompanies[0]
+    || null;
+  setActiveAccountsCompanyId(company?.id || null);
+  if (company) {
+    try { sessionStorage.setItem(COMPANY_STORAGE_KEY, company.id); } catch { /* ignore */ }
+  }
+  const [settings, accounts, parties, pipeline, vouchers, items, itemCategories, stockMovements, voucherItemLines, recurring] = await Promise.all([
+    loadAccountingSettings(token),
+    loadChartOfAccounts(token),
+    loadParties(token),
+    orEmptyWhenMigrating(loadPartyPipeline(token)),
+    loadVouchers(token),
+    orEmptyWhenMigrating(loadItems(token)),
+    orEmptyWhenMigrating(loadItemCategories(token)),
+    orEmptyWhenMigrating(loadStockMovements(token)),
+    orEmptyWhenMigrating(loadVoucherItemLines(token)),
+    wantRecurring ? loadRecurringTemplates(token).catch(() => []) : Promise.resolve(null),
+  ]);
+  const mergedSettings = {
+    ...(settings || {}),
+    companyName: company?.name || settings?.companyName || "",
+    booksStartedOn: company?.booksStartedOn || settings?.booksStartedOn || "",
+    fyStartMonth: company?.fyStartMonth || settings?.fyStartMonth || 4,
+  };
+  const activeCompanyId = company?.id || "";
+  const sameCompanyCache = accountsSnapshot?.token === token && accountsSnapshot.activeCompanyId === activeCompanyId;
+  const bundle = {
+    token,
+    companies,
+    activeCompanyId,
+    gstForm: company ? {
+      gstRegistration: company.gstRegistration || "unregistered",
+      gstin: company.gstin || "",
+      legalName: company.legalName || "",
+      stateCode: company.stateCode || "",
+    } : null,
+    settings: mergedSettings,
+    accounts,
+    parties,
+    partyPipeline: Object.fromEntries((pipeline || []).map(row => [row.partyId, row.stage])),
+    vouchers,
+    items: items || [],
+    itemCategories: itemCategories || [],
+    stockMovements: stockMovements || [],
+    voucherItemLines: voucherItemLines || [],
+    recurringFetched: Boolean(recurring),
+    recurringTemplates: recurring || (sameCompanyCache ? accountsSnapshot.recurringTemplates : []),
+  };
+  accountsSnapshot = bundle;
+  return bundle;
+}
+
+// Warm the Accounts books in the background (e.g. from the dashboard) so the
+// first open after login skips the loading placeholders.
+export function prefetchAccounts(token) {
+  if (!token || readAccountsSnapshot(token) || accountsPrefetch?.token === token) return;
+  const promise = fetchAccountsBundle(token);
+  accountsPrefetch = { token, promise };
+  promise.catch(() => {}).finally(() => {
+    if (accountsPrefetch?.promise === promise) accountsPrefetch = null;
+  });
+}
 const NAV_TREE = [
   { id: "overview", label: "Overview", glyph: "⌂" },
   { id: "vouchers", label: "Transactions", glyph: "▣" },
@@ -1697,92 +1775,32 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
     if (!hasLoadedRef.current) setLoading(true);
     setError("");
     try {
-      let nextCompanies = [];
-      try {
-        nextCompanies = await loadAccountsCompanies(token);
-      } catch (err) {
-        if (err.code !== "MIGRATION_REQUIRED") throw err;
-      }
+      const inFlight = !preferredCompanyId && accountsPrefetch?.token === token ? accountsPrefetch.promise : null;
+      const bundle = (inFlight && await inFlight.catch(() => null))
+        || await fetchAccountsBundle(token, {
+          preferredCompanyId,
+          wantRecurring: sectionRef.current === "overview" || sectionRef.current === "bank",
+        });
       if (gen !== refreshGen.current) return;
-      setCompanies(nextCompanies);
-      let stored = "";
-      try { stored = sessionStorage.getItem(COMPANY_STORAGE_KEY) || ""; } catch { stored = ""; }
-      const activeCompanies = nextCompanies.filter(item => item.status !== "archived");
-      const nextCompany = (preferredCompanyId && activeCompanies.find(item => item.id === preferredCompanyId))
-        || activeCompanies.find(item => item.id === stored)
-        || activeCompanies.find(item => item.isPrimary)
-        || activeCompanies[0]
-        || null;
-      const nextGstForm = nextCompany ? {
-        gstRegistration: nextCompany.gstRegistration || "unregistered",
-        gstin: nextCompany.gstin || "",
-        legalName: nextCompany.legalName || "",
-        stateCode: nextCompany.stateCode || "",
-      } : null;
-      if (nextCompany) {
-        setActiveAccountsCompanyId(nextCompany.id);
-        setActiveCompanyId(nextCompany.id);
-        try { sessionStorage.setItem(COMPANY_STORAGE_KEY, nextCompany.id); } catch { /* ignore */ }
-        setGstForm(nextGstForm);
-      } else {
-        setActiveAccountsCompanyId(null);
-        setActiveCompanyId("");
-      }
-      const wantRecurring = sectionRef.current === "overview" || sectionRef.current === "bank";
-      const [nextSettings, nextAccounts, nextParties, nextPipeline, nextVouchers, nextItems, nextCategories, nextMovements, nextVoucherItemLines, nextRecurring] = await Promise.all([
-        loadAccountingSettings(token),
-        loadChartOfAccounts(token),
-        loadParties(token),
-        loadPartyPipeline(token).catch(err => { if (err.code === "MIGRATION_REQUIRED") return []; throw err; }),
-        loadVouchers(token),
-        loadItems(token).catch(err => { if (err.code === "MIGRATION_REQUIRED") return []; throw err; }),
-        loadItemCategories(token).catch(err => { if (err.code === "MIGRATION_REQUIRED") return []; throw err; }),
-        loadStockMovements(token).catch(err => { if (err.code === "MIGRATION_REQUIRED") return []; throw err; }),
-        loadVoucherItemLines(token).catch(err => { if (err.code === "MIGRATION_REQUIRED") return []; throw err; }),
-        wantRecurring ? loadRecurringTemplates(token).catch(() => []) : Promise.resolve(null),
-      ]);
-      if (gen !== refreshGen.current) return;
-      const mergedSettings = {
-        ...(nextSettings || {}),
-        companyName: nextCompany?.name || nextSettings?.companyName || "",
-        booksStartedOn: nextCompany?.booksStartedOn || nextSettings?.booksStartedOn || "",
-        fyStartMonth: nextCompany?.fyStartMonth || nextSettings?.fyStartMonth || 4,
-      };
-      const resolvedSettings = Object.keys(mergedSettings).length ? mergedSettings : nextSettings;
-      const nextPipelineMap = Object.fromEntries((nextPipeline || []).map(row => [row.partyId, row.stage]));
-      setSettings(resolvedSettings);
-      setAccounts(nextAccounts);
-      setParties(nextParties);
-      setPartyPipeline(nextPipelineMap);
-      setVouchers(nextVouchers);
-      setItems(nextItems || []);
-      setItemCategories(nextCategories || []);
-      setStockMovements(nextMovements || []);
-      setVoucherItemLines(nextVoucherItemLines || []);
+      setCompanies(bundle.companies);
+      setActiveCompanyId(bundle.activeCompanyId);
+      if (bundle.gstForm) setGstForm(bundle.gstForm);
+      setSettings(bundle.settings);
+      setAccounts(bundle.accounts);
+      setParties(bundle.parties);
+      setPartyPipeline(bundle.partyPipeline);
+      setVouchers(bundle.vouchers);
+      setItems(bundle.items);
+      setItemCategories(bundle.itemCategories);
+      setStockMovements(bundle.stockMovements);
+      setVoucherItemLines(bundle.voucherItemLines);
       // Setup (audit, locks, roles, invites) and bank-statement data are loaded
       // by the section-specific effect below.
-      if (nextRecurring) setRecurringTemplates(nextRecurring);
+      if (bundle.recurringFetched) setRecurringTemplates(bundle.recurringTemplates);
       setMigrationRequired(false);
-      if (mergedSettings.companyName || mergedSettings.booksStartedOn) {
-        setSetupForm({ companyName: mergedSettings.companyName, booksStartedOn: mergedSettings.booksStartedOn || todayIso() });
+      if (bundle.settings?.companyName || bundle.settings?.booksStartedOn) {
+        setSetupForm({ companyName: bundle.settings.companyName, booksStartedOn: bundle.settings.booksStartedOn || todayIso() });
       }
-      const sameCompanyCache = accountsSnapshot?.token === token && accountsSnapshot.activeCompanyId === (nextCompany?.id || "");
-      accountsSnapshot = {
-        token,
-        companies: nextCompanies,
-        activeCompanyId: nextCompany?.id || "",
-        gstForm: nextGstForm || undefined,
-        settings: resolvedSettings,
-        accounts: nextAccounts,
-        parties: nextParties,
-        partyPipeline: nextPipelineMap,
-        vouchers: nextVouchers,
-        items: nextItems || [],
-        itemCategories: nextCategories || [],
-        stockMovements: nextMovements || [],
-        voucherItemLines: nextVoucherItemLines || [],
-        recurringTemplates: nextRecurring || (sameCompanyCache ? accountsSnapshot.recurringTemplates : []),
-      };
     } catch (err) {
       if (gen !== refreshGen.current) return;
       if (err.code === "MIGRATION_REQUIRED") setMigrationRequired(true);

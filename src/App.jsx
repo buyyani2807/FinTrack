@@ -1604,15 +1604,15 @@ function FinancierTools({ loans, token, activeChitSchemes = [], onCreateAgent, o
   const showCashbook = workspace?.role === "owner" && isModuleEnabled(orgSettings, "cashbook");
   const showAccounts = workspace?.role === "owner" && isModuleEnabled(orgSettings, "accounts");
   useEffect(() => {
-    if (!showAccounts) return undefined;
-    const preload = () => { loadAccountsModule().catch(() => {}); };
+    if (!showAccounts || !token) return undefined;
+    const preload = () => { loadAccountsModule().then(module => module.prefetchAccounts?.(token)).catch(() => {}); };
     if (typeof window.requestIdleCallback === "function") {
       const id = window.requestIdleCallback(preload, { timeout: 4000 });
       return () => window.cancelIdleCallback?.(id);
     }
     const id = window.setTimeout(preload, 1500);
     return () => window.clearTimeout(id);
-  }, [showAccounts]);
+  }, [showAccounts, token]);
   const openEntitledPanel = (moduleId, open) => {
     try {
       assertModuleEntitled(orgSettings, moduleId);

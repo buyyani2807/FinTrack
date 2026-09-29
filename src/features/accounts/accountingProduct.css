@@ -1441,8 +1441,9 @@ html:has(.accounts-dashboard) .financier-nav {
 
 .accounts-dashboard .acc-skel {
   height: 102px;
+  border: 1px solid #e4eaf2;
   border-radius: var(--acc-radius);
-  background: linear-gradient(90deg, #1a2230 0%, #243044 50%, #1a2230 100%);
+  background: linear-gradient(90deg, #f1f5f9 0%, #fafcfe 50%, #f1f5f9 100%);
   background-size: 200% 100%;
   animation: acc-pulse 1.2s ease-in-out infinite;
 }
