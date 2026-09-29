@@ -1036,11 +1036,12 @@ function Financier({
   const [statementLoan, setStatementLoan] = useState(null);
   const [chitAttention, setChitAttention] = useState([]);
   const isOwner = role === "owner";
+  const detailId = detail?.id || null;
   useEffect(() => {
     if (!authToken) return;
     loadPaymentReminderLog(authToken).then(setReminderLogState).catch(() => setReminderLogState([]));
     loadTransactionConfirmationLog(authToken).then(setConfirmationLogState).catch(() => setConfirmationLogState([]));
-  }, [authToken]);
+  }, [authToken, detailId]);
   useEffect(() => {
     if (!isOwner || !authToken) {
       setChitAttention([]);

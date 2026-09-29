@@ -24,9 +24,13 @@ export const INDUSTRY_TEMPLATES = [
 ];
 
 const industryStorageKey = companyId => `fintrack-accounts-industry-v1:${companyId || "none"}`;
-const readIndustry = companyId => {
+export const readIndustry = companyId => {
   if (!companyId || typeof localStorage === "undefined") return "retail";
   try { return localStorage.getItem(industryStorageKey(companyId)) || "retail"; } catch { return "retail"; }
+};
+export const saveIndustry = (companyId, industry) => {
+  if (!companyId || !industry || typeof localStorage === "undefined") return;
+  try { localStorage.setItem(industryStorageKey(companyId), industry); } catch { /* ignore */ }
 };
 
 const stepStorageKey = companyId => `fintrack-accounts-onboarding-step-v1:${companyId || "none"}`;
@@ -119,7 +123,7 @@ export function AccOnboardingWizard({
     try {
       if (step.id === "company") {
         if (!String(companyName || "").trim()) throw new Error("Business name is required.");
-        try { localStorage.setItem(industryStorageKey(companyId), industry); } catch { /* ignore */ }
+        saveIndustry(companyId, industry);
         if (onSaveCompany) await onSaveCompany({ companyName: companyName.trim(), booksStartedOn, industry });
       }
       if (step.id === "gst" && canAdmin && onSaveGst) {

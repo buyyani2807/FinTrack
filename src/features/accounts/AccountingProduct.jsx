@@ -65,16 +65,16 @@ import {
   AccOnboardingWizard,
   isAccountsOnboardingDone,
   markAccountsOnboardingDone,
+  INDUSTRY_TEMPLATES,
+  readIndustry,
+  saveIndustry,
 } from "./AccOnboardingWizard.jsx";
-import { INDUSTRY_TEMPLATES } from "./AccOnboardingWizard.jsx";
+import { parsePartyCsv, planPartyImport } from "./partyCsvImport.js";
 
 function IndustryTemplateCard({ companyId }) {
   const [industry, setIndustry] = useState("retail");
   useEffect(() => {
-    if (!companyId) return;
-    try {
-      setIndustry(localStorage.getItem(`fintrack-accounts-industry-v1:${companyId}`) || "retail");
-    } catch { /* ignore storage access errors */ }
+    if (companyId) setIndustry(readIndustry(companyId));
   }, [companyId]);
   const template = INDUSTRY_TEMPLATES.find(item => item.id === industry) || INDUSTRY_TEMPLATES[0];
   return <div className="card accounts-industry-card">
@@ -82,19 +82,6 @@ function IndustryTemplateCard({ companyId }) {
     <p className="copy">Recommended workflows for this company.</p>
     <div className="accounts-template-features">{template.features.map(feature => <span key={feature}>{feature}</span>)}</div>
   </div>;
-}
-
-function parsePartyCsv(text) {
-  const rows = String(text || "").split(/\r?\n/).map(row => row.trim()).filter(Boolean);
-  if (!rows.length) return [];
-  const cells = row => row.match(/(?:"(?:[^"]|"")*"|[^,])+/g)?.map(value => value.trim().replace(/^"|"$/g, "").replace(/""/g, '"')) || [];
-  const headers = cells(rows[0]).map(value => value.toLowerCase().replace(/[^a-z0-9]+/g, ""));
-  const index = name => headers.findIndex(value => value === name || value.includes(name));
-  const at = (values, names) => { const position = names.map(index).find(value => value >= 0); return position >= 0 ? values[position] || "" : ""; };
-  return rows.slice(1).map(row => {
-    const values = cells(row);
-    return { partyType: (at(values, ["type", "partytype"]) || "customer").toLowerCase(), name: at(values, ["name", "partyname"]), phone: at(values, ["phone", "mobile"]), email: at(values, ["email"]), address: at(values, ["address"]), gstin: at(values, ["gstin"]), notes: at(values, ["notes", "note"]) };
-  }).filter(row => row.name.trim());
 }
 
 const CRM_STAGES = ["Lead", "Contacted", "Quoted", "Won", "Lost"];
@@ -1043,7 +1030,7 @@ const REPORT_HUB_CARDS = [
   { id: "cashflow", label: "Cash Flow", copy: "Money in and out (simplified)." },
 ];
 
-function ManufacturingWorkspace({ items = [], stockMovements = [], onItems, onTransactions, onAdjustStock, saving = false }) {
+function ManufacturingWorkspace({ items = [], stockMovements = [], onItems, onTransactions, onProductionRun, saving = false }) {
   const rawMaterials = items.filter(item => /raw|material/i.test(`${item.name} ${item.categoryName || ""}`)).length;
   const finishedGoods = items.filter(item => /finished|product/i.test(`${item.name} ${item.categoryName || ""}`)).length;
   const [run, setRun] = useState({ date: todayIso(), materialId: "", materialQty: "", outputId: "", outputQty: "", note: "" });
@@ -1052,8 +1039,15 @@ function ManufacturingWorkspace({ items = [], stockMovements = [], onItems, onTr
   const submitRun = async () => {
     if (!run.materialId || !run.outputId || Number(run.materialQty) <= 0 || Number(run.outputQty) <= 0 || run.materialId === run.outputId) return;
     const note = run.note.trim() || "Production run";
-    await onAdjustStock?.({ itemId: run.materialId, date: run.date, quantityDelta: -Math.abs(Number(run.materialQty)), reasonNote: `${note} · material consumed` });
-    await onAdjustStock?.({ itemId: run.outputId, date: run.date, quantityDelta: Math.abs(Number(run.outputQty)), reasonNote: `${note} · finished goods produced` });
+    const ok = await onProductionRun?.({
+      date: run.date,
+      note,
+      materialId: run.materialId,
+      materialQty: Math.abs(Number(run.materialQty)),
+      outputId: run.outputId,
+      outputQty: Math.abs(Number(run.outputQty)),
+    });
+    if (!ok) return;
     setRun({ date: todayIso(), materialId: "", materialQty: "", outputId: "", outputQty: "", note: "" });
     setRunOpen(false);
   };
@@ -1701,12 +1695,11 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
       }
       if (gen !== refreshGen.current) return;
       setCompanies(nextCompanies);
-      let stored = preferredCompanyId || "";
-      if (!stored) {
-        try { stored = sessionStorage.getItem(COMPANY_STORAGE_KEY) || ""; } catch { stored = ""; }
-      }
+      let stored = "";
+      try { stored = sessionStorage.getItem(COMPANY_STORAGE_KEY) || ""; } catch { stored = ""; }
       const activeCompanies = nextCompanies.filter(item => item.status !== "archived");
-      const nextCompany = activeCompanies.find(item => item.id === stored)
+      const nextCompany = (preferredCompanyId && activeCompanies.find(item => item.id === preferredCompanyId))
+        || activeCompanies.find(item => item.id === stored)
         || activeCompanies.find(item => item.isPrimary)
         || activeCompanies[0]
         || null;
@@ -1755,9 +1748,9 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
       if (mergedSettings.companyName || mergedSettings.booksStartedOn) {
         setSetupForm({ companyName: mergedSettings.companyName, booksStartedOn: mergedSettings.booksStartedOn || todayIso() });
       }
-      // Audit/lock and bank-statement data are loaded by the section-specific
-      // effect below. Keeping them out of the core refresh prevents duplicate
-      // requests whenever the Accounts shell mounts or changes company.
+      // Setup (audit, locks, roles, invites, recurring) and bank-statement data
+      // are loaded by the section-specific effect below. Keeping them out of the
+      // core refresh prevents duplicate requests whenever the shell remounts.
       if (sectionRef.current === "overview" || sectionRef.current === "bank") {
         const nextRecurring = await loadRecurringTemplates(token).catch(() => []);
         if (gen !== refreshGen.current) return;
@@ -1809,10 +1802,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
   const canWrite = accountsAccessRole === "owner" || accountsAccessRole === "accountant";
   const canAdmin = accountsAccessRole === "owner";
   const readOnly = Boolean(accountsAccessRole) && !canWrite;
-  const manufacturingEnabled = (() => {
-    if (!activeCompanyId || typeof localStorage === "undefined") return false;
-    try { return localStorage.getItem(`fintrack-accounts-industry-v1:${activeCompanyId}`) === "manufacturing"; } catch { return false; }
-  })();
+  const manufacturingEnabled = Boolean(activeCompanyId) && readIndustry(activeCompanyId) === "manufacturing";
   // Keep the wizard mounted across refresh()/loading so Continue does not
   // unmount mid-flow (that looked like “Step 1/6 finishes in 2 steps”).
   const showOnboarding = Boolean(
@@ -1871,20 +1861,29 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
 
   useEffect(() => {
     if (!token || migrationRequired) return undefined;
-    if (section !== "setup" && section !== "bank") return undefined;
+    if (section !== "setup" && section !== "bank" && section !== "overview") return undefined;
     let cancelled = false;
     const loadExtras = async () => {
       try {
         if (section === "setup") {
-          const [nextAudit, nextLocks] = await Promise.all([loadAuditLog(token), loadPeriodLocks(token)]);
+          const [nextAudit, nextLocks, nextRoles, nextInvites, nextRecurring] = await Promise.all([
+            loadAuditLog(token),
+            loadPeriodLocks(token),
+            loadAccountsRoles(token).catch(() => []),
+            listTeamInvites(token).catch(() => []),
+            loadRecurringTemplates(token).catch(() => []),
+          ]);
           if (!cancelled) {
             setAudit(nextAudit);
             setLocks(nextLocks);
+            setAccountsRoles(nextRoles || []);
+            setTeamInvites(nextInvites || []);
+            setRecurringTemplates(nextRecurring || []);
           }
           return;
         }
-        const nextStatements = await loadBankStatements(token);
-        if (!cancelled) setStatements(nextStatements);
+        const nextStatements = await loadBankStatements(token).catch(() => []);
+        if (!cancelled) setStatements(nextStatements || []);
       } catch (err) {
         if (!cancelled) setError(err.message || "Could not load this screen.");
       }
@@ -2186,6 +2185,22 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
     return ok;
   };
 
+  // Two stock RPCs cannot share a transaction, so undo the material
+  // consumption if the finished-goods increase fails.
+  const recordProductionRun = ({ date, note, materialId, materialQty, outputId, outputQty }) => run(async () => {
+    await adjustStock(token, { itemId: materialId, date, quantityDelta: -materialQty, reasonNote: `${note} · material consumed` });
+    try {
+      await adjustStock(token, { itemId: outputId, date, quantityDelta: outputQty, reasonNote: `${note} · finished goods produced` });
+    } catch (err) {
+      try {
+        await adjustStock(token, { itemId: materialId, date, quantityDelta: materialQty, reasonNote: `${note} · reversed (output failed)` });
+      } catch {
+        throw new Error(`Finished goods were not added and the material deduction could not be reversed. Add ${materialQty} back to the material in Items. (${err.message || "Unknown error"})`);
+      }
+      throw err;
+    }
+  }, "Production run saved.");
+
   const submitVoucher = () => run(async () => {
     assertVoucherDateNotFuture(voucherForm.date);
     const payload = {
@@ -2461,15 +2476,23 @@ const openVoucher = () => {
     if (!file) return;
     const rows = parsePartyCsv(await file.text());
     if (!rows.length) { setError("No valid party rows found. Use a CSV with a Name column."); return; }
-    setPartyImportStatus(`Importing ${rows.length} parties…`);
-    try {
-      for (const row of rows) await createParty(token, { ...emptyPartyForm(), ...row, partyType: ["customer", "supplier", "employee", "agent", "other"].includes(row.partyType) ? row.partyType : "customer" });
-      setPartyImportStatus(`${rows.length} parties imported.`);
-      await refresh();
-    } catch (err) {
-      setError(err?.message || "Could not import parties.");
-      setPartyImportStatus("");
+    const { toCreate, duplicates } = planPartyImport(rows, parties);
+    const skippedNote = duplicates.length ? ` ${duplicates.length} duplicate${duplicates.length === 1 ? "" : "s"} skipped.` : "";
+    if (!toCreate.length) { setPartyImportStatus(`Nothing to import.${skippedNote}`); return; }
+    setPartyImportStatus(`Importing ${toCreate.length} parties…`);
+    let imported = 0;
+    const failed = [];
+    for (const row of toCreate) {
+      try {
+        await createParty(token, { ...emptyPartyForm(), ...row });
+        imported += 1;
+      } catch (err) {
+        failed.push(`${row.name}: ${err?.message || "could not save"}`);
+      }
     }
+    setPartyImportStatus(`${imported} ${imported === 1 ? "party" : "parties"} imported.${skippedNote}${failed.length ? ` ${failed.length} failed.` : ""}`);
+    if (failed.length) setError(`Some parties were not imported. ${failed.slice(0, 3).join("; ")}${failed.length > 3 ? ` and ${failed.length - 3} more` : ""}`);
+    if (imported) await refresh();
   };
 
   const requestDeleteParty = party => {
@@ -3613,7 +3636,7 @@ const openVoucher = () => {
           </> : <AccEmpty title="No customers or suppliers yet" copy="Accounts parties are independent of Daily Finance customers and Chit Fund members." actionLabel={canWrite ? "+ Add party" : ""} onAction={canWrite ? openParty : undefined} />}
         </div>}
 
-        {section === "manufacturing" && manufacturingEnabled && <ManufacturingWorkspace items={items} stockMovements={stockMovements} saving={saving} onItems={() => openSection("setup")} onTransactions={() => openSection("vouchers")} onAdjustStock={payload => run(() => adjustStock(token, payload), "Production stock movement saved.")} />}
+        {section === "manufacturing" && manufacturingEnabled && <ManufacturingWorkspace items={items} stockMovements={stockMovements} saving={saving} onItems={() => openSection("setup")} onTransactions={() => openSection("vouchers")} onProductionRun={recordProductionRun} />}
 
         {section === "more" && <div className="acc-panel">
           <p className="copy">Ledger, banking, statements and setup. Day-to-day work stays on Home, Transactions, Parties and Reports.</p>
@@ -4429,6 +4452,7 @@ const openVoucher = () => {
       {showCreateCompany && <Modal title="Create company" close={() => !saving && setShowCreateCompany(false)} actions={<div className="tabs spacer"><button type="button" className="btn" disabled={saving} onClick={() => setShowCreateCompany(false)}>Cancel</button><button type="button" className="btn primary" disabled={saving || !String(companyDraft.name || "").trim()} onClick={() => run(async () => {
         const created = await createAccountsCompany(token, companyDraft);
         const id = Array.isArray(created) ? created[0] : created;
+        if (typeof id === "string") saveIndustry(id, companyDraft.industry || "retail");
         setShowCreateCompany(false);
         return typeof id === "string" ? id : undefined;
       }, "Company created. This company’s books start empty.")}>{saving ? "Saving…" : "Create company"}</button></div>}>
