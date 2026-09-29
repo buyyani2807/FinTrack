@@ -660,6 +660,11 @@ function AccUserMenu({ workspace = {}, onSetup, onLogout, placement = "sidebar" 
 
 const NAV_STORAGE_KEY = "fintrack-accounts-nav";
 const COMPANY_STORAGE_KEY = "fintrack-accounts-company";
+
+// Last loaded books, kept in memory only for this tab and session token, so
+// reopening Accounts renders immediately while refresh() revalidates.
+let accountsSnapshot = null;
+const readAccountsSnapshot = token => (token && accountsSnapshot?.token === token ? accountsSnapshot : null);
 const NAV_TREE = [
   { id: "overview", label: "Overview", glyph: "⌂" },
   { id: "vouchers", label: "Transactions", glyph: "▣" },
@@ -1576,28 +1581,33 @@ function CoaFormFields({ form, setForm, accounts = [] }) {
 }
 
 export function AccountsModule({ token, close, logout, workspace = {}, orgSettings: orgSettingsProp = null }) {
+  const [cached] = useState(() => {
+    const snapshot = readAccountsSnapshot(token);
+    if (snapshot) setActiveAccountsCompanyId(snapshot.activeCompanyId || null);
+    return snapshot;
+  });
   const [section, setSection] = useState("overview");
   const [reportTab, setReportTab] = useState("daybook");
   const [navExpanded, setNavExpanded] = useState(() => {
     try { return sessionStorage.getItem(NAV_STORAGE_KEY) === "expanded"; } catch { return false; }
   });
-  const [settings, setSettings] = useState(null);
+  const [settings, setSettings] = useState(cached?.settings ?? null);
   const [orgSettings, setOrgSettings] = useState(orgSettingsProp || {});
   const [pendingSalesInvoiceId, setPendingSalesInvoiceId] = useState(null);
   const [salesInvoiceSuccess, setSalesInvoiceSuccess] = useState(null);
   const [salesInvoiceView, setSalesInvoiceView] = useState(null);
-  const [accounts, setAccounts] = useState([]);
-  const [parties, setParties] = useState([]);
-  const [partyPipeline, setPartyPipeline] = useState({});
-  const [vouchers, setVouchers] = useState([]);
-  const [items, setItems] = useState([]);
-  const [itemCategories, setItemCategories] = useState([]);
-  const [stockMovements, setStockMovements] = useState([]);
-  const [voucherItemLines, setVoucherItemLines] = useState([]);
+  const [accounts, setAccounts] = useState(cached?.accounts ?? []);
+  const [parties, setParties] = useState(cached?.parties ?? []);
+  const [partyPipeline, setPartyPipeline] = useState(cached?.partyPipeline ?? {});
+  const [vouchers, setVouchers] = useState(cached?.vouchers ?? []);
+  const [items, setItems] = useState(cached?.items ?? []);
+  const [itemCategories, setItemCategories] = useState(cached?.itemCategories ?? []);
+  const [stockMovements, setStockMovements] = useState(cached?.stockMovements ?? []);
+  const [voucherItemLines, setVoucherItemLines] = useState(cached?.voucherItemLines ?? []);
   const [audit, setAudit] = useState([]);
   const [locks, setLocks] = useState([]);
   const [statements, setStatements] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [migrationRequired, setMigrationRequired] = useState(false);
@@ -1644,7 +1654,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
   const [inviteDraft, setInviteDraft] = useState({ email: "", role: "viewer", note: "" });
   const [inviteEmailDraft, setInviteEmailDraft] = useState(null);
   const [teamInvites, setTeamInvites] = useState([]);
-  const [recurringTemplates, setRecurringTemplates] = useState([]);
+  const [recurringTemplates, setRecurringTemplates] = useState(cached?.recurringTemplates ?? []);
   const [recurringDraft, setRecurringDraft] = useState(() => emptyRecurringDraft());
   const [pendingRecurringId, setPendingRecurringId] = useState(null);
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
@@ -1665,11 +1675,11 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
   const [partySearch, setPartySearch] = useState("");
   const [partyDeleteDialog, setPartyDeleteDialog] = useState(null);
   const [outstandingOnly, setOutstandingOnly] = useState(false);
-  const [companies, setCompanies] = useState([]);
-  const [activeCompanyId, setActiveCompanyId] = useState("");
+  const [companies, setCompanies] = useState(cached?.companies ?? []);
+  const [activeCompanyId, setActiveCompanyId] = useState(cached?.activeCompanyId ?? "");
   const [showCreateCompany, setShowCreateCompany] = useState(false);
   const [companyDraft, setCompanyDraft] = useState({ name: "", booksStartedOn: todayIso(), industry: "retail" });
-  const [gstForm, setGstForm] = useState({ gstRegistration: "unregistered", gstin: "", legalName: "", stateCode: "" });
+  const [gstForm, setGstForm] = useState(cached?.gstForm ?? { gstRegistration: "unregistered", gstin: "", legalName: "", stateCode: "" });
   const [listPage, setListPage] = useState(1);
   const [expandedVoucherId, setExpandedVoucherId] = useState(null);
   const [voucherAttachments, setVoucherAttachments] = useState([]);
@@ -1678,7 +1688,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
   const deferredPartySearch = useDeferredValue(partySearch);
   const sectionRef = useRef(section);
   const refreshGen = useRef(0);
-  const hasLoadedRef = useRef(false);
+  const hasLoadedRef = useRef(Boolean(cached));
   sectionRef.current = section;
 
   const refresh = useCallback(async (preferredCompanyId) => {
@@ -1703,21 +1713,23 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
         || activeCompanies.find(item => item.isPrimary)
         || activeCompanies[0]
         || null;
+      const nextGstForm = nextCompany ? {
+        gstRegistration: nextCompany.gstRegistration || "unregistered",
+        gstin: nextCompany.gstin || "",
+        legalName: nextCompany.legalName || "",
+        stateCode: nextCompany.stateCode || "",
+      } : null;
       if (nextCompany) {
         setActiveAccountsCompanyId(nextCompany.id);
         setActiveCompanyId(nextCompany.id);
         try { sessionStorage.setItem(COMPANY_STORAGE_KEY, nextCompany.id); } catch { /* ignore */ }
-        setGstForm({
-          gstRegistration: nextCompany.gstRegistration || "unregistered",
-          gstin: nextCompany.gstin || "",
-          legalName: nextCompany.legalName || "",
-          stateCode: nextCompany.stateCode || "",
-        });
+        setGstForm(nextGstForm);
       } else {
         setActiveAccountsCompanyId(null);
         setActiveCompanyId("");
       }
-      const [nextSettings, nextAccounts, nextParties, nextPipeline, nextVouchers, nextItems, nextCategories, nextMovements, nextVoucherItemLines] = await Promise.all([
+      const wantRecurring = sectionRef.current === "overview" || sectionRef.current === "bank";
+      const [nextSettings, nextAccounts, nextParties, nextPipeline, nextVouchers, nextItems, nextCategories, nextMovements, nextVoucherItemLines, nextRecurring] = await Promise.all([
         loadAccountingSettings(token),
         loadChartOfAccounts(token),
         loadParties(token),
@@ -1727,6 +1739,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
         loadItemCategories(token).catch(err => { if (err.code === "MIGRATION_REQUIRED") return []; throw err; }),
         loadStockMovements(token).catch(err => { if (err.code === "MIGRATION_REQUIRED") return []; throw err; }),
         loadVoucherItemLines(token).catch(err => { if (err.code === "MIGRATION_REQUIRED") return []; throw err; }),
+        wantRecurring ? loadRecurringTemplates(token).catch(() => []) : Promise.resolve(null),
       ]);
       if (gen !== refreshGen.current) return;
       const mergedSettings = {
@@ -1735,27 +1748,41 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
         booksStartedOn: nextCompany?.booksStartedOn || nextSettings?.booksStartedOn || "",
         fyStartMonth: nextCompany?.fyStartMonth || nextSettings?.fyStartMonth || 4,
       };
-      setSettings(Object.keys(mergedSettings).length ? mergedSettings : nextSettings);
+      const resolvedSettings = Object.keys(mergedSettings).length ? mergedSettings : nextSettings;
+      const nextPipelineMap = Object.fromEntries((nextPipeline || []).map(row => [row.partyId, row.stage]));
+      setSettings(resolvedSettings);
       setAccounts(nextAccounts);
       setParties(nextParties);
-      setPartyPipeline(Object.fromEntries((nextPipeline || []).map(row => [row.partyId, row.stage])));
+      setPartyPipeline(nextPipelineMap);
       setVouchers(nextVouchers);
       setItems(nextItems || []);
       setItemCategories(nextCategories || []);
       setStockMovements(nextMovements || []);
       setVoucherItemLines(nextVoucherItemLines || []);
+      // Setup (audit, locks, roles, invites) and bank-statement data are loaded
+      // by the section-specific effect below.
+      if (nextRecurring) setRecurringTemplates(nextRecurring);
       setMigrationRequired(false);
       if (mergedSettings.companyName || mergedSettings.booksStartedOn) {
         setSetupForm({ companyName: mergedSettings.companyName, booksStartedOn: mergedSettings.booksStartedOn || todayIso() });
       }
-      // Setup (audit, locks, roles, invites, recurring) and bank-statement data
-      // are loaded by the section-specific effect below. Keeping them out of the
-      // core refresh prevents duplicate requests whenever the shell remounts.
-      if (sectionRef.current === "overview" || sectionRef.current === "bank") {
-        const nextRecurring = await loadRecurringTemplates(token).catch(() => []);
-        if (gen !== refreshGen.current) return;
-        setRecurringTemplates(nextRecurring || []);
-      }
+      const sameCompanyCache = accountsSnapshot?.token === token && accountsSnapshot.activeCompanyId === (nextCompany?.id || "");
+      accountsSnapshot = {
+        token,
+        companies: nextCompanies,
+        activeCompanyId: nextCompany?.id || "",
+        gstForm: nextGstForm || undefined,
+        settings: resolvedSettings,
+        accounts: nextAccounts,
+        parties: nextParties,
+        partyPipeline: nextPipelineMap,
+        vouchers: nextVouchers,
+        items: nextItems || [],
+        itemCategories: nextCategories || [],
+        stockMovements: nextMovements || [],
+        voucherItemLines: nextVoucherItemLines || [],
+        recurringTemplates: nextRecurring || (sameCompanyCache ? accountsSnapshot.recurringTemplates : []),
+      };
     } catch (err) {
       if (gen !== refreshGen.current) return;
       if (err.code === "MIGRATION_REQUIRED") setMigrationRequired(true);
@@ -2151,6 +2178,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
     try {
       sessionStorage.setItem("fintrack-login-context", "accounts");
       sessionStorage.setItem("fintrack-open-accounts", "1");
+      accountsSnapshot = null;
       await logout({ from: "accounts" });
     } finally {
       setSigningOut(false);

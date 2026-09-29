@@ -36,7 +36,8 @@ import { AttentionCenterCard } from "./features/intelligence/AttentionCenterCard
 import { buildTodaysActionList, buildChitAttentionItems } from "./features/intelligence/attentionCenter.js";
 import { assertModuleEntitled, isModuleEnabled } from "./features/commercial/entitlements.js";
 import { trackProductEvent } from "./features/commercial/productAnalytics.js";
-const AccountsModule = lazy(() => import("./features/accounts/AccountingProduct.jsx").then(module => ({ default: module.AccountsModule })));
+const loadAccountsModule = () => import("./features/accounts/AccountingProduct.jsx");
+const AccountsModule = lazy(() => loadAccountsModule().then(module => ({ default: module.AccountsModule })));
 import { CreditScoreCard } from "./features/creditScore/CreditScoreCard.jsx";
 import { buildChitMonthStatement, currentSchemeMonth, monthLabel as chitMonthLabel } from "./features/chitFund/monthStatement";
 import { downloadChitMonthStatementPdf } from "./features/chitFund/monthStatementPdf";
@@ -1602,6 +1603,16 @@ function FinancierTools({ loans, token, activeChitSchemes = [], onCreateAgent, o
   const showChit = workspace?.role === "owner" && isModuleEnabled(orgSettings, "chit");
   const showCashbook = workspace?.role === "owner" && isModuleEnabled(orgSettings, "cashbook");
   const showAccounts = workspace?.role === "owner" && isModuleEnabled(orgSettings, "accounts");
+  useEffect(() => {
+    if (!showAccounts) return undefined;
+    const preload = () => { loadAccountsModule().catch(() => {}); };
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(preload, { timeout: 4000 });
+      return () => window.cancelIdleCallback?.(id);
+    }
+    const id = window.setTimeout(preload, 1500);
+    return () => window.clearTimeout(id);
+  }, [showAccounts]);
   const openEntitledPanel = (moduleId, open) => {
     try {
       assertModuleEntitled(orgSettings, moduleId);
