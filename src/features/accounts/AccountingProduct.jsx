@@ -2009,7 +2009,9 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
       overdueInvoiceCount: overdueInvoices.length,
       lowStockCount,
       unmatchedBankLines,
-      gstNeedsReview: Boolean(activeCompany?.gstRegistration && activeCompany.gstRegistration !== "unregistered"),
+      gstEntryCount: activeCompany?.gstRegistration && activeCompany.gstRegistration !== "unregistered"
+        ? new Set(gstBooksReport(vouchers, range).rows.map(row => `${row.voucherType}:${row.voucherNumber}`)).size
+        : 0,
     });
     return {
       summary: itemsList.length ? `${itemsList.length} Accounts item${itemsList.length === 1 ? "" : "s"} need review` : "Accounts look clear",

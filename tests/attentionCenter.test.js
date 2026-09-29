@@ -42,6 +42,14 @@ test("accounts attention stays empty when nothing is flagged", () => {
   assert.equal(items.length, 0);
 });
 
+test("GST review is flagged only when the period has GST entries", () => {
+  assert.equal(buildAccountsAttentionItems({ gstEntryCount: 0 }).length, 0);
+  const [gst] = buildAccountsAttentionItems({ gstEntryCount: 3 });
+  assert.equal(gst.id, "accounts-gst-review");
+  assert.match(gst.detail, /^3 GST entries this period/);
+  assert.match(buildAccountsAttentionItems({ gstEntryCount: 1 })[0].detail, /^1 GST entry this period/);
+});
+
 test("daily finance created today is not flagged unpaid in attention center", () => {
   const today = "2026-09-08";
   const center = buildAttentionCenter({

@@ -158,7 +158,7 @@ export function buildAccountsAttentionItems({
   overdueInvoiceCount = 0,
   lowStockCount = 0,
   unmatchedBankLines = 0,
-  gstNeedsReview = false,
+  gstEntryCount = 0,
 } = {}) {
   const items = [];
   if (overdueReceivables > 0 || overdueInvoiceCount > 0) {
@@ -194,13 +194,13 @@ export function buildAccountsAttentionItems({
       href: { panel: "accounts", section: "bank" },
     });
   }
-  if (gstNeedsReview) {
+  if (gstEntryCount > 0) {
     items.push({
       id: "accounts-gst-review",
       module: "gst",
       severity: "medium",
       title: "GST books data requires review",
-      detail: "Review calculated GST before any portal filing.",
+      detail: `${gstEntryCount} GST entr${gstEntryCount === 1 ? "y" : "ies"} this period. Review calculated GST before any portal filing.`,
       actionLabel: "Open GST report",
       href: { panel: "accounts", section: "reports", reportTab: "gst" },
     });
