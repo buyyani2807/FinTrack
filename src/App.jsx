@@ -15,6 +15,7 @@ import { disbursementPayoutError, disbursementPayoutSplit, disbursementPayoutTot
 import { collectionDetailVisibility, financeRolesAligned, ownerChromeAllowed, sessionUserRole, workspaceSessionAllowed } from "./features/finance/workspaceAccess.js";
 import { ChitCustomerPortal, ChitFundPage } from "./features/chitFund/ChitFundModule";
 import { LegalPage, legalViewFromLocation, openLegalView } from "./features/legal/LegalPage.jsx";
+import { ROUTED_PANELS, getAppRoute, resetAppRoute, subscribeAppRoute, updateAppRoute } from "./lib/appRoute.js";
 import { isPublicSignupAllowed, signupInviteRequired, validateSignupInvite } from "./lib/signupGate.js";
 import { assignCollectionAgents, chitCustomerPortalLogin, claimTransactionConfirmation, createCollectionAgent, createFinanceAccount, customerPortalLogin, deleteFinanceAccount, deleteFinancePayment, enableCustomerPortal, loadActiveChitSchemes, loadChitSchemeDetails, loadChitSchemes, loadCustomerKyc, loadFinanceAccounts, loadManagedAgents, loadPaymentReminderLog, loadTransactionConfirmationLog, loadUpcomingChitPayments, loadWorkspace, logReceiptActivity, recordPayment, recordTransactionConfirmationResend, resetCustomerPortalPin, saveCustomerKyc, setAccountStatus, saveCollectionOrder, updateCollectionAgent, updateFinanceAccount, updateFinancePayment, updatePaymentNotes, updateTransactionConfirmationStatus } from "./lib/financeRepository";
 import { buildFinanceReceipt, formatReceiptDate, nextMonthlyPayment } from "./features/receipts/receiptModel.js";
@@ -1017,16 +1018,18 @@ function Financier({
   , role = "staff", onStatusChange, onPaymentNoteChange, onPaymentCorrect, onPaymentDelete, onCollectionOrderChange,
   authToken, orgSettings = {}, workspace = {}, onLogReceipt, module = "all", onModuleChange = () => {},
 }) {
+  const [initialRoute] = useState(getAppRoute);
   const [modal, setModal] = useState(null),
     [detail, setDetail] = useState(null),
+    [pendingDetailId, setPendingDetailId] = useState(() => initialRoute.detailId),
     [editLoan, setEditLoan] = useState(null),
     [portalLoan, setPortalLoan] = useState(null),
-    [collectionMode, setCollectionMode] = useState(false),
-    [moduleSection, setModuleSection] = useState("overview"),
+    [collectionMode, setCollectionMode] = useState(() => initialRoute.module !== "all" && initialRoute.section === "collections"),
+    [moduleSection, setModuleSection] = useState(() => initialRoute.section || "overview"),
     [editKycLoan, setEditKycLoan] = useState(null),
     [kyc, setKyc] = useState(null),
     [filter, setFilter] = useState("all"),
-    [customerMode, setCustomerMode] = useState(false),
+    [customerMode, setCustomerMode] = useState(() => initialRoute.section === "customers"),
     [statusFilter, setStatusFilter] = useState("all"),
     [search, setSearch] = useState(""),
     [reportDate, setReportDate] = useState(today()),
@@ -1101,11 +1104,13 @@ function Financier({
     const navigate = event => {
       const { kind = "all", customers = false, section } = event.detail || {};
       onModuleChange(kind);
+      setPendingDetailId(null);
       if (kind === "all") {
         setFilter("all");
         setCustomerMode(false);
         setStatusFilter("all");
         setModuleSection("overview");
+        setCollectionMode(false);
         return;
       }
       const nextSection = section || (customers ? "customers" : "overview");
@@ -1121,6 +1126,37 @@ function Financier({
     window.addEventListener("fintrack-navigate-module", navigate);
     return () => window.removeEventListener("fintrack-navigate-module", navigate);
   }, [onModuleChange]);
+  useEffect(() => subscribeAppRoute(route => {
+    const customers = route.section === "customers";
+    onModuleChange(route.module);
+    setFilter("all");
+    setCustomerMode(customers);
+    setModuleSection(route.section || "overview");
+    setCollectionMode(route.module !== "all" && route.section === "collections");
+    setStatusFilter("all");
+    setSearch("");
+    setStatementLoan(null);
+    setDetail(null);
+    setPendingDetailId(route.detailId || null);
+  }), [onModuleChange]);
+  useEffect(() => {
+    if (!pendingDetailId) return;
+    const loan = loans.find(item => item.id === pendingDetailId);
+    if (!loan) return;
+    setDetail(loan);
+    setPendingDetailId(null);
+  }, [pendingDetailId, loans]);
+  const routeSection = customerMode
+    ? "customers"
+    : module === "all"
+      ? "overview"
+      : collectionMode
+        ? "collections"
+        : moduleSection === "collections" ? "overview" : moduleSection;
+  useEffect(() => {
+    if (pendingDetailId) return;
+    updateAppRoute({ module, section: routeSection, detailId, ...(isOwner ? {} : { panel: null }) });
+  }, [module, routeSection, detailId, pendingDetailId, isOwner]);
   const openCustomerDirectory = () => {
     setFilter("all");
     setCustomerMode(true);
@@ -1232,7 +1268,7 @@ function Financier({
       }
       if (href?.panel === "accounts") {
         sessionStorage.setItem("fintrack-open-accounts", "1");
-        if (href.section) sessionStorage.setItem("fintrack-open-accounts-section", href.section);
+        updateAppRoute({ panel: "accounts", sub: [href.section, href.section === "reports" ? href.reportTab : null].filter(Boolean) });
         window.dispatchEvent(new CustomEvent("fintrack-open-accounts", { detail: { section: href.section, reportTab: href.reportTab } }));
         return;
       }
@@ -1543,7 +1579,11 @@ function ActiveChitSchemes({ schemes = [], onOpen }) {
 }
 
 function FinancierTools({ loans, token, activeChitSchemes = [], onCreateAgent, onLoadAgents, onAssignAgent, onUpdateAgent, orgSettings = {}, workspace = {}, onLogReceipt, onSettingsSaved, selectedModule = "all", onModuleChange = () => {}, logout }) {
-  const [panel, setPanel] = useState(null);
+  const [panel, setPanel] = useState(() => getAppRoute().panel);
+  useEffect(() => subscribeAppRoute(route => setPanel(route.panel)), []);
+  useEffect(() => {
+    updateAppRoute({ panel: ROUTED_PANELS.includes(panel) ? panel : null });
+  }, [panel]);
   const [dashboardChitSchemes, setDashboardChitSchemes] = useState(activeChitSchemes);
   const [openChitSchemeId, setOpenChitSchemeId] = useState(null);
   const reloadDashboardChit = () => loadActiveChitSchemes(token)
@@ -1603,6 +1643,19 @@ function FinancierTools({ loans, token, activeChitSchemes = [], onCreateAgent, o
   const showChit = workspace?.role === "owner" && isModuleEnabled(orgSettings, "chit");
   const showCashbook = workspace?.role === "owner" && isModuleEnabled(orgSettings, "cashbook");
   const showAccounts = workspace?.role === "owner" && isModuleEnabled(orgSettings, "accounts");
+  const panelAllowed = {
+    cashbook: showCashbook,
+    chit: showChit,
+    accounts: showAccounts,
+    agents: workspace?.role === "owner",
+    settings: workspace?.role === "owner",
+  };
+  const panelBlocked = ROUTED_PANELS.includes(panel) && !panelAllowed[panel];
+  useEffect(() => {
+    if (!panelBlocked) return;
+    updateAppRoute({ panel: null }, { replace: true });
+    setPanel(null);
+  }, [panelBlocked]);
   useEffect(() => {
     if (!showAccounts || !token) return undefined;
     const preload = () => { loadAccountsModule().then(module => module.prefetchAccounts?.(token)).catch(() => {}); };
@@ -1661,7 +1714,7 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [loans, setLoans] = useState([]);
   const [workspace, setWorkspace] = useState(null);
-  const [financeModule, setFinanceModule] = useState("all");
+  const [financeModule, setFinanceModule] = useState(() => getAppRoute().module);
   const [dataError, setDataError] = useState("");
   const sessionGen = useRef(0);
   const userRoleRef = useRef(null);
@@ -1672,6 +1725,7 @@ export default function App() {
     return !role || role === "customer" || role === "chitCustomer" || financeRolesAligned(role, next?.role);
   };
   const clearFinanceState = () => {
+    resetAppRoute();
     setLoans([]);
     setFinanceModule("all");
     setDataError("");
@@ -1748,7 +1802,7 @@ export default function App() {
     const { workspace: nextWorkspace, ...session } = payload;
     beginSession();
     setLoans([]);
-    setFinanceModule("all");
+    setFinanceModule(getAppRoute().module);
     setDataError("");
     userRoleRef.current = session.role;
     flushSync(() => {
@@ -1804,6 +1858,7 @@ export default function App() {
     userRoleRef.current = null;
     clearFinanceState();
     if (role === "financier" || role === "agent") await supabase.auth.signOut();
+    resetAppRoute();
     window.history.replaceState(null, "", window.location.pathname + window.location.search);
   };
   const createLoan = async loan => {

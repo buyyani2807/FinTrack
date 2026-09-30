@@ -250,6 +250,7 @@ import { previousComparisonRange } from "./accountsIntelligence.js";
 import { downloadAccountsCsv, downloadAccountsExcel, downloadAccountsPdf } from "./accountingExport.js";
 import { formatInr } from "../../lib/formatMoney.js";
 import { loadOrganizationSettings } from "../../lib/financeRepository.js";
+import { getAppRoute, subscribeAppRoute, updateAppRoute } from "../../lib/appRoute.js";
 import { buildSalesInvoice } from "./salesInvoiceModel.js";
 import { ArReminderButton, OutstandingWhatsAppButton, PartyStatementButton, PaymentAdviceButton, PurchaseDocumentButton, SalesInvoiceActions, SalesInvoiceSuccessModal, SalesInvoiceViewerModal } from "./SalesInvoiceActions.jsx";
 import { AccItemsSetup } from "./AccItemsSetup.jsx";
@@ -260,7 +261,10 @@ import {
   itemPurchasesReport,
   itemSalesReport,
   itemizedEntryDraft,
+  normalizeItemLine,
   stockMovementReport,
+  stockReasonLabel,
+  usesItemLines,
 } from "./inventoryModel.js";
 
 const money = formatInr;
@@ -1001,6 +1005,7 @@ const emptySimpleForm = () => ({
   hsnSac: "",
   taxInclusive: false,
   entryMode: "items",
+  noteEntryMode: "amount",
   itemLines: [emptyItemLine()],
   settlements: [],
   amountReceived: "",
@@ -1093,6 +1098,17 @@ const REPORT_TABS = [
   { id: "item_purchases", label: "Item Purchases" },
   { id: "stock_moves", label: "Stock Movement" },
 ];
+
+const SECTION_ROUTE_ALIASES = { items: "setup", gst: "reports" };
+
+function accountsViewFromRoute(route) {
+  const [rawSection, rawTab] = route?.panel === "accounts" ? route.sub || [] : [];
+  const aliased = SECTION_ROUTE_ALIASES[rawSection] || rawSection;
+  const section = SECTIONS.some(item => item.id === aliased) ? aliased : "overview";
+  const tabId = rawSection === "gst" ? "gst" : rawTab;
+  const reportTab = section === "reports" && REPORT_TABS.some(tab => tab.id === tabId) ? tabId : "daybook";
+  return { section, reportTab };
+}
 
 const MOBILE_TABS = [
   { id: "overview", label: "Home" },
@@ -1239,7 +1255,8 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
   const selectedParty = parties.find(party => party.id === form.partyId);
   const partyState = selectedParty?.stateCode || gstStateFromGstin(selectedParty?.gstin);
   const intra = isIntraGst(gstCompany?.stateCode, partyState);
-  const itemMode = (kind === "sale" || kind === "purchase") && form.entryMode !== "amount";
+  const returnKind = kind === "credit_note" || kind === "debit_note";
+  const itemMode = usesItemLines(kind, form);
   const settlementKinds = kind === "receipt" || kind === "payment" || kind === "credit_note" || kind === "debit_note";
   const partyOpenInvoices = settlementKinds && form.partyId
     ? (openInvoices || []).filter(row => row.partyId === form.partyId && Number(row.outstanding || 0) > 0)
@@ -1253,6 +1270,9 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
   const itemPreview = itemMode
     ? aggregateItemizedGst(form.itemLines || [], { intra, taxInclusive: false })
     : null;
+  const settlementAmount = itemMode
+    ? Number((gstOn ? itemPreview?.total : itemPreview?.taxable) || 0)
+    : form.amount;
   const gstPreview = !itemMode && gstOn
     ? prepareGstAmount(form.amount, { enabled: Number(form.gstRate) > 0, rate: form.gstRate, intra, taxInclusive: form.taxInclusive, hsnSac: form.hsnSac })
     : null;
@@ -1295,9 +1315,13 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
       upi: Number(form.receivedUpi || 0),
     });
   const noteCopy = kind === "credit_note"
-    ? "Reduces the customer balance and sales. Original invoices stay in Day Book."
+    ? (itemMode
+      ? "Sales return: returned items go back into stock, and the customer balance and sales reduce. Original invoices stay in Day Book."
+      : "Reduces the customer balance and sales. Original invoices stay in Day Book.")
     : kind === "debit_note"
-      ? "Reduces the supplier balance and purchases. Original invoices stay in Day Book."
+      ? (itemMode
+        ? "Purchase return: returned items leave stock, and the supplier balance and purchases reduce. Original invoices stay in Day Book."
+        : "Reduces the supplier balance and purchases. Original invoices stay in Day Book.")
       : kind === "sale"
         ? "Sale value is always the full invoice. Amount received is a separate collection against that invoice — never a reduced sale."
         : "FinTrack posts the balanced voucher for you. Open + Voucher if you need a custom journal.";
@@ -1316,7 +1340,7 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
       patchItemLine(index, { itemId: "", itemName: "", itemSku: "", itemType: "product", unit: "Nos" });
       return;
     }
-    const defaultRate = kind === "sale" ? item.sellingPrice : item.purchasePrice;
+    const defaultRate = kind === "sale" || kind === "credit_note" ? item.sellingPrice : item.purchasePrice;
     patchItemLine(index, {
       itemId: item.id,
       itemName: item.name,
@@ -1363,7 +1387,7 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
           const partyId = event.target.value;
           set({
             partyId,
-            settlements: settlementKinds ? syncSettlements(partyId, form.amount) : form.settlements,
+            settlements: settlementKinds ? syncSettlements(partyId, settlementAmount) : form.settlements,
           });
         }}><option value="">Select</option>{partyList.map(party => <option key={party.id} value={party.id}>{party.name}</option>)}</select></Field>}
         {(kind === "sale" || kind === "purchase") && (
@@ -1371,6 +1395,14 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
             <select value={itemMode ? "items" : "amount"} onChange={event => set({ entryMode: event.target.value })}>
               <option value="items">Line items</option>
               <option value="amount">Single amount</option>
+            </select>
+          </Field>
+        )}
+        {returnKind && (
+          <Field label="Entry">
+            <select value={itemMode ? "items" : "amount"} onChange={event => set({ noteEntryMode: event.target.value, settlements: [] })}>
+              <option value="amount">Amount only (rate difference / discount)</option>
+              <option value="items">Returned items (updates stock)</option>
             </select>
           </Field>
         )}
@@ -1435,10 +1467,9 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
     {itemMode && (
       <section className="acc-form-section acc-item-lines">
         <h3 className="acc-form-section-title">Line items</h3>
-        <div className="table acc-table-wrap"><table><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>GST%</th><th className="acc-num">Amount</th><th></th></tr></thead><tbody>
+        <div className="table acc-table-wrap"><table><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Discount</th><th>GST%</th><th className="acc-num">Amount</th><th></th></tr></thead><tbody>
           {(form.itemLines || [emptyItemLine()]).map((line, index) => {
-            const qty = Number(line.quantity || 0);
-            const rate = Number(line.rate || 0);
+            const lineTotals = normalizeItemLine(line);
             const stock = line.itemId ? stockByItem[line.itemId] : null;
             return (
               <tr key={index}>
@@ -1455,8 +1486,9 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
                 </td>
                 <td><input type="number" min="0" step="0.001" value={line.quantity} onChange={event => patchItemLine(index, { quantity: event.target.value })} /></td>
                 <td><input type="number" min="0" step="0.01" value={line.rate} onChange={event => patchItemLine(index, { rate: event.target.value, rateTouched: true })} /></td>
+                <td><input inputMode="decimal" value={line.discount || ""} placeholder="₹ or %" aria-label="Discount (amount or percent)" onChange={event => patchItemLine(index, { discount: event.target.value })} /></td>
                 <td><input type="number" min="0" max="100" step="0.01" value={line.gstRate} onChange={event => patchItemLine(index, { gstRate: event.target.value })} /></td>
-                <td className="acc-num">{money(qty * rate)}</td>
+                <td className="acc-num">{money(lineTotals.netAmount)}</td>
                 <td>{(form.itemLines || []).length > 1 && <button type="button" className="btn danger" onClick={() => setForm(current => ({ ...current, itemLines: current.itemLines.filter((_, i) => i !== index) }))}>Remove</button>}</td>
               </tr>
             );
@@ -1464,15 +1496,14 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
         </tbody></table></div>
         <div className="acc-item-line-cards">
           {(form.itemLines || [emptyItemLine()]).map((line, index) => {
-            const qty = Number(line.quantity || 0);
-            const rate = Number(line.rate || 0);
+            const lineTotals = normalizeItemLine(line);
             const stock = line.itemId ? stockByItem[line.itemId] : null;
             const lineName = activeItems.find(item => item.id === line.itemId)?.name || "Select item";
             return (
               <article key={index} className="acc-item-line-card">
                 <div className="acc-item-line-card-top">
                   <strong>{lineName}</strong>
-                  <span className="acc-item-line-amount">{money(qty * rate)}</span>
+                  <span className="acc-item-line-amount">{money(lineTotals.netAmount)}</span>
                 </div>
                 <label className="accounts-filter-field">
                   <span className="small">Item</span>
@@ -1493,6 +1524,9 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
                   <label className="accounts-filter-field"><span className="small">Rate</span>
                     <input type="number" min="0" step="0.01" value={line.rate} onChange={event => patchItemLine(index, { rate: event.target.value, rateTouched: true })} />
                   </label>
+                  <label className="accounts-filter-field"><span className="small">Discount</span>
+                    <input inputMode="decimal" value={line.discount || ""} placeholder="₹ or %" onChange={event => patchItemLine(index, { discount: event.target.value })} />
+                  </label>
                   <label className="accounts-filter-field"><span className="small">GST %</span>
                     <input type="number" min="0" max="100" step="0.01" value={line.gstRate} onChange={event => patchItemLine(index, { gstRate: event.target.value })} />
                   </label>
@@ -1507,6 +1541,10 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
         <button type="button" className="btn" onClick={() => setForm(current => ({ ...current, itemLines: [...(current.itemLines || []), emptyItemLine()] }))}>+ Add item</button>
         {itemPreview && (
           <p className="small acc-gst-preview">
+            {(() => {
+              const discountTotal = roundMoney(itemPreview.lines.reduce((sum, line) => sum + (Number.isFinite(line.discountAmount) ? line.discountAmount : 0), 0));
+              return discountTotal > 0 ? `Discount ${money(discountTotal)} · ` : "";
+            })()}
             Subtotal {money(itemPreview.taxable)}
             {gstOn && itemPreview.tax > 0 ? (itemPreview.igst > 0
               ? ` · IGST ${money(itemPreview.igst)}`
@@ -1664,8 +1702,19 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
     if (snapshot) setActiveAccountsCompanyId(snapshot.activeCompanyId || null);
     return snapshot;
   });
-  const [section, setSection] = useState("overview");
-  const [reportTab, setReportTab] = useState("daybook");
+  const [initialView] = useState(() => accountsViewFromRoute(getAppRoute()));
+  const [section, setSection] = useState(initialView.section);
+  const [reportTab, setReportTab] = useState(initialView.reportTab);
+  useEffect(() => subscribeAppRoute(route => {
+    if (route.panel !== "accounts") return;
+    const view = accountsViewFromRoute(route);
+    setSection(view.section);
+    setReportTab(view.reportTab);
+  }), []);
+  useEffect(() => {
+    const sub = section === "overview" ? [] : section === "reports" ? ["reports", reportTab] : [section];
+    updateAppRoute({ panel: "accounts", sub });
+  }, [section, reportTab]);
   const [navExpanded, setNavExpanded] = useState(() => {
     try { return sessionStorage.getItem(NAV_STORAGE_KEY) === "expanded"; } catch { return false; }
   });
@@ -2599,7 +2648,7 @@ const openVoucher = () => {
     const gstOn = activeCompany?.gstRegistration === "regular" && ["sale", "purchase", "credit_note", "debit_note"].includes(simpleKind);
     const partyState = selectedParty?.stateCode || gstStateFromGstin(selectedParty?.gstin);
     const intra = isIntraGst(activeCompany?.stateCode, partyState);
-    const useItems = (simpleKind === "sale" || simpleKind === "purchase") && simpleForm.entryMode !== "amount";
+    const useItems = usesItemLines(simpleKind, simpleForm);
     const moneyParts = simpleForm.moneyMode === "cash_upi"
       ? { cash: Number(simpleForm.receivedCash || 0), upi: Number(simpleForm.receivedUpi || 0) }
       : null;
@@ -3883,7 +3932,7 @@ const openVoucher = () => {
           )}
           {section === "reports" && reportTab === "stock_moves" && (
             <div className="table spacer acc-table-wrap"><table><thead><tr><th>Date</th><th>Item</th><th>Direction</th><th className="acc-num">Qty</th><th>Reason</th><th>Voucher</th></tr></thead><tbody>
-              {stockMoveRows.map(row => <tr key={row.id}><td>{row.movementDate}</td><td>{row.itemName}</td><td>{row.direction}</td><td className="acc-num">{row.quantityDelta}</td><td>{row.reason}</td><td>{row.voucherNumber || "—"}</td></tr>)}
+              {stockMoveRows.map(row => <tr key={row.id}><td>{row.movementDate}</td><td>{row.itemName}</td><td>{row.direction}</td><td className="acc-num">{row.quantityDelta}</td><td>{stockReasonLabel(row.reason)}</td><td>{row.voucherNumber || "—"}</td></tr>)}
               {!stockMoveRows.length && <tr><td colSpan="6">No stock movements in this period.</td></tr>}
             </tbody></table></div>
           )}

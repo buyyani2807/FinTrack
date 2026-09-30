@@ -26,6 +26,7 @@ import {
   withRunningBalances,
 } from "./cashbookModel.js";
 import { formatInr } from "../../lib/formatMoney.js";
+import { getAppRoute, subscribeAppRoute, updateAppRoute } from "../../lib/appRoute.js";
 
 const Field = ({ label, children }) => <label className="field"><span>{label}</span>{children}</label>;
 const money = formatInr;
@@ -141,8 +142,19 @@ export function AccountsSummaryCard({ token, moneyFmt = money }) {
   </button>;
 }
 
+const cashbookSectionFromRoute = route => {
+  const id = route?.panel === "cashbook" ? route.sub?.[0] : null;
+  return SECTIONS.some(item => item.id === id) ? id : "cashbook";
+};
+
 export function CashbookWorkspace({ token, close, loans = [] }) {
-  const [section, setSection] = useState("cashbook");
+  const [section, setSection] = useState(() => cashbookSectionFromRoute(getAppRoute()));
+  useEffect(() => subscribeAppRoute(route => {
+    if (route.panel === "cashbook") setSection(cashbookSectionFromRoute(route));
+  }), []);
+  useEffect(() => {
+    updateAppRoute({ panel: "cashbook", sub: section === "cashbook" ? [] : [section] });
+  }, [section]);
   const [ledgers, setLedgers] = useState([]);
   const [entries, setEntries] = useState([]);
   const [closings, setClosings] = useState([]);

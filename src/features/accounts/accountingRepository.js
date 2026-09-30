@@ -329,7 +329,12 @@ export const postVoucher = async (token, payload) => {
       amount: Number(link.amount || 0),
     }));
   }
-  const id = await wrap(accRpc("acc_post_voucher", args, token));
+  const id = await wrap(accRpc("acc_post_voucher", args, token)).catch(err => {
+    if (/only supported on sales and purchase/i.test(String(err?.message || ""))) {
+      throw new Error("Returned items need migration 079 (079_accounts_inventory_returns_discounts.sql) in the Supabase SQL editor. Use \"Amount only\" until it is applied.");
+    }
+    throw err;
+  });
   if (payload.dueDate) await setVoucherDueDate(token, id, payload.dueDate);
   // Legacy path: older DBs without input_item_lines still accept a follow-up save.
   if (itemLines.length && payload.forceSeparateItemSave) {
@@ -496,6 +501,7 @@ const mapVoucherItemLine = row => ({
   quantity: Number(row.quantity || 0),
   rate: Number(row.rate || 0),
   amount: Number(row.amount || 0),
+  discountAmount: Number(row.discount_amount || 0),
   gstRate: Number(row.gst_rate || 0),
   hsnSac: row.hsn_sac || "",
   taxableAmount: Number(row.taxable_amount || 0),
@@ -529,11 +535,16 @@ export const loadItems = token => wrap(
   ).then(rows => (rows || []).map(mapItem)),
 );
 
+const VOUCHER_ITEM_LINE_COLUMNS = "id,voucher_id,line_no,item_id,item_name,item_sku,item_type,unit,quantity,rate,amount,gst_rate,hsn_sac,taxable_amount,cgst_amount,sgst_amount,igst_amount";
+const voucherItemLinesPath = columns => `/rest/v1/acc_voucher_item_lines?select=${columns}&order=line_no.asc&limit=20000${companyEq()}`;
+
 export const loadVoucherItemLines = token => wrap(
-  accQuery(
-    `/rest/v1/acc_voucher_item_lines?select=id,voucher_id,line_no,item_id,item_name,item_sku,item_type,unit,quantity,rate,amount,gst_rate,hsn_sac,taxable_amount,cgst_amount,sgst_amount,igst_amount&order=line_no.asc&limit=20000${companyEq()}`,
-    token,
-  ).then(rows => (rows || []).map(mapVoucherItemLine)),
+  accQuery(voucherItemLinesPath(`${VOUCHER_ITEM_LINE_COLUMNS},discount_amount`), token)
+    .catch(err => {
+      if (!/discount_amount/i.test(String(err?.message || ""))) throw err;
+      return accQuery(voucherItemLinesPath(VOUCHER_ITEM_LINE_COLUMNS), token);
+    })
+    .then(rows => (rows || []).map(mapVoucherItemLine)),
 );
 
 export const loadStockMovements = token => wrap(

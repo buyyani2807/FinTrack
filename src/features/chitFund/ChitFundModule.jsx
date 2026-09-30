@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { getAppRoute, subscribeAppRoute, updateAppRoute } from "../../lib/appRoute.js";
 import {
   activateChitScheme,
   chitCustomerLiveState,
@@ -1117,6 +1118,14 @@ function ChitLandingReports({ token, schemes }) {
   </div>;
 }
 
+const CHIT_LANDINGS = ["schemes", "members", "bids", "payments", "reports"];
+
+function chitViewFromRoute(route) {
+  const [first, second] = route?.panel === "chit" ? route.sub || [] : [];
+  if (first === "scheme" && second) return { landing: "schemes", schemeId: second };
+  return { landing: CHIT_LANDINGS.includes(first) ? first : "schemes", schemeId: null };
+}
+
 export function ChitFundPage({ token, close, openSchemeId = null, onOpenSchemeConsumed, onSchemesChanged, orgSettings = {}, workspace = {}, onLogReceipt }) {
   const [schemes, setSchemes] = useState([]);
   const [cycles, setCycles] = useState([]);
@@ -1135,7 +1144,26 @@ export function ChitFundPage({ token, close, openSchemeId = null, onOpenSchemeCo
   const [activateError, setActivateError] = useState("");
   const [receiptSuccess, setReceiptSuccess] = useState(null);
   const [reminderRefresh, setReminderRefresh] = useState(0);
-  const [landing, setLanding] = useState("schemes");
+  const [initialView] = useState(() => chitViewFromRoute(getAppRoute()));
+  const [landing, setLanding] = useState(initialView.landing);
+  const [routeSchemeId, setRouteSchemeId] = useState(initialView.schemeId);
+  useEffect(() => subscribeAppRoute(route => {
+    if (route.panel !== "chit") return;
+    const view = chitViewFromRoute(route);
+    setLanding(view.landing);
+    setSelected(null);
+    setRouteSchemeId(view.schemeId);
+  }), []);
+  useEffect(() => {
+    if (!routeSchemeId || busy) return;
+    setSelected(schemes.find(scheme => scheme.id === routeSchemeId) || null);
+    setRouteSchemeId(null);
+  }, [routeSchemeId, busy, schemes]);
+  const selectedSchemeId = selected?.id || null;
+  useEffect(() => {
+    if (routeSchemeId) return;
+    updateAppRoute({ panel: "chit", sub: selectedSchemeId ? ["scheme", selectedSchemeId] : landing === "schemes" ? [] : [landing] });
+  }, [selectedSchemeId, landing, routeSchemeId]);
   const applyDashboard = payload => {
     setSchemes(payload.schemes);
     setCycles(payload.cycles);

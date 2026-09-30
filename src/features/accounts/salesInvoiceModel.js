@@ -100,6 +100,7 @@ export function buildSalesInvoice({
       quantity: Number(line.quantity || 0),
       unit: line.unit || "",
       rate: Number(line.rate || 0),
+      discount: Number(line.discountAmount || 0),
       amount: Number(line.taxableAmount ?? line.amount ?? 0),
       gstRate: Number(line.gstRate || 0),
       hsnSac: line.hsnSac || "",

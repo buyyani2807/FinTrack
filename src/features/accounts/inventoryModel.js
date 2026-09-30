@@ -1,4 +1,20 @@
-import { prepareGstAmount, roundMoney, gstDocumentLine, saleLines, purchaseLines, assertVoucherDateNotFuture, addDaysIso, assertMoneyModeSplit } from "./accountingModel.js";
+import { prepareGstAmount, roundMoney, gstDocumentLine, saleLines, purchaseLines, creditNoteLines, debitNoteLines, assertVoucherDateNotFuture, addDaysIso, assertMoneyModeSplit } from "./accountingModel.js";
+
+export const ITEMIZED_KINDS = {
+  sale: { voucherType: "sales", partyLabel: "customer", returnKind: false },
+  purchase: { voucherType: "purchase", partyLabel: "supplier", returnKind: false },
+  credit_note: { voucherType: "credit_note", partyLabel: "customer", returnKind: true },
+  debit_note: { voucherType: "debit_note", partyLabel: "supplier", returnKind: true },
+};
+
+export const supportsItemLines = kind => Boolean(ITEMIZED_KINDS[kind]);
+
+/** Sales/purchases default to line items; credit/debit notes default to a single amount (price adjustments). */
+export function usesItemLines(kind, form = {}) {
+  const config = ITEMIZED_KINDS[kind];
+  if (!config) return false;
+  return config.returnKind ? form.noteEntryMode === "items" : form.entryMode !== "amount";
+}
 
 export const ITEM_UNITS = [
   "Nos", "Kg", "Gram", "Litre", "Meter", "Box", "Pack", "Bag", "Piece", "Set", "Hour", "Day",
@@ -35,10 +51,25 @@ export const emptyItemLine = () => ({
   unit: "Nos",
   quantity: "1",
   rate: "",
+  discount: "",
   gstRate: "18",
   hsnSac: "",
   rateTouched: false,
 });
+
+/** Discount input is a rupee amount ("50") or a percent of quantity x rate ("10%"). */
+export function parseLineDiscount(input, grossAmount) {
+  const text = String(input ?? "").trim();
+  if (!text) return 0;
+  const gross = Number(grossAmount || 0);
+  if (text.endsWith("%")) {
+    const percent = Number(text.slice(0, -1).trim());
+    if (!Number.isFinite(percent)) return Number.NaN;
+    return roundMoney((gross * percent) / 100);
+  }
+  const value = Number(text);
+  return Number.isFinite(value) ? roundMoney(value) : Number.NaN;
+}
 
 export function validateItemForm(form = {}) {
   if (!String(form.name || "").trim()) return "Item name is required.";
@@ -55,6 +86,9 @@ export function normalizeItemLine(line = {}) {
   const quantity = Number(line.quantity || 0);
   const rate = Number(line.rate || 0);
   const amount = roundMoney(quantity * rate);
+  const discountAmount = line.discountAmount != null && line.discount == null
+    ? roundMoney(Number(line.discountAmount || 0))
+    : parseLineDiscount(line.discount, amount);
   return {
     itemId: line.itemId || null,
     itemName: String(line.itemName || "").trim(),
@@ -64,6 +98,8 @@ export function normalizeItemLine(line = {}) {
     quantity,
     rate,
     amount,
+    discountAmount,
+    netAmount: Number.isFinite(discountAmount) ? roundMoney(amount - discountAmount) : amount,
     gstRate: Number(line.gstRate || 0),
     hsnSac: String(line.hsnSac || "").trim(),
   };
@@ -79,6 +115,7 @@ export function mapVoucherItemLinesForRpc(lines = []) {
     quantity: Number(line.quantity || 0),
     rate: Number(line.rate || 0),
     amount: Number(line.amount || line.taxableAmount || line.taxable_amount || 0),
+    discount_amount: Number(line.discountAmount ?? line.discount_amount ?? 0),
     gst_rate: Number(line.gstRate ?? line.gst_rate ?? 0),
     hsn_sac: line.hsnSac || line.hsn_sac || "",
     taxable_amount: Number(line.taxableAmount ?? line.taxable_amount ?? line.amount ?? 0),
@@ -90,16 +127,14 @@ export function mapVoucherItemLinesForRpc(lines = []) {
 
 export function validateItemLines(lines = []) {
   if (!lines.length) return "Add at least one item.";
-  const seen = new Set();
   for (let index = 0; index < lines.length; index += 1) {
     const line = normalizeItemLine(lines[index]);
     if (!line.itemId && !line.itemName) return `Choose an item on line ${index + 1}.`;
     if (!(line.quantity > 0)) return `Quantity must be greater than zero on line ${index + 1}.`;
     if (line.rate < 0) return `Rate cannot be negative on line ${index + 1}.`;
-    if (line.itemId) {
-      if (seen.has(line.itemId)) return "Duplicate items in the same voucher are not allowed.";
-      seen.add(line.itemId);
-    }
+    if (!Number.isFinite(line.discountAmount)) return `Enter the discount as an amount or a percent (e.g. 10%) on line ${index + 1}.`;
+    if (line.discountAmount < 0) return `Discount cannot be negative on line ${index + 1}.`;
+    if (line.discountAmount > line.amount) return `Discount cannot be more than the line amount on line ${index + 1}.`;
   }
   return "";
 }
@@ -113,7 +148,7 @@ export function aggregateItemizedGst(lines = [], { intra = true, taxInclusive = 
   const enriched = [];
   lines.forEach((raw, index) => {
     const line = normalizeItemLine(raw);
-    const prepared = prepareGstAmount(line.amount, {
+    const prepared = prepareGstAmount(line.netAmount, {
       enabled: line.gstRate > 0,
       rate: line.gstRate,
       intra,
@@ -176,31 +211,38 @@ export function itemizedEntryDraft({
   gstEnabled = false,
 } = {}) {
   assertVoucherDateNotFuture(date, today);
-  if (kind !== "sale" && kind !== "purchase") throw new Error("Itemized entry supports sale and purchase only");
+  const config = ITEMIZED_KINDS[kind];
+  if (!config) throw new Error("Itemized entry supports sale, purchase, credit note and debit note only");
   const lineError = validateItemLines(itemLines);
   if (lineError) throw new Error(lineError);
-  if (settlement === "credit" && !partyId) {
-    throw new Error(kind === "sale" ? "Choose the customer" : "Choose the supplier");
+  if ((config.returnKind || settlement === "credit") && !partyId) {
+    throw new Error(`Choose the ${config.partyLabel}`);
   }
   const aggregate = aggregateItemizedGst(itemLines, { intra, taxInclusive: gstEnabled ? taxInclusive : false });
   if (!(aggregate.taxable > 0)) throw new Error("Enter an amount greater than zero");
   const description = String(narration || "").trim();
-  const invoiceDue = settlement === "credit" ? (dueDate || addDaysIso(date, 7)) : null;
+  const invoiceDue = !config.returnKind && settlement === "credit" ? (dueDate || addDaysIso(date, 7)) : null;
   const gstForLines = gstEnabled
     ? { enabled: true, rate: 0, intra, taxInclusive: false, preparedOverride: aggregate.prepared }
     : undefined;
   // Pass taxable as amount with preparedOverride so COA matches summed item GST.
   const amount = aggregate.taxable;
-  const totalForMoney = gstEnabled ? roundMoney(aggregate.prepared?.total ?? aggregate.total) : aggregate.taxable;
-  const split = moneyParts ? assertMoneyModeSplit(moneyMode, totalForMoney, moneyParts) : null;
-  const lines = kind === "sale"
-    ? saleLines({ accounts, amount, settlement, moneyMode, moneyParts: split, partyId, description, gst: gstForLines })
-    : purchaseLines({ accounts, amount, settlement, moneyMode, moneyParts: split, partyId, description, gst: gstForLines });
+  let lines;
+  if (kind === "credit_note") {
+    lines = creditNoteLines({ accounts, amount, partyId, description, gst: gstForLines });
+  } else if (kind === "debit_note") {
+    lines = debitNoteLines({ accounts, amount, partyId, description, gst: gstForLines });
+  } else {
+    const totalForMoney = gstEnabled ? roundMoney(aggregate.prepared?.total ?? aggregate.total) : aggregate.taxable;
+    const split = moneyParts ? assertMoneyModeSplit(moneyMode, totalForMoney, moneyParts) : null;
+    const buildLines = kind === "sale" ? saleLines : purchaseLines;
+    lines = buildLines({ accounts, amount, settlement, moneyMode, moneyParts: split, partyId, description, gst: gstForLines });
+  }
 
   return {
-    voucherType: kind === "sale" ? "sales" : "purchase",
+    voucherType: config.voucherType,
     date,
-    narration: description,
+    narration: description || (kind === "credit_note" ? "Sales return" : kind === "debit_note" ? "Purchase return" : ""),
     partyId: partyId || null,
     dueDate: invoiceDue,
     lines,
@@ -214,6 +256,7 @@ export function itemizedEntryDraft({
       quantity: line.quantity,
       rate: line.rate,
       amount: line.amount,
+      discountAmount: line.discountAmount,
       gstRate: line.gstRate,
       hsnSac: line.hsnSac,
       taxableAmount: line.taxableAmount,
@@ -245,39 +288,48 @@ export function stockStatus(current, reorderLevel) {
   return "normal";
 }
 
-export function itemSalesReport(voucherItemLines = [], vouchers = [], { from, to } = {}) {
+function itemMovementValueReport(voucherItemLines, vouchers, { from, to }, forwardType, returnType) {
   const byVoucher = Object.fromEntries((vouchers || []).map(v => [v.id, v]));
   const map = new Map();
   for (const line of voucherItemLines || []) {
     const voucher = byVoucher[line.voucherId];
-    if (!voucher || voucher.voucherType !== "sales" || voucher.status !== "posted") continue;
+    if (!voucher || voucher.status !== "posted") continue;
+    const sign = voucher.voucherType === forwardType ? 1 : voucher.voucherType === returnType ? -1 : 0;
+    if (!sign) continue;
     if (from && voucher.date < from) continue;
     if (to && voucher.date > to) continue;
     const key = line.itemId || line.itemSku || line.itemName;
-    if (!map.has(key)) map.set(key, { itemId: line.itemId, name: line.itemName, sku: line.itemSku, quantity: 0, amount: 0 });
+    if (!map.has(key)) map.set(key, { itemId: line.itemId, name: line.itemName, sku: line.itemSku, quantity: 0, amount: 0, returnedQuantity: 0 });
     const row = map.get(key);
-    row.quantity = roundMoney(row.quantity + Number(line.quantity || 0));
-    row.amount = roundMoney(row.amount + Number(line.taxableAmount ?? line.amount ?? 0));
+    const quantity = Number(line.quantity || 0);
+    row.quantity = roundMoney(row.quantity + sign * quantity);
+    row.amount = roundMoney(row.amount + sign * Number(line.taxableAmount ?? line.amount ?? 0));
+    if (sign < 0) row.returnedQuantity = roundMoney(row.returnedQuantity + quantity);
   }
   return [...map.values()].sort((a, b) => b.amount - a.amount);
 }
 
-export function itemPurchasesReport(voucherItemLines = [], vouchers = [], { from, to } = {}) {
-  const byVoucher = Object.fromEntries((vouchers || []).map(v => [v.id, v]));
-  const map = new Map();
-  for (const line of voucherItemLines || []) {
-    const voucher = byVoucher[line.voucherId];
-    if (!voucher || voucher.voucherType !== "purchase" || voucher.status !== "posted") continue;
-    if (from && voucher.date < from) continue;
-    if (to && voucher.date > to) continue;
-    const key = line.itemId || line.itemSku || line.itemName;
-    if (!map.has(key)) map.set(key, { itemId: line.itemId, name: line.itemName, sku: line.itemSku, quantity: 0, amount: 0 });
-    const row = map.get(key);
-    row.quantity = roundMoney(row.quantity + Number(line.quantity || 0));
-    row.amount = roundMoney(row.amount + Number(line.taxableAmount ?? line.amount ?? 0));
-  }
-  return [...map.values()].sort((a, b) => b.amount - a.amount);
+/** Net of sales returns (credit notes with item lines). */
+export function itemSalesReport(voucherItemLines = [], vouchers = [], { from, to } = {}) {
+  return itemMovementValueReport(voucherItemLines, vouchers, { from, to }, "sales", "credit_note");
 }
+
+/** Net of purchase returns (debit notes with item lines). */
+export function itemPurchasesReport(voucherItemLines = [], vouchers = [], { from, to } = {}) {
+  return itemMovementValueReport(voucherItemLines, vouchers, { from, to }, "purchase", "debit_note");
+}
+
+const STOCK_REASON_LABELS = {
+  opening: "Opening",
+  purchase: "Purchase",
+  sale: "Sale",
+  sales_return: "Sales return",
+  purchase_return: "Purchase return",
+  adjustment: "Adjustment",
+  reversal: "Reversal",
+};
+
+export const stockReasonLabel = reason => STOCK_REASON_LABELS[reason] || String(reason || "").replaceAll("_", " ") || "—";
 
 export function stockMovementReport(movements = [], items = [], { from, to, itemId } = {}) {
   const byItem = Object.fromEntries((items || []).map(item => [item.id, item]));
