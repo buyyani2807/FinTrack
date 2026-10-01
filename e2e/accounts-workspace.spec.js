@@ -4,7 +4,7 @@ import { mockAccountsWorkspace } from "./fixtures/accountsMocks.js";
 const SECTIONS = [
   ["Transactions"], ["Documents"], ["Inventory"],
   ["Parties", "Party Ledger"], ["Parties", "Receivables"], ["Parties", "Payables"], ["Parties", "Collection routes"],
-  ["Reports", "Day Book"], ["Reports", "GST"], ["Reports", "Ledger"], ["Reports", "Trial Balance"], ["Reports", "Profit & Loss"], ["Reports", "Balance Sheet"],
+  ["Reports", "Day Book"], ["Reports", "GST"], ["Reports", "Ledger"], ["Reports", "Trial Balance"], ["Reports", "Accounting P&L"], ["Reports", "Balance Sheet"],
   ["Banking"], ["Setup"], ["More"],
 ];
 
