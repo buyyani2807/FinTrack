@@ -113,3 +113,18 @@ test.describe("Workspace sidebar", () => {
     await expect(page.getByRole("button", { name: "Financier sign in" })).toBeVisible();
   });
 });
+
+test.describe("Daily Finance tabs", () => {
+  test("Overview, Customers and Reports keep the same page frame", async ({ page }) => {
+    await mockAccountsWorkspace(page);
+    await page.goto("/daily-finance");
+    const tabs = page.getByRole("navigation", { name: "Module sections" });
+    await expect(tabs).toBeVisible({ timeout: 15_000 });
+    for (const tab of ["Customers", "Reports", "Overview"]) {
+      await tabs.getByRole("button", { name: tab, exact: true }).click();
+      await expect(page.getByRole("heading", { name: "Daily Finance", level: 1 })).toBeVisible();
+      await expect(tabs.getByRole("button", { name: tab, exact: true })).toHaveAttribute("aria-current", "page");
+      await expect(page.getByRole("button", { name: "Today’s collections" })).toBeVisible();
+    }
+  });
+});
