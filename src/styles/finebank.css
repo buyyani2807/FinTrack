@@ -186,6 +186,22 @@ a { color: var(--ft-primary); }
 .ft-theme-toggle[aria-checked="true"] .ft-theme-toggle-thumb { transform: translateX(18px); color: var(--ft-primary); }
 .ft-theme-toggle.compact { padding: 4px; border-radius: 999px; }
 
+/* ------------------------------------------------------------------ login */
+.login { max-width: 440px !important; margin: 8vh auto 48px !important; padding: 0 16px; }
+.login > .brand.ft-login-brand { margin-bottom: 8px; }
+.login > .brand.ft-login-brand .ft-brand { color: var(--ft-primary) !important; font-size: 40px; line-height: 48px; letter-spacing: .08em; }
+.ft-wordmark-suffix { font-weight: 500; letter-spacing: 0; color: var(--ft-text-2); font-size: .55em; }
+.login > .sub { margin-bottom: 32px !important; font-size: 14px !important; }
+.login .card { background: var(--ft-surface) !important; padding: 32px !important; box-shadow: var(--ft-shadow) !important; }
+.login .ft-login-modes { display: grid !important; grid-template-columns: 1fr 1fr; gap: 4px !important; padding: 4px; border-radius: var(--ft-radius-sm); background: var(--ft-surface-muted); }
+.login .ft-login-modes .tab { min-height: 40px !important; border: 0 !important; border-radius: 6px !important; color: var(--ft-text-2) !important; font-size: 13px !important; font-weight: 600 !important; }
+.login .ft-login-modes .tab.active { background: var(--ft-surface) !important; color: var(--ft-primary) !important; box-shadow: 0 1px 3px rgba(25, 25, 25, .12) !important; }
+.login .ft-login-modes .tab:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.login .field label { font-size: 15px !important; font-weight: 500 !important; color: var(--ft-text) !important; }
+.login .field input { min-height: 48px !important; }
+.login .btn.primary { min-height: 48px !important; font-size: 16px !important; }
+.login .link-button { font-size: 13px; }
+
 /* ------------------------------------------------------------------ forms */
 .field label, .field > span, .accounts-filter-field .small, .accounts-filter-field > span { color: var(--ft-text-2) !important; font-weight: 600 !important; font-size: 14px !important; }
 .field input, .field select, .field textarea, input.accounts-search, .accounts-filter-field input, .accounts-filter-field select, .acc-new-entry,
