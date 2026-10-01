@@ -501,6 +501,9 @@ html:not([data-ft-role="owner"]) .ft-app-header-brand { display: inline; }
 .accounts-dashboard .acc-user-menu, .accounts-dashboard .acc-gst-setup-hint, .accounts-dashboard .acc-gst-preview, .accounts-dashboard .acc-form-section { background: var(--ft-surface) !important; border-color: var(--ft-border) !important; }
 .accounts-dashboard .acc-ov-context { background: var(--ft-surface) !important; border-color: transparent !important; box-shadow: var(--ft-shadow) !important; }
 .accounts-dashboard .acc-ov-aging-bar { background: var(--ft-surface-muted) !important; }
+/* ageing bars: current vs overdue, matching the legend (previously only payables-current was coloured) */
+.accounts-dashboard .acc-ov-aging-bar .current, .accounts-dashboard .acc-ov-chart-row.kind-ap .acc-ov-aging-bar .current, .accounts-dashboard .acc-ov-aging-foot i.current { background: var(--ft-primary) !important; }
+.accounts-dashboard .acc-ov-aging-bar .overdue, .accounts-dashboard .acc-ov-aging-foot i.overdue { background: var(--ft-warning) !important; }
 .accounts-dashboard .acc-ov-more-menu button:hover, .accounts-dashboard .acc-ov-more-menu button:focus-visible, .accounts-dashboard .acc-table-wrap tbody tr:hover { background: var(--ft-surface-hover) !important; }
 .accounts-dashboard .acc-switch { background: var(--ft-border-strong) !important; }
 .accounts-dashboard .acc-bottom-nav { background: var(--ft-surface) !important; border-color: var(--ft-border) !important; }
