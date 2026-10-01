@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { NAV_TREE, navItemIsActive } from "../accountsNavigation.js";
 import { ArrowLeftRight, ChartColumn, Ellipsis, FileText, Landmark, LayoutGrid, Package, Settings, Users, Wallet } from "lucide-react";
+import { ThemeToggle } from "../../../components/ThemeToggle.jsx";
 
 // Line icons for the Accounts sections (falls back to the text glyph for any new section).
 const NAV_ICONS = { overview: LayoutGrid, vouchers: ArrowLeftRight, documents: FileText, inventory: Package, parties: Users, reports: ChartColumn, bank: Landmark, cashbook: Wallet, setup: Settings, more: Ellipsis };
@@ -120,6 +121,7 @@ export function AccSidebar({ section, expanded, onToggle, onNavigate }) {
         })}
       </div>
       <div className="acc-sidebar-footer">
+        <ThemeToggle compact={!expanded} className="acc-theme" />
         <button
           type="button"
           className="acc-nav-toggle"

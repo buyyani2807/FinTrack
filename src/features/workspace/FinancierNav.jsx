@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { BookOpenText, CalendarDays, CalendarRange, Coins, Ellipsis, LayoutGrid, LogOut, Settings, Users, Wallet } from "lucide-react";
 import { Button } from "../../components/ui.jsx";
+import { ThemeToggle } from "../../components/ThemeToggle.jsx";
 import { assertModuleEntitled } from "../commercial/entitlements.js";
 import { financeViewForPath, isWithin, workspacePaths } from "./paths.js";
 
@@ -58,8 +59,10 @@ export function FinancierNav({ access, orgSettings = {}, businessName = "", logo
     {access.isOwner && menuOpen && <div className="financier-nav-more">
       <Button onClick={() => go(workspacePaths.collectionStaff)}><NavLabel icon={Users} long="Collection Staff" short="Staff" /></Button>
       <Button onClick={() => go(workspacePaths.settings)}><NavLabel icon={Settings} long="Settings" short="Settings" /></Button>
+      <ThemeToggle className="nav-theme nav-theme-more" />
     </div>}
     <div className="nav-footer">
+      <ThemeToggle className="nav-theme" />
       {logout && <Button className="nav-logout" onClick={logout}><NavLabel icon={LogOut} long="Logout" short="Logout" /></Button>}
       <div className="nav-profile">
         <span className="nav-avatar" aria-hidden="true">{initialsOf(businessName)}</span>

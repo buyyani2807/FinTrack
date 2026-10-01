@@ -138,9 +138,9 @@ export function CustomerStatementPage({
   };
 
   return <main className="shell customer-statement-page">
+    <Breadcrumb items={[...(trail.length ? trail : ["Back"]).map((label, index, all) => ({ label, onClick: index === all.length - 1 ? back : undefined })), { label: "Customer Statement" }]} />
     <div className="toolbar">
       <div>
-        <Breadcrumb items={[...(trail.length ? trail : ["Back"]).map((label, index, all) => ({ label, onClick: index === all.length - 1 ? back : undefined })), { label: "Customer Statement" }]} />
         <h1 className="title">Customer Statement</h1>
         <p className="copy">{bundle.customerName} · {bundle.phone || "No phone"} · As of {formatReceiptDate(bundle.asOf)}</p>
       </div>

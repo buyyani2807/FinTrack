@@ -68,7 +68,6 @@
   --ft-radius: 8px;
   --ft-radius-lg: 16px;
   --ft-control-h: 44px;
-  --ft-header-h: 72px;
   /* depth */
   --ft-shadow-sm: 0 1px 2px rgba(25, 25, 25, .04);
   --ft-shadow: 0 12px 24px rgba(76, 103, 100, .08);
@@ -206,7 +205,6 @@ a { color: var(--ft-primary); }
 .login .link-button { font-size: 13px; }
 
 /* sign-in: full-page split, showcase left and form right (Finebank colours) */
-.app.ft-no-header { padding-top: 0; }
 .ft-auth { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(440px, 1fr); min-height: 100svh; }
 .ft-auth .login.ft-auth-panel { display: flex; align-items: center; justify-content: center; max-width: none !important; margin: 0 !important; padding: 56px 48px; background: var(--ft-surface); }
 .ft-auth-panel-inner { width: 100%; max-width: clamp(440px, 27vw, 580px); }
@@ -455,7 +453,8 @@ input:disabled, select:disabled, textarea:disabled { background: var(--ft-surfac
 .ft-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
 /* breadcrumb with back arrow (sub-pages inside a section): deliberately quiet so the page title leads */
-.ft-breadcrumb { display: flex; align-items: center; gap: 2px; margin: 0 0 6px; min-width: 0; }
+/* only pages with a breadcrumb get this slim top bar, divided from the page like a header */
+.ft-breadcrumb { display: flex; align-items: center; gap: 2px; min-width: 0; min-height: 40px; margin: -12px 0 24px; padding: 0 0 10px; border-bottom: 1px solid var(--ft-border); }
 .ft-breadcrumb-back { width: 28px; height: 28px; margin-left: -6px; border: 0 !important; border-radius: 6px; background: transparent !important; color: var(--ft-subtle); }
 .ft-breadcrumb-back:hover { background: var(--ft-surface-hover) !important; color: var(--ft-text-2); }
 .ft-breadcrumb-back svg { width: 16px; height: 16px; }
@@ -466,6 +465,13 @@ input:disabled, select:disabled, textarea:disabled { background: var(--ft-surfac
 .ft-breadcrumb-link:hover { color: var(--ft-text-2); text-decoration: underline; text-underline-offset: 3px; }
 .ft-breadcrumb li > span { overflow: hidden; padding: 2px; color: var(--ft-subtle); font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
 .ft-breadcrumb [aria-current="page"] { color: var(--ft-muted); font-weight: 500; }
+/* phones: one line, showing the parent and the current page */
+@media (width <= 680px) {
+  .ft-breadcrumb ol { flex-wrap: nowrap; }
+  .ft-breadcrumb li:not(:nth-last-child(-n+2)) { display: none; }
+  .ft-breadcrumb li:nth-last-child(2) .ft-breadcrumb-sep { display: none; }
+  .ft-breadcrumb li:last-child { overflow: hidden; }
+}
 
 /* ------------------------------------------------------------------ tables */
 .table { background: var(--ft-surface) !important; border: 1px solid var(--ft-border) !important; border-radius: var(--ft-radius) !important; box-shadow: none !important; }
@@ -562,64 +568,52 @@ input:disabled, select:disabled, textarea:disabled { background: var(--ft-surfac
   .financier-nav .nav-logout { background: var(--ft-sidebar-chip) !important; }
   .financier-nav-more { position: static !important; background: rgba(255, 255, 255, .04) !important; border: 0 !important; box-shadow: none !important; }
   html[data-ft-role="owner"] .shell { margin-left: var(--ft-rail-w) !important; }
-  html[data-ft-role="owner"] .ft-app-header { left: var(--ft-rail-w); }
-  html:has(.accounts-dashboard) .ft-app-header { left: 0; }
   html[data-ft-role="owner"] .shell { padding-bottom: 32px !important; }
   html[data-ft-role="owner"] .shell > header.top:has(.brand) { display: none !important; }
 }
 
-/* ------------------------------------------------------------------ app header (one for the whole app) */
-.ft-app-header {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 9; height: var(--ft-header-h);
-  display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 32px;
-  background: var(--ft-bg); border-bottom: 1px solid var(--ft-border);
+/* ------------------------------------------------------------------ theme switch (no app header: it lives in the navigation) */
+/* owner sidebar: a row above Logout, styled like the menu items */
+.financier-nav .ft-theme-toggle.nav-theme {
+  display: flex; flex-direction: row-reverse; justify-content: space-between; width: 100%;
+  min-height: 48px !important; padding: 12px 16px !important; border-radius: var(--ft-radius-xs) !important;
+  font-size: 15px !important; font-weight: 400 !important;
 }
-.ft-app-header-context { display: flex; align-items: center; gap: 20px; min-width: 0; }
-.ft-app-header .ft-app-header-brand { display: none; color: var(--ft-text) !important; font-size: 22px; line-height: 28px; white-space: nowrap; }
-html:not([data-ft-role="owner"]) .ft-app-header-brand { display: inline; }
-.ft-app-header-date { display: inline-flex; align-items: center; gap: 4px; min-width: 0; color: var(--ft-subtle); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ft-app-header-actions { display: flex; align-items: center; gap: 12px; flex: none; }
-.app { padding-top: var(--ft-header-h); }
-/* Accounts is a full-screen layer: start it below the header, but stack it (and its dialogs) above the header */
-.accounts-dashboard { top: var(--ft-header-h) !important; z-index: 10 !important; }
-@media (width <= 1050px) {
-  html[data-ft-role="owner"] .ft-app-header-brand { display: inline; }
-}
+.financier-nav .nav-theme .ft-theme-toggle-track { background: rgba(255, 255, 255, .16); }
+.financier-nav .nav-theme[aria-checked="true"] .ft-theme-toggle-track { background: var(--ft-primary); }
+.financier-nav .nav-theme-more { display: none !important; }
+/* tablet rail: just the switch */
 @media (681px <= width <= 1050px) {
-  html[data-ft-role="owner"] .ft-app-header-brand { display: none; }
-  html[data-ft-role="owner"]:has(.accounts-dashboard) .ft-app-header-brand { display: inline; }
+  .financier-nav .ft-theme-toggle.nav-theme { justify-content: center; min-height: 52px !important; padding: 8px 4px !important; margin-bottom: 8px; }
+  .financier-nav .nav-theme .ft-theme-toggle-label { display: none; }
 }
-@media (width >= 1051px) {
-  html[data-ft-role="owner"] .ft-app-header { left: var(--ft-sidebar-w); }
-  html:has(.accounts-dashboard) .ft-app-header { left: 0; }
-}
+/* phones: the bottom bar has no footer, so the switch sits in the More menu */
 @media (width <= 680px) {
-  :root { --ft-header-h: 60px; }
-  .ft-app-header { padding: 0 16px; }
-  .ft-app-header .ft-app-header-brand { display: inline; font-size: 20px; }
-  .ft-app-header-date { display: none; }
-  .ft-app-header .ft-theme-toggle-label { display: none; }
+  /* fixed, so the scrolling bottom bar does not clip the menu */
+  .financier-nav-more { position: fixed !important; right: 10px !important; bottom: calc(max(8px, env(safe-area-inset-bottom, 0px)) + 68px) !important; z-index: 12; }
+  .financier-nav .ft-theme-toggle.nav-theme-more { display: flex !important; color: var(--ft-text-2) !important; font-weight: 600 !important; }
+  .financier-nav .nav-theme-more .ft-theme-toggle-track { background: var(--ft-surface-muted); }
+  .financier-nav .nav-theme-more[aria-checked="true"] .ft-theme-toggle-track { background: var(--ft-primary); }
 }
-
-/* sub-pages: the breadcrumb takes the date's place in the header (on phones, the wordmark's too) */
-.ft-app-header .ft-breadcrumb { margin: 0; gap: 4px; }
-.ft-app-header .ft-breadcrumb-back { margin-left: -8px; }
-.ft-app-header .ft-breadcrumb ol { flex-wrap: nowrap; font-size: 14px; }
-.ft-app-header .ft-breadcrumb li:last-child { overflow: hidden; }
-@media (width <= 680px) {
-  .ft-app-header-context.has-breadcrumb .ft-app-header-brand { display: none !important; }
-  .ft-app-header .ft-breadcrumb li:not(:last-child), .ft-app-header .ft-breadcrumb-sep { display: none; }
-  .ft-app-header .ft-breadcrumb-back { width: 40px; height: 40px; }
-  .ft-app-header .ft-breadcrumb-back svg { width: 20px; height: 20px; }
-  .ft-app-header .ft-breadcrumb ol { font-size: 16px; }
-  .ft-app-header .ft-breadcrumb [aria-current="page"] { color: var(--ft-text); font-weight: 600; }
-}
+/* screens without the sidebar (agents, customer portals): beside Log out in the page's top bar */
+html[data-ft-role="owner"] .top-actions .top-theme { display: none; }
+.top-actions:has(.top-theme) { flex-direction: row !important; align-items: center !important; }
+.top-actions .top-theme { flex: none; }
+@media (width <= 680px) { .top-actions .top-theme .ft-theme-toggle-label { display: none; } }
+/* Accounts sidebar footer */
+.accounts-dashboard .ft-theme-toggle.acc-theme { width: 100%; justify-content: center; margin-bottom: 8px; background: transparent; border-color: var(--ft-sidebar-line); color: var(--ft-sidebar-text); }
+.accounts-dashboard .ft-theme-toggle.acc-theme:hover { background: var(--ft-sidebar-hover); color: #fff; border-color: var(--ft-sidebar-line); }
+.accounts-dashboard .acc-theme .ft-theme-toggle-track { background: rgba(255, 255, 255, .16); }
+.accounts-dashboard .acc-theme[aria-checked="true"] .ft-theme-toggle-track { background: var(--ft-primary); }
+.accounts-dashboard { z-index: 10 !important; }
 
 /* full-page routes (Cashbook, Chit Fund, Settings) render in the normal page flow */
-.ft-route-page { min-height: calc(100svh - var(--ft-header-h)); background: var(--ft-bg); }
+.ft-route-page { min-height: 100svh; background: var(--ft-bg); }
 
 /* ------------------------------------------------------------------ page header */
 .shell > .top { padding-bottom: 20px; margin-bottom: 28px !important; border-bottom: 1px solid var(--ft-border); }
+/* the breadcrumb bar already divides the page; no second line under the title */
+.shell > .ft-breadcrumb + .top { padding-bottom: 0; margin-bottom: 24px !important; border-bottom: 0; }
 .dashboard-home .toolbar { background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; margin-bottom: 24px !important; }
 .shell > .toolbar { margin-bottom: 24px; }
 .dashboard-home .toolbar .title { color: var(--ft-text) !important; }

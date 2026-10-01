@@ -1,5 +1,5 @@
 /* renders in the page flow (like Cashbook and Chit Fund) so dialogs stack above the header and navigation */
-.rc-owner-overlay { min-height: calc(100svh - var(--ft-header-h, 0px)); background: var(--ft-bg); }
+.rc-owner-overlay { min-height: 100svh; background: var(--ft-bg); }
 .rc-page { padding-bottom: 48px; }
 .rc-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 12px 0; }
 .rc-metrics .metric-value { font-size: 22px; }

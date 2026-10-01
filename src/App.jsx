@@ -9,13 +9,12 @@ import { LegalPage } from "./features/legal/LegalPage.jsx";
 
 function SessionApp() {
   const session = useFinTrackSession();
-  const signedIn = Boolean(session.user) && !session.isPasswordRecovery;
-  if (session.legalView) return <AppShell header={signedIn}><LegalPage view={session.legalView} /></AppShell>;
-  if (session.isLoading) return <AppShell header={false}><LoadingScreen /></AppShell>;
-  return <AppShell header={signedIn}><AppRoutes session={session} /></AppShell>;
+  if (session.legalView) return <AppShell><LegalPage view={session.legalView} /></AppShell>;
+  if (session.isLoading) return <AppShell><LoadingScreen /></AppShell>;
+  return <AppShell><AppRoutes session={session} /></AppShell>;
 }
 
 export default function App() {
-  if (isPayPagePath()) return <AppShell header={false}><PayPage /></AppShell>;
+  if (isPayPagePath()) return <AppShell><PayPage /></AppShell>;
   return <SessionApp />;
 }

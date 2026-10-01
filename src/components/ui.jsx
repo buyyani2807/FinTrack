@@ -1,5 +1,4 @@
-import { cloneElement, isValidElement, useId, useLayoutEffect, useRef, useState } from "react";
-import { useHeaderSlot } from "./headerSlot.js";
+import { cloneElement, isValidElement, useId, useState } from "react";
 import { ArrowLeft, ChevronRight, Eye, EyeOff, Inbox, X } from "lucide-react";
 
 // Shared presentational building blocks used across the finance app.
@@ -126,23 +125,9 @@ export function IconInput({ icon: Icon, className = "", ...inputProps }) {
 }
 IconInput.fieldControl = true;
 
-// Where the user is inside a section, e.g. Daily Finance › Ravi Kumar. items: [{ label, onClick? }], last = current page.
-// Inside the app it is shown in the app header (in place of the date); elsewhere it renders in place.
+// Where the user is inside a section, e.g. Daily Finance › Ravi Kumar, shown at the top left of the page.
+// items: [{ label, onClick? }], last = current page. The back arrow goes to the nearest ancestor with onClick.
 export function Breadcrumb({ items }) {
-  const slot = useHeaderSlot();
-  const ref = useRef(items);
-  const key = items.map(item => `${item.label}${item.onClick ? "*" : ""}`).join("\u203a");
-  useLayoutEffect(() => { ref.current = items; });
-  useLayoutEffect(() => {
-    if (!slot) return undefined;
-    slot.show({ ref, labels: ref.current.map(item => ({ label: item.label, clickable: Boolean(item.onClick) })) });
-    return () => slot.hide(ref);
-  }, [slot, key]);
-  return slot ? null : <BreadcrumbTrail items={items} />;
-}
-
-// The trail itself. The back arrow goes to the nearest ancestor that has onClick.
-export function BreadcrumbTrail({ items }) {
   const parent = items.slice(0, -1).reverse().find(item => item.onClick);
   return <nav className="ft-breadcrumb" aria-label="Breadcrumb">
     {parent && <button type="button" className="ft-icon-btn ft-breadcrumb-back" aria-label={`Back to ${parent.label}`} title={`Back to ${parent.label}`} onClick={parent.onClick}><ArrowLeft size={18} aria-hidden="true" /></button>}

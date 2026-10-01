@@ -10,20 +10,19 @@ test.describe("Theme", () => {
     await context.close();
   });
 
-  test("sign-in has no header or theme toggle", async ({ page }) => {
+  test("sign-in has no theme toggle", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("button", { name: "Financier sign in" })).toBeVisible();
-    await expect(page.locator(".ft-app-header")).toHaveCount(0);
     await expect(page.getByRole("switch")).toHaveCount(0);
   });
 
-  test("the header toggle switches theme and remembers the choice", async ({ page }) => {
+  test("the sidebar toggle switches theme and remembers the choice", async ({ page }) => {
     await page.emulateMedia({ colorScheme: "light" });
     await mockAccountsWorkspace(page);
     await page.goto("/dashboard");
     const html = page.locator("html");
     await expect(html).toHaveAttribute("data-theme", "light");
-    const toggle = page.getByRole("switch", { name: "Switch to dark theme" });
+    const toggle = page.getByRole("complementary", { name: "Workspace" }).getByRole("switch", { name: "Switch to dark theme" });
     await expect(toggle).toHaveCount(1);
     await toggle.click();
     await expect(html).toHaveAttribute("data-theme", "dark");
