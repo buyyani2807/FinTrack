@@ -618,6 +618,26 @@ html:not([data-ft-role="owner"]) .ft-app-header-brand { display: inline; }
 .collection-summary span, .collection-info span, .collection-amount small { color: var(--ft-muted) !important; }
 .collection-avatar { background: var(--ft-icon-tile) !important; color: var(--ft-text-2) !important; }
 
+/* Active Chit Fund schemes under the dashboard: same .shell geometry as the finance sections, and the
+   same gap between cards (the negative margin cancels the dashboard shell's bottom padding). */
+.shell.dashboard-chit { padding-top: 0 !important; margin-top: -74px !important; }
+@media (681px <= width <= 1050px) { .shell.dashboard-chit { margin-top: -4px !important; } }
+@media (width <= 680px) { .shell.dashboard-chit { margin-top: 2px !important; } }
+.dashboard-chit-panel { padding: 22px; }
+.dashboard-chit-heading { display: flex; align-items: center; gap: 12px; }
+.dashboard-chit-icon { display: grid; place-items: center; width: 42px; height: 42px; font-size: 20px; }
+.dashboard-chit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin-top: 20px; }
+.dashboard-chit-card { position: relative; overflow: hidden; padding: 18px; border: 1px solid var(--ft-border); border-radius: var(--ft-radius); cursor: pointer; transition: border-color .15s var(--ft-ease); }
+.dashboard-chit-card::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; }
+.dashboard-chit-card:hover { border-color: var(--ft-primary) !important; }
+.dashboard-chit-type { display: inline-flex; padding: 4px 8px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.dashboard-chit-name { margin: 12px 0 4px; font-weight: 700; font-size: 17px; }
+.dashboard-chit-value { margin: 14px 0; font-weight: 800; font-size: 24px; }
+.dashboard-chit-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-top: 13px; border-top: 1px solid; }
+.dashboard-chit-stats span { display: block; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+.dashboard-chit-stats strong { display: block; margin-top: 3px; font-size: 13px; }
+@media (width <= 680px) { .dashboard-chit-panel { padding: 17px; } .dashboard-chit-grid { grid-template-columns: 1fr; } }
+
 /* Cashbook */
 .accounts-module .accounts-balance-item, .accounts-module .accounts-closing-stats > div { background: var(--ft-surface) !important; border-color: var(--ft-border) !important; box-shadow: none !important; color: var(--ft-text) !important; }
 .accounts-module .accounts-balance-move { background: var(--ft-surface-subtle) !important; }
