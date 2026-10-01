@@ -6,6 +6,7 @@ const CALENDAR_DAYS = Array.from({ length: 21 }, (_, index) => index + 8);
 export function AuthShowcase() {
   return (
     <aside className="ft-auth-showcase" aria-hidden="true">
+      <span className="ft-auth-showcase-brand ft-brand"><span className="ft-brand-strong">FIN</span>Track</span>
       <div className="ft-auth-showcase-copy">
         <p className="ft-auth-kicker">Finance · Chit Fund · Accounts</p>
         <h2>Every collection, scheme and ledger in one place.</h2>

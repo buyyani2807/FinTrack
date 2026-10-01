@@ -4,8 +4,9 @@ import appStyles from "../styles/app.css?inline";
 import designSystem from "../styles/finebank.css?inline";
 import { AppHeader } from "../components/AppHeader.jsx";
 
-export function AppShell({ children }) {
-  return <div className="app"><style>{appStyles + designSystem}</style><AppHeader />{children}</div>;
+// `header` is off for signed-out screens (sign-in, password reset, legal, pay links).
+export function AppShell({ children, header = true }) {
+  return <div className={`app${header ? "" : " ft-no-header"}`}><style>{appStyles + designSystem}</style>{header && <AppHeader />}{children}</div>;
 }
 
 export function LoadingScreen() {

@@ -205,56 +205,107 @@ a { color: var(--ft-primary); }
 .login .btn.primary { min-height: 48px !important; font-size: 16px !important; }
 .login .link-button { font-size: 13px; }
 
-/* sign-in: showcase panel + form (Finebank colours) */
-.ft-auth { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(360px, 460px); gap: 56px; align-items: center; max-width: 1320px; min-height: calc(100svh - var(--ft-header-h)); margin: 0 auto; padding: 40px 32px; }
-.ft-auth .login.ft-auth-panel { max-width: none !important; margin: 0 !important; padding: 0; }
-.ft-auth-brandrow { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
-.ft-auth-mark { display: grid; place-items: center; width: 56px; height: 56px; flex: none; border-radius: 50%; background: var(--ft-primary); color: var(--ft-on-primary) !important; font-weight: 800; font-size: 26px; letter-spacing: 0 !important; box-shadow: 0 10px 24px var(--ft-primary-soft-strong); }
+/* sign-in: full-page split, showcase left and form right (Finebank colours) */
+.app.ft-no-header { padding-top: 0; }
+.ft-auth { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(440px, 1fr); min-height: 100svh; }
+.ft-auth .login.ft-auth-panel { display: flex; align-items: center; justify-content: center; max-width: none !important; margin: 0 !important; padding: 56px 48px; background: var(--ft-surface); }
+.ft-auth-panel-inner { width: 100%; max-width: 440px; }
+.ft-auth-brandrow { display: none; align-items: center; gap: 12px; margin-bottom: 32px; }
+/* desktop: the logo lives in the showcase, so only the product tag (e.g. Accounts) shows here */
+.ft-auth-brandrow:has(.ft-auth-product) { display: flex; margin-bottom: 16px; }
+@media (width > 1100px) { .ft-auth-brandrow .ft-auth-mark, .ft-auth-brandrow > .ft-brand:not(.ft-auth-mark) { display: none; } }
+.ft-auth-brandrow .ft-brand:not(.ft-auth-mark) { color: var(--ft-text) !important; font-size: 22px; letter-spacing: .08em; }
+.ft-auth-mark { display: grid; place-items: center; width: 44px; height: 44px; flex: none; border-radius: 12px; background: var(--ft-primary); color: var(--ft-on-primary) !important; font-weight: 800; font-size: 22px; letter-spacing: 0 !important; }
 .ft-auth-product { padding: 4px 10px; border-radius: 999px; background: var(--ft-primary-soft); color: var(--ft-primary); font-weight: 600; font-size: 13px; }
-.ft-auth-title { margin: 0 0 6px; color: var(--ft-text); font-weight: 700; font-size: 32px; line-height: 40px; letter-spacing: -.02em; }
-.ft-auth .login > .sub.ft-auth-sub { margin: 0 0 28px !important; text-align: left; font-size: 15px !important; }
-.ft-auth .login .card { padding: 28px !important; }
+.ft-auth-title { margin: 0 0 8px; color: var(--ft-text); font-weight: 700; font-size: 34px; line-height: 42px; letter-spacing: -.02em; }
+.ft-auth .login .sub.ft-auth-sub { margin: 0 0 28px !important; text-align: left; font-size: 15px !important; line-height: 1.5; }
 
-.ft-auth-showcase { position: relative; overflow: hidden; height: min(660px, calc(100svh - 160px)); min-height: 560px; padding: 48px; border-radius: 24px; background: var(--ft-sidebar-bg); color: #fff; isolation: isolate; }
-.ft-auth-showcase::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(520px 360px at 85% 8%, rgba(41, 157, 145, .38), transparent 70%), radial-gradient(420px 300px at 0% 100%, rgba(41, 157, 145, .26), transparent 70%); }
-.ft-auth-showcase-copy { max-width: 400px; }
-.ft-auth-kicker { margin: 0 0 14px; color: #46c2b5; font-weight: 600; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; }
-.ft-auth-showcase-copy h2 { margin: 0 0 14px; color: #fff; font-weight: 700; font-size: 30px; line-height: 38px; letter-spacing: -.02em; }
-.ft-auth-showcase-copy p:last-child { margin: 0; max-width: 34ch; color: rgba(255, 255, 255, .7); font-size: 15px; }
+/* who is signing in */
+.ft-auth-modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 28px; }
+.ft-auth-mode { display: flex; align-items: center; gap: 12px; min-height: 68px; padding: 12px 14px; border: 1px solid var(--ft-border); border-radius: 12px; background: var(--ft-surface); color: var(--ft-text); text-align: left; font: inherit; cursor: pointer; transition: border-color .15s var(--ft-ease), background .15s var(--ft-ease), box-shadow .15s var(--ft-ease); }
+.ft-auth-mode:hover { border-color: var(--ft-primary); }
+.ft-auth-mode-icon { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 10px; background: var(--ft-icon-tile); color: var(--ft-text-2); transition: background .15s var(--ft-ease), color .15s var(--ft-ease); }
+.ft-auth-mode-text { display: grid; gap: 2px; min-width: 0; }
+.ft-auth-mode-text strong { font-weight: 600; font-size: 14px; line-height: 20px; }
+.ft-auth-mode-text span { color: var(--ft-muted); font-size: 12px; line-height: 16px; }
+.ft-auth-mode.active { border-color: var(--ft-primary); background: var(--ft-primary-soft); box-shadow: 0 0 0 1px var(--ft-primary) inset; }
+.ft-auth-mode.active .ft-auth-mode-icon { background: var(--ft-primary); color: var(--ft-on-primary); }
+
+/* form */
+.ft-auth-form { display: grid; gap: 18px; }
+.ft-auth-form .field { margin: 0; }
+.ft-auth-form .field label { margin-bottom: 8px; color: var(--ft-text) !important; font-size: 14px !important; font-weight: 600 !important; }
+.ft-auth-form .field input { min-height: 52px !important; border-radius: 10px !important; font-size: 15px !important; }
+.ft-auth-password { position: relative; }
+.ft-auth .ft-auth-forgot { position: absolute; top: 0; right: 0; margin: 0 !important; display: inline-flex; align-items: center; height: 20px; min-height: 20px !important; padding: 0 !important; border: 0; background: none; font-size: 13px; line-height: 20px; }
+.ft-auth-password .field label { padding-right: 140px; }
+/* small inline links sit on the text line (the 44px touch-target rule is for standalone links) */
+.ft-auth .ft-auth-switch .link-button, .ft-auth .ft-auth-legal .link-button { display: inline; margin: 0 !important; min-height: 0 !important; padding: 0 !important; vertical-align: baseline; line-height: inherit; }
+.ft-auth-message { margin: 0; }
+.ft-auth .btn.primary.ft-auth-submit { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 52px !important; margin-top: 6px; border-radius: 10px !important; font-size: 16px !important; box-shadow: 0 10px 24px var(--ft-primary-soft-strong) !important; }
+.ft-auth-switch { margin: 28px 0 0; text-align: center; color: var(--ft-text-2); font-size: 14px; }
+.ft-auth-switch .link-button { min-height: 0 !important; padding: 0; border: 0; background: none; font-size: 14px; }
+.ft-auth-legal { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 20px 0 0; }
+.ft-auth-legal .link-button { min-height: 0 !important; padding: 0; border: 0; background: none; font-size: 12px; }
+
+/* inputs with a leading icon (selector outranks the general .field input padding) */
+.ft-input-icon { position: relative; display: block; }
+.field .ft-input-icon > input, .ft-input-icon > input { width: 100%; padding-left: 46px !important; }
+.ft-input-icon-glyph { position: absolute; top: 50%; left: 15px; z-index: 1; color: var(--ft-subtle); transform: translateY(-50%); pointer-events: none; }
+.ft-input-icon:focus-within .ft-input-icon-glyph { color: var(--ft-primary); }
+
+/* showcase */
+.ft-auth-showcase { position: relative; overflow: hidden; min-height: 100svh; background: var(--ft-sidebar-bg); color: #fff; isolation: isolate; }
+.ft-auth-showcase::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(60% 45% at 88% 6%, rgba(41, 157, 145, .42), transparent 70%), radial-gradient(55% 40% at 0% 100%, rgba(41, 157, 145, .3), transparent 70%); }
+.ft-auth-showcase::after { content: ""; position: absolute; inset: 0; z-index: -1; background-image: radial-gradient(rgba(255, 255, 255, .07) 1px, transparent 1px); background-size: 28px 28px; mask-image: linear-gradient(to bottom, #000, transparent 85%); }
+.ft-auth-showcase-brand { position: absolute; top: 40px; left: 56px; color: #fff !important; font-size: 26px; letter-spacing: .08em; }
+.ft-auth-showcase-copy { position: absolute; top: 18%; left: 56px; max-width: 460px; }
+.ft-auth-kicker { margin: 0 0 16px; color: #46c2b5; font-weight: 600; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+.ft-auth-showcase-copy h2 { margin: 0 0 16px; color: #fff; font-weight: 700; font-size: clamp(30px, 2.6vw, 42px); line-height: 1.18; letter-spacing: -.02em; }
+.ft-auth-showcase-copy p:last-child { margin: 0; max-width: 38ch; color: rgba(255, 255, 255, .72); font-size: 16px; line-height: 1.55; }
 .ft-auth-float { position: absolute; display: grid; gap: 6px; padding: 16px 18px; border: 1px solid rgba(255, 255, 255, .1); border-radius: 16px; background: rgba(255, 255, 255, .06); backdrop-filter: blur(10px); box-shadow: 0 24px 48px rgba(0, 0, 0, .35); animation: ft-auth-float 7s ease-in-out infinite alternate; }
 .ft-auth-float strong { color: #fff; font-weight: 800; font-size: 22px; line-height: 28px; }
 .ft-auth-float-label { color: rgba(255, 255, 255, .7); font-size: 12px; font-weight: 500; }
 @keyframes ft-auth-float { from { translate: 0 0; } to { translate: 0 -10px; } }
-.ft-auth-collections { left: 48px; bottom: 56px; width: 236px; animation-delay: -2s; }
+.ft-auth-collections { left: 56px; bottom: 9%; width: 240px; animation-delay: -2s; }
 .ft-auth-trend { display: inline-flex; align-items: center; gap: 4px; color: #5cc283; font-size: 12px; font-weight: 600; }
 .ft-auth-spark { width: 100%; height: 48px; margin-top: 4px; }
 .ft-auth-spark path { fill: none; stroke: #46c2b5; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
 .ft-auth-spark circle { fill: #fff; }
-.ft-auth-cashcard { right: 44px; bottom: 56px; width: 270px; min-height: 150px; align-content: space-between; border: 0; background: linear-gradient(135deg, #299d91 0%, #1f7a71 100%); rotate: -5deg; animation-delay: -4s; }
+.ft-auth-cashcard { right: 7%; bottom: 8%; width: 290px; min-height: 160px; align-content: space-between; border: 0; background: linear-gradient(135deg, #299d91 0%, #1f7a71 100%); rotate: -5deg; animation-delay: -4s; }
 .ft-auth-cashcard .ft-auth-float-label { color: rgba(255, 255, 255, .85); }
-.ft-auth-cashcard strong { font-size: 26px; }
+.ft-auth-cashcard strong { font-size: 28px; }
 .ft-auth-cashcard-foot { display: flex; align-items: center; justify-content: space-between; color: rgba(255, 255, 255, .85); font-size: 12px; }
 .ft-auth-chip-dots { display: flex; }
 .ft-auth-chip-dots i { width: 22px; height: 22px; border-radius: 50%; background: rgba(255, 255, 255, .85); }
 .ft-auth-chip-dots i + i { margin-left: -8px; background: rgba(255, 255, 255, .45); }
-.ft-auth-calendar { right: 52px; top: 128px; width: 196px; }
+.ft-auth-calendar { right: 9%; top: 46%; width: 200px; }
 .ft-auth-calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px 6px; margin-top: 6px; }
 .ft-auth-calendar-grid span { justify-self: center; width: 5px; height: 5px; border-radius: 50%; background: rgba(255, 255, 255, .28); }
 .ft-auth-calendar-grid span.is-event { display: grid; place-items: center; width: 22px; height: 22px; margin: -8px 0; border-radius: 6px; background: var(--ft-brand); color: #fff; font-size: 11px; font-weight: 700; }
-.ft-auth-route { right: 52px; top: 262px; grid-auto-flow: column; align-items: center; gap: 12px; animation-delay: -1s; }
+.ft-auth-route { left: 56px; top: 58%; grid-auto-flow: column; align-items: center; gap: 12px; animation-delay: -1s; }
 .ft-auth-route-pin { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: rgba(41, 157, 145, .25); color: #46c2b5; }
 .ft-auth-route strong { display: block; font-size: 15px; line-height: 20px; }
 .ft-auth-route span span { color: rgba(255, 255, 255, .7); font-size: 12px; }
-.ft-auth-toast { top: 48px; right: 48px; grid-auto-flow: column; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 999px; background: #fff; color: #191919; font-weight: 600; font-size: 13px; animation-delay: -3s; }
+.ft-auth-toast { top: 40px; right: 48px; grid-auto-flow: column; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 999px; background: #fff; color: #191919; font-weight: 600; font-size: 13px; animation-delay: -3s; }
 .ft-auth-toast-icon { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #25d366; color: #fff; }
+
 @media (width <= 1100px) {
-  .ft-auth { grid-template-columns: minmax(0, 460px); justify-content: center; padding: 32px 16px; min-height: auto; }
+  .ft-auth { grid-template-columns: 1fr; }
   .ft-auth-showcase { display: none; }
+  .ft-auth .login.ft-auth-panel { min-height: 100svh; padding: 48px 24px; background: var(--ft-bg); }
+  .ft-auth-brandrow { display: flex; }
 }
 @media (width <= 680px) {
-  .ft-auth { padding: 24px 16px; }
-  .ft-auth-title { font-size: 26px; line-height: 32px; }
-  .ft-auth .login .card { padding: 20px !important; }
+  .ft-auth .login.ft-auth-panel { align-items: flex-start; padding: 32px 16px; }
+  .ft-auth-title { font-size: 28px; line-height: 34px; }
+  .ft-auth-modes { gap: 8px; }
+  .ft-auth-mode { gap: 10px; padding: 10px; }
+  .ft-auth-mode-icon { width: 36px; height: 36px; }
+}
+@media (width <= 480px) {
+  /* icon above the text so every option fits on one line */
+  .ft-auth-mode { flex-direction: column; align-items: flex-start; gap: 8px; min-height: 0; padding: 12px; }
 }
 
 /* password field with show/hide */

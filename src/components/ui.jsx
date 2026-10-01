@@ -104,9 +104,10 @@ export function LoadingState({ label = "Loading…", rows = 3 }) {
 }
 
 // Password field with a show/hide toggle. Passes every input prop through, so Field can label it.
-export function PasswordInput({ className = "", ...inputProps }) {
+export function PasswordInput({ className = "", icon: Icon = null, ...inputProps }) {
   const [visible, setVisible] = useState(false);
-  return <span className={`ft-password${className ? ` ${className}` : ""}`}>
+  return <span className={`ft-password${Icon ? " ft-input-icon" : ""}${className ? ` ${className}` : ""}`}>
+    {Icon && <Icon className="ft-input-icon-glyph" size={20} aria-hidden="true" />}
     <input {...inputProps} type={visible ? "text" : "password"} />
     <button type="button" className="ft-password-toggle" aria-pressed={visible} aria-controls={inputProps.id} aria-label={visible ? "Hide characters" : "Show characters"} title={visible ? "Hide" : "Show"} onClick={() => setVisible(value => !value)}>
       {visible ? <EyeOff size={20} aria-hidden="true" /> : <Eye size={20} aria-hidden="true" />}
@@ -114,3 +115,12 @@ export function PasswordInput({ className = "", ...inputProps }) {
   </span>;
 }
 PasswordInput.fieldControl = true;
+
+// Text input with a leading icon. Passes every input prop through, so Field can label it.
+export function IconInput({ icon: Icon, className = "", ...inputProps }) {
+  return <span className={`ft-input-icon${className ? ` ${className}` : ""}`}>
+    <Icon className="ft-input-icon-glyph" size={20} aria-hidden="true" />
+    <input {...inputProps} />
+  </span>;
+}
+IconInput.fieldControl = true;

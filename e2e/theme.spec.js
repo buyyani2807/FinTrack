@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { mockAccountsWorkspace } from "./fixtures/accountsMocks.js";
 
 test.describe("Theme", () => {
   test("follows the system setting until the toggle is used", async ({ browser }) => {
@@ -9,9 +10,17 @@ test.describe("Theme", () => {
     await context.close();
   });
 
+  test("sign-in has no header or theme toggle", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByRole("button", { name: "Financier sign in" })).toBeVisible();
+    await expect(page.locator(".ft-app-header")).toHaveCount(0);
+    await expect(page.getByRole("switch")).toHaveCount(0);
+  });
+
   test("the header toggle switches theme and remembers the choice", async ({ page }) => {
     await page.emulateMedia({ colorScheme: "light" });
-    await page.goto("/");
+    await mockAccountsWorkspace(page);
+    await page.goto("/dashboard");
     const html = page.locator("html");
     await expect(html).toHaveAttribute("data-theme", "light");
     const toggle = page.getByRole("switch", { name: "Switch to dark theme" });
@@ -20,6 +29,7 @@ test.describe("Theme", () => {
     await expect(html).toHaveAttribute("data-theme", "dark");
     await page.reload();
     await expect(html).toHaveAttribute("data-theme", "dark");
+    await expect(page.getByRole("switch", { name: "Switch to light theme" })).toBeVisible({ timeout: 15_000 });
     await page.getByRole("switch", { name: "Switch to light theme" }).click();
     await expect(html).toHaveAttribute("data-theme", "light");
   });
