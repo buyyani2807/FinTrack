@@ -4,7 +4,6 @@ import {
   addBankStatement,
   addVoucherAttachment,
   archiveAccountsCompany,
-  createAccountsCompany,
   createChartAccount,
   createParty,
   deleteChartAccount,
@@ -36,9 +35,9 @@ import {
   loadInventorySettings,
   saveInventorySettings,
 } from "./accountingRepository.js";
-import { isAccountsOnboardingDone, INDUSTRY_TEMPLATES, readIndustry, saveIndustry } from "./AccOnboardingWizard.jsx";
+import { isAccountsOnboardingDone, readIndustry } from "./AccOnboardingWizard.jsx";
 import { parsePartyCsv, planPartyImport } from "./partyCsvImport.js";
-import { AccMoreMenu, Field, AccSkeleton, Modal, ReasonModal } from "./components/AccUi.jsx";
+import { AccMoreMenu, AccSkeleton, Modal, ReasonModal } from "./components/AccUi.jsx";
 import { guessColumnMapping, mapBankImportRows, readBankStatementFile } from "./bankStatementImport.js";
 import { backupDownloadFilename, buildAccountsCompanyBackup, parseAccountsCompanyBackup } from "./accountsBackup.js";
 import { assertBackupRestorable, restoreAccountsCompanyBackup } from "./accountsRestore.js";
@@ -122,14 +121,12 @@ import {
   emptyCoaForm,
 } from "./accountsFormDefaults.js";
 import { NAV_STORAGE_KEY, sectionTrail, SECTIONS, REPORT_TABS, MOBILE_TABS, MORE_LINKS } from "./accountsNavigation.js";
-import { partyTypeLabel, gstStatusLabel } from "./accountsFormat.js";
+import { gstStatusLabel } from "./accountsFormat.js";
 import { AccSidebar, AccCompanyBar, AccPageHeader } from "./components/AccLayout.jsx";
-import { PartyFormFields } from "./components/PartyFields.jsx";
 import { CustomerPipeline } from "./components/CustomerPipeline.jsx";
 import { ManufacturingWorkspace } from "./components/ManufacturingWorkspace.jsx";
 import { VoucherForm } from "./components/VoucherForm.jsx";
 import { SimpleEntryForm } from "./components/SimpleEntryForm.jsx";
-import { CoaFormFields } from "./components/CoaFormFields.jsx";
 import { OverviewSection } from "./sections/OverviewSection.jsx";
 import { LedgerSection } from "./sections/LedgerSection.jsx";
 import { VouchersSection } from "./sections/VouchersSection.jsx";
@@ -140,6 +137,13 @@ import { MoreSection } from "./sections/MoreSection.jsx";
 import { ReportsSection } from "./sections/ReportsSection.jsx";
 import { BankSection } from "./sections/BankSection.jsx";
 import { SetupSection } from "./sections/SetupSection.jsx";
+import { NewEntryActions } from "./components/NewEntryActions.jsx";
+import { CreateCompanyModal } from "./components/dialogs/CreateCompanyModal.jsx";
+import { PartyModal } from "./components/dialogs/PartyModal.jsx";
+import { DeletePartyModal } from "./components/dialogs/DeletePartyModal.jsx";
+import { PartyDeleteBlockedModal } from "./components/dialogs/PartyDeleteBlockedModal.jsx";
+import { CoaModal } from "./components/dialogs/CoaModal.jsx";
+import { LogoutConfirmModal } from "./components/dialogs/LogoutConfirmModal.jsx";
 
 // Re-exported for the workspace preloader, which lazy-loads this module.
 export { prefetchAccounts } from "./accountsCache.js";
@@ -1602,27 +1606,7 @@ const openVoucher = () => {
           fyLabel={fy?.label || ""}
           booksStartedOn={activeCompany?.booksStartedOn || settings?.booksStartedOn || ""}
         />}
-        extras={canWrite ? <>
-          <select className="acc-new-entry" defaultValue="" aria-label="New entry" onChange={event => {
-            if (event.target.value) {
-              openSimple(event.target.value);
-              event.target.value = "";
-            }
-          }}>
-            <option value="">+ New entry</option>
-            {SIMPLE_ENTRY_KINDS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
-          </select>
-          <button type="button" className="btn primary acc-hide-mobile" onClick={openVoucher}>+ Voucher</button>
-          <button type="button" className="btn acc-hide-mobile" onClick={openParty}>+ Party</button>
-          <AccMoreMenu
-            className="acc-show-mobile"
-            label="More"
-            items={[
-              { id: "voucher", label: "+ Advanced voucher", onClick: openVoucher },
-              { id: "party", label: "+ Party", onClick: openParty },
-            ]}
-          />
-        </> : <span className="small">View-only · {accountsAccessRole || "viewer"}</span>}
+        extras={canWrite ? <NewEntryActions openSimple={openSimple} openVoucher={openVoucher} openParty={openParty} /> : <span className="small">View-only · {accountsAccessRole || "viewer"}</span>}
       />
       {error && <div className="notice acc-toast error" role="alert">{error}</div>}
       {notice && <div className="notice accounts-notice-ok acc-toast ok" role="status">{notice}</div>}
@@ -1925,39 +1909,45 @@ const openVoucher = () => {
         <p className="copy">Total debits must equal total credits. Unbalanced vouchers cannot be posted.</p>
         <VoucherForm accounts={visibleAccounts} parties={parties} voucherType={voucherType} setVoucherType={setVoucherType} form={voucherForm} setForm={setVoucherForm} lines={lines} setLines={setLines} onSubmit={submitVoucher} saving={saving} maxDate={todayIso()} />
       </Modal>}
-      {showCreateCompany && <Modal title="Create company" close={() => !saving && setShowCreateCompany(false)} actions={<div className="tabs spacer"><button type="button" className="btn" disabled={saving} onClick={() => setShowCreateCompany(false)}>Cancel</button><button type="button" className="btn primary" disabled={saving || !String(companyDraft.name || "").trim()} onClick={() => run(async () => {
-        const created = await createAccountsCompany(token, companyDraft);
-        const id = Array.isArray(created) ? created[0] : created;
-        if (typeof id === "string") saveIndustry(id, companyDraft.industry || "retail");
-        setShowCreateCompany(false);
-        return typeof id === "string" ? id : undefined;
-      }, "Company created. This company’s books start empty.")}>{saving ? "Saving…" : "Create company"}</button></div>}>
-        <p className="copy">A new company has its own chart, parties, vouchers, bank, GST, and locks. It does not copy SriHitha Infra or any other company.</p>
-        <div className="form">
-          <Field required label="Company name"><input value={companyDraft.name} onChange={event => setCompanyDraft(current => ({ ...current, name: event.target.value }))} placeholder="e.g. ABC Traders" /></Field>
-          <Field label="Books start date"><input type="date" value={companyDraft.booksStartedOn} onChange={event => setCompanyDraft(current => ({ ...current, booksStartedOn: event.target.value }))} /></Field>
-          <Field label="Industry template"><select value={companyDraft.industry || "retail"} onChange={event => setCompanyDraft(current => ({ ...current, industry: event.target.value }))}>{INDUSTRY_TEMPLATES.map(template => <option key={template.id} value={template.id}>{template.label}</option>)}</select><span className="small">{INDUSTRY_TEMPLATES.find(template => template.id === (companyDraft.industry || "retail"))?.hint}</span></Field>
-          <div className="accounts-template-features span">{(INDUSTRY_TEMPLATES.find(template => template.id === (companyDraft.industry || "retail"))?.features || []).map(feature => <span key={feature}>{feature}</span>)}</div>
-        </div>
-      </Modal>}
+      {showCreateCompany && <CreateCompanyModal
+        saving={saving}
+        setShowCreateCompany={setShowCreateCompany}
+        companyDraft={companyDraft}
+        run={run}
+        token={token}
+        setCompanyDraft={setCompanyDraft}
+      />}
       {showSimple && <Modal title={SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry"} close={closeSimple}>
         <SimpleEntryForm kind={simpleKind} accounts={visibleAccounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} maxDate={todayIso()} gstCompany={activeCompany} onGstSetup={() => { setShowSimple(false); openSection("setup"); }} items={items} stockByItem={stockByItem} openInvoices={settlementOpenInvoices} />
       </Modal>}
-      {showParty && <Modal title={partyForm.id ? "Edit party" : "Add party"} close={closeParty} actions={<div className="tabs spacer"><button type="button" className="btn" disabled={saving} onClick={closeParty}>Cancel</button><button type="button" className="btn primary" disabled={saving} onClick={saveParty}>{saving ? "Saving…" : partyForm.id ? "Save changes" : "Save party"}</button></div>}>
-        <p className="copy">{partyForm.id ? "Updates this party only. Existing vouchers and ledgers stay attached to the same party." : "Accounts parties are independent of Daily Finance customers and Chit Fund members."}</p>
-        <PartyFormFields form={partyForm} setForm={setPartyForm} typeLocked={Boolean(partyForm.id && partyHasAccountingUse(partyForm.id, vouchers))} />
-      </Modal>}
-      {partyDeleteDialog?.mode === "confirm" && <Modal title="Delete party?" close={() => !saving && setPartyDeleteDialog(null)} actions={<div className="tabs spacer"><button type="button" className="btn" disabled={saving} onClick={() => setPartyDeleteDialog(null)}>Cancel</button><button type="button" className="btn danger" disabled={saving} onClick={confirmDeleteParty}>{saving ? "Deleting…" : "Delete"}</button></div>}>
-        <p className="copy">Are you sure you want to delete this party?</p>
-        <p className="small"><strong>{partyDeleteDialog.party.name}</strong> · {partyTypeLabel(partyDeleteDialog.party.partyType)}</p>
-      </Modal>}
-      {partyDeleteDialog?.mode === "blocked" && <Modal title="This party cannot be deleted" close={() => !saving && setPartyDeleteDialog(null)} actions={<div className="tabs spacer">{partyDeleteDialog.party.isActive !== false && <button type="button" className="btn" disabled={saving} onClick={() => setPartyActiveState(partyDeleteDialog.party, false)}>{saving ? "Saving…" : "Deactivate instead"}</button>}<button type="button" className="btn primary" disabled={saving} onClick={() => setPartyDeleteDialog(null)}>Close</button></div>}>
-        <p className="copy">This party cannot be deleted because accounting transactions already exist for this party.</p>
-        <p className="small">Historical vouchers, ledgers, receivables, payables, and reports stay intact. Deactivate the party if it should no longer appear on new entries.</p>
-      </Modal>}
-      {showCoa && <Modal title={coaForm.id ? "Edit ledger account" : "Add ledger account"} close={closeCoa} actions={<div className="tabs spacer"><button type="button" className="btn primary" disabled={saving} onClick={saveCoa}>{saving ? "Saving…" : "Save account"}</button></div>}>
-        <CoaFormFields form={coaForm} setForm={setCoaForm} accounts={visibleAccounts} />
-      </Modal>}
+      {showParty && <PartyModal
+        partyForm={partyForm}
+        closeParty={closeParty}
+        saving={saving}
+        saveParty={saveParty}
+        setPartyForm={setPartyForm}
+        vouchers={vouchers}
+      />}
+      {partyDeleteDialog?.mode === "confirm" && <DeletePartyModal
+        saving={saving}
+        setPartyDeleteDialog={setPartyDeleteDialog}
+        confirmDeleteParty={confirmDeleteParty}
+        partyDeleteDialog={partyDeleteDialog}
+      />}
+      {partyDeleteDialog?.mode === "blocked" && <PartyDeleteBlockedModal
+        saving={saving}
+        setPartyDeleteDialog={setPartyDeleteDialog}
+        partyDeleteDialog={partyDeleteDialog}
+        setPartyActiveState={setPartyActiveState}
+      />}
+      {showCoa && <CoaModal
+        coaForm={coaForm}
+        closeCoa={closeCoa}
+        saving={saving}
+        saveCoa={saveCoa}
+        setCoaForm={setCoaForm}
+        visibleAccounts={visibleAccounts}
+      />}
       {reasonDialog && <ReasonModal
         title={reasonDialog.title}
         label="Reason"
@@ -1982,9 +1972,7 @@ const openVoucher = () => {
           close={() => setSalesInvoiceView(null)}
         />
       )}
-      {confirmLogout && <Modal title="Log out of Accounts?" close={() => !signingOut && setConfirmLogout(false)} actions={<div className="tabs spacer"><button type="button" className="btn" disabled={signingOut} onClick={() => setConfirmLogout(false)}>Stay signed in</button><button type="button" className="btn danger" disabled={signingOut} onClick={confirmAccountsLogout}>{signingOut ? "Signing out…" : "Log out"}</button></div>}>
-        <p className="copy">This ends your FinTrack session. You will need to sign in again to open Accounts or any other module.</p>
-      </Modal>}
+      {confirmLogout && <LogoutConfirmModal signingOut={signingOut} setConfirmLogout={setConfirmLogout} confirmAccountsLogout={confirmAccountsLogout} />}
     </main>
   </div>;
 }
