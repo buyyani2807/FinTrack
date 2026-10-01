@@ -173,6 +173,8 @@ td:has(> .btn + .btn) { line-height: 2.6; }
 /* Chit Fund: Upcoming payments sits directly above the insights card */
 .upcoming-payments + .module-intel { margin-top: 22px !important; }
 @media (width <= 680px) { .upcoming-payments + .module-intel { margin-top: 16px !important; } }
+/* Cashbook: action buttons sit directly above the entry list */
+.accounts-action-row + .accounts-entry-list { margin-top: 16px; }
 /* account page: Repayment progress card */
 .repayment-progress .metric-value { margin: 12px 0 4px; }
 .repayment-progress-bar { margin-top: 16px; }
