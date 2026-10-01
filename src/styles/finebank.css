@@ -466,26 +466,12 @@ input:disabled, select:disabled, textarea:disabled { background: var(--ft-surfac
 @keyframes ft-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 .ft-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
-/* breadcrumb with back arrow (sub-pages inside a section): deliberately quiet so the page title leads */
-/* only pages with a breadcrumb get this slim top bar, divided from the page like a header */
-.ft-breadcrumb { display: flex; align-items: center; gap: 2px; min-width: 0; min-height: 40px; margin: -12px 0 24px; padding: 0 0 10px; border-bottom: 1px solid var(--ft-border); }
-.ft-breadcrumb-back { width: 28px; height: 28px; margin-left: -6px; border: 0 !important; border-radius: 6px; background: transparent !important; color: var(--ft-subtle); }
-.ft-breadcrumb-back:hover { background: var(--ft-surface-hover) !important; color: var(--ft-text-2); }
-.ft-breadcrumb-back svg { width: 16px; height: 16px; }
-.ft-breadcrumb ol { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; min-width: 0; margin: 0; padding: 0; list-style: none; font-size: 13px; line-height: 20px; }
-.ft-breadcrumb li { display: inline-flex; align-items: center; gap: 2px; min-width: 0; }
-.ft-breadcrumb-sep { width: 12px; height: 12px; color: var(--ft-disabled); flex: none; }
-.ft-breadcrumb-link { padding: 2px; border: 0; border-radius: 4px; background: none; color: var(--ft-subtle); font: inherit; font-weight: 400; cursor: pointer; }
-.ft-breadcrumb-link:hover { color: var(--ft-text-2); text-decoration: underline; text-underline-offset: 3px; }
-.ft-breadcrumb li > span { overflow: hidden; padding: 2px; color: var(--ft-subtle); font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
-.ft-breadcrumb [aria-current="page"] { color: var(--ft-muted); font-weight: 500; }
-/* phones: one line, showing the parent and the current page */
-@media (width <= 680px) {
-  .ft-breadcrumb ol { flex-wrap: nowrap; }
-  .ft-breadcrumb li:not(:nth-last-child(-n+2)) { display: none; }
-  .ft-breadcrumb li:nth-last-child(2) .ft-breadcrumb-sep { display: none; }
-  .ft-breadcrumb li:last-child { overflow: hidden; }
-}
+/* sub-pages: a slim bar with one Back button, divided from the page like a header */
+.ft-back-bar { display: flex; align-items: center; min-height: 40px; margin: -12px 0 24px; padding: 0 0 10px; border-bottom: 1px solid var(--ft-border); }
+.ft-back-link { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; margin-left: -8px; padding: 4px 10px 4px 8px; border: 0; border-radius: 8px; background: transparent; color: var(--ft-muted); font: 600 14px/1.2 var(--ft-font); cursor: pointer; }
+.ft-back-link:hover { background: var(--ft-surface-hover); color: var(--ft-text); }
+.ft-back-link:focus-visible { outline: 2px solid var(--ft-primary); outline-offset: 1px; }
+@media (width <= 680px) { .ft-back-link { min-height: 40px; } }
 
 /* ------------------------------------------------------------------ tables */
 .table { background: var(--ft-surface) !important; border: 1px solid var(--ft-border) !important; border-radius: var(--ft-radius) !important; box-shadow: none !important; }
@@ -837,8 +823,8 @@ html[data-ft-role="owner"] .top-actions .top-theme { display: none; }
 
 /* ------------------------------------------------------------------ page header */
 .shell > .top { padding-bottom: 20px; margin-bottom: 28px !important; border-bottom: 1px solid var(--ft-border); }
-/* the breadcrumb bar already divides the page; no second line under the title */
-.shell > .ft-breadcrumb + .top { padding-bottom: 0; margin-bottom: 24px !important; border-bottom: 0; }
+/* the back bar already divides the page; no second line under the title */
+.shell > .ft-back-bar + .top { padding-bottom: 0; margin-bottom: 24px !important; border-bottom: 0; }
 .dashboard-home .toolbar { background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; margin-bottom: 24px !important; }
 .shell > .toolbar { margin-bottom: 24px; }
 .dashboard-home .toolbar .title { color: var(--ft-text) !important; }

@@ -9,7 +9,7 @@ import {
 import { downloadCustomerStatementPdf } from "./statementPdf.js";
 import { canWhatsAppShare, openManualWhatsAppShare } from "../receipts/io/receiptWhatsApp.js";
 import { formatInr } from "../../lib/formatMoney.js";
-import { Breadcrumb } from "../../components/ui.jsx";
+import { BackButton } from "../../components/ui.jsx";
 
 const money = formatInr;
 
@@ -109,7 +109,6 @@ export function CustomerStatementPage({
   chit = null,
   settings = {},
   back,
-  trail = [],
 }) {
   const [asOf, setAsOf] = useState(todayIso());
   const [selectedAccountId, setSelectedAccountId] = useState(mode === "finance" ? "all" : "chit");
@@ -138,7 +137,7 @@ export function CustomerStatementPage({
   };
 
   return <main className="shell customer-statement-page">
-    <Breadcrumb items={[...(trail.length ? trail : ["Back"]).map((label, index, all) => ({ label, onClick: index === all.length - 1 ? back : undefined })), { label: "Customer Statement" }]} />
+    <BackButton onClick={back} />
     <div className="toolbar">
       <div>
         <h1 className="title">Customer Statement</h1>

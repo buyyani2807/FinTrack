@@ -125,24 +125,12 @@ export function IconInput({ icon: Icon, className = "", ...inputProps }) {
 }
 IconInput.fieldControl = true;
 
-// Where the user is inside a section, e.g. Daily Finance › Ravi Kumar, shown at the top left of the page.
-// items: [{ label, onClick? }], last = current page. The back arrow goes to the nearest ancestor with onClick.
-export function Breadcrumb({ items }) {
-  const parent = items.slice(0, -1).reverse().find(item => item.onClick);
-  return <nav className="ft-breadcrumb" aria-label="Breadcrumb">
-    {parent && <button type="button" className="ft-icon-btn ft-breadcrumb-back" aria-label={`Back to ${parent.label}`} title={`Back to ${parent.label}`} onClick={parent.onClick}><ArrowLeft size={18} aria-hidden="true" /></button>}
-    <ol>
-      {items.map((item, index) => {
-        const current = index === items.length - 1;
-        return <li key={`${index}-${item.label}`}>
-          {index > 0 && <ChevronRight className="ft-breadcrumb-sep" size={14} aria-hidden="true" />}
-          {!current && item.onClick
-            ? <button type="button" className="ft-breadcrumb-link" onClick={item.onClick}>{item.label}</button>
-            : <span aria-current={current ? "page" : undefined}>{item.label}</span>}
-        </li>;
-      })}
-    </ol>
-  </nav>;
+// Sub-pages (an account, a statement, a scheme, a staff member…) start with a slim bar holding one "Back" button
+// that returns to the page they were opened from.
+export function BackButton({ onClick }) {
+  return <div className="ft-back-bar">
+    <button type="button" className="ft-back-link" onClick={onClick}><ArrowLeft size={16} aria-hidden="true" />Back</button>
+  </div>;
 }
 
 // One-of-few choice shown as joined buttons (period, money in/out, chit type…). options: [{ id, label }].

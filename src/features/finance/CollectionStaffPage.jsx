@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Badge, Breadcrumb, Button, EmptyState, Field, Modal } from "../../components/ui.jsx";
+import { Badge, BackButton, Button, EmptyState, Field, Modal } from "../../components/ui.jsx";
 import { formatInr as money } from "../../lib/formatMoney.js";
 import { financeKindLabel, staffAssignableLoans } from "./model/collectionStaff";
 import { loanBalance, loanStatus } from "./model/loanState.js";
@@ -43,7 +43,7 @@ export function CollectionStaffPage({ loans, loadAgents, createAgent, assignAgen
   return <main className="shell collection-staff-page">
     {selected
       ? <>
-        <Breadcrumb items={[{ label: "Collection Staff", onClick: () => setSelected(null) }, { label: selected.full_name }]} />
+        <BackButton onClick={() => setSelected(null)} />
         <div className="toolbar"><div><h1 className="title">{selected.full_name}</h1><p className="copy">{[selected.email, selected.phone].filter(Boolean).join(" · ") || "No contact details"}</p></div><div className="tabs"><Button onClick={() => setShowEdit(true)}>Edit staff</Button><Button onClick={() => setShowResetPassword(true)}>Reset password</Button></div></div>
         {error && <p className="red small">{error}</p>}
         <div className="card">

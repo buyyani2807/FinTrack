@@ -143,18 +143,20 @@ test.describe("Back buttons", () => {
   });
 });
 
-test.describe("Breadcrumbs", () => {
-  test("sub-pages show where they sit and the back arrow returns to the parent", async ({ page }) => {
+test.describe("Back button", () => {
+  test("sub-pages show a Back button instead of breadcrumbs and it returns to the parent", async ({ page }) => {
     await mockAccountsWorkspace(page);
     await page.goto("/daily-finance/todays-collections");
-    const crumbs = page.getByRole("navigation", { name: "Breadcrumb" });
-    await expect(crumbs).toContainText("Daily Finance", { timeout: 15_000 });
-    await expect(crumbs.locator('[aria-current="page"]')).toHaveText("Today’s collections");
-    await crumbs.getByRole("button", { name: "Back to Daily Finance" }).click();
+    const back = page.getByRole("button", { name: "Back", exact: true });
+    await expect(back).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("navigation", { name: "Breadcrumb" })).toHaveCount(0);
+    await back.click();
     await expect(page.getByRole("heading", { name: "Daily Finance", level: 1 })).toBeVisible();
 
     await page.goto("/daily-finance/accounts/fa1");
-    await expect(page.getByRole("navigation", { name: "Breadcrumb" }).locator('[aria-current="page"]')).toHaveText("Ravi Kumar", { timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Ravi Kumar", level: 1 })).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: "Back", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Daily Finance", level: 1 })).toBeVisible();
   });
 });
 
@@ -206,7 +208,7 @@ test.describe("Collection Staff", () => {
     await expect(page.locator(".modal-bg")).toHaveCount(0);
     await page.getByRole("button", { name: "View / Assign" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Suresh Agent" })).toBeVisible();
-    await page.getByRole("button", { name: "Back to Collection Staff" }).click();
+    await page.getByRole("button", { name: "Back", exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Collection Staff" })).toBeVisible();
   });
 });
