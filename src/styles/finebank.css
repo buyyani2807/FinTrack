@@ -451,6 +451,10 @@ html:not([data-ft-role="owner"]) .ft-app-header-brand { display: inline; }
 .accounts-module .accounts-balance-item strong.green { color: var(--ft-success) !important; }
 .accounts-module .accounts-balance-item strong.red { color: var(--ft-danger) !important; }
 .accounts-section-nav { border-bottom: 1px solid var(--ft-border); gap: 8px !important; }
+/* tab rows scroll sideways when they do not fit */
+.accounts-section-nav, .module-section-nav, .tabs { max-width: 100%; overflow-x: auto; scrollbar-width: thin; flex-wrap: nowrap !important; }
+.accounts-section-nav > *, .module-section-nav > * { flex: none !important; white-space: nowrap; }
+.login .tabs { overflow: visible; }
 
 /* Chit Fund */
 .chit-dashboard { background: var(--ft-bg) !important; color: var(--ft-text) !important; }
