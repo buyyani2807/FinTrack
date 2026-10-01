@@ -4,15 +4,12 @@ import {
   addBankStatement,
   addVoucherAttachment,
   archiveAccountsCompany,
-  cancelVoucher,
   createAccountsCompany,
   createChartAccount,
   createParty,
   deleteChartAccount,
   deleteParty,
   deleteVoucherAttachment,
-  ignoreBankLine,
-  initializeAccounting,
   loadAccountsRoles,
   loadAccountsAccessRole,
   loadAuditLog,
@@ -20,77 +17,37 @@ import {
   loadPeriodLocks,
   loadVoucherAttachments,
   loadVouchers,
-  lockAccountingPeriod,
   matchBankLine as saveBankMatch,
   postVoucher,
-  queueEinvoicePayload,
-  reopenAccountingPeriod,
-  reverseVoucher,
-  saveAccountingSettings,
-  saveGstSettings,
-  setAccountingIntegration,
   setPartyPipelineStage,
   setActiveAccountsCompanyId,
-  setAccountsUserRole,
-  setItemActive,
   setPartyActive,
-  syncAccountingOperations,
   trackProductEventRpc,
   updateChartAccount,
   updateParty,
   upsertItem,
   upsertItemCategory,
-  deleteItem,
-  deleteItemCategory,
   adjustStock,
   claimTeamInvites,
-  inviteTeamMember,
   listTeamInvites,
-  revokeTeamInvite,
   loadRecurringTemplates,
-  upsertRecurringTemplate,
-  deleteRecurringTemplate,
   markRecurringRun,
   setItemOpeningRate,
   loadInventorySettings,
   saveInventorySettings,
 } from "./accountingRepository.js";
-import {
-  AccOnboardingWizard,
-  isAccountsOnboardingDone,
-  markAccountsOnboardingDone,
-  INDUSTRY_TEMPLATES,
-  readIndustry,
-  saveIndustry,
-} from "./AccOnboardingWizard.jsx";
+import { isAccountsOnboardingDone, INDUSTRY_TEMPLATES, readIndustry, saveIndustry } from "./AccOnboardingWizard.jsx";
 import { parsePartyCsv, planPartyImport } from "./partyCsvImport.js";
-import { AccMoreMenu, AccToolbar, Field, AccMetric, AccEmpty, AccPager, AccSetupSection, AccSkeleton, Modal, ReasonModal } from "./components/AccUi.jsx";
-import { BANK_IMPORT_FIELDS, guessColumnMapping, mapBankImportRows, readBankStatementFile } from "./bankStatementImport.js";
+import { AccMoreMenu, Field, AccSkeleton, Modal, ReasonModal } from "./components/AccUi.jsx";
+import { guessColumnMapping, mapBankImportRows, readBankStatementFile } from "./bankStatementImport.js";
 import { backupDownloadFilename, buildAccountsCompanyBackup, parseAccountsCompanyBackup } from "./accountsBackup.js";
 import { assertBackupRestorable, restoreAccountsCompanyBackup } from "./accountsRestore.js";
-import {
-  buildEinvoiceOutboundPayload,
-  buildGstr1Preparation,
-  buildGstr3bPreparation,
-  EINVOICE_INTEGRATION_STUB,
-  gstrPrepToCsvRows,
-  gstrPrepToJson,
-} from "./gstPrepExport.js";
 import { buildAccountsAttentionItems } from "../intelligence/attentionCenter.js";
-import { AttentionCenterCard } from "../intelligence/AttentionCenterCard.jsx";
 import { trackProductEvent } from "../commercial/productAnalytics.js";
+import { assertVoucherAttachmentMeta, normalizeAttachmentContentType, readFileAsBase64 } from "./voucherAttachments.js";
 import {
-  assertVoucherAttachmentMeta,
-  attachmentDownloadHref,
-  normalizeAttachmentContentType,
-  readFileAsBase64,
-  VOUCHER_ATTACHMENT_MAX_BYTES,
-} from "./voucherAttachments.js";
-import {
-  MONEY_MODES,
   PARTY_TYPES,
   SIMPLE_ENTRY_KINDS,
-  VOUCHER_TYPES,
   accountNormalSide,
   addDaysIso,
   assertBalancedVoucher,
@@ -103,7 +60,6 @@ import {
   createSubmitLock,
   filterParties,
   indianFinancialYear,
-  ledgerHasPostedLines,
   moneyAccounts,
   newClientRequestId,
   partyHasAccountingUse,
@@ -116,8 +72,8 @@ import {
   salePaymentSummary,
   assertMoneyModeSplit,
 } from "./accountingModel.js";
-import { formatIstDateTime, todayIso } from "./cashbookModel.js";
-import { INDIA_STATES, gstStateFromGstin, isIntraGst, validateGstSettings } from "./accountingGst.js";
+import { todayIso } from "./cashbookModel.js";
+import { gstStateFromGstin, isIntraGst } from "./accountingGst.js";
 import {
   accountLedger,
   balanceSheet,
@@ -125,7 +81,6 @@ import {
   cashFlow,
   dashboardMetrics,
   dayBook,
-  defaultBankStatementLines,
   gstBooksReport,
   invoiceAgingTotals,
   invoiceRegister,
@@ -136,23 +91,11 @@ import {
   trialBalance,
 } from "./accountingReports.js";
 import { pageSlice } from "./accountsList.js";
-import { AccIntelligenceBrief } from "./AccIntelligenceBrief.jsx";
 import { previousComparisonRange } from "./accountsIntelligence.js";
 import { downloadAccountsCsv, downloadAccountsExcel, downloadAccountsPdf } from "./accountingExport.js";
 import { loadOrganizationSettings } from "../../lib/financeRepository.js";
 import { buildSalesInvoice } from "./salesInvoiceModel.js";
-import {
-  ArReminderButton,
-  OutstandingWhatsAppButton,
-  PartyStatementButton,
-  PaymentAdviceButton,
-  PurchaseDocumentButton,
-  SalesInvoiceActions,
-  SalesInvoiceSuccessModal,
-  SalesInvoiceViewerModal,
-} from "./SalesInvoiceActions.jsx";
-import { AccItemsSetup } from "./AccItemsSetup.jsx";
-import { AccInventoryWorkspace } from "./AccInventoryWorkspace.jsx";
+import { SalesInvoiceSuccessModal, SalesInvoiceViewerModal } from "./SalesInvoiceActions.jsx";
 import { periodStockValues } from "./inventoryValuation.js";
 import {
   currentStockForItem,
@@ -160,7 +103,6 @@ import {
   itemSalesReport,
   itemizedEntryDraft,
   stockMovementReport,
-  stockReasonLabel,
   usesItemLines,
 } from "./inventoryModel.js";
 import {
@@ -170,34 +112,37 @@ import {
   inFlightAccountsPrefetch,
   clearAccountsSnapshot,
 } from "./accountsCache.js";
-
-// Re-exported for the workspace preloader, which lazy-loads this module.
-export { prefetchAccounts } from "./accountsCache.js";
 import {
   emptyLine,
   emptyBankLine,
   emptyPartyForm,
   emptyRecurringDraft,
-  RECURRING_KINDS,
-  RECURRING_FREQUENCIES,
   emptyVoucherForm,
   emptySimpleForm,
   emptyCoaForm,
 } from "./accountsFormDefaults.js";
 import { NAV_STORAGE_KEY, sectionTrail, SECTIONS, REPORT_TABS, MOBILE_TABS, MORE_LINKS } from "./accountsNavigation.js";
-import { money, partyTypeLabel, gstStatusLabel, bankMatchLabel, bankMatchTone, PARTY_TYPE_FILTERS } from "./accountsFormat.js";
+import { partyTypeLabel, gstStatusLabel } from "./accountsFormat.js";
 import { AccSidebar, AccCompanyBar, AccPageHeader } from "./components/AccLayout.jsx";
-import { AccOverviewContextBar, ReportRangeBar } from "./components/AccPeriodBars.jsx";
-import { AccountsBusinessPulse, AccCompareChart, AccOverviewRecent } from "./components/AccOverviewWidgets.jsx";
-import { BankMatchControls } from "./components/BankMatchControls.jsx";
-import { PartyTypeBadge, PartyFormFields } from "./components/PartyFields.jsx";
-import { IndustryTemplateCard, SubscriptionMonitoringPanel } from "./components/AccSetupWidgets.jsx";
+import { PartyFormFields } from "./components/PartyFields.jsx";
 import { CustomerPipeline } from "./components/CustomerPipeline.jsx";
 import { ManufacturingWorkspace } from "./components/ManufacturingWorkspace.jsx";
 import { VoucherForm } from "./components/VoucherForm.jsx";
 import { SimpleEntryForm } from "./components/SimpleEntryForm.jsx";
 import { CoaFormFields } from "./components/CoaFormFields.jsx";
+import { OverviewSection } from "./sections/OverviewSection.jsx";
+import { LedgerSection } from "./sections/LedgerSection.jsx";
+import { VouchersSection } from "./sections/VouchersSection.jsx";
+import { InvoicesSection } from "./sections/InvoicesSection.jsx";
+import { PartiesSection } from "./sections/PartiesSection.jsx";
+import { InventorySection } from "./sections/InventorySection.jsx";
+import { MoreSection } from "./sections/MoreSection.jsx";
+import { ReportsSection } from "./sections/ReportsSection.jsx";
+import { BankSection } from "./sections/BankSection.jsx";
+import { SetupSection } from "./sections/SetupSection.jsx";
 
+// Re-exported for the workspace preloader, which lazy-loads this module.
+export { prefetchAccounts } from "./accountsCache.js";
 export function AccountsModule({ token, close, onOpenCashbook, logout, workspace = {}, orgSettings: orgSettingsProp = null }) {
   const [cached] = useState(() => {
     const snapshot = readAccountsSnapshot(token);
@@ -1630,94 +1575,11 @@ const openVoucher = () => {
     work(reason);
   };
 
-  const invoiceStatusTone = status => {
-    if (status === "Overdue") return "inv-overdue";
-    if (status === "Due") return "inv-due";
-    if (status === "Paid") return "inv-paid";
-    if (status === "Partially Paid") return "inv-partial";
-    return "inv-current";
-  };
   const isInvoicePayables = section === "payables";
   const invoiceAging = invoiceAgingTotals(isInvoicePayables ? apInvoices : arInvoices);
   const pagedInvoiceRows = isInvoicePayables ? pagedApInvoices : pagedArInvoices;
   const invoicePartyRows = partyTotalsFromInvoices(isInvoicePayables ? apInvoices : arInvoices);
 
-  const invoiceTable = (rows, kind) => {
-    const emptyTitle = kind === "payable" ? "No outstanding payables" : "No outstanding receivables";
-    const emptyCopy = kind === "payable"
-      ? "Supplier invoices will appear here after you record a purchase."
-      : "Customer invoices will appear here after you record a credit sale.";
-    if (!rows.length) {
-      return <AccEmpty title={emptyTitle} copy={emptyCopy} />;
-    }
-    return (
-      <>
-        <div className="table spacer acc-table-wrap accounts-invoice-table acc-invoice-desktop">
-          <table>
-            <thead>
-              <tr>
-                <th>{kind === "payable" ? "Supplier" : "Customer"}</th>
-                <th>Invoice</th>
-                <th>Invoice date</th>
-                <th>Due date</th>
-                <th className="acc-num">Amount</th>
-                <th className="acc-num">Paid</th>
-                <th className="acc-num">Outstanding</th>
-                <th className="acc-num">Days overdue</th>
-                <th>Status</th>
-                <th>{kind === "payable" ? "Advice" : "Remind"}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(row => (
-                <tr key={row.id} className={row.status === "Overdue" ? "acc-invoice-overdue" : ""}>
-                  <td>
-                    <strong className="acc-invoice-party">{row.partyName}</strong>
-                  </td>
-                  <td><span className="acc-invoice-ref">{row.reference}</span></td>
-                  <td>{row.invoiceDate}</td>
-                  <td>{row.dueDate}</td>
-                  <td className="acc-num">{money(row.amount)}</td>
-                  <td className="acc-num acc-invoice-paid">{money(row.paid)}</td>
-                  <td className={`acc-num acc-invoice-out${row.status === "Overdue" ? " is-overdue" : row.outstanding > 0 ? "" : " is-clear"}`}>{money(row.outstanding)}</td>
-                  <td className="acc-num">{row.daysOverdue || 0}</td>
-                  <td><span className={`acc-status-pill ${invoiceStatusTone(row.status)}`}>{row.status}</span></td>
-                  <td className="acc-invoice-remind">
-                    {kind === "payable"
-                      ? <PaymentAdviceButton row={row} settings={orgSettings} company={activeCompany} workspace={workspace} compact />
-                      : <ArReminderButton row={row} settings={orgSettings} company={activeCompany} workspace={workspace} compact />}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="acc-invoice-cards spacer">
-          {rows.map(row => (
-            <article key={row.id} className={`card acc-invoice-card${row.status === "Overdue" ? " is-overdue" : ""}`}>
-              <div className="acc-invoice-card-top">
-                <div>
-                  <strong>{row.partyName}</strong>
-                  <p className="small">{row.reference} · due {row.dueDate}</p>
-                </div>
-                <span className={`acc-status-pill ${invoiceStatusTone(row.status)}`}>{row.status}</span>
-              </div>
-              <p className="acc-ledger-card-amounts">
-                <span>Amount <strong>{money(row.amount)}</strong></span>
-                <span>Paid <strong>{money(row.paid)}</strong></span>
-                <span>Outstanding <strong>{money(row.outstanding)}</strong></span>
-              </p>
-              <div className="acc-invoice-remind">
-                {kind === "payable"
-                  ? <PaymentAdviceButton row={row} settings={orgSettings} company={activeCompany} workspace={workspace} compact />
-                  : <ArReminderButton row={row} settings={orgSettings} company={activeCompany} workspace={workspace} compact />}
-              </div>
-            </article>
-          ))}
-        </div>
-      </>
-    );
-  };
 
   return <div className={`acc-shell${navExpanded ? " nav-expanded" : ""}`}>
     <AccSidebar section={section} expanded={navExpanded} onToggle={toggleNav} onNavigate={openSection} />
@@ -1774,1360 +1636,289 @@ const openVoucher = () => {
         ))}
       </nav>
       {loading && !settings ? <><p className="copy">Loading Accounts…</p><AccSkeleton /></> : <>
-        {section === "overview" && <div className="acc-panel acc-overview">
-          {!settings && <div className="card accounts-form-card">
-            <strong>Open the books</strong>
-            <p className="copy">Create a chart of accounts for this business. You do not need Daily Finance, Monthly Finance, or Chit Fund records.</p>
-            <div className="form spacer">
-              <Field label="Business name"><input value={setupForm.companyName} onChange={event => setSetupForm(current => ({ ...current, companyName: event.target.value }))} /></Field>
-              <Field label="Books start date"><input type="date" value={setupForm.booksStartedOn} onChange={event => setSetupForm(current => ({ ...current, booksStartedOn: event.target.value }))} /></Field>
-            </div>
-            <button type="button" className="btn primary" disabled={saving} onClick={() => run(() => initializeAccounting(token, setupForm), "Accounts opened.")}>{saving ? "Saving…" : "Create chart of accounts"}</button>
-          </div>}
+        {section === "overview" && <OverviewSection
+          settings={settings}
+          setupForm={setupForm}
+          setSetupForm={setSetupForm}
+          saving={saving}
+          run={run}
+          token={token}
+          showOnboarding={showOnboarding}
+          activeCompanyId={activeCompanyId}
+          activeCompany={activeCompany}
+          canAdmin={canAdmin}
+          canWrite={canWrite}
+          setOnboardingDismissed={setOnboardingDismissed}
+          setNotice={setNotice}
+          fy={fy}
+          lastFy={lastFy}
+          rangeFrom={rangeFrom}
+          rangeTo={rangeTo}
+          setReportRange={setReportRange}
+          metrics={metrics}
+          overviewArAging={overviewArAging}
+          overviewApAging={overviewApAging}
+          items={items}
+          stockMovements={stockMovements}
+          accountsAttention={accountsAttention}
+          close={close}
+          openSection={openSection}
+          setReportTab={setReportTab}
+          visibleAccounts={visibleAccounts}
+          vouchers={vouchers}
+          parties={parties}
+          range={range}
+          intelligencePreviousRange={intelligencePreviousRange}
+          voucherItemLines={voucherItemLines}
+          recentVouchers={recentVouchers}
+        />}
 
-          {showOnboarding && (
-            <AccOnboardingWizard
-              key={activeCompanyId || "onboarding"}
-              company={activeCompany}
-              canAdmin={canAdmin}
-              canWrite={canWrite}
-              saving={saving}
-              onSaveCompany={async ({ companyName, booksStartedOn }) => {
-                const ok = await run(() => saveAccountingSettings(token, { companyName, booksStartedOn }), "Company saved.");
-                if (!ok) throw new Error("Could not save company.");
-              }}
-              onSaveGst={async payload => {
-                const ok = await run(() => saveGstSettings(token, {
-                  ...payload,
-                  stateName: INDIA_STATES.find(state => state.code === payload.stateCode)?.name || "",
-                }), "GST settings saved.");
-                if (!ok) throw new Error("Could not save GST.");
-              }}
-              onCreateParty={async payload => {
-                const ok = await run(() => createParty(token, {
-                  ...emptyPartyForm(),
-                  ...payload,
-                }), "Party created.");
-                if (!ok) throw new Error("Could not create party.");
-              }}
-              onInviteCa={async ({ email, role }) => {
-                const ok = await run(async () => {
-                  await inviteTeamMember(token, { email, role });
-                }, `Invite processed for ${email}.`);
-                if (!ok) throw new Error("Could not invite. Apply migration 075 if this is the first invite.");
-              }}
-              onFinish={() => {
-                markAccountsOnboardingDone(activeCompanyId);
-                setOnboardingDismissed(true);
-                setNotice("Accounts setup complete.");
-              }}
-              onSkip={() => {
-                markAccountsOnboardingDone(activeCompanyId);
-                setOnboardingDismissed(true);
-              }}
-            />
-          )}
+        {section === "ledger" && <LedgerSection
+          fy={fy}
+          lastFy={lastFy}
+          rangeFrom={rangeFrom}
+          rangeTo={rangeTo}
+          setReportRange={setReportRange}
+          ledgerId={ledgerId}
+          setLedgerId={setLedgerId}
+          visibleAccounts={visibleAccounts}
+          ledger={ledger}
+          pagedLedger={pagedLedger}
+          setListPage={setListPage}
+        />}
 
-          <AccOverviewContextBar
-            fy={fy}
-            lastFy={lastFy}
-            from={rangeFrom}
-            to={rangeTo}
-            onChange={setReportRange}
-            equationHolds={Boolean(metrics?.equationHolds)}
-            integrationEnabled={Boolean(settings?.integrationEnabled)}
-          />
+        {section === "vouchers" && <VouchersSection
+          canWrite={canWrite}
+          openSimple={openSimple}
+          openVoucher={openVoucher}
+          search={search}
+          setSearch={setSearch}
+          pagedVouchers={pagedVouchers}
+          setExpandedVoucherId={setExpandedVoucherId}
+          expandedVoucherId={expandedVoucherId}
+          openSalesInvoice={openSalesInvoice}
+          duplicateVoucher={duplicateVoucher}
+          saving={saving}
+          askReason={askReason}
+          run={run}
+          token={token}
+          shownVouchers={shownVouchers}
+          showAdjacentVoucher={showAdjacentVoucher}
+          parties={parties}
+          accounts={accounts}
+          activeCompany={activeCompany}
+          workspace={workspace}
+          voucherItemLines={voucherItemLines}
+          orgSettings={orgSettings}
+          attachmentBusy={attachmentBusy}
+          onAttachVoucherFile={onAttachVoucherFile}
+          voucherAttachments={voucherAttachments}
+          onDeleteAttachment={onDeleteAttachment}
+          setListPage={setListPage}
+        />}
 
-          <IndustryTemplateCard companyId={activeCompanyId} />
+        {(section === "receivables" || section === "payables") && <InvoicesSection
+          fy={fy}
+          lastFy={lastFy}
+          rangeFrom={rangeFrom}
+          rangeTo={rangeTo}
+          setReportRange={setReportRange}
+          isInvoicePayables={isInvoicePayables}
+          invoiceAging={invoiceAging}
+          outstandingOnly={outstandingOnly}
+          setOutstandingOnly={setOutstandingOnly}
+          exportReport={exportReport}
+          pagedInvoiceRows={pagedInvoiceRows}
+          orgSettings={orgSettings}
+          activeCompany={activeCompany}
+          workspace={workspace}
+          setListPage={setListPage}
+          invoicePartyRows={invoicePartyRows}
+        />}
 
-          <AccountsBusinessPulse
-            metrics={metrics}
-            receivables={overviewArAging}
-            payables={overviewApAging}
-            items={items}
-            stockMovements={stockMovements}
-            attention={accountsAttention}
-            onOpenCollections={close}
-            onNavigate={target => {
-              if (typeof target === "string") openSection(target);
-              else if (target?.section) {
-                openSection(target.section);
-                if (target.reportTab) setReportTab(target.reportTab);
-              }
-            }}
-          />
-
-          {accountsAttention?.count > 0 && <AttentionCenterCard attention={accountsAttention} onNavigate={href => {
-            trackProductEvent("accounts_attention_navigate", { section: href?.section || "" });
-            if (href?.section) openSection(href.section);
-            if (href?.reportTab) setReportTab(href.reportTab);
-          }} />}
-
-          <AccCompareChart
-            ar={overviewArAging}
-            ap={overviewApAging}
-            onReceivables={() => openSection("receivables")}
-            onPayables={() => openSection("payables")}
-          />
-
-          <AccIntelligenceBrief
-            accounts={visibleAccounts}
-            vouchers={vouchers}
-            parties={parties}
-            range={range}
-            previousRange={intelligencePreviousRange}
-            today={todayIso()}
-            companyId={activeCompanyId}
-            companyName={activeCompany?.name || settings?.companyName || ""}
-            items={items}
-            stockMovements={stockMovements}
-            voucherItemLines={voucherItemLines}
-            onNavigate={openSection}
-          />
-
-          <section className="acc-section">
-            <h2 className="acc-section-title">Metrics</h2>
-            <div className="acc-metric-grid acc-ov-metrics acc-metric-compact">
-              <AccMetric label="Cash" value={money(metrics?.cash)} tone="gold" />
-              <AccMetric label="Bank" value={money(metrics?.bank)} tone="gold" />
-              <AccMetric label="UPI" value={money(metrics?.upi)} tone="gold" />
-              <AccMetric label="Receivables" value={money(metrics?.receivables)} tone="blue" onClick={() => openSection("receivables")} />
-              <AccMetric label="Payables" value={money(metrics?.payables)} tone="gold" onClick={() => openSection("payables")} />
-              <AccMetric label="Income" value={money(metrics?.income)} tone="green" onClick={() => openSection("pnl")} />
-              <AccMetric label="Expenses" value={money(metrics?.expenses)} tone="red" onClick={() => openSection("pnl")} />
-              <AccMetric label="Net profit" value={money(metrics?.netProfit)} tone={metrics?.netProfit < 0 ? "red" : "green"} onClick={() => openSection("pnl")} />
-            </div>
-          </section>
-
-          <AccOverviewRecent rows={recentVouchers} onViewAll={() => openSection("vouchers")} />
-        </div>}
-
-        {section === "ledger" && <div className="acc-panel">
-          <ReportRangeBar fy={fy} lastFy={lastFy} from={rangeFrom} to={rangeTo} onChange={setReportRange} />
-          <div className="card accounts-filter-card spacer">
-            <label className="accounts-filter-field"><span className="small">Account</span>
-              <select value={ledgerId} onChange={event => setLedgerId(event.target.value)}>{visibleAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</select>
-            </label>
-            <div className="acc-btn-group">
-              <button type="button" className="btn acc-hide-mobile" onClick={() => downloadAccountsCsv(`fintrack-ledger-${todayIso()}.csv`, [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])])}>Export CSV</button>
-              <button type="button" className="btn acc-hide-mobile" onClick={() => downloadAccountsExcel(`fintrack-ledger-${todayIso()}.xlsx`, [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])])}>Export Excel</button>
-              <button type="button" className="btn acc-hide-mobile" onClick={() => downloadAccountsPdf(`fintrack-ledger-${todayIso()}.pdf`, { title: "Ledger", subtitle: `${ledger.account?.code || ""} ${ledger.account?.name || ""}`, rows: [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])] })}>Download PDF</button>
-              <AccMoreMenu
-                className="acc-show-mobile"
-                label="Export"
-                items={[
-                  { id: "csv", label: "Export CSV", onClick: () => downloadAccountsCsv(`fintrack-ledger-${todayIso()}.csv`, [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])]) },
-                  { id: "xlsx", label: "Export Excel", onClick: () => downloadAccountsExcel(`fintrack-ledger-${todayIso()}.xlsx`, [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])]) },
-                  { id: "pdf", label: "Download PDF", onClick: () => downloadAccountsPdf(`fintrack-ledger-${todayIso()}.pdf`, { title: "Ledger", subtitle: `${ledger.account?.code || ""} ${ledger.account?.name || ""}`, rows: [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])] }) },
-                ]}
-              />
-            </div>
-          </div>
-          <div className="table spacer acc-table-wrap acc-ledger-table"><table><thead><tr><th>Date</th><th>Voucher</th><th>Narration</th><th className="acc-num">Debit</th><th className="acc-num">Credit</th><th className="acc-num">Balance</th></tr></thead><tbody>
-            {pagedLedger.items.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.narration}</td><td className="acc-num">{row.debit ? money(row.debit) : ""}</td><td className="acc-num">{row.credit ? money(row.credit) : ""}</td><td className="acc-num">{money(row.balance)}</td></tr>)}
-            {!ledger.rows.length && <tr><td colSpan="6">No postings on this ledger yet. Post a voucher to see movement here.</td></tr>}
-          </tbody></table></div>
-          <div className="acc-ledger-cards spacer">
-            {pagedLedger.items.map((row, index) => (
-              <article key={`${row.voucherNumber}-${index}`} className="acc-ledger-card">
-                <div className="acc-ledger-card-top">
-                  <strong>{row.voucherNumber}</strong>
-                  <span className="small">{row.date}</span>
-                </div>
-                {row.narration ? <p className="small">{row.narration}</p> : null}
-                <p className="acc-ledger-card-amounts">
-                  {row.debit ? <span>Debit <strong>{money(row.debit)}</strong></span> : null}
-                  {row.credit ? <span>Credit <strong>{money(row.credit)}</strong></span> : null}
-                  <span>Balance <strong>{money(row.balance)}</strong></span>
-                </p>
-              </article>
-            ))}
-            {!ledger.rows.length && <p className="copy">No postings on this ledger yet. Post a voucher to see movement here.</p>}
-          </div>
-          <AccPager page={pagedLedger.page} pages={pagedLedger.pages} total={pagedLedger.total} onPage={setListPage} noun="postings" />
-        </div>}
-
-        {section === "vouchers" && <div className="acc-panel">
-          {canWrite && (
-            <AccToolbar
-              className="spacer"
-              start={(
-                <div className="acc-btn-group">
-                  <button type="button" className="btn primary" onClick={() => openSimple("sale")}>+ Sale</button>
-                  <button type="button" className="btn" onClick={() => openSimple("purchase")}>+ Purchase</button>
-                  <AccMoreMenu
-                    label="More"
-                    items={[
-                      ...SIMPLE_ENTRY_KINDS
-                        .filter(item => !["sale", "purchase"].includes(item.id))
-                        .map(item => ({
-                          id: item.id,
-                          label: `+ ${item.label}`,
-                          onClick: () => openSimple(item.id),
-                        })),
-                      { id: "advanced", label: "+ Advanced voucher", onClick: openVoucher },
-                    ]}
-                  />
-                </div>
-              )}
-              end={(
-                <input className="accounts-search" placeholder="Search voucher or narration" value={search} onChange={event => setSearch(event.target.value)} />
-              )}
-            />
-          )}
-          {!canWrite && (
-            <div className="accounts-action-row spacer">
-              <input className="accounts-search" placeholder="Search voucher or narration" value={search} onChange={event => setSearch(event.target.value)} />
-            </div>
-          )}
-          <div className="accounts-entry-list spacer">
-            {pagedVouchers.items.map(voucher => <article key={voucher.id} className="card accounts-entry-row">
-              <div className="accounts-entry-main">
-                <div>
-                  <strong>{voucher.voucherNumber}</strong>
-                  <p className="small">{voucher.date} · {VOUCHER_TYPES[voucher.voucherType]?.label} · {voucher.status}{voucher.sourceType ? ` · ${voucher.sourceModule}/${voucher.sourceType}` : ""}{voucher.status === "reversed" ? " · kept in ledgers with its reversal" : ""}</p>
-                  <p className="small">{voucher.narration}</p>
-                </div>
-                <div className="accounts-entry-amounts">
-                  <span>{money(voucherTotals(voucher.lines).debit)}</span>
-                  <button type="button" className="btn" onClick={() => setExpandedVoucherId(current => current === voucher.id ? null : voucher.id)}>{expandedVoucherId === voucher.id ? "Hide" : "Lines"}</button>
-                  <AccMoreMenu
-                    label="More"
-                    items={[
-                      voucher.voucherType === "sales" && voucher.status === "posted"
-                        ? { id: "invoice", label: "Invoice", onClick: () => openSalesInvoice(voucher) }
-                        : null,
-                      canWrite
-                        ? { id: "duplicate", label: "Duplicate", onClick: () => duplicateVoucher(voucher) }
-                        : null,
-                      canWrite && voucher.status === "posted"
-                        ? {
-                          id: "reverse",
-                          label: "Reverse",
-                          disabled: saving,
-                          onClick: () => askReason("Reverse voucher", "Post reversal", reason => run(() => reverseVoucher(token, voucher.id, todayIso(), reason), "Reversal posted.")),
-                        }
-                        : null,
-                      canWrite && voucher.status === "posted"
-                        ? {
-                          id: "cancel",
-                          label: "Cancel voucher",
-                          danger: true,
-                          disabled: saving,
-                          onClick: () => askReason("Cancel voucher", "Cancel voucher", reason => run(() => cancelVoucher(token, voucher.id, reason), "Voucher cancelled.")),
-                        }
-                        : null,
-                    ]}
-                  />
-                </div>
-              </div>
-              {expandedVoucherId === voucher.id && <>
-                <div className="acc-voucher-nav">
-                  <button type="button" className="btn" disabled={shownVouchers.findIndex(item => item.id === voucher.id) <= 0} onClick={() => showAdjacentVoucher(voucher.id, -1)}>Previous</button>
-                  <button type="button" className="btn" disabled={shownVouchers.findIndex(item => item.id === voucher.id) >= shownVouchers.length - 1} onClick={() => showAdjacentVoucher(voucher.id, 1)}>Next</button>
-                </div>
-                {voucher.voucherType === "sales" && (
-                  <div className="acc-sales-invoice-actions spacer">
-                    <SalesInvoiceActions
-                      invoice={buildSalesInvoice({
-                        voucher,
-                        party: parties.find(item => item.id === voucher.partyId) || null,
-                        accounts,
-                        company: activeCompany,
-                        workspace,
-                        itemLines: voucherItemLines.filter(line => line.voucherId === voucher.id),
-                      })}
-                      settings={orgSettings}
-                      compact
-                    />
-                    {canWrite && activeCompany?.gstRegistration === "regular" && (
-                      <button
-                        type="button"
-                        className="btn"
-                        disabled={saving}
-                        onClick={() => run(async () => {
-                          const party = parties.find(item => item.id === voucher.partyId) || null;
-                          const payload = buildEinvoiceOutboundPayload({
-                            voucher,
-                            party,
-                            company: activeCompany,
-                            workspace,
-                          });
-                          await queueEinvoicePayload(token, voucher.id, payload);
-                          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-                          const url = URL.createObjectURL(blob);
-                          const a = document.createElement("a");
-                          a.href = url;
-                          a.download = `fintrack-einvoice-payload-${voucher.voucherNumber || voucher.id}.json`;
-                          a.click();
-                          URL.revokeObjectURL(url);
-                        }, "E-invoice payload queued (not submitted) and downloaded.")}
-                      >
-                        Queue e-invoice payload
-                      </button>
-                    )}
-                  </div>
-                )}
-                {voucher.voucherType === "purchase" && (
-                  <div className="acc-sales-invoice-actions spacer">
-                    <PurchaseDocumentButton
-                      voucher={voucher}
-                      party={parties.find(item => item.id === voucher.partyId) || null}
-                      settings={orgSettings}
-                      company={activeCompany}
-                      workspace={workspace}
-                      compact
-                    />
-                  </div>
-                )}
-                <div className="table spacer"><table><thead><tr><th>Account</th><th>Debit</th><th>Credit</th></tr></thead><tbody>
-                  {voucher.lines.map(line => <tr key={line.id}><td>{line.code} {line.name}</td><td>{line.debit ? money(line.debit) : ""}</td><td>{line.credit ? money(line.credit) : ""}</td></tr>)}
-                </tbody></table></div>
-                <div className="acc-voucher-attachments spacer">
-                  <div className="row" style={{ justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                    <strong>Attachments</strong>
-                    {(voucher.status === "posted" || voucher.status === "reversed") && (
-                      <label className="btn" style={{ cursor: attachmentBusy ? "wait" : "pointer" }}>
-                        {attachmentBusy ? "Uploading…" : "Add file"}
-                        <input
-                          type="file"
-                          accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp"
-                          hidden
-                          disabled={attachmentBusy}
-                          onChange={event => {
-                            const file = event.target.files?.[0];
-                            event.target.value = "";
-                            if (file) onAttachVoucherFile(voucher, file);
-                          }}
-                        />
-                      </label>
-                    )}
-                  </div>
-                  <p className="small">PDF or image up to {Math.round(VOUCHER_ATTACHMENT_MAX_BYTES / 1024)} KB. Kept with this company’s voucher only.</p>
-                  <ul className="acc-attachment-list">
-                    {voucherAttachments.map(file => (
-                      <li key={file.id} className="acc-attachment-item">
-                        <a className="link-button" href={attachmentDownloadHref(file)} download={file.fileName}>{file.fileName}</a>
-                        <span className="small">{Math.max(1, Math.round(file.byteSize / 1024))} KB</span>
-                        <button type="button" className="btn" disabled={attachmentBusy} onClick={() => onDeleteAttachment(voucher.id, file.id)}>Remove</button>
-                      </li>
-                    ))}
-                    {!voucherAttachments.length && <li className="small">No attachments yet.</li>}
-                  </ul>
-                </div>
-              </>}
-            </article>)}
-            {!shownVouchers.length && <AccEmpty title="No transactions yet" copy="Use a guided entry for everyday work, or an advanced voucher for a custom journal." actionLabel="+ Create transaction" onAction={() => openSimple("sale")} />}
-          </div>
-          <AccPager page={pagedVouchers.page} pages={pagedVouchers.pages} total={pagedVouchers.total} onPage={setListPage} noun="vouchers" />
-        </div>}
-
-        {(section === "receivables" || section === "payables") && <div className="acc-panel acc-invoice-page">
-          <ReportRangeBar fy={fy} lastFy={lastFy} from={rangeFrom} to={rangeTo} onChange={setReportRange} />
-          <div className="acc-invoice-kpis">
-            <article className={`acc-invoice-kpi ${isInvoicePayables ? "tone-gold" : "tone-blue"}`}>
-              <span>Outstanding</span>
-              <strong>{money(invoiceAging.total)}</strong>
-            </article>
-            <article className="acc-invoice-kpi tone-green">
-              <span>Current</span>
-              <strong>{money(invoiceAging.current)}</strong>
-            </article>
-            <article className="acc-invoice-kpi tone-red">
-              <span>Overdue</span>
-              <strong>{money(invoiceAging.overdue)}</strong>
-            </article>
-          </div>
-          <div className="acc-invoice-aging" aria-label="Aging buckets">
-            <span><em>1–30</em> {money(invoiceAging.d1_30 || 0)}</span>
-            <span><em>31–60</em> {money(invoiceAging.d31_60 || 0)}</span>
-            <span><em>61–90</em> {money(invoiceAging.d61_90 || 0)}</span>
-            <span><em>90+</em> {money(invoiceAging.d90 || 0)}</span>
-          </div>
-          <p className="small">New receipts and payments store bill-wise links against selected invoices. Older vouchers without links still use party-level FIFO for remaining allocation.</p>
-          <div className="acc-invoice-toolbar">
-            <button
-              type="button"
-              className={`acc-outstanding-toggle${outstandingOnly ? " on" : ""}`}
-              aria-pressed={outstandingOnly}
-              onClick={() => setOutstandingOnly(current => !current)}
-            >
-              <span className="acc-switch" aria-hidden="true"><span className="acc-switch-knob" /></span>
-              Outstanding only
-            </button>
-            <div className="acc-invoice-exports">
-              <button type="button" className="btn acc-hide-mobile" onClick={() => exportReport("csv")}>Export CSV</button>
-              <button type="button" className="btn acc-hide-mobile" onClick={() => exportReport("xlsx")}>Export Excel</button>
-              <button type="button" className="btn acc-hide-mobile" onClick={() => exportReport("pdf")}>Download PDF</button>
-              <AccMoreMenu
-                className="acc-show-mobile"
-                label="Export"
-                items={[
-                  { id: "csv", label: "Export CSV", onClick: () => exportReport("csv") },
-                  { id: "xlsx", label: "Export Excel", onClick: () => exportReport("xlsx") },
-                  { id: "pdf", label: "Download PDF", onClick: () => exportReport("pdf") },
-                ]}
-              />
-            </div>
-          </div>
-          {invoiceTable(pagedInvoiceRows.items, isInvoicePayables ? "payable" : "receivable")}
-          <AccPager
-            page={pagedInvoiceRows.page}
-            pages={pagedInvoiceRows.pages}
-            total={pagedInvoiceRows.total}
-            onPage={setListPage}
-            noun="invoices"
-          />
-          <div className="acc-invoice-parties">
-            <span className="acc-invoice-parties-label">Party totals</span>
-            {invoicePartyRows.length
-              ? invoicePartyRows.map(row => (
-                <span key={row.id || row.name} className="acc-chip">{row.name} <strong>{money(row.balance)}</strong></span>
-              ))
-              : <span className="small">none</span>}
-          </div>
-        </div>}
-
-        {section === "parties" && <div className="acc-panel acc-party-ledger">
-          <div className="acc-party-ledger-toolbar">
-            <p className="copy">Accounting customers and suppliers are independent of Daily Finance customers and Chit Fund members.</p>
-            <div className="acc-party-ledger-links">
-              {canWrite && <button type="button" className="btn primary" onClick={openParty}>+ Party</button>}
-              <button type="button" className="btn" onClick={() => openSection("receivables")}>Receivables</button>
-              <button type="button" className="btn" onClick={() => openSection("payables")}>Payables</button>
-            </div>
-          </div>
-          <div className="card acc-party-ledger-filters">
-            <label className="accounts-filter-field acc-party-ledger-party">
-              <span className="small">Party</span>
-              <select value={focusedParty?.id || ""} onChange={event => setPartyFocusId(event.target.value)}>
-                <option value="">Select party</option>
-                {parties.map(party => <option key={party.id} value={party.id}>{party.name} · {partyTypeLabel(party.partyType)}{party.isActive === false ? " · inactive" : ""}</option>)}
-              </select>
-            </label>
-            <label className="accounts-filter-field"><span className="small">From</span>
-              <input type="date" value={partyFrom} onChange={event => setPartyFrom(event.target.value)} />
-            </label>
-            <label className="accounts-filter-field"><span className="small">To</span>
-              <input type="date" value={partyTo} onChange={event => setPartyTo(event.target.value)} />
-            </label>
-            <label className="accounts-filter-field"><span className="small">Type</span>
-              <select value={partyTxnType} onChange={event => setPartyTxnType(event.target.value)}>
-                <option value="">All</option>
-                {Object.values(VOUCHER_TYPES).map(type => <option key={type.id} value={type.id}>{type.label}</option>)}
-              </select>
-            </label>
-          </div>
-          {focusedParty ? <>
-            <div className="acc-party-ledger-identity">
-              <div>
-                <h2>{focusedParty.name}</h2>
-                <div className="acc-party-card-meta">
-                  <PartyTypeBadge type={focusedParty.partyType} />
-                  <span className={`acc-status-pill ${focusedParty.isActive === false ? "inactive" : "active"}`}>{focusedParty.isActive === false ? "Inactive" : "Active"}</span>
-                </div>
-                {(focusedParty.phone || focusedParty.email) ? <p className="small acc-party-ledger-contact">{[focusedParty.phone, focusedParty.email].filter(Boolean).join(" · ")}</p> : null}
-              </div>
-              <div className="acc-party-ledger-stats">
-                <article>
-                  <span>Opening</span>
-                  <strong>{money(partyBook.opening)}</strong>
-                </article>
-                <article>
-                  <span>Invoices (period)</span>
-                  <strong>{money(partyBook.rows.reduce((sum, row) => sum + Number(row.debit || 0), 0))}</strong>
-                </article>
-                <article>
-                  <span>Payments (period)</span>
-                  <strong>{money(partyBook.rows.reduce((sum, row) => sum + Number(row.credit || 0), 0))}</strong>
-                </article>
-                <article>
-                  <span>{partyBook.advance > 0 ? "Advance" : "Outstanding"}</span>
-                  <strong className={partyBook.advance > 0 ? "ok" : partyBook.outstanding ? "due" : ""}>{money(partyBook.advance > 0 ? partyBook.advance : partyBook.outstanding)}</strong>
-                </article>
-              </div>
-            </div>
-            <div className="accounts-action-row spacer">
-              <PartyStatementButton
-                party={focusedParty}
-                partyBook={partyBook}
-                periodFrom={partyFrom}
-                periodTo={partyTo}
-                settings={orgSettings}
-                company={activeCompany}
-                workspace={workspace}
-                money={money}
-              />
-              <OutstandingWhatsAppButton
-                party={focusedParty}
-                outstanding={partyBook.advance > 0 ? 0 : partyBook.outstanding}
-                kind={focusedParty.partyType === "supplier" ? "payable" : "receivable"}
-                settings={orgSettings}
-                company={activeCompany}
-                workspace={workspace}
-              />
-            </div>
-            <div className="table acc-table-wrap acc-party-ledger-table"><table><thead><tr><th>Date</th><th>Voucher</th><th>Type</th><th>Narration</th><th className="acc-num">Debit</th><th className="acc-num">Credit</th><th className="acc-num">Balance</th></tr></thead><tbody>
-              {pagedPartyBook.items.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}>
-                <td>{row.date}</td>
-                <td><strong>{row.voucherNumber}</strong></td>
-                <td><span className="acc-voucher-chip">{VOUCHER_TYPES[row.voucherType]?.label || row.voucherType}</span></td>
-                <td className="acc-party-ledger-narration">{row.narration || "—"}</td>
-                <td className="acc-num">{row.debit ? money(row.debit) : ""}</td>
-                <td className="acc-num">{row.credit ? money(row.credit) : ""}</td>
-                <td className="acc-num acc-party-ledger-balance">{money(row.balance)}</td>
-              </tr>)}
-              {!partyBook.rows.length && <tr><td colSpan="7">No transactions for this party in the selected dates.</td></tr>}
-            </tbody></table></div>
-            <AccPager page={pagedPartyBook.page} pages={pagedPartyBook.pages} total={pagedPartyBook.total} onPage={setListPage} noun="transactions" />
-            <div className="acc-party-ledger-cards">
-              {pagedPartyBook.items.map((row, index) => (
-                <article key={`${row.voucherNumber}-${index}`} className="card acc-party-ledger-card">
-                  <div className="acc-party-ledger-card-top">
-                    <strong>{row.voucherNumber}</strong>
-                    <span className="acc-voucher-chip">{VOUCHER_TYPES[row.voucherType]?.label || row.voucherType}</span>
-                  </div>
-                  <p className="small">{row.date}{row.narration ? ` · ${row.narration}` : ""}</p>
-                  <p className="acc-party-ledger-card-amounts">
-                    {row.debit ? <span>Debit <strong>{money(row.debit)}</strong></span> : null}
-                    {row.credit ? <span>Credit <strong>{money(row.credit)}</strong></span> : null}
-                    <span>Balance <strong>{money(row.balance)}</strong></span>
-                  </p>
-                </article>
-              ))}
-              {!partyBook.rows.length && <p className="copy">No transactions for this party in the selected dates.</p>}
-            </div>
-          </> : <AccEmpty title="No customers or suppliers yet" copy="Accounts parties are independent of Daily Finance customers and Chit Fund members." actionLabel={canWrite ? "+ Add party" : ""} onAction={canWrite ? openParty : undefined} />}
-        </div>}
+        {section === "parties" && <PartiesSection
+          canWrite={canWrite}
+          openParty={openParty}
+          openSection={openSection}
+          focusedParty={focusedParty}
+          setPartyFocusId={setPartyFocusId}
+          parties={parties}
+          partyFrom={partyFrom}
+          setPartyFrom={setPartyFrom}
+          partyTo={partyTo}
+          setPartyTo={setPartyTo}
+          partyTxnType={partyTxnType}
+          setPartyTxnType={setPartyTxnType}
+          partyBook={partyBook}
+          orgSettings={orgSettings}
+          activeCompany={activeCompany}
+          workspace={workspace}
+          pagedPartyBook={pagedPartyBook}
+          setListPage={setListPage}
+        />}
 
         {section === "manufacturing" && manufacturingEnabled && <ManufacturingWorkspace items={items} stockMovements={stockMovements} saving={saving} onItems={() => openSection("inventory")} onTransactions={() => openSection("vouchers")} onProductionRun={recordProductionRun} />}
-        {section === "inventory" && <div className="acc-panel">
-          <AccInventoryWorkspace
-            items={items}
-            movements={stockMovements}
-            voucherItemLines={voucherItemLines}
-            range={range}
-            saving={saving}
-            canEdit={canWrite}
-            inventorySettings={inventorySettings}
-            onSaveInventorySettings={saveStockRules}
-            onImportItems={importItems}
-            onApplyCount={applyPhysicalCount}
-            itemsSetup={<AccItemsSetup
-              items={items}
-              categories={itemCategories}
-              movements={stockMovements}
-              voucherItemLines={voucherItemLines}
-              vouchers={vouchers}
-              saving={saving}
-              onSaveItem={form => run(() => saveItemRecord(form), form.id ? "Item updated." : "Item created.")}
-              onDeleteItem={item => run(() => deleteItem(token, item.id), "Item deleted.")}
-              onSetItemActive={(id, active) => run(() => setItemActive(token, id, active), active ? "Item reactivated." : "Item deactivated.")}
-              onSaveCategory={async payload => {
-                const ok = await run(() => upsertItemCategory(token, payload), "Category saved.");
-                if (!ok) throw new Error("Could not create category. Confirm migration 067 is applied, then try again.");
-              }}
-              onDeleteCategory={id => run(() => deleteItemCategory(token, id), "Category deleted.")}
-              onAdjustStock={payload => run(() => adjustStock(token, payload), "Stock adjustment saved.")}
-            />}
-          />
-        </div>}
+        {section === "inventory" && <InventorySection
+          items={items}
+          stockMovements={stockMovements}
+          voucherItemLines={voucherItemLines}
+          range={range}
+          saving={saving}
+          canWrite={canWrite}
+          inventorySettings={inventorySettings}
+          saveStockRules={saveStockRules}
+          importItems={importItems}
+          applyPhysicalCount={applyPhysicalCount}
+          itemCategories={itemCategories}
+          vouchers={vouchers}
+          run={run}
+          saveItemRecord={saveItemRecord}
+          token={token}
+        />}
 
-        {section === "more" && <div className="acc-panel">
-          <p className="copy">Ledger, banking, statements and setup. Day-to-day work stays on Home, Transactions, Parties and Reports.</p>
-          <div className="acc-landing-grid spacer">
-            {manufacturingEnabled && <button type="button" className="card acc-landing-card manufacturing-landing-card" onClick={() => openSection("manufacturing")}><strong>Manufacturing</strong><p className="small">Materials, production flow and finished goods</p></button>}
-            {moreLinks.map(([id, title]) => (
-              <button key={id} type="button" className="card acc-landing-card" onClick={() => openSection(id)}>
-                <strong>{title}</strong>
-              </button>
-            ))}
-          </div>
-        </div>}
+        {section === "more" && <MoreSection manufacturingEnabled={manufacturingEnabled} openSection={openSection} moreLinks={moreLinks} />}
 
-        {(section === "reports" || section === "pnl" || section === "balance" || section === "trial") && <div className="acc-panel">
-          <ReportRangeBar fy={fy} lastFy={lastFy} from={rangeFrom} to={rangeTo} onChange={setReportRange} />
-          <div className="accounts-action-row spacer">
-            <div className="accounts-section-nav">
-            {REPORT_TABS.map(item => <button key={item.id} type="button" className={`accounts-section-tab ${(section === "pnl" ? "pnl" : section === "balance" ? "balance" : section === "trial" ? "trial" : reportTab) === item.id ? "active" : ""}`} onClick={() => {
-              if (item.id === "pnl") openSection("pnl");
-              else if (item.id === "balance") openSection("balance");
-              else if (item.id === "trial") openSection("trial");
-              else { setSection("reports"); setReportTab(item.id); }
-            }}>{item.label}</button>)}
-            </div>
-            <div className="acc-btn-group">
-              <button type="button" className="btn acc-hide-mobile" onClick={() => exportReport("csv")}>Export CSV</button>
-              <button type="button" className="btn acc-hide-mobile" onClick={() => exportReport("xlsx")}>Export Excel</button>
-              <button type="button" className="btn acc-hide-mobile" onClick={() => exportReport("pdf")}>Download PDF</button>
-              <AccMoreMenu
-                className="acc-show-mobile"
-                label="Export"
-                items={[
-                  { id: "csv", label: "Export CSV", onClick: () => exportReport("csv") },
-                  { id: "xlsx", label: "Export Excel", onClick: () => exportReport("xlsx") },
-                  { id: "pdf", label: "Download PDF", onClick: () => exportReport("pdf") },
-                ]}
-              />
-            </div>
-          </div>
-          {(section === "trial" || reportTab === "trial") && section !== "pnl" && section !== "balance" && <>
-            <div className="acc-metric-grid three spacer">
-              <AccMetric label="Total debit" value={money(tb.totalDebit)} />
-              <AccMetric label="Total credit" value={money(tb.totalCredit)} />
-              <AccMetric label="Difference" value={money(Math.abs(Number(tb.totalDebit || 0) - Number(tb.totalCredit || 0)))} tone={Math.abs(Number(tb.totalDebit || 0) - Number(tb.totalCredit || 0)) < 0.01 ? "green" : "red"} />
-            </div>
-            <div className="table spacer acc-table-wrap"><table><thead><tr><th>Code</th><th>Account</th><th className="acc-num">Debit</th><th className="acc-num">Credit</th></tr></thead><tbody>
-            {tb.rows.map(row => <tr key={row.id}><td>{row.code}</td><td>{row.name}</td><td className="acc-num">{row.debit ? money(row.debit) : ""}</td><td className="acc-num">{row.credit ? money(row.credit) : ""}</td></tr>)}
-            <tr><td></td><td><strong>Total</strong></td><td className="acc-num"><strong>{money(tb.totalDebit)}</strong></td><td className="acc-num"><strong>{money(tb.totalCredit)}</strong></td></tr>
-          </tbody></table></div>
-          </>}
-          {(section === "pnl" || reportTab === "pnl") && section !== "trial" && section !== "balance" && <div className="grid two spacer">
-            <div className="card"><strong>Income</strong>{pnl.income.filter(row => row.amount).map(row => <p key={row.id} className="row spacer"><span>{row.name}</span><strong>{money(row.amount)}</strong></p>)}<p className="row"><span>Total income</span><strong className="green">{money(pnl.totalIncome)}</strong></p></div>
-            <div className="card"><strong>Expenses</strong>{pnl.expenses.filter(row => row.amount).map(row => <p key={row.id} className="row spacer"><span>{row.name}</span><strong>{money(row.amount)}</strong></p>)}<p className="row"><span>Total expenses</span><strong className="red">{money(pnl.totalExpense)}</strong></p></div>
-            {(pnl.openingStock || pnl.closingStock) ? <div className="card span"><strong>Stock (weighted average)</strong>
-              <p className="row spacer"><span>Opening stock (charged)</span><strong>{money(pnl.openingStock)}</strong></p>
-              <p className="row"><span>Closing stock (added back)</span><strong>{money(pnl.closingStock)}</strong></p>
-              <p className="row"><span>Stock adjustment to profit</span><strong className={pnl.stockAdjustment < 0 ? "red" : "green"}>{money(pnl.stockAdjustment)}</strong></p>
-              <p className="small">Purchases are expensed when booked; cost of goods sold = opening stock + purchases − closing stock.</p>
-            </div> : null}
-            <div className="card span"><strong>Net {pnl.net < 0 ? "loss" : "profit"}</strong><p className={`metric-value ${pnl.net < 0 ? "red" : "green"}`}>{money(pnl.net)}</p></div>
-          </div>}
-          {(section === "balance" || reportTab === "balance") && section !== "trial" && section !== "pnl" && <div className="grid two spacer">
-            <div className="card"><strong>Assets {money(sheet.totalAssets)}</strong>{sheet.assets.map(row => <p key={row.id} className="row spacer"><span>{row.code} {row.name}</span><strong>{money(row.balance)}</strong></p>)}</div>
-            <div className="card"><strong>Liabilities & equity {money(roundMoney(sheet.totalLiabilities + sheet.totalEquity))}</strong>
-              {sheet.liabilities.map(row => <p key={row.id} className="row spacer"><span>{row.code} {row.name}</span><strong>{money(row.balance)}</strong></p>)}
-              {sheet.equity.map(row => <p key={row.id} className="row spacer"><span>{row.code} {row.name}</span><strong>{money(row.balance)}</strong></p>)}
-              <p className="small">{sheet.balanced ? "Assets equal liabilities plus equity." : "Balance sheet is out of equation."}</p>
-            </div>
-          </div>}
-          {section === "reports" && reportTab === "daybook" && <>
-            <div className="table spacer acc-table-wrap acc-daybook-table"><table><thead><tr><th>Date</th><th>Number</th><th>Type</th><th>Narration</th><th className="acc-num">Amount</th></tr></thead><tbody>
-            {pagedBooks.items.map(row => <tr key={row.id}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.voucherType}</td><td>{row.narration}</td><td className="acc-num">{money(row.debit)}</td></tr>)}
-            {!books.length && <tr><td colSpan="5">No posted vouchers in this period. Change the date range or record a transaction.</td></tr>}
-          </tbody></table></div>
-            <div className="acc-ledger-cards spacer">
-              {pagedBooks.items.map(row => (
-                <article key={row.id} className="acc-ledger-card">
-                  <div className="acc-ledger-card-top">
-                    <strong>{row.voucherNumber}</strong>
-                    <span className="acc-voucher-chip">{row.voucherType}</span>
-                  </div>
-                  <p className="small">{row.date}{row.narration ? ` · ${row.narration}` : ""}</p>
-                  <p className="acc-ledger-card-amounts"><span>Amount <strong>{money(row.debit)}</strong></span></p>
-                </article>
-              ))}
-              {!books.length && <p className="copy">No posted vouchers in this period. Change the date range or record a transaction.</p>}
-            </div>
-            <AccPager page={pagedBooks.page} pages={pagedBooks.pages} total={pagedBooks.total} onPage={setListPage} noun="vouchers" />
-          </>}
-          {section === "reports" && reportTab === "cashflow" && <>
-            <div className="acc-metric-grid three"><AccMetric label="Inflow" value={money(flow.inflow)} tone="green" /><AccMetric label="Outflow" value={money(flow.outflow)} tone="red" /><AccMetric label="Net cash" value={money(flow.net)} tone="gold" /></div>
-            <p className="small">Internal cash/bank/UPI transfers ({money(flow.transfers || 0)}) are excluded from inflow and outflow. Closing cash still follows the ledgers.</p>
-          </>}
-          {section === "reports" && reportTab === "receivables" && <>
-            {invoiceTable(pagedArInvoices.items, "receivable")}
-            <AccPager page={pagedArInvoices.page} pages={pagedArInvoices.pages} total={pagedArInvoices.total} onPage={setListPage} noun="invoices" />
-          </>}
-          {section === "reports" && reportTab === "payables" && <>
-            {invoiceTable(pagedApInvoices.items, "payable")}
-            <AccPager page={pagedApInvoices.page} pages={pagedApInvoices.pages} total={pagedApInvoices.total} onPage={setListPage} noun="invoices" />
-          </>}
-          {section === "reports" && reportTab === "sales" && <div className="table spacer acc-table-wrap"><table><thead><tr><th>Date</th><th>Number</th><th>Narration</th><th className="acc-num">Amount</th></tr></thead><tbody>
-            {salesRows.map(row => <tr key={row.id}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.narration}</td><td className="acc-num">{money(row.debit)}</td></tr>)}
-            {!salesRows.length && <tr><td colSpan="4">No sales vouchers in this period.</td></tr>}
-          </tbody></table></div>}
-          {section === "reports" && reportTab === "purchases" && <div className="table spacer acc-table-wrap"><table><thead><tr><th>Date</th><th>Number</th><th>Narration</th><th className="acc-num">Amount</th></tr></thead><tbody>
-            {purchaseRows.map(row => <tr key={row.id}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.narration}</td><td className="acc-num">{money(row.debit)}</td></tr>)}
-            {!purchaseRows.length && <tr><td colSpan="4">No purchase vouchers in this period.</td></tr>}
-          </tbody></table></div>}
-          {section === "reports" && reportTab === "gst" && <div className="acc-gst-reports">
-            <p className="copy">GST figures are from this company’s books for the selected dates. They are <strong>calculated</strong> data — not a filed GSTR-1 or GSTR-3B.</p>
-            <div className="accounts-action-row spacer">
-              <button type="button" className="btn" onClick={() => {
-                const prep = buildGstr1Preparation({ vouchers, parties, range });
-                downloadAccountsCsv(`fintrack-gstr1-prep-${todayIso()}.csv`, gstrPrepToCsvRows(prep));
-                trackProductEvent("gstr1_prep_export");
-                setNotice("GSTR-1 preparation CSV downloaded (calculated / not filed).");
-              }}>Export GSTR-1 prep CSV</button>
-              <button type="button" className="btn" onClick={() => {
-                const prep = buildGstr1Preparation({ vouchers, parties, range });
-                const blob = new Blob([JSON.stringify(gstrPrepToJson(prep), null, 2)], { type: "application/json" });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `fintrack-gstr1-prep-${todayIso()}.json`;
-                a.click();
-                URL.revokeObjectURL(url);
-                trackProductEvent("gstr1_prep_json_export");
-                setNotice("GSTR-1 preparation JSON downloaded (calculated / not filed).");
-              }}>Export GSTR-1 prep JSON</button>
-              <button type="button" className="btn" onClick={() => {
-                const prep = buildGstr3bPreparation({ vouchers, range });
-                downloadAccountsCsv(`fintrack-gstr3b-prep-${todayIso()}.csv`, gstrPrepToCsvRows(prep));
-                trackProductEvent("gstr3b_prep_export");
-                setNotice("GSTR-3B preparation CSV downloaded (calculated / not filed).");
-              }}>Export GSTR-3B prep CSV</button>
-              <button type="button" className="btn" onClick={() => {
-                const prep = buildGstr3bPreparation({ vouchers, range });
-                const blob = new Blob([JSON.stringify(gstrPrepToJson(prep), null, 2)], { type: "application/json" });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `fintrack-gstr3b-prep-${todayIso()}.json`;
-                a.click();
-                URL.revokeObjectURL(url);
-                trackProductEvent("gstr3b_prep_json_export");
-                setNotice("GSTR-3B preparation JSON downloaded (calculated / not filed).");
-              }}>Export GSTR-3B prep JSON</button>
-            </div>
-            <div className="notice spacer">
-              <strong>e-Invoice / e-Way:</strong> {EINVOICE_INTEGRATION_STUB.note} Queue a payload from a posted sales voucher — FinTrack will not invent IRNs or call the portal.
-            </div>
-            <div className="acc-metric-grid three">
-              <AccMetric label="Output GST" value={money(gstReport.outputTax)} />
-              <AccMetric label="Eligible ITC" value={money(gstReport.inputTax)} />
-              <AccMetric label="Net GST payable" value={money(gstReport.netPayable)} tone={gstReport.netPayable > 0 ? "due" : ""} />
-            </div>
-            <h3 className="acc-section-title">Tax-rate summary</h3>
-            <div className="table acc-table-wrap"><table><thead><tr><th>Rate</th><th className="acc-num">Taxable</th><th className="acc-num">CGST</th><th className="acc-num">SGST</th><th className="acc-num">IGST</th></tr></thead><tbody>
-              {gstReport.byRate.map(row => <tr key={row.rate}><td>{row.rate}%</td><td className="acc-num">{money(row.taxable)}</td><td className="acc-num">{money(row.cgst)}</td><td className="acc-num">{money(row.sgst)}</td><td className="acc-num">{money(row.igst)}</td></tr>)}
-              {!gstReport.byRate.length && <tr><td colSpan="5">No GST lines in this period.</td></tr>}
-            </tbody></table></div>
-            <h3 className="acc-section-title">HSN / SAC</h3>
-            <div className="table acc-table-wrap"><table><thead><tr><th>HSN / SAC</th><th className="acc-num">Taxable</th><th className="acc-num">CGST</th><th className="acc-num">SGST</th><th className="acc-num">IGST</th></tr></thead><tbody>
-              {gstReport.byHsn.map(row => <tr key={row.hsnSac}><td>{row.hsnSac}</td><td className="acc-num">{money(row.taxable)}</td><td className="acc-num">{money(row.cgst)}</td><td className="acc-num">{money(row.sgst)}</td><td className="acc-num">{money(row.igst)}</td></tr>)}
-              {!gstReport.byHsn.length && <tr><td colSpan="5">No HSN/SAC lines in this period.</td></tr>}
-            </tbody></table></div>
-            <h3 className="acc-section-title">Output GST</h3>
-            <div className="table acc-table-wrap"><table><thead><tr><th>Date</th><th>Voucher</th><th>HSN</th><th className="acc-num">Taxable</th><th className="acc-num">Tax</th></tr></thead><tbody>
-              {pagedGstOutput.items.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.hsnSac || "—"}</td><td className="acc-num">{money(row.taxable)}</td><td className="acc-num">{money(row.cgst + row.sgst + row.igst)}</td></tr>)}
-              {!gstReport.output.length && <tr><td colSpan="5">No output GST in this period.</td></tr>}
-            </tbody></table></div>
-            <AccPager page={pagedGstOutput.page} pages={pagedGstOutput.pages} total={pagedGstOutput.total} onPage={setListPage} noun="output lines" />
-            <h3 className="acc-section-title">Input GST / ITC</h3>
-            <div className="table acc-table-wrap"><table><thead><tr><th>Date</th><th>Voucher</th><th>HSN</th><th className="acc-num">Taxable</th><th className="acc-num">ITC</th></tr></thead><tbody>
-              {gstReport.input.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.hsnSac || "—"}</td><td className="acc-num">{money(row.taxable)}</td><td className="acc-num">{money(row.itcEligible ? row.cgst + row.sgst + row.igst : 0)}</td></tr>)}
-              {!gstReport.input.length && <tr><td colSpan="5">No input GST in this period.</td></tr>}
-            </tbody></table></div>
-          </div>}
-          {section === "reports" && reportTab === "ledger" && <>
-            <div className="card accounts-filter-card spacer">
-              <label className="accounts-filter-field"><span className="small">Account</span>
-                <select value={ledgerId} onChange={event => setLedgerId(event.target.value)}>{visibleAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</select>
-              </label>
-            </div>
-            <div className="table spacer acc-table-wrap"><table><thead><tr><th>Date</th><th>Voucher</th><th>Narration</th><th className="acc-num">Debit</th><th className="acc-num">Credit</th><th className="acc-num">Balance</th></tr></thead><tbody>
-              {ledger.rows.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.narration}</td><td className="acc-num">{row.debit ? money(row.debit) : ""}</td><td className="acc-num">{row.credit ? money(row.credit) : ""}</td><td className="acc-num">{money(row.balance)}</td></tr>)}
-              {!ledger.rows.length && <tr><td colSpan="6">No postings on this ledger in this period.</td></tr>}
-            </tbody></table></div>
-          </>}
-          {section === "reports" && reportTab === "item_sales" && (
-            <div className="table spacer acc-table-wrap"><table><thead><tr><th>Item</th><th>SKU</th><th className="acc-num">Qty sold</th><th className="acc-num">Sales amount</th></tr></thead><tbody>
-              {itemSalesRows.map(row => <tr key={row.itemId || row.name}><td>{row.name}</td><td>{row.sku || "—"}</td><td className="acc-num">{row.quantity}</td><td className="acc-num">{money(row.amount)}</td></tr>)}
-              {!itemSalesRows.length && <tr><td colSpan="4">No itemized sales in this period. Use Line items on a Sale entry.</td></tr>}
-            </tbody></table></div>
-          )}
-          {section === "reports" && reportTab === "item_purchases" && (
-            <div className="table spacer acc-table-wrap"><table><thead><tr><th>Item</th><th>SKU</th><th className="acc-num">Qty bought</th><th className="acc-num">Purchase amount</th></tr></thead><tbody>
-              {itemPurchaseRows.map(row => <tr key={row.itemId || row.name}><td>{row.name}</td><td>{row.sku || "—"}</td><td className="acc-num">{row.quantity}</td><td className="acc-num">{money(row.amount)}</td></tr>)}
-              {!itemPurchaseRows.length && <tr><td colSpan="4">No itemized purchases in this period.</td></tr>}
-            </tbody></table></div>
-          )}
-          {section === "reports" && reportTab === "stock_moves" && (
-            <div className="table spacer acc-table-wrap"><table><thead><tr><th>Date</th><th>Item</th><th>Direction</th><th className="acc-num">Qty</th><th>Reason</th><th>Voucher</th></tr></thead><tbody>
-              {stockMoveRows.map(row => <tr key={row.id}><td>{row.movementDate}</td><td>{row.itemName}</td><td>{row.direction}</td><td className="acc-num">{row.quantityDelta}</td><td>{stockReasonLabel(row.reason)}</td><td>{row.voucherNumber || "—"}</td></tr>)}
-              {!stockMoveRows.length && <tr><td colSpan="6">No stock movements in this period.</td></tr>}
-            </tbody></table></div>
-          )}
-        </div>}
+        {(section === "reports" || section === "pnl" || section === "balance" || section === "trial") && <ReportsSection
+          fy={fy}
+          lastFy={lastFy}
+          rangeFrom={rangeFrom}
+          rangeTo={rangeTo}
+          setReportRange={setReportRange}
+          section={section}
+          reportTab={reportTab}
+          openSection={openSection}
+          setSection={setSection}
+          setReportTab={setReportTab}
+          exportReport={exportReport}
+          tb={tb}
+          pnl={pnl}
+          sheet={sheet}
+          pagedBooks={pagedBooks}
+          books={books}
+          setListPage={setListPage}
+          flow={flow}
+          pagedArInvoices={pagedArInvoices}
+          orgSettings={orgSettings}
+          activeCompany={activeCompany}
+          workspace={workspace}
+          pagedApInvoices={pagedApInvoices}
+          salesRows={salesRows}
+          purchaseRows={purchaseRows}
+          vouchers={vouchers}
+          parties={parties}
+          range={range}
+          setNotice={setNotice}
+          gstReport={gstReport}
+          pagedGstOutput={pagedGstOutput}
+          ledgerId={ledgerId}
+          setLedgerId={setLedgerId}
+          visibleAccounts={visibleAccounts}
+          ledger={ledger}
+          itemSalesRows={itemSalesRows}
+          itemPurchaseRows={itemPurchaseRows}
+          stockMoveRows={stockMoveRows}
+        />}
 
-        {section === "bank" && <div className="acc-panel acc-bank">
-          <p className="acc-bank-note">Matching marks statement lines against posted voucher lines. It never changes cash, bank, P&amp;L, or the trial balance.</p>
-          <AccSetupSection icon="B" title="Add bank statement" copy="Import a CSV from net banking, map columns, then save. PDF is not auto-parsed yet.">
-            <h3 className="acc-section-title">Import file (CSV / Excel text export)</h3>
-            <div className="accounts-action-row acc-bank-actions">
-              <label className="btn">
-                Choose statement file
-                <input type="file" accept=".csv,.txt,.tsv,.xls,.xlsx" hidden onChange={onBankImportFile} />
-              </label>
-            </div>
-            {bankImport && <>
-              <p className="small">Map columns from your bank file, then apply. Amounts are not posted to ledgers until you create vouchers separately.</p>
-              <div className="acc-bank-meta">
-                {BANK_IMPORT_FIELDS.map(field => (
-                  <Field key={field.id} label={field.label}>
-                    <select
-                      value={bankImportMapping[field.id] ?? ""}
-                      onChange={event => setBankImportMapping(current => ({ ...current, [field.id]: event.target.value === "" ? undefined : Number(event.target.value) }))}
-                    >
-                      <option value="">Ignore</option>
-                      {bankImport.headers.map((header, index) => <option key={`${header}-${index}`} value={index}>{header}</option>)}
-                    </select>
-                  </Field>
-                ))}
-              </div>
-              <button type="button" className="btn primary" onClick={applyBankImportMapping}>Apply mapping to draft lines</button>
-            </>}
-            <h3 className="acc-section-title">Statement details</h3>
-            <div className="acc-bank-meta">
-              <Field label="Bank account"><select value={bankForm.coaId || bankAccounts[0]?.id || ""} onChange={event => setBankForm(current => ({ ...current, coaId: event.target.value }))}><option value="">Select bank</option>{bankAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</select></Field>
-              <Field label="Statement date"><input type="date" value={bankForm.statementDate} onChange={event => setBankForm(current => ({ ...current, statementDate: event.target.value }))} /></Field>
-              <Field label="Opening balance"><input className="acc-num-input" type="number" step="0.01" placeholder="0.00" value={bankForm.openingBalance} onChange={event => setBankForm(current => ({ ...current, openingBalance: event.target.value }))} /></Field>
-              <Field label="Closing balance"><input className="acc-num-input" type="number" step="0.01" placeholder="0.00" value={bankForm.closingBalance} onChange={event => setBankForm(current => ({ ...current, closingBalance: event.target.value }))} /></Field>
-            </div>
-            <h3 className="acc-section-title">Statement lines</h3>
-            <div className="table acc-table-wrap acc-bank-line-table"><table><thead><tr><th>Date</th><th>Description</th><th className="acc-num">Amount</th><th>In / Out</th><th></th></tr></thead><tbody>
-              {bankForm.lines.map((line, index) => <tr key={index}>
-                <td><input type="date" value={line.lineDate} onChange={event => patchBankLine(index, { lineDate: event.target.value })} /></td>
-                <td className="acc-bank-desc"><input value={line.description} placeholder="e.g. UPI from customer" onChange={event => patchBankLine(index, { description: event.target.value })} /></td>
-                <td><input className="acc-num-input" type="number" min="0" step="0.01" placeholder="0.00" value={line.amount} onChange={event => patchBankLine(index, { amount: event.target.value })} /></td>
-                <td><select value={line.direction} onChange={event => patchBankLine(index, { direction: event.target.value })}><option value="in">In</option><option value="out">Out</option></select></td>
-                <td>{bankForm.lines.length > 1 && <button type="button" className="btn danger" onClick={() => setBankForm(current => ({ ...current, lines: current.lines.filter((_, i) => i !== index) }))}>Remove</button>}</td>
-              </tr>)}
-            </tbody></table></div>
-            <div className="acc-bank-line-cards">
-              {bankForm.lines.map((line, index) => (
-                <article key={index} className="card acc-bank-line-card">
-                  <div className="acc-bank-meta">
-                    <Field label="Date"><input type="date" value={line.lineDate} onChange={event => patchBankLine(index, { lineDate: event.target.value })} /></Field>
-                    <Field label="In / Out"><select value={line.direction} onChange={event => patchBankLine(index, { direction: event.target.value })}><option value="in">Money in</option><option value="out">Money out</option></select></Field>
-                    <Field className="span" label="Description"><input value={line.description} placeholder="e.g. UPI from customer" onChange={event => patchBankLine(index, { description: event.target.value })} /></Field>
-                    <Field label="Amount"><input className="acc-num-input" type="number" min="0" step="0.01" placeholder="0.00" value={line.amount} onChange={event => patchBankLine(index, { amount: event.target.value })} /></Field>
-                  </div>
-                  {bankForm.lines.length > 1 && <button type="button" className="btn danger" onClick={() => setBankForm(current => ({ ...current, lines: current.lines.filter((_, i) => i !== index) }))}>Remove line</button>}
-                </article>
-              ))}
-            </div>
-            <div className="accounts-action-row acc-bank-actions acc-form-actions">
-              <button type="button" className="btn" onClick={() => setBankForm(current => ({ ...current, lines: [...current.lines, emptyBankLine()] }))}>+ Add line</button>
-              <button type="button" className="btn primary" disabled={saving} onClick={submitBankStatement}>{saving ? "Saving…" : "Save statement"}</button>
-            </div>
-          </AccSetupSection>
-          <h3 className="acc-section-title">Saved statements</h3>
-          {statements.map(statement => {
-            const voucherLines = bankVoucherLines(accounts, vouchers, statement.coaId, parties).map(line => ({
-              ...line,
-              matched: matchedLineIds.has(line.id),
-            }));
-            const displayLines = defaultBankStatementLines(statement.lines, voucherLines);
-            const unmatched = displayLines.filter(line => line.matchStatus !== "matched" && line.matchStatus !== "ignored").length;
-            const suggested = displayLines.filter(line => line.matchStatus === "suggested").length;
-            return <article key={statement.id} className="card acc-bank-statement">
-              <header className="acc-bank-statement-head">
-                <div>
-                  <h3>{statement.accountName}</h3>
-                  <p className="small">{statement.statementDate}</p>
-                </div>
-                <div className="acc-bank-statement-stats">
-                  <span>Opening <strong>{money(statement.openingBalance)}</strong></span>
-                  <span>Closing <strong>{money(statement.closingBalance)}</strong></span>
-                  {suggested > 0 ? <span className="acc-status-pill suggested">{suggested} suggested</span> : null}
-                  <span className={`acc-status-pill ${unmatched ? "inactive" : "active"}`}>{unmatched ? `${unmatched} unmatched` : "Reconciled"}</span>
-                  {canWrite && suggested > 0 ? (
-                    <button
-                      type="button"
-                      className="btn primary"
-                      disabled={saving}
-                      onClick={() => acceptSuggestedBankMatches(displayLines)}
-                    >
-                      Accept all suggestions
-                    </button>
-                  ) : null}
-                </div>
-              </header>
-              <div className="table acc-table-wrap acc-bank-match-table"><table><thead><tr><th>Date</th><th>Description</th><th className="acc-num">Amount</th><th>Status</th><th>Match to books</th></tr></thead><tbody>
-                {displayLines.map(line => {
-                  const options = bankVoucherLines(accounts, vouchers, statement.coaId, parties).filter(item => !matchedLineIds.has(item.id) || item.id === line.matchedVoucherLineId);
-                  const selected = matchChoice[line.id] || line.matchedVoucherLineId || "";
-                  return <tr key={line.id}>
-                    <td>{line.lineDate}</td>
-                    <td>{line.description || "—"}{line.reference ? <span className="small"> · {line.reference}</span> : null}</td>
-                    <td className="acc-num">{money(line.amount)} <span className={`acc-voucher-chip ${line.direction === "out" ? "out" : "in"}`}>{line.direction === "out" ? "Out" : "In"}</span></td>
-                    <td><span className={`acc-status-pill ${bankMatchTone(line.matchStatus)}`}>{bankMatchLabel(line.matchStatus)}</span></td>
-                    <td className="acc-bank-match-select">
-                      <BankMatchControls
-                        line={line}
-                        selected={selected}
-                        options={options}
-                        saving={saving}
-                        canWrite={canWrite}
-                        onSelect={value => setMatchChoice(current => ({ ...current, [line.id]: value }))}
-                        onMatch={() => run(() => saveBankMatch(token, line.id, selected, "Matched"), "Line reconciled. Books unchanged.")}
-                        onUnmatch={() => run(() => saveBankMatch(token, line.id, null, "Unmatched"), "Line unmatched. Books unchanged.")}
-                        onIgnore={() => run(() => ignoreBankLine(token, line.id, "Ignored from statement"), "Line ignored. Books unchanged.")}
-                        onCreate={() => openSimpleFromBankLine(line, statement)}
-                      />
-                    </td>
-                  </tr>;
-                })}
-              </tbody></table></div>
-              <div className="acc-bank-match-cards">
-                {displayLines.map(line => {
-                  const options = bankVoucherLines(accounts, vouchers, statement.coaId, parties).filter(item => !matchedLineIds.has(item.id) || item.id === line.matchedVoucherLineId);
-                  const selected = matchChoice[line.id] || line.matchedVoucherLineId || "";
-                  return (
-                    <article key={line.id} className="card acc-bank-match-card">
-                      <div className="acc-bank-match-card-top">
-                        <strong>{line.description || "Statement line"}</strong>
-                        <span className={`acc-status-pill ${bankMatchTone(line.matchStatus)}`}>{bankMatchLabel(line.matchStatus)}</span>
-                      </div>
-                      <p className="small">{line.lineDate} · {money(line.amount)} · {line.direction === "out" ? "Out" : "In"}</p>
-                      <BankMatchControls
-                        line={line}
-                        selected={selected}
-                        options={options}
-                        saving={saving}
-                        canWrite={canWrite}
-                        onSelect={value => setMatchChoice(current => ({ ...current, [line.id]: value }))}
-                        onMatch={() => run(() => saveBankMatch(token, line.id, selected, "Matched"), "Line reconciled. Books unchanged.")}
-                        onUnmatch={() => run(() => saveBankMatch(token, line.id, null, "Unmatched"), "Line unmatched. Books unchanged.")}
-                        onIgnore={() => run(() => ignoreBankLine(token, line.id, "Ignored from statement"), "Line ignored. Books unchanged.")}
-                        onCreate={() => openSimpleFromBankLine(line, statement)}
-                      />
-                    </article>
-                  );
-                })}
-              </div>
-            </article>;
-          })}
-          {!statements.length && <AccEmpty title="No bank statements yet" copy="Add opening, closing, and statement lines above. Matching never changes the books." />}
-        </div>}
+        {section === "bank" && <BankSection
+          onBankImportFile={onBankImportFile}
+          bankImport={bankImport}
+          bankImportMapping={bankImportMapping}
+          setBankImportMapping={setBankImportMapping}
+          applyBankImportMapping={applyBankImportMapping}
+          bankForm={bankForm}
+          bankAccounts={bankAccounts}
+          setBankForm={setBankForm}
+          patchBankLine={patchBankLine}
+          saving={saving}
+          submitBankStatement={submitBankStatement}
+          statements={statements}
+          accounts={accounts}
+          vouchers={vouchers}
+          parties={parties}
+          matchedLineIds={matchedLineIds}
+          canWrite={canWrite}
+          acceptSuggestedBankMatches={acceptSuggestedBankMatches}
+          matchChoice={matchChoice}
+          setMatchChoice={setMatchChoice}
+          run={run}
+          token={token}
+          openSimpleFromBankLine={openSimpleFromBankLine}
+        />}
 
         {section === "crm" && <CustomerPipeline companyId={activeCompanyId} parties={parties} pipeline={partyPipeline} saving={saving} onStageChange={(partyId, stage) => run(async () => {
           await setPartyPipelineStage(token, partyId, stage);
           setPartyPipeline(current => ({ ...current, [partyId]: stage }));
         }, "Pipeline stage saved.")} />}
 
-        {section === "setup" && <div className="acc-panel acc-setup">
-          <p className="copy acc-setup-lead">Books, chart, parties, GST, and locks for {activeCompany?.name || "this Accounts company"} only. Daily Finance, Monthly Finance, and Chit Fund stay on the Finance workspace.</p>
-          <AccSetupSection icon="FY" title="Company / financial year" copy="Indian financial year is 1 April to 31 March. Saving the name here updates the current Accounts company, not Finance.">
-            <div className="form">
-              <Field label="Business name"><input value={setupForm.companyName} onChange={event => setSetupForm(current => ({ ...current, companyName: event.target.value }))} /></Field>
-              <Field label="Books start date"><input type="date" value={setupForm.booksStartedOn} onChange={event => setSetupForm(current => ({ ...current, booksStartedOn: event.target.value }))} /></Field>
-            </div>
-            <div className="acc-form-actions">
-              <button type="button" className="btn primary" disabled={!canAdmin || saving} onClick={() => {
-                if (!canAdmin) {
-                  setError("Only the business owner can change company settings.");
-                  return;
-                }
-                run(() => saveAccountingSettings(token, { ...setupForm, fyStartMonth: 4 }), "Company details saved.");
-              }}>{saving ? "Saving…" : "Save company"}</button>
-              <button type="button" className="btn" onClick={downloadCompanyBackup}>Download company backup</button>
-              {canAdmin && <label className="btn">
-                Choose restore file
-                <input type="file" accept="application/json,.json" hidden onChange={previewCompanyRestore} />
-              </label>}
-              {canAdmin && restoreDraft && (
-                <button type="button" className="btn primary" disabled={saving || restoreBusy} onClick={confirmCompanyRestore}>
-                  {restoreBusy ? "Restoring…" : `Confirm restore into ${activeCompany?.name || "this company"}`}
-                </button>
-              )}
-              {canAdmin && restoreDraft && (
-                <button type="button" className="btn" disabled={restoreBusy} onClick={() => setRestoreDraft(null)}>Cancel restore</button>
-              )}
-            </div>
-            {!canAdmin && <p className="small">Only the business owner can change company name / books start settings.</p>}
-            <p className="small">Backups are company-isolated. Restore only works into the same company when it has no vouchers yet. Cross-company overwrite is blocked.</p>
-            <div className="acc-company-setup-list">
-              <p className="small">Each company has its own books. Switching never mixes vouchers.</p>
-              {companies.map(company => (
-                <div
-                  key={company.id}
-                  className={`acc-company-setup-item${company.id === activeCompanyId ? " current" : ""}${company.status === "archived" ? " archived" : ""}`}
-                >
-                  <button
-                    type="button"
-                    className="acc-company-setup-pick"
-                    disabled={company.status === "archived"}
-                    onClick={() => company.id !== activeCompanyId && company.status !== "archived" && switchCompany(company.id)}
-                  >
-                    <strong>{company.name}</strong>
-                    <span className="small">
-                      {company.isPrimary ? "Primary" : "Company"}
-                      {company.status === "archived" ? " · archived" : ""}
-                      {company.id === activeCompanyId ? " · current" : ""}
-                      {` · ${gstStatusLabel(company)}`}
-                    </span>
-                  </button>
-                  {canAdmin && company.status !== "archived" && !company.isPrimary && (
-                    <button type="button" className="btn" disabled={saving} onClick={() => archiveCompany(company)}>Archive</button>
-                  )}
-                </div>
-              ))}
-              {canAdmin && <button type="button" className="btn" onClick={() => { setCompanyDraft({ name: "", booksStartedOn: todayIso(), industry: "retail" }); setShowCreateCompany(true); }}>+ Create company</button>}
-              {!canAdmin && <p className="small">Only the owner can create or archive Accounts companies.</p>}
-            </div>
-          </AccSetupSection>
-          <AccSetupSection icon="GST" title={`GST${activeCompany?.name ? ` · ${activeCompany.name}` : ""}`} copy="GST is per company. These settings never apply to another Accounts company or to Daily / Monthly Finance. Books reports only — not GST portal filing. Owner manages GST registration.">
-            {!canAdmin && <p className="small">View GST details below. Only the owner can change GST registration settings.</p>}
-            <div className="form">
-              <Field label="Registration">
-                <select value={gstForm.gstRegistration} disabled={!canAdmin} onChange={event => setGstForm(current => ({ ...current, gstRegistration: event.target.value }))}>
-                  <option value="unregistered">Unregistered</option>
-                  <option value="regular">Regular</option>
-                  <option value="composition">Composition</option>
-                </select>
-              </Field>
-              <Field label="GSTIN"><input value={gstForm.gstin} disabled={!canAdmin} placeholder="e.g. 36AAAAA0000A1Z3" onChange={event => setGstForm(current => ({ ...current, gstin: event.target.value, stateCode: gstStateFromGstin(event.target.value) || current.stateCode }))} /></Field>
-              <Field label="Legal name"><input value={gstForm.legalName} disabled={!canAdmin} onChange={event => setGstForm(current => ({ ...current, legalName: event.target.value }))} /></Field>
-              <Field label="State">
-                <select value={gstForm.stateCode} disabled={!canAdmin} onChange={event => setGstForm(current => ({ ...current, stateCode: event.target.value }))}>
-                  <option value="">Select state</option>
-                  {INDIA_STATES.map(state => <option key={state.code} value={state.code}>{state.code} · {state.name}</option>)}
-                </select>
-              </Field>
-            </div>
-            {canAdmin && (
-              <div className="acc-form-actions">
-                <button type="button" className="btn primary" disabled={saving} onClick={() => {
-                  const message = validateGstSettings(gstForm);
-                  if (message) { setError(message); return; }
-                  run(() => saveGstSettings(token, { ...gstForm, stateName: INDIA_STATES.find(state => state.code === gstForm.stateCode)?.name || "" }), "GST settings saved.");
-                }}>{saving ? "Saving…" : "Save GST"}</button>
-              </div>
-            )}
-          </AccSetupSection>
-          <AccSetupSection
-            icon="#"
-            title="Chart of accounts"
-            copy={`Opening debit and credit sides across the chart should balance. System accounts can be renamed and given openings, but not deleted.${settings?.integrationEnabled ? "" : " Daily Finance, Monthly Finance, and Chit Fund ledgers stay hidden while integration is off."}`}
-            actions={<button type="button" className="btn" onClick={() => openCoa(null)}>+ Account</button>}
-            collapsible
-            summary={`${visibleAccounts.length} ${visibleAccounts.length === 1 ? "account" : "accounts"}`}
-          >
-            <div className="table spacer acc-table-wrap"><table><thead><tr><th>Code</th><th>Account</th><th>Group</th><th>Opening</th><th></th></tr></thead><tbody>
-              {visibleAccounts.map(account => {
-                const used = ledgerHasPostedLines(account, vouchers);
-                return <tr key={account.id}>
-                  <td>{account.code}</td>
-                  <td style={account.parentId ? { paddingLeft: 22 } : undefined}>{account.parentId ? "↳ " : ""}{account.name}{account.isSystem ? " · system" : ""}</td>
-                  <td>{account.groupType}</td>
-                  <td>{account.openingBalance ? `${money(account.openingBalance)} ${account.openingSide}` : "—"}</td>
-                  <td>
-                    <button type="button" className="btn" disabled={saving} onClick={() => openCoa(account)}>Edit</button>
-                    <button type="button" className="btn danger" disabled={saving || account.isSystem || used} onClick={() => removeCoa(account)}>{account.isSystem ? "System" : used ? "In use" : "Delete"}</button>
-                  </td>
-                </tr>;
-              })}
-            </tbody></table></div>
-          </AccSetupSection>
-          <AccSetupSection
-            icon="P"
-            title="Parties"
-            copy="Customers, suppliers, employees, agents, and others used only by Accounts. They do not have to exist in Daily Finance, Monthly Finance, or Chit Fund."
-            actions={<div className="acc-btn-group"><label className="btn">Import CSV<input type="file" accept=".csv,text/csv" hidden onChange={importParties} /></label><button type="button" className="btn primary" onClick={() => openParty()}>+ Add Party</button></div>}
-            collapsible
-            summary={`${parties.length} ${parties.length === 1 ? "party" : "parties"}`}
-          >
-            <div className="acc-party-toolbar">
-              <label className="accounts-filter-field acc-party-search">
-                <span className="small">Search parties</span>
-                <input value={partySearch} placeholder="Name, phone, or email" onChange={event => setPartySearch(event.target.value)} />
-              </label>
-              <label className="accounts-filter-field acc-party-type-select">
-                <span className="small">Party type</span>
-                <select value={partyTypeFilter} onChange={event => setPartyTypeFilter(event.target.value)}>
-                  {PARTY_TYPE_FILTERS.map(item => <option key={item.id} value={item.id}>{item.label} ({partyCountByType[item.id] || 0})</option>)}
-                </select>
-              </label>
-              <div className="acc-party-chips" role="group" aria-label="Party type">
-                {PARTY_TYPE_FILTERS.map(item => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className={`acc-filter-chip ${partyTypeFilter === item.id ? "active" : ""}`}
-                    onClick={() => setPartyTypeFilter(item.id)}
-                  >
-                    {item.label} <span>{partyCountByType[item.id] || 0}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-            <p className="small acc-party-count">
-              {partySearch || partyTypeFilter !== "all"
-                ? `${setupParties.length} of ${parties.length} ${parties.length === 1 ? "party" : "parties"}`
-                : `${parties.length} ${parties.length === 1 ? "party" : "parties"}`}
-            </p>
-            {partyImportStatus && <p className="small accounts-notice-ok" role="status">{partyImportStatus}</p>}
-            {!parties.length ? (
-              <AccEmpty title="No parties yet" copy="Add customers and suppliers to start managing your accounting relationships." actionLabel="+ Add Party" onAction={() => openParty()} />
-            ) : !setupParties.length ? (
-              <AccEmpty
-                title={PARTY_TYPE_FILTERS.find(item => item.id === partyTypeFilter)?.emptyTitle || "No parties found"}
-                copy={PARTY_TYPE_FILTERS.find(item => item.id === partyTypeFilter)?.emptyCopy || "Clear the filter to see all parties."}
-                actionLabel="Clear filter"
-                onAction={clearPartyFilters}
-              />
-            ) : <>
-              <div className="table acc-table-wrap acc-party-table"><table><thead><tr><th>Party</th><th>Type</th><th>Contact</th><th className="acc-num">Outstanding</th><th>Status</th><th></th></tr></thead><tbody>
-                {pagedSetupParties.items.map(party => {
-                  const outstanding = outstandingByParty.get(party.id);
-                  return <tr key={party.id}>
-                    <td>
-                      <strong>{party.name}</strong>
-                      {party.gstin ? <span className="small acc-party-meta">{party.gstin}</span> : null}
-                    </td>
-                    <td><PartyTypeBadge type={party.partyType} /></td>
-                    <td>
-                      <span className="acc-party-contact">{party.phone || "—"}</span>
-                      {party.email ? <span className="small acc-party-meta">{party.email}</span> : null}
-                    </td>
-                    <td className="acc-num">{outstanding?.balance ? money(outstanding.balance) : "—"}</td>
-                    <td><span className={`acc-status-pill ${party.isActive === false ? "inactive" : "active"}`}>{party.isActive === false ? "Inactive" : "Active"}</span></td>
-                    <td>{partyActions(party)}</td>
-                  </tr>;
-                })}
-              </tbody></table></div>
-              <div className="acc-party-cards">
-                {pagedSetupParties.items.map(party => {
-                  const outstanding = outstandingByParty.get(party.id);
-                  return <article key={party.id} className="card acc-party-card">
-                    <div className="acc-party-card-top">
-                      <div>
-                        <strong>{party.name}</strong>
-                        <div className="acc-party-card-meta">
-                          <PartyTypeBadge type={party.partyType} />
-                          <span className={`acc-status-pill ${party.isActive === false ? "inactive" : "active"}`}>{party.isActive === false ? "Inactive" : "Active"}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <p className="small">{party.phone || party.email || "No contact"}{party.phone && party.email ? ` · ${party.email}` : ""}</p>
-                    <p className="acc-party-outstanding">Outstanding: <strong>{outstanding?.balance ? money(outstanding.balance) : "—"}</strong></p>
-                    {partyActions(party)}
-                  </article>;
-                })}
-              </div>
-              <AccPager page={pagedSetupParties.page} pages={pagedSetupParties.pages} total={pagedSetupParties.total} onPage={setListPage} noun="parties" />
-            </>}
-          </AccSetupSection>
-          <AccSetupSection icon="✓" title="Production readiness" copy="A practical checklist for running FinTrack safely in production." collapsible summary="Operational safeguards">
-            <div className="production-readiness-grid">
-              <div className="card"><strong>Backups</strong><p className="small">Download a company backup after each important month-end and store it outside the browser.</p><button type="button" className="btn" onClick={downloadCompanyBackup}>Download backup now</button></div>
-              <div className="card"><strong>Restore drill</strong><p className="small">Test restore in a separate empty company before relying on a backup. Existing restore safeguards prevent overwriting posted books.</p><span className="acc-chip ok">Protected workflow</span></div>
-              <div className="card"><strong>Period control</strong><p className="small">Lock completed periods so posted vouchers cannot be changed accidentally.</p><button type="button" className="btn" onClick={() => document.getElementById("accounts-period-lock")?.scrollIntoView({ behavior: "smooth" })}>Open period locks</button></div>
-              <div className="card"><strong>Scale safely</strong><p className="small">Use date filters, company separation, and regular exports as transaction volume grows.</p><span className="acc-chip">Company isolated</span></div>
-            </div>
-          </AccSetupSection>
-          <SubscriptionMonitoringPanel orgSettings={orgSettings} companyId={activeCompanyId} />
-          <AccSetupSection
-            icon="↔"
-            title="Accounting integration"
-            copy="Cashbook is always available from Finance. This switch only copies eligible Daily, Monthly, Chit, and Cashbook rows into the primary Accounts company. Keep it off if Accounts books belong to a different business. The same payment is never posted twice."
-            actions={<span className={`acc-chip ${settings?.integrationEnabled ? "ok" : ""}`}>Status: {settings?.integrationEnabled ? "ON" : "OFF"}</span>}
-          >
-            <div className="accounts-action-row">
-              <button type="button" className="btn" disabled={saving} onClick={() => run(() => setAccountingIntegration(token, !settings?.integrationEnabled), `Integration ${settings?.integrationEnabled ? "disabled" : "enabled"}.`)}>{settings?.integrationEnabled ? "Turn integration off" : "Turn integration on"}</button>
-              {settings?.integrationEnabled && <button type="button" className="btn" disabled={saving} onClick={() => run(() => syncAccountingOperations(token), "Linked vouchers synced from operations.")}>Sync linked vouchers</button>}
-            </div>
-          </AccSetupSection>
-          <AccSetupSection
-            icon="I"
-            title="Items & inventory"
-            copy="Items, stock value, physical count, ageing, CSV import and stock rules now live in the Inventory section."
-          >
-            <button type="button" className="btn primary" onClick={() => openSection("inventory")}>Open Inventory</button>
-          </AccSetupSection>
-          <div id="accounts-period-lock"><AccSetupSection icon="L" title="Period locking" copy="Lock a closed period so posted vouchers in that range cannot be changed. Owner only.">
-            {!canAdmin && <p className="small">Only the business owner can lock or reopen periods.</p>}
-            {canAdmin && <>
-            <div className="form">
-              <Field label="From"><input type="date" value={lockForm.from} onChange={event => setLockForm(current => ({ ...current, from: event.target.value }))} /></Field>
-              <Field label="To"><input type="date" value={lockForm.to} onChange={event => setLockForm(current => ({ ...current, to: event.target.value }))} /></Field>
-            </div>
-            <div className="acc-form-actions">
-              <button type="button" className="btn primary" disabled={saving} onClick={event => {
-                event.currentTarget.scrollIntoView({ block: "center", behavior: "smooth" });
-                run(() => lockAccountingPeriod(token, lockForm.from, lockForm.to), "Period locked.");
-              }}>{saving ? "Saving…" : "Lock period"}</button>
-            </div>
-            <div className="table acc-table-wrap"><table><thead><tr><th>Period</th><th>Status</th><th></th></tr></thead><tbody>
-              {locks.map(lock => <tr key={lock.id}><td>{lock.periodFrom} to {lock.periodTo}</td><td>{lock.isLocked ? "Locked" : "Reopened"}</td>              <td>{lock.isLocked && <button type="button" className="btn" disabled={saving} onClick={() => askReason("Reopen period", "Reopen", reason => run(() => reopenAccountingPeriod(token, lock.id, reason), "Period reopened."))}>Reopen</button>}</td></tr>)}
-            </tbody></table></div>
-            </>}
-            {!canAdmin && <div className="table spacer acc-table-wrap"><table><thead><tr><th>Period</th><th>Status</th></tr></thead><tbody>
-              {locks.map(lock => <tr key={lock.id}><td>{lock.periodFrom} to {lock.periodTo}</td><td>{lock.isLocked ? "Locked" : "Reopened"}</td></tr>)}
-              {!locks.length && <tr><td colSpan="2">No period locks yet.</td></tr>}
-            </tbody></table></div>}
-          </AccSetupSection></div>
-          {canAdmin && <AccSetupSection
-            icon="R"
-            title="Accounts access roles"
-            copy="Invite your CA by email (viewer recommended), or paste a user UUID. Requires migrations 070–076."
-            collapsible
-            summary={`${accountsRoles.length} assigned · ${teamInvites.filter(row => row.status === "pending").length} pending`}
-          >
-            <div className="accounts-collab-guide">
-              <div><strong>Recommended collaboration setup</strong><p className="small">Give your accountant <b>Accountant</b> access to post and reconcile. Give an external reviewer <b>Viewer</b> access. The owner remains the only user who can manage roles, lock periods, or change company settings.</p></div>
-              <span className="acc-chip ok">Owner controlled</span>
-            </div>
-            <h4 className="acc-subsection-title">Invite by email</h4>
-            <div className="form">
-              <Field label="Email"><input type="email" value={inviteDraft.email} onChange={event => setInviteDraft(current => ({ ...current, email: event.target.value }))} placeholder="ca@example.com" /></Field>
-              <Field label="Role">
-                <select value={inviteDraft.role} onChange={event => setInviteDraft(current => ({ ...current, role: event.target.value }))}>
-                  <option value="viewer">Viewer (read only)</option>
-                  <option value="accountant">Accountant (can post)</option>
-                </select>
-              </Field>
-              <Field label="Note (optional)"><input value={inviteDraft.note} onChange={event => setInviteDraft(current => ({ ...current, note: event.target.value }))} placeholder="e.g. FY 2026-27 review" /></Field>
-            </div>
-            <div className="acc-form-actions">
-              <button type="button" className="btn primary" disabled={saving || !inviteDraft.email.trim()} onClick={() => run(async () => {
-                const result = await inviteTeamMember(token, inviteDraft);
-                setInviteDraft({ email: "", role: "viewer", note: "" });
-                setTeamInvites(await listTeamInvites(token));
-                setAccountsRoles(await loadAccountsRoles(token));
-                if (result?.status === "pending") setInviteEmailDraft({ email: result.email, role: result.role, expiresAt: result.expiresAt });
-                if (result?.status === "assigned") {
-                  setNotice(`Assigned ${result.role} to ${result.email}.`);
-                }
-              }, inviteDraft.email ? `Invite processed for ${inviteDraft.email.trim()}.` : "Invite saved.")}>{saving ? "Saving…" : "Send invite"}</button>
-            </div>
-            {inviteEmailDraft && <div className="notice accounts-invite-email" role="status"><strong>Invite recorded for {inviteEmailDraft.email}</strong><p className="small">The current backend does not send email automatically. Use your email client to send the instructions below; after the user signs up with this email, the invite is claimed automatically.</p><button type="button" className="btn" onClick={() => { const subject = encodeURIComponent(`FinTrack Accounts access · ${inviteEmailDraft.role}`); const body = encodeURIComponent(`You have been invited to FinTrack Accounts as ${inviteEmailDraft.role}. Sign up or sign in using this email address. Your Accounts access will be activated automatically after sign-in.`); window.location.href = `mailto:${inviteEmailDraft.email}?subject=${subject}&body=${body}`; }}>Open email draft</button><button type="button" className="btn" onClick={() => setInviteEmailDraft(null)}>Dismiss</button></div>}
-            <div className="table spacer acc-table-wrap"><table><thead><tr><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody>
-              {teamInvites.map(row => (
-                <tr key={row.id}>
-                  <td>{row.email}</td>
-                  <td>{row.role}</td>
-                  <td>{row.status}</td>
-                  <td>{row.status === "pending" ? <button type="button" className="btn" disabled={saving} onClick={() => run(async () => {
-                    await revokeTeamInvite(token, row.id);
-                    setTeamInvites(await listTeamInvites(token));
-                  }, "Invite revoked.")}>Revoke</button> : null}</td>
-                </tr>
-              ))}
-              {!teamInvites.length && <tr><td colSpan="4">No email invites yet.</td></tr>}
-            </tbody></table></div>
-            <h4 className="acc-subsection-title">Assign by user ID</h4>
-            <div className="form">
-              <Field label="User ID (auth UUID)"><input value={roleDraft.userId} onChange={event => setRoleDraft(current => ({ ...current, userId: event.target.value.trim() }))} placeholder="Paste Supabase auth user UUID" /></Field>
-              <Field label="Role">
-                <select value={roleDraft.role} onChange={event => setRoleDraft(current => ({ ...current, role: event.target.value }))}>
-                  <option value="accountant">Accountant (read + write)</option>
-                  <option value="viewer">Viewer (read only)</option>
-                </select>
-              </Field>
-            </div>
-            <div className="acc-form-actions">
-              <button type="button" className="btn primary" disabled={saving || !roleDraft.userId} onClick={() => run(async () => {
-                await setAccountsUserRole(token, roleDraft.userId, roleDraft.role);
-                setRoleDraft({ userId: "", role: "accountant" });
-                setAccountsRoles(await loadAccountsRoles(token));
-              }, "Accounts role saved.")}>{saving ? "Saving…" : "Assign role"}</button>
-            </div>
-            <div className="table spacer acc-table-wrap"><table><thead><tr><th>User ID</th><th>Role</th><th></th></tr></thead><tbody>
-              {accountsRoles.map(row => (
-                <tr key={row.id}>
-                  <td className="small">{row.userId}</td>
-                  <td>{row.role}</td>
-                  <td><button type="button" className="btn" disabled={saving} onClick={() => run(async () => {
-                    await setAccountsUserRole(token, row.userId, null);
-                    setAccountsRoles(await loadAccountsRoles(token));
-                  }, "Accounts role cleared.")}>Remove</button></td>
-                </tr>
-              ))}
-              {!accountsRoles.length && <tr><td colSpan="3">No accountant or viewer roles assigned yet. Owner keeps full access.</td></tr>}
-            </tbody></table></div>
-          </AccSetupSection>}
-          {canWrite && <AccSetupSection
-            icon="↻"
-            title="Recurring entries"
-            copy="Templates for monthly rent, retainers, or standing expenses. Run now opens a pre-filled entry; posting advances the next run date. Requires migration 075."
-            collapsible
-            summary={`${recurringTemplates.filter(row => row.isActive).length} active`}
-          >
-            <div className="form">
-              <Field label="Name"><input value={recurringDraft.name} onChange={event => setRecurringDraft(current => ({ ...current, name: event.target.value }))} placeholder="e.g. Office rent" /></Field>
-              <Field label="Kind">
-                <select value={recurringDraft.kind} onChange={event => setRecurringDraft(current => ({ ...current, kind: event.target.value }))}>
-                  {RECURRING_KINDS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
-                </select>
-              </Field>
-              <Field label="Frequency">
-                <select value={recurringDraft.frequency} onChange={event => setRecurringDraft(current => ({ ...current, frequency: event.target.value }))}>
-                  {RECURRING_FREQUENCIES.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
-                </select>
-              </Field>
-              <Field label="Next run"><input type="date" value={recurringDraft.nextRunOn} onChange={event => setRecurringDraft(current => ({ ...current, nextRunOn: event.target.value }))} /></Field>
-              <Field label="Amount"><input className="acc-num-input" type="number" min="0" step="0.01" value={recurringDraft.amount} onChange={event => setRecurringDraft(current => ({ ...current, amount: event.target.value }))} /></Field>
-              <Field label="Party">
-                <select value={recurringDraft.partyId} onChange={event => setRecurringDraft(current => ({ ...current, partyId: event.target.value }))}>
-                  <option value="">Optional</option>
-                  {parties.filter(party => party.isActive !== false).map(party => <option key={party.id} value={party.id}>{party.name}</option>)}
-                </select>
-              </Field>
-              <Field label="Payment mode">
-                <select value={recurringDraft.mode} onChange={event => setRecurringDraft(current => ({ ...current, mode: event.target.value }))}>
-                  {MONEY_MODES.map(mode => <option key={mode.id} value={mode.id}>{mode.label}</option>)}
-                </select>
-              </Field>
-              <Field className="span" label="Narration"><input value={recurringDraft.narration} onChange={event => setRecurringDraft(current => ({ ...current, narration: event.target.value }))} /></Field>
-            </div>
-            <div className="acc-form-actions">
-              <button type="button" className="btn primary" disabled={saving || !recurringDraft.name.trim() || !recurringDraft.nextRunOn} onClick={() => run(async () => {
-                await upsertRecurringTemplate(token, {
-                  ...recurringDraft,
-                  amount: Number(recurringDraft.amount || 0),
-                  partyId: recurringDraft.partyId || null,
-                });
-                setRecurringDraft(emptyRecurringDraft());
-                setRecurringTemplates(await loadRecurringTemplates(token));
-              }, recurringDraft.id ? "Recurring template updated." : "Recurring template saved.")}>{saving ? "Saving…" : recurringDraft.id ? "Update template" : "Save template"}</button>
-              {recurringDraft.id ? <button type="button" className="btn" disabled={saving} onClick={() => setRecurringDraft(emptyRecurringDraft())}>Clear</button> : null}
-            </div>
-            <div className="table spacer acc-table-wrap"><table><thead><tr><th>Name</th><th>Kind</th><th>Next</th><th className="acc-num">Amount</th><th></th></tr></thead><tbody>
-              {recurringTemplates.map(row => (
-                <tr key={row.id}>
-                  <td>{row.name}{row.isActive === false ? " · inactive" : ""}</td>
-                  <td>{RECURRING_KINDS.find(item => item.id === row.kind)?.label || row.kind} · {row.frequency}</td>
-                  <td>{row.nextRunOn || "—"}</td>
-                  <td className="acc-num">{money(row.amount)}</td>
-                  <td className="accounts-action-row">
-                    <button type="button" className="btn primary" disabled={saving || !canWrite} onClick={() => openSimpleFromRecurring(row)}>Run now</button>
-                    <button type="button" className="btn" disabled={saving} onClick={() => setRecurringDraft({
-                      id: row.id,
-                      name: row.name,
-                      kind: row.kind,
-                      frequency: row.frequency,
-                      nextRunOn: row.nextRunOn || todayIso(),
-                      amount: String(row.amount || ""),
-                      partyId: row.partyId || "",
-                      narration: row.narration || "",
-                      mode: row.mode || "cash",
-                      isActive: row.isActive !== false,
-                    })}>Edit</button>
-                    <button type="button" className="btn danger" disabled={saving} onClick={() => run(async () => {
-                      await deleteRecurringTemplate(token, row.id);
-                      setRecurringTemplates(await loadRecurringTemplates(token));
-                    }, "Template deleted.")}>Delete</button>
-                  </td>
-                </tr>
-              ))}
-              {!recurringTemplates.length && <tr><td colSpan="5">No recurring templates yet.</td></tr>}
-            </tbody></table></div>
-          </AccSetupSection>}
-          <AccSetupSection
-            icon="A"
-            title="Audit trail"
-            copy="Owner actions on books, parties, and settings. Posted amounts are not edited here."
-            collapsible
-            summary={`${audit.length} ${audit.length === 1 ? "event" : "events"}`}
-          >
-            <div className="table spacer acc-table-wrap"><table><thead><tr><th>When (IST)</th><th>Action</th><th>Entity</th><th>Before → After</th><th>Reason</th></tr></thead><tbody>
-              {pagedAudit.items.map(row => <tr key={row.id}>
-                <td>{formatIstDateTime(row.createdAt)}</td>
-                <td>{row.action}</td>
-                <td>{row.entityType}</td>
-                <td className="small">{row.oldValue || row.newValue ? `${JSON.stringify(row.oldValue || {})} → ${JSON.stringify(row.newValue || {})}` : "—"}</td>
-                <td>{row.reason || "—"}</td>
-              </tr>)}
-              {!audit.length && <tr><td colSpan="5">No accounting audit events yet.</td></tr>}
-            </tbody></table></div>
-            <AccPager page={pagedAudit.page} pages={pagedAudit.pages} total={pagedAudit.total} onPage={setListPage} noun="events" />
-          </AccSetupSection>
-        </div>}
+        {section === "setup" && <SetupSection
+          activeCompany={activeCompany}
+          setupForm={setupForm}
+          setSetupForm={setSetupForm}
+          canAdmin={canAdmin}
+          saving={saving}
+          setError={setError}
+          run={run}
+          token={token}
+          downloadCompanyBackup={downloadCompanyBackup}
+          previewCompanyRestore={previewCompanyRestore}
+          restoreDraft={restoreDraft}
+          restoreBusy={restoreBusy}
+          confirmCompanyRestore={confirmCompanyRestore}
+          setRestoreDraft={setRestoreDraft}
+          companies={companies}
+          activeCompanyId={activeCompanyId}
+          switchCompany={switchCompany}
+          archiveCompany={archiveCompany}
+          setCompanyDraft={setCompanyDraft}
+          setShowCreateCompany={setShowCreateCompany}
+          gstForm={gstForm}
+          setGstForm={setGstForm}
+          settings={settings}
+          openCoa={openCoa}
+          visibleAccounts={visibleAccounts}
+          vouchers={vouchers}
+          removeCoa={removeCoa}
+          importParties={importParties}
+          openParty={openParty}
+          parties={parties}
+          partySearch={partySearch}
+          setPartySearch={setPartySearch}
+          partyTypeFilter={partyTypeFilter}
+          setPartyTypeFilter={setPartyTypeFilter}
+          partyCountByType={partyCountByType}
+          setupParties={setupParties}
+          partyImportStatus={partyImportStatus}
+          clearPartyFilters={clearPartyFilters}
+          pagedSetupParties={pagedSetupParties}
+          outstandingByParty={outstandingByParty}
+          partyActions={partyActions}
+          setListPage={setListPage}
+          orgSettings={orgSettings}
+          openSection={openSection}
+          lockForm={lockForm}
+          setLockForm={setLockForm}
+          locks={locks}
+          askReason={askReason}
+          accountsRoles={accountsRoles}
+          teamInvites={teamInvites}
+          inviteDraft={inviteDraft}
+          setInviteDraft={setInviteDraft}
+          setTeamInvites={setTeamInvites}
+          setAccountsRoles={setAccountsRoles}
+          setInviteEmailDraft={setInviteEmailDraft}
+          setNotice={setNotice}
+          inviteEmailDraft={inviteEmailDraft}
+          roleDraft={roleDraft}
+          setRoleDraft={setRoleDraft}
+          canWrite={canWrite}
+          recurringTemplates={recurringTemplates}
+          recurringDraft={recurringDraft}
+          setRecurringDraft={setRecurringDraft}
+          setRecurringTemplates={setRecurringTemplates}
+          openSimpleFromRecurring={openSimpleFromRecurring}
+          audit={audit}
+          pagedAudit={pagedAudit}
+        />}
       </>}
 
       {showVoucher && <Modal title="Post voucher" close={closeVoucher}>
