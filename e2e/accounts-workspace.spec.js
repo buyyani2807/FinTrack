@@ -155,3 +155,21 @@ test.describe("Breadcrumbs", () => {
     await expect(page.getByRole("navigation", { name: "Breadcrumb" }).locator('[aria-current="page"]')).toHaveText("Ravi Kumar", { timeout: 15_000 });
   });
 });
+
+test.describe("Chit type", () => {
+  test("the create-scheme form can switch type and keeps the shared details", async ({ page }) => {
+    await mockAccountsWorkspace(page);
+    await page.goto("/chit-fund");
+    await page.getByRole("button", { name: "+ New scheme" }).click({ timeout: 15_000 });
+    await page.getByRole("button", { name: /Fixed Chit/ }).first().click();
+    const types = page.getByRole("group", { name: "Chit type" });
+    await expect(types.getByRole("button", { name: "Fixed" })).toHaveAttribute("aria-pressed", "true");
+    await page.getByLabel("Scheme name *").fill("Diwali group");
+    await types.getByRole("button", { name: "Auction" }).click();
+    await expect(page.getByRole("heading", { name: "Create Auction Chit scheme" })).toBeVisible();
+    await expect(page.getByLabel("Scheme name *")).toHaveValue("Diwali group");
+    await types.getByRole("button", { name: "Predefined Bid" }).click();
+    await expect(page.getByRole("heading", { name: "Create Fixed Predefined Bid Chit" })).toBeVisible();
+    await expect(page.getByLabel("Scheme name *")).toHaveValue("Diwali group");
+  });
+});

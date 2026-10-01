@@ -507,6 +507,13 @@ input:disabled, select:disabled, textarea:disabled { background: var(--ft-surfac
 :root[data-theme="dark"] .modal, :root[data-theme="dark"] .acc-modal { border-color: var(--ft-border) !important; }
 .modal .title, .acc-modal .title { font-size: 20px !important; line-height: 28px !important; }
 .modal > .row:first-child, .acc-modal > .row:first-child { align-items: flex-start; gap: 16px; }
+/* segmented switch (e.g. Chit type inside the create-scheme form) */
+.ft-segmented { display: flex; gap: 4px; margin: 16px 0 4px; padding: 4px; border-radius: var(--ft-radius-sm); background: var(--ft-surface-muted); }
+.ft-segmented > button { flex: 1 1 0; min-height: 40px; padding: 8px 12px; border: 0; border-radius: var(--ft-radius-xs); background: transparent; color: var(--ft-muted); font: 600 14px/1.2 var(--ft-font); cursor: pointer; }
+.ft-segmented > button:hover { color: var(--ft-text); }
+.ft-segmented > button.active { background: var(--ft-surface); color: var(--ft-primary); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+.ft-segmented > button:focus-visible { outline: 2px solid var(--ft-primary); outline-offset: 1px; }
+@media (width <= 680px) { .ft-segmented > button { padding: 8px 4px; font-size: 13px; white-space: nowrap; } }
 .ft-icon-btn { display: inline-grid; place-items: center; width: 40px; height: 40px; flex: none; padding: 0; border: 0; border-radius: var(--ft-radius-sm); background: transparent; color: var(--ft-text-2); cursor: pointer; }
 .ft-icon-btn:hover { background: var(--ft-surface-hover); color: var(--ft-text); }
 .ft-dialog-close { margin: -6px -8px 0 0; }

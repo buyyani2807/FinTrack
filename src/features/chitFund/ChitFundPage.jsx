@@ -195,6 +195,8 @@ export function ChitFundPage({ token, openSchemeId = null, onOpenSchemeConsumed,
       setActivateBusy(false);
     }
   };
+  // While creating, the type can be switched in the form: the details every type shares are kept, type-specific fields start fresh.
+  const changeSchemeType = modal === "scheme" ? type => setSchemeForm(current => ({ ...emptySchemeForm(type), name: current.name, startDate: current.startDate, chitValue: current.chitValue, durationMonths: current.durationMonths, memberCount: current.memberCount })) : undefined;
   const editScheme = scheme => {
     setSchemeForm({
       id: scheme.id, chitType: scheme.chit_type || CHIT_TYPES.AUCTION, name: scheme.name, chitValue: scheme.chit_value, durationMonths: scheme.duration_months,
@@ -245,10 +247,10 @@ export function ChitFundPage({ token, openSchemeId = null, onOpenSchemeConsumed,
     {landing === "reports" && <ChitLandingReports token={token} schemes={schemes} />}
     {modal === "choose-type" && <ChitTypeChooser close={() => setModal(null)} choose={type => { setSchemeForm(emptySchemeForm(type)); setModal("scheme"); }} />}
     {(modal === "scheme" || modal === "edit-scheme") && (schemeForm.chitType === CHIT_TYPES.FIXED_PREDEFINED_BID
-      ? <PredefinedBidSchemeForm form={schemeForm} setForm={setSchemeForm} busy={busy} error={error} onClose={() => { setModal(null); if (modal !== "edit-scheme") setSchemeForm(emptySchemeForm()); }} onSubmit={submitScheme} />
+      ? <PredefinedBidSchemeForm onChangeType={changeSchemeType} form={schemeForm} setForm={setSchemeForm} busy={busy} error={error} onClose={() => { setModal(null); if (modal !== "edit-scheme") setSchemeForm(emptySchemeForm()); }} onSubmit={submitScheme} />
       : schemeForm.chitType === CHIT_TYPES.FIXED
-        ? <FixedChitSchemeForm title={modal === "edit-scheme" ? "Edit Fixed Chit scheme" : "Create Fixed Chit scheme"} form={schemeForm} setForm={setSchemeForm} busy={busy} error={error} onClose={() => { setModal(null); if (modal !== "edit-scheme") setSchemeForm(emptySchemeForm()); }} onSubmit={submitScheme} submitLabel={modal === "edit-scheme" ? "Save changes" : "Create draft"} />
-        : <ChitSchemeForm title={modal === "edit-scheme" ? "Edit Auction Chit scheme" : "Create Auction Chit scheme"} form={schemeForm} setForm={setSchemeForm} busy={busy} error={error} onClose={() => { setModal(null); if (modal !== "edit-scheme") setSchemeForm(emptySchemeForm()); }} onSubmit={submitScheme} submitLabel={modal === "edit-scheme" ? "Save changes" : "Create draft"} />)}
+        ? <FixedChitSchemeForm onChangeType={changeSchemeType} title={modal === "edit-scheme" ? "Edit Fixed Chit scheme" : "Create Fixed Chit scheme"} form={schemeForm} setForm={setSchemeForm} busy={busy} error={error} onClose={() => { setModal(null); if (modal !== "edit-scheme") setSchemeForm(emptySchemeForm()); }} onSubmit={submitScheme} submitLabel={modal === "edit-scheme" ? "Save changes" : "Create draft"} />
+        : <ChitSchemeForm onChangeType={changeSchemeType} title={modal === "edit-scheme" ? "Edit Auction Chit scheme" : "Create Auction Chit scheme"} form={schemeForm} setForm={setSchemeForm} busy={busy} error={error} onClose={() => { setModal(null); if (modal !== "edit-scheme") setSchemeForm(emptySchemeForm()); }} onSubmit={submitScheme} submitLabel={modal === "edit-scheme" ? "Save changes" : "Create draft"} />)}
     {activateTarget && <ChitActivateSchemeModal scheme={activateTarget.scheme} memberCount={activateTarget.memberCount} busy={activateBusy} error={activateError} onCancel={() => !activateBusy && setActivateTarget(null)} onConfirm={confirmActivate} />}
   </main>;
 }
