@@ -713,6 +713,86 @@ html:has(.accounts-dashboard) .financier-nav {
   max-width: none;
 }
 
+/* Owner daily brief */
+.accounts-dashboard .acc-brief { display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px; }
+.accounts-dashboard .acc-brief-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.accounts-dashboard .acc-brief-head h3 { margin: 2px 0 0; font-size: 18px; }
+.accounts-dashboard .acc-brief-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.accounts-dashboard .acc-brief-col {
+  display: flex; flex-direction: column; gap: 8px; min-width: 0;
+  padding: 12px; border: 1px solid var(--acc-line); border-radius: var(--acc-radius-sm); background: var(--acc-card-elevated);
+}
+.accounts-dashboard .acc-brief-col > header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.accounts-dashboard .acc-brief-col h4 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--acc-muted); }
+.accounts-dashboard .acc-brief-col > header strong { font-size: 16px; }
+.accounts-dashboard .acc-brief-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.accounts-dashboard .acc-brief-list li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.accounts-dashboard .acc-brief-row-main { flex: 1 1 120px; min-width: 0; display: flex; flex-direction: column; }
+.accounts-dashboard .acc-brief-row-main strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.accounts-dashboard .acc-brief-list .btn { min-height: 32px; padding: 0 10px; font-size: 12px; }
+.accounts-dashboard .acc-brief-po { display: flex; flex-direction: column; gap: 6px; }
+.accounts-dashboard .acc-brief-po .btn { width: 100%; justify-content: center; }
+.accounts-dashboard .acc-brief .btn.linkish { align-self: flex-start; padding: 0; min-height: 0; }
+@media (max-width: 1200px) { .accounts-dashboard .acc-brief-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .accounts-dashboard .acc-brief-grid { grid-template-columns: 1fr; } }
+
+/* Monthly GST pack */
+.accounts-dashboard .acc-gstpack { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+.accounts-dashboard .acc-gstpack-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.accounts-dashboard .acc-gstpack-head h3 { margin: 2px 0 4px; }
+.accounts-dashboard .acc-gstpack-metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.accounts-dashboard .acc-gstpack-metrics > div,
+.accounts-dashboard .acc-routes-card-metrics > div {
+  display: flex; flex-direction: column; gap: 2px; padding: 10px; border: 1px solid var(--acc-line); border-radius: var(--acc-radius-sm);
+}
+.accounts-dashboard .acc-gstpack-checks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.accounts-dashboard .acc-gstpack-checks li { display: flex; gap: 8px; align-items: baseline; }
+.accounts-dashboard .acc-gstpack-sev {
+  flex: 0 0 auto; min-width: 54px; text-align: center; padding: 1px 6px; border-radius: 999px; font-size: 11px; font-weight: 700;
+  border: 1px solid var(--acc-line); color: var(--acc-muted);
+}
+.accounts-dashboard .acc-gstpack-checks .tone-error .acc-gstpack-sev { color: var(--acc-red); border-color: #ff7a7a55; background: #ff7a7a14; }
+.accounts-dashboard .acc-gstpack-checks .tone-warn .acc-gstpack-sev { color: var(--acc-gold); border-color: #f4b94255; background: #f4b94214; }
+.accounts-dashboard .acc-gstpack-checks .tone-ok .acc-gstpack-sev { color: var(--acc-green); border-color: #4fd08d44; background: #4fd08d14; }
+.accounts-dashboard .acc-gstpack-filings { border-top: 1px solid var(--acc-line); padding-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.accounts-dashboard .acc-gstpack-filings-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.accounts-dashboard .acc-gstpack-filings ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.accounts-dashboard .acc-gstpack-filing {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 10px; border: 1px solid var(--acc-line); border-radius: var(--acc-radius-sm);
+}
+.accounts-dashboard .acc-gstpack-filing.tone-filed { border-color: #4fd08d55; }
+.accounts-dashboard .acc-gstpack-filing.tone-overdue { border-color: #ff7a7a66; }
+.accounts-dashboard .acc-gstpack-mark { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.accounts-dashboard .acc-gstpack-mark input { min-height: 36px; max-width: 170px; }
+@media (max-width: 900px) { .accounts-dashboard .acc-gstpack-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Collection routes */
+.accounts-dashboard .acc-routes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.accounts-dashboard .acc-routes-card { display: flex; flex-direction: column; gap: 10px; }
+.accounts-dashboard .acc-routes-card.inactive { opacity: .65; }
+.accounts-dashboard .acc-routes-card-head { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+.accounts-dashboard .acc-routes-card-head h3 { margin: 0 0 2px; font-size: 16px; }
+.accounts-dashboard .acc-routes-card-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.accounts-dashboard .acc-routes-preview { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.accounts-dashboard .acc-routes-preview li > span:first-child { margin-right: 6px; }
+.accounts-dashboard .acc-routes-days { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.accounts-dashboard .acc-routes-days .btn { min-width: 48px; }
+.accounts-dashboard .acc-routes-stop-list,
+.accounts-dashboard .acc-routes-candidates {
+  list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 300px; overflow-y: auto;
+}
+.accounts-dashboard .acc-routes-stop-list li,
+.accounts-dashboard .acc-routes-candidates li {
+  display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--acc-line); border-radius: var(--acc-radius-sm);
+}
+.accounts-dashboard .acc-routes-stop-no { width: 24px; text-align: center; font-weight: 700; color: var(--acc-muted); }
+.accounts-dashboard .acc-routes-stop-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.accounts-dashboard .acc-routes-stop-list .btn.ghost { min-height: 32px; min-width: 32px; padding: 0 6px; }
+.accounts-dashboard .acc-routes-subhead { margin: 18px 0 8px; font-size: 15px; }
+.accounts-dashboard .acc-routes-total-row td { font-weight: 700; }
+.accounts-dashboard .acc-row-muted td { opacity: .55; }
+
 .accounts-dashboard .acc-doc-logo {
   max-width: 72px;
   max-height: 56px;

@@ -447,12 +447,25 @@ export function AccDocumentsWorkspace({
   onSetStatus,
   onConvertToEntry,
   onSaveSettings,
+  prefill = null,
 }) {
-  const [tab, setTab] = useState("quotation");
+  const [tab, setTab] = useState(prefill?.docType || "quotation");
   const [search, setSearch] = useState("");
   const [showClosed, setShowClosed] = useState(false);
   const [form, setForm] = useState(null);
   const [formError, setFormError] = useState("");
+  const [prefillKey, setPrefillKey] = useState(null);
+  if (prefill?.key && prefill.key !== prefillKey && canEdit) {
+    setPrefillKey(prefill.key);
+    setTab(prefill.docType);
+    setFormError("");
+    setForm({
+      ...emptyDocumentForm(prefill.docType, todayIso()),
+      partyId: prefill.partyId || "",
+      notes: prefill.notes || "",
+      lines: prefill.lines?.length ? prefill.lines : [emptyItemLine()],
+    });
+  }
   const [viewId, setViewId] = useState(null);
   const [cancelDoc, setCancelDoc] = useState(null);
   const [cancelReason, setCancelReason] = useState("");

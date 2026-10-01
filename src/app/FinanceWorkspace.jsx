@@ -7,6 +7,7 @@ import { ChitFundRoute } from "../features/workspace/routes/ChitFundRoute.jsx";
 import { CollectionStaffRoute } from "../features/workspace/routes/CollectionStaffRoute.jsx";
 import { DashboardRoute } from "../features/workspace/routes/DashboardRoute.jsx";
 import { RequireModule } from "../features/workspace/routes/RequireModule.jsx";
+import { RouteCollectionsRoute } from "../features/workspace/routes/RouteCollectionsRoute.jsx";
 import { SettingsRoute } from "../features/workspace/routes/SettingsRoute.jsx";
 
 // Child routes shared by Daily and Monthly Finance: Today's collections and account detail. Their screens are views
@@ -33,6 +34,7 @@ export function FinanceWorkspace({ session }) {
       <Route path={workspacePaths.cashbook} element={<RequireModule module="cashbook"><CashbookRoute /></RequireModule>} />
       <Route path={workspacePaths.accounts} element={<RequireModule module="accounts"><AccountsRoute /></RequireModule>} />
       <Route path={workspacePaths.collectionStaff} element={<RequireModule module="isOwner"><CollectionStaffRoute /></RequireModule>} />
+      <Route path={workspacePaths.routeCollections} element={<RouteCollectionsRoute />} />
       <Route path={workspacePaths.settings} element={<RequireModule module="isOwner"><SettingsRoute /></RequireModule>} />
       <Route path="*" element={<Navigate to={workspacePaths.dashboard} replace />} />
     </Route>

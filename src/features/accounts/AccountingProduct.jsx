@@ -70,6 +70,12 @@ import {
   saveTradeDocument,
   setPartyCredit,
   setTradeDocumentStatus,
+  loadCollectionRoutes,
+  saveCollectionRoute,
+  deleteCollectionRoute,
+  setRouteStops,
+  loadComplianceFilings,
+  setComplianceFiling,
 } from "./accountingRepository.js";
 import {
   AccOnboardingWizard,
@@ -265,7 +271,13 @@ import { ArReminderButton, OutstandingWhatsAppButton, PartyStatementButton, Paym
 import { AccItemsSetup } from "./AccItemsSetup.jsx";
 import { AccInventoryWorkspace } from "./AccInventoryWorkspace.jsx";
 import { AccDocumentsWorkspace } from "./AccDocumentsWorkspace.jsx";
-import { creditCheck, documentFulfilment, documentLabel } from "./tradeDocumentModel.js";
+import { creditCheck, documentFulfilment, documentLabel, pendingOrderRows } from "./tradeDocumentModel.js";
+import { AccRoutesWorkspace } from "./AccRoutesWorkspace.jsx";
+import { receivablePositions } from "./routeCollectionsModel.js";
+import { AccGstPackCard } from "./AccGstPackCard.jsx";
+import { AccOwnerDailyBrief } from "./AccOwnerDailyBrief.jsx";
+import { buildOwnerDailyBrief, reorderPurchaseOrderLines } from "./ownerDailyBrief.js";
+import { addMonths, gstFilingSchedule, monthKey, monthLabel, monthRange, readGstFrequency, writeGstFrequency } from "./gstCalendar.js";
 import { periodStockValues } from "./inventoryValuation.js";
 import {
   aggregateItemizedGst,
@@ -710,7 +722,7 @@ async function fetchAccountsBundle(token, { preferredCompanyId, wantRecurring = 
   if (company) {
     try { sessionStorage.setItem(COMPANY_STORAGE_KEY, company.id); } catch { /* ignore */ }
   }
-  const [settings, accounts, parties, pipeline, vouchers, items, itemCategories, stockMovements, voucherItemLines, recurring, tradeDocuments, documentSettings] = await Promise.all([
+  const [settings, accounts, parties, pipeline, vouchers, items, itemCategories, stockMovements, voucherItemLines, recurring, tradeDocuments, documentSettings, complianceFilings, collectionRoutes] = await Promise.all([
     loadAccountingSettings(token),
     loadChartOfAccounts(token),
     loadParties(token),
@@ -723,6 +735,8 @@ async function fetchAccountsBundle(token, { preferredCompanyId, wantRecurring = 
     wantRecurring ? loadRecurringTemplates(token).catch(() => []) : Promise.resolve(null),
     loadTradeDocuments(token).catch(() => null),
     loadDocumentSettings(token).catch(() => ({ ...DEFAULT_DOCUMENT_SETTINGS, available: false })),
+    loadComplianceFilings(token).catch(() => null),
+    loadCollectionRoutes(token).catch(() => null),
   ]);
   const mergedSettings = {
     ...(settings || {}),
@@ -755,6 +769,8 @@ async function fetchAccountsBundle(token, { preferredCompanyId, wantRecurring = 
     recurringTemplates: recurring || (sameCompanyCache ? accountsSnapshot.recurringTemplates : []),
     tradeDocuments,
     documentSettings,
+    complianceFilings,
+    collectionRoutes,
   };
   accountsSnapshot = bundle;
   return bundle;
@@ -783,6 +799,7 @@ const NAV_TREE = [
       { id: "parties", label: "Party Ledger" },
       { id: "receivables", label: "Receivables" },
       { id: "payables", label: "Payables" },
+      { id: "routes", label: "Collection routes" },
     ],
   },
   {
@@ -813,6 +830,7 @@ function sectionTrail(section, reportTab) {
   if (section === "parties") return ["Parties", "Party Ledger"];
   if (section === "receivables") return ["Parties", "Receivables"];
   if (section === "payables") return ["Parties", "Payables"];
+  if (section === "routes") return ["Parties", "Collection routes"];
   if (section === "ledger") return ["Reports", "Ledger"];
   if (section === "pnl") return ["Reports", "Profit & Loss"];
   if (section === "balance") return ["Reports", "Balance Sheet"];
@@ -1101,6 +1119,7 @@ const SECTIONS = [
   { id: "receivables", label: "Receivables", group: "Parties" },
   { id: "payables", label: "Payables", group: "Parties" },
   { id: "parties", label: "Party Ledger", group: "Parties" },
+  { id: "routes", label: "Collection routes", group: "Parties" },
   { id: "crm", label: "Customer Pipeline", group: "Parties" },
   { id: "reports", label: "Reports", group: "Reports" },
   { id: "bank", label: "Bank Reconciliation", group: "Reports" },
@@ -1753,6 +1772,10 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [voucherItemLines, setVoucherItemLines] = useState(cached?.voucherItemLines ?? []);
   const [tradeDocuments, setTradeDocuments] = useState(cached?.tradeDocuments ?? null);
   const [documentSettings, setDocumentSettings] = useState(cached?.documentSettings ?? { ...DEFAULT_DOCUMENT_SETTINGS, available: false });
+  const [complianceFilings, setComplianceFilings] = useState(cached?.complianceFilings ?? null);
+  const [collectionRoutes, setCollectionRoutes] = useState(cached?.collectionRoutes ?? null);
+  const [documentPrefill, setDocumentPrefill] = useState(null);
+  const [gstFrequencyState, setGstFrequencyState] = useState(null);
   const [inventorySettings, setInventorySettings] = useState({ available: false, allowNegativeStock: false });
   const [audit, setAudit] = useState([]);
   const [locks, setLocks] = useState([]);
@@ -1868,6 +1891,8 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       setVoucherItemLines(bundle.voucherItemLines);
       setTradeDocuments(bundle.tradeDocuments);
       setDocumentSettings(bundle.documentSettings);
+      setComplianceFilings(bundle.complianceFilings);
+      setCollectionRoutes(bundle.collectionRoutes);
       // Setup (audit, locks, roles, invites) and bank-statement data are loaded
       // by the section-specific effect below.
       if (bundle.recurringFetched) setRecurringTemplates(bundle.recurringTemplates);
@@ -2010,8 +2035,14 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
           }
           return;
         }
-        const nextStatements = await loadBankStatements(token).catch(() => []);
-        if (!cancelled) setStatements(nextStatements || []);
+        const [nextStatements, nextLocks] = await Promise.all([
+          loadBankStatements(token).catch(() => []),
+          section === "overview" ? loadPeriodLocks(token).catch(() => null) : Promise.resolve(null),
+        ]);
+        if (!cancelled) {
+          setStatements(nextStatements || []);
+          if (nextLocks) setLocks(nextLocks);
+        }
       } catch (err) {
         if (!cancelled) setError(err.message || "Could not load this screen.");
       }
@@ -2181,6 +2212,53 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     for (const item of items) map[item.id] = currentStockForItem(item, stockMovements);
     return map;
   }, [items, stockMovements]);
+  const gstFrequency = gstFrequencyState?.companyId === activeCompanyId ? gstFrequencyState.value : readGstFrequency(activeCompanyId);
+  const changeGstFrequency = value => {
+    writeGstFrequency(activeCompanyId, value);
+    setGstFrequencyState({ companyId: activeCompanyId, value });
+  };
+  const wantBrief = wantOverview && canWrite;
+  const gstSchedule = useMemo(() => {
+    if (!wantBrief || !activeCompany) return null;
+    return gstFilingSchedule({
+      today: todayIso(),
+      registration: activeCompany.gstRegistration,
+      frequency: gstFrequency,
+      stateCode: activeCompany.stateCode,
+      filings: complianceFilings || [],
+      since: activeCompany.booksStartedOn || settings?.booksStartedOn || "",
+    });
+  }, [wantBrief, activeCompany, gstFrequency, complianceFilings, settings]);
+  const ownerBrief = useMemo(() => {
+    if (!wantBrief) return null;
+    const today = todayIso();
+    const unmatchedBankLines = (statements || []).reduce((sum, statement) => sum + (statement.lines || []).filter(line => line.matchStatus !== "matched" && line.matchStatus !== "ignored").length, 0);
+    const lastMonth = addMonths(monthKey(today), -1);
+    const lastRange = monthRange(lastMonth);
+    const lastMonthReturns = (gstSchedule?.all || []).filter(item => item.period === lastMonth);
+    const lastMonthLocked = (locks || []).some(lock => lock.isLocked && lock.periodFrom <= lastRange.from && lock.periodTo >= lastRange.to);
+    const periodToLock = canAdmin && complianceFilings && lastMonthReturns.length && lastMonthReturns.every(item => item.status === "filed") && !lastMonthLocked
+      ? { ...lastRange, label: monthLabel(lastMonth) }
+      : null;
+    return buildOwnerDailyBrief({
+      today,
+      receivables: invoiceRegister(accounts, vouchers, parties, { kind: "receivable", today, outstandingOnly: true }),
+      payables: invoiceRegister(accounts, vouchers, parties, { kind: "payable", today, outstandingOnly: true }),
+      items,
+      stockByItem,
+      pendingPurchaseRows: pendingOrderRows({ documents: tradeDocuments || [], fulfilment, side: "purchase", parties, today }),
+      voucherItemLines,
+      vouchers,
+      parties,
+      gstSchedule,
+      unmatchedBankLines,
+      periodToLock,
+    });
+  }, [wantBrief, accounts, vouchers, parties, items, stockByItem, tradeDocuments, fulfilment, voucherItemLines, gstSchedule, statements, locks, canAdmin, complianceFilings]);
+  const routePositions = useMemo(() => {
+    if (section !== "routes") return new Map();
+    return receivablePositions(invoiceRegister(accounts, vouchers, parties, { kind: "receivable", today: todayIso(), outstandingOnly: true }));
+  }, [section, accounts, vouchers, parties]);
   const itemSalesRows = useMemo(() => itemSalesReport(voucherItemLines, vouchers, range), [voucherItemLines, vouchers, range]);
   const itemPurchaseRows = useMemo(() => itemPurchasesReport(voucherItemLines, vouchers, range), [voucherItemLines, vouchers, range]);
   const stockMoveRows = useMemo(() => stockMovementReport(stockMovements, items, range).slice(0, 200), [stockMovements, items, range]);
@@ -2238,6 +2316,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   };
 
   const openSection = id => {
+    if (id !== "documents") setDocumentPrefill(null);
     if (id === "cashbook") {
       if (onOpenCashbook) onOpenCashbook();
       else close();
@@ -2270,6 +2349,9 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     setRecurringTemplates([]);
     setTradeDocuments(null);
     setDocumentSettings({ ...DEFAULT_DOCUMENT_SETTINGS, available: false });
+    setComplianceFilings(null);
+    setCollectionRoutes(null);
+    setDocumentPrefill(null);
     setOnboardingDismissed(false);
     refresh(id);
   };
@@ -2650,6 +2732,62 @@ const openVoucher = () => {
   const saveDocSettings = next => run(async () => {
     await saveDocumentSettings(token, next);
   }, "Document settings saved.");
+
+  const openPaymentFor = row => {
+    if (!canWrite) {
+      setError("Your Accounts role is view-only.");
+      return;
+    }
+    const moneyRows = moneyAccounts(visibleAccounts);
+    setPendingBankMatch(null);
+    setPendingRecurringId(null);
+    setSimpleKind("payment");
+    setSimpleRequestId(newClientRequestId());
+    setSimpleForm({
+      ...emptySimpleForm(),
+      partyId: row.partyId,
+      amount: String(row.due || ""),
+      moneyMode: "bank",
+      narration: `Payment to ${row.partyName}`,
+      fromAccountId: moneyRows.find(account => account.accountType === "cash")?.id || moneyRows[0]?.id || "",
+      toAccountId: moneyRows.find(account => account.accountType === "bank")?.id || moneyRows.find(account => account.id !== moneyRows[0]?.id)?.id || "",
+    });
+    setShowSimple(true);
+  };
+
+  const createPurchaseOrderFromReorder = group => {
+    const lines = reorderPurchaseOrderLines(group?.rows || []);
+    if (!lines.length) return;
+    setDocumentPrefill({
+      key: `${Date.now()}`,
+      docType: "purchase_order",
+      partyId: group.supplierId || "",
+      notes: "Reorder from daily brief",
+      lines,
+    });
+    openSection("documents");
+  };
+
+  const saveRoute = form => run(async () => {
+    await saveCollectionRoute(token, form);
+  }, form.id ? "Route updated." : "Route created.");
+
+  const removeRoute = route => run(async () => {
+    await deleteCollectionRoute(token, route.id);
+  }, `Route ${route.name} deleted.`);
+
+  const saveRouteStops = (routeId, partyIds) => run(async () => {
+    await setRouteStops(token, routeId, partyIds);
+  }, "Route customers saved.");
+
+  const markGstFiled = ({ returnCode, period, filedOn = null, reference = "", clear = false }) => run(async () => {
+    await setComplianceFiling(token, { returnCode, period, filedOn, reference, clear });
+  }, clear ? "Filing mark removed." : "Marked as filed.");
+
+  const lockMonth = period => run(async () => {
+    await lockAccountingPeriod(token, period.from, period.to);
+    setLocks(await loadPeriodLocks(token));
+  }, `${period.label} locked.`);
 
   const acceptSuggestedBankMatches = (displayLines = []) => {
     if (!canWrite) {
@@ -3461,6 +3599,22 @@ const openVoucher = () => {
             />
           )}
 
+          {ownerBrief && settings && <AccOwnerDailyBrief
+            brief={ownerBrief}
+            parties={parties}
+            companyName={activeCompany?.name || settings?.companyName || ""}
+            settings={orgSettings}
+            company={activeCompany}
+            workspace={workspace}
+            canWrite={canWrite}
+            saving={saving}
+            onOpenSection={openSection}
+            onPay={openPaymentFor}
+            onCreatePurchaseOrder={createPurchaseOrderFromReorder}
+            onMarkFiled={item => markGstFiled({ returnCode: item.code, period: item.period })}
+            onLockPeriod={canAdmin ? lockMonth : null}
+          />}
+
           <AccOverviewContextBar
             fy={fy}
             lastFy={lastFy}
@@ -3951,6 +4105,21 @@ const openVoucher = () => {
             onSetStatus={changeDocumentStatus}
             onConvertToEntry={openSimpleFromDocument}
             onSaveSettings={saveDocSettings}
+            prefill={documentPrefill}
+          />
+        </div>}
+        {section === "routes" && <div className="acc-panel">
+          <AccRoutesWorkspace
+            token={token}
+            routesData={collectionRoutes}
+            parties={parties}
+            positions={routePositions}
+            canEdit={canWrite}
+            saving={saving}
+            today={todayIso()}
+            onSaveRoute={saveRoute}
+            onDeleteRoute={removeRoute}
+            onSetStops={saveRouteStops}
           />
         </div>}
         {section === "inventory" && <div className="acc-panel">
@@ -4094,6 +4263,20 @@ const openVoucher = () => {
             {!purchaseRows.length && <tr><td colSpan="4">No purchase vouchers in this period.</td></tr>}
           </tbody></table></div>}
           {section === "reports" && reportTab === "gst" && <div className="acc-gst-reports">
+            <AccGstPackCard
+              company={activeCompany}
+              businessName={workspace?.businessName || settings?.companyName || ""}
+              vouchers={vouchers}
+              parties={parties}
+              voucherItemLines={voucherItemLines}
+              filings={complianceFilings}
+              frequency={gstFrequency}
+              onFrequencyChange={changeGstFrequency}
+              canWrite={canWrite}
+              saving={saving}
+              today={todayIso()}
+              onMarkFiled={markGstFiled}
+            />
             <p className="copy">GST figures are from this company’s books for the selected dates. They are <strong>calculated</strong> data — not a filed GSTR-1 or GSTR-3B.</p>
             <div className="accounts-action-row spacer">
               <button type="button" className="btn" onClick={() => {

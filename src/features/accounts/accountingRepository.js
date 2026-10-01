@@ -865,3 +865,61 @@ export const markRecurringRun = (token, id, runOn = null) =>
     input_id: id,
     input_run_on: runOn || null,
   }, token));
+
+const migration082Error = err => {
+  if (!isMissing(err)) return err;
+  const error = new Error("Run migration 082_accounts_route_collections_gst_filings.sql in the Supabase SQL editor to enable collection routes and GST filing tracking.");
+  error.code = "MIGRATION_REQUIRED";
+  return error;
+};
+
+/** Routes with their stops, or null when migration 082 has not been run. */
+export const loadCollectionRoutes = token => ignoreMissing(Promise.all([
+  accQuery(`/rest/v1/acc_collection_routes?select=id,name,agent_id,weekdays,notes,is_active,updated_at&order=name.asc${companyEq()}`, token),
+  accQuery(`/rest/v1/acc_collection_route_stops?select=route_id,party_id,stop_order&order=stop_order.asc&limit=20000${companyEq()}`, token),
+]).then(([routes, stops]) => ({ routes: routes || [], stops: stops || [] })));
+
+export const loadCollectionAgents = token =>
+  supabase.rpc("acc_list_collection_agents", {}, token)
+    .then(rows => (Array.isArray(rows) ? rows : []))
+    .catch(err => { throw migration082Error(err); });
+
+export const saveCollectionRoute = (token, route) =>
+  accRpc("acc_save_collection_route", {
+    input_id: route.id || null,
+    input_name: route.name,
+    input_agent_id: route.agentId || null,
+    input_weekdays: (route.weekdays || []).map(Number),
+    input_notes: route.notes || null,
+    input_is_active: route.isActive !== false,
+  }, token).catch(err => { throw migration082Error(err); });
+
+export const deleteCollectionRoute = (token, id) =>
+  accRpc("acc_delete_collection_route", { input_id: id }, token).catch(err => { throw migration082Error(err); });
+
+export const setRouteStops = (token, routeId, partyIds) =>
+  accRpc("acc_set_route_stops", { input_route_id: routeId, input_party_ids: partyIds || [] }, token)
+    .catch(err => { throw migration082Error(err); });
+
+export const loadRouteCollectionsReport = (token, from, to) =>
+  ignoreMissing(accRpc("acc_route_collections_report", { input_from: from, input_to: to }, token))
+    .then(rows => (rows === null ? null : Array.isArray(rows) ? rows : []));
+
+/** GST returns marked filed, or null when migration 082 has not been run. */
+export const loadComplianceFilings = token =>
+  ignoreMissing(accQuery(`/rest/v1/acc_compliance_filings?select=return_code,period,filed_on,reference&order=period.desc&limit=500${companyEq()}`, token))
+    .then(rows => (rows === null ? null : rows.map(row => ({
+      returnCode: row.return_code,
+      period: row.period,
+      filedOn: row.filed_on,
+      reference: row.reference || "",
+    }))));
+
+export const setComplianceFiling = (token, { returnCode, period, filedOn = null, reference = "", clear = false }) =>
+  accRpc("acc_set_compliance_filing", {
+    input_return_code: returnCode,
+    input_period: period,
+    input_filed_on: filedOn || null,
+    input_reference: reference || null,
+    input_clear: Boolean(clear),
+  }, token).catch(err => { throw migration082Error(err); });
