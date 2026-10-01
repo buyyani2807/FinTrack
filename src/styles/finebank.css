@@ -141,7 +141,8 @@ a { color: var(--ft-primary); }
 .sub, .small, .copy { color: var(--ft-muted) !important; }
 .copy { line-height: 1.55; }
 .accounts-dashboard h2, .accounts-dashboard h3, .accounts-dashboard h4, .accounts-dashboard .accounts-panel-title, .shell h2, .shell h3 { color: var(--ft-text) !important; }
-.gold { color: var(--ft-warning) !important; }
+/* gold was decoration in the old design; amounts read as plain bold text, green/red keep meaning in/out */
+.gold { color: var(--ft-text) !important; }
 .green { color: var(--ft-success) !important; }
 .red { color: var(--ft-danger) !important; }
 .blue { color: var(--ft-info) !important; }
@@ -384,12 +385,19 @@ input:disabled, select:disabled, textarea:disabled { background: var(--ft-surfac
   background: var(--ft-bg); border-bottom: 1px solid var(--ft-border);
 }
 .ft-app-header-context { display: flex; align-items: center; gap: 20px; min-width: 0; }
-.ft-app-header-section { color: var(--ft-text); font-weight: 700; font-size: 22px; line-height: 28px; white-space: nowrap; }
+.ft-app-header .ft-app-header-brand { display: none; color: var(--ft-text) !important; font-size: 22px; line-height: 28px; white-space: nowrap; }
+html:not([data-ft-role="owner"]) .ft-app-header-brand { display: inline; }
 .ft-app-header-date { display: inline-flex; align-items: center; gap: 4px; min-width: 0; color: var(--ft-subtle); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ft-app-header-actions { display: flex; align-items: center; gap: 12px; flex: none; }
 .app { padding-top: var(--ft-header-h); }
 /* Accounts is a full-screen layer: start it below the header, but stack it (and its dialogs) above the header */
 .accounts-dashboard { top: var(--ft-header-h) !important; z-index: 10 !important; }
+@media (width <= 1050px) {
+  html[data-ft-role="owner"] .ft-app-header-brand { display: inline; }
+}
+@media (681px <= width <= 1050px) {
+  html[data-ft-role="owner"] .ft-app-header-brand { display: none; }
+}
 @media (width >= 1051px) {
   html[data-ft-role="owner"] .ft-app-header { left: var(--ft-sidebar-w); }
   html:has(.accounts-dashboard) .ft-app-header { left: 0; }
@@ -397,7 +405,7 @@ input:disabled, select:disabled, textarea:disabled { background: var(--ft-surfac
 @media (width <= 680px) {
   :root { --ft-header-h: 60px; }
   .ft-app-header { padding: 0 16px; }
-  .ft-app-header-section { font-size: 18px; }
+  .ft-app-header .ft-app-header-brand { display: inline; font-size: 20px; }
   .ft-app-header-date { display: none; }
   .ft-app-header .ft-theme-toggle-label { display: none; }
 }
@@ -407,7 +415,8 @@ input:disabled, select:disabled, textarea:disabled { background: var(--ft-surfac
 
 /* ------------------------------------------------------------------ page header */
 .shell > .top { padding-bottom: 20px; margin-bottom: 28px !important; border-bottom: 1px solid var(--ft-border); }
-.dashboard-home .toolbar { background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; }
+.dashboard-home .toolbar { background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; margin-bottom: 24px !important; }
+.shell > .toolbar { margin-bottom: 24px; }
 .dashboard-home .toolbar .title { color: var(--ft-text) !important; }
 
 /* ------------------------------------------------------------------ dashboard surfaces */

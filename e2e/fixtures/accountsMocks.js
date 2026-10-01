@@ -65,7 +65,23 @@ const LEDGERS = [
   { id: "la-bank", account_type: "bank", name: "HDFC Current", bank_account_last4: "4321", is_default: false, is_active: true },
 ];
 
+const financeAccount = (n, name, extra, payments, status = "active") => ({
+  id: `fa${n}`, customer_id: `c${n}`, customers: { full_name: name, phone: "9876543210", address: "MG Road" }, kind: "daily",
+  start_date: "2026-08-20", status, collection_order: n, disbursement_mode: "cash", payments, rate_changes: [],
+  customer_portal_credentials: [], created_at: "2026-08-20T09:00:00Z", ...extra,
+});
+const financePayment = (n, paidOn, total) => ({
+  id: `fp${n}`, paid_on: paidOn, mode: "cash", total_amount: total, interest_amount: 0, principal_amount: 0, penalty_amount: 0,
+  receipt_number: `R${n}`, created_at: `${paidOn}T10:00:00Z`, profiles: { full_name: "E2E Owner" },
+});
+const FINANCE_ACCOUNTS = [
+  financeAccount(1, "Ravi Kumar", { collection_amount: 12000, disbursed_amount: 10000, daily_collection: 120 }, [financePayment(1, "2026-09-27", 120), financePayment(2, "2026-09-29", 240)]),
+  financeAccount(2, "Lakshmi Devi", { collection_amount: 24000, disbursed_amount: 20000, daily_collection: 240 }, [financePayment(3, "2026-09-28", 240)]),
+  financeAccount(3, "Suresh Babu", { collection_amount: 6000, disbursed_amount: 5000, daily_collection: 60 }, [financePayment(4, "2026-09-30", 60)]),
+];
+
 const restRows = url => {
+  if (url.includes("/finance_accounts?")) return FINANCE_ACCOUNTS;
   if (url.includes("/profiles?")) return [{ id: "e2e-user", full_name: "E2E Owner", role: "owner", is_active: true, organizations: { name: "E2E Finance" } }];
   if (url.includes("/acc_settings?")) return [{ company_name: "E2E Traders", fy_start_month: 4, books_started_on: "2026-04-01", integration_enabled: false }];
   if (url.includes("/acc_coa?")) return COA;

@@ -1,10 +1,10 @@
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
+  --text: var(--ft-muted);
+  --text-h: var(--ft-bg);
   --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
+  --border: var(--ft-border);
+  --code-bg: var(--ft-surface-muted);
+  --accent: var(--ft-info);
   --accent-bg: rgba(170, 59, 255, 0.1);
   --accent-border: rgba(170, 59, 255, 0.5);
   --social-bg: rgba(244, 243, 236, 0.5);
@@ -37,8 +37,8 @@ body {
 .dashboard-finance-section {
   margin-bottom: 28px;
   padding: 22px;
-  background: linear-gradient(145deg, #202a3b, #1b2230);
-  border: 1px solid #303a4d;
+  background: linear-gradient(145deg, var(--ft-surface-subtle), var(--ft-surface));
+  border: 1px solid var(--ft-border);
   box-shadow: 0 14px 32px #080d1680;
 }
 
@@ -77,14 +77,14 @@ body {
   display: grid;
   place-items: center;
   border-radius: 12px;
-  background: #f4b94218;
-  border: 1px solid #f4b94255;
-  color: #f4b942;
+  background: color-mix(in srgb, var(--ft-primary) 9%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ft-primary) 33%, transparent);
+  color: var(--ft-primary);
   font-size: 20px;
 }
 
 .dashboard-finance-heading strong {
-  color: #f4f6fb;
+  color: var(--ft-text);
   font: 700 17px Syne;
 }
 
@@ -106,27 +106,27 @@ body {
   margin: 0;
   padding: 8px 2px;
   border: 0;
-  border-top: 1px solid #303a4d;
+  border-top: 1px solid var(--ft-border);
   background: transparent;
-  color: #f4f6fb;
+  color: var(--ft-text);
   font: 700 13px DM Sans, system-ui, sans-serif;
   text-align: left;
   cursor: pointer;
 }
 
 .dashboard-customers-toggle:hover {
-  color: #f4b942;
+  color: var(--ft-primary);
 }
 
 .dashboard-customers-toggle:focus-visible {
-  outline: 3px solid #f4b94255;
+  outline: 3px solid color-mix(in srgb, var(--ft-primary) 33%, transparent);
   outline-offset: 2px;
   border-radius: 8px;
 }
 
 .dashboard-customers-chevron {
   flex-shrink: 0;
-  color: #f4b942;
+  color: var(--ft-primary);
   font-size: 11px;
   line-height: 1;
   transition: transform .18s ease;
@@ -146,7 +146,7 @@ body {
 }
 
 .dashboard-finance-table {
-  border-top: 1px solid #303a4d;
+  border-top: 1px solid var(--ft-border);
   padding-top: 4px;
 }
 
@@ -156,7 +156,7 @@ body {
 
 .dashboard-reorder-hint {
   margin: 0 0 12px;
-  color: #9ba9bd;
+  color: var(--ft-muted);
 }
 
 .dashboard-drag-handle {
@@ -180,8 +180,8 @@ body {
   margin-top: 22px;
   padding: 22px;
   border-radius: 16px;
-  background: linear-gradient(145deg, #202a3b, #1b2230);
-  border: 1px solid #303a4d;
+  background: linear-gradient(145deg, var(--ft-surface-subtle), var(--ft-surface));
+  border: 1px solid var(--ft-border);
   box-shadow: 0 14px 32px #080d1680;
 }
 
@@ -211,7 +211,7 @@ body {
 .chit-board-title strong {
   display: block;
   font: 700 17px Syne, DM Sans, sans-serif;
-  color: #f4f6fb;
+  color: var(--ft-text);
 }
 
 .chit-board-count {
@@ -238,8 +238,8 @@ body {
   gap: 0;
   padding: 18px 18px 16px;
   border-radius: 14px;
-  background: #171d29;
-  border: 1px solid #303a4d;
+  background: var(--ft-surface);
+  border: 1px solid var(--ft-border);
   overflow: hidden;
   cursor: pointer;
   text-align: left;
@@ -255,20 +255,20 @@ body {
 
 .chit-scheme-card:hover {
   transform: translateY(-2px);
-  border-color: #526078;
+  border-color: var(--ft-border-strong);
   box-shadow: 0 14px 28px #0006;
 }
 
 .chit-board-auction .chit-scheme-card:hover {
-  border-color: #f4b94266;
+  border-color: color-mix(in srgb, var(--ft-primary) 40%, transparent);
 }
 
 .chit-board-fixed .chit-scheme-card:hover {
-  border-color: #4fd0c866;
+  border-color: color-mix(in srgb, var(--ft-primary) 40%, transparent);
 }
 
 .chit-board-predefined .chit-scheme-card:hover {
-  border-color: #9b8cff66;
+  border-color: color-mix(in srgb, var(--ft-info) 40%, transparent);
 }
 
 .chit-scheme-card-top {
@@ -291,7 +291,7 @@ body {
 .chit-scheme-name {
   margin: 12px 0 2px;
   font: 700 17px Syne, DM Sans, sans-serif;
-  color: #f4f6fb;
+  color: var(--ft-text);
   letter-spacing: -0.3px;
   overflow-wrap: anywhere;
 }
@@ -304,7 +304,7 @@ body {
 
 .chit-scheme-value-label {
   margin: 2px 0 0;
-  color: #9ba9bd;
+  color: var(--ft-muted);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -318,7 +318,7 @@ body {
   gap: 10px;
   margin-top: 14px;
   padding-top: 13px;
-  border-top: 1px solid #303a4d;
+  border-top: 1px solid var(--ft-border);
 }
 
 .chit-scheme-current {
@@ -329,7 +329,7 @@ body {
 .chit-scheme-stats span,
 .chit-scheme-current span {
   display: block;
-  color: #9ba9bd;
+  color: var(--ft-muted);
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -340,7 +340,7 @@ body {
   display: block;
   margin-top: 3px;
   font-size: 13px;
-  color: #e4e9f2;
+  color: var(--ft-text);
   overflow-wrap: anywhere;
 }
 
@@ -360,75 +360,75 @@ body {
 }
 
 .chit-board-auction {
-  border-color: #f4b94240;
+  border-color: color-mix(in srgb, var(--ft-primary) 25%, transparent);
 }
 
 .chit-board-auction .chit-board-icon {
-  background: #f4b94218;
-  border-color: #f4b94255;
-  color: #f4b942;
+  background: color-mix(in srgb, var(--ft-primary) 9%, transparent);
+  border-color: color-mix(in srgb, var(--ft-primary) 33%, transparent);
+  color: var(--ft-primary);
 }
 
 .chit-board-auction .chit-board-count,
 .chit-board-auction .chit-scheme-type {
-  background: #f4b94218;
-  color: #f4b942;
+  background: color-mix(in srgb, var(--ft-primary) 9%, transparent);
+  color: var(--ft-primary);
 }
 
 .chit-board-auction .chit-scheme-card:before {
-  background: #f4b942;
+  background: var(--ft-primary);
 }
 
 .chit-board-auction .chit-scheme-value {
-  color: #f4b942;
+  color: var(--ft-primary);
 }
 
 .chit-board-fixed {
-  border-color: #4fd0c840;
+  border-color: color-mix(in srgb, var(--ft-primary) 25%, transparent);
 }
 
 .chit-board-fixed .chit-board-icon {
-  background: #4fd0c818;
-  border-color: #4fd0c855;
-  color: #4fd0c8;
+  background: color-mix(in srgb, var(--ft-primary) 9%, transparent);
+  border-color: color-mix(in srgb, var(--ft-primary) 33%, transparent);
+  color: var(--ft-primary);
 }
 
 .chit-board-fixed .chit-board-count,
 .chit-board-fixed .chit-scheme-type {
-  background: #4fd0c818;
-  color: #4fd0c8;
+  background: color-mix(in srgb, var(--ft-primary) 9%, transparent);
+  color: var(--ft-primary);
 }
 
 .chit-board-fixed .chit-scheme-card:before {
-  background: #4fd0c8;
+  background: var(--ft-primary);
 }
 
 .chit-board-fixed .chit-scheme-value {
-  color: #4fd0c8;
+  color: var(--ft-primary);
 }
 
 .chit-board-predefined {
-  border-color: #9b8cff40;
+  border-color: color-mix(in srgb, var(--ft-info) 25%, transparent);
 }
 
 .chit-board-predefined .chit-board-icon {
-  background: #9b8cff18;
-  border-color: #9b8cff55;
-  color: #9b8cff;
+  background: color-mix(in srgb, var(--ft-info) 9%, transparent);
+  border-color: color-mix(in srgb, var(--ft-info) 33%, transparent);
+  color: var(--ft-info);
 }
 
 .chit-board-predefined .chit-board-count,
 .chit-board-predefined .chit-scheme-type {
-  background: #9b8cff18;
-  color: #9b8cff;
+  background: color-mix(in srgb, var(--ft-info) 9%, transparent);
+  color: var(--ft-info);
 }
 
 .chit-board-predefined .chit-scheme-card:before {
-  background: #9b8cff;
+  background: var(--ft-info);
 }
 
 .chit-board-predefined .chit-scheme-value {
-  color: #9b8cff;
+  color: var(--ft-info);
 }
 
 @media (max-width: 1050px) {
