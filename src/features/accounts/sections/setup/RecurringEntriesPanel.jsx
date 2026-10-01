@@ -1,5 +1,5 @@
 import { loadRecurringTemplates, upsertRecurringTemplate, deleteRecurringTemplate } from "../../data/accountingRepository.js";
-import { Field, AccSetupSection } from "../../components/AccUi.jsx";
+import { Field, AccSetupSection, AccTable } from "../../components/AccUi.jsx";
 import { MONEY_MODES } from "../../model/accountingModel.js";
 import { todayIso } from "../../../../lib/dates.js";
 import { emptyRecurringDraft, RECURRING_KINDS, RECURRING_FREQUENCIES } from "../../accountsFormDefaults.js";
@@ -64,7 +64,7 @@ export function RecurringEntriesPanel({
         }, recurringDraft.id ? "Recurring template updated." : "Recurring template saved.")}>{saving ? "Saving…" : recurringDraft.id ? "Update template" : "Save template"}</button>
         {recurringDraft.id ? <button type="button" className="btn" disabled={saving} onClick={() => setRecurringDraft(emptyRecurringDraft())}>Clear</button> : null}
       </div>
-      <div className="table spacer acc-table-wrap"><table><thead><tr><th>Name</th><th>Kind</th><th>Next</th><th className="acc-num">Amount</th><th></th></tr></thead><tbody>
+      <AccTable columns={["Name", "Kind", "Next", { label: "Amount", num: true }, ""]} empty={!recurringTemplates.length && "No recurring templates yet."}>
         {recurringTemplates.map(row => (
           <tr key={row.id}>
             <td>{row.name}{row.isActive === false ? " · inactive" : ""}</td>
@@ -92,8 +92,7 @@ export function RecurringEntriesPanel({
             </td>
           </tr>
         ))}
-        {!recurringTemplates.length && <tr><td colSpan="5">No recurring templates yet.</td></tr>}
-      </tbody></table></div>
+      </AccTable>
     </AccSetupSection>
   );
 }

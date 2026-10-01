@@ -1,4 +1,4 @@
-import { AccSetupSection } from "../../components/AccUi.jsx";
+import { AccSetupSection, AccTable } from "../../components/AccUi.jsx";
 import { ledgerHasPostedLines } from "../../model/accountingModel.js";
 import { money } from "../../accountsFormat.js";
 
@@ -12,7 +12,7 @@ export function ChartOfAccountsPanel({ settings, openCoa, visibleAccounts, vouch
       collapsible
       summary={`${visibleAccounts.length} ${visibleAccounts.length === 1 ? "account" : "accounts"}`}
     >
-      <div className="table spacer acc-table-wrap"><table><thead><tr><th>Code</th><th>Account</th><th>Group</th><th>Opening</th><th></th></tr></thead><tbody>
+      <AccTable columns={["Code", "Account", "Group", "Opening", ""]}>
         {visibleAccounts.map(account => {
           const used = ledgerHasPostedLines(account, vouchers);
           return <tr key={account.id}>
@@ -26,7 +26,7 @@ export function ChartOfAccountsPanel({ settings, openCoa, visibleAccounts, vouch
             </td>
           </tr>;
         })}
-      </tbody></table></div>
+      </AccTable>
     </AccSetupSection>
   );
 }

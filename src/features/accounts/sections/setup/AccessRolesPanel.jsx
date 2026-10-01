@@ -1,5 +1,5 @@
 import { loadAccountsRoles, setAccountsUserRole, inviteTeamMember, listTeamInvites, revokeTeamInvite } from "../../data/accountingRepository.js";
-import { Field, AccSetupSection } from "../../components/AccUi.jsx";
+import { Field, AccSetupSection, AccTable } from "../../components/AccUi.jsx";
 
 export function AccessRolesPanel({
   accountsRoles,
@@ -53,7 +53,7 @@ export function AccessRolesPanel({
         }, inviteDraft.email ? `Invite processed for ${inviteDraft.email.trim()}.` : "Invite saved.")}>{saving ? "Saving…" : "Send invite"}</button>
       </div>
       {inviteEmailDraft && <div className="notice accounts-invite-email" role="status"><strong>Invite recorded for {inviteEmailDraft.email}</strong><p className="small">The current backend does not send email automatically. Use your email client to send the instructions below; after the user signs up with this email, the invite is claimed automatically.</p><button type="button" className="btn" onClick={() => { const subject = encodeURIComponent(`FinTrack Accounts access · ${inviteEmailDraft.role}`); const body = encodeURIComponent(`You have been invited to FinTrack Accounts as ${inviteEmailDraft.role}. Sign up or sign in using this email address. Your Accounts access will be activated automatically after sign-in.`); window.location.href = `mailto:${inviteEmailDraft.email}?subject=${subject}&body=${body}`; }}>Open email draft</button><button type="button" className="btn" onClick={() => setInviteEmailDraft(null)}>Dismiss</button></div>}
-      <div className="table spacer acc-table-wrap"><table><thead><tr><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody>
+      <AccTable columns={["Email", "Role", "Status", ""]} empty={!teamInvites.length && "No email invites yet."}>
         {teamInvites.map(row => (
           <tr key={row.id}>
             <td>{row.email}</td>
@@ -65,8 +65,7 @@ export function AccessRolesPanel({
             }, "Invite revoked.")}>Revoke</button> : null}</td>
           </tr>
         ))}
-        {!teamInvites.length && <tr><td colSpan="4">No email invites yet.</td></tr>}
-      </tbody></table></div>
+      </AccTable>
       <h4 className="acc-subsection-title">Assign by user ID</h4>
       <div className="form">
         <Field label="User ID (auth UUID)"><input value={roleDraft.userId} onChange={event => setRoleDraft(current => ({ ...current, userId: event.target.value.trim() }))} placeholder="Paste Supabase auth user UUID" /></Field>
@@ -84,7 +83,7 @@ export function AccessRolesPanel({
           setAccountsRoles(await loadAccountsRoles(token));
         }, "Accounts role saved.")}>{saving ? "Saving…" : "Assign role"}</button>
       </div>
-      <div className="table spacer acc-table-wrap"><table><thead><tr><th>User ID</th><th>Role</th><th></th></tr></thead><tbody>
+      <AccTable columns={["User ID", "Role", ""]} empty={!accountsRoles.length && "No accountant or viewer roles assigned yet. Owner keeps full access."}>
         {accountsRoles.map(row => (
           <tr key={row.id}>
             <td className="small">{row.userId}</td>
@@ -95,8 +94,7 @@ export function AccessRolesPanel({
             }, "Accounts role cleared.")}>Remove</button></td>
           </tr>
         ))}
-        {!accountsRoles.length && <tr><td colSpan="3">No accountant or viewer roles assigned yet. Owner keeps full access.</td></tr>}
-      </tbody></table></div>
+      </AccTable>
     </AccSetupSection>
   );
 }

@@ -1,5 +1,5 @@
 import { lockAccountingPeriod, reopenAccountingPeriod } from "../../data/accountingRepository.js";
-import { Field, AccSetupSection } from "../../components/AccUi.jsx";
+import { Field, AccSetupSection, AccTable } from "../../components/AccUi.jsx";
 
 export function PeriodLockPanel({ canAdmin, lockForm, setLockForm, saving, run, token, locks, askReason }) {
   return (
@@ -16,14 +16,13 @@ export function PeriodLockPanel({ canAdmin, lockForm, setLockForm, saving, run, 
           run(() => lockAccountingPeriod(token, lockForm.from, lockForm.to), "Period locked.");
         }}>{saving ? "Saving…" : "Lock period"}</button>
       </div>
-      <div className="table acc-table-wrap"><table><thead><tr><th>Period</th><th>Status</th><th></th></tr></thead><tbody>
+      <AccTable spaced={false} columns={["Period", "Status", ""]}>
         {locks.map(lock => <tr key={lock.id}><td>{lock.periodFrom} to {lock.periodTo}</td><td>{lock.isLocked ? "Locked" : "Reopened"}</td>              <td>{lock.isLocked && <button type="button" className="btn" disabled={saving} onClick={() => askReason("Reopen period", "Reopen", reason => run(() => reopenAccountingPeriod(token, lock.id, reason), "Period reopened."))}>Reopen</button>}</td></tr>)}
-      </tbody></table></div>
+      </AccTable>
       </>}
-      {!canAdmin && <div className="table spacer acc-table-wrap"><table><thead><tr><th>Period</th><th>Status</th></tr></thead><tbody>
+      {!canAdmin && <AccTable columns={["Period", "Status"]} empty={!locks.length && "No period locks yet."}>
         {locks.map(lock => <tr key={lock.id}><td>{lock.periodFrom} to {lock.periodTo}</td><td>{lock.isLocked ? "Locked" : "Reopened"}</td></tr>)}
-        {!locks.length && <tr><td colSpan="2">No period locks yet.</td></tr>}
-      </tbody></table></div>}
+      </AccTable>}
     </AccSetupSection></div>
   );
 }

@@ -5,7 +5,7 @@ import { downloadAccountsCsv } from "../io/accountingExport.js";
 import { stockMovementReport, stockReasonLabel, stockStatus } from "../model/inventoryModel.js";
 import { STOCK_AGE_BUCKETS, physicalCountVariances, stockAgeing, stockValuation } from "../model/inventoryValuation.js";
 import { ITEM_CSV_TEMPLATE, parseItemCsv, planItemImport } from "../io/itemCsvImport.js";
-import { FilterField as Field } from "./AccUi.jsx";
+import { FilterField as Field, AccTable } from "./AccUi.jsx";
 
 const money = formatInr;
 const qty = (value, unit) => `${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 3 })}${unit ? ` ${unit}` : ""}`;
@@ -147,14 +147,14 @@ export function AccInventoryWorkspace({
           <Metric label="Products in stock" value={String(valuation.itemsInStock)} />
           <Metric label="Negative stock" value={String(valuation.negativeItems)} tone={valuation.negativeItems ? "red" : ""} />
         </div>
-        <div className="table spacer acc-table-wrap"><table><thead><tr><th>Item</th><th>SKU</th><th className="acc-num">Quantity</th><th className="acc-num">Avg cost</th><th className="acc-num">Value</th><th>Status</th></tr></thead><tbody>
+        <AccTable columns={["Item", "SKU", { label: "Quantity", num: true }, { label: "Avg cost", num: true }, { label: "Value", num: true }, "Status"]}>
           {valuation.rows.filter(matches).map(row => {
             const status = row.quantity < 0 ? "Negative" : stockStatus(row.quantity, row.reorderLevel) === "low" ? "Low stock" : row.quantity === 0 ? "Out of stock" : "";
             return <tr key={row.itemId}><td>{row.name}</td><td>{row.sku}</td><td className="acc-num">{qty(row.quantity, row.unit)}</td><td className="acc-num">{money(row.averageCost)}</td><td className="acc-num">{money(row.value)}</td><td className={row.quantity < 0 ? "red" : ""}>{status}</td></tr>;
           })}
           {!valuation.rows.length && <tr><td colSpan="6">No products yet. Add items or import them from a CSV.</td></tr>}
           {valuation.rows.length > 0 && <tr><td colSpan="4"><strong>Total</strong></td><td className="acc-num"><strong>{money(valuation.totalValue)}</strong></td><td></td></tr>}
-        </tbody></table></div>
+        </AccTable>
         <p className="small spacer">Valued at moving weighted-average cost. Purchases use the line value after discount and before GST; opening stock uses the item's opening rate (or purchase price). This value flows into the Profit &amp; Loss and Balance Sheet as closing stock.</p>
       </>}
 
@@ -171,10 +171,9 @@ export function AccInventoryWorkspace({
             </select>
           </Field>
         </div>
-        <div className="table spacer acc-table-wrap"><table><thead><tr><th>Date</th><th>Item</th><th>Reason</th><th className="acc-num">Qty</th><th>Voucher / note</th></tr></thead><tbody>
+        <AccTable columns={["Date", "Item", "Reason", { label: "Qty", num: true }, "Voucher / note"]} empty={!moveRows.length && "No stock movements for this filter."}>
           {moveRows.map(row => <tr key={row.id}><td>{row.movementDate}</td><td>{row.itemName}</td><td>{stockReasonLabel(row.reason)}</td><td className={`acc-num ${row.quantityDelta < 0 ? "red" : "green"}`}>{row.quantityDelta > 0 ? `+${qty(row.quantityDelta)}` : qty(row.quantityDelta)}</td><td>{row.voucherNumber || row.note || "—"}</td></tr>)}
-          {!moveRows.length && <tr><td colSpan="5">No stock movements for this filter.</td></tr>}
-        </tbody></table></div>
+        </AccTable>
       </>}
 
       {tab === "count" && countBook && <>
@@ -183,7 +182,7 @@ export function AccInventoryWorkspace({
           <Field label="Count date"><input type="date" value={countDate} onChange={event => setCountDate(event.target.value || todayIso())} /></Field>
           <input className="accounts-search" placeholder="Search item or SKU" value={search} onChange={event => setSearch(event.target.value)} />
         </div>
-        <div className="table spacer acc-table-wrap"><table><thead><tr><th>Item</th><th className="acc-num">Book qty</th><th className="acc-num">Counted</th><th className="acc-num">Difference</th><th className="acc-num">Value impact</th></tr></thead><tbody>
+        <AccTable columns={["Item", { label: "Book qty", num: true }, { label: "Counted", num: true }, { label: "Difference", num: true }, { label: "Value impact", num: true }]} empty={!countBook.rows.length && "No active products to count."}>
           {countBook.rows.filter(matches).map(row => {
             const variance = variances.find(entry => entry.itemId === row.itemId);
             return <tr key={row.itemId}>
@@ -194,8 +193,7 @@ export function AccInventoryWorkspace({
               <td className="acc-num">{variance ? money(variance.valueImpact) : ""}</td>
             </tr>;
           })}
-          {!countBook.rows.length && <tr><td colSpan="5">No active products to count.</td></tr>}
-        </tbody></table></div>
+        </AccTable>
         {countError && <p className="red small">{countError}</p>}
         <div className="accounts-action-row spacer">
           <p className="small">{variances.length} item{variances.length === 1 ? "" : "s"} to adjust · value impact {money(variances.reduce((sum, row) => sum + row.valueImpact, 0))}</p>
@@ -233,9 +231,9 @@ export function AccInventoryWorkspace({
           {importPlan.invalid.length > 0 && <ul className="small">
             {importPlan.invalid.slice(0, 8).map(row => <li key={row.rowNumber}>Row {row.rowNumber}: {row.error}</li>)}
           </ul>}
-          {importPlan.toCreate.length > 0 && <div className="table spacer acc-table-wrap"><table><thead><tr><th>Name</th><th>SKU</th><th>Type</th><th>Unit</th><th className="acc-num">Opening</th><th className="acc-num">Rate</th></tr></thead><tbody>
+          {importPlan.toCreate.length > 0 && <AccTable columns={["Name", "SKU", "Type", "Unit", { label: "Opening", num: true }, { label: "Rate", num: true }]}>
             {importPlan.toCreate.slice(0, 20).map(row => <tr key={row.rowNumber}><td>{row.name}</td><td>{row.sku}</td><td>{row.itemType}</td><td>{row.unit}</td><td className="acc-num">{row.openingStock}</td><td className="acc-num">{row.openingRate || row.purchasePrice}</td></tr>)}
-          </tbody></table></div>}
+          </AccTable>}
           <div className="tabs spacer">
             <button type="button" className="btn" onClick={() => setImportPlan(null)}>Cancel</button>
             <button type="button" className="btn primary" disabled={saving || !importPlan.toCreate.length} onClick={runImport}>{saving ? "Importing…" : `Import ${importPlan.toCreate.length}`}</button>

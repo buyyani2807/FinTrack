@@ -1,4 +1,4 @@
-import { AccMetric, AccPager } from "../components/AccUi.jsx";
+import { AccMetric, AccPager, AccTable } from "../components/AccUi.jsx";
 import { stockReasonLabel } from "../model/inventoryModel.js";
 import { money } from "../accountsFormat.js";
 import { ReportRangeBar } from "../components/AccPeriodBars.jsx";
@@ -78,14 +78,12 @@ export function ReportsSection({
         <InvoiceTable rows={pagedApInvoices.items} kind="payable" orgSettings={orgSettings} activeCompany={activeCompany} workspace={workspace} />
         <AccPager page={pagedApInvoices.page} pages={pagedApInvoices.pages} total={pagedApInvoices.total} onPage={setListPage} noun="invoices" />
       </>}
-      {section === "reports" && reportTab === "sales" && <div className="table spacer acc-table-wrap"><table><thead><tr><th>Date</th><th>Number</th><th>Narration</th><th className="acc-num">Amount</th></tr></thead><tbody>
+      {section === "reports" && reportTab === "sales" && <AccTable columns={["Date", "Number", "Narration", { label: "Amount", num: true }]} empty={!salesRows.length && "No sales vouchers in this period."}>
         {salesRows.map(row => <tr key={row.id}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.narration}</td><td className="acc-num">{money(row.debit)}</td></tr>)}
-        {!salesRows.length && <tr><td colSpan="4">No sales vouchers in this period.</td></tr>}
-      </tbody></table></div>}
-      {section === "reports" && reportTab === "purchases" && <div className="table spacer acc-table-wrap"><table><thead><tr><th>Date</th><th>Number</th><th>Narration</th><th className="acc-num">Amount</th></tr></thead><tbody>
+      </AccTable>}
+      {section === "reports" && reportTab === "purchases" && <AccTable columns={["Date", "Number", "Narration", { label: "Amount", num: true }]} empty={!purchaseRows.length && "No purchase vouchers in this period."}>
         {purchaseRows.map(row => <tr key={row.id}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.narration}</td><td className="acc-num">{money(row.debit)}</td></tr>)}
-        {!purchaseRows.length && <tr><td colSpan="4">No purchase vouchers in this period.</td></tr>}
-      </tbody></table></div>}
+      </AccTable>}
       {section === "reports" && reportTab === "gst" && <GstReport
         vouchers={vouchers}
         parties={parties}
@@ -102,22 +100,19 @@ export function ReportsSection({
         ledger={ledger}
       />}
       {section === "reports" && reportTab === "item_sales" && (
-        <div className="table spacer acc-table-wrap"><table><thead><tr><th>Item</th><th>SKU</th><th className="acc-num">Qty sold</th><th className="acc-num">Sales amount</th></tr></thead><tbody>
+        <AccTable columns={["Item", "SKU", { label: "Qty sold", num: true }, { label: "Sales amount", num: true }]} empty={!itemSalesRows.length && "No itemized sales in this period. Use Line items on a Sale entry."}>
           {itemSalesRows.map(row => <tr key={row.itemId || row.name}><td>{row.name}</td><td>{row.sku || "—"}</td><td className="acc-num">{row.quantity}</td><td className="acc-num">{money(row.amount)}</td></tr>)}
-          {!itemSalesRows.length && <tr><td colSpan="4">No itemized sales in this period. Use Line items on a Sale entry.</td></tr>}
-        </tbody></table></div>
+        </AccTable>
       )}
       {section === "reports" && reportTab === "item_purchases" && (
-        <div className="table spacer acc-table-wrap"><table><thead><tr><th>Item</th><th>SKU</th><th className="acc-num">Qty bought</th><th className="acc-num">Purchase amount</th></tr></thead><tbody>
+        <AccTable columns={["Item", "SKU", { label: "Qty bought", num: true }, { label: "Purchase amount", num: true }]} empty={!itemPurchaseRows.length && "No itemized purchases in this period."}>
           {itemPurchaseRows.map(row => <tr key={row.itemId || row.name}><td>{row.name}</td><td>{row.sku || "—"}</td><td className="acc-num">{row.quantity}</td><td className="acc-num">{money(row.amount)}</td></tr>)}
-          {!itemPurchaseRows.length && <tr><td colSpan="4">No itemized purchases in this period.</td></tr>}
-        </tbody></table></div>
+        </AccTable>
       )}
       {section === "reports" && reportTab === "stock_moves" && (
-        <div className="table spacer acc-table-wrap"><table><thead><tr><th>Date</th><th>Item</th><th>Direction</th><th className="acc-num">Qty</th><th>Reason</th><th>Voucher</th></tr></thead><tbody>
+        <AccTable columns={["Date", "Item", "Direction", { label: "Qty", num: true }, "Reason", "Voucher"]} empty={!stockMoveRows.length && "No stock movements in this period."}>
           {stockMoveRows.map(row => <tr key={row.id}><td>{row.movementDate}</td><td>{row.itemName}</td><td>{row.direction}</td><td className="acc-num">{row.quantityDelta}</td><td>{stockReasonLabel(row.reason)}</td><td>{row.voucherNumber || "—"}</td></tr>)}
-          {!stockMoveRows.length && <tr><td colSpan="6">No stock movements in this period.</td></tr>}
-        </tbody></table></div>
+        </AccTable>
       )}
     </div>
   );

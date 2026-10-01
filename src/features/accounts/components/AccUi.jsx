@@ -196,3 +196,19 @@ export function ReasonModal({ title, label, value, onChange, onConfirm, onClose,
     </div>
   </Modal>;
 }
+/**
+ * Standard Accounts table. columns: ["Label", { label, num: true }] (num right-aligns).
+ * `empty` (truthy) renders a single full-width row, e.g. empty={!rows.length && "No rows yet."}.
+ * `spaced={false}` drops the top margin for tables inside cards and dialogs.
+ */
+export function AccTable({ columns, empty = null, spaced = true, children }) {
+  return (
+    <div className={`table${spaced ? " spacer" : ""} acc-table-wrap`}><table><thead><tr>{columns.map(column => {
+      const { label, num } = typeof column === "string" ? { label: column } : column;
+      return <th key={typeof label === "string" ? label : undefined} className={num ? "acc-num" : undefined}>{label}</th>;
+    })}</tr></thead><tbody>
+      {children}
+      {empty ? <tr><td colSpan={columns.length}>{empty}</td></tr> : null}
+    </tbody></table></div>
+  );
+}

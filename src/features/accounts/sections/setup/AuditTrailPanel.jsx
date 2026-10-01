@@ -1,4 +1,4 @@
-import { AccPager, AccSetupSection } from "../../components/AccUi.jsx";
+import { AccPager, AccSetupSection, AccTable } from "../../components/AccUi.jsx";
 import { formatIstDateTime } from "../../../../lib/dates.js";
 
 export function AuditTrailPanel({ audit, pagedAudit, setListPage }) {
@@ -10,7 +10,7 @@ export function AuditTrailPanel({ audit, pagedAudit, setListPage }) {
       collapsible
       summary={`${audit.length} ${audit.length === 1 ? "event" : "events"}`}
     >
-      <div className="table spacer acc-table-wrap"><table><thead><tr><th>When (IST)</th><th>Action</th><th>Entity</th><th>Before → After</th><th>Reason</th></tr></thead><tbody>
+      <AccTable columns={["When (IST)", "Action", "Entity", "Before → After", "Reason"]} empty={!audit.length && "No accounting audit events yet."}>
         {pagedAudit.items.map(row => <tr key={row.id}>
           <td>{formatIstDateTime(row.createdAt)}</td>
           <td>{row.action}</td>
@@ -18,8 +18,7 @@ export function AuditTrailPanel({ audit, pagedAudit, setListPage }) {
           <td className="small">{row.oldValue || row.newValue ? `${JSON.stringify(row.oldValue || {})} → ${JSON.stringify(row.newValue || {})}` : "—"}</td>
           <td>{row.reason || "—"}</td>
         </tr>)}
-        {!audit.length && <tr><td colSpan="5">No accounting audit events yet.</td></tr>}
-      </tbody></table></div>
+      </AccTable>
       <AccPager page={pagedAudit.page} pages={pagedAudit.pages} total={pagedAudit.total} onPage={setListPage} noun="events" />
     </AccSetupSection>
   );

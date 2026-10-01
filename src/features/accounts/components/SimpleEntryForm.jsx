@@ -12,7 +12,7 @@ import { GST_RATES, gstStateFromGstin, isIntraGst } from "../model/accountingGst
 import { suggestBillWiseAllocations } from "../model/accountingReports.js";
 import { aggregateItemizedGst, emptyItemLine, normalizeItemLine, usesItemLines } from "../model/inventoryModel.js";
 import { money, gstStatusLabel } from "../accountsFormat.js";
-import { Field } from "./AccUi.jsx";
+import { Field, AccTable } from "./AccUi.jsx";
 
 export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, saving, maxDate, gstCompany, onGstSetup, items = [], stockByItem = {}, openInvoices = [] }) {
   const customers = parties.filter(party => party.partyType === "customer" && (party.isActive !== false || party.id === form.partyId));
@@ -241,7 +241,7 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
     {itemMode && (
       <section className="acc-form-section acc-item-lines">
         <h3 className="acc-form-section-title">Line items</h3>
-        <div className="table acc-table-wrap"><table><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Discount</th><th>GST%</th><th className="acc-num">Amount</th><th></th></tr></thead><tbody>
+        <AccTable spaced={false} columns={["Item", "Qty", "Rate", "Discount", "GST%", { label: "Amount", num: true }, ""]}>
           {(form.itemLines || [emptyItemLine()]).map((line, index) => {
             const lineTotals = normalizeItemLine(line);
             const stock = line.itemId ? stockByItem[line.itemId] : null;
@@ -267,7 +267,7 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
               </tr>
             );
           })}
-        </tbody></table></div>
+        </AccTable>
         <div className="acc-item-line-cards">
           {(form.itemLines || [emptyItemLine()]).map((line, index) => {
             const lineTotals = normalizeItemLine(line);
@@ -389,7 +389,7 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
         <h3 className="acc-form-section-title">Allocate against invoices</h3>
         <p className="small">Bill-wise links are saved with this voucher. Suggested oldest-first; edit amounts as needed. Unallocated remainder still reduces party balance.</p>
         {partyOpenInvoices.length ? (
-          <div className="table acc-table-wrap"><table><thead><tr><th>Invoice</th><th>Date</th><th className="acc-num">Outstanding</th><th className="acc-num">Allocate</th></tr></thead><tbody>
+          <AccTable spaced={false} columns={["Invoice", "Date", { label: "Outstanding", num: true }, { label: "Allocate", num: true }]}>
             {partyOpenInvoices.map(invoice => {
               const link = (form.settlements || []).find(row => row.invoiceVoucherId === invoice.id);
               return (
@@ -424,7 +424,7 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
                 </tr>
               );
             })}
-          </tbody></table></div>
+          </AccTable>
         ) : <p className="small">No open invoices for this party — receipt/payment will still post to the party ledger.</p>}
         <p className={`small ${settlementTotal > Number(form.amount || 0) + 0.001 ? "red" : ""}`}>
           Allocated {money(settlementTotal)} of {money(form.amount || 0)}
