@@ -205,6 +205,64 @@ a { color: var(--ft-primary); }
 .login .btn.primary { min-height: 48px !important; font-size: 16px !important; }
 .login .link-button { font-size: 13px; }
 
+/* sign-in: showcase panel + form (Finebank colours) */
+.ft-auth { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(360px, 460px); gap: 56px; align-items: center; max-width: 1320px; min-height: calc(100svh - var(--ft-header-h)); margin: 0 auto; padding: 40px 32px; }
+.ft-auth .login.ft-auth-panel { max-width: none !important; margin: 0 !important; padding: 0; }
+.ft-auth-brandrow { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+.ft-auth-mark { display: grid; place-items: center; width: 56px; height: 56px; flex: none; border-radius: 50%; background: var(--ft-primary); color: var(--ft-on-primary) !important; font-weight: 800; font-size: 26px; letter-spacing: 0 !important; box-shadow: 0 10px 24px var(--ft-primary-soft-strong); }
+.ft-auth-product { padding: 4px 10px; border-radius: 999px; background: var(--ft-primary-soft); color: var(--ft-primary); font-weight: 600; font-size: 13px; }
+.ft-auth-title { margin: 0 0 6px; color: var(--ft-text); font-weight: 700; font-size: 32px; line-height: 40px; letter-spacing: -.02em; }
+.ft-auth .login > .sub.ft-auth-sub { margin: 0 0 28px !important; text-align: left; font-size: 15px !important; }
+.ft-auth .login .card { padding: 28px !important; }
+
+.ft-auth-showcase { position: relative; overflow: hidden; height: min(660px, calc(100svh - 160px)); min-height: 560px; padding: 48px; border-radius: 24px; background: var(--ft-sidebar-bg); color: #fff; isolation: isolate; }
+.ft-auth-showcase::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(520px 360px at 85% 8%, rgba(41, 157, 145, .38), transparent 70%), radial-gradient(420px 300px at 0% 100%, rgba(41, 157, 145, .26), transparent 70%); }
+.ft-auth-showcase-copy { max-width: 400px; }
+.ft-auth-kicker { margin: 0 0 14px; color: #46c2b5; font-weight: 600; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; }
+.ft-auth-showcase-copy h2 { margin: 0 0 14px; color: #fff; font-weight: 700; font-size: 30px; line-height: 38px; letter-spacing: -.02em; }
+.ft-auth-showcase-copy p:last-child { margin: 0; max-width: 34ch; color: rgba(255, 255, 255, .7); font-size: 15px; }
+.ft-auth-float { position: absolute; display: grid; gap: 6px; padding: 16px 18px; border: 1px solid rgba(255, 255, 255, .1); border-radius: 16px; background: rgba(255, 255, 255, .06); backdrop-filter: blur(10px); box-shadow: 0 24px 48px rgba(0, 0, 0, .35); animation: ft-auth-float 7s ease-in-out infinite alternate; }
+.ft-auth-float strong { color: #fff; font-weight: 800; font-size: 22px; line-height: 28px; }
+.ft-auth-float-label { color: rgba(255, 255, 255, .7); font-size: 12px; font-weight: 500; }
+@keyframes ft-auth-float { from { translate: 0 0; } to { translate: 0 -10px; } }
+.ft-auth-collections { left: 48px; bottom: 56px; width: 236px; animation-delay: -2s; }
+.ft-auth-trend { display: inline-flex; align-items: center; gap: 4px; color: #5cc283; font-size: 12px; font-weight: 600; }
+.ft-auth-spark { width: 100%; height: 48px; margin-top: 4px; }
+.ft-auth-spark path { fill: none; stroke: #46c2b5; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.ft-auth-spark circle { fill: #fff; }
+.ft-auth-cashcard { right: 44px; bottom: 56px; width: 270px; min-height: 150px; align-content: space-between; border: 0; background: linear-gradient(135deg, #299d91 0%, #1f7a71 100%); rotate: -5deg; animation-delay: -4s; }
+.ft-auth-cashcard .ft-auth-float-label { color: rgba(255, 255, 255, .85); }
+.ft-auth-cashcard strong { font-size: 26px; }
+.ft-auth-cashcard-foot { display: flex; align-items: center; justify-content: space-between; color: rgba(255, 255, 255, .85); font-size: 12px; }
+.ft-auth-chip-dots { display: flex; }
+.ft-auth-chip-dots i { width: 22px; height: 22px; border-radius: 50%; background: rgba(255, 255, 255, .85); }
+.ft-auth-chip-dots i + i { margin-left: -8px; background: rgba(255, 255, 255, .45); }
+.ft-auth-calendar { right: 52px; top: 128px; width: 196px; }
+.ft-auth-calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px 6px; margin-top: 6px; }
+.ft-auth-calendar-grid span { justify-self: center; width: 5px; height: 5px; border-radius: 50%; background: rgba(255, 255, 255, .28); }
+.ft-auth-calendar-grid span.is-event { display: grid; place-items: center; width: 22px; height: 22px; margin: -8px 0; border-radius: 6px; background: var(--ft-brand); color: #fff; font-size: 11px; font-weight: 700; }
+.ft-auth-route { right: 52px; top: 262px; grid-auto-flow: column; align-items: center; gap: 12px; animation-delay: -1s; }
+.ft-auth-route-pin { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: rgba(41, 157, 145, .25); color: #46c2b5; }
+.ft-auth-route strong { display: block; font-size: 15px; line-height: 20px; }
+.ft-auth-route span span { color: rgba(255, 255, 255, .7); font-size: 12px; }
+.ft-auth-toast { top: 48px; right: 48px; grid-auto-flow: column; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 999px; background: #fff; color: #191919; font-weight: 600; font-size: 13px; animation-delay: -3s; }
+.ft-auth-toast-icon { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #25d366; color: #fff; }
+@media (width <= 1100px) {
+  .ft-auth { grid-template-columns: minmax(0, 460px); justify-content: center; padding: 32px 16px; min-height: auto; }
+  .ft-auth-showcase { display: none; }
+}
+@media (width <= 680px) {
+  .ft-auth { padding: 24px 16px; }
+  .ft-auth-title { font-size: 26px; line-height: 32px; }
+  .ft-auth .login .card { padding: 20px !important; }
+}
+
+/* password field with show/hide */
+.ft-password { position: relative; display: block; }
+.ft-password input { width: 100%; padding-right: 52px !important; }
+.ft-password-toggle { position: absolute; top: 50%; right: 4px; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: var(--ft-radius-sm); background: transparent; color: var(--ft-muted); cursor: pointer; transform: translateY(-50%); }
+.ft-password-toggle:hover { color: var(--ft-text); background: var(--ft-surface-hover); }
+
 /* ------------------------------------------------------------------ forms */
 .field label, .field > span, .accounts-filter-field .small, .accounts-filter-field > span { color: var(--ft-text-2) !important; font-weight: 600 !important; font-size: 14px !important; }
 .field input, .field select, .field textarea, input.accounts-search, .accounts-filter-field input, .accounts-filter-field select, .acc-new-entry,

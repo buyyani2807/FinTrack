@@ -1,5 +1,5 @@
-import { cloneElement, isValidElement, useId } from "react";
-import { ChevronRight, Inbox, X } from "lucide-react";
+import { cloneElement, isValidElement, useId, useState } from "react";
+import { ChevronRight, Eye, EyeOff, Inbox, X } from "lucide-react";
 
 // Shared presentational building blocks used across the finance app.
 export const Button = ({
@@ -10,7 +10,7 @@ export const Button = ({
 // The label is tied to its control (htmlFor/id) so screen readers announce the field name.
 export function Field({ label, children, className = "" }) {
   const generatedId = useId();
-  const single = isValidElement(children) && ["input", "select", "textarea"].includes(children.type);
+  const single = isValidElement(children) && (["input", "select", "textarea"].includes(children.type) || children.type?.fieldControl);
   const id = single ? children.props.id || generatedId : undefined;
   return <div className={`field ${className}`}><label htmlFor={id}>{label}</label>{single && !children.props.id ? cloneElement(children, { id }) : children}</div>;
 }
@@ -102,3 +102,15 @@ export function LoadingState({ label = "Loading…", rows = 3 }) {
     {Array.from({ length: rows }, (_, index) => <span key={index} className="ft-skeleton" aria-hidden="true" />)}
   </div>;
 }
+
+// Password field with a show/hide toggle. Passes every input prop through, so Field can label it.
+export function PasswordInput({ className = "", ...inputProps }) {
+  const [visible, setVisible] = useState(false);
+  return <span className={`ft-password${className ? ` ${className}` : ""}`}>
+    <input {...inputProps} type={visible ? "text" : "password"} />
+    <button type="button" className="ft-password-toggle" aria-pressed={visible} aria-controls={inputProps.id} aria-label={visible ? "Hide characters" : "Show characters"} title={visible ? "Hide" : "Show"} onClick={() => setVisible(value => !value)}>
+      {visible ? <EyeOff size={20} aria-hidden="true" /> : <Eye size={20} aria-hidden="true" />}
+    </button>
+  </span>;
+}
+PasswordInput.fieldControl = true;

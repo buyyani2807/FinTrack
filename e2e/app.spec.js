@@ -49,3 +49,17 @@ test.describe("Accessibility", () => {
     await expect(page.getByLabel("6-digit PIN")).toBeVisible();
   });
 });
+
+test.describe("Sign-in form", () => {
+  test("password can be shown and hidden", async ({ page }) => {
+    await page.goto("/");
+    const password = page.getByLabel("Password", { exact: true });
+    await password.fill("secret-pass");
+    await expect(password).toHaveAttribute("type", "password");
+    await page.getByRole("button", { name: "Show characters" }).click();
+    await expect(password).toHaveAttribute("type", "text");
+    await page.getByRole("button", { name: "Hide characters" }).click();
+    await expect(password).toHaveAttribute("type", "password");
+    await expect(password).toHaveValue("secret-pass");
+  });
+});
