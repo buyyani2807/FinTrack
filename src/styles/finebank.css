@@ -671,6 +671,9 @@ html[data-ft-role="owner"] .top-actions .top-theme { display: none; }
 .accounts-dashboard .acc-theme[aria-checked="true"] .ft-theme-toggle-track { background: var(--ft-primary); }
 .accounts-dashboard { z-index: 10 !important; }
 
+/* workspace pages use the whole width beside the navigation (pages that set their own reading width inline,
+   like the legal page and customer portals, keep it) */
+.shell:not([style*="max-width"]), .collection-shell, .accounts-module { max-width: none !important; }
 /* full-page routes (Cashbook, Chit Fund, Settings) render in the normal page flow */
 .ft-route-page { min-height: 100svh; background: var(--ft-bg); }
 
