@@ -1,9 +1,18 @@
+import { X } from "lucide-react";
+import { FilterSelect, SearchInput, SegmentedControl } from "../../../components/ui.jsx";
 import { backfillCashbook } from "../cashbookRepository.js";
 import { CASHBOOK_SOURCE_FILTERS, sourceOriginLabel } from "../cashbookModel.js";
 import { money } from "../cashbookConfig.js";
 import { EmptyState } from "../components/CashbookUi.jsx";
 import { PeriodPills } from "../components/PeriodPills.jsx";
 import { CashbookOverview } from "../components/CashbookOverview.jsx";
+
+const DIRECTION_OPTIONS = [
+  { id: "all", label: "All" },
+  { id: "in", label: "Money in" },
+  { id: "out", label: "Money out" },
+  { id: "transfer", label: "Transfer" },
+];
 
 export function CashbookLedgerSection({
   allTimeOverview,
@@ -27,35 +36,26 @@ export function CashbookLedgerSection({
   loanById,
   removeManual,
 }) {
+  const filtersActive = Boolean(search) || accountFilter !== "all" || sourceFilter !== "all" || directionFilter !== "all";
+  const clearFilters = () => { setSearch(""); setAccountFilter("all"); setSourceFilter("all"); setDirectionFilter("all"); };
   return (
     <div className="accounts-panel">
       <CashbookOverview balances={allTimeOverview} movement={periodOverview} period={period} />
-      <div className="card accounts-filter-card spacer">
-        <PeriodPills {...periodProps} />
-        <div className="accounts-filter-row">
-          <input className="accounts-search" placeholder="Search customer, receipt, reference…" value={search} onChange={event => setSearch(event.target.value)} />
-          <label className="accounts-filter-field">
-            <span className="small">Account</span>
-            <select value={accountFilter} onChange={event => setAccountFilter(event.target.value)}>
-              <option value="all">All accounts</option>
-              {ledgers.map(ledger => <option key={ledger.id} value={ledger.id}>{ledger.name}</option>)}
-            </select>
-          </label>
-          <label className="accounts-filter-field">
-            <span className="small">Source</span>
-            <select value={sourceFilter} onChange={event => setSourceFilter(event.target.value)}>
-              {CASHBOOK_SOURCE_FILTERS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
-            </select>
-          </label>
-          <label className="accounts-filter-field">
-            <span className="small">In / out</span>
-            <select value={directionFilter} onChange={event => setDirectionFilter(event.target.value)}>
-              <option value="all">All</option>
-              <option value="in">Money in</option>
-              <option value="out">Money out</option>
-              <option value="transfer">Transfer</option>
-            </select>
-          </label>
+      <div className="card accounts-filter-card cashbook-filters spacer">
+        <div className="cashbook-filters-top">
+          <SearchInput label="Search transactions" placeholder="Search customer, receipt, reference…" value={search} onChange={event => setSearch(event.target.value)} />
+          <PeriodPills {...periodProps} />
+        </div>
+        <div className="cashbook-filters-row">
+          <FilterSelect label="Account" value={accountFilter} onChange={setAccountFilter}>
+            <option value="all">All accounts</option>
+            {ledgers.map(ledger => <option key={ledger.id} value={ledger.id}>{ledger.name}</option>)}
+          </FilterSelect>
+          <FilterSelect label="Source" value={sourceFilter} onChange={setSourceFilter}>
+            {CASHBOOK_SOURCE_FILTERS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
+          </FilterSelect>
+          <SegmentedControl label="Money in or out" options={DIRECTION_OPTIONS} value={directionFilter} onChange={setDirectionFilter} className="cashbook-direction" />
+          {filtersActive && <button type="button" className="ft-clear-filters" onClick={clearFilters}><X size={14} aria-hidden="true" />Clear filters</button>}
         </div>
       </div>
       <div className="accounts-action-row spacer">

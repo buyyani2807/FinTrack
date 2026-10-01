@@ -173,8 +173,9 @@ td:has(> .btn + .btn) { line-height: 2.6; }
 /* Chit Fund: Upcoming payments sits directly above the insights card */
 .upcoming-payments + .module-intel { margin-top: 22px !important; }
 @media (width <= 680px) { .upcoming-payments + .module-intel { margin-top: 16px !important; } }
-/* Cashbook: action buttons sit directly above the entry list */
-.accounts-action-row + .accounts-entry-list { margin-top: 16px; }
+/* Cashbook sections: one rhythm between every block (head, filters, cards, lists) */
+.accounts-module .accounts-panel > * + * { margin-top: 18px !important; }
+@media (width <= 680px) { .accounts-module .accounts-panel > * + * { margin-top: 16px !important; } }
 /* account page: Repayment progress card */
 .repayment-progress .metric-value { margin: 12px 0 4px; }
 .repayment-progress-bar { margin-top: 16px; }
@@ -509,13 +510,56 @@ input:disabled, select:disabled, textarea:disabled { background: var(--ft-surfac
 :root[data-theme="dark"] .modal, :root[data-theme="dark"] .acc-modal { border-color: var(--ft-border) !important; }
 .modal .title, .acc-modal .title { font-size: 20px !important; line-height: 28px !important; }
 .modal > .row:first-child, .acc-modal > .row:first-child { align-items: flex-start; gap: 16px; }
-/* segmented switch (e.g. Chit type inside the create-scheme form) */
-.ft-segmented { display: flex; gap: 4px; margin: 16px 0 4px; padding: 4px; border-radius: var(--ft-radius-sm); background: var(--ft-surface-muted); }
-.ft-segmented > button { flex: 1 1 0; min-height: 40px; padding: 8px 12px; border: 0; border-radius: var(--ft-radius-xs); background: transparent; color: var(--ft-muted); font: 600 14px/1.2 var(--ft-font); cursor: pointer; }
+/* segmented control: one-of-few choice (period, money in/out, chit type) */
+.ft-segmented { display: inline-flex; gap: 2px; max-width: 100%; padding: 3px; border-radius: 10px; background: var(--ft-surface-muted); }
+.ft-segmented > button { flex: 1 1 auto; min-height: 34px; padding: 6px 14px; border: 0; border-radius: 8px; background: transparent; color: var(--ft-muted); font: 600 13px/1.2 var(--ft-font); white-space: nowrap; cursor: pointer; transition: background .15s var(--ft-ease), color .15s var(--ft-ease); }
 .ft-segmented > button:hover { color: var(--ft-text); }
-.ft-segmented > button.active { background: var(--ft-surface); color: var(--ft-primary); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+.ft-segmented > button.active { background: var(--ft-surface); color: var(--ft-primary); box-shadow: 0 1px 3px rgba(0, 0, 0, .14); }
 .ft-segmented > button:focus-visible { outline: 2px solid var(--ft-primary); outline-offset: 1px; }
-@media (width <= 680px) { .ft-segmented > button { padding: 8px 4px; font-size: 13px; white-space: nowrap; } }
+/* dark: the surface is darker than the track, so lift the selected segment instead */
+:root[data-theme="dark"] .ft-segmented > button.active { background: color-mix(in srgb, var(--ft-text) 12%, var(--ft-surface-muted)); box-shadow: none; }
+.chit-type-switch { display: flex; margin: 16px 0 4px; }
+.chit-type-switch > button { flex: 1 1 0; min-height: 38px; font-size: 14px; }
+@media (width <= 680px) {
+  .ft-segmented { display: flex; }
+  .ft-segmented > button { flex: 1 1 0; padding: 6px 4px; }
+}
+
+/* search box with a leading icon */
+.ft-search { position: relative; display: flex; align-items: center; min-width: 0; }
+.ft-search-icon { position: absolute; left: 12px; color: var(--ft-subtle); pointer-events: none; }
+.ft-search > input { width: 100%; min-height: 40px; margin: 0; padding: 8px 12px 8px 40px !important; border: 1px solid var(--ft-border); border-radius: 10px; background: var(--ft-surface); color: var(--ft-text); font: 400 14px/1.4 var(--ft-font); outline: none; }
+.ft-search > input::placeholder { color: var(--ft-subtle); }
+.ft-search > input:focus { border-color: var(--ft-primary); box-shadow: 0 0 0 3px var(--ft-primary-soft); }
+
+/* filter dropdown chip; the transparent native select on top keeps the system list and keyboard support */
+.ft-filter-select { position: relative; display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; min-height: 36px; padding: 0 10px 0 12px; border: 1px solid var(--ft-border); border-radius: 999px; background: var(--ft-surface); color: var(--ft-text); font: 400 13px/1.2 var(--ft-font); cursor: pointer; transition: border-color .15s var(--ft-ease), background .15s var(--ft-ease); }
+.ft-filter-select:hover { border-color: var(--ft-subtle); }
+.ft-filter-select:focus-within { border-color: var(--ft-primary); box-shadow: 0 0 0 3px var(--ft-primary-soft); }
+.ft-filter-select-label { color: var(--ft-muted); white-space: nowrap; }
+.ft-filter-select-value { overflow: hidden; max-width: 200px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.ft-filter-select-chevron { flex: none; color: var(--ft-subtle); }
+.ft-filter-select > select { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0 !important; border: 0 !important; opacity: 0; cursor: pointer; appearance: none; }
+.ft-filter-select.is-active { border-color: var(--ft-primary); background: var(--ft-primary-soft); }
+.ft-filter-select.is-active .ft-filter-select-value, .ft-filter-select.is-active .ft-filter-select-chevron { color: var(--ft-primary); }
+
+/* Cashbook filters: search + period on top, refinements below */
+.cashbook-filters { display: grid; gap: 14px; padding: 16px !important; }
+.cashbook-filters-top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.cashbook-filters-top .ft-search { flex: 1 1 280px; }
+.accounts-period-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.accounts-custom-range input[type="date"] { min-height: 36px !important; padding: 6px 10px !important; font-size: 13px; }
+.cashbook-filters-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 14px; border-top: 1px solid var(--ft-divider); }
+.ft-clear-filters { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; padding: 6px 8px; border: 0; border-radius: 6px; background: none; color: var(--ft-primary); font: 600 13px/1.2 var(--ft-font); cursor: pointer; }
+.ft-clear-filters:hover { background: var(--ft-primary-soft); }
+@media (width <= 680px) {
+  .cashbook-filters-top .ft-search, .accounts-period-bar, .accounts-period-bar > .ft-segmented { flex: 1 1 100%; }
+  .cashbook-direction { flex: 1 1 100%; }
+  /* full-width rows on phones: label left, value right, nothing truncated */
+  .ft-filter-select { flex: 1 1 100%; min-height: 40px; border-radius: 10px; }
+  .ft-filter-select-value { flex: 1; max-width: none; text-align: right; }
+  .ft-clear-filters { margin: 0 auto; }
+}
 .ft-icon-btn { display: inline-grid; place-items: center; width: 40px; height: 40px; flex: none; padding: 0; border: 0; border-radius: var(--ft-radius-sm); background: transparent; color: var(--ft-text-2); cursor: pointer; }
 .ft-icon-btn:hover { background: var(--ft-surface-hover); color: var(--ft-text); }
 .ft-dialog-close { margin: -6px -8px 0 0; }

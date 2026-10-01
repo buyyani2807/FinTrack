@@ -1,20 +1,16 @@
 import { CHIT_TYPES, fixedCommissionFromPercent } from "../model/fixedChit";
 import { money } from "../model/chitFormat.js";
-import { Button, Field } from "../../../components/ui.jsx";
+import { Button, Field, SegmentedControl } from "../../../components/ui.jsx";
 import { Modal } from "./ChitUi.jsx";
 
 const CHIT_TYPE_OPTIONS = [
-  { type: CHIT_TYPES.AUCTION, label: "Auction" },
-  { type: CHIT_TYPES.FIXED, label: "Fixed" },
-  { type: CHIT_TYPES.FIXED_PREDEFINED_BID, label: "Predefined Bid" },
+  { id: CHIT_TYPES.AUCTION, label: "Auction" },
+  { id: CHIT_TYPES.FIXED, label: "Fixed" },
+  { id: CHIT_TYPES.FIXED_PREDEFINED_BID, label: "Predefined Bid" },
 ];
 
 // While creating a scheme the type can still be changed from inside the form.
-function ChitTypeSwitch({ value, onChange }) {
-  return <div className="ft-segmented chit-type-switch" role="group" aria-label="Chit type">
-    {CHIT_TYPE_OPTIONS.map(option => <button key={option.type} type="button" className={value === option.type ? "active" : ""} aria-pressed={value === option.type} onClick={() => value !== option.type && onChange(option.type)}>{option.label}</button>)}
-  </div>;
-}
+const ChitTypeSwitch = ({ value, onChange }) => <SegmentedControl label="Chit type" options={CHIT_TYPE_OPTIONS} value={value} onChange={onChange} className="chit-type-switch" />;
 
 export function ChitSchemeForm({ title, form, setForm, busy, error, onClose, onSubmit, submitLabel, onChangeType }) {
   const set = (key, value) => setForm(current => ({ ...current, [key]: value }));

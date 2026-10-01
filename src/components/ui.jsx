@@ -1,5 +1,5 @@
-import { cloneElement, isValidElement, useId, useState } from "react";
-import { ArrowLeft, ChevronRight, Eye, EyeOff, Inbox, X } from "lucide-react";
+import { Children, cloneElement, isValidElement, useId, useState } from "react";
+import { ArrowLeft, ChevronDown, ChevronRight, Eye, EyeOff, Inbox, Search, X } from "lucide-react";
 
 // Shared presentational building blocks used across the finance app.
 export const Button = ({
@@ -143,4 +143,31 @@ export function Breadcrumb({ items }) {
       })}
     </ol>
   </nav>;
+}
+
+// One-of-few choice shown as joined buttons (period, money in/out, chit type…). options: [{ id, label }].
+export function SegmentedControl({ label, options, value, onChange, className = "" }) {
+  return <div className={`ft-segmented${className ? ` ${className}` : ""}`} role="group" aria-label={label}>
+    {options.map(option => <button key={option.id} type="button" className={value === option.id ? "active" : ""} aria-pressed={value === option.id} onClick={() => value !== option.id && onChange(option.id)}>{option.label}</button>)}
+  </div>;
+}
+
+// Compact filter dropdown chip: "Account  All accounts ⌄". The native select covers the whole chip (so a tap anywhere
+// opens the system list); highlighted while it filters (value differs from `allValue`).
+export function FilterSelect({ label, value, onChange, allValue = "all", children }) {
+  const selected = Children.toArray(children).find(child => isValidElement(child) && String(child.props.value) === String(value));
+  return <label className={`ft-filter-select${value !== allValue ? " is-active" : ""}`}>
+    <span className="ft-filter-select-label">{label}</span>
+    <span className="ft-filter-select-value" aria-hidden="true">{selected?.props.children ?? value}</span>
+    <ChevronDown className="ft-filter-select-chevron" size={16} aria-hidden="true" />
+    <select value={value} onChange={event => onChange(event.target.value)}>{children}</select>
+  </label>;
+}
+
+// Search box with a leading icon.
+export function SearchInput({ label, className = "", ...props }) {
+  return <label className={`ft-search${className ? ` ${className}` : ""}`}>
+    <Search className="ft-search-icon" size={18} aria-hidden="true" />
+    <input type="search" aria-label={label} {...props} />
+  </label>;
 }
