@@ -1,5 +1,6 @@
 // Mocked owner session plus a small set of books (one company, a few ledgers,
 // parties, vouchers, items and cashbook rows) so Accounts screens render real rows.
+import { Buffer } from "node:buffer";
 
 const makeE2eToken = (sub = "e2e-user") => {
   const header = Buffer.from(JSON.stringify({ alg: "none", typ: "JWT" })).toString("base64url");
