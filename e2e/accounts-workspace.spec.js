@@ -210,3 +210,24 @@ test.describe("Collection Staff", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Collection Staff" })).toBeVisible();
   });
 });
+
+test.describe("Phone navigation", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+  test("the top bar menu opens the full navigation and Logout sits in the top bar", async ({ page }) => {
+    await mockAccountsWorkspace(page);
+    await page.goto("/daily-finance");
+    const menu = page.getByRole("button", { name: "Open menu" });
+    await expect(menu).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator(".ft-mobile-header").getByRole("button", { name: "Logout" })).toBeVisible();
+    const drawer = page.getByRole("complementary", { name: "Workspace" });
+    await expect(drawer).toBeHidden();
+    await menu.click();
+    await expect(drawer.getByRole("button", { name: "Collection Staff" })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(drawer).toBeHidden();
+    await menu.click();
+    await drawer.getByRole("button", { name: "Chit Fund" }).click();
+    await expect(page).toHaveURL(/\/chit-fund$/);
+    await expect(drawer).toBeHidden();
+  });
+});
