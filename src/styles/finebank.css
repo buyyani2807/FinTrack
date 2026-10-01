@@ -401,6 +401,7 @@ html:not([data-ft-role="owner"]) .ft-app-header-brand { display: inline; }
 }
 @media (681px <= width <= 1050px) {
   html[data-ft-role="owner"] .ft-app-header-brand { display: none; }
+  html[data-ft-role="owner"]:has(.accounts-dashboard) .ft-app-header-brand { display: inline; }
 }
 @media (width >= 1051px) {
   html[data-ft-role="owner"] .ft-app-header { left: var(--ft-sidebar-w); }
@@ -509,7 +510,8 @@ html:not([data-ft-role="owner"]) .ft-app-header-brand { display: inline; }
 .accounts-dashboard .acc-ov-more-menu button:hover, .accounts-dashboard .acc-ov-more-menu button:focus-visible, .accounts-dashboard .acc-table-wrap tbody tr:hover { background: var(--ft-surface-hover) !important; }
 .accounts-dashboard .acc-switch { background: var(--ft-border-strong) !important; }
 .accounts-dashboard .acc-bottom-nav { background: var(--ft-surface) !important; border-color: var(--ft-border) !important; }
-.accounts-dashboard .acc-bottom-item { color: var(--ft-text-2) !important; }
+.accounts-dashboard .acc-bottom-item { color: var(--ft-text-2) !important; display: flex !important; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px !important; }
+.accounts-dashboard .acc-bottom-item .acc-nav-icon { width: 22px !important; height: 22px !important; }
 .accounts-dashboard .acc-bottom-item.active { background: var(--ft-primary-soft) !important; color: var(--ft-primary) !important; }
 .accounts-dashboard .acc-toast.error { background: var(--ft-danger-soft) !important; border-color: transparent !important; color: var(--ft-text) !important; }
 .accounts-dashboard .acc-toast.ok { background: var(--ft-success-soft) !important; border-color: transparent !important; color: var(--ft-text) !important; }

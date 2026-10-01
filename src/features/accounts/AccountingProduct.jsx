@@ -122,7 +122,7 @@ import {
 } from "./accountsFormDefaults.js";
 import { NAV_STORAGE_KEY, sectionTrail, SECTIONS, REPORT_TABS, MOBILE_TABS, MORE_LINKS } from "./accountsNavigation.js";
 import { gstStatusLabel } from "./accountsFormat.js";
-import { AccSidebar, AccCompanyBar, AccPageHeader } from "./components/AccLayout.jsx";
+import { AccSidebar, AccCompanyBar, AccPageHeader, NavIcon } from "./components/AccLayout.jsx";
 import { CustomerPipeline } from "./components/CustomerPipeline.jsx";
 import { ManufacturingWorkspace } from "./components/ManufacturingWorkspace.jsx";
 import { VoucherForm } from "./components/VoucherForm.jsx";
@@ -1615,6 +1615,7 @@ const openVoucher = () => {
       <nav className="acc-bottom-nav" aria-label="Accounts">
         {MOBILE_TABS.map(item => (
           <button key={item.id} type="button" className={`acc-bottom-item ${mobileTab === item.id ? "active" : ""}`} onClick={() => openSection(item.id)}>
+            <NavIcon item={item} />
             <span>{item.label}</span>
           </button>
         ))}

@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { NAV_TREE, navItemIsActive } from "../accountsNavigation.js";
-import { ArrowLeftRight, ChartColumn, Landmark, LayoutGrid, Package, Settings, Users, Wallet } from "lucide-react";
+import { ArrowLeftRight, ChartColumn, Ellipsis, Landmark, LayoutGrid, Package, Settings, Users, Wallet } from "lucide-react";
 
 // Line icons for the Accounts sections (falls back to the text glyph for any new section).
-const NAV_ICONS = { overview: LayoutGrid, vouchers: ArrowLeftRight, inventory: Package, parties: Users, reports: ChartColumn, bank: Landmark, cashbook: Wallet, setup: Settings };
-function NavIcon({ item }) {
+const NAV_ICONS = { overview: LayoutGrid, vouchers: ArrowLeftRight, inventory: Package, parties: Users, reports: ChartColumn, bank: Landmark, cashbook: Wallet, setup: Settings, more: Ellipsis };
+export function NavIcon({ item }) {
   const Icon = NAV_ICONS[item.id];
   return Icon
     ? <Icon className="acc-nav-glyph acc-nav-icon" size={22} strokeWidth={1.8} aria-hidden="true" />
