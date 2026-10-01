@@ -1,6 +1,5 @@
 /* App shell styles, moved out of App.jsx. Sections keep their original order so the cascade is unchanged. */
 /* styles */
-@import "https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Syne:wght@600;700&display=swap";
 
 * {
   box-sizing: border-box;
@@ -512,12 +511,7 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
   display: none;
 }
 
-/* visualRefresh */
-:root {
-  color-scheme: dark !important;
-  background: #0e1118 !important;
-  font: 16px / 1.45 DM Sans, system-ui, sans-serif !important;
-}
+/* visualRefresh (page colours, type and colour-scheme now come from finebank.css) */
 
 #root {
   text-align: left !important;
