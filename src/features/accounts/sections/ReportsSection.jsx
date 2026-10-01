@@ -50,6 +50,14 @@ export function ReportsSection({
   itemSalesRows,
   itemPurchaseRows,
   stockMoveRows,
+  settings,
+  voucherItemLines,
+  complianceFilings,
+  gstFrequency,
+  changeGstFrequency,
+  canWrite,
+  saving,
+  markGstFiled,
 }) {
   return (
     <div className="acc-panel">
@@ -92,6 +100,16 @@ export function ReportsSection({
         gstReport={gstReport}
         pagedGstOutput={pagedGstOutput}
         setListPage={setListPage}
+        activeCompany={activeCompany}
+        workspace={workspace}
+        settings={settings}
+        voucherItemLines={voucherItemLines}
+        complianceFilings={complianceFilings}
+        gstFrequency={gstFrequency}
+        changeGstFrequency={changeGstFrequency}
+        canWrite={canWrite}
+        saving={saving}
+        markGstFiled={markGstFiled}
       />}
       {section === "reports" && reportTab === "ledger" && <LedgerReport
         ledgerId={ledgerId}

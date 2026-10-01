@@ -271,8 +271,8 @@ export const standaloneVisibleAccounts = (accounts = [], { integrationEnabled = 
   integrationEnabled ? accounts : (accounts || []).filter(account => !isFinanceOnlyAccount(account));
 
 export const addDaysIso = (iso, days) => {
-  const date = new Date(`${String(iso).slice(0, 10)}T00:00:00`);
-  date.setDate(date.getDate() + days);
+  const date = new Date(`${String(iso).slice(0, 10)}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + Number(days || 0));
   return date.toISOString().slice(0, 10);
 };
 

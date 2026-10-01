@@ -2,8 +2,8 @@ import { test, expect } from "@playwright/test";
 import { mockAccountsWorkspace } from "./fixtures/accountsMocks.js";
 
 const SECTIONS = [
-  ["Transactions"], ["Inventory"],
-  ["Parties", "Party Ledger"], ["Parties", "Receivables"], ["Parties", "Payables"],
+  ["Transactions"], ["Documents"], ["Inventory"],
+  ["Parties", "Party Ledger"], ["Parties", "Receivables"], ["Parties", "Payables"], ["Parties", "Collection routes"],
   ["Reports", "Day Book"], ["Reports", "GST"], ["Reports", "Ledger"], ["Reports", "Trial Balance"], ["Reports", "Profit & Loss"], ["Reports", "Balance Sheet"],
   ["Banking"], ["Setup"],
 ];

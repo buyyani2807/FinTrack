@@ -35,6 +35,12 @@ export function PartyFormFields({ form, setForm, typeLocked = false }) {
         </select>
       </Field>
       <Field label="Notes"><input value={form.notes} placeholder="optional" onChange={event => set({ notes: event.target.value })} /></Field>
+      {(form.partyType === "customer" || form.partyType === "supplier") && <>
+        {form.partyType === "customer" && (
+          <Field label="Credit limit (₹)"><input type="number" min="0" step="0.01" value={form.creditLimit ?? ""} placeholder="0 = no limit" onChange={event => set({ creditLimit: event.target.value })} /></Field>
+        )}
+        <Field label="Credit days"><input type="number" min="0" max="365" step="1" value={form.creditDays ?? ""} placeholder="Default due date" onChange={event => set({ creditDays: event.target.value })} /></Field>
+      </>}
       {typeLocked ? <p className="small acc-party-lock">Party type is locked because this party already has accounting transactions.</p> : null}
     </div>
   );

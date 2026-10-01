@@ -1,0 +1,61 @@
+/* renders in the page flow (like Cashbook and Chit Fund) so dialogs stack above the header and navigation */
+.rc-owner-overlay { min-height: calc(100svh - var(--ft-header-h, 0px)); background: var(--ft-bg); }
+.rc-page { padding-bottom: 48px; }
+.rc-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 12px 0; }
+.rc-metrics .metric-value { font-size: 22px; }
+
+.rc-route-tabs { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 8px; scrollbar-width: thin; }
+.rc-route-tab {
+  flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  min-width: 140px; max-width: 240px; padding: 10px 12px; text-align: left; cursor: pointer;
+  border: 1px solid var(--ft-border, var(--ft-border)); border-radius: var(--ft-radius, 12px);
+  background: var(--ft-surface, #fff); color: var(--ft-text, var(--ft-text)); font: inherit;
+}
+.rc-route-tab span { font-size: 12px; color: var(--ft-muted, var(--ft-muted)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.rc-route-tab.active { border-color: var(--ft-primary); background: var(--ft-primary-soft); }
+.rc-route-notes { margin: 4px 0 8px; }
+
+.rc-filter-row { display: flex; gap: 10px; align-items: center; margin: 8px 0 12px; flex-wrap: wrap; }
+.rc-filter-row input[type="search"] { flex: 1 1 220px; min-height: 44px; }
+.rc-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; white-space: nowrap; }
+
+.rc-stops { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.rc-stop { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 12px; }
+.rc-stop.paid { opacity: 0.6; }
+.rc-stop.visited { border-color: var(--ft-success, var(--ft-success)); }
+.rc-stop-no {
+  width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--ft-surface-muted, var(--ft-surface)); font-weight: 700; font-size: 13px;
+}
+.rc-stop-main { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.rc-stop-name { font-weight: 700; font-size: 15px; overflow-wrap: anywhere; }
+.rc-stop-side { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; text-align: right; }
+.rc-stop-due { font-weight: 700; font-size: 16px; }
+.rc-stop-actions { display: flex; gap: 6px; margin-top: 4px; }
+.rc-stop-actions .btn { min-height: 40px; }
+.rc-chip { display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; width: fit-content; }
+.rc-chip.ok { background: var(--ft-success-soft, var(--ft-surface-muted)); color: var(--ft-success, var(--ft-success)); }
+.rc-empty { text-align: center; color: var(--ft-muted, var(--ft-muted)); padding: 20px; }
+
+.rc-handover { margin-top: 16px; }
+.rc-handover-modes { display: flex; gap: 18px; flex-wrap: wrap; margin: 8px 0; }
+.rc-handover-modes div { display: flex; flex-direction: column; }
+.rc-handover-modes strong { font-size: 18px; }
+
+.rc-mode-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.rc-mode-row .btn { min-height: 44px; padding: 0 6px; }
+.rc-quick-amounts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.rc-upi { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 12px; text-align: center; }
+.rc-upi .acc-qr { border: 1px solid var(--ft-border, var(--ft-border)); border-radius: 8px; }
+.rc-success-amount { font-size: 30px; font-weight: 800; margin: 4px 0; }
+
+.rc-entry { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 0; flex-wrap: wrap; }
+.rc-entry-title { font-weight: 700; font-size: 16px; margin: 2px 0; }
+
+@media (max-width: 560px) {
+  .rc-metrics { grid-template-columns: 1fr 1fr; }
+  .rc-metrics .card:last-child { grid-column: span 2; }
+  .rc-stop { grid-template-columns: 28px minmax(0, 1fr); }
+  .rc-stop-side { grid-column: 2; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; text-align: left; }
+  .rc-mode-row { grid-template-columns: 1fr 1fr; }
+}

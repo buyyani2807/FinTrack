@@ -11,6 +11,7 @@ import { money } from "../accountsFormat.js";
 import { AccOverviewContextBar } from "../components/AccPeriodBars.jsx";
 import { AccountsBusinessPulse, AccCompareChart, AccOverviewRecent } from "../components/AccOverviewWidgets.jsx";
 import { IndustryTemplateCard } from "../components/AccSetupWidgets.jsx";
+import { AccOwnerDailyBrief } from "../components/AccOwnerDailyBrief.jsx";
 
 export function OverviewSection({
   settings,
@@ -47,6 +48,13 @@ export function OverviewSection({
   intelligencePreviousRange,
   voucherItemLines,
   recentVouchers,
+  ownerBrief,
+  orgSettings,
+  workspace,
+  openPaymentFor,
+  createPurchaseOrderFromReorder,
+  markGstFiled,
+  lockMonth,
 }) {
   return (
     <div className="acc-panel acc-overview">
@@ -102,6 +110,22 @@ export function OverviewSection({
           }}
         />
       )}
+
+      {ownerBrief && settings && <AccOwnerDailyBrief
+        brief={ownerBrief}
+        parties={parties}
+        companyName={activeCompany?.name || settings?.companyName || ""}
+        settings={orgSettings}
+        company={activeCompany}
+        workspace={workspace}
+        canWrite={canWrite}
+        saving={saving}
+        onOpenSection={openSection}
+        onPay={openPaymentFor}
+        onCreatePurchaseOrder={createPurchaseOrderFromReorder}
+        onMarkFiled={item => markGstFiled({ returnCode: item.code, period: item.period })}
+        onLockPeriod={canAdmin ? lockMonth : null}
+      />}
 
       <AccOverviewContextBar
         fy={fy}

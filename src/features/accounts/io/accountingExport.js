@@ -42,7 +42,7 @@ const u32 = value => {
 
 const encodeUtf8 = text => new TextEncoder().encode(text);
 
-const zipStore = files => {
+export const zipStore = files => {
   const locals = [];
   const centrals = [];
   let offset = 0;
@@ -237,13 +237,21 @@ const triggerDownload = (filename, blob) => {
   URL.revokeObjectURL(url);
 };
 
-export function downloadAccountsCsv(filename, rows) {
+/** CSV text with a UTF-8 BOM so Excel opens rupee symbols and Indian names correctly. */
+export function accountsCsvText(rows) {
   const csvCell = value => {
     const textValue = String(value ?? "");
-    return /[",\n]/.test(textValue) ? `"${textValue.replace(/"/g, '""')}"` : textValue;
+    return /[",\r\n]/.test(textValue) ? `"${textValue.replace(/"/g, '""')}"` : textValue;
   };
-  const csv = (rows || []).map(row => row.map(csvCell).join(",")).join("\r\n");
-  triggerDownload(filename, new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" }));
+  return "\ufeff" + (rows || []).map(row => row.map(csvCell).join(",")).join("\r\n");
+}
+
+export function downloadAccountsCsv(filename, rows) {
+  triggerDownload(filename, new Blob([accountsCsvText(rows)], { type: "text/csv;charset=utf-8" }));
+}
+
+export function downloadAccountsZip(filename, files) {
+  triggerDownload(filename, new Blob([zipStore(files)], { type: "application/zip" }));
 }
 
 export function downloadAccountsExcel(filename, rows) {

@@ -11,6 +11,7 @@ import {
 import { gstStateFromGstin, isIntraGst } from "../model/accountingGst.js";
 import { suggestBillWiseAllocations } from "../model/accountingReports.js";
 import { aggregateItemizedGst, emptyItemLine, usesItemLines } from "../model/inventoryModel.js";
+import { creditCheck } from "../model/tradeDocumentModel.js";
 import { money } from "../accountsFormat.js";
 import { Field } from "./AccUi.jsx";
 import { EntryAmountSection } from "./simpleEntry/EntryAmountSection.jsx";
@@ -18,7 +19,7 @@ import { ItemLinesSection } from "./simpleEntry/ItemLinesSection.jsx";
 import { SaleSummaryCard } from "./simpleEntry/SaleSummaryCard.jsx";
 import { BillwiseSettlement } from "./simpleEntry/BillwiseSettlement.jsx";
 
-export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, saving, maxDate, gstCompany, onGstSetup, items = [], stockByItem = {}, openInvoices = [] }) {
+export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, saving, maxDate, gstCompany, onGstSetup, items = [], stockByItem = {}, openInvoices = [], creditInfo = null }) {
   const customers = parties.filter(party => party.partyType === "customer" && (party.isActive !== false || party.id === form.partyId));
   const suppliers = parties.filter(party => party.partyType === "supplier" && (party.isActive !== false || party.id === form.partyId));
   const expenseOptions = SIMPLE_EXPENSE_CODES.filter(([code]) => accounts.some(account => account.code === code) || code === "5990");
@@ -77,6 +78,9 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
     })()
     : null;
   const showReceivedOnCredit = kind === "sale" && form.settlement === "credit";
+  const credit = showReceivedOnCredit && creditInfo
+    ? creditCheck({ ...creditInfo, invoiceTotal: Math.max(0, invoiceTotalPreview - Number(form.amountReceived || 0)) })
+    : null;
   const showMoneyMode = kind !== "transfer" && kind !== "credit_note" && kind !== "debit_note"
     && (kind === "expense" || kind === "receipt" || kind === "payment" || form.settlement === "paid"
       || (showReceivedOnCredit && Number(form.amountReceived || 0) > 0));
@@ -163,9 +167,11 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
         </>}
         {needsParty && <Field label={needsParty === "supplier" ? "Supplier" : "Customer"}><select value={form.partyId} onChange={event => {
           const partyId = event.target.value;
+          const creditDays = parties.find(party => party.id === partyId)?.creditDays;
           set({
             partyId,
             settlements: settlementKinds ? syncSettlements(partyId, settlementAmount) : form.settlements,
+            ...((kind === "sale" || kind === "purchase") && creditDays != null ? { dueDate: addDaysIso(form.date, creditDays) } : {}),
           });
         }}><option value="">Select</option>{partyList.map(party => <option key={party.id} value={party.id}>{party.name}</option>)}</select></Field>}
         {(kind === "sale" || kind === "purchase") && (
@@ -238,6 +244,14 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
         {gstPreview.supplyType === "intra" ? ` · CGST ${money(gstPreview.cgst)} · SGST ${money(gstPreview.sgst)}` : ` · IGST ${money(gstPreview.igst)}`}
         {` · Total ${money(gstPreview.total)}`}
       </p>
+    )}
+
+    {credit && credit.level !== "ok" && (
+      <div className={`acc-credit-alert spacer${credit.level === "block" ? " block" : ""}`} role="alert">
+        <strong>{credit.level === "block" ? "Credit sale blocked" : "Credit warning"}</strong>
+        {credit.messages.map(message => <p key={message} className="small">{message}</p>)}
+        <p className="small">{credit.level === "block" ? "Record it as paid now, collect the overdue amount first, or raise the limit in Parties." : "You can still save this sale."}</p>
+      </div>
     )}
 
     {saleSummary && (

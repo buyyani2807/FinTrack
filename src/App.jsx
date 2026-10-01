@@ -3,11 +3,18 @@
 import { AppRoutes } from "./app/AppRoutes.jsx";
 import { AppShell, LoadingScreen } from "./app/AppShell.jsx";
 import { useFinTrackSession } from "./app/useFinTrackSession.js";
+import { PayPage } from "./features/accounts/PayPage.jsx";
+import { isPayPagePath } from "./features/accounts/model/upiPay.js";
 import { LegalPage } from "./features/legal/LegalPage.jsx";
 
-export default function App() {
+function SessionApp() {
   const session = useFinTrackSession();
   if (session.legalView) return <AppShell><LegalPage view={session.legalView} /></AppShell>;
   if (session.isLoading) return <AppShell><LoadingScreen /></AppShell>;
   return <AppShell><AppRoutes session={session} /></AppShell>;
+}
+
+export default function App() {
+  if (isPayPagePath()) return <AppShell><PayPage /></AppShell>;
+  return <SessionApp />;
 }

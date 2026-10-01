@@ -2,6 +2,7 @@ import { formatInr } from "../../../lib/formatMoney.js";
 import { applyTemplate, resolveWhatsAppTemplate } from "../../receipts/model/templateEngine.js";
 import { formatReceiptDate } from "../../receipts/model/receiptModel.js";
 import { voucherTotals } from "./accountingModel.js";
+import { browserOrigin, isValidUpiId, payPageUrl, upiPayLink } from "./upiPay.js";
 
 const money = formatInr;
 
@@ -17,20 +18,49 @@ export function accountsCompanyBranding(company = null, workspace = {}) {
     .map(part => String(part || "").trim())
     .filter(Boolean)
     .join(" ");
+  const doc = company?.documentSettings || {};
+  const upiId = isValidUpiId(doc.upiId) ? String(doc.upiId).trim() : "";
   return {
     companyName,
     companyLegalName: legalName && legalName.toLowerCase() !== booksName.toLowerCase() ? legalName : "",
     companyGstin: company?.gstin || "",
-    companyAddress: stateLine,
-    companyPhone: "",
-    companyEmail: "",
-    companyLogoUrl: "",
+    companyAddress: [String(doc.businessAddress || "").trim(), stateLine].filter(Boolean).join(", "),
+    companyPhone: String(doc.businessPhone || "").trim(),
+    companyEmail: String(doc.businessEmail || "").trim(),
+    companyLogoUrl: doc.logoDataUrl || "",
+    upiId,
+    upiPayeeName: String(doc.upiPayeeName || "").trim() || companyName,
+    showUpiQr: doc.showUpiQr !== false,
+    bankLines: bankDetailLines(doc),
+    documentTemplate: doc.invoiceTemplate || "a4",
+    quotationTerms: String(doc.quotationTerms || "").trim(),
     receiptFooter: `Thank you for your business.${companyName ? ` - ${companyName}` : ""}`,
-    receiptTerms: company?.gstin
+    receiptTerms: String(doc.invoiceTerms || "").trim() || (company?.gstin
       ? `Issued by ${companyName} (GSTIN ${company.gstin}). Please retain this invoice for your records.`
-      : `Issued by ${companyName}. Please retain this invoice for your records.`,
+      : `Issued by ${companyName}. Please retain this invoice for your records.`),
   };
 }
+
+export function bankDetailLines(doc = {}) {
+  const parts = [
+    doc.bankName ? `Bank: ${String(doc.bankName).trim()}` : "",
+    doc.bankAccountNumber ? `A/c: ${String(doc.bankAccountNumber).trim()}` : "",
+    doc.bankIfsc ? `IFSC: ${String(doc.bankIfsc).trim().toUpperCase()}` : "",
+  ].filter(Boolean);
+  return parts.length ? [parts.join("  ")] : [];
+}
+
+/** Pay link details for an amount due to the company, or null when no UPI ID is set. */
+export function companyPayLinks(branding, { amount = 0, note = "", origin = browserOrigin() } = {}) {
+  if (!branding?.upiId || !(Number(amount) > 0)) return null;
+  const params = { upiId: branding.upiId, payeeName: branding.upiPayeeName, amount, note };
+  return { upiLink: upiPayLink(params), payUrl: payPageUrl(origin, params) };
+}
+
+const withPayLink = (message, payUrl) => {
+  if (!payUrl || message.includes(payUrl)) return message;
+  return `${message.trimEnd()}\n\nPay by UPI: ${payUrl}`;
+};
 
 export function salesSettlementLabel(accounts = [], voucher = {}) {
   const byId = accountById(accounts);
@@ -69,16 +99,24 @@ export function buildSalesInvoice({
   const tax = gst.cgst + gst.sgst + gst.igst;
   const taxable = gst.taxable || Math.max(0, amount - tax);
   const branding = accountsCompanyBranding(company, workspace);
+  const due = outstanding == null ? amount : Number(outstanding || 0);
+  const settlement = salesSettlementLabel(accounts, voucher);
+  const payable = outstanding == null ? (settlement === "Credit" ? amount : 0) : due;
+  const pay = voucher.status === "cancelled" ? null : companyPayLinks(branding, { amount: payable, note: voucher.voucherNumber || "" });
 
   return {
     kind: "sales_invoice",
+    title: branding.companyGstin && tax > 0 ? "TAX INVOICE" : "SALES INVOICE",
+    upiLink: pay?.upiLink || "",
+    payUrl: pay?.payUrl || "",
     source: "accounts_sales",
     voucherId: voucher.id,
     invoiceNumber: voucher.voucherNumber || "",
     invoiceDate: voucher.date || "",
     dueDate: voucher.dueDate || voucher.date || "",
     narration: voucher.narration || "",
-    settlement: salesSettlementLabel(accounts, voucher),
+    settlement,
+    payableAmount: pay ? payable : 0,
     status: voucher.status || "posted",
     customerName: party?.name || (voucher.partyId ? "Customer" : "Cash customer"),
     customerPhone: party?.phone || "",
@@ -93,7 +131,7 @@ export function buildSalesInvoice({
     gstRate: gst.rate,
     hsnSac: gst.hsnSac,
     supplyType: gst.supplyType,
-    outstanding: outstanding == null ? amount : Number(outstanding || 0),
+    outstanding: due,
     itemLines: (itemLines || []).map(line => ({
       name: line.itemName || line.name || "",
       sku: line.itemSku || line.sku || "",
@@ -129,16 +167,19 @@ export function salesInvoiceWhatsAppVariables(invoice) {
     company_phone: invoice.companyPhone || "",
     settlement: invoice.settlement || "",
     gstin: invoice.customerGstin || "",
+    pay_link: invoice.payUrl || "",
   };
 }
 
 export function buildSalesInvoiceMessage(invoice, settings = {}) {
   // Templates may come from org receipt settings; company_* variables stay on the Accounts company.
-  return applyTemplate(resolveWhatsAppTemplate(settings, "sales_invoice"), salesInvoiceWhatsAppVariables(invoice));
+  const message = applyTemplate(resolveWhatsAppTemplate(settings, "sales_invoice"), salesInvoiceWhatsAppVariables(invoice));
+  return withPayLink(message, invoice.payUrl);
 }
 
-export function buildArReminderMessage(row, settings = {}, company = {}, workspace = {}) {
+export function buildArReminderMessage(row, settings = {}, company = {}, workspace = {}, { origin } = {}) {
   const branding = accountsCompanyBranding(company, workspace);
+  const pay = companyPayLinks(branding, { amount: row.outstanding, note: row.reference || "", ...(origin != null ? { origin } : {}) });
   const invoice = {
     ...branding,
     customerName: row.partyName,
@@ -148,9 +189,10 @@ export function buildArReminderMessage(row, settings = {}, company = {}, workspa
     amount: row.amount,
     outstanding: row.outstanding,
     daysOverdue: row.daysOverdue || 0,
+    payUrl: pay?.payUrl || "",
     money,
   };
-  return applyTemplate(resolveWhatsAppTemplate(settings, "ar_reminder"), salesInvoiceWhatsAppVariables(invoice));
+  return withPayLink(applyTemplate(resolveWhatsAppTemplate(settings, "ar_reminder"), salesInvoiceWhatsAppVariables(invoice)), invoice.payUrl);
 }
 
 export function buildPaymentAdviceMessage(row, settings = {}, company = {}, workspace = {}) {
@@ -225,7 +267,8 @@ export function buildOutstandingSummaryMessage({
       company_phone: branding.companyPhone || "",
     });
   }
-  return applyTemplate(resolveWhatsAppTemplate(settings, "ar_reminder"), {
+  const pay = companyPayLinks(branding, { amount: outstanding, note: "Outstanding balance" });
+  return withPayLink(applyTemplate(resolveWhatsAppTemplate(settings, "ar_reminder"), {
     customer_name: party?.name || "Customer",
     amount: money(outstanding),
     invoice_number: "Outstanding",
@@ -237,7 +280,8 @@ export function buildOutstandingSummaryMessage({
     company_phone: branding.companyPhone || "",
     settlement: "",
     gstin: party?.gstin || "",
-  });
+    pay_link: pay?.payUrl || "",
+  }), pay?.payUrl);
 }
 
 export function buildSalesInvoiceFromRegisterRow({ row, voucher, party, accounts, company, workspace }) {

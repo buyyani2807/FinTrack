@@ -11,6 +11,11 @@ import {
   loadVoucherItemLines,
   setActiveAccountsCompanyId,
   loadRecurringTemplates,
+  DEFAULT_DOCUMENT_SETTINGS,
+  loadTradeDocuments,
+  loadDocumentSettings,
+  loadComplianceFilings,
+  loadCollectionRoutes,
 } from "./accountingRepository.js";
 
 export const COMPANY_STORAGE_KEY = "fintrack-accounts-company";
@@ -39,7 +44,7 @@ export async function fetchAccountsBundle(token, { preferredCompanyId, wantRecur
   if (company) {
     try { sessionStorage.setItem(COMPANY_STORAGE_KEY, company.id); } catch { /* ignore */ }
   }
-  const [settings, accounts, parties, pipeline, vouchers, items, itemCategories, stockMovements, voucherItemLines, recurring] = await Promise.all([
+  const [settings, accounts, parties, pipeline, vouchers, items, itemCategories, stockMovements, voucherItemLines, recurring, tradeDocuments, documentSettings, complianceFilings, collectionRoutes] = await Promise.all([
     loadAccountingSettings(token),
     loadChartOfAccounts(token),
     loadParties(token),
@@ -50,6 +55,10 @@ export async function fetchAccountsBundle(token, { preferredCompanyId, wantRecur
     orEmptyWhenMigrating(loadStockMovements(token)),
     orEmptyWhenMigrating(loadVoucherItemLines(token)),
     wantRecurring ? loadRecurringTemplates(token).catch(() => []) : Promise.resolve(null),
+    loadTradeDocuments(token).catch(() => null),
+    loadDocumentSettings(token).catch(() => ({ ...DEFAULT_DOCUMENT_SETTINGS, available: false })),
+    loadComplianceFilings(token).catch(() => null),
+    loadCollectionRoutes(token).catch(() => null),
   ]);
   const mergedSettings = {
     ...(settings || {}),
@@ -80,6 +89,10 @@ export async function fetchAccountsBundle(token, { preferredCompanyId, wantRecur
     voucherItemLines: voucherItemLines || [],
     recurringFetched: Boolean(recurring),
     recurringTemplates: recurring || (sameCompanyCache ? accountsSnapshot.recurringTemplates : []),
+    tradeDocuments,
+    documentSettings,
+    complianceFilings,
+    collectionRoutes,
   };
   accountsSnapshot = bundle;
   return bundle;

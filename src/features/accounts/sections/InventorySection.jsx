@@ -18,13 +18,14 @@ export function InventorySection({
   run,
   saveItemRecord,
   token,
+  costLines,
 }) {
   return (
     <div className="acc-panel">
       <AccInventoryWorkspace
         items={items}
         movements={stockMovements}
-        voucherItemLines={voucherItemLines}
+        voucherItemLines={costLines}
         range={range}
         saving={saving}
         canEdit={canWrite}

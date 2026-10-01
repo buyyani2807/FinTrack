@@ -11,10 +11,43 @@ import { todayIso } from "../../../../lib/dates.js";
 import { downloadAccountsCsv } from "../../io/accountingExport.js";
 import { money } from "../../accountsFormat.js";
 import { AccTable } from "../../components/AccUi.jsx";
+import { AccGstPackCard } from "../../components/AccGstPackCard.jsx";
 
-export function GstReport({ vouchers, parties, range, setNotice, gstReport, pagedGstOutput, setListPage }) {
+export function GstReport({
+  vouchers,
+  parties,
+  range,
+  setNotice,
+  gstReport,
+  pagedGstOutput,
+  setListPage,
+  activeCompany,
+  workspace,
+  settings,
+  voucherItemLines,
+  complianceFilings,
+  gstFrequency,
+  changeGstFrequency,
+  canWrite,
+  saving,
+  markGstFiled,
+}) {
   return (
     <div className="acc-gst-reports">
+      <AccGstPackCard
+        company={activeCompany}
+        businessName={workspace?.businessName || settings?.companyName || ""}
+        vouchers={vouchers}
+        parties={parties}
+        voucherItemLines={voucherItemLines}
+        filings={complianceFilings}
+        frequency={gstFrequency}
+        onFrequencyChange={changeGstFrequency}
+        canWrite={canWrite}
+        saving={saving}
+        today={todayIso()}
+        onMarkFiled={markGstFiled}
+      />
       <p className="copy">GST figures are from this company’s books for the selected dates. They are <strong>calculated</strong> data — not a filed GSTR-1 or GSTR-3B.</p>
       <div className="accounts-action-row spacer">
         <button type="button" className="btn" onClick={() => {

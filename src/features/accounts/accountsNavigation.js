@@ -2,6 +2,7 @@ export const NAV_STORAGE_KEY = "fintrack-accounts-nav";
 export const NAV_TREE = [
   { id: "overview", label: "Overview", glyph: "⌂" },
   { id: "vouchers", label: "Transactions", glyph: "▣" },
+  { id: "documents", label: "Documents", glyph: "▧" },
   { id: "inventory", label: "Inventory", glyph: "▤" },
   {
     id: "parties",
@@ -11,6 +12,7 @@ export const NAV_TREE = [
       { id: "parties", label: "Party Ledger" },
       { id: "receivables", label: "Receivables" },
       { id: "payables", label: "Payables" },
+      { id: "routes", label: "Collection routes" },
     ],
   },
   {
@@ -35,9 +37,11 @@ export function sectionTrail(section, reportTab) {
   if (section === "overview") return ["Overview"];
   if (section === "vouchers") return ["Transactions"];
   if (section === "inventory") return ["Inventory"];
+  if (section === "documents") return ["Documents"];
   if (section === "parties") return ["Parties", "Party Ledger"];
   if (section === "receivables") return ["Parties", "Receivables"];
   if (section === "payables") return ["Parties", "Payables"];
+  if (section === "routes") return ["Parties", "Collection routes"];
   if (section === "ledger") return ["Reports", "Ledger"];
   if (section === "pnl") return ["Reports", "Profit & Loss"];
   if (section === "balance") return ["Reports", "Balance Sheet"];
@@ -54,11 +58,13 @@ export const SECTIONS = [
   { id: "manufacturing", label: "Manufacturing", group: "Industry" },
   { id: "ledger", label: "Ledger", group: "Books" },
   { id: "vouchers", label: "Transactions", group: "Books" },
+  { id: "documents", label: "Documents", group: "Books" },
   { id: "inventory", label: "Inventory", group: "Books" },
   { id: "cashbook", label: "Cashbook", group: "Books" },
   { id: "receivables", label: "Receivables", group: "Parties" },
   { id: "payables", label: "Payables", group: "Parties" },
   { id: "parties", label: "Party Ledger", group: "Parties" },
+  { id: "routes", label: "Collection routes", group: "Parties" },
   { id: "crm", label: "Customer Pipeline", group: "Parties" },
   { id: "reports", label: "Reports", group: "Reports" },
   { id: "bank", label: "Bank Reconciliation", group: "Reports" },

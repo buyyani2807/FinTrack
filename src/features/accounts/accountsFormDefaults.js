@@ -4,7 +4,7 @@ import { emptyItemLine } from "./model/inventoryModel.js";
 
 export const emptyLine = () => ({ coaId: "", debit: "", credit: "", description: "" });
 export const emptyBankLine = () => ({ lineDate: todayIso(), description: "", reference: "", amount: "", direction: "in" });
-export const emptyPartyForm = () => ({ id: null, partyType: "customer", name: "", phone: "", email: "", address: "", gstin: "", stateCode: "", gstRegistration: "", notes: "" });
+export const emptyPartyForm = () => ({ id: null, partyType: "customer", name: "", phone: "", email: "", address: "", gstin: "", stateCode: "", gstRegistration: "", notes: "", creditLimit: "", creditDays: "" });
 export const emptyRecurringDraft = () => ({
   id: null,
   name: "",
