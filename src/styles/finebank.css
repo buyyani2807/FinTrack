@@ -679,7 +679,11 @@ html[data-ft-role="owner"] .top-actions .top-theme { display: none; }
 @media (width >= 1051px) { html[data-ft-role="owner"] .accounts-dashboard { margin-left: calc(var(--ft-sidebar-w) + 8px); } }
 @media (681px <= width <= 1050px) { html[data-ft-role="owner"] .accounts-dashboard { margin-left: var(--ft-rail-w); } .accounts-dashboard .acc-main { padding: 28px 24px 48px !important; } }
 @media (width <= 680px) { .accounts-dashboard .acc-main { padding: 20px 16px calc(96px + env(safe-area-inset-bottom, 0px)) !important; } }
-.acc-page-toolbar { align-items: flex-start; gap: 16px; }
+/* title + actions on one line, the books context across the full width below */
+.accounts-dashboard .acc-page-toolbar { display: grid !important; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "title actions" "context context"; align-items: center; gap: 0 16px; }
+.accounts-dashboard .acc-page-toolbar > .title { grid-area: title; margin: 0 !important; }
+.acc-page-toolbar .acc-page-actions { grid-area: actions; flex-wrap: nowrap; }
+.acc-page-context { grid-area: context; min-width: 0; }
 .acc-page-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; }
 .acc-section-tabs { display: grid; gap: 12px; margin: 20px 0 24px; }
 .acc-section-tabs .acc-section-nav { margin: 0 !important; }
@@ -690,9 +694,37 @@ html[data-ft-role="owner"] .top-actions .top-theme { display: none; }
 .acc-subsection-tab:hover { background: var(--ft-surface-hover); color: var(--ft-text); }
 .acc-subsection-tab.active { border-color: var(--ft-primary-soft-strong); background: var(--ft-primary-soft); color: var(--ft-primary); }
 .acc-subsection-tab:focus-visible { outline: 2px solid var(--ft-primary); outline-offset: 1px; }
+/* books context line under the Accounts title (replaces the old company card) */
+.accounts-dashboard .acc-page-toolbar .acc-company-bar { display: grid !important; justify-items: start; gap: 10px; margin: 12px 0 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: none !important; box-shadow: none !important; }
+.acc-company-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: 100%; }
+.acc-company-picker { position: relative; display: inline-flex; align-items: center; gap: 8px; max-width: 100%; min-height: 38px; padding: 0 10px 0 12px; border: 1px solid var(--ft-border); border-radius: 10px; background: var(--ft-surface); color: var(--ft-text); cursor: pointer; transition: border-color .15s var(--ft-ease); }
+.acc-company-picker:hover { border-color: var(--ft-subtle); }
+.acc-company-picker:focus-within { border-color: var(--ft-primary); box-shadow: 0 0 0 3px var(--ft-primary-soft); }
+.acc-company-picker-icon, .acc-company-picker-chevron { flex: none; color: var(--ft-subtle); }
+.acc-company-picker-name { overflow: hidden; font: 600 14px/1.2 var(--ft-font); text-overflow: ellipsis; white-space: nowrap; }
+.acc-company-primary { flex: none; padding: 2px 8px; border-radius: 999px; background: var(--ft-primary-soft); color: var(--ft-primary); font: 600 11px/1.4 var(--ft-font); }
+.accounts-dashboard .acc-company-picker > select.acc-company-switch { position: absolute !important; inset: 0; width: 100% !important; height: 100% !important; min-height: 0 !important; margin: 0; padding: 0 !important; border: 0 !important; opacity: 0; cursor: pointer; appearance: none; }
+.acc-company-meta-wrap { overflow: hidden; max-width: 100%; }
+.acc-company-meta { display: flex; flex-wrap: wrap; align-items: center; row-gap: 4px; margin: 0 0 0 -23px; padding: 0; list-style: none; color: var(--ft-text-2); font-size: 13px; }
+.acc-company-meta > li { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.acc-company-meta > li::before { content: ""; flex: none; width: 3px; height: 3px; margin: 0 10px; border-radius: 50%; background: var(--ft-disabled); }
+.acc-company-meta-key { color: var(--ft-muted); }
+.acc-company-gst { padding: 2px 8px; border-radius: 999px; background: var(--ft-surface-muted); color: var(--ft-muted); font-size: 12px; font-weight: 600; }
+.acc-company-gst.is-registered { background: var(--ft-success-soft, var(--ft-primary-soft)); color: var(--ft-success); }
+.acc-company-new { display: inline-flex; align-items: center; gap: 4px; padding: 6px 8px; border: 0; border-radius: 6px; background: none; color: var(--ft-primary); font: 600 13px/1.2 var(--ft-font); cursor: pointer; }
+.acc-company-new:hover { background: var(--ft-primary-soft); }
+
+/* second-level tabs inside Accounts pages (Documents, Inventory, Collection routes): the same quiet pills as the
+   Parties / Reports sub-tabs, so every second row looks alike and stays below the main tabs in weight */
+.accounts-dashboard .accounts-section-nav { gap: 6px !important; margin: 0 0 20px !important; padding: 0 !important; border: 0 !important; scrollbar-width: none; }
+.accounts-dashboard .accounts-section-nav::-webkit-scrollbar { display: none; }
+.accounts-dashboard .acc-documents > .accounts-section-nav:first-child, .accounts-dashboard .acc-inventory > .accounts-section-nav:first-child { margin-top: -12px !important; }
+.accounts-dashboard .accounts-section-nav > .accounts-section-tab { min-height: 34px !important; padding: 6px 14px !important; border: 1px solid transparent !important; border-radius: 999px !important; background: transparent !important; color: var(--ft-muted) !important; font: 600 13px/1.2 var(--ft-font) !important; }
+.accounts-dashboard .accounts-section-nav > .accounts-section-tab:hover { background: var(--ft-surface-hover) !important; color: var(--ft-text) !important; }
+.accounts-dashboard .accounts-section-nav > .accounts-section-tab.active { border-color: var(--ft-primary-soft-strong) !important; background: var(--ft-primary-soft) !important; color: var(--ft-primary) !important; }
 @media (width <= 680px) {
-  .acc-page-toolbar { flex-direction: column; }
-  .acc-page-actions { justify-content: flex-start; }
+  .accounts-dashboard .acc-page-toolbar { grid-template-columns: minmax(0, 1fr); grid-template-areas: "title" "context" "actions"; }
+  .acc-page-toolbar .acc-page-actions { flex-wrap: wrap; justify-content: flex-start; margin-top: 14px; }
 }
 
 /* workspace pages use the whole width beside the navigation (pages that set their own reading width inline,

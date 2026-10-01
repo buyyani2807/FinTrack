@@ -1822,6 +1822,9 @@ const openVoucher = () => {
           gstLabel={gstStatusLabel(activeCompany)}
           fyLabel={fy?.label || ""}
           booksStartedOn={activeCompany?.booksStartedOn || settings?.booksStartedOn || ""}
+          rangeFrom={range.from}
+          rangeTo={range.to}
+          fallbackName={settings?.companyName || workspace.businessName || ""}
         />}
         extras={canWrite ? <NewEntryActions openSimple={openSimple} openVoucher={openVoucher} openParty={openParty} /> : <span className="small">View-only · {accountsAccessRole || "viewer"}</span>}
       />
