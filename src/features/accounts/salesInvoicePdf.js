@@ -99,8 +99,7 @@ function layoutSalesInvoice(invoice) {
     y -= 4;
     commands.push(text("F2", 11, PAGE.left, y, "ITEMS")); y -= 16;
     for (const line of invoice.itemLines.slice(0, 18)) {
-      const discount = line.discount > 0 ? ` - disc ${m(line.discount)}` : "";
-      commands.push(text("F1", 9, PAGE.left, y, `${line.quantity} ${line.unit || ""} ${line.name} @ ${m(line.rate)}${discount} = ${m(line.amount)}`));
+      commands.push(text("F1", 9, PAGE.left, y, `${line.quantity} ${line.unit || ""} ${line.name} @ ${m(line.rate)} = ${m(line.amount)}`));
       y -= 12;
       if (y < 80) break;
     }

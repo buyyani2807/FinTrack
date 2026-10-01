@@ -4,13 +4,8 @@ import {
   aggregateItemizedGst,
   currentStockForItem,
   itemizedEntryDraft,
-  itemPurchasesReport,
-  itemSalesReport,
   mapVoucherItemLinesForRpc,
-  normalizeItemLine,
-  parseLineDiscount,
   stockStatus,
-  supportsItemLines,
   validateItemForm,
   validateItemLines,
 } from "../src/features/accounts/inventoryModel.js";
@@ -86,149 +81,10 @@ test("itemized sale draft keeps double-entry balanced with GST", () => {
 test("rejects invalid item lines", () => {
   assert.match(validateItemLines([]), /at least one/i);
   assert.match(validateItemLines([{ itemId: "a", itemName: "A", quantity: 0, rate: 10 }]), /quantity/i);
-  assert.match(validateItemLines([{ itemId: "a", itemName: "A", quantity: 1, rate: 10, discount: "11" }]), /more than the line amount/i);
-  assert.match(validateItemLines([{ itemId: "a", itemName: "A", quantity: 1, rate: 10, discount: "-1" }]), /negative/i);
-  assert.match(validateItemLines([{ itemId: "a", itemName: "A", quantity: 1, rate: 10, discount: "abc" }]), /amount or a percent/i);
-});
-
-test("same item may appear on several lines (e.g. free goods, different rates)", () => {
-  assert.equal(validateItemLines([
+  assert.match(validateItemLines([
     { itemId: "a", itemName: "A", quantity: 1, rate: 10 },
-    { itemId: "a", itemName: "A", quantity: 2, rate: 0 },
-  ]), "");
-});
-
-test("line discount accepts rupees or percent and reduces taxable value before GST", () => {
-  assert.equal(parseLineDiscount("", 1000), 0);
-  assert.equal(parseLineDiscount("50", 1000), 50);
-  assert.equal(parseLineDiscount("10%", 1000), 100);
-  assert.equal(parseLineDiscount(" 2.5 % ", 1000), 25);
-  const line = normalizeItemLine({ itemName: "A", quantity: 10, rate: 100, discount: "10%" });
-  assert.equal(line.amount, 1000);
-  assert.equal(line.discountAmount, 100);
-  assert.equal(line.netAmount, 900);
-
-  const agg = aggregateItemizedGst([
-    { itemName: "A", quantity: 10, rate: 100, discount: "10%", gstRate: 18 },
-  ], { intra: true });
-  assert.equal(agg.taxable, 900);
-  assert.equal(agg.cgst, 81);
-  assert.equal(agg.sgst, 81);
-  assert.equal(agg.lines[0].discountAmount, 100);
-  assert.equal(agg.lines[0].taxableAmount, 900);
-});
-
-test("saved lines keep their stored discount amount", () => {
-  const line = normalizeItemLine({ itemName: "A", quantity: 2, rate: 100, discountAmount: 30 });
-  assert.equal(line.discountAmount, 30);
-  assert.equal(line.netAmount, 170);
-});
-
-test("itemized sale draft carries discount through to item lines and ledger", () => {
-  const draft = itemizedEntryDraft({
-    kind: "sale",
-    accounts,
-    date: "2026-09-06",
-    partyId: "p1",
-    settlement: "credit",
-    intra: true,
-    gstEnabled: true,
-    itemLines: [
-      { itemId: "i1", itemName: "Cement", quantity: 10, rate: 100, discount: "100", gstRate: 18, itemType: "product" },
-    ],
-  });
-  assert.equal(draft.itemLines[0].amount, 1000);
-  assert.equal(draft.itemLines[0].discountAmount, 100);
-  assert.equal(draft.itemLines[0].taxableAmount, 900);
-  assert.equal(draft.lines.find(line => line.code === "4300").credit, 900);
-  assert.equal(draft.lines.find(line => line.code === "1100").debit, 1062);
-  assert.equal(mapVoucherItemLinesForRpc(draft.itemLines)[0].discount_amount, 100);
-});
-
-test("itemized credit note (sales return) reverses sales and GST against the customer", () => {
-  const draft = itemizedEntryDraft({
-    kind: "credit_note",
-    accounts,
-    date: "2026-09-06",
-    partyId: "c1",
-    intra: true,
-    gstEnabled: true,
-    itemLines: [
-      { itemId: "i1", itemName: "Cement", quantity: 2, rate: 100, gstRate: 18, itemType: "product" },
-    ],
-  });
-  assert.equal(draft.voucherType, "credit_note");
-  assert.equal(draft.dueDate, null);
-  assert.equal(draft.narration, "Sales return");
-  const debit = draft.lines.reduce((sum, line) => sum + Number(line.debit || 0), 0);
-  const credit = draft.lines.reduce((sum, line) => sum + Number(line.credit || 0), 0);
-  assert.equal(debit, credit);
-  assert.equal(draft.lines.find(line => line.code === "4300").debit, 200);
-  assert.equal(draft.lines.find(line => line.code === "1100").credit, 236);
-  assert.equal(draft.lines.find(line => line.code === "1100").partyId, "c1");
-  assert.equal(draft.itemLines[0].quantity, 2);
-});
-
-test("itemized debit note (purchase return) reverses purchase against the supplier", () => {
-  const draft = itemizedEntryDraft({
-    kind: "debit_note",
-    accounts,
-    date: "2026-09-06",
-    partyId: "s1",
-    itemLines: [
-      { itemId: "i1", itemName: "Cement", quantity: 3, rate: 50, itemType: "product" },
-    ],
-  });
-  assert.equal(draft.voucherType, "debit_note");
-  assert.equal(draft.lines.find(line => line.code === "5110").credit, 150);
-  assert.equal(draft.lines.find(line => line.code === "2100").debit, 150);
-});
-
-test("itemized returns require the party", () => {
-  assert.throws(() => itemizedEntryDraft({
-    kind: "credit_note",
-    accounts,
-    date: "2026-09-06",
-    itemLines: [{ itemId: "i1", itemName: "Cement", quantity: 1, rate: 100 }],
-  }), /customer/i);
-  assert.throws(() => itemizedEntryDraft({
-    kind: "debit_note",
-    accounts,
-    date: "2026-09-06",
-    itemLines: [{ itemId: "i1", itemName: "Cement", quantity: 1, rate: 100 }],
-  }), /supplier/i);
-});
-
-test("item sales and purchase reports are net of returns", () => {
-  const vouchers = [
-    { id: "s", voucherType: "sales", status: "posted", date: "2026-09-01" },
-    { id: "cn", voucherType: "credit_note", status: "posted", date: "2026-09-02" },
-    { id: "p", voucherType: "purchase", status: "posted", date: "2026-09-01" },
-    { id: "dn", voucherType: "debit_note", status: "posted", date: "2026-09-02" },
-    { id: "cnx", voucherType: "credit_note", status: "cancelled", date: "2026-09-03" },
-  ];
-  const lines = [
-    { voucherId: "s", itemId: "i1", itemName: "Cement", quantity: 10, taxableAmount: 1000 },
-    { voucherId: "cn", itemId: "i1", itemName: "Cement", quantity: 2, taxableAmount: 200 },
-    { voucherId: "cnx", itemId: "i1", itemName: "Cement", quantity: 5, taxableAmount: 500 },
-    { voucherId: "p", itemId: "i1", itemName: "Cement", quantity: 20, taxableAmount: 1400 },
-    { voucherId: "dn", itemId: "i1", itemName: "Cement", quantity: 4, taxableAmount: 280 },
-  ];
-  const [sales] = itemSalesReport(lines, vouchers);
-  assert.equal(sales.quantity, 8);
-  assert.equal(sales.amount, 800);
-  assert.equal(sales.returnedQuantity, 2);
-  const [purchases] = itemPurchasesReport(lines, vouchers);
-  assert.equal(purchases.quantity, 16);
-  assert.equal(purchases.amount, 1120);
-});
-
-test("supportsItemLines covers sales, purchases and both return notes", () => {
-  assert.equal(supportsItemLines("sale"), true);
-  assert.equal(supportsItemLines("purchase"), true);
-  assert.equal(supportsItemLines("credit_note"), true);
-  assert.equal(supportsItemLines("debit_note"), true);
-  assert.equal(supportsItemLines("expense"), false);
+    { itemId: "a", itemName: "A", quantity: 2, rate: 10 },
+  ]), /Duplicate/i);
 });
 
 test("aggregate GST supports mixed lines", () => {

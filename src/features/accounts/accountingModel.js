@@ -853,7 +853,7 @@ export function saleLines({ accounts, amount, settlement = "credit", moneyMode =
 }
 
 export function creditNoteLines({ accounts, amount, partyId, description = "", gst } = {}) {
-  const prepared = gst?.preparedOverride || prepareGstAmount(amount, gst);
+  const prepared = prepareGstAmount(amount, gst);
   const sales = findAccount(accounts, { code: SYSTEM_CODES.sales });
   const receivable = findAccount(accounts, { code: SYSTEM_CODES.receivable }) || findAccount(accounts, { accountType: "receivable" });
   if (!sales) throw new Error("Missing Sales account");
@@ -867,7 +867,7 @@ export function creditNoteLines({ accounts, amount, partyId, description = "", g
 }
 
 export function debitNoteLines({ accounts, amount, partyId, description = "", gst } = {}) {
-  const prepared = gst?.preparedOverride || prepareGstAmount(amount, gst);
+  const prepared = prepareGstAmount(amount, gst);
   const purchase = findAccount(accounts, { code: SYSTEM_CODES.purchase });
   const payable = findAccount(accounts, { code: SYSTEM_CODES.payable }) || findAccount(accounts, { accountType: "payable" });
   if (!purchase) throw new Error("Missing Purchase account");

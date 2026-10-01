@@ -8,7 +8,6 @@ import {
   currentStockForItem,
   emptyItemForm,
   stockMovementReport,
-  stockReasonLabel,
   stockStatus,
   validateItemForm,
 } from "./inventoryModel.js";
@@ -368,7 +367,7 @@ export function AccItemsSetup({
             <p className="small">Item profitability will be available once sufficient cost data is recorded.</p>
             <h3 className="acc-section-title">Recent stock movements</h3>
             <div className="table acc-table-wrap"><table><thead><tr><th>Date</th><th>Reason</th><th className="acc-num">Qty</th><th>Voucher</th></tr></thead><tbody>
-              {detailMoves.map(row => <tr key={row.id}><td>{row.movementDate}</td><td>{stockReasonLabel(row.reason)}</td><td className="acc-num">{row.quantityDelta > 0 ? `+${row.quantityDelta}` : row.quantityDelta}</td><td>{row.voucherNumber || "—"}</td></tr>)}
+              {detailMoves.map(row => <tr key={row.id}><td>{row.movementDate}</td><td>{row.reason}</td><td className="acc-num">{row.quantityDelta > 0 ? `+${row.quantityDelta}` : row.quantityDelta}</td><td>{row.voucherNumber || "—"}</td></tr>)}
               {!detailMoves.length && <tr><td colSpan="4">No movements yet.</td></tr>}
             </tbody></table></div>
             <p className="small">Sales lines: {detailSales.length} · Purchase lines: {detailPurchases.length}</p>

@@ -41,7 +41,7 @@ export function SalesInvoiceViewerModal({ invoice, settings = {}, close }) {
             <section>
               <strong>ITEMS</strong>
               {invoice.itemLines.map((line, index) => (
-                <p key={index}>{line.quantity} {line.unit} × {line.name} @ {m(line.rate)}{line.discount > 0 ? ` − disc ${m(line.discount)}` : ""} = {m(line.amount)}</p>
+                <p key={index}>{line.quantity} {line.unit} × {line.name} @ {m(line.rate)} = {m(line.amount)}</p>
               ))}
             </section>
           ) : null}
