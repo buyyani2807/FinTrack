@@ -10,5 +10,7 @@ export const C = {
   gold: "var(--ft-warning)",
   green: "var(--ft-success)",
   red: "var(--ft-danger)",
-  blue: "var(--ft-info)"
+  blue: "var(--ft-info)",
+  primary: "var(--ft-primary)",
+  track: "var(--ft-surface-muted)"
 };

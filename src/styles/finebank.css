@@ -235,6 +235,8 @@ input:disabled, select:disabled, textarea:disabled { background: var(--ft-surfac
 :root[data-theme="dark"] .metrics .card { border-color: var(--ft-border) !important; }
 .metrics .card::before { display: none !important; }
 .metrics button.card.metric-link:hover { border-color: var(--ft-primary) !important; }
+/* tiles inside a card are flat and outlined, not floating */
+.card .metrics .card, .card .metrics button.card.metric-link, .dashboard-finance-section .metrics .card { box-shadow: none !important; border-color: var(--ft-border) !important; background: var(--ft-surface-subtle) !important; }
 .metric-label { color: var(--ft-muted) !important; font-weight: 500 !important; font-size: 12px !important; letter-spacing: .02em !important; text-transform: none !important; }
 .metric-value { color: var(--ft-text) !important; font-weight: 800 !important; font-size: 22px !important; line-height: 32px !important; }
 .metric-value.gold { color: var(--ft-text) !important; }
