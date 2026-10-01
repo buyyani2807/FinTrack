@@ -42,7 +42,7 @@ const vercel = readFileSync(join(root, "vercel.json"), "utf8");
 if (vercel.includes("Content-Security-Policy")) ok("security headers configured in vercel.json");
 else fail("CSP missing from vercel.json");
 
-const chitModule = readFileSync(join(root, "src/features/chitFund/ChitFundModule.jsx"), "utf8");
+const chitModule = readFileSync(join(root, "src/features/chitFund/ChitFundPage.jsx"), "utf8");
 if (/const \[enriching, setEnriching\] = useState/.test(chitModule)) ok("ChitFundPage enriching state declared");
 else fail("ChitFundPage missing enriching state — Chit Fund will crash on load");
 
