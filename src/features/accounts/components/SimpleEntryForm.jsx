@@ -8,11 +8,15 @@ import {
   salePaymentSummary,
   cashUpiSplitIsValid,
 } from "../model/accountingModel.js";
-import { GST_RATES, gstStateFromGstin, isIntraGst } from "../model/accountingGst.js";
+import { gstStateFromGstin, isIntraGst } from "../model/accountingGst.js";
 import { suggestBillWiseAllocations } from "../model/accountingReports.js";
-import { aggregateItemizedGst, emptyItemLine, normalizeItemLine, usesItemLines } from "../model/inventoryModel.js";
-import { money, gstStatusLabel } from "../accountsFormat.js";
-import { Field, AccTable } from "./AccUi.jsx";
+import { aggregateItemizedGst, emptyItemLine, usesItemLines } from "../model/inventoryModel.js";
+import { money } from "../accountsFormat.js";
+import { Field } from "./AccUi.jsx";
+import { EntryAmountSection } from "./simpleEntry/EntryAmountSection.jsx";
+import { ItemLinesSection } from "./simpleEntry/ItemLinesSection.jsx";
+import { SaleSummaryCard } from "./simpleEntry/SaleSummaryCard.jsx";
+import { BillwiseSettlement } from "./simpleEntry/BillwiseSettlement.jsx";
 
 export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, saving, maxDate, gstCompany, onGstSetup, items = [], stockByItem = {}, openInvoices = [] }) {
   const customers = parties.filter(party => party.partyType === "customer" && (party.isActive !== false || party.id === form.partyId));
@@ -184,180 +188,48 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
     </section>
 
     {!itemMode && (
-      <section className="acc-form-section">
-        <h3 className="acc-form-section-title">{kind === "sale" ? "Invoice amount" : "Amount"}</h3>
-        <div className="form">
-          <Field required label={kind === "sale" ? "Sale value (invoice)" : "Amount"}><input type="number" min="0" step="0.01" value={form.amount} placeholder="0.00" onChange={event => {
-            const amount = event.target.value;
-            set({
-              amount,
-              settlements: settlementKinds ? syncSettlements(form.partyId, amount) : form.settlements,
-            });
-          }} /></Field>
-          {showReceivedOnCredit && (
-            <Field label="Amount received now">
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.amountReceived}
-                placeholder="0.00 — leave blank if unpaid"
-                onChange={event => set({ amountReceived: event.target.value })}
-              />
-            </Field>
-          )}
-          {showMoneyMode && form.moneyMode === "cash_upi" && (
-            <>
-              <Field label="Cash amount (₹)">
-                <input type="number" min="0" step="0.01" value={form.receivedCash} placeholder="0.00" onChange={event => set({ receivedCash: event.target.value })} />
-              </Field>
-              <Field label="UPI amount (₹)">
-                <input type="number" min="0" step="0.01" value={form.receivedUpi} placeholder="0.00" onChange={event => set({ receivedUpi: event.target.value })} />
-              </Field>
-              <p className={`small span ${cashUpiValid ? "" : "red"}`}>
-                Cash + UPI must equal {money(splitTargetAmount)}
-                {splitEntered > 0 ? ` · entered ${money(splitEntered)}` : ""}
-                {!cashUpiValid && splitTargetAmount > 0 ? " · enter both amounts" : ""}
-              </p>
-            </>
-          )}
-          {!itemMode && gstKinds && gstOn && <>
-            <Field label="GST rate"><select value={form.gstRate} onChange={event => set({ gstRate: event.target.value })}>{GST_RATES.map(rate => <option key={rate} value={String(rate)}>{rate}%</option>)}</select></Field>
-            <Field label="Price"><select value={form.taxInclusive ? "incl" : "excl"} onChange={event => set({ taxInclusive: event.target.value === "incl" })}><option value="excl">Tax exclusive</option><option value="incl">Tax inclusive</option></select></Field>
-            <Field label="HSN / SAC"><input value={form.hsnSac} placeholder="optional" onChange={event => set({ hsnSac: event.target.value })} /></Field>
-            <Field label="Supply">{intra ? "Intra-state (CGST + SGST)" : partyState ? "Inter-state (IGST)" : "Set party state for CGST/SGST vs IGST"}</Field>
-          </>}
-          {gstKinds && !gstOn && (
-            <div className="acc-gst-setup-hint span">
-              <p className="copy">GST is off for {gstCompany?.name || "this company"} ({gstStatusLabel(gstCompany)}). This {kind.replaceAll("_", " ")} posts without tax until you choose Regular in Setup and save GSTIN + state.</p>
-              {onGstSetup ? <button type="button" className="btn" onClick={onGstSetup}>Open GST setup</button> : null}
-            </div>
-          )}
-          <Field className="span" label="Note (optional)"><input value={form.narration} onChange={event => set({ narration: event.target.value })} placeholder="Received from Ravi" /></Field>
-        </div>
-      </section>
+      <EntryAmountSection
+        kind={kind}
+        form={form}
+        set={set}
+        settlementKinds={settlementKinds}
+        syncSettlements={syncSettlements}
+        showReceivedOnCredit={showReceivedOnCredit}
+        showMoneyMode={showMoneyMode}
+        cashUpiValid={cashUpiValid}
+        splitTargetAmount={splitTargetAmount}
+        splitEntered={splitEntered}
+        itemMode={itemMode}
+        gstKinds={gstKinds}
+        gstOn={gstOn}
+        intra={intra}
+        partyState={partyState}
+        gstCompany={gstCompany}
+        onGstSetup={onGstSetup}
+      />
     )}
 
     {itemMode && (
-      <section className="acc-form-section acc-item-lines">
-        <h3 className="acc-form-section-title">Line items</h3>
-        <AccTable spaced={false} columns={["Item", "Qty", "Rate", "Discount", "GST%", { label: "Amount", num: true }, ""]}>
-          {(form.itemLines || [emptyItemLine()]).map((line, index) => {
-            const lineTotals = normalizeItemLine(line);
-            const stock = line.itemId ? stockByItem[line.itemId] : null;
-            return (
-              <tr key={index}>
-                <td>
-                  <select value={line.itemId || ""} onChange={event => selectItem(index, event.target.value)}>
-                    <option value="">Search / select item</option>
-                    {activeItems.map(item => (
-                      <option key={item.id} value={item.id}>
-                        {item.name} · {item.sku}{item.itemType === "product" && stockByItem[item.id] != null ? ` · stock ${stockByItem[item.id]} ${item.unit}` : ""}
-                      </option>
-                    ))}
-                  </select>
-                  {stock != null && <div className="small">Stock {stock} {line.unit || ""}</div>}
-                </td>
-                <td><input type="number" min="0" step="0.001" value={line.quantity} onChange={event => patchItemLine(index, { quantity: event.target.value })} /></td>
-                <td><input type="number" min="0" step="0.01" value={line.rate} onChange={event => patchItemLine(index, { rate: event.target.value, rateTouched: true })} /></td>
-                <td><input inputMode="decimal" value={line.discount || ""} placeholder="₹ or %" aria-label="Discount (amount or percent)" onChange={event => patchItemLine(index, { discount: event.target.value })} /></td>
-                <td><input type="number" min="0" max="100" step="0.01" value={line.gstRate} onChange={event => patchItemLine(index, { gstRate: event.target.value })} /></td>
-                <td className="acc-num">{money(lineTotals.netAmount)}</td>
-                <td>{(form.itemLines || []).length > 1 && <button type="button" className="btn danger" onClick={() => setForm(current => ({ ...current, itemLines: current.itemLines.filter((_, i) => i !== index) }))}>Remove</button>}</td>
-              </tr>
-            );
-          })}
-        </AccTable>
-        <div className="acc-item-line-cards">
-          {(form.itemLines || [emptyItemLine()]).map((line, index) => {
-            const lineTotals = normalizeItemLine(line);
-            const stock = line.itemId ? stockByItem[line.itemId] : null;
-            const lineName = activeItems.find(item => item.id === line.itemId)?.name || "Select item";
-            return (
-              <article key={index} className="acc-item-line-card">
-                <div className="acc-item-line-card-top">
-                  <strong>{lineName}</strong>
-                  <span className="acc-item-line-amount">{money(lineTotals.netAmount)}</span>
-                </div>
-                <label className="accounts-filter-field">
-                  <span className="small">Item</span>
-                  <select value={line.itemId || ""} onChange={event => selectItem(index, event.target.value)}>
-                    <option value="">Search / select item</option>
-                    {activeItems.map(item => (
-                      <option key={item.id} value={item.id}>
-                        {item.name} · {item.sku}{item.itemType === "product" && stockByItem[item.id] != null ? ` · stock ${stockByItem[item.id]} ${item.unit}` : ""}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {stock != null && <p className="small">Stock {stock} {line.unit || ""}</p>}
-                <div className="acc-item-line-card-grid">
-                  <label className="accounts-filter-field"><span className="small">Qty</span>
-                    <input type="number" min="0" step="0.001" value={line.quantity} onChange={event => patchItemLine(index, { quantity: event.target.value })} />
-                  </label>
-                  <label className="accounts-filter-field"><span className="small">Rate</span>
-                    <input type="number" min="0" step="0.01" value={line.rate} onChange={event => patchItemLine(index, { rate: event.target.value, rateTouched: true })} />
-                  </label>
-                  <label className="accounts-filter-field"><span className="small">Discount</span>
-                    <input inputMode="decimal" value={line.discount || ""} placeholder="₹ or %" onChange={event => patchItemLine(index, { discount: event.target.value })} />
-                  </label>
-                  <label className="accounts-filter-field"><span className="small">GST %</span>
-                    <input type="number" min="0" max="100" step="0.01" value={line.gstRate} onChange={event => patchItemLine(index, { gstRate: event.target.value })} />
-                  </label>
-                </div>
-                {(form.itemLines || []).length > 1 && (
-                  <button type="button" className="btn danger" onClick={() => setForm(current => ({ ...current, itemLines: current.itemLines.filter((_, i) => i !== index) }))}>Remove</button>
-                )}
-              </article>
-            );
-          })}
-        </div>
-        <button type="button" className="btn" onClick={() => setForm(current => ({ ...current, itemLines: [...(current.itemLines || []), emptyItemLine()] }))}>+ Add item</button>
-        {itemPreview && (
-          <p className="small acc-gst-preview">
-            {(() => {
-              const discountTotal = roundMoney(itemPreview.lines.reduce((sum, line) => sum + (Number.isFinite(line.discountAmount) ? line.discountAmount : 0), 0));
-              return discountTotal > 0 ? `Discount ${money(discountTotal)} · ` : "";
-            })()}
-            Subtotal {money(itemPreview.taxable)}
-            {gstOn && itemPreview.tax > 0 ? (itemPreview.igst > 0
-              ? ` · IGST ${money(itemPreview.igst)}`
-              : ` · CGST ${money(itemPreview.cgst)} · SGST ${money(itemPreview.sgst)}`) : ""}
-            {` · Total ${money(gstOn ? itemPreview.total : itemPreview.taxable)}`}
-          </p>
-        )}
-        {showReceivedOnCredit && (
-          <div className="form spacer">
-            <Field label="Amount received now">
-              <input type="number" min="0" step="0.01" value={form.amountReceived} placeholder="0.00 — leave blank if unpaid" onChange={event => set({ amountReceived: event.target.value })} />
-            </Field>
-          </div>
-        )}
-        {showMoneyMode && form.moneyMode === "cash_upi" && (
-          <div className="form spacer">
-            <Field label="Cash amount (₹)">
-              <input type="number" min="0" step="0.01" value={form.receivedCash} placeholder="0.00" onChange={event => set({ receivedCash: event.target.value })} />
-            </Field>
-            <Field label="UPI amount (₹)">
-              <input type="number" min="0" step="0.01" value={form.receivedUpi} placeholder="0.00" onChange={event => set({ receivedUpi: event.target.value })} />
-            </Field>
-            <p className={`small span ${cashUpiValid ? "" : "red"}`}>
-              Cash + UPI must equal {money(splitTargetAmount)}
-              {splitEntered > 0 ? ` · entered ${money(splitEntered)}` : ""}
-              {!cashUpiValid && splitTargetAmount > 0 ? " · enter both amounts" : ""}
-            </p>
-          </div>
-        )}
-        {gstKinds && !gstOn && (
-          <div className="acc-gst-setup-hint">
-            <p className="copy">GST is off for {gstCompany?.name || "this company"} ({gstStatusLabel(gstCompany)}). This {kind.replaceAll("_", " ")} posts without tax until you choose Regular in Setup and save GSTIN + state.</p>
-            {onGstSetup ? <button type="button" className="btn" onClick={onGstSetup}>Open GST setup</button> : null}
-          </div>
-        )}
-        <div className="form">
-          <Field className="span" label="Note (optional)"><input value={form.narration} onChange={event => set({ narration: event.target.value })} placeholder="Received from Ravi" /></Field>
-        </div>
-      </section>
+      <ItemLinesSection
+        form={form}
+        stockByItem={stockByItem}
+        selectItem={selectItem}
+        activeItems={activeItems}
+        patchItemLine={patchItemLine}
+        setForm={setForm}
+        itemPreview={itemPreview}
+        gstOn={gstOn}
+        showReceivedOnCredit={showReceivedOnCredit}
+        set={set}
+        showMoneyMode={showMoneyMode}
+        cashUpiValid={cashUpiValid}
+        splitTargetAmount={splitTargetAmount}
+        splitEntered={splitEntered}
+        gstKinds={gstKinds}
+        gstCompany={gstCompany}
+        kind={kind}
+        onGstSetup={onGstSetup}
+      />
     )}
 
     {gstPreview && Number(form.amount) > 0 && Number(form.gstRate) > 0 && (
@@ -369,69 +241,18 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
     )}
 
     {saleSummary && (
-      <div className="card acc-sale-summary spacer" aria-label="Sale summary">
-        <h3 className="acc-section-title">Sale summary</h3>
-        <p className="small">Sale value is the full invoice recorded in the books. Amount received is money collected against that invoice.</p>
-        <dl className="acc-sale-summary-grid">
-          <div><dt>Invoice total (sale value)</dt><dd>{money(saleSummary.invoiceTotal)}</dd></div>
-          <div><dt>Amount received</dt><dd>{money(saleSummary.amountReceived)}</dd></div>
-          <div><dt>Outstanding receivable</dt><dd className={saleSummary.outstanding > 0 ? "due" : "ok"}>{money(saleSummary.outstanding)}</dd></div>
-          <div><dt>Payment status</dt><dd><span className={`acc-status-pill ${saleSummary.paymentStatus === "Paid" ? "inv-paid" : saleSummary.paymentStatus === "Partially Paid" ? "inv-partial" : "inv-current"}`}>{saleSummary.paymentStatus}</span></dd></div>
-        </dl>
-        {form.settlement === "credit" && saleSummary.amountReceived > saleSummary.invoiceTotal + 0.001 ? (
-          <p className="small red" role="alert">Amount received cannot exceed the invoice total.</p>
-        ) : null}
-      </div>
+      <SaleSummaryCard saleSummary={saleSummary} form={form} />
     )}
 
     {settlementKinds && form.partyId && (
-      <div className="acc-billwise spacer acc-form-section">
-        <h3 className="acc-form-section-title">Allocate against invoices</h3>
-        <p className="small">Bill-wise links are saved with this voucher. Suggested oldest-first; edit amounts as needed. Unallocated remainder still reduces party balance.</p>
-        {partyOpenInvoices.length ? (
-          <AccTable spaced={false} columns={["Invoice", "Date", { label: "Outstanding", num: true }, { label: "Allocate", num: true }]}>
-            {partyOpenInvoices.map(invoice => {
-              const link = (form.settlements || []).find(row => row.invoiceVoucherId === invoice.id);
-              return (
-                <tr key={invoice.id}>
-                  <td>{invoice.reference}</td>
-                  <td>{invoice.invoiceDate}</td>
-                  <td className="acc-num">{money(invoice.outstanding)}</td>
-                  <td className="acc-num">
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={link ? String(link.amount) : ""}
-                      placeholder="0"
-                      onChange={event => {
-                        const value = Number(event.target.value || 0);
-                        setForm(current => {
-                          const rest = (current.settlements || []).filter(row => row.invoiceVoucherId !== invoice.id);
-                          if (!(value > 0)) return { ...current, settlements: rest };
-                          return {
-                            ...current,
-                            settlements: [...rest, {
-                              invoiceVoucherId: invoice.id,
-                              reference: invoice.reference,
-                              amount: roundMoney(Math.min(value, invoice.outstanding)),
-                            }],
-                          };
-                        });
-                      }}
-                    />
-                  </td>
-                </tr>
-              );
-            })}
-          </AccTable>
-        ) : <p className="small">No open invoices for this party — receipt/payment will still post to the party ledger.</p>}
-        <p className={`small ${settlementTotal > Number(form.amount || 0) + 0.001 ? "red" : ""}`}>
-          Allocated {money(settlementTotal)} of {money(form.amount || 0)}
-          {settlementTotal > Number(form.amount || 0) + 0.001 ? " · reduce allocations to match the amount" : ""}
-        </p>
-        <button type="button" className="btn" onClick={() => set({ settlements: syncSettlements(form.partyId, form.amount) })}>Auto-allocate oldest first</button>
-      </div>
+      <BillwiseSettlement
+        partyOpenInvoices={partyOpenInvoices}
+        form={form}
+        setForm={setForm}
+        settlementTotal={settlementTotal}
+        set={set}
+        syncSettlements={syncSettlements}
+      />
     )}
 
     <div className="tabs spacer"><button type="button" className="btn primary" disabled={saving || (settlementKinds && settlementTotal > Number(form.amount || 0) + 0.001) || (saleSummary && saleSummary.amountReceived > saleSummary.invoiceTotal + 0.001) || (showMoneyMode && form.moneyMode === "cash_upi" && splitTargetAmount > 0 && !cashUpiValid)} onClick={onSubmit}>{saving ? "Saving…" : "Save"}</button></div>

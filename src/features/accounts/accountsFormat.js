@@ -2,6 +2,7 @@ import { PARTY_TYPES } from "./model/accountingModel.js";
 import { formatInr } from "../../lib/formatMoney.js";
 
 export const money = formatInr;
+export const qty = (value, unit) => `${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 3 })}${unit ? ` ${unit}` : ""}`;
 export const formatOverviewDate = iso => {
   if (!iso) return "—";
   const [year, month, day] = String(iso).split("-").map(Number);

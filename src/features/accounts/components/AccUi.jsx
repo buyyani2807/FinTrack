@@ -98,6 +98,10 @@ export const Field = LabeledField;
 export function FilterField({ label, children, className = "" }) {
   return <label className={`accounts-filter-field ${className}`.trim()}><span className="small">{label}</span>{children}</label>;
 }
+// Label/value card without the click and hint behaviour of AccMetric.
+export function SimpleMetric({ label, value, tone = "" }) {
+  return <article className="card acc-metric-card"><div className="metric-label">{label}</div><div className={`metric-value ${tone}`.trim()}>{value}</div></article>;
+}
 export const AccMetric = ({ label, value, tone = "", onClick, hint = "" }) => (
   <article
     className={`card acc-metric-card tone-${tone || "plain"}${onClick ? " clickable" : ""}`}

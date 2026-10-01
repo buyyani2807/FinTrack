@@ -1,21 +1,13 @@
 import { useMemo, useState } from "react";
-import { formatInr } from "../../../lib/formatMoney.js";
 import { todayIso } from "../../../lib/dates.js";
-import { AccMoreMenu, FilterField as Field, AccTable } from "./AccUi.jsx";
-import {
-  ITEM_TYPES,
-  ITEM_UNITS,
-  currentStockForItem,
-  emptyItemForm,
-  stockMovementReport,
-  stockReasonLabel,
-  stockStatus,
-  validateItemForm,
-} from "../model/inventoryModel.js";
+import { currentStockForItem, emptyItemForm, stockMovementReport, stockStatus, validateItemForm } from "../model/inventoryModel.js";
 import { costItemMovements } from "../model/inventoryValuation.js";
-import { DialogModal } from "../../../components/ui.jsx";
+import { ItemsTable } from "./items/ItemsTable.jsx";
+import { ItemCards } from "./items/ItemCards.jsx";
+import { ItemsSidePanels } from "./items/ItemsSidePanels.jsx";
+import { ItemFormDialog } from "./items/ItemFormDialog.jsx";
+import { ItemDetailDialog } from "./items/ItemDetailDialog.jsx";
 
-const money = formatInr;
 
 
 export function AccItemsSetup({
@@ -148,228 +140,64 @@ export function AccItemsSetup({
         <button type="button" className="btn primary" onClick={openCreate}>+ Item</button>
       </div>
 
-      <div className="table spacer acc-table-wrap acc-items-desktop">
-        <table>
-          <thead>
-            <tr>
-              <th>Item</th>
-              <th>SKU</th>
-              <th>Type</th>
-              <th>Unit</th>
-              <th className="acc-num">Sell</th>
-              <th className="acc-num">Buy</th>
-              <th className="acc-num">Stock</th>
-              <th>Status</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map(item => {
-              const stock = stockByItem[item.id];
-              const status = stockStatus(stock, item.reorderLevel);
-              return (
-                <tr key={item.id}>
-                  <td><button type="button" className="link-button" onClick={() => setDetailId(item.id)}><strong>{item.name}</strong></button></td>
-                  <td>{item.sku}</td>
-                  <td>{item.itemType}</td>
-                  <td>{item.unit}</td>
-                  <td className="acc-num">{money(item.sellingPrice)}</td>
-                  <td className="acc-num">{money(item.purchasePrice)}</td>
-                  <td className="acc-num">{stock == null ? "—" : `${stock} ${item.unit}`}</td>
-                  <td>{item.isActive === false ? "Inactive" : status === "low" ? "Low stock" : "Active"}</td>
-                  <td className="acc-item-actions">
-                    <button type="button" className="btn" disabled={saving} onClick={() => openEdit(item)}>Edit</button>
-                    <AccMoreMenu
-                      label="More"
-                      items={[
-                        item.isActive !== false
-                          ? { id: "deactivate", label: "Deactivate", disabled: saving, onClick: () => onSetItemActive(item.id, false) }
-                          : { id: "reactivate", label: "Reactivate", disabled: saving, onClick: () => onSetItemActive(item.id, true) },
-                        { id: "delete", label: "Delete", danger: true, disabled: saving, onClick: () => onDeleteItem(item) },
-                      ]}
-                    />
-                  </td>
-                </tr>
-              );
-            })}
-            {!filtered.length && <tr><td colSpan="9">No items yet. Create Cement 50kg or a service to start.</td></tr>}
-          </tbody>
-        </table>
-      </div>
-      <div className="acc-item-cards spacer">
-        {filtered.map(item => {
-          const stock = stockByItem[item.id];
-          const status = stockStatus(stock, item.reorderLevel);
-          return (
-            <article key={item.id} className="card acc-item-card">
-              <div className="acc-item-line-card-top">
-                <div>
-                  <strong>{item.name}</strong>
-                  <p className="small">{item.sku} · {item.itemType}</p>
-                </div>
-                <span className="small">{item.isActive === false ? "Inactive" : status === "low" ? "Low stock" : "Active"}</span>
-              </div>
-              <p className="acc-ledger-card-amounts">
-                <span>Sell <strong>{money(item.sellingPrice)}</strong></span>
-                <span>Buy <strong>{money(item.purchasePrice)}</strong></span>
-                <span>Stock <strong>{stock == null ? "—" : `${stock} ${item.unit}`}</strong></span>
-              </p>
-              <div className="acc-item-actions">
-                <button type="button" className="btn" onClick={() => setDetailId(item.id)}>View</button>
-                <button type="button" className="btn" disabled={saving} onClick={() => openEdit(item)}>Edit</button>
-                <AccMoreMenu
-                  label="More"
-                  items={[
-                    item.isActive !== false
-                      ? { id: "deactivate", label: "Deactivate", disabled: saving, onClick: () => onSetItemActive(item.id, false) }
-                      : { id: "reactivate", label: "Reactivate", disabled: saving, onClick: () => onSetItemActive(item.id, true) },
-                    { id: "delete", label: "Delete", danger: true, disabled: saving, onClick: () => onDeleteItem(item) },
-                  ]}
-                />
-              </div>
-            </article>
-          );
-        })}
-        {!filtered.length && <p className="copy">No items yet. Create Cement 50kg or a service to start.</p>}
-      </div>
+      <ItemsTable
+        filtered={filtered}
+        stockByItem={stockByItem}
+        setDetailId={setDetailId}
+        saving={saving}
+        openEdit={openEdit}
+        onSetItemActive={onSetItemActive}
+        onDeleteItem={onDeleteItem}
+      />
+      <ItemCards
+        filtered={filtered}
+        stockByItem={stockByItem}
+        setDetailId={setDetailId}
+        saving={saving}
+        openEdit={openEdit}
+        onSetItemActive={onSetItemActive}
+        onDeleteItem={onDeleteItem}
+      />
 
-      <div className="acc-items-side-grid">
-        <div className="card acc-item-categories-card">
-          <strong>Categories</strong>
-          <p className="small">Create a category here, then assign it when you add an item.</p>
-          <label className="accounts-filter-field acc-category-create">
-            <span className="small">New category name</span>
-            <div className="acc-category-create-row">
-              <input
-                value={categoryName}
-                placeholder="e.g. Construction Materials"
-                onChange={event => { setCategoryName(event.target.value); setCategoryError(""); }}
-                onKeyDown={async event => {
-                  if (event.key !== "Enter") return;
-                  event.preventDefault();
-                  const name = categoryName.trim();
-                  if (!name || saving) return;
-                  setCategoryError("");
-                  try {
-                    await onSaveCategory({ name });
-                    setCategoryName("");
-                  } catch (err) {
-                    setCategoryError(err?.message || "Could not create category. Apply migration 067 if Items RPCs are missing.");
-                  }
-                }}
-              />
-              <button
-                type="button"
-                className="btn primary"
-                disabled={saving || !categoryName.trim()}
-                onClick={async () => {
-                  const name = categoryName.trim();
-                  if (!name) return;
-                  setCategoryError("");
-                  try {
-                    await onSaveCategory({ name });
-                    setCategoryName("");
-                  } catch (err) {
-                    setCategoryError(err?.message || "Could not create category. Apply migration 067 if Items RPCs are missing.");
-                  }
-                }}
-              >
-                Create category
-              </button>
-            </div>
-          </label>
-          {categoryError && <p className="red small">{categoryError}</p>}
-          <ul className="acc-item-cat-list">
-            {categories.map(category => (
-              <li key={category.id}>
-                <span>{category.name}</span>
-                <button type="button" className="btn danger" disabled={saving} onClick={() => onDeleteCategory(category.id)}>Delete</button>
-              </li>
-            ))}
-            {!categories.length && <li className="small">No categories yet — type a name above and click Create category.</li>}
-          </ul>
-        </div>
-
-        <div className="card">
-          <strong>Stock adjustment</strong>
-          <p className="small">Increase or decrease product stock with a reason. Auditable movement only.</p>
-          <div className="form">
-            <Field label="Item">
-              <select value={adjust.itemId} onChange={event => setAdjust(current => ({ ...current, itemId: event.target.value }))}>
-                <option value="">Select product</option>
-                {items.filter(item => item.itemType === "product" && item.isActive !== false).map(item => (
-                  <option key={item.id} value={item.id}>{item.name} ({stockByItem[item.id]} {item.unit})</option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Date"><input type="date" value={adjust.date} onChange={event => setAdjust(current => ({ ...current, date: event.target.value }))} /></Field>
-            <Field label="Qty (+/-)"><input type="number" step="0.001" value={adjust.quantityDelta} onChange={event => setAdjust(current => ({ ...current, quantityDelta: event.target.value }))} /></Field>
-            <Field className="span" label="Reason"><input value={adjust.reasonNote} placeholder="Damaged stock" onChange={event => setAdjust(current => ({ ...current, reasonNote: event.target.value }))} /></Field>
-          </div>
-          <button
-            type="button"
-            className="btn primary"
-            disabled={saving}
-            onClick={async () => {
-              await onAdjustStock(adjust);
-              setAdjust({ itemId: "", date: todayIso(), quantityDelta: "", reasonNote: "" });
-            }}
-          >
-            Save adjustment
-          </button>
-        </div>
-      </div>
+      <ItemsSidePanels
+        categoryName={categoryName}
+        setCategoryName={setCategoryName}
+        setCategoryError={setCategoryError}
+        saving={saving}
+        onSaveCategory={onSaveCategory}
+        categoryError={categoryError}
+        categories={categories}
+        onDeleteCategory={onDeleteCategory}
+        adjust={adjust}
+        setAdjust={setAdjust}
+        items={items}
+        stockByItem={stockByItem}
+        onAdjustStock={onAdjustStock}
+      />
 
       {showForm && (
-        <DialogModal className="acc-modal" title={form.id ? "Edit item" : "Create item"} close={() => setShowForm(false)}>
-          {error && <p className="red small">{error}</p>}
-          <div className="form">
-            <Field label="Type"><select value={form.itemType} onChange={event => setForm(current => ({ ...current, itemType: event.target.value }))}>{ITEM_TYPES.map(type => <option key={type.id} value={type.id}>{type.label}</option>)}</select></Field>
-            <Field label="Name"><input value={form.name} onChange={event => setForm(current => ({ ...current, name: event.target.value }))} /></Field>
-            <Field label="SKU / Code"><input value={form.sku} onChange={event => setForm(current => ({ ...current, sku: event.target.value }))} /></Field>
-            <Field label="Category">
-              <select value={form.categoryId} onChange={event => setForm(current => ({ ...current, categoryId: event.target.value }))}>
-                <option value="">None</option>
-                {categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
-              </select>
-            </Field>
-            <Field label="Unit"><select value={form.unit} onChange={event => setForm(current => ({ ...current, unit: event.target.value }))}>{ITEM_UNITS.map(unit => <option key={unit} value={unit}>{unit}</option>)}</select></Field>
-            <Field label="Selling price"><input type="number" min="0" step="0.01" value={form.sellingPrice} onChange={event => setForm(current => ({ ...current, sellingPrice: event.target.value }))} /></Field>
-            <Field label="Purchase price"><input type="number" min="0" step="0.01" value={form.purchasePrice} onChange={event => setForm(current => ({ ...current, purchasePrice: event.target.value }))} /></Field>
-            <Field label="GST %"><input type="number" min="0" max="100" step="0.01" value={form.gstRate} onChange={event => setForm(current => ({ ...current, gstRate: event.target.value }))} /></Field>
-            <Field label="HSN / SAC"><input value={form.hsnSac} onChange={event => setForm(current => ({ ...current, hsnSac: event.target.value }))} /></Field>
-            {form.itemType === "product" && <>
-              <Field label="Opening stock"><input type="number" min="0" step="0.001" value={form.openingStock} onChange={event => setForm(current => ({ ...current, openingStock: event.target.value }))} /></Field>
-              <Field label="Opening date"><input type="date" value={form.openingStockDate} onChange={event => setForm(current => ({ ...current, openingStockDate: event.target.value }))} /></Field>
-              <Field label="Opening rate (cost / unit)"><input type="number" min="0" step="0.01" value={form.openingRate ?? ""} placeholder={form.purchasePrice ? `Uses purchase price ${form.purchasePrice}` : "Uses purchase price"} onChange={event => setForm(current => ({ ...current, openingRate: event.target.value }))} /></Field>
-              <Field label="Reorder level"><input type="number" min="0" step="0.001" value={form.reorderLevel} onChange={event => setForm(current => ({ ...current, reorderLevel: event.target.value }))} /></Field>
-            </>}
-            <Field className="span" label="Description"><input value={form.description} onChange={event => setForm(current => ({ ...current, description: event.target.value }))} /></Field>
-          </div>
-          <div className="tabs spacer">
-            <button type="button" className="btn" disabled={saving} onClick={() => setShowForm(false)}>Cancel</button>
-            <button type="button" className="btn primary" disabled={saving} onClick={saveItem}>{saving ? "Saving…" : "Save item"}</button>
-          </div>
-        </DialogModal>
+        <ItemFormDialog
+          form={form}
+          setShowForm={setShowForm}
+          error={error}
+          setForm={setForm}
+          categories={categories}
+          saving={saving}
+          saveItem={saveItem}
+        />
       )}
 
       {detail && (
-        <DialogModal className="acc-modal" title={detail.name} close={() => setDetailId(null)}>
-          <p className="copy">{detail.sku} · {detail.itemType} · {detail.unit}</p>
-          <div className="acc-metric-grid three">
-            <article className="card acc-metric-card"><div className="metric-label">Current stock</div><div className="metric-value">{stockByItem[detail.id] == null ? "—" : `${stockByItem[detail.id]} ${detail.unit}`}</div></article>
-            <article className="card acc-metric-card"><div className="metric-label">Selling</div><div className="metric-value">{money(detail.sellingPrice)}</div></article>
-            <article className="card acc-metric-card"><div className="metric-label">Purchase</div><div className="metric-value">{money(detail.purchasePrice)}</div></article>
-          </div>
-          <p className="small">GST {detail.gstRate}% · HSN {detail.hsnSac || "—"} · Reorder {detail.reorderLevel} · {stockStatus(stockByItem[detail.id], detail.reorderLevel) === "low" ? "Low stock" : "Normal"}</p>
-          {detailValue && <p className="small">Average cost {money(detailValue.averageCost)} · Stock value {money(detailValue.value)} (weighted average)</p>}
-          <h3 className="acc-section-title">Recent stock movements</h3>
-          <AccTable spaced={false} columns={["Date", "Reason", { label: "Qty", num: true }, "Voucher"]} empty={!detailMoves.length && "No movements yet."}>
-            {detailMoves.map(row => <tr key={row.id}><td>{row.movementDate}</td><td>{stockReasonLabel(row.reason)}</td><td className="acc-num">{row.quantityDelta > 0 ? `+${row.quantityDelta}` : row.quantityDelta}</td><td>{row.voucherNumber || "—"}</td></tr>)}
-          </AccTable>
-          <p className="small">Sales lines: {detailSales.length} · Purchase lines: {detailPurchases.length}</p>
-          <div className="tabs spacer"><button type="button" className="btn" onClick={() => openEdit(detail)}>Edit</button><button type="button" className="btn primary" onClick={() => setDetailId(null)}>Done</button></div>
-        </DialogModal>
+        <ItemDetailDialog
+          detail={detail}
+          setDetailId={setDetailId}
+          stockByItem={stockByItem}
+          detailValue={detailValue}
+          detailMoves={detailMoves}
+          detailSales={detailSales}
+          detailPurchases={detailPurchases}
+          openEdit={openEdit}
+        />
       )}
     </section>
   );
