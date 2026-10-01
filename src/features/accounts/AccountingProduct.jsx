@@ -71,7 +71,7 @@ import {
   salePaymentSummary,
   assertMoneyModeSplit,
 } from "./accountingModel.js";
-import { todayIso } from "./cashbookModel.js";
+import { todayIso } from "../../lib/dates.js";
 import { gstStateFromGstin, isIntraGst } from "./accountingGst.js";
 import {
   accountLedger,

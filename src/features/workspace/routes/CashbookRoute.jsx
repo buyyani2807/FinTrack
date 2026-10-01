@@ -1,6 +1,6 @@
 import { useNavigate, useOutletContext } from "react-router";
 import { C } from "../../../styles/theme.js";
-import { CashbookWorkspace } from "../../accounts/AccountsModule.jsx";
+import { CashbookWorkspace } from "../../cashbook/CashbookWorkspace.jsx";
 import { workspacePaths } from "../paths.js";
 
 // /cashbook

@@ -1,5 +1,5 @@
 import { AccPager, AccSetupSection } from "../../components/AccUi.jsx";
-import { formatIstDateTime } from "../../cashbookModel.js";
+import { formatIstDateTime } from "../../../../lib/dates.js";
 
 export function AuditTrailPanel({ audit, pagedAudit, setListPage }) {
   return (

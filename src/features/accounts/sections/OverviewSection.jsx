@@ -3,7 +3,7 @@ import { AccOnboardingWizard, markAccountsOnboardingDone } from "../AccOnboardin
 import { Field, AccMetric } from "../components/AccUi.jsx";
 import { AttentionCenterCard } from "../../intelligence/AttentionCenterCard.jsx";
 import { trackProductEvent } from "../../commercial/productAnalytics.js";
-import { todayIso } from "../cashbookModel.js";
+import { todayIso } from "../../../lib/dates.js";
 import { INDIA_STATES } from "../accountingGst.js";
 import { AccIntelligenceBrief } from "../AccIntelligenceBrief.jsx";
 import { emptyPartyForm } from "../accountsFormDefaults.js";

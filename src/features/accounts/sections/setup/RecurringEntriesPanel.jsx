@@ -1,7 +1,7 @@
 import { loadRecurringTemplates, upsertRecurringTemplate, deleteRecurringTemplate } from "../../accountingRepository.js";
 import { Field, AccSetupSection } from "../../components/AccUi.jsx";
 import { MONEY_MODES } from "../../accountingModel.js";
-import { todayIso } from "../../cashbookModel.js";
+import { todayIso } from "../../../../lib/dates.js";
 import { emptyRecurringDraft, RECURRING_KINDS, RECURRING_FREQUENCIES } from "../../accountsFormDefaults.js";
 import { money } from "../../accountsFormat.js";
 

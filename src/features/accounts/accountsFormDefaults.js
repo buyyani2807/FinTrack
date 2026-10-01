@@ -1,5 +1,5 @@
 import { addDaysIso } from "./accountingModel.js";
-import { todayIso } from "./cashbookModel.js";
+import { todayIso } from "../../lib/dates.js";
 import { emptyItemLine } from "./inventoryModel.js";
 
 export const emptyLine = () => ({ coaId: "", debit: "", credit: "", description: "" });

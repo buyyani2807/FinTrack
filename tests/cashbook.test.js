@@ -11,7 +11,7 @@ import {
   sourceOriginLabel,
   todayIso,
   withRunningBalances,
-} from "../src/features/accounts/cashbookModel.js";
+} from "../src/features/cashbook/cashbookModel.js";
 
 const ledgers = [
   { id: "cash", accountType: "cash", name: "Cash", isDefault: true },

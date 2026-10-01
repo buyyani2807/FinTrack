@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { formatInr } from "../../lib/formatMoney.js";
-import { todayIso } from "./cashbookModel.js";
+import { todayIso } from "../../lib/dates.js";
 import { downloadAccountsCsv } from "./accountingExport.js";
 import { stockMovementReport, stockReasonLabel, stockStatus } from "./inventoryModel.js";
 import { STOCK_AGE_BUCKETS, physicalCountVariances, stockAgeing, stockValuation } from "./inventoryValuation.js";

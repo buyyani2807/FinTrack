@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { todayIso } from "../cashbookModel.js";
+import { todayIso } from "../../../lib/dates.js";
 import { Field, AccMetric, Modal } from "./AccUi.jsx";
 
 export function ManufacturingWorkspace({ items = [], stockMovements = [], onItems, onTransactions, onProductionRun, saving = false }) {

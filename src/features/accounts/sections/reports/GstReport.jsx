@@ -7,7 +7,7 @@ import {
   gstrPrepToJson,
 } from "../../gstPrepExport.js";
 import { trackProductEvent } from "../../../commercial/productAnalytics.js";
-import { todayIso } from "../../cashbookModel.js";
+import { todayIso } from "../../../../lib/dates.js";
 import { downloadAccountsCsv } from "../../accountingExport.js";
 import { money } from "../../accountsFormat.js";
 

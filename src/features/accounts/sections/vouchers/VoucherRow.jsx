@@ -3,7 +3,7 @@ import { AccMoreMenu } from "../../components/AccUi.jsx";
 import { buildEinvoiceOutboundPayload } from "../../gstPrepExport.js";
 import { attachmentDownloadHref, VOUCHER_ATTACHMENT_MAX_BYTES } from "../../voucherAttachments.js";
 import { VOUCHER_TYPES, voucherTotals } from "../../accountingModel.js";
-import { todayIso } from "../../cashbookModel.js";
+import { todayIso } from "../../../../lib/dates.js";
 import { buildSalesInvoice } from "../../salesInvoiceModel.js";
 import { PurchaseDocumentButton, SalesInvoiceActions } from "../../SalesInvoiceActions.jsx";
 import { money } from "../../accountsFormat.js";

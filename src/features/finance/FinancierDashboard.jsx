@@ -4,7 +4,7 @@ import { Badge, Button, Metric } from "../../components/ui.jsx";
 import { claimTransactionConfirmation, loadPaymentReminderLog, loadTransactionConfirmationLog, loadUpcomingChitPayments, recordTransactionConfirmationResend, updateTransactionConfirmationStatus } from "../../lib/financeRepository";
 import { formatInr as money } from "../../lib/formatMoney.js";
 import { C } from "../../styles/theme.js";
-import { AccountsSummaryCard } from "../accounts/AccountsModule.jsx";
+import { AccountsSummaryCard } from "../cashbook/AccountsSummaryCard.jsx";
 import { trackProductEvent } from "../commercial/productAnalytics.js";
 import { AttentionCenterCard } from "../intelligence/AttentionCenterCard.jsx";
 import { buildChitAttentionItems, buildTodaysActionList } from "../intelligence/attentionCenter.js";

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { formatInr } from "../../lib/formatMoney.js";
-import { todayIso } from "./cashbookModel.js";
+import { todayIso } from "../../lib/dates.js";
 import { AccMoreMenu } from "./components/AccUi.jsx";
 import {
   ITEM_TYPES,
