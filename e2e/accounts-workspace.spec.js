@@ -101,3 +101,15 @@ test.describe("Cashbook workspace", () => {
     expect(errors).toEqual([]);
   });
 });
+
+test.describe("Workspace sidebar", () => {
+  test("Logout in the sidebar signs the owner out", async ({ page }) => {
+    await mockAccountsWorkspace(page);
+    await page.route("**/api/auth/logout", route => route.fulfill({ status: 200, contentType: "application/json", body: "{}" }));
+    await page.goto("/dashboard");
+    const sidebar = page.getByRole("complementary", { name: "Workspace" });
+    await expect(sidebar).toBeVisible({ timeout: 15_000 });
+    await sidebar.getByRole("button", { name: "Logout" }).click();
+    await expect(page.getByRole("button", { name: "Financier sign in" })).toBeVisible();
+  });
+});

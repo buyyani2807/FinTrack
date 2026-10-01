@@ -1,5 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { NAV_TREE, navItemIsActive } from "../accountsNavigation.js";
+import { ArrowLeftRight, ChartColumn, Landmark, LayoutGrid, Package, Settings, Users, Wallet } from "lucide-react";
+
+// Line icons for the Accounts sections (falls back to the text glyph for any new section).
+const NAV_ICONS = { overview: LayoutGrid, vouchers: ArrowLeftRight, inventory: Package, parties: Users, reports: ChartColumn, bank: Landmark, cashbook: Wallet, setup: Settings };
+function NavIcon({ item }) {
+  const Icon = NAV_ICONS[item.id];
+  return Icon
+    ? <Icon className="acc-nav-glyph acc-nav-icon" size={22} strokeWidth={1.8} aria-hidden="true" />
+    : <span className="acc-nav-glyph" aria-hidden="true">{item.glyph}</span>;
+}
 
 function AccUserMenu({ workspace = {}, onSetup, onLogout, placement = "sidebar" }) {
   const [open, setOpen] = useState(false);
@@ -61,9 +71,9 @@ export function AccSidebar({ section, expanded, onToggle, onNavigate }) {
     <aside className={`acc-sidebar${expanded ? " expanded" : " collapsed"}`} ref={root} aria-label="Accounts sections">
       <div className="acc-sidebar-brand">
         {expanded ? <>
-          <strong>FinTrack Accounts</strong>
+          <strong className="ft-brand"><span className="ft-brand-strong">FIN</span>Track</strong>
           <span className="small">Small-business books</span>
-        </> : <strong className="acc-sidebar-mark" title="FinTrack Accounts">FT</strong>}
+        </> : <strong className="acc-sidebar-mark ft-brand" title="FinTrack Accounts"><span className="ft-brand-strong">F</span>T</strong>}
       </div>
       <div className="acc-sidebar-nav" id="acc-sidebar-nav">
         {items.map(item => {
@@ -86,7 +96,7 @@ export function AccSidebar({ section, expanded, onToggle, onNavigate }) {
                   go(item.id);
                 }}
               >
-                <span className="acc-nav-glyph" aria-hidden="true">{item.glyph}</span>
+                <NavIcon item={item} />
                 {expanded ? <span className="acc-nav-label">{item.label}</span> : <span className="acc-sr-only">{item.label}</span>}
               </button>
               {kidsOpen && item.children && (

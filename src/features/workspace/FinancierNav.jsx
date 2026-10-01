@@ -1,11 +1,21 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router";
+import { BookOpenText, CalendarDays, CalendarRange, Coins, Ellipsis, LayoutGrid, LogOut, Settings, Users, Wallet } from "lucide-react";
 import { Button } from "../../components/ui.jsx";
 import { assertModuleEntitled } from "../commercial/entitlements.js";
 import { financeViewForPath, isWithin, workspacePaths } from "./paths.js";
 
+const initialsOf = name => String(name || "").trim().split(/\s+/).slice(0, 2).map(word => word[0]?.toUpperCase() || "").join("") || "FT";
+
+function NavLabel({ icon: Icon, long, short }) {
+  return <span className="nav-label">
+    <Icon className="nav-icon" size={22} strokeWidth={1.8} aria-hidden="true" />
+    <span className="nav-long">{long}</span><span className="nav-short">{short}</span>
+  </span>;
+}
+
 // Owner sidebar. Every option navigates to its route; "More" only expands the Collection Staff / Settings menu.
-export function FinancierNav({ access, orgSettings = {} }) {
+export function FinancierNav({ access, orgSettings = {}, businessName = "", logout }) {
   const location = useLocation();
   const navigate = useNavigate();
   const path = location.pathname.replace(/\/+$/, "");
@@ -34,20 +44,27 @@ export function FinancierNav({ access, orgSettings = {} }) {
     else if (onFinanceView) setMenu({ key: location.key, open: true });
     else navigate(workspacePaths.dashboard, { state: { moreOpen: true, resetView: true } });
   };
+  const itemClass = active => (active ? "tab active" : "");
 
-  return <aside className="financier-nav">
-    <div className="nav-title">FinTrack</div>
-    <Button className={isActive(workspacePaths.dashboard) ? "tab active" : ""} onClick={() => go(workspacePaths.dashboard)}><span className="nav-label"><span className="nav-glyph">▦</span><span className="nav-long">Dashboard</span><span className="nav-short">Dash</span></span></Button>
-    {access.daily && <Button className={isActive(workspacePaths.daily) ? "tab active" : ""} onClick={() => go(workspacePaths.daily)}><span className="nav-label"><span className="nav-glyph">▣</span><span className="nav-long">Daily Finance</span><span className="nav-short">Daily</span></span></Button>}
-    {access.monthly && <Button className={isActive(workspacePaths.monthly) ? "tab active" : ""} onClick={() => go(workspacePaths.monthly)}><span className="nav-label"><span className="nav-glyph">◫</span><span className="nav-long">Monthly Finance</span><span className="nav-short">Monthly</span></span></Button>}
-    {access.chit && <Button className={isActive(workspacePaths.chit) ? "tab active" : ""} onClick={() => openEntitled("chit", workspacePaths.chit)}><span className="nav-label"><span className="nav-glyph">◎</span><span className="nav-long">Chit Fund</span><span className="nav-short">Chit</span></span></Button>}
-    {access.cashbook && <Button className={isActive(workspacePaths.cashbook) ? "tab active" : ""} onClick={() => toggleEntitled("cashbook", workspacePaths.cashbook)}><span className="nav-label"><span className="nav-glyph">◇</span><span className="nav-long">Cashbook</span><span className="nav-short">Cash</span></span></Button>}
-    {access.accounts && <Button className={isActive(workspacePaths.accounts) ? "tab active" : ""} onClick={() => toggleEntitled("accounts", workspacePaths.accounts)}><span className="nav-label"><span className="nav-glyph">☰</span><span className="nav-long">Accounts</span><span className="nav-short">Accounts</span></span></Button>}
-    {access.isOwner && <Button className={moreActive ? "tab active" : ""} onClick={toggleMore}><span className="nav-label"><span className="nav-glyph">⋯</span><span className="nav-long">More</span><span className="nav-short">More</span></span></Button>}
+  return <aside className="financier-nav" aria-label="Workspace">
+    <div className="nav-title ft-brand"><span className="ft-brand-strong">FIN</span>Track</div>
+    <Button className={itemClass(isActive(workspacePaths.dashboard))} onClick={() => go(workspacePaths.dashboard)}><NavLabel icon={LayoutGrid} long="Dashboard" short="Dash" /></Button>
+    {access.daily && <Button className={itemClass(isActive(workspacePaths.daily))} onClick={() => go(workspacePaths.daily)}><NavLabel icon={CalendarDays} long="Daily Finance" short="Daily" /></Button>}
+    {access.monthly && <Button className={itemClass(isActive(workspacePaths.monthly))} onClick={() => go(workspacePaths.monthly)}><NavLabel icon={CalendarRange} long="Monthly Finance" short="Monthly" /></Button>}
+    {access.chit && <Button className={itemClass(isActive(workspacePaths.chit))} onClick={() => openEntitled("chit", workspacePaths.chit)}><NavLabel icon={Coins} long="Chit Fund" short="Chit" /></Button>}
+    {access.cashbook && <Button className={itemClass(isActive(workspacePaths.cashbook))} onClick={() => toggleEntitled("cashbook", workspacePaths.cashbook)}><NavLabel icon={Wallet} long="Cashbook" short="Cash" /></Button>}
+    {access.accounts && <Button className={itemClass(isActive(workspacePaths.accounts))} onClick={() => toggleEntitled("accounts", workspacePaths.accounts)}><NavLabel icon={BookOpenText} long="Accounts" short="Accounts" /></Button>}
+    {access.isOwner && <Button className={itemClass(moreActive)} aria-expanded={menuOpen} onClick={toggleMore}><NavLabel icon={Ellipsis} long="More" short="More" /></Button>}
     {access.isOwner && menuOpen && <div className="financier-nav-more">
-      <Button onClick={() => go(workspacePaths.collectionStaff)}>Collection Staff</Button>
-      <Button onClick={() => go(workspacePaths.settings)}>Settings</Button>
+      <Button onClick={() => go(workspacePaths.collectionStaff)}><NavLabel icon={Users} long="Collection Staff" short="Staff" /></Button>
+      <Button onClick={() => go(workspacePaths.settings)}><NavLabel icon={Settings} long="Settings" short="Settings" /></Button>
     </div>}
-    <div className="nav-footer">Financier workspace</div>
+    <div className="nav-footer">
+      {logout && <Button className="nav-logout" onClick={logout}><NavLabel icon={LogOut} long="Logout" short="Logout" /></Button>}
+      <div className="nav-profile">
+        <span className="nav-avatar" aria-hidden="true">{initialsOf(businessName)}</span>
+        <span className="nav-profile-text"><strong>{businessName || "My Finance Business"}</strong><span>Financier workspace</span></span>
+      </div>
+    </div>
   </aside>;
 }
