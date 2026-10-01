@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { DEFAULT_WHATSAPP_TEMPLATES } from "./model/templateEngine.js";
 import { defaultConfirmationSettings } from "./io/transactionConfirmations.js";
 import { loadOrganizationSettings, saveOrganizationSettings } from "../../lib/financeRepository.js";
+import { LabeledField as Field } from "../../components/ui.jsx";
 
-const Field = ({ label, children, className = "" }) => <label className={`field ${className}`}><span>{label}</span>{children}</label>;
 
 const defaultReminderSettings = () => ({
   monthly: { 7: true, 3: true, 1: true, 0: true },

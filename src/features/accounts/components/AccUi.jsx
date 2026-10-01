@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { LIST_PAGE_SIZE } from "../model/accountsList.js";
+import { LabeledField } from "../../../components/ui.jsx";
 
 /**
  * Shared Accounts UI primitives (presentation only).
@@ -93,12 +94,10 @@ export function AccMoreMenu({
 }
 
 
-export const Field = ({ label, children, required, className }) => (
-  <label className={`field${className ? ` ${className}` : ""}`}>
-    <span>{label}{required ? <span className="acc-req"> *</span> : null}</span>
-    {children}
-  </label>
-);
+export const Field = LabeledField;
+export function FilterField({ label, children, className = "" }) {
+  return <label className={`accounts-filter-field ${className}`.trim()}><span className="small">{label}</span>{children}</label>;
+}
 export const AccMetric = ({ label, value, tone = "", onClick, hint = "" }) => (
   <article
     className={`card acc-metric-card tone-${tone || "plain"}${onClick ? " clickable" : ""}`}

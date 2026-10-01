@@ -5,6 +5,7 @@ import { downloadAccountsCsv } from "../io/accountingExport.js";
 import { stockMovementReport, stockReasonLabel, stockStatus } from "../model/inventoryModel.js";
 import { STOCK_AGE_BUCKETS, physicalCountVariances, stockAgeing, stockValuation } from "../model/inventoryValuation.js";
 import { ITEM_CSV_TEMPLATE, parseItemCsv, planItemImport } from "../io/itemCsvImport.js";
+import { FilterField as Field } from "./AccUi.jsx";
 
 const money = formatInr;
 const qty = (value, unit) => `${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 3 })}${unit ? ` ${unit}` : ""}`;
@@ -19,9 +20,6 @@ const TABS = [
   { id: "settings", label: "Settings" },
 ];
 
-function Field({ label, children, className = "" }) {
-  return <label className={`accounts-filter-field ${className}`.trim()}><span className="small">{label}</span>{children}</label>;
-}
 
 function Metric({ label, value, tone = "" }) {
   return <article className="card acc-metric-card"><div className="metric-label">{label}</div><div className={`metric-value ${tone}`.trim()}>{value}</div></article>;

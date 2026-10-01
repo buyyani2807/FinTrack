@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { formatInr } from "../../../lib/formatMoney.js";
 import { todayIso } from "../../../lib/dates.js";
-import { AccMoreMenu } from "./AccUi.jsx";
+import { AccMoreMenu, FilterField as Field } from "./AccUi.jsx";
 import {
   ITEM_TYPES,
   ITEM_UNITS,
@@ -13,12 +13,10 @@ import {
   validateItemForm,
 } from "../model/inventoryModel.js";
 import { costItemMovements } from "../model/inventoryValuation.js";
+import { DialogModal } from "../../../components/ui.jsx";
 
 const money = formatInr;
 
-function Field({ label, children, className = "" }) {
-  return <label className={`accounts-filter-field ${className}`.trim()}><span className="small">{label}</span>{children}</label>;
-}
 
 export function AccItemsSetup({
   items = [],
@@ -323,62 +321,56 @@ export function AccItemsSetup({
       </div>
 
       {showForm && (
-        <div className="modal-bg">
-          <div className="modal acc-modal">
-            <div className="row"><h2 className="title">{form.id ? "Edit item" : "Create item"}</h2><button type="button" className="btn" onClick={() => setShowForm(false)}>Close</button></div>
-            {error && <p className="red small">{error}</p>}
-            <div className="form">
-              <Field label="Type"><select value={form.itemType} onChange={event => setForm(current => ({ ...current, itemType: event.target.value }))}>{ITEM_TYPES.map(type => <option key={type.id} value={type.id}>{type.label}</option>)}</select></Field>
-              <Field label="Name"><input value={form.name} onChange={event => setForm(current => ({ ...current, name: event.target.value }))} /></Field>
-              <Field label="SKU / Code"><input value={form.sku} onChange={event => setForm(current => ({ ...current, sku: event.target.value }))} /></Field>
-              <Field label="Category">
-                <select value={form.categoryId} onChange={event => setForm(current => ({ ...current, categoryId: event.target.value }))}>
-                  <option value="">None</option>
-                  {categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
-                </select>
-              </Field>
-              <Field label="Unit"><select value={form.unit} onChange={event => setForm(current => ({ ...current, unit: event.target.value }))}>{ITEM_UNITS.map(unit => <option key={unit} value={unit}>{unit}</option>)}</select></Field>
-              <Field label="Selling price"><input type="number" min="0" step="0.01" value={form.sellingPrice} onChange={event => setForm(current => ({ ...current, sellingPrice: event.target.value }))} /></Field>
-              <Field label="Purchase price"><input type="number" min="0" step="0.01" value={form.purchasePrice} onChange={event => setForm(current => ({ ...current, purchasePrice: event.target.value }))} /></Field>
-              <Field label="GST %"><input type="number" min="0" max="100" step="0.01" value={form.gstRate} onChange={event => setForm(current => ({ ...current, gstRate: event.target.value }))} /></Field>
-              <Field label="HSN / SAC"><input value={form.hsnSac} onChange={event => setForm(current => ({ ...current, hsnSac: event.target.value }))} /></Field>
-              {form.itemType === "product" && <>
-                <Field label="Opening stock"><input type="number" min="0" step="0.001" value={form.openingStock} onChange={event => setForm(current => ({ ...current, openingStock: event.target.value }))} /></Field>
-                <Field label="Opening date"><input type="date" value={form.openingStockDate} onChange={event => setForm(current => ({ ...current, openingStockDate: event.target.value }))} /></Field>
-                <Field label="Opening rate (cost / unit)"><input type="number" min="0" step="0.01" value={form.openingRate ?? ""} placeholder={form.purchasePrice ? `Uses purchase price ${form.purchasePrice}` : "Uses purchase price"} onChange={event => setForm(current => ({ ...current, openingRate: event.target.value }))} /></Field>
-                <Field label="Reorder level"><input type="number" min="0" step="0.001" value={form.reorderLevel} onChange={event => setForm(current => ({ ...current, reorderLevel: event.target.value }))} /></Field>
-              </>}
-              <Field className="span" label="Description"><input value={form.description} onChange={event => setForm(current => ({ ...current, description: event.target.value }))} /></Field>
-            </div>
-            <div className="tabs spacer">
-              <button type="button" className="btn" disabled={saving} onClick={() => setShowForm(false)}>Cancel</button>
-              <button type="button" className="btn primary" disabled={saving} onClick={saveItem}>{saving ? "Saving…" : "Save item"}</button>
-            </div>
+        <DialogModal className="acc-modal" title={form.id ? "Edit item" : "Create item"} close={() => setShowForm(false)}>
+          {error && <p className="red small">{error}</p>}
+          <div className="form">
+            <Field label="Type"><select value={form.itemType} onChange={event => setForm(current => ({ ...current, itemType: event.target.value }))}>{ITEM_TYPES.map(type => <option key={type.id} value={type.id}>{type.label}</option>)}</select></Field>
+            <Field label="Name"><input value={form.name} onChange={event => setForm(current => ({ ...current, name: event.target.value }))} /></Field>
+            <Field label="SKU / Code"><input value={form.sku} onChange={event => setForm(current => ({ ...current, sku: event.target.value }))} /></Field>
+            <Field label="Category">
+              <select value={form.categoryId} onChange={event => setForm(current => ({ ...current, categoryId: event.target.value }))}>
+                <option value="">None</option>
+                {categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
+              </select>
+            </Field>
+            <Field label="Unit"><select value={form.unit} onChange={event => setForm(current => ({ ...current, unit: event.target.value }))}>{ITEM_UNITS.map(unit => <option key={unit} value={unit}>{unit}</option>)}</select></Field>
+            <Field label="Selling price"><input type="number" min="0" step="0.01" value={form.sellingPrice} onChange={event => setForm(current => ({ ...current, sellingPrice: event.target.value }))} /></Field>
+            <Field label="Purchase price"><input type="number" min="0" step="0.01" value={form.purchasePrice} onChange={event => setForm(current => ({ ...current, purchasePrice: event.target.value }))} /></Field>
+            <Field label="GST %"><input type="number" min="0" max="100" step="0.01" value={form.gstRate} onChange={event => setForm(current => ({ ...current, gstRate: event.target.value }))} /></Field>
+            <Field label="HSN / SAC"><input value={form.hsnSac} onChange={event => setForm(current => ({ ...current, hsnSac: event.target.value }))} /></Field>
+            {form.itemType === "product" && <>
+              <Field label="Opening stock"><input type="number" min="0" step="0.001" value={form.openingStock} onChange={event => setForm(current => ({ ...current, openingStock: event.target.value }))} /></Field>
+              <Field label="Opening date"><input type="date" value={form.openingStockDate} onChange={event => setForm(current => ({ ...current, openingStockDate: event.target.value }))} /></Field>
+              <Field label="Opening rate (cost / unit)"><input type="number" min="0" step="0.01" value={form.openingRate ?? ""} placeholder={form.purchasePrice ? `Uses purchase price ${form.purchasePrice}` : "Uses purchase price"} onChange={event => setForm(current => ({ ...current, openingRate: event.target.value }))} /></Field>
+              <Field label="Reorder level"><input type="number" min="0" step="0.001" value={form.reorderLevel} onChange={event => setForm(current => ({ ...current, reorderLevel: event.target.value }))} /></Field>
+            </>}
+            <Field className="span" label="Description"><input value={form.description} onChange={event => setForm(current => ({ ...current, description: event.target.value }))} /></Field>
           </div>
-        </div>
+          <div className="tabs spacer">
+            <button type="button" className="btn" disabled={saving} onClick={() => setShowForm(false)}>Cancel</button>
+            <button type="button" className="btn primary" disabled={saving} onClick={saveItem}>{saving ? "Saving…" : "Save item"}</button>
+          </div>
+        </DialogModal>
       )}
 
       {detail && (
-        <div className="modal-bg">
-          <div className="modal acc-modal">
-            <div className="row"><h2 className="title">{detail.name}</h2><button type="button" className="btn" onClick={() => setDetailId(null)}>Close</button></div>
-            <p className="copy">{detail.sku} · {detail.itemType} · {detail.unit}</p>
-            <div className="acc-metric-grid three">
-              <article className="card acc-metric-card"><div className="metric-label">Current stock</div><div className="metric-value">{stockByItem[detail.id] == null ? "—" : `${stockByItem[detail.id]} ${detail.unit}`}</div></article>
-              <article className="card acc-metric-card"><div className="metric-label">Selling</div><div className="metric-value">{money(detail.sellingPrice)}</div></article>
-              <article className="card acc-metric-card"><div className="metric-label">Purchase</div><div className="metric-value">{money(detail.purchasePrice)}</div></article>
-            </div>
-            <p className="small">GST {detail.gstRate}% · HSN {detail.hsnSac || "—"} · Reorder {detail.reorderLevel} · {stockStatus(stockByItem[detail.id], detail.reorderLevel) === "low" ? "Low stock" : "Normal"}</p>
-            {detailValue && <p className="small">Average cost {money(detailValue.averageCost)} · Stock value {money(detailValue.value)} (weighted average)</p>}
-            <h3 className="acc-section-title">Recent stock movements</h3>
-            <div className="table acc-table-wrap"><table><thead><tr><th>Date</th><th>Reason</th><th className="acc-num">Qty</th><th>Voucher</th></tr></thead><tbody>
-              {detailMoves.map(row => <tr key={row.id}><td>{row.movementDate}</td><td>{stockReasonLabel(row.reason)}</td><td className="acc-num">{row.quantityDelta > 0 ? `+${row.quantityDelta}` : row.quantityDelta}</td><td>{row.voucherNumber || "—"}</td></tr>)}
-              {!detailMoves.length && <tr><td colSpan="4">No movements yet.</td></tr>}
-            </tbody></table></div>
-            <p className="small">Sales lines: {detailSales.length} · Purchase lines: {detailPurchases.length}</p>
-            <div className="tabs spacer"><button type="button" className="btn" onClick={() => openEdit(detail)}>Edit</button><button type="button" className="btn primary" onClick={() => setDetailId(null)}>Done</button></div>
+        <DialogModal className="acc-modal" title={detail.name} close={() => setDetailId(null)}>
+          <p className="copy">{detail.sku} · {detail.itemType} · {detail.unit}</p>
+          <div className="acc-metric-grid three">
+            <article className="card acc-metric-card"><div className="metric-label">Current stock</div><div className="metric-value">{stockByItem[detail.id] == null ? "—" : `${stockByItem[detail.id]} ${detail.unit}`}</div></article>
+            <article className="card acc-metric-card"><div className="metric-label">Selling</div><div className="metric-value">{money(detail.sellingPrice)}</div></article>
+            <article className="card acc-metric-card"><div className="metric-label">Purchase</div><div className="metric-value">{money(detail.purchasePrice)}</div></article>
           </div>
-        </div>
+          <p className="small">GST {detail.gstRate}% · HSN {detail.hsnSac || "—"} · Reorder {detail.reorderLevel} · {stockStatus(stockByItem[detail.id], detail.reorderLevel) === "low" ? "Low stock" : "Normal"}</p>
+          {detailValue && <p className="small">Average cost {money(detailValue.averageCost)} · Stock value {money(detailValue.value)} (weighted average)</p>}
+          <h3 className="acc-section-title">Recent stock movements</h3>
+          <div className="table acc-table-wrap"><table><thead><tr><th>Date</th><th>Reason</th><th className="acc-num">Qty</th><th>Voucher</th></tr></thead><tbody>
+            {detailMoves.map(row => <tr key={row.id}><td>{row.movementDate}</td><td>{stockReasonLabel(row.reason)}</td><td className="acc-num">{row.quantityDelta > 0 ? `+${row.quantityDelta}` : row.quantityDelta}</td><td>{row.voucherNumber || "—"}</td></tr>)}
+            {!detailMoves.length && <tr><td colSpan="4">No movements yet.</td></tr>}
+          </tbody></table></div>
+          <p className="small">Sales lines: {detailSales.length} · Purchase lines: {detailPurchases.length}</p>
+          <div className="tabs spacer"><button type="button" className="btn" onClick={() => openEdit(detail)}>Edit</button><button type="button" className="btn primary" onClick={() => setDetailId(null)}>Done</button></div>
+        </DialogModal>
       )}
     </section>
   );
