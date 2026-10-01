@@ -580,7 +580,6 @@ input:disabled, select:disabled, textarea:disabled { background: var(--ft-surfac
 .financier-nav button.tab.active, .financier-nav .btn.tab.active { background: var(--ft-primary) !important; color: #fff !important; font-weight: 600 !important; border: 0 !important; }
 .financier-nav .nav-glyph { background: transparent !important; color: currentColor !important; }
 .financier-nav .nav-footer { color: var(--ft-sidebar-text) !important; border-color: var(--ft-sidebar-line) !important; }
-.financier-nav-more { background: rgba(255, 255, 255, .04) !important; border: 0 !important; box-shadow: none !important; border-radius: var(--ft-radius-xs) !important; }
 
 @media (width >= 1051px) {
   .financier-nav {
@@ -598,7 +597,6 @@ input:disabled, select:disabled, textarea:disabled { background: var(--ft-surfac
   .financier-nav button, .financier-nav .btn { color: var(--ft-text-2) !important; font-weight: 600 !important; }
   .financier-nav button:hover, .financier-nav .btn:hover { background: var(--ft-surface-hover) !important; color: var(--ft-primary) !important; }
   .financier-nav button.tab.active, .financier-nav .btn.tab.active { background: var(--ft-primary-soft) !important; color: var(--ft-primary) !important; }
-  .financier-nav-more { background: var(--ft-surface) !important; border: 1px solid var(--ft-border) !important; box-shadow: var(--ft-shadow-lg) !important; }
 }
 
 /* sidebar contents */
@@ -638,7 +636,6 @@ input:disabled, select:disabled, textarea:disabled { background: var(--ft-surfac
   .financier-nav .nav-footer { display: flex !important; margin-top: auto; gap: 0; }
   .financier-nav .nav-footer .nav-profile { display: none; }
   .financier-nav .nav-logout { background: var(--ft-sidebar-chip) !important; }
-  .financier-nav-more { position: static !important; background: rgba(255, 255, 255, .04) !important; border: 0 !important; box-shadow: none !important; }
   html[data-ft-role="owner"] .shell { margin-left: var(--ft-rail-w) !important; }
   html[data-ft-role="owner"] .shell { padding-bottom: 32px !important; }
   html[data-ft-role="owner"] .shell > header.top:has(.brand) { display: none !important; }
@@ -653,22 +650,16 @@ input:disabled, select:disabled, textarea:disabled { background: var(--ft-surfac
 }
 .financier-nav .nav-theme .ft-theme-toggle-track { background: rgba(255, 255, 255, .16); }
 .financier-nav .nav-theme[aria-checked="true"] .ft-theme-toggle-track { background: var(--ft-primary); }
-.financier-nav .nav-theme-more { display: none !important; }
 /* tablet rail: just the switch */
 @media (681px <= width <= 1050px) {
   .financier-nav .ft-theme-toggle.nav-theme { justify-content: center; min-height: 52px !important; padding: 8px 4px !important; margin-bottom: 8px; }
   .financier-nav .nav-theme .ft-theme-toggle-label { display: none; }
 }
-/* phones: the bottom bar has no footer, so the switch sits in the More menu */
-@media (width <= 680px) {
-  /* fixed, so the scrolling bottom bar does not clip the menu */
-  .financier-nav-more { position: fixed !important; right: 10px !important; bottom: calc(max(8px, env(safe-area-inset-bottom, 0px)) + 68px) !important; z-index: 12; }
-  .financier-nav .ft-theme-toggle.nav-theme-more { display: flex !important; color: var(--ft-text-2) !important; font-weight: 600 !important; }
-  .financier-nav .nav-theme-more .ft-theme-toggle-track { background: var(--ft-surface-muted); }
-  .financier-nav .nav-theme-more[aria-checked="true"] .ft-theme-toggle-track { background: var(--ft-primary); }
-}
-/* screens without the sidebar (agents, customer portals): beside Log out in the page's top bar */
-html[data-ft-role="owner"] .top-actions .top-theme { display: none; }
+/* phone bottom bar: items share the width by label length, so all eight fit without clipping */
+@media (width <= 680px) { .financier-nav > button, .financier-nav > .btn { flex: 1 1 auto !important; min-width: 0 !important; padding-left: 2px !important; padding-right: 2px !important; } }
+/* beside Log out in the page's top bar: for screens without the sidebar (agents, customer portals), and for owners on
+   phones, where the bottom bar has no room for it */
+@media (width >= 681px) { html[data-ft-role="owner"] .top-actions .top-theme { display: none; } }
 .top-actions:has(.top-theme) { flex-direction: row !important; align-items: center !important; }
 .top-actions .top-theme { flex: none; }
 @media (width <= 680px) { .top-actions .top-theme .ft-theme-toggle-label { display: none; } }

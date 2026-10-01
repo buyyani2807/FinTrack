@@ -32,7 +32,7 @@ export const isWithin = (pathname, target) => pathname === target || pathname.st
 // What the finance dashboard (Financier) shows for a path, or null when the route is a different page.
 export function financeViewForPath(pathname) {
   const path = pathname.replace(/\/+$/, "");
-  if (path === workspacePaths.dashboard || path === workspacePaths.collectionStaff) return { module: "all", collections: false, accountId: null };
+  if (path === workspacePaths.dashboard) return { module: "all", collections: false, accountId: null };
   for (const module of ["daily", "monthly"]) {
     const root = workspacePaths[module];
     if (path === root) return { module, collections: false, accountId: null };

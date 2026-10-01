@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Badge, Button, Field, Modal } from "../../components/ui.jsx";
+import { Badge, Breadcrumb, Button, EmptyState, Field, Modal } from "../../components/ui.jsx";
 import { formatInr as money } from "../../lib/formatMoney.js";
 import { financeKindLabel, staffAssignableLoans } from "./model/collectionStaff";
 import { loanBalance, loanStatus } from "./model/loanState.js";
@@ -18,7 +18,8 @@ export function ResetStaffPasswordModal({ staff, close, save }) {
   };
   return <Modal close={close}><h2 className="title">Reset staff password</h2><p className="copy">Set a new password for {staff.full_name}. Share it with them privately.</p><Field className="spacer" label="New password"><input type="password" minLength="8" autoComplete="new-password" value={password} onChange={event => setPassword(event.target.value)} /></Field>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button onClick={close} disabled={busy}>Cancel</Button><Button className="primary" disabled={busy || password.length < 8} onClick={submit}>{busy ? "Saving…" : "Reset password"}</Button></div></Modal>;
 }
-export function CollectionStaffPage({ loans, close, loadAgents, createAgent, assignAgent, updateAgent }) {
+// A full page: the staff list, or one staff member with their customer assignments (opened from the list).
+export function CollectionStaffPage({ loans, loadAgents, createAgent, assignAgent, updateAgent }) {
   const [agents, setAgents] = useState([]), [selected, setSelected] = useState(null), [search, setSearch] = useState(""), [showCreate, setShowCreate] = useState(false), [showEdit, setShowEdit] = useState(false), [showResetPassword, setShowResetPassword] = useState(false), [error, setError] = useState(""), [draftIds, setDraftIds] = useState([]), [saved, setSaved] = useState(""), [loading, setLoading] = useState(true);
   const refresh = async () => { setLoading(true); setError(""); try { setAgents(await loadAgents()); } catch (e) { setError(e.message || "Could not load staff."); } finally { setLoading(false); } };
   useEffect(() => { refresh(); }, []);
@@ -39,7 +40,27 @@ export function CollectionStaffPage({ loans, close, loadAgents, createAgent, ass
       setSaved("Customer assignments saved successfully.");
     } catch (e) { setError(e.message || "Could not save assignments."); }
   };
-  return <Modal><div className="row"><Button onClick={selected ? () => setSelected(null) : close}>← Back</Button><h2 className="title">Collection Staff</h2></div>{error && <p className="red small">{error}</p>}{!selected ? <><div className="row spacer"><span className="copy">Create staff, review existing staff, and assign customer accounts.</span><Button className="primary" onClick={() => setShowCreate(true)}>+ Create New Agent</Button></div>{loading ? <p className="small spacer">Loading collection staff…</p> : <div className="table spacer"><table><thead><tr><th>Agent</th><th>Email</th><th>Mobile</th><th>Status</th><th>Assigned customers</th><th></th></tr></thead><tbody>{agents.map(agent => <tr key={agent.id}><td>{agent.full_name}</td><td>{agent.email || "—"}</td><td>{agent.phone || "—"}</td><td><Badge status={agent.is_active ? "active" : "closed"} /></td><td>{agent.assigned_customer_count || 0}</td><td><Button onClick={() => choose(agent)}>View / Assign</Button></td></tr>)}</tbody></table></div>}</> : <div className="card spacer"><div className="row"><h3>{selected.full_name}</h3><Button onClick={() => setShowEdit(true)}>Edit staff</Button><Button onClick={() => setShowResetPassword(true)}>Reset password</Button></div><p className="small">Email and mobile number can be changed using Edit staff. Select customers, then save. {draftIds.length} customers selected.</p>{saved && <p className="green small">{saved}</p>}<div className="customer-search"><input placeholder="Search customers" value={search} onChange={e => setSearch(e.target.value)} /></div><div className="table"><table><thead><tr><th>Customer</th><th>Finance</th><th>Outstanding</th><th>Assigned</th></tr></thead><tbody>{visibleLoans.map(loan => <tr key={loan.id}><td>{loan.customerName}<br /><span className="small">{loan.phone}</span></td><td>{financeKindLabel(loan.kind)}</td><td>{money(loanBalance(loan))}</td><td><input type="checkbox" checked={assigned(loan)} onChange={() => toggle(loan.id)} /></td></tr>)}</tbody></table></div><div className="row spacer"><Button onClick={() => choose(selected)}>Cancel</Button><Button className="primary" onClick={saveAssignments}>Save Changes</Button></div></div>}{showEdit && <EditCollectionStaff staff={selected} close={() => setShowEdit(false)} save={saveStaff} />}{showResetPassword && selected && <ResetStaffPasswordModal staff={selected} close={() => setShowResetPassword(false)} save={async password => { await updateAgent({ id: selected.id, name: selected.full_name, email: selected.email, phone: selected.phone, active: selected.is_active, password }); setSaved("Password reset successfully."); }} />}{showCreate && <CreateAgent close={() => { setShowCreate(false); refresh(); }} save={async details => { await createAgent(details); }} />}</Modal>;
+  return <main className="shell collection-staff-page">
+    {selected
+      ? <>
+        <Breadcrumb items={[{ label: "Collection Staff", onClick: () => setSelected(null) }, { label: selected.full_name }]} />
+        <div className="toolbar"><div><h1 className="title">{selected.full_name}</h1><p className="copy">{[selected.email, selected.phone].filter(Boolean).join(" · ") || "No contact details"}</p></div><div className="tabs"><Button onClick={() => setShowEdit(true)}>Edit staff</Button><Button onClick={() => setShowResetPassword(true)}>Reset password</Button></div></div>
+        {error && <p className="red small">{error}</p>}
+        <div className="card">
+          <div className="toolbar"><div><strong>Assigned customers</strong><p className="small">Select customers, then save. {draftIds.length} customers selected.</p></div></div>
+          {saved && <p className="green small">{saved}</p>}
+          <div className="customer-search"><input aria-label="Search customers" placeholder="Search customers" value={search} onChange={e => setSearch(e.target.value)} /></div>
+          <div className="table"><table><thead><tr><th>Customer</th><th>Finance</th><th>Outstanding</th><th>Assigned</th></tr></thead><tbody>{visibleLoans.map(loan => <tr key={loan.id}><td>{loan.customerName}<br /><span className="small">{loan.phone}</span></td><td>{financeKindLabel(loan.kind)}</td><td>{money(loanBalance(loan))}</td><td><input type="checkbox" aria-label={`Assign ${loan.customerName}`} checked={assigned(loan)} onChange={() => toggle(loan.id)} /></td></tr>)}</tbody></table></div>
+          <div className="row spacer collection-staff-actions"><Button onClick={() => choose(selected)}>Cancel</Button><Button className="primary" onClick={saveAssignments}>Save Changes</Button></div>
+        </div>
+      </>
+      : <>
+        <div className="toolbar"><div><h1 className="title">Collection Staff</h1><p className="copy">Create staff, review existing staff, and assign customer accounts.</p></div><div className="tabs"><Button className="primary" onClick={() => setShowCreate(true)}>+ Create New Agent</Button></div></div>
+        {error && <p className="red small">{error}</p>}
+        <div className="card">{loading ? <p className="small">Loading collection staff…</p> : !agents.length ? <EmptyState title="No collection staff yet" copy="Add staff to give them their own sign-in. They see only the customers you assign and record only their own collections." action={<Button className="primary" onClick={() => setShowCreate(true)}>+ Create New Agent</Button>} /> : <div className="table"><table><thead><tr><th>Agent</th><th>Email</th><th>Mobile</th><th>Status</th><th>Assigned customers</th><th></th></tr></thead><tbody>{agents.map(agent => <tr key={agent.id}><td>{agent.full_name}</td><td>{agent.email || "—"}</td><td>{agent.phone || "—"}</td><td><Badge status={agent.is_active ? "active" : "closed"} /></td><td>{agent.assigned_customer_count || 0}</td><td><Button onClick={() => choose(agent)}>View / Assign</Button></td></tr>)}</tbody></table></div>}</div>
+      </>}
+    {showEdit && <EditCollectionStaff staff={selected} close={() => setShowEdit(false)} save={saveStaff} />}{showResetPassword && selected && <ResetStaffPasswordModal staff={selected} close={() => setShowResetPassword(false)} save={async password => { await updateAgent({ id: selected.id, name: selected.full_name, email: selected.email, phone: selected.phone, active: selected.is_active, password }); setSaved("Password reset successfully."); }} />}{showCreate && <CreateAgent close={() => { setShowCreate(false); refresh(); }} save={async details => { await createAgent(details); }} />}
+  </main>;
 }
 export function EditCollectionStaff({ staff, close, save }) {
   const [name, setName] = useState(staff.full_name || ""), [email, setEmail] = useState(staff.email || ""), [phone, setPhone] = useState(staff.phone || ""), [active, setActive] = useState(staff.is_active !== false), [busy, setBusy] = useState(false);

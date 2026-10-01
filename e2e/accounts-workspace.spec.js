@@ -193,3 +193,20 @@ test.describe("Accounts navigation", () => {
     await expect(tabs.getByRole("button", { name: "Reports", exact: true })).toHaveAttribute("aria-current", "true");
   });
 });
+
+test.describe("Collection Staff", () => {
+  test("is a sidebar item and a full page with a staff detail view", async ({ page }) => {
+    await mockAccountsWorkspace(page);
+    await page.goto("/dashboard");
+    const sidebar = page.getByRole("complementary", { name: "Workspace" });
+    await expect(sidebar.getByRole("button", { name: "Settings" })).toBeVisible({ timeout: 15_000 });
+    await expect(sidebar.getByRole("button", { name: "More" })).toHaveCount(0);
+    await sidebar.getByRole("button", { name: "Collection Staff" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Collection Staff" })).toBeVisible();
+    await expect(page.locator(".modal-bg")).toHaveCount(0);
+    await page.getByRole("button", { name: "View / Assign" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Suresh Agent" })).toBeVisible();
+    await page.getByRole("button", { name: "Back to Collection Staff" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Collection Staff" })).toBeVisible();
+  });
+});

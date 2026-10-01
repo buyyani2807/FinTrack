@@ -120,6 +120,9 @@ export async function mockAccountsWorkspace(page) {
   await page.route("**/api/auth/session", route => (route.request().method() === "GET"
     ? route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ access_token: makeE2eToken(), expires_in: 3600 }) })
     : route.fulfill({ status: 200, contentType: "application/json", body: "{}" })));
+  await page.route("**/api/agents", route => (route.request().method() === "GET"
+    ? route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify([{ id: "ag1", full_name: "Suresh Agent", email: "suresh@example.com", phone: "9876500000", is_active: true, assigned_customer_count: 0 }]) })
+    : route.fulfill({ status: 200, contentType: "application/json", body: "{}" })));
   await page.route("**/rest/v1/**", route => {
     const url = route.request().url();
     const rpc = url.match(/\/rest\/v1\/rpc\/([a-z_0-9]+)/);
