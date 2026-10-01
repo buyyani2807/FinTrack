@@ -1,5 +1,4 @@
 import { useNavigate, useOutletContext, useParams } from "react-router";
-import { C } from "../../../styles/theme.js";
 import { ChitFundPage } from "../../chitFund/ChitFundPage.jsx";
 import { workspacePaths } from "../paths.js";
 
@@ -8,7 +7,7 @@ export function ChitFundRoute() {
   const { token, orgSettings, workspace, onLogReceipt, setChitSchemes } = useOutletContext();
   const { schemeId = null } = useParams();
   const navigate = useNavigate();
-  return <div className="chit-dashboard" style={{ position: "fixed", inset: 0, zIndex: 5, overflow: "auto", background: C.bg }}>
+  return <div className="chit-dashboard ft-route-page">
     <ChitFundPage
       token={token}
       orgSettings={orgSettings}

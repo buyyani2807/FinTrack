@@ -1,3 +1,5 @@
+import { ChevronRight, Inbox, X } from "lucide-react";
+
 // Shared presentational building blocks used across the finance app.
 export const Button = ({
   children,
@@ -45,5 +47,55 @@ export function ConfirmDialog({ title, message, confirmLabel = "Confirm", danger
 }
 // Dialog with a title row and Close button; `actions` render after the body.
 export function DialogModal({ title, close, children, actions, className = "" }) {
-  return <div className="modal-bg"><div className={`modal${className ? ` ${className}` : ""}`}><div className="row"><h2 className="title">{title}</h2><button type="button" className="btn" onClick={close}>Close</button></div>{children}{actions}</div></div>;
+  return <div className="modal-bg"><div className={`modal${className ? ` ${className}` : ""}`} role="dialog" aria-modal="true" aria-label={title}><div className="row"><h2 className="title">{title}</h2><CloseButton onClick={close} /></div>{children}{actions}</div></div>;
+}
+// ✕ icon button for dialogs and drawers; its accessible name is "Close".
+export function CloseButton({ onClick, label = "Close" }) {
+  return <button type="button" className="ft-icon-btn ft-dialog-close" aria-label={label} title={label} onClick={onClick}><X size={22} strokeWidth={2} aria-hidden="true" /></button>;
+}
+
+/* Finebank page patterns ------------------------------------------------- */
+
+// Grey section title above a card (Finebank "Total Balance", "Recent Transaction" …), with an optional action on the right.
+export function SectionCard({ title, action = null, children, className = "", bodyClassName = "" }) {
+  return <section className={`ft-section${className ? ` ${className}` : ""}`}>
+    <div className="ft-section-head"><h2 className="ft-section-title">{title}</h2>{action}</div>
+    <div className={`card ft-section-body${bodyClassName ? ` ${bodyClassName}` : ""}`}>{children}</div>
+  </section>;
+}
+
+// "View All ›" style link button used in section headers.
+export function ViewAllLink({ onClick, children = "View All" }) {
+  return <button type="button" className="ft-view-all" onClick={onClick}>{children}<ChevronRight size={16} aria-hidden="true" /></button>;
+}
+
+// List row: icon tile, title + subtitle on the left, amount + meta on the right. Renders a button when clickable.
+export function ListRow({ icon = null, title, subtitle = "", amount = null, meta = "", tone = "", onClick, className = "" }) {
+  const Tag = onClick ? "button" : "div";
+  return <Tag {...(onClick ? { type: "button", onClick } : {})} className={`ft-list-row${onClick ? " clickable" : ""}${className ? ` ${className}` : ""}`}>
+    {icon && <span className="ft-icon-tile" aria-hidden="true">{icon}</span>}
+    <span className="ft-list-row-main"><strong>{title}</strong>{subtitle && <span>{subtitle}</span>}</span>
+    {(amount !== null || meta) && <span className="ft-list-row-side"><strong className={tone}>{amount}</strong>{meta && <span>{meta}</span>}</span>}
+  </Tag>;
+}
+
+// Month/day tile (Finebank "Upcoming Bill").
+export function DateTile({ month, day }) {
+  return <span className="ft-date-tile"><span>{month}</span><strong>{day}</strong></span>;
+}
+
+export function EmptyState({ title, copy = "", action = null, icon = <Inbox size={28} strokeWidth={1.6} /> }) {
+  return <div className="ft-empty" role="status">
+    <span className="ft-empty-icon" aria-hidden="true">{icon}</span>
+    <strong>{title}</strong>
+    {copy && <p>{copy}</p>}
+    {action}
+  </div>;
+}
+
+export function LoadingState({ label = "Loading…", rows = 3 }) {
+  return <div className="ft-loading" role="status" aria-live="polite">
+    <span className="ft-sr-only">{label}</span>
+    {Array.from({ length: rows }, (_, index) => <span key={index} className="ft-skeleton" aria-hidden="true" />)}
+  </div>;
 }

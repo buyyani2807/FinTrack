@@ -1,5 +1,4 @@
 import { useNavigate, useOutletContext } from "react-router";
-import { C } from "../../../styles/theme.js";
 import { CashbookWorkspace } from "../../cashbook/CashbookWorkspace.jsx";
 import { workspacePaths } from "../paths.js";
 
@@ -7,7 +6,7 @@ import { workspacePaths } from "../paths.js";
 export function CashbookRoute() {
   const { token, loans } = useOutletContext();
   const navigate = useNavigate();
-  return <div style={{ position: "fixed", inset: 0, zIndex: 5, overflow: "auto", background: C.bg }}>
+  return <div className="ft-route-page">
     <CashbookWorkspace token={token} close={() => navigate(workspacePaths.dashboard)} loans={loans} />
   </div>;
 }

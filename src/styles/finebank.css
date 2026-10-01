@@ -230,6 +230,36 @@ input:disabled, select:disabled, textarea:disabled { background: var(--ft-surfac
 .notice.red, .notice.error { background: var(--ft-danger-soft) !important; border-left-color: var(--ft-danger) !important; }
 .accounts-notice-ok { background: var(--ft-success-soft) !important; border-left-color: var(--ft-success) !important; }
 
+/* ------------------------------------------------------------------ page patterns */
+.ft-section { display: grid; gap: 8px; min-width: 0; }
+.ft-section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 32px; }
+.ft-section-title { margin: 0; color: var(--ft-muted) !important; font-weight: 400 !important; font-size: 22px !important; line-height: 32px !important; }
+.ft-section-body { padding: 20px 24px !important; }
+.ft-view-all { display: inline-flex; align-items: center; gap: 4px; padding: 6px 4px; border: 0; background: transparent; color: var(--ft-muted); font-weight: 500; font-size: 12px; cursor: pointer; }
+.ft-view-all:hover { color: var(--ft-primary); }
+.ft-list-row { display: flex; align-items: center; gap: 16px; width: 100%; padding: 18px 0; border: 0; border-bottom: 1px solid var(--ft-divider); background: transparent; color: inherit; text-align: left; font: inherit; }
+.ft-list-row:last-child { border-bottom: 0; }
+.ft-list-row.clickable { cursor: pointer; }
+.ft-list-row.clickable:hover .ft-list-row-main strong { color: var(--ft-primary); }
+.ft-icon-tile { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: var(--ft-radius-sm); background: var(--ft-icon-tile); color: var(--ft-text-2); }
+.ft-list-row-main { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.ft-list-row-main strong { color: var(--ft-text); font-weight: 600; font-size: 16px; line-height: 24px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ft-list-row-main span, .ft-list-row-side span { color: var(--ft-subtle); font-size: 12px; line-height: 16px; }
+.ft-list-row-side { display: grid; justify-items: end; gap: 2px; flex: none; text-align: right; }
+.ft-list-row-side strong { color: var(--ft-text-2); font-weight: 600; font-size: 16px; line-height: 24px; }
+.ft-date-tile { display: grid; justify-items: center; gap: 2px; min-width: 48px; padding: 8px; border-radius: var(--ft-radius-sm); background: var(--ft-icon-tile); }
+.ft-date-tile span { color: var(--ft-text-3); font-weight: 500; font-size: 12px; line-height: 16px; }
+.ft-date-tile strong { color: var(--ft-text); font-weight: 800; font-size: 22px; line-height: 28px; }
+.ft-empty { display: grid; justify-items: center; gap: 8px; padding: 32px 16px; text-align: center; color: var(--ft-muted); }
+.ft-empty-icon { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: var(--ft-icon-tile); color: var(--ft-muted); }
+.ft-empty strong { color: var(--ft-text); font-size: 16px; }
+.ft-empty p { margin: 0; max-width: 42ch; font-size: 14px; }
+.ft-loading { display: grid; gap: 12px; padding: 8px 0; }
+.ft-skeleton { display: block; height: 16px; border-radius: 6px; background: linear-gradient(90deg, var(--ft-surface-muted), var(--ft-surface-subtle), var(--ft-surface-muted)); background-size: 200% 100%; animation: ft-shimmer 1.4s ease-in-out infinite; }
+.ft-skeleton:nth-child(3n) { width: 70%; }
+@keyframes ft-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.ft-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
 /* ------------------------------------------------------------------ tables */
 .table { background: var(--ft-surface) !important; border: 1px solid var(--ft-border) !important; border-radius: var(--ft-radius) !important; box-shadow: none !important; }
 .table table, .accounts-dashboard table { background: transparent !important; }
@@ -237,6 +267,8 @@ input:disabled, select:disabled, textarea:disabled { background: var(--ft-surfac
 .table td, .accounts-dashboard td { color: var(--ft-text-2) !important; border-color: var(--ft-divider) !important; }
 .table tbody tr:hover, .accounts-dashboard tbody tr:hover { background: var(--ft-surface-hover) !important; }
 .table tbody tr:last-child td { border-bottom-color: transparent !important; }
+/* wide tables scroll inside their card instead of widening the page */
+.table, .acc-table-wrap { max-width: 100%; overflow-x: auto !important; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
 
 /* ------------------------------------------------------------------ status */
 .badge, .acc-status-pill, .accounts-industry-badge { border: 1px solid transparent !important; border-radius: 999px !important; font-weight: 600 !important; }
@@ -245,10 +277,15 @@ input:disabled, select:disabled, textarea:disabled { background: var(--ft-surfac
 .badge.closed, .badge.pending, .badge.draft { background: var(--ft-warning-soft) !important; color: var(--ft-warning) !important; }
 
 /* ------------------------------------------------------------------ dialogs */
-.modal-bg { background: var(--ft-backdrop) !important; backdrop-filter: blur(2px) !important; }
+/* dialogs sit above the header (9) and the navigation bars (20) */
+.modal-bg { z-index: 30 !important; background: var(--ft-backdrop) !important; backdrop-filter: blur(2px) !important; }
 .modal, .acc-modal { background: var(--ft-surface) !important; color: var(--ft-text) !important; border: 1px solid transparent !important; border-radius: var(--ft-radius-lg) !important; box-shadow: var(--ft-shadow-lg) !important; }
 :root[data-theme="dark"] .modal, :root[data-theme="dark"] .acc-modal { border-color: var(--ft-border) !important; }
 .modal .title, .acc-modal .title { font-size: 20px !important; line-height: 28px !important; }
+.modal > .row:first-child, .acc-modal > .row:first-child { align-items: flex-start; gap: 16px; }
+.ft-icon-btn { display: inline-grid; place-items: center; width: 40px; height: 40px; flex: none; padding: 0; border: 0; border-radius: var(--ft-radius-sm); background: transparent; color: var(--ft-text-2); cursor: pointer; }
+.ft-icon-btn:hover { background: var(--ft-surface-hover); color: var(--ft-text); }
+.ft-dialog-close { margin: -6px -8px 0 0; }
 
 /* ------------------------------------------------------------------ sidebar (Finance) */
 .financier-nav { background: var(--ft-sidebar-bg) !important; border: 0 !important; box-shadow: none !important; backdrop-filter: none !important; color: var(--ft-sidebar-text) !important; }
@@ -335,8 +372,8 @@ input:disabled, select:disabled, textarea:disabled { background: var(--ft-surfac
 .ft-app-header-date { display: inline-flex; align-items: center; gap: 4px; min-width: 0; color: var(--ft-subtle); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ft-app-header-actions { display: flex; align-items: center; gap: 12px; flex: none; }
 .app { padding-top: var(--ft-header-h); }
-/* Accounts is a full-screen layer: start it below the header */
-.accounts-dashboard { top: var(--ft-header-h) !important; }
+/* Accounts is a full-screen layer: start it below the header, but stack it (and its dialogs) above the header */
+.accounts-dashboard { top: var(--ft-header-h) !important; z-index: 10 !important; }
 @media (width >= 1051px) {
   html[data-ft-role="owner"] .ft-app-header { left: var(--ft-sidebar-w); }
   html:has(.accounts-dashboard) .ft-app-header { left: 0; }
@@ -348,6 +385,9 @@ input:disabled, select:disabled, textarea:disabled { background: var(--ft-surfac
   .ft-app-header-date { display: none; }
   .ft-app-header .ft-theme-toggle-label { display: none; }
 }
+
+/* full-page routes (Cashbook, Chit Fund, Settings) render in the normal page flow */
+.ft-route-page { min-height: calc(100svh - var(--ft-header-h)); background: var(--ft-bg); }
 
 /* ------------------------------------------------------------------ page header */
 .shell > .top { padding-bottom: 20px; margin-bottom: 28px !important; border-bottom: 1px solid var(--ft-border); }

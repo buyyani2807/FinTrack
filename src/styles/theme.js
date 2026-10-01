@@ -1,15 +1,14 @@
-
-
-// Colour tokens shared by inline styles in the finance app.
+// Colour tokens for inline styles. They point at the design-system CSS variables
+// (src/styles/finebank.css), so inline colours follow the light/dark theme too.
 export const C = {
-  bg: "#f6f8fb",
-  surface: "#f8fafc",
-  card: "#ffffff",
-  line: "#dbe3ee",
-  text: "#172033",
-  muted: "#667085",
-  gold: "#b7791f",
-  green: "#168a63",
-  red: "#d14355",
-  blue: "#356fc4"
+  bg: "var(--ft-bg)",
+  surface: "var(--ft-surface-subtle)",
+  card: "var(--ft-surface)",
+  line: "var(--ft-border)",
+  text: "var(--ft-text)",
+  muted: "var(--ft-muted)",
+  gold: "var(--ft-warning)",
+  green: "var(--ft-success)",
+  red: "var(--ft-danger)",
+  blue: "var(--ft-info)"
 };

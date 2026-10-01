@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { LIST_PAGE_SIZE } from "../model/accountsList.js";
-import { LabeledField } from "../../../components/ui.jsx";
+import { CloseButton, LabeledField } from "../../../components/ui.jsx";
 
 /**
  * Shared Accounts UI primitives (presentation only).
@@ -184,7 +184,7 @@ export function Modal({ title, close, children, actions }) {
       <div className="modal acc-modal" role="dialog" aria-modal="true" aria-label={title}>
         <div className="row">
           <h2 className="title">{title}</h2>
-          <button type="button" className="btn ghost" aria-label="Close" onClick={close}>Close</button>
+          <CloseButton onClick={close} />
         </div>
         {children}
         {actions ? <div className="acc-modal-actions">{actions}</div> : null}
