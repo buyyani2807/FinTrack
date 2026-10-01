@@ -170,7 +170,7 @@ export function AccPageHeader({ backLabel, onBack, title, copy, trail, extras, c
   return <>
     <header className="acc-page-head">
       <div className="acc-page-head-start">
-        <button type="button" className="btn ghost" onClick={onBack}>{backLabel}</button>
+        {backLabel && <button type="button" className="btn ghost" onClick={onBack}>{backLabel}</button>}
       </div>
       <p className="acc-kicker acc-page-head-brand">FinTrack Accounts</p>
       <div className="acc-page-head-end">

@@ -1828,8 +1828,8 @@ const openVoucher = () => {
     <AccSidebar section={section} expanded={navExpanded} onToggle={toggleNav} onNavigate={openSection} />
     <main className="acc-main acc-print-root">
       <AccPageHeader
-        backLabel={section === "overview" ? "← Dashboard" : "← Accounts"}
-        onBack={section === "overview" ? close : () => openSection("overview")}
+        backLabel={section === "overview" ? "← Dashboard" : null}
+        onBack={section === "overview" ? close : undefined}
         title={SECTIONS.find(item => item.id === section)?.label || "Accounts"}
         trail={sectionTrail(section, reportTab)}
         copy={`${activeCompany?.name || settings?.companyName || workspace.businessName || "Your business"} · ${fy.label} · ${range.from} to ${range.to}`}

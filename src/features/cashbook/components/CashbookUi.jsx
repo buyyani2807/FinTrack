@@ -5,6 +5,3 @@ export function PanelHead({ title, children }) {
 export function EmptyState({ children }) {
   return <div className="card accounts-empty">{children}</div>;
 }
-export function ButtonLike({ onClick, children }) {
-  return <button type="button" className="btn" onClick={onClick}>{children}</button>;
-}

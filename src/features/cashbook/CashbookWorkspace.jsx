@@ -22,7 +22,6 @@ import {
   withRunningBalances,
 } from "./cashbookModel.js";
 import { SECTIONS, emptyManualForm, emptyExpenseForm, emptyTransferForm, emptyClosingForm } from "./cashbookConfig.js";
-import { ButtonLike } from "./components/CashbookUi.jsx";
 import { CashbookLedgerSection } from "./sections/CashbookLedgerSection.jsx";
 import { ExpensesSection } from "./sections/ExpensesSection.jsx";
 import { BankAccountsSection } from "./sections/BankAccountsSection.jsx";
@@ -35,7 +34,7 @@ import { ExpenseModal } from "./dialogs/ExpenseModal.jsx";
 import { TransferModal } from "./dialogs/TransferModal.jsx";
 import { DayClosingModal } from "./dialogs/DayClosingModal.jsx";
 
-export function CashbookWorkspace({ token, close, loans = [] }) {
+export function CashbookWorkspace({ token, loans = [] }) {
   const [section, setSection] = useState("cashbook");
   const [ledgers, setLedgers] = useState([]);
   const [entries, setEntries] = useState([]);
@@ -271,7 +270,7 @@ export function CashbookWorkspace({ token, close, loans = [] }) {
   const periodProps = { period, setPeriod, customFrom, setCustomFrom, customTo, setCustomTo };
 
   return <div className="accounts-module shell">
-    <header className="top"><div><ButtonLike onClick={close}>← Dashboard</ButtonLike><h1 className="title spacer">Cashbook</h1><p className="copy">Cash, bank and UPI for this Finance workspace. Independent of Accounts companies and their double-entry books.</p></div></header>
+    <header className="top"><div><h1 className="title">Cashbook</h1><p className="copy">Cash, bank and UPI for this Finance workspace. Independent of Accounts companies and their double-entry books.</p></div></header>
     {error && <div className="notice">{error}</div>}
     {notice && <div className="notice accounts-notice-ok">{notice}</div>}
     <nav className="accounts-section-nav spacer" aria-label="Cashbook sections">

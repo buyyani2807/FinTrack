@@ -16,7 +16,6 @@ export function ChitFundRoute() {
       openSchemeId={schemeId}
       onOpenSchemeConsumed={() => navigate(workspacePaths.chit, { replace: true })}
       onSchemesChanged={schemes => setChitSchemes((schemes || []).filter(scheme => scheme.status === "active"))}
-      close={() => navigate(workspacePaths.dashboard)}
     />
   </div>;
 }

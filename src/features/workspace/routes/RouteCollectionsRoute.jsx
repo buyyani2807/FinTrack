@@ -6,7 +6,7 @@ import { workspacePaths } from "../paths.js";
 export function RouteCollectionsRoute() {
   const { token, workspace, access } = useOutletContext();
   const navigate = useNavigate();
-  const page = <RouteCollectionsPage token={token} businessName={workspace?.businessName} back={() => navigate(workspacePaths.dashboard)} />;
+  const page = <RouteCollectionsPage token={token} businessName={workspace?.businessName} back={access.isOwner ? null : () => navigate(workspacePaths.dashboard)} />;
   if (!access.isOwner) return page;
   return <div className="rc-owner-overlay">{page}</div>;
 }

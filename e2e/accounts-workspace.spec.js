@@ -128,3 +128,15 @@ test.describe("Daily Finance tabs", () => {
     }
   });
 });
+
+test.describe("Back buttons", () => {
+  test("owner pages rely on the sidebar instead of back-to-dashboard buttons", async ({ page }) => {
+    await mockAccountsWorkspace(page);
+    for (const path of ["/cashbook", "/chit-fund", "/settings", "/daily-finance/todays-collections"]) {
+      await page.goto(path);
+      await expect(page.getByRole("complementary", { name: "Workspace" })).toBeVisible({ timeout: 15_000 });
+      await page.locator(".modal-bg").getByRole("button", { name: "Close" }).click({ timeout: 1500 }).catch(() => {});
+      await expect(page.getByRole("button", { name: /^← (Dashboard|Back)$/ })).toHaveCount(0);
+    }
+  });
+});

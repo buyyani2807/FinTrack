@@ -30,7 +30,7 @@ import { ChitActivateSchemeModal } from "./components/ChitAdminControls.jsx";
 import { ChitSchemeForm, ChitTypeChooser, FixedChitSchemeForm, PredefinedBidSchemeForm } from "./components/ChitSchemeForms.jsx";
 import { ChitSchemeDetails, ChitSchemeDashboardSection, ChitLandingReports } from "./components/ChitSchemeDashboard.jsx";
 
-export function ChitFundPage({ token, close, openSchemeId = null, onOpenSchemeConsumed, onSchemesChanged, orgSettings = {}, workspace = {}, onLogReceipt }) {
+export function ChitFundPage({ token, openSchemeId = null, onOpenSchemeConsumed, onSchemesChanged, orgSettings = {}, workspace = {}, onLogReceipt }) {
   const [schemes, setSchemes] = useState([]);
   const [cycles, setCycles] = useState([]);
   const [enrollments, setEnrollments] = useState([]);
@@ -222,7 +222,7 @@ export function ChitFundPage({ token, close, openSchemeId = null, onOpenSchemeCo
   };
   if (selected) return <><ChitSchemeDetails token={token} scheme={selected} back={() => { setSelected(null); setReminderRefresh(current => current + 1); }} onSchemeDeleted={schemeDeleted} orgSettings={orgSettings} workspace={workspace} onReceipt={setReceiptSuccess} onLogReceipt={onLogReceipt} />{receiptSuccess && <ReceiptSuccessModal receipt={receiptSuccess} settings={orgSettings} token={token} onLogAction={onLogReceipt} close={() => setReceiptSuccess(null)} />}</>;
   return <main className="shell chit-fund-page">
-    <div className="toolbar"><div><Button onClick={close}>← Dashboard</Button><h1 className="title spacer">Chit Fund</h1><p className="copy chit-fund-intro">Auction Chits use live bidding, Fixed Chits use scheduled lifts, and Fixed Predefined Bid Chits use an editable generated schedule.</p></div><Button className="primary" onClick={() => setModal("choose-type")}>+ New scheme</Button></div>
+    <div className="toolbar"><div><h1 className="title">Chit Fund</h1><p className="copy chit-fund-intro">Auction Chits use live bidding, Fixed Chits use scheduled lifts, and Fixed Predefined Bid Chits use an editable generated schedule.</p></div><Button className="primary" onClick={() => setModal("choose-type")}>+ New scheme</Button></div>
     <nav className="module-section-nav" aria-label="Chit Fund sections">
       {[["schemes", "Schemes"], ["members", "Members"], ["bids", "Bids"], ["payments", "Payments"], ["reports", "Reports"]].map(([id, label]) => (
         <button key={id} type="button" className={`module-section-tab ${landing === id ? "active" : ""}`} onClick={() => setLanding(id)}>{label}</button>

@@ -99,7 +99,7 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved }) {
     ...(form.reminderSettings?.confirmations || {}),
   };
 
-  return <main className="shell"><div className="toolbar"><div><button type="button" className="btn" onClick={close}>← Back</button><h1 className="title spacer">Settings</h1><p className="copy">Company branding, receipt footer, WhatsApp templates, and payment reminders.</p></div></div>
+  return <main className="shell"><div className="toolbar"><div><h1 className="title">Settings</h1><p className="copy">Company branding, receipt footer, WhatsApp templates, and payment reminders.</p></div></div>
     <form onSubmit={submit} className="card spacer">
       <strong>Company branding</strong>
       <div className="form spacer">

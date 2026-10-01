@@ -140,7 +140,7 @@ export function RouteCollectionsPage({ token, businessName, back }) {
     </div>
     <div className="top-actions">
       <Button onClick={() => refresh()}>Refresh</Button>
-      <Button onClick={back}>← Dashboard</Button>
+      {back && <Button onClick={back}>← Dashboard</Button>}
     </div>
   </header>;
 
