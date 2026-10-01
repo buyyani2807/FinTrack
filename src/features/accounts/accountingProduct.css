@@ -38,10 +38,6 @@
   -webkit-font-smoothing: antialiased;
 }
 
-html:has(.accounts-dashboard) .financier-nav {
-  display: none !important;
-}
-
 .accounts-dashboard .acc-shell {
   min-height: 100svh;
   background: transparent;

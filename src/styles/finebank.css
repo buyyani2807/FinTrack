@@ -672,12 +672,28 @@ html[data-ft-role="owner"] .top-actions .top-theme { display: none; }
 .top-actions:has(.top-theme) { flex-direction: row !important; align-items: center !important; }
 .top-actions .top-theme { flex: none; }
 @media (width <= 680px) { .top-actions .top-theme .ft-theme-toggle-label { display: none; } }
-/* Accounts sidebar footer */
-.accounts-dashboard .ft-theme-toggle.acc-theme { width: 100%; justify-content: center; margin-bottom: 8px; background: transparent; border-color: var(--ft-sidebar-line); color: var(--ft-sidebar-text); }
-.accounts-dashboard .ft-theme-toggle.acc-theme:hover { background: var(--ft-sidebar-hover); color: #fff; border-color: var(--ft-sidebar-line); }
-.accounts-dashboard .acc-theme .ft-theme-toggle-track { background: rgba(255, 255, 255, .16); }
-.accounts-dashboard .acc-theme[aria-checked="true"] .ft-theme-toggle-track { background: var(--ft-primary); }
-.accounts-dashboard { z-index: 10 !important; }
+/* Accounts: a normal page beside the workspace sidebar (like Daily Finance), sections as tabs inside the page */
+.accounts-dashboard { position: static !important; inset: auto !important; z-index: auto !important; overflow: visible !important; min-height: 100svh; padding: 0 !important; }
+.accounts-dashboard .acc-shell { display: block !important; min-height: 0; }
+.accounts-dashboard .acc-main { padding: 36px 44px 74px !important; }
+@media (width >= 1051px) { html[data-ft-role="owner"] .accounts-dashboard { margin-left: calc(var(--ft-sidebar-w) + 8px); } }
+@media (681px <= width <= 1050px) { html[data-ft-role="owner"] .accounts-dashboard { margin-left: var(--ft-rail-w); } .accounts-dashboard .acc-main { padding: 28px 24px 48px !important; } }
+@media (width <= 680px) { .accounts-dashboard .acc-main { padding: 20px 16px calc(96px + env(safe-area-inset-bottom, 0px)) !important; } }
+.acc-page-toolbar { align-items: flex-start; gap: 16px; }
+.acc-page-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; }
+.acc-section-tabs { display: grid; gap: 12px; margin: 20px 0 24px; }
+.acc-section-tabs .acc-section-nav { margin: 0 !important; }
+/* second row: the selected section's pages, as quieter pills */
+.acc-subsection-nav { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.acc-subsection-nav::-webkit-scrollbar { display: none; }
+.acc-subsection-tab { flex: none; min-height: 34px; padding: 6px 14px; border: 1px solid transparent; border-radius: 999px; background: transparent; color: var(--ft-muted); font: 600 13px/1.2 var(--ft-font); white-space: nowrap; cursor: pointer; }
+.acc-subsection-tab:hover { background: var(--ft-surface-hover); color: var(--ft-text); }
+.acc-subsection-tab.active { border-color: var(--ft-primary-soft-strong); background: var(--ft-primary-soft); color: var(--ft-primary); }
+.acc-subsection-tab:focus-visible { outline: 2px solid var(--ft-primary); outline-offset: 1px; }
+@media (width <= 680px) {
+  .acc-page-toolbar { flex-direction: column; }
+  .acc-page-actions { justify-content: flex-start; }
+}
 
 /* workspace pages use the whole width beside the navigation (pages that set their own reading width inline,
    like the legal page and customer portals, keep it) */

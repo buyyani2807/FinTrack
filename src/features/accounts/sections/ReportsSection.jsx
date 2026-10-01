@@ -19,9 +19,6 @@ export function ReportsSection({
   setReportRange,
   section,
   reportTab,
-  openSection,
-  setSection,
-  setReportTab,
   exportReport,
   tb,
   pnl,
@@ -62,14 +59,7 @@ export function ReportsSection({
   return (
     <div className="acc-panel">
       <ReportRangeBar fy={fy} lastFy={lastFy} from={rangeFrom} to={rangeTo} onChange={setReportRange} />
-      <ReportActions
-        section={section}
-        reportTab={reportTab}
-        openSection={openSection}
-        setSection={setSection}
-        setReportTab={setReportTab}
-        exportReport={exportReport}
-      />
+      <ReportActions exportReport={exportReport} />
       {(section === "trial" || reportTab === "trial") && section !== "pnl" && section !== "balance" && <TrialBalanceReport tb={tb} />}
       {(section === "pnl" || reportTab === "pnl") && section !== "trial" && section !== "balance" && <ProfitLossReport pnl={pnl} />}
       {(section === "balance" || reportTab === "balance") && section !== "trial" && section !== "pnl" && <BalanceSheetReport sheet={sheet} />}

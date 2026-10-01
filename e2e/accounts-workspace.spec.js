@@ -5,7 +5,7 @@ const SECTIONS = [
   ["Transactions"], ["Documents"], ["Inventory"],
   ["Parties", "Party Ledger"], ["Parties", "Receivables"], ["Parties", "Payables"], ["Parties", "Collection routes"],
   ["Reports", "Day Book"], ["Reports", "GST"], ["Reports", "Ledger"], ["Reports", "Trial Balance"], ["Reports", "Profit & Loss"], ["Reports", "Balance Sheet"],
-  ["Banking"], ["Setup"],
+  ["Banking"], ["Setup"], ["More"],
 ];
 
 const trackErrors = page => {
@@ -20,23 +20,24 @@ test.describe("Accounts workspace", () => {
     const errors = trackErrors(page);
     await mockAccountsWorkspace(page);
     await page.goto("/accounting");
-    const sidebar = page.locator(".acc-sidebar");
-    await expect(sidebar).toBeVisible({ timeout: 15_000 });
+    const tabs = page.getByRole("navigation", { name: "Accounts sections" });
+    await expect(tabs).toBeVisible({ timeout: 15_000 });
+    const subTabs = page.locator(".acc-subsection-nav");
 
     for (const [label, child] of SECTIONS) {
-      await sidebar.getByRole("button", { name: label, exact: true }).first().click();
-      if (child) await sidebar.getByRole("button", { name: child, exact: true }).click();
+      await tabs.getByRole("button", { name: label, exact: true }).click();
+      if (child) await subTabs.getByRole("button", { name: child, exact: true }).click();
       await expect(page.locator(".acc-panel").first()).toBeVisible();
       if (label === "Transactions") await expect(page.getByText("S-1", { exact: true })).toBeVisible();
     }
 
-    await sidebar.getByRole("button", { name: "Reports", exact: true }).first().click();
-    await sidebar.getByRole("button", { name: "Day Book", exact: true }).click();
+    await tabs.getByRole("button", { name: "Reports", exact: true }).click();
+    await subTabs.getByRole("button", { name: "Day Book", exact: true }).click();
     for (const tab of await page.locator(".accounts-section-tab").allTextContents()) {
       await page.locator(".accounts-section-tab", { hasText: tab }).first().click();
     }
 
-    await sidebar.getByRole("button", { name: "Inventory", exact: true }).first().click();
+    await tabs.getByRole("button", { name: "Inventory", exact: true }).click();
     for (const tab of await page.locator(".acc-panel .accounts-section-tab").allTextContents()) {
       await page.locator(".acc-panel .accounts-section-tab", { hasText: tab }).first().click();
     }
@@ -48,7 +49,8 @@ test.describe("Accounts workspace", () => {
     const errors = trackErrors(page);
     await mockAccountsWorkspace(page);
     await page.goto("/accounting");
-    await expect(page.locator(".acc-sidebar")).toBeVisible({ timeout: 15_000 });
+    const tabs = page.getByRole("navigation", { name: "Accounts sections" });
+    await expect(tabs).toBeVisible({ timeout: 15_000 });
     const dialog = page.locator(".modal-bg").last();
     const closeDialog = () => dialog.getByRole("button", { name: "Close", exact: true }).first().click();
 
@@ -64,13 +66,13 @@ test.describe("Accounts workspace", () => {
     await expect(dialog.getByRole("heading", { name: "Add party" })).toBeVisible();
     await closeDialog();
 
-    await page.locator(".acc-sidebar").getByRole("button", { name: "Transactions", exact: true }).click();
+    await tabs.getByRole("button", { name: "Transactions", exact: true }).click();
     await page.locator(".accounts-entry-row .acc-more-trigger").first().click();
     await page.getByRole("menuitem", { name: "Reverse", exact: true }).click();
     await expect(dialog.getByText("This is stored on the audit trail.")).toBeVisible();
     await closeDialog();
 
-    await page.locator(".acc-sidebar").getByRole("button", { name: "Inventory", exact: true }).click();
+    await tabs.getByRole("button", { name: "Inventory", exact: true }).click();
     await page.locator(".acc-panel").getByRole("button", { name: "Items", exact: true }).click();
     await page.getByRole("button", { name: "Basmati Rice 25kg", exact: true }).click();
     await expect(dialog.getByRole("heading", { name: "Basmati Rice 25kg" })).toBeVisible();
@@ -171,5 +173,23 @@ test.describe("Chit type", () => {
     await types.getByRole("button", { name: "Predefined Bid" }).click();
     await expect(page.getByRole("heading", { name: "Create Fixed Predefined Bid Chit" })).toBeVisible();
     await expect(page.getByLabel("Scheme name *")).toHaveValue("Diwali group");
+  });
+});
+
+test.describe("Accounts navigation", () => {
+  test("keeps the workspace sidebar and shows sections as tabs with sub-tabs", async ({ page }) => {
+    await mockAccountsWorkspace(page);
+    await page.goto("/accounting");
+    const tabs = page.getByRole("navigation", { name: "Accounts sections" });
+    await expect(tabs).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("complementary", { name: "Workspace" })).toBeVisible();
+    await expect(page.locator(".acc-sidebar")).toHaveCount(0);
+    await expect(page.locator(".acc-subsection-nav")).toHaveCount(0);
+    await tabs.getByRole("button", { name: "Reports", exact: true }).click();
+    const reportPages = page.getByRole("navigation", { name: "Reports pages" });
+    await expect(reportPages.locator('[aria-current="page"]')).toHaveText("Day Book");
+    await reportPages.getByRole("button", { name: "Trial Balance", exact: true }).click();
+    await expect(reportPages.locator('[aria-current="page"]')).toHaveText("Trial Balance");
+    await expect(tabs.getByRole("button", { name: "Reports", exact: true })).toHaveAttribute("aria-current", "true");
   });
 });

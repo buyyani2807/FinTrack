@@ -130,9 +130,9 @@ import {
   emptySimpleForm,
   emptyCoaForm,
 } from "./accountsFormDefaults.js";
-import { NAV_STORAGE_KEY, sectionTrail, SECTIONS, REPORT_TABS, MOBILE_TABS, MORE_LINKS } from "./accountsNavigation.js";
+import { REPORT_TABS, MORE_LINKS } from "./accountsNavigation.js";
 import { gstStatusLabel } from "./accountsFormat.js";
-import { AccSidebar, AccCompanyBar, AccPageHeader, NavIcon } from "./components/AccLayout.jsx";
+import { AccSectionTabs, AccCompanyBar, AccPageHeader } from "./components/AccLayout.jsx";
 import { CustomerPipeline } from "./components/CustomerPipeline.jsx";
 import { ManufacturingWorkspace } from "./components/ManufacturingWorkspace.jsx";
 import { VoucherForm } from "./components/VoucherForm.jsx";
@@ -171,9 +171,6 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   });
   const [section, setSection] = useState("overview");
   const [reportTab, setReportTab] = useState("daybook");
-  const [navExpanded, setNavExpanded] = useState(() => {
-    try { return sessionStorage.getItem(NAV_STORAGE_KEY) === "expanded"; } catch { return false; }
-  });
   const [settings, setSettings] = useState(cached?.settings ?? null);
   const [orgSettings, setOrgSettings] = useState(orgSettingsProp || {});
   const [pendingSalesInvoiceId, setPendingSalesInvoiceId] = useState(null);
@@ -753,6 +750,12 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     window.scrollTo(0, 0);
   };
 
+  // A report from the Reports sub-tabs: the three statements are their own sections, the rest are tabs of the Reports page.
+  const openReport = id => {
+    if (["trial", "pnl", "balance"].includes(id)) openSection(id);
+    else { setSection("reports"); setReportTab(id); }
+  };
+
   const switchCompany = id => {
     setAccounts([]);
     setParties([]);
@@ -787,19 +790,6 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
         try { sessionStorage.setItem(COMPANY_STORAGE_KEY, fallback); } catch { /* ignore */ }
       }
     }, "Company archived."));
-  };
-
-  const toggleNav = () => {
-    setNavExpanded(current => {
-      const next = !current;
-      try { sessionStorage.setItem(NAV_STORAGE_KEY, next ? "expanded" : "collapsed"); } catch { /* ignore */ }
-      return next;
-    });
-  };
-
-  const requestLogout = () => {
-    if (!logout) return;
-    setConfirmLogout(true);
   };
 
   const confirmAccountsLogout = async () => {
@@ -1734,12 +1724,6 @@ const openVoucher = () => {
     }, "Company backup restored into this company only.");
   };
 
-  const mobileTab = ["overview", "vouchers", "parties", "reports"].includes(section)
-    ? section
-    : section === "receivables" || section === "payables" ? "parties"
-    : section === "pnl" || section === "balance" || section === "trial" ? "reports"
-    : "more";
-
   const exportRows = () => {
     const active = ["receivables", "payables", "pnl", "balance", "trial"].includes(section) ? section : reportTab;
     const stamp = todayIso();
@@ -1824,18 +1808,12 @@ const openVoucher = () => {
   const invoicePartyRows = partyTotalsFromInvoices(isInvoicePayables ? apInvoices : arInvoices);
 
 
-  return <div className={`acc-shell${navExpanded ? " nav-expanded" : ""}`}>
-    <AccSidebar section={section} expanded={navExpanded} onToggle={toggleNav} onNavigate={openSection} />
+  return <div className="acc-shell">
     <main className="acc-main acc-print-root">
       <AccPageHeader
-        backLabel={section === "overview" ? "← Dashboard" : null}
-        onBack={section === "overview" ? close : undefined}
-        title={SECTIONS.find(item => item.id === section)?.label || "Accounts"}
-        trail={sectionTrail(section, reportTab)}
+        title="Accounts"
         copy={`${activeCompany?.name || settings?.companyName || workspace.businessName || "Your business"} · ${fy.label} · ${range.from} to ${range.to}`}
-        workspace={workspace}
-        onSetup={() => openSection("setup")}
-        onLogout={requestLogout}
+        tabs={<AccSectionTabs section={section} reportTab={reportTab} onNavigate={openSection} openReport={openReport} />}
         companyBar={<AccCompanyBar
           companies={companies}
           activeId={activeCompanyId}
@@ -1851,14 +1829,6 @@ const openVoucher = () => {
       {notice && <div className="notice accounts-notice-ok acc-toast ok" role="status">{notice}</div>}
       {readOnly && <div className="notice">Accounts access: <strong>viewer</strong>. You can review books and reports, but posting and setup changes are blocked.</div>}
       {migrationRequired && <div className="notice">Run <strong>052</strong> through <strong>076_fix_ambiguous_item_type.sql</strong> in the Supabase SQL editor (including <strong>059</strong>, <strong>064–067</strong>, <strong>070–076</strong>), then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
-      <nav className="acc-bottom-nav" aria-label="Accounts">
-        {MOBILE_TABS.map(item => (
-          <button key={item.id} type="button" className={`acc-bottom-item ${mobileTab === item.id ? "active" : ""}`} onClick={() => openSection(item.id)}>
-            <NavIcon item={item} />
-            <span>{item.label}</span>
-          </button>
-        ))}
-      </nav>
       {loading && !settings ? <><p className="copy">Loading Accounts…</p><AccSkeleton /></> : <>
         {section === "overview" && <OverviewSection
           settings={settings}
@@ -2058,9 +2028,6 @@ const openVoucher = () => {
           setReportRange={setReportRange}
           section={section}
           reportTab={reportTab}
-          openSection={openSection}
-          setSection={setSection}
-          setReportTab={setReportTab}
           exportReport={exportReport}
           tb={tb}
           pnl={pnl}
