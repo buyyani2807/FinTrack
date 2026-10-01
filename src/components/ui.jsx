@@ -20,12 +20,19 @@ export const Metric = ({
     ? <button type="button" className="card metric-link" onClick={onClick}>{inner}</button>
     : <div className="card">{inner}</div>;
 };
+// `tone` picks the badge colour class when it differs from the label.
 export const Badge = ({
-  status
-}) => <span className={`badge ${status}`}>{status}</span>;
+  status,
+  tone = status
+}) => <span className={`badge ${tone}`}>{status}</span>;
+// `isolateClicks` stops clicks inside the dialog reaching clickable parents (e.g. cards).
 export const Modal = ({
-  children
-}) => <div className="modal-bg"><div className="modal">{children}</div></div>;
+  children,
+  isolateClicks = false
+}) => {
+  const stop = isolateClicks ? event => event.stopPropagation() : undefined;
+  return <div className="modal-bg" onClick={stop}><div className="modal" onClick={stop}>{children}</div></div>;
+};
 export function ConfirmDialog({ title, message, confirmLabel = "Confirm", danger = false, busy = false, error = "", close, onConfirm }) {
   return <Modal><h2 className="title">{title}</h2><p className="copy">{message}</p>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button onClick={close} disabled={busy}>Cancel</Button><Button className={danger ? "danger primary" : "primary"} disabled={busy} onClick={onConfirm}>{busy ? "Please wait…" : confirmLabel}</Button></div></Modal>;
 }

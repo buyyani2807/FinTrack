@@ -1,6 +1,6 @@
 import { useNavigate, useOutletContext, useParams } from "react-router";
 import { C } from "../../../styles/theme.js";
-import { ChitFundPage } from "../../chitFund/ChitFundModule";
+import { ChitFundPage } from "../../chitFund/ChitFundPage.jsx";
 import { workspacePaths } from "../paths.js";
 
 // /chit and /chit/:schemeId (opens that scheme, e.g. from a dashboard card).

@@ -1,4 +1,4 @@
-import { ChitCustomerPortal } from "../features/chitFund/ChitFundModule";
+import { ChitCustomerPortal } from "../features/chitFund/ChitCustomerPortal.jsx";
 import { FinancierAuth, PasswordRecovery } from "../features/auth/AuthScreens.jsx";
 import { Customer } from "../features/finance/CustomerAccountView.jsx";
 import { CustomerReportDownload } from "../features/finance/PortfolioReport.jsx";
