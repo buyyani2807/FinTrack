@@ -1,5 +1,5 @@
 import { cloneElement, isValidElement, useId, useState } from "react";
-import { ChevronRight, Eye, EyeOff, Inbox, X } from "lucide-react";
+import { ArrowLeft, ChevronRight, Eye, EyeOff, Inbox, X } from "lucide-react";
 
 // Shared presentational building blocks used across the finance app.
 export const Button = ({
@@ -124,3 +124,23 @@ export function IconInput({ icon: Icon, className = "", ...inputProps }) {
   </span>;
 }
 IconInput.fieldControl = true;
+
+// Where the user is inside a section, e.g. Daily Finance › Ravi Kumar. items: [{ label, onClick? }], last = current page.
+// The back arrow goes to the nearest ancestor that has onClick.
+export function Breadcrumb({ items }) {
+  const parent = items.slice(0, -1).reverse().find(item => item.onClick);
+  return <nav className="ft-breadcrumb" aria-label="Breadcrumb">
+    {parent && <button type="button" className="ft-icon-btn ft-breadcrumb-back" aria-label={`Back to ${parent.label}`} title={`Back to ${parent.label}`} onClick={parent.onClick}><ArrowLeft size={18} aria-hidden="true" /></button>}
+    <ol>
+      {items.map((item, index) => {
+        const current = index === items.length - 1;
+        return <li key={`${index}-${item.label}`}>
+          {index > 0 && <ChevronRight className="ft-breadcrumb-sep" size={14} aria-hidden="true" />}
+          {!current && item.onClick
+            ? <button type="button" className="ft-breadcrumb-link" onClick={item.onClick}>{item.label}</button>
+            : <span aria-current={current ? "page" : undefined}>{item.label}</span>}
+        </li>;
+      })}
+    </ol>
+  </nav>;
+}

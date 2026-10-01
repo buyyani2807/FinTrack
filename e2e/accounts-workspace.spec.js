@@ -140,3 +140,18 @@ test.describe("Back buttons", () => {
     }
   });
 });
+
+test.describe("Breadcrumbs", () => {
+  test("sub-pages show where they sit and the back arrow returns to the parent", async ({ page }) => {
+    await mockAccountsWorkspace(page);
+    await page.goto("/daily-finance/todays-collections");
+    const crumbs = page.getByRole("navigation", { name: "Breadcrumb" });
+    await expect(crumbs).toContainText("Daily Finance", { timeout: 15_000 });
+    await expect(crumbs.locator('[aria-current="page"]')).toHaveText("Today’s collections");
+    await crumbs.getByRole("button", { name: "Back to Daily Finance" }).click();
+    await expect(page.getByRole("heading", { name: "Daily Finance", level: 1 })).toBeVisible();
+
+    await page.goto("/daily-finance/accounts/fa1");
+    await expect(page.getByRole("navigation", { name: "Breadcrumb" }).locator('[aria-current="page"]')).toHaveText("Ravi Kumar", { timeout: 15_000 });
+  });
+});
