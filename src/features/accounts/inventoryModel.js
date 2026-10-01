@@ -106,6 +106,7 @@ export function normalizeItemLine(line = {}) {
     netAmount: Number.isFinite(discountAmount) ? roundMoney(amount - discountAmount) : amount,
     gstRate: Number(line.gstRate || 0),
     hsnSac: String(line.hsnSac || "").trim(),
+    sourceDocumentLineId: line.sourceDocumentLineId || null,
   };
 }
 
@@ -126,6 +127,7 @@ export function mapVoucherItemLinesForRpc(lines = []) {
     cgst_amount: Number(line.cgstAmount ?? line.cgst_amount ?? 0),
     sgst_amount: Number(line.sgstAmount ?? line.sgst_amount ?? 0),
     igst_amount: Number(line.igstAmount ?? line.igst_amount ?? 0),
+    ...(line.sourceDocumentLineId ? { source_document_line_id: line.sourceDocumentLineId } : {}),
   })).filter(line => String(line.item_name || "").trim() || line.item_id);
 }
 
@@ -267,6 +269,7 @@ export function itemizedEntryDraft({
       cgstAmount: line.cgstAmount,
       sgstAmount: line.sgstAmount,
       igstAmount: line.igstAmount,
+      sourceDocumentLineId: line.sourceDocumentLineId,
     })),
     totals: {
       taxable: aggregate.taxable,
@@ -331,6 +334,8 @@ const STOCK_REASON_LABELS = {
   purchase_return: "Purchase return",
   adjustment: "Adjustment",
   reversal: "Reversal",
+  delivery: "Delivery challan",
+  goods_receipt: "Goods receipt",
 };
 
 export const stockReasonLabel = reason => STOCK_REASON_LABELS[reason] || String(reason || "").replaceAll("_", " ") || "—";

@@ -63,6 +63,8 @@ const mapParty = row => ({
   gstRegistration: row.gst_registration || "",
   notes: row.notes || "",
   isActive: row.is_active,
+  creditLimit: Number(row.credit_limit || 0),
+  creditDays: row.credit_days === null || row.credit_days === undefined ? null : Number(row.credit_days),
 });
 
 const mapCompany = row => ({
@@ -118,9 +120,31 @@ export const loadChartOfAccounts = token => wrap(
   accQuery(`/rest/v1/acc_coa?select=id,code,name,group_type,account_type,is_system,is_active,opening_balance,opening_side,parent_id&order=code.asc${companyEq()}`, token).then(rows => rows.map(mapCoa)),
 );
 
+const PARTY_COLUMNS = "id,party_type,name,phone,email,address,gstin,state_code,gst_registration,notes,is_active";
+const partiesPath = columns => `/rest/v1/acc_parties?select=${columns}&order=name.asc${companyEq()}`;
+
 export const loadParties = token => wrap(
-  accQuery(`/rest/v1/acc_parties?select=id,party_type,name,phone,email,address,gstin,state_code,gst_registration,notes,is_active&order=name.asc${companyEq()}`, token).then(rows => rows.map(mapParty)),
+  accQuery(partiesPath(`${PARTY_COLUMNS},credit_limit,credit_days`), token)
+    .catch(err => {
+      if (!/credit_limit|credit_days/i.test(String(err?.message || ""))) throw err;
+      return accQuery(partiesPath(PARTY_COLUMNS), token);
+    })
+    .then(rows => rows.map(mapParty)),
 );
+
+const migration081Error = err => {
+  if (!isMissing(err)) return err;
+  const error = new Error("Run migration 081_accounts_trade_documents.sql in the Supabase SQL editor to enable quotations, orders, challans, document settings and credit limits.");
+  error.code = "MIGRATION_REQUIRED";
+  return error;
+};
+
+export const setPartyCredit = (token, partyId, { creditLimit, creditDays }) =>
+  accRpc("acc_set_party_credit", {
+    input_party_id: partyId,
+    input_credit_limit: Number(creditLimit || 0),
+    input_credit_days: creditDays === "" || creditDays === null || creditDays === undefined ? null : Number(creditDays),
+  }, token).catch(err => { throw migration081Error(err); });
 
 export const loadPartyPipeline = token => wrap(
   supabase.rpc("acc_list_party_pipeline", { input_company_id: activeCompanyId }, token).then(rows => (Array.isArray(rows) ? rows : []).map(row => ({ partyId: row.party_id, stage: row.stage }))),
@@ -509,6 +533,7 @@ const mapVoucherItemLine = row => ({
   cgstAmount: Number(row.cgst_amount || 0),
   sgstAmount: Number(row.sgst_amount || 0),
   igstAmount: Number(row.igst_amount || 0),
+  sourceDocumentLineId: row.source_document_line_id || null,
 });
 
 const mapStockMovement = row => ({
@@ -521,6 +546,8 @@ const mapStockMovement = row => ({
   voucherId: row.voucher_id || null,
   voucherItemLineId: row.voucher_item_line_id || null,
   voucherNumber: row.voucher_number || "",
+  documentId: row.document_id || null,
+  documentLineId: row.document_line_id || null,
   createdAt: row.created_at,
 });
 
@@ -569,7 +596,11 @@ const VOUCHER_ITEM_LINE_COLUMNS = "id,voucher_id,line_no,item_id,item_name,item_
 const voucherItemLinesPath = columns => `/rest/v1/acc_voucher_item_lines?select=${columns}&order=line_no.asc&limit=20000${companyEq()}`;
 
 export const loadVoucherItemLines = token => wrap(
-  accQuery(voucherItemLinesPath(`${VOUCHER_ITEM_LINE_COLUMNS},discount_amount`), token)
+  accQuery(voucherItemLinesPath(`${VOUCHER_ITEM_LINE_COLUMNS},discount_amount,source_document_line_id`), token)
+    .catch(err => {
+      if (!/source_document_line_id/i.test(String(err?.message || ""))) throw err;
+      return accQuery(voucherItemLinesPath(`${VOUCHER_ITEM_LINE_COLUMNS},discount_amount`), token);
+    })
     .catch(err => {
       if (!/discount_amount/i.test(String(err?.message || ""))) throw err;
       return accQuery(voucherItemLinesPath(VOUCHER_ITEM_LINE_COLUMNS), token);
@@ -577,12 +608,148 @@ export const loadVoucherItemLines = token => wrap(
     .then(rows => (rows || []).map(mapVoucherItemLine)),
 );
 
+const STOCK_MOVEMENT_COLUMNS = "id,item_id,movement_date,quantity_delta,reason,note,voucher_id,voucher_item_line_id,voucher_number,created_at";
+const stockMovementsPath = columns => `/rest/v1/acc_stock_movements?select=${columns}&order=movement_date.desc,created_at.desc&limit=20000${companyEq()}`;
+
 export const loadStockMovements = token => wrap(
-  accQuery(
-    `/rest/v1/acc_stock_movements?select=id,item_id,movement_date,quantity_delta,reason,note,voucher_id,voucher_item_line_id,voucher_number,created_at&order=movement_date.desc,created_at.desc&limit=20000${companyEq()}`,
-    token,
-  ).then(rows => (rows || []).map(mapStockMovement)),
+  accQuery(stockMovementsPath(`${STOCK_MOVEMENT_COLUMNS},document_id,document_line_id`), token)
+    .catch(err => {
+      if (!/document_id|document_line_id/i.test(String(err?.message || ""))) throw err;
+      return accQuery(stockMovementsPath(STOCK_MOVEMENT_COLUMNS), token);
+    })
+    .then(rows => (rows || []).map(mapStockMovement)),
 );
+
+const mapTradeDocumentLine = row => ({
+  id: row.id,
+  documentId: row.document_id,
+  lineNo: row.line_no,
+  itemId: row.item_id || null,
+  itemName: row.item_name,
+  itemSku: row.item_sku || "",
+  itemType: row.item_type || "product",
+  unit: row.unit || "Nos",
+  quantity: Number(row.quantity || 0),
+  rate: Number(row.rate || 0),
+  amount: Number(row.amount || 0),
+  discountAmount: Number(row.discount_amount || 0),
+  gstRate: Number(row.gst_rate || 0),
+  hsnSac: row.hsn_sac || "",
+  taxableAmount: Number(row.taxable_amount || 0),
+  cgstAmount: Number(row.cgst_amount || 0),
+  sgstAmount: Number(row.sgst_amount || 0),
+  igstAmount: Number(row.igst_amount || 0),
+  sourceLineId: row.source_line_id || null,
+});
+
+const mapTradeDocument = (row, lines = []) => ({
+  id: row.id,
+  docType: row.doc_type,
+  docNumber: row.doc_number,
+  docDate: row.doc_date,
+  validUntil: row.valid_until || "",
+  partyId: row.party_id,
+  status: row.status,
+  reference: row.reference || "",
+  notes: row.notes || "",
+  terms: row.terms || "",
+  sourceDocumentId: row.source_document_id || null,
+  stockPosted: Boolean(row.stock_posted),
+  taxableTotal: Number(row.taxable_total || 0),
+  taxTotal: Number(row.tax_total || 0),
+  grandTotal: Number(row.grand_total || 0),
+  cancelReason: row.cancel_reason || "",
+  createdAt: row.created_at,
+  lines,
+});
+
+/** Trade documents with their lines, or null when migration 081 has not been run. */
+export const loadTradeDocuments = token => ignoreMissing(Promise.all([
+  accQuery(`/rest/v1/acc_trade_documents?select=id,doc_type,doc_number,doc_date,valid_until,party_id,status,reference,notes,terms,source_document_id,stock_posted,taxable_total,tax_total,grand_total,cancel_reason,created_at&order=doc_date.desc,doc_number.desc&limit=5000${companyEq()}`, token),
+  accQuery(`/rest/v1/acc_trade_document_lines?select=id,document_id,line_no,item_id,item_name,item_sku,item_type,unit,quantity,rate,amount,discount_amount,gst_rate,hsn_sac,taxable_amount,cgst_amount,sgst_amount,igst_amount,source_line_id&order=line_no.asc&limit=50000${companyEq()}`, token),
+]).then(([docs, lines]) => {
+  const linesBy = groupByKey((lines || []).map(mapTradeDocumentLine), "documentId");
+  return (docs || []).map(row => mapTradeDocument(row, linesBy.get(row.id) || []));
+}));
+
+export const saveTradeDocument = (token, draft) =>
+  accRpc("acc_save_trade_document", {
+    input_id: draft.id || null,
+    input_doc_type: draft.docType,
+    input_doc_date: draft.docDate,
+    input_party_id: draft.partyId,
+    input_lines: draft.lines,
+    input_valid_until: draft.validUntil || null,
+    input_reference: draft.reference || null,
+    input_notes: draft.notes || null,
+    input_terms: draft.terms || null,
+    input_source_document_id: draft.sourceDocumentId || null,
+  }, token).catch(err => { throw migration081Error(err); });
+
+export const setTradeDocumentStatus = (token, id, status, reason = "") =>
+  accRpc("acc_set_trade_document_status", {
+    input_id: id,
+    input_status: status,
+    input_reason: reason || null,
+  }, token).catch(err => { throw migration081Error(err); });
+
+const DOCUMENT_SETTING_FIELDS = [
+  ["businessAddress", "business_address"],
+  ["businessPhone", "business_phone"],
+  ["businessEmail", "business_email"],
+  ["logoDataUrl", "logo_data_url"],
+  ["upiId", "upi_id"],
+  ["upiPayeeName", "upi_payee_name"],
+  ["bankName", "bank_name"],
+  ["bankAccountNumber", "bank_account_number"],
+  ["bankIfsc", "bank_ifsc"],
+  ["invoiceTemplate", "invoice_template"],
+  ["showUpiQr", "show_upi_qr"],
+  ["invoiceTerms", "invoice_terms"],
+  ["quotationTerms", "quotation_terms"],
+  ["creditControl", "credit_control"],
+  ["overdueBlockDays", "overdue_block_days"],
+];
+
+export const DEFAULT_DOCUMENT_SETTINGS = {
+  businessAddress: "",
+  businessPhone: "",
+  businessEmail: "",
+  logoDataUrl: "",
+  upiId: "",
+  upiPayeeName: "",
+  bankName: "",
+  bankAccountNumber: "",
+  bankIfsc: "",
+  invoiceTemplate: "a4",
+  showUpiQr: true,
+  invoiceTerms: "",
+  quotationTerms: "",
+  creditControl: "warn",
+  overdueBlockDays: 0,
+};
+
+export const loadDocumentSettings = token =>
+  ignoreMissing(accQuery(`/rest/v1/acc_document_settings?select=${DOCUMENT_SETTING_FIELDS.map(([, column]) => column).join(",")}${companyEq()}&limit=1`, token))
+    .then(rows => {
+      const row = rows?.[0] || {};
+      const settings = { ...DEFAULT_DOCUMENT_SETTINGS, available: rows !== null };
+      for (const [key, column] of DOCUMENT_SETTING_FIELDS) {
+        if (row[column] !== null && row[column] !== undefined) settings[key] = row[column];
+      }
+      settings.overdueBlockDays = Number(settings.overdueBlockDays || 0);
+      settings.showUpiQr = settings.showUpiQr !== false;
+      return settings;
+    });
+
+export const saveDocumentSettings = (token, settings) => {
+  const payload = {};
+  for (const [key, column] of DOCUMENT_SETTING_FIELDS) payload[column] = settings[key] ?? DEFAULT_DOCUMENT_SETTINGS[key];
+  payload.overdue_block_days = Number(payload.overdue_block_days || 0);
+  payload.show_upi_qr = payload.show_upi_qr !== false;
+  return accRpc("acc_save_document_settings", { input_settings: payload }, token)
+    .catch(err => { throw migration081Error(err); });
+};
 
 export const upsertItemCategory = (token, { id = null, name }) =>
   wrap(accRpc("acc_upsert_item_category", { input_id: id, input_name: name }, token));

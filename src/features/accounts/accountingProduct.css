@@ -677,11 +677,85 @@ html:has(.accounts-dashboard) .financier-nav {
   text-align: right;
 }
 
-.accounts-dashboard .acc-inventory .acc-toggle-row {
+.accounts-dashboard .acc-inventory .acc-toggle-row,
+.accounts-dashboard .acc-documents .acc-toggle-row,
+.accounts-dashboard .acc-doc-settings .acc-toggle-row {
   display: flex;
   gap: 8px;
   align-items: center;
   font-weight: 600;
+}
+
+.accounts-dashboard .acc-documents .accounts-section-nav {
+  flex-wrap: wrap;
+}
+
+.accounts-dashboard .acc-doc-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid var(--acc-line);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.accounts-dashboard .acc-doc-status.tone-green { color: var(--acc-green); border-color: #4fd08d44; background: #4fd08d14; }
+.accounts-dashboard .acc-doc-status.tone-amber { color: var(--acc-gold); border-color: #f4b94255; background: #f4b94214; }
+.accounts-dashboard .acc-doc-status.tone-red { color: var(--acc-red); border-color: #ff7a7a55; background: #ff7a7a14; }
+.accounts-dashboard .acc-doc-status.tone-blue { color: var(--acc-blue); border-color: #7eb6ff44; background: #7eb6ff14; }
+.accounts-dashboard .acc-doc-status.tone-muted { color: var(--acc-muted); background: #93a0b514; }
+
+.accounts-dashboard .acc-modal.acc-modal-wide {
+  width: min(960px, calc(100vw - 32px));
+  max-width: none;
+}
+
+.accounts-dashboard .acc-doc-logo {
+  max-width: 72px;
+  max-height: 56px;
+  object-fit: contain;
+}
+
+.accounts-dashboard .acc-doc-logo-row,
+.accounts-dashboard .acc-doc-qr-preview,
+.accounts-dashboard .acc-doc-viewer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.accounts-dashboard .acc-doc-qr-preview .acc-qr {
+  border: 1px solid var(--acc-line);
+  border-radius: 6px;
+  flex: none;
+}
+
+.accounts-dashboard .acc-doc-qr-preview .small {
+  flex: 1 1 220px;
+}
+
+.accounts-dashboard .acc-doc-totals {
+  text-align: right;
+}
+
+.accounts-dashboard .acc-credit-alert {
+  border: 1px solid #f4b94255;
+  background: #f4b94214;
+  border-radius: var(--acc-radius);
+  padding: 10px 12px;
+}
+
+.accounts-dashboard .acc-credit-alert.block {
+  border-color: #ff7a7a55;
+  background: #ff7a7a14;
+}
+
+.accounts-dashboard .acc-credit-alert p {
+  margin: 4px 0 0;
 }
 
 .accounts-dashboard .acc-overview {

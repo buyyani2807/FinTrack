@@ -3,6 +3,7 @@ import { addDaysIso, roundMoney } from "./accountingModel.js";
 // Periodic valuation at moving weighted-average cost (Tally's default).
 // Purchases are expensed in the ledger; reports add closing stock and subtract
 // opening stock, so nothing here posts journal entries.
+// `voucherItemLines` may also contain trade document lines (goods receipts are costed from them).
 
 const QTY_EPSILON = 0.0005;
 
@@ -68,15 +69,16 @@ function costItem(item, rows, linesById, asOf) {
     const delta = Number(movement.quantityDelta || 0);
     if (!delta) continue;
     const average = quantity > QTY_EPSILON ? value / quantity : fallback;
+    const lineKey = movement.voucherItemLineId || movement.documentLineId || null;
     let unitCost = null;
     if (movement.reason === "opening") unitCost = itemOpeningRate(item);
-    else if (movement.reason === "purchase" || movement.reason === "purchase_return") {
-      unitCost = lineNetUnitCost(linesById.get(movement.voucherItemLineId));
-    } else if (movement.reason === "reversal" && movement.voucherItemLineId) {
-      unitCost = costByLine.get(movement.voucherItemLineId) ?? null;
+    else if (movement.reason === "purchase" || movement.reason === "purchase_return" || movement.reason === "goods_receipt") {
+      unitCost = lineNetUnitCost(linesById.get(lineKey));
+    } else if (movement.reason === "reversal" && lineKey) {
+      unitCost = costByLine.get(lineKey) ?? null;
     }
     if (unitCost == null) unitCost = average;
-    if (movement.voucherItemLineId && movement.reason !== "reversal") costByLine.set(movement.voucherItemLineId, unitCost);
+    if (lineKey && movement.reason !== "reversal") costByLine.set(lineKey, unitCost);
     const movementValue = delta * unitCost;
     quantity += delta;
     value += movementValue;

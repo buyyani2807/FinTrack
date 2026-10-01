@@ -63,6 +63,13 @@ import {
   setItemOpeningRate,
   loadInventorySettings,
   saveInventorySettings,
+  DEFAULT_DOCUMENT_SETTINGS,
+  loadDocumentSettings,
+  loadTradeDocuments,
+  saveDocumentSettings,
+  saveTradeDocument,
+  setPartyCredit,
+  setTradeDocumentStatus,
 } from "./accountingRepository.js";
 import {
   AccOnboardingWizard,
@@ -257,6 +264,8 @@ import { buildSalesInvoice } from "./salesInvoiceModel.js";
 import { ArReminderButton, OutstandingWhatsAppButton, PartyStatementButton, PaymentAdviceButton, PurchaseDocumentButton, SalesInvoiceActions, SalesInvoiceSuccessModal, SalesInvoiceViewerModal } from "./SalesInvoiceActions.jsx";
 import { AccItemsSetup } from "./AccItemsSetup.jsx";
 import { AccInventoryWorkspace } from "./AccInventoryWorkspace.jsx";
+import { AccDocumentsWorkspace } from "./AccDocumentsWorkspace.jsx";
+import { creditCheck, documentFulfilment, documentLabel } from "./tradeDocumentModel.js";
 import { periodStockValues } from "./inventoryValuation.js";
 import {
   aggregateItemizedGst,
@@ -626,6 +635,12 @@ function PartyFormFields({ form, setForm, typeLocked = false }) {
         </select>
       </Field>
       <Field label="Notes"><input value={form.notes} placeholder="optional" onChange={event => set({ notes: event.target.value })} /></Field>
+      {(form.partyType === "customer" || form.partyType === "supplier") && <>
+        {form.partyType === "customer" && (
+          <Field label="Credit limit (₹)"><input type="number" min="0" step="0.01" value={form.creditLimit ?? ""} placeholder="0 = no limit" onChange={event => set({ creditLimit: event.target.value })} /></Field>
+        )}
+        <Field label="Credit days"><input type="number" min="0" max="365" step="1" value={form.creditDays ?? ""} placeholder="Default due date" onChange={event => set({ creditDays: event.target.value })} /></Field>
+      </>}
       {typeLocked ? <p className="small acc-party-lock">Party type is locked because this party already has accounting transactions.</p> : null}
     </div>
   );
@@ -695,7 +710,7 @@ async function fetchAccountsBundle(token, { preferredCompanyId, wantRecurring = 
   if (company) {
     try { sessionStorage.setItem(COMPANY_STORAGE_KEY, company.id); } catch { /* ignore */ }
   }
-  const [settings, accounts, parties, pipeline, vouchers, items, itemCategories, stockMovements, voucherItemLines, recurring] = await Promise.all([
+  const [settings, accounts, parties, pipeline, vouchers, items, itemCategories, stockMovements, voucherItemLines, recurring, tradeDocuments, documentSettings] = await Promise.all([
     loadAccountingSettings(token),
     loadChartOfAccounts(token),
     loadParties(token),
@@ -706,6 +721,8 @@ async function fetchAccountsBundle(token, { preferredCompanyId, wantRecurring = 
     orEmptyWhenMigrating(loadStockMovements(token)),
     orEmptyWhenMigrating(loadVoucherItemLines(token)),
     wantRecurring ? loadRecurringTemplates(token).catch(() => []) : Promise.resolve(null),
+    loadTradeDocuments(token).catch(() => null),
+    loadDocumentSettings(token).catch(() => ({ ...DEFAULT_DOCUMENT_SETTINGS, available: false })),
   ]);
   const mergedSettings = {
     ...(settings || {}),
@@ -736,6 +753,8 @@ async function fetchAccountsBundle(token, { preferredCompanyId, wantRecurring = 
     voucherItemLines: voucherItemLines || [],
     recurringFetched: Boolean(recurring),
     recurringTemplates: recurring || (sameCompanyCache ? accountsSnapshot.recurringTemplates : []),
+    tradeDocuments,
+    documentSettings,
   };
   accountsSnapshot = bundle;
   return bundle;
@@ -754,6 +773,7 @@ export function prefetchAccounts(token) {
 const NAV_TREE = [
   { id: "overview", label: "Overview", glyph: "⌂" },
   { id: "vouchers", label: "Transactions", glyph: "▣" },
+  { id: "documents", label: "Documents", glyph: "▧" },
   { id: "inventory", label: "Inventory", glyph: "▤" },
   {
     id: "parties",
@@ -789,6 +809,7 @@ function sectionTrail(section, reportTab) {
   if (section === "overview") return ["Overview"];
   if (section === "vouchers") return ["Transactions"];
   if (section === "inventory") return ["Inventory"];
+  if (section === "documents") return ["Documents"];
   if (section === "parties") return ["Parties", "Party Ledger"];
   if (section === "receivables") return ["Parties", "Receivables"];
   if (section === "payables") return ["Parties", "Payables"];
@@ -967,7 +988,7 @@ function AccPageHeader({ backLabel, onBack, title, copy, trail, extras, companyB
 }
 const emptyLine = () => ({ coaId: "", debit: "", credit: "", description: "" });
 const emptyBankLine = () => ({ lineDate: todayIso(), description: "", reference: "", amount: "", direction: "in" });
-const emptyPartyForm = () => ({ id: null, partyType: "customer", name: "", phone: "", email: "", address: "", gstin: "", stateCode: "", gstRegistration: "", notes: "" });
+const emptyPartyForm = () => ({ id: null, partyType: "customer", name: "", phone: "", email: "", address: "", gstin: "", stateCode: "", gstRegistration: "", notes: "", creditLimit: "", creditDays: "" });
 const emptyRecurringDraft = () => ({
   id: null,
   name: "",
@@ -1074,6 +1095,7 @@ const SECTIONS = [
   { id: "manufacturing", label: "Manufacturing", group: "Industry" },
   { id: "ledger", label: "Ledger", group: "Books" },
   { id: "vouchers", label: "Transactions", group: "Books" },
+  { id: "documents", label: "Documents", group: "Books" },
   { id: "inventory", label: "Inventory", group: "Books" },
   { id: "cashbook", label: "Cashbook", group: "Books" },
   { id: "receivables", label: "Receivables", group: "Parties" },
@@ -1236,7 +1258,7 @@ function VoucherForm({ accounts, parties, voucherType, setVoucherType, form, set
   </>;
 }
 
-function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, saving, maxDate, gstCompany, onGstSetup, items = [], stockByItem = {}, openInvoices = [] }) {
+function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, saving, maxDate, gstCompany, onGstSetup, items = [], stockByItem = {}, openInvoices = [], creditInfo = null }) {
   const customers = parties.filter(party => party.partyType === "customer" && (party.isActive !== false || party.id === form.partyId));
   const suppliers = parties.filter(party => party.partyType === "supplier" && (party.isActive !== false || party.id === form.partyId));
   const expenseOptions = SIMPLE_EXPENSE_CODES.filter(([code]) => accounts.some(account => account.code === code) || code === "5990");
@@ -1295,6 +1317,9 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
     })()
     : null;
   const showReceivedOnCredit = kind === "sale" && form.settlement === "credit";
+  const credit = showReceivedOnCredit && creditInfo
+    ? creditCheck({ ...creditInfo, invoiceTotal: Math.max(0, invoiceTotalPreview - Number(form.amountReceived || 0)) })
+    : null;
   const showMoneyMode = kind !== "transfer" && kind !== "credit_note" && kind !== "debit_note"
     && (kind === "expense" || kind === "receipt" || kind === "payment" || form.settlement === "paid"
       || (showReceivedOnCredit && Number(form.amountReceived || 0) > 0));
@@ -1381,9 +1406,11 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
         </>}
         {needsParty && <Field label={needsParty === "supplier" ? "Supplier" : "Customer"}><select value={form.partyId} onChange={event => {
           const partyId = event.target.value;
+          const creditDays = parties.find(party => party.id === partyId)?.creditDays;
           set({
             partyId,
             settlements: settlementKinds ? syncSettlements(partyId, settlementAmount) : form.settlements,
+            ...((kind === "sale" || kind === "purchase") && creditDays != null ? { dueDate: addDaysIso(form.date, creditDays) } : {}),
           });
         }}><option value="">Select</option>{partyList.map(party => <option key={party.id} value={party.id}>{party.name}</option>)}</select></Field>}
         {(kind === "sale" || kind === "purchase") && (
@@ -1590,6 +1617,14 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
       </p>
     )}
 
+    {credit && credit.level !== "ok" && (
+      <div className={`acc-credit-alert spacer${credit.level === "block" ? " block" : ""}`} role="alert">
+        <strong>{credit.level === "block" ? "Credit sale blocked" : "Credit warning"}</strong>
+        {credit.messages.map(message => <p key={message} className="small">{message}</p>)}
+        <p className="small">{credit.level === "block" ? "Record it as paid now, collect the overdue amount first, or raise the limit in Parties." : "You can still save this sale."}</p>
+      </div>
+    )}
+
     {saleSummary && (
       <div className="card acc-sale-summary spacer" aria-label="Sale summary">
         <h3 className="acc-section-title">Sale summary</h3>
@@ -1716,6 +1751,8 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [itemCategories, setItemCategories] = useState(cached?.itemCategories ?? []);
   const [stockMovements, setStockMovements] = useState(cached?.stockMovements ?? []);
   const [voucherItemLines, setVoucherItemLines] = useState(cached?.voucherItemLines ?? []);
+  const [tradeDocuments, setTradeDocuments] = useState(cached?.tradeDocuments ?? null);
+  const [documentSettings, setDocumentSettings] = useState(cached?.documentSettings ?? { ...DEFAULT_DOCUMENT_SETTINGS, available: false });
   const [inventorySettings, setInventorySettings] = useState({ available: false, allowNegativeStock: false });
   const [audit, setAudit] = useState([]);
   const [locks, setLocks] = useState([]);
@@ -1829,6 +1866,8 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       setItemCategories(bundle.itemCategories);
       setStockMovements(bundle.stockMovements);
       setVoucherItemLines(bundle.voucherItemLines);
+      setTradeDocuments(bundle.tradeDocuments);
+      setDocumentSettings(bundle.documentSettings);
       // Setup (audit, locks, roles, invites) and bank-statement data are loaded
       // by the section-specific effect below.
       if (bundle.recurringFetched) setRecurringTemplates(bundle.recurringTemplates);
@@ -1916,12 +1955,12 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       voucher,
       party,
       accounts,
-      company,
+      company: company ? { ...company, documentSettings } : null,
       workspace,
       itemLines: voucherItemLines.filter(line => line.voucherId === voucher.id),
     }));
     setPendingSalesInvoiceId(null);
-  }, [pendingSalesInvoiceId, vouchers, parties, accounts, companies, activeCompanyId, workspace, voucherItemLines]);
+  }, [pendingSalesInvoiceId, vouchers, parties, accounts, companies, activeCompanyId, workspace, voucherItemLines, documentSettings]);
 
   useEffect(() => {
     if (!token || !expandedVoucherId || migrationRequired) {
@@ -2007,12 +2046,20 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     }
   }, [ledgerId, visibleAccounts]);
 
+  const costLines = useMemo(() => {
+    const documentLines = (tradeDocuments || []).filter(doc => doc.docType === "goods_receipt").flatMap(doc => doc.lines || []);
+    return documentLines.length ? [...voucherItemLines, ...documentLines] : voucherItemLines;
+  }, [tradeDocuments, voucherItemLines]);
+  const fulfilment = useMemo(
+    () => documentFulfilment({ documents: tradeDocuments || [], voucherItemLines, vouchers }),
+    [tradeDocuments, voucherItemLines, vouchers],
+  );
   const wantStockValue = wantOverview || wantPnl || wantSheet;
   const periodStock = useMemo(
     () => (wantStockValue && items.length
-      ? periodStockValues({ items, movements: stockMovements, voucherItemLines, from: range.from, to: range.to })
+      ? periodStockValues({ items, movements: stockMovements, voucherItemLines: costLines, from: range.from, to: range.to })
       : null),
-    [wantStockValue, items, stockMovements, voucherItemLines, range],
+    [wantStockValue, items, stockMovements, costLines, range],
   );
   const metrics = useMemo(
     () => (wantOverview ? dashboardMetrics(visibleAccounts, vouchers, parties, { today: todayIso(), ...range, stock: periodStock }) : null),
@@ -2073,7 +2120,20 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     () => (wantGst ? gstBooksReport(vouchers, range) : { rows: [], output: [], input: [], byRate: [], byHsn: [], outputTax: 0, inputTax: 0, netPayable: 0 }),
     [wantGst, vouchers, range],
   );
-  const activeCompany = useMemo(() => companies.find(item => item.id === activeCompanyId) || companies[0] || null, [companies, activeCompanyId]);
+  const activeCompany = useMemo(() => {
+    const company = companies.find(item => item.id === activeCompanyId) || companies[0] || null;
+    return company ? { ...company, documentSettings } : null;
+  }, [companies, activeCompanyId, documentSettings]);
+  const saleCreditInfo = useMemo(() => {
+    if (!showSimple || simpleKind !== "sale" || !simpleForm.partyId) return null;
+    const party = parties.find(item => item.id === simpleForm.partyId);
+    if (!party) return null;
+    const balance = partyBalances(accounts, vouchers, [party], { kind: "receivable" }).find(row => row.id === party.id)?.balance || 0;
+    const overdueDays = invoiceRegister(accounts, vouchers, parties, { kind: "receivable", today: todayIso(), outstandingOnly: true })
+      .filter(row => row.partyId === party.id)
+      .reduce((max, row) => Math.max(max, Number(row.daysOverdue || 0)), 0);
+    return { party, outstanding: Math.max(0, balance), overdueDays, settings: documentSettings };
+  }, [showSimple, simpleKind, simpleForm.partyId, parties, accounts, vouchers, documentSettings]);
   const settlementOpenInvoices = useMemo(() => {
     if (!showSimple || !["receipt", "payment", "credit_note", "debit_note"].includes(simpleKind)) return [];
     const kind = simpleKind === "receipt" || simpleKind === "credit_note" ? "receivable" : "payable";
@@ -2208,6 +2268,8 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     setMatchChoice({});
     setTeamInvites([]);
     setRecurringTemplates([]);
+    setTradeDocuments(null);
+    setDocumentSettings({ ...DEFAULT_DOCUMENT_SETTINGS, available: false });
     setOnboardingDismissed(false);
     refresh(id);
   };
@@ -2549,6 +2611,46 @@ const openVoucher = () => {
     setNotice("Review the recurring entry, then save. Next run date advances after posting.");
   };
 
+  const openSimpleFromDocument = (doc, kind, itemLines) => {
+    if (!canWrite) {
+      setError("Your Accounts role is view-only.");
+      return;
+    }
+    const party = parties.find(item => item.id === doc.partyId);
+    const moneyRows = moneyAccounts(visibleAccounts);
+    const date = todayIso();
+    setPendingBankMatch(null);
+    setPendingRecurringId(null);
+    setSimpleKind(kind);
+    setSimpleRequestId(newClientRequestId());
+    setSimpleForm({
+      ...emptySimpleForm(),
+      date,
+      partyId: doc.partyId,
+      settlement: "credit",
+      entryMode: "items",
+      itemLines,
+      dueDate: addDaysIso(date, party?.creditDays ?? 7),
+      narration: `${documentLabel(doc.docType)} ${doc.docNumber}${doc.reference ? ` · ${doc.reference}` : ""}`,
+      fromAccountId: moneyRows.find(account => account.accountType === "cash")?.id || moneyRows[0]?.id || "",
+      toAccountId: moneyRows.find(account => account.accountType === "bank")?.id || moneyRows.find(account => account.id !== moneyRows[0]?.id)?.id || "",
+    });
+    setShowSimple(true);
+    setNotice(`Items from ${documentLabel(doc.docType).toLowerCase()} ${doc.docNumber} are filled in. Check rates and quantities, then save.`);
+  };
+
+  const saveDocument = draft => run(async () => {
+    await saveTradeDocument(token, draft);
+  }, `${documentLabel(draft.docType)} saved.`);
+
+  const changeDocumentStatus = (doc, status, reason = "") => run(async () => {
+    await setTradeDocumentStatus(token, doc.id, status, reason);
+  }, status === "cancelled" ? `${documentLabel(doc.docType)} ${doc.docNumber} cancelled.` : `${documentLabel(doc.docType)} ${doc.docNumber} updated.`);
+
+  const saveDocSettings = next => run(async () => {
+    await saveDocumentSettings(token, next);
+  }, "Document settings saved.");
+
   const acceptSuggestedBankMatches = (displayLines = []) => {
     if (!canWrite) {
       setError("Your Accounts role is view-only.");
@@ -2594,6 +2696,8 @@ const openVoucher = () => {
         stateCode: party.stateCode || gstStateFromGstin(party.gstin),
         gstRegistration: party.gstRegistration || "",
         notes: party.notes || "",
+        creditLimit: party.creditLimit ? String(party.creditLimit) : "",
+        creditDays: party.creditDays == null ? "" : String(party.creditDays),
       });
     } else {
       setPartyForm(emptyPartyForm());
@@ -2620,9 +2724,23 @@ const openVoucher = () => {
     const createdLabel = partyForm.partyType === "customer" ? "Customer created successfully"
       : partyForm.partyType === "supplier" ? "Supplier created successfully"
       : "Party saved successfully";
+    const creditLimit = partyForm.partyType === "customer" ? Number(partyForm.creditLimit || 0) : 0;
+    const creditDays = String(partyForm.creditDays ?? "").trim() === "" ? null : Number(partyForm.creditDays);
+    if (!(creditLimit >= 0) || (creditDays != null && !(Number.isInteger(creditDays) && creditDays >= 0 && creditDays <= 365))) {
+      setError("Credit limit cannot be negative and credit days must be a whole number from 0 to 365.");
+      return;
+    }
+    const creditChanged = existing
+      ? Number(existing.creditLimit || 0) !== creditLimit || (existing.creditDays ?? null) !== creditDays
+      : creditLimit > 0 || creditDays != null;
     run(async () => {
+      let partyId = partyForm.id;
       if (partyForm.id) await updateParty(token, partyForm);
-      else await createParty(token, partyForm);
+      else {
+        const created = await createParty(token, partyForm);
+        partyId = Array.isArray(created) ? created[0] : created;
+      }
+      if (creditChanged && typeof partyId === "string") await setPartyCredit(token, partyId, { creditLimit, creditDays });
       setShowParty(false);
       setPartyForm(emptyPartyForm());
     }, partyForm.id ? "Party updated successfully" : createdLabel);
@@ -2778,6 +2896,27 @@ const openVoucher = () => {
       if (amountReceivedNow > 0 && simpleForm.moneyMode === "cash_upi") {
         assertMoneyModeSplit(simpleForm.moneyMode, amountReceivedNow, moneyParts || {});
       }
+      if (saleCreditInfo) {
+        const exposure = roundMoney(voucherTotals(draft.lines).debit - amountReceivedNow);
+        const check = creditCheck({ ...saleCreditInfo, invoiceTotal: exposure });
+        if (check.level === "block") {
+          throw new Error(`${check.messages.join(" ")} Credit sales to this customer are blocked by credit control in Documents → Document settings.`);
+        }
+      }
+    }
+
+    if (useItems) {
+      const pendingByLine = new Map();
+      for (const summary of fulfilment.values()) {
+        for (const line of summary.lines) pendingByLine.set(line.lineId, line.pending);
+      }
+      (simpleForm.itemLines || []).forEach((line, index) => {
+        if (!line.sourceDocumentLineId || !pendingByLine.has(line.sourceDocumentLineId)) return;
+        const pending = pendingByLine.get(line.sourceDocumentLineId);
+        if (Number(line.quantity || 0) - pending > 0.0005) {
+          throw new Error(`Line ${index + 1}: only ${pending} ${line.unit || ""} is still pending on the source document.`.replace(/ {2}/g, " "));
+        }
+      });
     }
 
     const voucherId = await postVoucher(token, {
@@ -3795,11 +3934,30 @@ const openVoucher = () => {
         </div>}
 
         {section === "manufacturing" && manufacturingEnabled && <ManufacturingWorkspace items={items} stockMovements={stockMovements} saving={saving} onItems={() => openSection("inventory")} onTransactions={() => openSection("vouchers")} onProductionRun={recordProductionRun} />}
+        {section === "documents" && <div className="acc-panel">
+          <AccDocumentsWorkspace
+            documents={tradeDocuments}
+            fulfilment={fulfilment}
+            parties={parties}
+            items={items}
+            stockByItem={stockByItem}
+            company={activeCompany}
+            workspace={workspace}
+            documentSettings={documentSettings}
+            canEdit={canWrite}
+            canAdmin={canAdmin}
+            saving={saving}
+            onSaveDocument={saveDocument}
+            onSetStatus={changeDocumentStatus}
+            onConvertToEntry={openSimpleFromDocument}
+            onSaveSettings={saveDocSettings}
+          />
+        </div>}
         {section === "inventory" && <div className="acc-panel">
           <AccInventoryWorkspace
             items={items}
             movements={stockMovements}
-            voucherItemLines={voucherItemLines}
+            voucherItemLines={costLines}
             range={range}
             saving={saving}
             canEdit={canWrite}
@@ -4644,7 +4802,7 @@ const openVoucher = () => {
         </div>
       </Modal>}
       {showSimple && <Modal title={SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry"} close={closeSimple}>
-        <SimpleEntryForm kind={simpleKind} accounts={visibleAccounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} maxDate={todayIso()} gstCompany={activeCompany} onGstSetup={() => { setShowSimple(false); openSection("setup"); }} items={items} stockByItem={stockByItem} openInvoices={settlementOpenInvoices} />
+        <SimpleEntryForm kind={simpleKind} accounts={visibleAccounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} maxDate={todayIso()} gstCompany={activeCompany} onGstSetup={() => { setShowSimple(false); openSection("setup"); }} items={items} stockByItem={stockByItem} openInvoices={settlementOpenInvoices} creditInfo={saleCreditInfo} />
       </Modal>}
       {showParty && <Modal title={partyForm.id ? "Edit party" : "Add party"} close={closeParty} actions={<div className="tabs spacer"><button type="button" className="btn" disabled={saving} onClick={closeParty}>Cancel</button><button type="button" className="btn primary" disabled={saving} onClick={saveParty}>{saving ? "Saving…" : partyForm.id ? "Save changes" : "Save party"}</button></div>}>
         <p className="copy">{partyForm.id ? "Updates this party only. Existing vouchers and ledgers stay attached to the same party." : "Accounts parties are independent of Daily Finance customers and Chit Fund members."}</p>
