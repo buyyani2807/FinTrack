@@ -16,7 +16,7 @@ function NavLabel({ icon: Icon, long, short }) {
 }
 
 // Owner sidebar. Every option navigates to its route. On phones it is a drawer opened from the top bar's menu button
-// (the top bar also carries Logout); on tablets an icon rail; on desktop the full sidebar.
+// that covers the whole screen; on tablets an icon rail; on desktop the full sidebar.
 export function FinancierNav({ access, orgSettings = {}, businessName = "", logout }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -50,7 +50,6 @@ export function FinancierNav({ access, orgSettings = {}, businessName = "", logo
   <header className="ft-mobile-header">
     <button type="button" className="ft-icon-btn ft-mobile-menu-btn" aria-label="Open menu" aria-expanded={drawerOpen} aria-controls="workspace-nav" onClick={() => setDrawerKey(location.key)}><Menu size={22} aria-hidden="true" /></button>
     <span className="ft-brand ft-mobile-brand"><span className="ft-brand-strong">FIN</span>Track</span>
-    {logout && <button type="button" className="ft-mobile-logout" onClick={logout}><LogOut size={18} aria-hidden="true" />Logout</button>}
   </header>
   {drawerOpen && <div className="ft-nav-backdrop" aria-hidden="true" onClick={closeDrawer} />}
   <aside className={`financier-nav${drawerOpen ? " is-open" : ""}`} id="workspace-nav" aria-label="Workspace">

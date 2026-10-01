@@ -213,21 +213,37 @@ test.describe("Collection Staff", () => {
 
 test.describe("Phone navigation", () => {
   test.use({ viewport: { width: 390, height: 844 } });
-  test("the top bar menu opens the full navigation and Logout sits in the top bar", async ({ page }) => {
+  test("the top bar menu opens the full navigation, including Logout", async ({ page }) => {
     await mockAccountsWorkspace(page);
     await page.goto("/daily-finance");
     const menu = page.getByRole("button", { name: "Open menu" });
     await expect(menu).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator(".ft-mobile-header").getByRole("button", { name: "Logout" })).toBeVisible();
     const drawer = page.getByRole("complementary", { name: "Workspace" });
     await expect(drawer).toBeHidden();
     await menu.click();
     await expect(drawer.getByRole("button", { name: "Collection Staff" })).toBeVisible();
+    await expect(drawer.getByRole("button", { name: "Logout" })).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(drawer).toBeHidden();
     await menu.click();
     await drawer.getByRole("button", { name: "Chit Fund" }).click();
     await expect(page).toHaveURL(/\/chit-fund$/);
     await expect(drawer).toBeHidden();
+  });
+});
+
+test.describe("Settings", () => {
+  test("sections are tabs and the save bar shows unsaved changes", async ({ page }) => {
+    await mockAccountsWorkspace(page);
+    await page.goto("/settings");
+    const tabs = page.getByRole("navigation", { name: "Settings sections" });
+    await expect(tabs).toBeVisible({ timeout: 15_000 });
+    await page.getByLabel("Phone", { exact: true }).fill("9876543210");
+    await expect(page.getByRole("status").filter({ hasText: "Unsaved changes" })).toBeVisible();
+    await tabs.getByRole("button", { name: "WhatsApp messages" }).click();
+    await page.locator(".settings-template summary").first().click();
+    await expect(page.getByRole("textbox", { name: "Payment receipt", exact: true })).toBeVisible();
+    await tabs.getByRole("button", { name: "Reminders" }).click();
+    await expect(page.getByRole("switch", { name: /Daily Finance/ })).toBeChecked();
   });
 });
