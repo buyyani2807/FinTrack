@@ -601,6 +601,20 @@ html:not([data-ft-role="owner"]) .ft-app-header-brand { display: inline; }
   .ft-app-header .ft-theme-toggle-label { display: none; }
 }
 
+/* sub-pages: the breadcrumb takes the date's place in the header (on phones, the wordmark's too) */
+.ft-app-header .ft-breadcrumb { margin: 0; gap: 4px; }
+.ft-app-header .ft-breadcrumb-back { margin-left: -8px; }
+.ft-app-header .ft-breadcrumb ol { flex-wrap: nowrap; font-size: 14px; }
+.ft-app-header .ft-breadcrumb li:last-child { overflow: hidden; }
+@media (width <= 680px) {
+  .ft-app-header-context.has-breadcrumb .ft-app-header-brand { display: none !important; }
+  .ft-app-header .ft-breadcrumb li:not(:last-child), .ft-app-header .ft-breadcrumb-sep { display: none; }
+  .ft-app-header .ft-breadcrumb-back { width: 40px; height: 40px; }
+  .ft-app-header .ft-breadcrumb-back svg { width: 20px; height: 20px; }
+  .ft-app-header .ft-breadcrumb ol { font-size: 16px; }
+  .ft-app-header .ft-breadcrumb [aria-current="page"] { color: var(--ft-text); font-weight: 600; }
+}
+
 /* full-page routes (Cashbook, Chit Fund, Settings) render in the normal page flow */
 .ft-route-page { min-height: calc(100svh - var(--ft-header-h)); background: var(--ft-bg); }
 
