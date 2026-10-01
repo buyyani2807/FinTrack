@@ -165,6 +165,17 @@ a { color: var(--ft-primary); }
 .btn.danger { background: var(--ft-surface) !important; border-color: var(--ft-danger) !important; color: var(--ft-danger) !important; }
 .btn.danger:hover { background: var(--ft-danger-soft) !important; color: var(--ft-danger) !important; }
 .btn.danger.primary { background: var(--ft-danger) !important; color: #fff !important; }
+/* row actions in tables (View · Collect · …): space them apart, including when they wrap */
+td .btn + .btn { margin-left: 8px !important; }
+td:has(> .btn + .btn) { line-height: 2.6; }
+/* long secondary lines (e.g. "Day 42 / 100 · 42 completed · 58 remaining") may wrap so wide tables fit their card */
+.table td span.small { white-space: normal; }
+/* Chit Fund: Upcoming payments sits directly above the insights card */
+.upcoming-payments + .module-intel { margin-top: 22px !important; }
+@media (width <= 680px) { .upcoming-payments + .module-intel { margin-top: 16px !important; } }
+/* account page: Repayment progress card */
+.repayment-progress .metric-value { margin: 12px 0 4px; }
+.repayment-progress-bar { margin-top: 16px; }
 .btn:disabled, .btn[disabled] { opacity: .5 !important; cursor: not-allowed !important; }
 .btn.whatsapp { background: var(--ft-success-soft) !important; border-color: transparent !important; color: var(--ft-success) !important; }
 .btn.whatsapp:hover { border-color: var(--ft-success) !important; }
