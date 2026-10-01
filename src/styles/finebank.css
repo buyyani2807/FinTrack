@@ -21,8 +21,8 @@
   --ft-text: #191919;
   --ft-text-2: #525256;
   --ft-text-3: #666666;
-  --ft-muted: #878787;
-  --ft-subtle: #9f9f9f;
+  --ft-muted: #666666;          /* Figma Gray/01: Gray/02 #878787 is below WCAG AA for small text */
+  --ft-subtle: #707070;         /* AA-compliant stand-in for Figma Gray/03 #9f9f9f */
   --ft-disabled: #d1d1d1;
   /* lines */
   --ft-border: #e8e8e8;
@@ -31,9 +31,10 @@
   --ft-input-border: #d0d5dd;
   --ft-input-focus: #4b5768;
   /* brand */
-  --ft-primary: #299d91;
-  --ft-primary-hover: #23887e;
-  --ft-primary-active: #1d746b;
+  --ft-brand: #299d91;          /* Figma primary, used for fills where text contrast does not apply */
+  --ft-primary: #217d73;        /* text/button shade of the brand teal that meets WCAG AA (4.5:1) */
+  --ft-primary-hover: #1b6b62;
+  --ft-primary-active: #165a53;
   --ft-primary-soft: rgba(41, 157, 145, .10);
   --ft-primary-soft-strong: rgba(41, 157, 145, .18);
   --ft-on-primary: #ffffff;
@@ -41,11 +42,11 @@
   --ft-secondary-bg: #e4e7eb;
   --ft-secondary-text: #4b5768;
   /* status */
-  --ft-success: #3d9a5e;
+  --ft-success: #317d4c;
   --ft-success-soft: rgba(77, 175, 110, .12);
-  --ft-danger: #d63a1b;
+  --ft-danger: #cf381a;
   --ft-danger-soft: rgba(231, 61, 28, .09);
-  --ft-warning: #b7791f;
+  --ft-warning: #98651a;
   --ft-warning-soft: rgba(229, 163, 59, .14);
   --ft-info: #2f6fd0;
   --ft-info-soft: rgba(47, 111, 208, .10);
@@ -58,7 +59,7 @@
   --ft-sidebar-chip: rgba(255, 255, 255, .08);
   --ft-sidebar-line: rgba(255, 255, 255, .08);
   /* charts */
-  --ft-chart-1: var(--ft-primary);
+  --ft-chart-1: var(--ft-brand);
   --ft-chart-2: #e8e8e8;
   --ft-chart-grid: #f0f0f0;
   /* shape */
@@ -95,6 +96,7 @@
   --ft-divider: #24292c;
   --ft-input-border: #3a4146;
   --ft-input-focus: #9aa6ae;
+  --ft-brand: #35b3a6;
   --ft-primary: #35b3a6;
   --ft-primary-hover: #46c2b5;
   --ft-primary-active: #2a9d91;
@@ -502,7 +504,7 @@ html:not([data-ft-role="owner"]) .ft-app-header-brand { display: inline; }
 .accounts-dashboard .acc-ov-context { background: var(--ft-surface) !important; border-color: transparent !important; box-shadow: var(--ft-shadow) !important; }
 .accounts-dashboard .acc-ov-aging-bar { background: var(--ft-surface-muted) !important; }
 /* ageing bars: current vs overdue, matching the legend (previously only payables-current was coloured) */
-.accounts-dashboard .acc-ov-aging-bar .current, .accounts-dashboard .acc-ov-chart-row.kind-ap .acc-ov-aging-bar .current, .accounts-dashboard .acc-ov-aging-foot i.current { background: var(--ft-primary) !important; }
+.accounts-dashboard .acc-ov-aging-bar .current, .accounts-dashboard .acc-ov-chart-row.kind-ap .acc-ov-aging-bar .current, .accounts-dashboard .acc-ov-aging-foot i.current { background: var(--ft-chart-1) !important; }
 .accounts-dashboard .acc-ov-aging-bar .overdue, .accounts-dashboard .acc-ov-aging-foot i.overdue { background: var(--ft-warning) !important; }
 .accounts-dashboard .acc-ov-more-menu button:hover, .accounts-dashboard .acc-ov-more-menu button:focus-visible, .accounts-dashboard .acc-table-wrap tbody tr:hover { background: var(--ft-surface-hover) !important; }
 .accounts-dashboard .acc-switch { background: var(--ft-border-strong) !important; }
@@ -544,6 +546,8 @@ html:not([data-ft-role="owner"]) .ft-app-header-brand { display: inline; }
   .modal, .acc-modal { width: 100% !important; max-height: 92svh !important; border-radius: 20px 20px 0 0 !important; padding: 20px !important; }
   .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
   .btn { min-height: 44px !important; }
+  .accounts-dashboard .acc-ov-seg button, .accounts-dashboard .accounts-business-action, .accounts-dashboard .acc-ov-chart-row, .accounts-dashboard .acc-ov-link-btn, .link-button { min-height: 44px !important; }
+  .link-button { display: inline-flex; align-items: center; }
   .dashboard-finance-section, .dashboard-chit-panel { padding: 16px !important; }
 }
 

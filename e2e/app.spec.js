@@ -38,3 +38,14 @@ test.describe("Legal pages", () => {
     await expect(page.getByText("Service description")).toBeVisible();
   });
 });
+
+test.describe("Accessibility", () => {
+  test("sign-in fields are labelled for screen readers", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByLabel("Business email")).toBeVisible();
+    await expect(page.getByLabel("Password")).toBeVisible();
+    await page.getByRole("button", { name: "Customer login" }).click();
+    await expect(page.getByLabel("Customer portal ID")).toBeVisible();
+    await expect(page.getByLabel("6-digit PIN")).toBeVisible();
+  });
+});

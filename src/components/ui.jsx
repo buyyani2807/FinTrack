@@ -1,3 +1,4 @@
+import { cloneElement, isValidElement, useId } from "react";
 import { ChevronRight, Inbox, X } from "lucide-react";
 
 // Shared presentational building blocks used across the finance app.
@@ -6,11 +7,13 @@ export const Button = ({
   className = "",
   ...props
 }) => <button className={`btn ${className}`} {...props}>{children}</button>;
-export const Field = ({
-  label,
-  children,
-  className = ""
-}) => <div className={`field ${className}`}><label>{label}</label>{children}</div>;
+// The label is tied to its control (htmlFor/id) so screen readers announce the field name.
+export function Field({ label, children, className = "" }) {
+  const generatedId = useId();
+  const single = isValidElement(children) && ["input", "select", "textarea"].includes(children.type);
+  const id = single ? children.props.id || generatedId : undefined;
+  return <div className={`field ${className}`}><label htmlFor={id}>{label}</label>{single && !children.props.id ? cloneElement(children, { id }) : children}</div>;
+}
 export const Metric = ({
   label,
   value,
