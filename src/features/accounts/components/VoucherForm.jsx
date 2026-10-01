@@ -1,4 +1,4 @@
-import { VOUCHER_TYPES, voucherTotals } from "../accountingModel.js";
+import { VOUCHER_TYPES, voucherTotals } from "../model/accountingModel.js";
 import { emptyLine } from "../accountsFormDefaults.js";
 import { money } from "../accountsFormat.js";
 import { Field } from "./AccUi.jsx";

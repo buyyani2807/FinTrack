@@ -1,4 +1,4 @@
-import { loadAccountsRoles, setAccountsUserRole, inviteTeamMember, listTeamInvites, revokeTeamInvite } from "../../accountingRepository.js";
+import { loadAccountsRoles, setAccountsUserRole, inviteTeamMember, listTeamInvites, revokeTeamInvite } from "../../data/accountingRepository.js";
 import { Field, AccSetupSection } from "../../components/AccUi.jsx";
 
 export function AccessRolesPanel({

@@ -1,14 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { DEFAULT_WHATSAPP_TEMPLATES, applyTemplate, resolveWhatsAppTemplate } from "../src/features/receipts/templateEngine.js";
-import { invoiceRegister } from "../src/features/accounts/accountingReports.js";
+import { DEFAULT_WHATSAPP_TEMPLATES, applyTemplate, resolveWhatsAppTemplate } from "../src/features/receipts/model/templateEngine.js";
+import { invoiceRegister } from "../src/features/accounts/model/accountingReports.js";
 import {
   buildArReminderMessage,
   buildSalesInvoice,
   buildSalesInvoiceMessage,
   salesSettlementLabel,
-} from "../src/features/accounts/salesInvoiceModel.js";
-import { renderSalesInvoicePdf } from "../src/features/accounts/salesInvoicePdf.js";
+} from "../src/features/accounts/model/salesInvoiceModel.js";
+import { renderSalesInvoicePdf } from "../src/features/accounts/io/salesInvoicePdf.js";
 
 const accounts = [
   { id: "ar", code: "1100", name: "Accounts Receivable", accountType: "receivable", groupType: "asset" },

@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { endChitLiveAuction, loadChitLiveAuction, pauseChitLiveAuction, startChitLiveAuction } from "../../../lib/financeRepository";
-import { buildAuctionLiftPayload } from "../../receipts/transactionConfirmations.js";
-import { LIVE_BID_MODEL, enrollmentPortalId, liveAuctionLimits, liveBidPayout } from "../liveBidding";
-import { disbursementPayoutError, disbursementPayoutSplit } from "../../finance/disbursementMode";
-import { today, money, formatTime, byMemberName } from "../chitFormat.js";
-import { fireChitLiftWhatsApp } from "../chitNotifications.js";
+import { buildAuctionLiftPayload } from "../../receipts/io/transactionConfirmations.js";
+import { LIVE_BID_MODEL, enrollmentPortalId, liveAuctionLimits, liveBidPayout } from "../model/liveBidding";
+import { disbursementPayoutError, disbursementPayoutSplit } from "../../finance/model/disbursementMode";
+import { today, money, formatTime, byMemberName } from "../model/chitFormat.js";
+import { fireChitLiftWhatsApp } from "../io/chitNotifications.js";
 import { Button, Field, Metric } from "../../../components/ui.jsx";
 import { Modal } from "../components/ChitUi.jsx";
 

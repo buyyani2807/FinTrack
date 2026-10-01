@@ -7,7 +7,7 @@ import {
   todayIso,
 } from "./statementModel.js";
 import { downloadCustomerStatementPdf } from "./statementPdf.js";
-import { canWhatsAppShare, openManualWhatsAppShare } from "../receipts/receiptWhatsApp.js";
+import { canWhatsAppShare, openManualWhatsAppShare } from "../receipts/io/receiptWhatsApp.js";
 import { formatInr } from "../../lib/formatMoney.js";
 
 const money = formatInr;

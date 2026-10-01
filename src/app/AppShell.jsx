@@ -1,4 +1,4 @@
-import { fintrackLightTheme } from "../fintrackLightTheme.js";
+import { fintrackLightTheme } from "../styles/fintrackLightTheme.js";
 // Imported as a string and rendered in <style> so it keeps its place in the cascade.
 import appStyles from "../styles/app.css?inline";
 

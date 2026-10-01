@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cashUpiSplit, cashUpiSplitIsValid } from "../src/features/finance/paymentSplit.js";
+import { cashUpiSplit, cashUpiSplitIsValid } from "../src/features/finance/model/paymentSplit.js";
 
 test("cash and upi modes put the full amount on one side", () => {
   assert.deepEqual(cashUpiSplit("cash", 5000, 1, 2), { cash: 5000, upi: 0 });

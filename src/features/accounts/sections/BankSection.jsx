@@ -1,5 +1,5 @@
 import { AccEmpty } from "../components/AccUi.jsx";
-import { bankVoucherLines, defaultBankStatementLines } from "../accountingReports.js";
+import { bankVoucherLines, defaultBankStatementLines } from "../model/accountingReports.js";
 import { BankStatementImportPanel } from "./bank/BankStatementImportPanel.jsx";
 import { BankStatementCard } from "./bank/BankStatementCard.jsx";
 

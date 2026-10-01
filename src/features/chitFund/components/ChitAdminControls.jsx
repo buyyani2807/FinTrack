@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { deleteChitScheme, deleteEnrolledChitMember } from "../../../lib/financeRepository";
-import { chitTypeLabel } from "../memberPortal";
-import { memberRemovalCopy, schemeRemovalCopy } from "../schemeAdmin";
-import { schemeStatusLabel, enrollmentName } from "../chitFormat.js";
+import { chitTypeLabel } from "../model/memberPortal";
+import { memberRemovalCopy, schemeRemovalCopy } from "../model/schemeAdmin";
+import { schemeStatusLabel, enrollmentName } from "../model/chitFormat.js";
 import { Button } from "../../../components/ui.jsx";
 import { Modal } from "./ChitUi.jsx";
 

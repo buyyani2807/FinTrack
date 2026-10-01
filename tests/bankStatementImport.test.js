@@ -6,7 +6,7 @@ import {
   parseDelimitedText,
   parseImportDate,
   parseIndianAmount,
-} from "../src/features/accounts/bankStatementImport.js";
+} from "../src/features/accounts/io/bankStatementImport.js";
 
 test("parses CSV bank export and maps debit/credit lines with reference", () => {
   const csv = [

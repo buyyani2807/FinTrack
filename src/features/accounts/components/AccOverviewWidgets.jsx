@@ -1,5 +1,5 @@
 import { useId, useMemo, useState } from "react";
-import { VOUCHER_TYPES, voucherTotals } from "../accountingModel.js";
+import { VOUCHER_TYPES, voucherTotals } from "../model/accountingModel.js";
 import { money } from "../accountsFormat.js";
 import { AccMetric } from "./AccUi.jsx";
 

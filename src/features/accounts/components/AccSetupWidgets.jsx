@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { INDUSTRY_TEMPLATES, readIndustry } from "../AccOnboardingWizard.jsx";
+import { INDUSTRY_TEMPLATES, readIndustry } from "./AccOnboardingWizard.jsx";
 import { resolveEntitlements } from "../../commercial/entitlements.js";
 import { SAAS_TIER_BLUEPRINT } from "../../commercial/featurePacks.js";
 import { Field, AccSetupSection } from "./AccUi.jsx";

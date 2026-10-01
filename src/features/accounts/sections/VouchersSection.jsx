@@ -1,5 +1,5 @@
 import { AccMoreMenu, AccToolbar, AccEmpty, AccPager } from "../components/AccUi.jsx";
-import { SIMPLE_ENTRY_KINDS } from "../accountingModel.js";
+import { SIMPLE_ENTRY_KINDS } from "../model/accountingModel.js";
 import { VoucherRow } from "./vouchers/VoucherRow.jsx";
 
 export function VouchersSection({

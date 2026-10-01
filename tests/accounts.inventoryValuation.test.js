@@ -7,8 +7,8 @@ import {
   physicalCountVariances,
   stockAgeing,
   stockValuation,
-} from "../src/features/accounts/inventoryValuation.js";
-import { parseItemCsv, planItemImport, ITEM_CSV_TEMPLATE } from "../src/features/accounts/itemCsvImport.js";
+} from "../src/features/accounts/model/inventoryValuation.js";
+import { parseItemCsv, planItemImport, ITEM_CSV_TEMPLATE } from "../src/features/accounts/io/itemCsvImport.js";
 
 const cement = { id: "i1", itemType: "product", name: "Cement", sku: "CEM", unit: "Bag", purchasePrice: 350, openingRate: 300, openingStock: 10 };
 const lines = [

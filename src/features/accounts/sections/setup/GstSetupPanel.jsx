@@ -1,6 +1,6 @@
-import { saveGstSettings } from "../../accountingRepository.js";
+import { saveGstSettings } from "../../data/accountingRepository.js";
 import { Field, AccSetupSection } from "../../components/AccUi.jsx";
-import { INDIA_STATES, gstStateFromGstin, validateGstSettings } from "../../accountingGst.js";
+import { INDIA_STATES, gstStateFromGstin, validateGstSettings } from "../../model/accountingGst.js";
 
 export function GstSetupPanel({ activeCompany, canAdmin, gstForm, setGstForm, saving, setError, run, token }) {
   return (

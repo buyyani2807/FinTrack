@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { enableChitMemberPortal, resetChitMemberPortalPin } from "../../../lib/financeRepository";
-import { buildChitReceipt } from "../../receipts/receiptModel.js";
-import { ReceiptActions } from "../../receipts/ReceiptActions.jsx";
-import { enrollmentPortalId } from "../liveBidding";
-import { chitPaymentDisplayStatus, normalizeMemberPayment } from "../memberPayments";
-import { chitTypeLabel, membershipEnrollmentId, portalMemberships } from "../memberPortal";
-import { today, money, formatChitDate, enrollmentName, paymentStatusClass } from "../chitFormat.js";
+import { buildChitReceipt } from "../../receipts/model/receiptModel.js";
+import { ReceiptActions } from "../../receipts/components/ReceiptActions.jsx";
+import { enrollmentPortalId } from "../model/liveBidding";
+import { chitPaymentDisplayStatus, normalizeMemberPayment } from "../model/memberPayments";
+import { chitTypeLabel, membershipEnrollmentId, portalMemberships } from "../model/memberPortal";
+import { today, money, formatChitDate, enrollmentName, paymentStatusClass } from "../model/chitFormat.js";
 import { Button, Field } from "../../../components/ui.jsx";
 import { Modal } from "./ChitUi.jsx";
 

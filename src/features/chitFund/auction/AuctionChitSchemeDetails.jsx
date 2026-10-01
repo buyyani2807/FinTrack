@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { deleteChitInstallmentPayment, loadChitSchemeDetails } from "../../../lib/financeRepository";
 import { CustomerStatementPage } from "../../statements/CustomerStatementPage.jsx";
 import { CreditScoreCard } from "../../creditScore/CreditScoreCard.jsx";
-import { enrollmentPortalId, winsForEnrollment } from "../liveBidding";
-import { chitPaymentOutstanding, filterPaymentsForMonth, memberPaymentsForEnrollment } from "../memberPayments";
+import { enrollmentPortalId, winsForEnrollment } from "../model/liveBidding";
+import { chitPaymentOutstanding, filterPaymentsForMonth, memberPaymentsForEnrollment } from "../model/memberPayments";
 import {
   money,
   formatChitDate,
@@ -12,7 +12,7 @@ import {
   nextAvailableTicket,
   paymentsByMemberName,
   latestCycle,
-} from "../chitFormat.js";
+} from "../model/chitFormat.js";
 import { Button, Metric } from "../../../components/ui.jsx";
 import { ChitDeletePaymentButton, ChitDeleteMemberControl, ChitSchemeHeaderActions } from "../components/ChitAdminControls.jsx";
 import { ChitPaymentStatus, ChitMemberPaymentHistory, ChitPortalAccess, ChitPaymentMonthPicker } from "../components/ChitMemberParts.jsx";

@@ -1,5 +1,5 @@
 import { AccSetupSection } from "../../components/AccUi.jsx";
-import { ledgerHasPostedLines } from "../../accountingModel.js";
+import { ledgerHasPostedLines } from "../../model/accountingModel.js";
 import { money } from "../../accountsFormat.js";
 
 export function ChartOfAccountsPanel({ settings, openCoa, visibleAccounts, vouchers, saving, removeCoa }) {

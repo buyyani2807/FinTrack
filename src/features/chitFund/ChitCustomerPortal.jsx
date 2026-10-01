@@ -5,10 +5,10 @@ import {
   chitCustomerPlaceLiveBid,
   chitCustomerSelectMembership,
 } from "../../lib/financeRepository";
-import { liveAuctionLimits, liveBidPayout, validateLiveBid } from "./liveBidding";
-import { CHIT_TYPES } from "./fixedChit";
-import { chitPaymentOutstanding, portalPaymentRows } from "./memberPayments";
-import { money, formatChitDate, formatTime } from "./chitFormat.js";
+import { liveAuctionLimits, liveBidPayout, validateLiveBid } from "./model/liveBidding";
+import { CHIT_TYPES } from "./model/fixedChit";
+import { chitPaymentOutstanding, portalPaymentRows } from "./model/memberPayments";
+import { money, formatChitDate, formatTime } from "./model/chitFormat.js";
 import { Button, Field, Metric } from "../../components/ui.jsx";
 import { ChitMemberPaymentHistory, ChitMembershipSwitcher } from "./components/ChitMemberParts.jsx";
 

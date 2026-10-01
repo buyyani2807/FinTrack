@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildChitMonthStatement, currentSchemeMonth, monthLabel } from "../src/features/chitFund/monthStatement.js";
-import { renderChitMonthStatementPdf } from "../src/features/chitFund/monthStatementPdf.js";
+import { buildChitMonthStatement, currentSchemeMonth, monthLabel } from "../src/features/chitFund/model/monthStatement.js";
+import { renderChitMonthStatementPdf } from "../src/features/chitFund/io/monthStatementPdf.js";
 
 const member = (id, name, ticket) => ({ id, ticket_number: ticket, chit_members: { full_name: name } });
 

@@ -34,16 +34,16 @@ import {
   setItemOpeningRate,
   loadInventorySettings,
   saveInventorySettings,
-} from "./accountingRepository.js";
-import { isAccountsOnboardingDone, readIndustry } from "./AccOnboardingWizard.jsx";
-import { parsePartyCsv, planPartyImport } from "./partyCsvImport.js";
+} from "./data/accountingRepository.js";
+import { isAccountsOnboardingDone, readIndustry } from "./components/AccOnboardingWizard.jsx";
+import { parsePartyCsv, planPartyImport } from "./io/partyCsvImport.js";
 import { AccMoreMenu, AccSkeleton, Modal, ReasonModal } from "./components/AccUi.jsx";
-import { guessColumnMapping, mapBankImportRows, readBankStatementFile } from "./bankStatementImport.js";
-import { backupDownloadFilename, buildAccountsCompanyBackup, parseAccountsCompanyBackup } from "./accountsBackup.js";
-import { assertBackupRestorable, restoreAccountsCompanyBackup } from "./accountsRestore.js";
+import { guessColumnMapping, mapBankImportRows, readBankStatementFile } from "./io/bankStatementImport.js";
+import { backupDownloadFilename, buildAccountsCompanyBackup, parseAccountsCompanyBackup } from "./data/accountsBackup.js";
+import { assertBackupRestorable, restoreAccountsCompanyBackup } from "./data/accountsRestore.js";
 import { buildAccountsAttentionItems } from "../intelligence/attentionCenter.js";
 import { trackProductEvent } from "../commercial/productAnalytics.js";
-import { assertVoucherAttachmentMeta, normalizeAttachmentContentType, readFileAsBase64 } from "./voucherAttachments.js";
+import { assertVoucherAttachmentMeta, normalizeAttachmentContentType, readFileAsBase64 } from "./data/voucherAttachments.js";
 import {
   PARTY_TYPES,
   SIMPLE_ENTRY_KINDS,
@@ -70,9 +70,9 @@ import {
   voucherTotals,
   salePaymentSummary,
   assertMoneyModeSplit,
-} from "./accountingModel.js";
+} from "./model/accountingModel.js";
 import { todayIso } from "../../lib/dates.js";
-import { gstStateFromGstin, isIntraGst } from "./accountingGst.js";
+import { gstStateFromGstin, isIntraGst } from "./model/accountingGst.js";
 import {
   accountLedger,
   balanceSheet,
@@ -88,14 +88,14 @@ import {
   partyTotalsFromInvoices,
   profitAndLoss,
   trialBalance,
-} from "./accountingReports.js";
-import { pageSlice } from "./accountsList.js";
-import { previousComparisonRange } from "./accountsIntelligence.js";
-import { downloadAccountsCsv, downloadAccountsExcel, downloadAccountsPdf } from "./accountingExport.js";
+} from "./model/accountingReports.js";
+import { pageSlice } from "./model/accountsList.js";
+import { previousComparisonRange } from "./model/accountsIntelligence.js";
+import { downloadAccountsCsv, downloadAccountsExcel, downloadAccountsPdf } from "./io/accountingExport.js";
 import { loadOrganizationSettings } from "../../lib/financeRepository.js";
-import { buildSalesInvoice } from "./salesInvoiceModel.js";
-import { SalesInvoiceSuccessModal, SalesInvoiceViewerModal } from "./SalesInvoiceActions.jsx";
-import { periodStockValues } from "./inventoryValuation.js";
+import { buildSalesInvoice } from "./model/salesInvoiceModel.js";
+import { SalesInvoiceSuccessModal, SalesInvoiceViewerModal } from "./components/SalesInvoiceActions.jsx";
+import { periodStockValues } from "./model/inventoryValuation.js";
 import {
   currentStockForItem,
   itemPurchasesReport,
@@ -103,14 +103,14 @@ import {
   itemizedEntryDraft,
   stockMovementReport,
   usesItemLines,
-} from "./inventoryModel.js";
+} from "./model/inventoryModel.js";
 import {
   COMPANY_STORAGE_KEY,
   readAccountsSnapshot,
   fetchAccountsBundle,
   inFlightAccountsPrefetch,
   clearAccountsSnapshot,
-} from "./accountsCache.js";
+} from "./data/accountsCache.js";
 import {
   emptyLine,
   emptyBankLine,
@@ -146,7 +146,7 @@ import { CoaModal } from "./components/dialogs/CoaModal.jsx";
 import { LogoutConfirmModal } from "./components/dialogs/LogoutConfirmModal.jsx";
 
 // Re-exported for the workspace preloader, which lazy-loads this module.
-export { prefetchAccounts } from "./accountsCache.js";
+export { prefetchAccounts } from "./data/accountsCache.js";
 export function AccountsModule({ token, close, onOpenCashbook, logout, workspace = {}, orgSettings: orgSettingsProp = null }) {
   const [cached] = useState(() => {
     const snapshot = readAccountsSnapshot(token);

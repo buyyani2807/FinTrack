@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildProfitLossCsvRows, filterCollectionReportAccounts, filterProfitLossAccounts } from "../src/features/finance/reports.js";
+import { buildProfitLossCsvRows, filterCollectionReportAccounts, filterProfitLossAccounts } from "../src/features/finance/model/reports.js";
 
 const statusOf = loan => loan.status;
 const loans = [

@@ -11,7 +11,7 @@ import {
   salePaymentSummary,
   simpleEntryDraft,
   voucherTotals,
-} from "../src/features/accounts/accountingModel.js";
+} from "../src/features/accounts/model/accountingModel.js";
 import {
   balanceSheet,
   invoiceRegister,
@@ -20,8 +20,8 @@ import {
   partyLedger,
   profitAndLoss,
   trialBalance,
-} from "../src/features/accounts/accountingReports.js";
-import { DEFAULT_CHART_OF_ACCOUNTS } from "../src/features/accounts/accountingModel.js";
+} from "../src/features/accounts/model/accountingReports.js";
+import { DEFAULT_CHART_OF_ACCOUNTS } from "../src/features/accounts/model/accountingModel.js";
 
 const accounts = DEFAULT_CHART_OF_ACCOUNTS.map(row => ({ ...row, id: row.code, isSystem: true, isActive: true }));
 const ravi = { id: "ravi", name: "Ravi", partyType: "customer" };

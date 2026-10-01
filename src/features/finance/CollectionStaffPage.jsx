@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Badge, Button, Field, Modal } from "../../components/ui.jsx";
 import { formatInr as money } from "../../lib/formatMoney.js";
-import { financeKindLabel, staffAssignableLoans } from "./collectionStaff";
-import { loanBalance, loanStatus } from "./loanState.js";
+import { financeKindLabel, staffAssignableLoans } from "./model/collectionStaff";
+import { loanBalance, loanStatus } from "./model/loanState.js";
 
 const byCustomerName = (a, b) => String(a.customerName || "").localeCompare(String(b.customerName || ""), undefined, { sensitivity: "base" });
 export function ResetStaffPasswordModal({ staff, close, save }) {

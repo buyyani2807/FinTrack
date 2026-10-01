@@ -1,6 +1,6 @@
-import { setItemActive, upsertItemCategory, deleteItem, deleteItemCategory, adjustStock } from "../accountingRepository.js";
-import { AccItemsSetup } from "../AccItemsSetup.jsx";
-import { AccInventoryWorkspace } from "../AccInventoryWorkspace.jsx";
+import { setItemActive, upsertItemCategory, deleteItem, deleteItemCategory, adjustStock } from "../data/accountingRepository.js";
+import { AccItemsSetup } from "../components/AccItemsSetup.jsx";
+import { AccInventoryWorkspace } from "../components/AccInventoryWorkspace.jsx";
 
 export function InventorySection({
   items,

@@ -1,5 +1,5 @@
-import { PARTY_TYPES } from "../accountingModel.js";
-import { INDIA_STATES, gstStateFromGstin } from "../accountingGst.js";
+import { PARTY_TYPES } from "../model/accountingModel.js";
+import { INDIA_STATES, gstStateFromGstin } from "../model/accountingGst.js";
 import { partyTypeLabel } from "../accountsFormat.js";
 import { Field } from "./AccUi.jsx";
 

@@ -1,4 +1,4 @@
-import { roundMoney } from "../../accountingModel.js";
+import { roundMoney } from "../../model/accountingModel.js";
 import { money } from "../../accountsFormat.js";
 
 export function BalanceSheetReport({ sheet }) {

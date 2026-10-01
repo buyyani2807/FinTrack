@@ -1,6 +1,6 @@
 import { AccEmpty, AccPager } from "../components/AccUi.jsx";
-import { VOUCHER_TYPES } from "../accountingModel.js";
-import { OutstandingWhatsAppButton, PartyStatementButton } from "../SalesInvoiceActions.jsx";
+import { VOUCHER_TYPES } from "../model/accountingModel.js";
+import { OutstandingWhatsAppButton, PartyStatementButton } from "../components/SalesInvoiceActions.jsx";
 import { money, partyTypeLabel } from "../accountsFormat.js";
 import { PartyTypeBadge } from "../components/PartyFields.jsx";
 

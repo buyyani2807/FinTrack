@@ -1,11 +1,11 @@
-import { createParty, initializeAccounting, saveAccountingSettings, saveGstSettings, inviteTeamMember } from "../accountingRepository.js";
-import { AccOnboardingWizard, markAccountsOnboardingDone } from "../AccOnboardingWizard.jsx";
+import { createParty, initializeAccounting, saveAccountingSettings, saveGstSettings, inviteTeamMember } from "../data/accountingRepository.js";
+import { AccOnboardingWizard, markAccountsOnboardingDone } from "../components/AccOnboardingWizard.jsx";
 import { Field, AccMetric } from "../components/AccUi.jsx";
 import { AttentionCenterCard } from "../../intelligence/AttentionCenterCard.jsx";
 import { trackProductEvent } from "../../commercial/productAnalytics.js";
 import { todayIso } from "../../../lib/dates.js";
-import { INDIA_STATES } from "../accountingGst.js";
-import { AccIntelligenceBrief } from "../AccIntelligenceBrief.jsx";
+import { INDIA_STATES } from "../model/accountingGst.js";
+import { AccIntelligenceBrief } from "../components/AccIntelligenceBrief.jsx";
 import { emptyPartyForm } from "../accountsFormDefaults.js";
 import { money } from "../accountsFormat.js";
 import { AccOverviewContextBar } from "../components/AccPeriodBars.jsx";

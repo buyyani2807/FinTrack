@@ -1,5 +1,5 @@
 import { Field, AccSetupSection } from "../../components/AccUi.jsx";
-import { BANK_IMPORT_FIELDS } from "../../bankStatementImport.js";
+import { BANK_IMPORT_FIELDS } from "../../io/bankStatementImport.js";
 import { emptyBankLine } from "../../accountsFormDefaults.js";
 
 export function BankStatementImportPanel({

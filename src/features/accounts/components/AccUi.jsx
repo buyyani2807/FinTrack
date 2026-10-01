@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { LIST_PAGE_SIZE } from "../accountsList.js";
+import { LIST_PAGE_SIZE } from "../model/accountsList.js";
 
 /**
  * Shared Accounts UI primitives (presentation only).

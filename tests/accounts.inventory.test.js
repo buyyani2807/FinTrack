@@ -13,7 +13,7 @@ import {
   supportsItemLines,
   validateItemForm,
   validateItemLines,
-} from "../src/features/accounts/inventoryModel.js";
+} from "../src/features/accounts/model/inventoryModel.js";
 
 const accounts = [
   { id: "cash", code: "1000", name: "Cash", accountType: "cash", groupType: "asset" },

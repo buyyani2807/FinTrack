@@ -1,5 +1,5 @@
 import { AccMetric, AccPager } from "../components/AccUi.jsx";
-import { stockReasonLabel } from "../inventoryModel.js";
+import { stockReasonLabel } from "../model/inventoryModel.js";
 import { money } from "../accountsFormat.js";
 import { ReportRangeBar } from "../components/AccPeriodBars.jsx";
 import { InvoiceTable } from "../components/InvoiceTable.jsx";

@@ -7,10 +7,10 @@ import {
   roundMoney,
   salePaymentSummary,
   cashUpiSplitIsValid,
-} from "../accountingModel.js";
-import { GST_RATES, gstStateFromGstin, isIntraGst } from "../accountingGst.js";
-import { suggestBillWiseAllocations } from "../accountingReports.js";
-import { aggregateItemizedGst, emptyItemLine, normalizeItemLine, usesItemLines } from "../inventoryModel.js";
+} from "../model/accountingModel.js";
+import { GST_RATES, gstStateFromGstin, isIntraGst } from "../model/accountingGst.js";
+import { suggestBillWiseAllocations } from "../model/accountingReports.js";
+import { aggregateItemizedGst, emptyItemLine, normalizeItemLine, usesItemLines } from "../model/inventoryModel.js";
 import { money, gstStatusLabel } from "../accountsFormat.js";
 import { Field } from "./AccUi.jsx";
 

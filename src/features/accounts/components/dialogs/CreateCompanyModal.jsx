@@ -1,5 +1,5 @@
-import { createAccountsCompany } from "../../accountingRepository.js";
-import { INDUSTRY_TEMPLATES, saveIndustry } from "../../AccOnboardingWizard.jsx";
+import { createAccountsCompany } from "../../data/accountingRepository.js";
+import { INDUSTRY_TEMPLATES, saveIndustry } from "../AccOnboardingWizard.jsx";
 import { Field, Modal } from "../AccUi.jsx";
 
 export function CreateCompanyModal({ saving, setShowCreateCompany, companyDraft, run, token, setCompanyDraft }) {

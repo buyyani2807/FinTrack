@@ -1,4 +1,4 @@
-import { lockAccountingPeriod, reopenAccountingPeriod } from "../../accountingRepository.js";
+import { lockAccountingPeriod, reopenAccountingPeriod } from "../../data/accountingRepository.js";
 import { Field, AccSetupSection } from "../../components/AccUi.jsx";
 
 export function PeriodLockPanel({ canAdmin, lockForm, setLockForm, saving, run, token, locks, askReason }) {

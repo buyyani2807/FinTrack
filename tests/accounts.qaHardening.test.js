@@ -5,15 +5,15 @@ import {
   chartOpeningTotals,
   financialYearContaining,
   newClientRequestId,
-} from "../src/features/accounts/accountingModel.js";
-import { itemPurchasesReport, itemSalesReport } from "../src/features/accounts/inventoryModel.js";
+} from "../src/features/accounts/model/accountingModel.js";
+import { itemPurchasesReport, itemSalesReport } from "../src/features/accounts/model/inventoryModel.js";
 import {
   buildEinvoiceOutboundPayload,
   EINVOICE_INTEGRATION_STUB,
   gstrPrepToJson,
   buildGstr1Preparation,
-} from "../src/features/accounts/gstPrepExport.js";
-import { invoiceRegister, suggestBillWiseAllocations } from "../src/features/accounts/accountingReports.js";
+} from "../src/features/accounts/io/gstPrepExport.js";
+import { invoiceRegister, suggestBillWiseAllocations } from "../src/features/accounts/model/accountingReports.js";
 
 test("non-April financial year ends on the day before next FY start", () => {
   const fy = financialYearContaining("2026-07-15", 7);

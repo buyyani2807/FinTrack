@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { hasWhatsAppPhone, normalizeWhatsAppPhone } from "../src/features/receipts/phoneNormalize.js";
-import { applyTemplate, DEFAULT_WHATSAPP_TEMPLATES, resolveWhatsAppTemplate } from "../src/features/receipts/templateEngine.js";
-import { buildChitUpcomingRows, flattenSchemePaymentsForReminders } from "../src/features/receipts/upcomingPayments.js";
-import { buildWhatsAppMessage, openManualWhatsAppShare, whatsAppShareUrl } from "../src/features/receipts/receiptWhatsApp.js";
-import { buildChitReceipt } from "../src/features/receipts/receiptModel.js";
+import { hasWhatsAppPhone, normalizeWhatsAppPhone } from "../src/features/receipts/model/phoneNormalize.js";
+import { applyTemplate, DEFAULT_WHATSAPP_TEMPLATES, resolveWhatsAppTemplate } from "../src/features/receipts/model/templateEngine.js";
+import { buildChitUpcomingRows, flattenSchemePaymentsForReminders } from "../src/features/receipts/model/upcomingPayments.js";
+import { buildWhatsAppMessage, openManualWhatsAppShare, whatsAppShareUrl } from "../src/features/receipts/io/receiptWhatsApp.js";
+import { buildChitReceipt } from "../src/features/receipts/model/receiptModel.js";
 
 test("normalizes 10-digit Indian numbers", () => {
   assert.equal(normalizeWhatsAppPhone("9876543210"), "919876543210");

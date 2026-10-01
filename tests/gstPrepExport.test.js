@@ -5,7 +5,7 @@ import {
   buildGstr3bPreparation,
   EINVOICE_INTEGRATION_STUB,
   gstrPrepToCsvRows,
-} from "../src/features/accounts/gstPrepExport.js";
+} from "../src/features/accounts/io/gstPrepExport.js";
 
 const sale = {
   id: "v1",

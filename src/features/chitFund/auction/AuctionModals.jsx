@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { recordChitMonthlyBid, updateChitInstallmentPayment, fetchChitInstallmentById } from "../../../lib/financeRepository";
-import { buildChitReceipt } from "../../receipts/receiptModel.js";
-import { buildAuctionLiftPayload } from "../../receipts/transactionConfirmations.js";
-import { today, enrollmentName } from "../chitFormat.js";
-import { fireChitLiftWhatsApp } from "../chitNotifications.js";
+import { buildChitReceipt } from "../../receipts/model/receiptModel.js";
+import { buildAuctionLiftPayload } from "../../receipts/io/transactionConfirmations.js";
+import { today, enrollmentName } from "../model/chitFormat.js";
+import { fireChitLiftWhatsApp } from "../io/chitNotifications.js";
 import { Button, Field } from "../../../components/ui.jsx";
 import { Modal } from "../components/ChitUi.jsx";
 

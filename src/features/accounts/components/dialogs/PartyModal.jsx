@@ -1,5 +1,5 @@
 import { Modal } from "../AccUi.jsx";
-import { partyHasAccountingUse } from "../../accountingModel.js";
+import { partyHasAccountingUse } from "../../model/accountingModel.js";
 import { PartyFormFields } from "../PartyFields.jsx";
 
 export function PartyModal({ partyForm, closeParty, saving, saveParty, setPartyForm, vouchers }) {

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { DEFAULT_WHATSAPP_TEMPLATES, applyTemplate, resolveWhatsAppTemplate } from "../src/features/receipts/templateEngine.js";
+import { DEFAULT_WHATSAPP_TEMPLATES, applyTemplate, resolveWhatsAppTemplate } from "../src/features/receipts/model/templateEngine.js";
 import {
   buildAuctionLiftPayload,
   buildChitLiftVariables,
@@ -11,7 +11,7 @@ import {
   confirmationSettingsFromReminder,
   eventTypeForFinanceLoan,
   isConfirmationEnabled,
-} from "../src/features/receipts/transactionConfirmations.js";
+} from "../src/features/receipts/io/transactionConfirmations.js";
 
 test("confirmation templates exist in defaults", () => {
   assert.match(DEFAULT_WHATSAPP_TEMPLATES.daily_account_opened, /Daily Finance/);

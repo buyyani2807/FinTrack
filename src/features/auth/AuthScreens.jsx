@@ -4,7 +4,7 @@ import { chitCustomerPortalLogin, customerPortalLogin, loadWorkspace } from "../
 import { isPublicSignupAllowed, signupInviteRequired, validateSignupInvite } from "../../lib/signupGate.js";
 import { supabase } from "../../lib/supabase";
 import { C } from "../../styles/theme.js";
-import { sessionUserRole } from "../finance/workspaceAccess.js";
+import { sessionUserRole } from "../finance/model/workspaceAccess.js";
 import { openLegalView } from "../legal/LegalPage.jsx";
 
 export function PasswordRecovery() {

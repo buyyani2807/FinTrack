@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { deleteFixedChitPayment, loadChitSchemeDetails } from "../../../lib/financeRepository";
-import { buildFixedLiftPayload } from "../../receipts/transactionConfirmations.js";
+import { buildFixedLiftPayload } from "../../receipts/io/transactionConfirmations.js";
 import { CustomerStatementPage } from "../../statements/CustomerStatementPage.jsx";
 import { CreditScoreCard } from "../../creditScore/CreditScoreCard.jsx";
-import { enrollmentPortalId } from "../liveBidding";
-import { fixedChitScheduleDisplayPayment, formatFixedManagerCommissionSummary, resolveFixedManagerCommission } from "../fixedChit";
-import { money, formatChitDate, schemeStatusLabel, enrollmentName, nextAvailableTicket, paymentsByMemberName } from "../chitFormat.js";
-import { fireChitLiftWhatsApp } from "../chitNotifications.js";
+import { enrollmentPortalId } from "../model/liveBidding";
+import { fixedChitScheduleDisplayPayment, formatFixedManagerCommissionSummary, resolveFixedManagerCommission } from "../model/fixedChit";
+import { money, formatChitDate, schemeStatusLabel, enrollmentName, nextAvailableTicket, paymentsByMemberName } from "../model/chitFormat.js";
+import { fireChitLiftWhatsApp } from "../io/chitNotifications.js";
 import { Button, Metric } from "../../../components/ui.jsx";
 import { ChitDeletePaymentButton, ChitDeleteMemberControl, ChitSchemeHeaderActions } from "../components/ChitAdminControls.jsx";
 import { ChitPaymentStatus, ChitPortalAccess, ChitPaymentMonthPicker } from "../components/ChitMemberParts.jsx";

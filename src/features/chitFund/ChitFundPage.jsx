@@ -12,23 +12,23 @@ import {
   updateFixedChitScheme,
   updateChitScheme,
 } from "../../lib/financeRepository";
-import { ReceiptSuccessModal } from "../receipts/ReceiptActions.jsx";
-import { UpcomingPaymentsSection } from "../receipts/UpcomingPaymentsSection.jsx";
-import { ChitInsightsBrief } from "./ChitInsightsBrief.jsx";
+import { ReceiptSuccessModal } from "../receipts/components/ReceiptActions.jsx";
+import { UpcomingPaymentsSection } from "../receipts/components/UpcomingPaymentsSection.jsx";
+import { ChitInsightsBrief } from "./components/ChitInsightsBrief.jsx";
 import {
   CHIT_TYPES,
   fixedCommissionFromPercent,
   fixedCommissionPercentFromAmount,
   normalizeFixedCommissionAmount,
   validateFixedChit,
-} from "./fixedChit";
-import { validatePredefinedBidChit } from "./predefinedBidChit";
-import { roundMoney } from "./calculations";
-import { money, emptySchemeForm, groupRowsBySchemeId } from "./chitFormat.js";
+} from "./model/fixedChit";
+import { validatePredefinedBidChit } from "./model/predefinedBidChit";
+import { roundMoney } from "./model/calculations";
+import { money, emptySchemeForm, groupRowsBySchemeId } from "./model/chitFormat.js";
 import { Button } from "../../components/ui.jsx";
 import { ChitActivateSchemeModal } from "./components/ChitAdminControls.jsx";
 import { ChitSchemeForm, ChitTypeChooser, FixedChitSchemeForm, PredefinedBidSchemeForm } from "./components/ChitSchemeForms.jsx";
-import { ChitSchemeDetails, ChitSchemeDashboardSection, ChitLandingReports } from "./ChitSchemeDashboard.jsx";
+import { ChitSchemeDetails, ChitSchemeDashboardSection, ChitLandingReports } from "./components/ChitSchemeDashboard.jsx";
 
 export function ChitFundPage({ token, close, openSchemeId = null, onOpenSchemeConsumed, onSchemesChanged, orgSettings = {}, workspace = {}, onLogReceipt }) {
   const [schemes, setSchemes] = useState([]);

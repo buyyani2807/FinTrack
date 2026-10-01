@@ -1,4 +1,4 @@
-import { ACCOUNT_TYPES_BY_GROUP, COA_GROUPS, accountNormalSide, defaultAccountTypeForGroup } from "../accountingModel.js";
+import { ACCOUNT_TYPES_BY_GROUP, COA_GROUPS, accountNormalSide, defaultAccountTypeForGroup } from "../model/accountingModel.js";
 import { Field } from "./AccUi.jsx";
 
 export function CoaFormFields({ form, setForm, accounts = [] }) {

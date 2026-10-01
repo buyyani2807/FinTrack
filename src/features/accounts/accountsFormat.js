@@ -1,4 +1,4 @@
-import { PARTY_TYPES } from "./accountingModel.js";
+import { PARTY_TYPES } from "./model/accountingModel.js";
 import { formatInr } from "../../lib/formatMoney.js";
 
 export const money = formatInr;

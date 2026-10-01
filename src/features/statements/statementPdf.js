@@ -1,4 +1,4 @@
-import { formatReceiptDate } from "../receipts/receiptModel.js";
+import { formatReceiptDate } from "../receipts/model/receiptModel.js";
 
 const PAGE = { width: 595, height: 842, left: 40, right: 555, top: 800, bottom: 48 };
 const ascii = text => String(text ?? "")

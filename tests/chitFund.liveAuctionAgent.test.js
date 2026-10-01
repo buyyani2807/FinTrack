@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { runLiveAuctionAgentSuite } from "../src/features/chitFund/liveAuctionAgent.js";
-import { TEST_AUCTION_SCHEME, TEST_DATA_MARK, createLiveAuctionHarness, testMemberIdentity } from "../src/features/chitFund/liveAuctionHarness.js";
+import { runLiveAuctionAgentSuite } from "../src/features/chitFund/model/liveAuctionAgent.js";
+import { TEST_AUCTION_SCHEME, TEST_DATA_MARK, createLiveAuctionHarness, testMemberIdentity } from "../src/features/chitFund/model/liveAuctionHarness.js";
 
 test("test identities are unique and marked TEST DATA", () => {
   const rows = Array.from({ length: 20 }, (_, index) => testMemberIdentity(index + 1));

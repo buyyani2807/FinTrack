@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { leadingLiveBid, liveAuctionLimits, liveBidPayout, validateLiveBid, winsForEnrollment } from "../src/features/chitFund/liveBidding.js";
+import { leadingLiveBid, liveAuctionLimits, liveBidPayout, validateLiveBid, winsForEnrollment } from "../src/features/chitFund/model/liveBidding.js";
 
 test("live bidding follows highest bid wins", () => {
   const leader = leadingLiveBid([

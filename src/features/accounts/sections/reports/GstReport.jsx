@@ -5,10 +5,10 @@ import {
   EINVOICE_INTEGRATION_STUB,
   gstrPrepToCsvRows,
   gstrPrepToJson,
-} from "../../gstPrepExport.js";
+} from "../../io/gstPrepExport.js";
 import { trackProductEvent } from "../../../commercial/productAnalytics.js";
 import { todayIso } from "../../../../lib/dates.js";
-import { downloadAccountsCsv } from "../../accountingExport.js";
+import { downloadAccountsCsv } from "../../io/accountingExport.js";
 import { money } from "../../accountsFormat.js";
 
 export function GstReport({ vouchers, parties, range, setNotice, gstReport, pagedGstOutput, setListPage }) {

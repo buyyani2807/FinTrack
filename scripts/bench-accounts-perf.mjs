@@ -1,7 +1,7 @@
 import { performance } from "node:perf_hooks";
-import { assembleVouchers } from "../src/features/accounts/accountsVoucherAssembly.js";
-import { dashboardMetrics, trialBalance, profitAndLoss, balanceSheet, dayBook } from "../src/features/accounts/accountingReports.js";
-import { DEFAULT_CHART_OF_ACCOUNTS } from "../src/features/accounts/accountingModel.js";
+import { assembleVouchers } from "../src/features/accounts/model/accountsVoucherAssembly.js";
+import { dashboardMetrics, trialBalance, profitAndLoss, balanceSheet, dayBook } from "../src/features/accounts/model/accountingReports.js";
+import { DEFAULT_CHART_OF_ACCOUNTS } from "../src/features/accounts/model/accountingModel.js";
 
 const accounts = DEFAULT_CHART_OF_ACCOUNTS.map(row => ({ ...row, id: row.code }));
 const voucherCount = 2000;

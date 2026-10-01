@@ -1,5 +1,5 @@
-import { ignoreBankLine, matchBankLine as saveBankMatch } from "../../accountingRepository.js";
-import { bankVoucherLines } from "../../accountingReports.js";
+import { ignoreBankLine, matchBankLine as saveBankMatch } from "../../data/accountingRepository.js";
+import { bankVoucherLines } from "../../model/accountingReports.js";
 import { money, bankMatchLabel, bankMatchTone } from "../../accountsFormat.js";
 import { BankMatchControls } from "../../components/BankMatchControls.jsx";
 

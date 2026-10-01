@@ -2,14 +2,14 @@ import { useEffect, useState } from "react";
 import { Button, Field, Metric, Modal } from "../../components/ui.jsx";
 import { loadChitSchemeDetails, loadChitSchemes } from "../../lib/financeRepository";
 import { formatInr as money } from "../../lib/formatMoney.js";
-import { buildChitMonthStatement, currentSchemeMonth, monthLabel as chitMonthLabel } from "../chitFund/monthStatement";
-import { downloadChitMonthStatementPdf } from "../chitFund/monthStatementPdf";
-import { financeKindLabel } from "./collectionStaff";
-import { annualRate, loanBalance, loanPaid, loanStatus, monthlyBalance, today } from "./loanState.js";
-import { paymentValue } from "./paymentFormat.js";
-import { investedAmount, realizedLoss, realizedProfit } from "./pnl.js";
-import { downloadCustomerReport, downloadDailyReport, downloadProfitLossReport } from "./reportDownloads.js";
-import { accountStatusLabel, filterCollectionReportAccounts, filterProfitLossAccounts } from "./reports.js";
+import { buildChitMonthStatement, currentSchemeMonth, monthLabel as chitMonthLabel } from "../chitFund/model/monthStatement";
+import { downloadChitMonthStatementPdf } from "../chitFund/io/monthStatementPdf";
+import { financeKindLabel } from "./model/collectionStaff";
+import { annualRate, loanBalance, loanPaid, loanStatus, monthlyBalance, today } from "./model/loanState.js";
+import { paymentValue } from "./model/paymentFormat.js";
+import { investedAmount, realizedLoss, realizedProfit } from "./model/pnl.js";
+import { downloadCustomerReport, downloadDailyReport, downloadProfitLossReport } from "./io/reportDownloads.js";
+import { accountStatusLabel, filterCollectionReportAccounts, filterProfitLossAccounts } from "./model/reports.js";
 
 export function PinResetModal({ title, currentPin, onSave, close }) {
   const [oldPin, setOldPin] = useState("");

@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { finalizeFixedChitLift, updateFixedChitPayment, fetchFixedChitPaymentById } from "../../../lib/financeRepository";
-import { buildChitReceipt } from "../../receipts/receiptModel.js";
-import { buildFixedLiftPayload } from "../../receipts/transactionConfirmations.js";
-import { fixedChitPostLiftMonthlyPayment, resolveFixedManagerCommission } from "../fixedChit";
-import { roundMoney } from "../calculations";
-import { cashUpiSplit, cashUpiSplitIsValid } from "../../finance/paymentSplit";
-import { disbursementPayoutError, disbursementPayoutSplit } from "../../finance/disbursementMode";
-import { today, money, enrollmentName } from "../chitFormat.js";
-import { fireChitLiftWhatsApp } from "../chitNotifications.js";
+import { buildChitReceipt } from "../../receipts/model/receiptModel.js";
+import { buildFixedLiftPayload } from "../../receipts/io/transactionConfirmations.js";
+import { fixedChitPostLiftMonthlyPayment, resolveFixedManagerCommission } from "../model/fixedChit";
+import { roundMoney } from "../model/calculations";
+import { cashUpiSplit, cashUpiSplitIsValid } from "../../finance/model/paymentSplit";
+import { disbursementPayoutError, disbursementPayoutSplit } from "../../finance/model/disbursementMode";
+import { today, money, enrollmentName } from "../model/chitFormat.js";
+import { fireChitLiftWhatsApp } from "../io/chitNotifications.js";
 import { Button, Field, Metric } from "../../../components/ui.jsx";
 import { Modal } from "../components/ChitUi.jsx";
 

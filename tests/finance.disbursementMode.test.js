@@ -4,7 +4,7 @@ import {
   disbursementPayoutError,
   disbursementPayoutSplit,
   disbursementPayoutTotal,
-} from "../src/features/finance/disbursementMode.js";
+} from "../src/features/finance/model/disbursementMode.js";
 
 test("daily payout total is paid to customer; monthly is principal", () => {
   assert.equal(disbursementPayoutTotal("daily", 8500, 10000), 8500);

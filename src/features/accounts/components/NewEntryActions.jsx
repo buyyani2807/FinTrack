@@ -1,5 +1,5 @@
 import { AccMoreMenu } from "./AccUi.jsx";
-import { SIMPLE_ENTRY_KINDS } from "../accountingModel.js";
+import { SIMPLE_ENTRY_KINDS } from "../model/accountingModel.js";
 
 export function NewEntryActions({ openSimple, openVoucher, openParty }) {
   return (

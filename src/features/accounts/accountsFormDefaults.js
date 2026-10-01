@@ -1,6 +1,6 @@
-import { addDaysIso } from "./accountingModel.js";
+import { addDaysIso } from "./model/accountingModel.js";
 import { todayIso } from "../../lib/dates.js";
-import { emptyItemLine } from "./inventoryModel.js";
+import { emptyItemLine } from "./model/inventoryModel.js";
 
 export const emptyLine = () => ({ coaId: "", debit: "", credit: "", description: "" });
 export const emptyBankLine = () => ({ lineDate: todayIso(), description: "", reference: "", amount: "", direction: "in" });

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { calculateDividend, validateBid } from "../src/features/chitFund/calculations.js";
-import { liveBidPayout, validateLiveBid } from "../src/features/chitFund/liveBidding.js";
+import { calculateDividend, validateBid } from "../src/features/chitFund/model/calculations.js";
+import { liveBidPayout, validateLiveBid } from "../src/features/chitFund/model/liveBidding.js";
 
 test("Auction live discount converts to payout before existing dividend calculations", () => {
   const chitValue = 1_000_000;

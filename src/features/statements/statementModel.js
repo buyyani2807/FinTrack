@@ -1,4 +1,4 @@
-import { monthlyInterestOnBalance, monthlyRateOnDate } from "../finance/calculations.js";
+import { monthlyInterestOnBalance, monthlyRateOnDate } from "../finance/model/calculations.js";
 import {
   financeAccountId,
   financeTypeLabel,
@@ -7,11 +7,11 @@ import {
   nextMonthlyPayment,
   paymentModeText,
   paymentValue,
-} from "../receipts/receiptModel.js";
-import { chitPaymentAmounts, chitPaymentDisplayStatus, chitPaymentOutstanding } from "../chitFund/memberPayments.js";
-import { chitTypeLabel } from "../chitFund/memberPortal.js";
-import { enrollmentPortalId, winsForEnrollment } from "../chitFund/liveBidding.js";
-import { CHIT_TYPES } from "../chitFund/fixedChit.js";
+} from "../receipts/model/receiptModel.js";
+import { chitPaymentAmounts, chitPaymentDisplayStatus, chitPaymentOutstanding } from "../chitFund/model/memberPayments.js";
+import { chitTypeLabel } from "../chitFund/model/memberPortal.js";
+import { enrollmentPortalId, winsForEnrollment } from "../chitFund/model/liveBidding.js";
+import { CHIT_TYPES } from "../chitFund/model/fixedChit.js";
 import { formatInr } from "../../lib/formatMoney.js";
 
 const moneyFn = formatInr;

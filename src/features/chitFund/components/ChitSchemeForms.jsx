@@ -1,5 +1,5 @@
-import { CHIT_TYPES, fixedCommissionFromPercent } from "../fixedChit";
-import { money } from "../chitFormat.js";
+import { CHIT_TYPES, fixedCommissionFromPercent } from "../model/fixedChit";
+import { money } from "../model/chitFormat.js";
 import { Button, Field } from "../../../components/ui.jsx";
 import { Modal } from "./ChitUi.jsx";
 

@@ -1,11 +1,11 @@
-import { cancelVoucher, queueEinvoicePayload, reverseVoucher } from "../../accountingRepository.js";
+import { cancelVoucher, queueEinvoicePayload, reverseVoucher } from "../../data/accountingRepository.js";
 import { AccMoreMenu } from "../../components/AccUi.jsx";
-import { buildEinvoiceOutboundPayload } from "../../gstPrepExport.js";
-import { attachmentDownloadHref, VOUCHER_ATTACHMENT_MAX_BYTES } from "../../voucherAttachments.js";
-import { VOUCHER_TYPES, voucherTotals } from "../../accountingModel.js";
+import { buildEinvoiceOutboundPayload } from "../../io/gstPrepExport.js";
+import { attachmentDownloadHref, VOUCHER_ATTACHMENT_MAX_BYTES } from "../../data/voucherAttachments.js";
+import { VOUCHER_TYPES, voucherTotals } from "../../model/accountingModel.js";
 import { todayIso } from "../../../../lib/dates.js";
-import { buildSalesInvoice } from "../../salesInvoiceModel.js";
-import { PurchaseDocumentButton, SalesInvoiceActions } from "../../SalesInvoiceActions.jsx";
+import { buildSalesInvoice } from "../../model/salesInvoiceModel.js";
+import { PurchaseDocumentButton, SalesInvoiceActions } from "../../components/SalesInvoiceActions.jsx";
 import { money } from "../../accountsFormat.js";
 
 export function VoucherRow({

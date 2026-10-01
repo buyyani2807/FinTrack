@@ -4,7 +4,7 @@ import {
   monthlyComponentsMatch,
   paymentExceedsRemaining,
   remainingCollectable,
-} from "../src/features/finance/paymentLimits.js";
+} from "../src/features/finance/model/paymentLimits.js";
 
 test("monthly interest + principal + penalty must equal the total", () => {
   assert.equal(monthlyComponentsMatch(1500, 1000, 400, 100), true);

@@ -1,4 +1,4 @@
-import { saveAccountingSettings } from "../../accountingRepository.js";
+import { saveAccountingSettings } from "../../data/accountingRepository.js";
 import { Field, AccSetupSection } from "../../components/AccUi.jsx";
 import { todayIso } from "../../../../lib/dates.js";
 import { gstStatusLabel } from "../../accountsFormat.js";

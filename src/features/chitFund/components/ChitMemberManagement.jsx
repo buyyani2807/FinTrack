@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createChitMember, enableChitMemberPortal, enrollChitMember, updateEnrolledChitMember } from "../../../lib/financeRepository";
-import { enrollmentName, canEnrollMoreMembers } from "../chitFormat.js";
+import { enrollmentName, canEnrollMoreMembers } from "../model/chitFormat.js";
 import { Button, Field } from "../../../components/ui.jsx";
 import { Modal } from "./ChitUi.jsx";
 import { ChitDeleteMemberControl } from "./ChitAdminControls.jsx";

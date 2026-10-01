@@ -1,5 +1,5 @@
 import { AccEmpty } from "./AccUi.jsx";
-import { ArReminderButton, PaymentAdviceButton } from "../SalesInvoiceActions.jsx";
+import { ArReminderButton, PaymentAdviceButton } from "./SalesInvoiceActions.jsx";
 import { money } from "../accountsFormat.js";
 
 const invoiceStatusTone = status => {

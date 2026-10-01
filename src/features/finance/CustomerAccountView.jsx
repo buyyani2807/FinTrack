@@ -1,7 +1,7 @@
 import { Button, Metric } from "../../components/ui.jsx";
 import { formatInr as money } from "../../lib/formatMoney.js";
-import { annualRate, dailyBalance, dailyPaid, dailyProgress, estimatedPenalty, loanPaid, loanStatus, monthlyBalance, monthlyInterestPending, today } from "./loanState.js";
-import { paymentModeLabel } from "./paymentFormat.js";
+import { annualRate, dailyBalance, dailyPaid, dailyProgress, estimatedPenalty, loanPaid, loanStatus, monthlyBalance, monthlyInterestPending, today } from "./model/loanState.js";
+import { paymentModeLabel } from "./model/paymentFormat.js";
 
 export function Customer({
   loan,

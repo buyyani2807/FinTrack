@@ -1,4 +1,4 @@
-import { setAccountingIntegration, syncAccountingOperations } from "../../accountingRepository.js";
+import { setAccountingIntegration, syncAccountingOperations } from "../../data/accountingRepository.js";
 import { AccSetupSection } from "../../components/AccUi.jsx";
 
 export function IntegrationSetupPanel({ settings, saving, run, token }) {
