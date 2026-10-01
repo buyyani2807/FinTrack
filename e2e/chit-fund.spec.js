@@ -66,8 +66,8 @@ test.describe("Chit Fund workspace", () => {
     await page.getByRole("button", { name: "Chit Fund" }).click();
     await expect(page.getByRole("heading", { name: "Chit Fund", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "+ New scheme" })).toBeVisible();
-    await expect(page.getByText("Auction Chits")).toBeVisible();
-    await expect(page.getByText("Fixed Chits")).toBeVisible();
+    await expect(page.getByText("Auction Chits", { exact: true })).toBeVisible();
+    await expect(page.getByText("Fixed Chits", { exact: true })).toBeVisible();
 
     expect(pageErrors).toEqual([]);
   });
