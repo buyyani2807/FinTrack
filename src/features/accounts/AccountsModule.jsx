@@ -116,7 +116,7 @@ function Modal({ title, close, children, actions }) {
   return <div className="modal-bg"><div className="modal"><div className="row"><h2 className="title">{title}</h2><button type="button" className="btn" onClick={close}>Close</button></div>{children}{actions}</div></div>;
 }
 
-export function AccountsSummaryCard({ token, moneyFmt = money }) {
+export function AccountsSummaryCard({ token, moneyFmt = money, onOpen }) {
   const [overview, setOverview] = useState(null);
   useEffect(() => {
     if (!token) return;
@@ -128,7 +128,7 @@ export function AccountsSummaryCard({ token, moneyFmt = money }) {
       .catch(() => setOverview(null));
   }, [token]);
   if (!overview) return null;
-  return <button type="button" className="card accounts-summary-card spacer" onClick={() => window.dispatchEvent(new CustomEvent("fintrack-open-cashbook"))}>
+  return <button type="button" className="card accounts-summary-card spacer" onClick={onOpen}>
     <div className="toolbar accounts-summary-heading"><strong>Cashbook</strong><span className="small">Today&apos;s movement · Open</span></div>
     <div className="accounts-summary-grid">
       <div><span className="small">Cash</span><strong className="gold">{moneyFmt(overview.cash)}</strong></div>

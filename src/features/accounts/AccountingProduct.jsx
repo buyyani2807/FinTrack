@@ -1658,7 +1658,7 @@ function CoaFormFields({ form, setForm, accounts = [] }) {
   </div>;
 }
 
-export function AccountsModule({ token, close, logout, workspace = {}, orgSettings: orgSettingsProp = null }) {
+export function AccountsModule({ token, close, onOpenCashbook, logout, workspace = {}, orgSettings: orgSettingsProp = null }) {
   const [cached] = useState(() => {
     const snapshot = readAccountsSnapshot(token);
     if (snapshot) setActiveAccountsCompanyId(snapshot.activeCompanyId || null);
@@ -2128,8 +2128,8 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
 
   const openSection = id => {
     if (id === "cashbook") {
-      close();
-      window.dispatchEvent(new CustomEvent("fintrack-open-cashbook"));
+      if (onOpenCashbook) onOpenCashbook();
+      else close();
       return;
     }
     if (id === "gst") {
