@@ -195,6 +195,16 @@ test("trial balance, P&L and balance sheet stay in equation", () => {
   assert.equal(sheet.totalAssets, roundMoney(sheet.totalLiabilities + sheet.totalEquity));
   const equation = accountingEquationHolds(accounts, vouchers);
   assert.equal(equation.balanced, true);
+
+  const stock = { openingStock: 3000, closingStock: 4500 };
+  const tradingPnl = profitAndLoss(accounts, vouchers, { from: "2026-04-01", to: "2026-04-30" }, { stock });
+  assert.equal(tradingPnl.stockAdjustment, 1500);
+  assert.equal(tradingPnl.net, -500);
+  const stockSheet = balanceSheet(accounts, vouchers, { from: "2026-04-01", to: "2026-04-30" }, { stock });
+  assert.equal(stockSheet.balanced, true);
+  assert.equal(stockSheet.assets.find(row => row.id === "inventory:closing").balance, 4500);
+  assert.equal(stockSheet.equity.find(row => row.id === "inventory:opening").balance, 3000);
+  assert.equal(stockSheet.totalAssets, roundMoney(sheet.totalAssets + 4500));
 });
 
 test("day book lists only posted vouchers in date order", () => {

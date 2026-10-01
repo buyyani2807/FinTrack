@@ -60,6 +60,9 @@ import {
   upsertRecurringTemplate,
   deleteRecurringTemplate,
   markRecurringRun,
+  setItemOpeningRate,
+  loadInventorySettings,
+  saveInventorySettings,
 } from "./accountingRepository.js";
 import {
   AccOnboardingWizard,
@@ -137,8 +140,8 @@ function AccountsBusinessPulse({ metrics, receivables, payables, items, stockMov
       <AccMetric label="Receivables due" value={money(receivables?.total)} tone="blue" onClick={() => onNavigate("receivables")} />
       <AccMetric label="Payables due" value={money(payables?.total)} tone="red" onClick={() => onNavigate("payables")} />
       <AccMetric label="Profit this period" value={money(metrics?.netProfit)} tone={Number(metrics?.netProfit) < 0 ? "red" : "green"} onClick={() => onNavigate("pnl")} />
-      <AccMetric label="Low-stock items" value={String(lowStockCount)} tone={lowStockCount ? "red" : "green"} onClick={() => onNavigate("setup")} />
-      <AccMetric label="Stock movements" value={String((stockMovements || []).length)} tone="blue" onClick={() => onNavigate("setup")} />
+      <AccMetric label="Low-stock items" value={String(lowStockCount)} tone={lowStockCount ? "red" : "green"} onClick={() => onNavigate("inventory")} />
+      <AccMetric label="Stock movements" value={String((stockMovements || []).length)} tone="blue" onClick={() => onNavigate("inventory")} />
     </div>
     <div className="accounts-business-actions" aria-label="Quick actions">
       <span className="small">Quick actions</span>
@@ -253,6 +256,8 @@ import { loadOrganizationSettings } from "../../lib/financeRepository.js";
 import { buildSalesInvoice } from "./salesInvoiceModel.js";
 import { ArReminderButton, OutstandingWhatsAppButton, PartyStatementButton, PaymentAdviceButton, PurchaseDocumentButton, SalesInvoiceActions, SalesInvoiceSuccessModal, SalesInvoiceViewerModal } from "./SalesInvoiceActions.jsx";
 import { AccItemsSetup } from "./AccItemsSetup.jsx";
+import { AccInventoryWorkspace } from "./AccInventoryWorkspace.jsx";
+import { periodStockValues } from "./inventoryValuation.js";
 import {
   aggregateItemizedGst,
   currentStockForItem,
@@ -260,7 +265,10 @@ import {
   itemPurchasesReport,
   itemSalesReport,
   itemizedEntryDraft,
+  normalizeItemLine,
   stockMovementReport,
+  stockReasonLabel,
+  usesItemLines,
 } from "./inventoryModel.js";
 
 const money = formatInr;
@@ -746,6 +754,7 @@ export function prefetchAccounts(token) {
 const NAV_TREE = [
   { id: "overview", label: "Overview", glyph: "⌂" },
   { id: "vouchers", label: "Transactions", glyph: "▣" },
+  { id: "inventory", label: "Inventory", glyph: "▤" },
   {
     id: "parties",
     label: "Parties",
@@ -779,6 +788,7 @@ const navItemIsActive = (item, section) => item.children?.some(child => child.id
 function sectionTrail(section, reportTab) {
   if (section === "overview") return ["Overview"];
   if (section === "vouchers") return ["Transactions"];
+  if (section === "inventory") return ["Inventory"];
   if (section === "parties") return ["Parties", "Party Ledger"];
   if (section === "receivables") return ["Parties", "Receivables"];
   if (section === "payables") return ["Parties", "Payables"];
@@ -1001,6 +1011,7 @@ const emptySimpleForm = () => ({
   hsnSac: "",
   taxInclusive: false,
   entryMode: "items",
+  noteEntryMode: "amount",
   itemLines: [emptyItemLine()],
   settlements: [],
   amountReceived: "",
@@ -1063,6 +1074,7 @@ const SECTIONS = [
   { id: "manufacturing", label: "Manufacturing", group: "Industry" },
   { id: "ledger", label: "Ledger", group: "Books" },
   { id: "vouchers", label: "Transactions", group: "Books" },
+  { id: "inventory", label: "Inventory", group: "Books" },
   { id: "cashbook", label: "Cashbook", group: "Books" },
   { id: "receivables", label: "Receivables", group: "Parties" },
   { id: "payables", label: "Payables", group: "Parties" },
@@ -1239,7 +1251,8 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
   const selectedParty = parties.find(party => party.id === form.partyId);
   const partyState = selectedParty?.stateCode || gstStateFromGstin(selectedParty?.gstin);
   const intra = isIntraGst(gstCompany?.stateCode, partyState);
-  const itemMode = (kind === "sale" || kind === "purchase") && form.entryMode !== "amount";
+  const returnKind = kind === "credit_note" || kind === "debit_note";
+  const itemMode = usesItemLines(kind, form);
   const settlementKinds = kind === "receipt" || kind === "payment" || kind === "credit_note" || kind === "debit_note";
   const partyOpenInvoices = settlementKinds && form.partyId
     ? (openInvoices || []).filter(row => row.partyId === form.partyId && Number(row.outstanding || 0) > 0)
@@ -1253,6 +1266,9 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
   const itemPreview = itemMode
     ? aggregateItemizedGst(form.itemLines || [], { intra, taxInclusive: false })
     : null;
+  const settlementAmount = itemMode
+    ? Number((gstOn ? itemPreview?.total : itemPreview?.taxable) || 0)
+    : form.amount;
   const gstPreview = !itemMode && gstOn
     ? prepareGstAmount(form.amount, { enabled: Number(form.gstRate) > 0, rate: form.gstRate, intra, taxInclusive: form.taxInclusive, hsnSac: form.hsnSac })
     : null;
@@ -1295,9 +1311,13 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
       upi: Number(form.receivedUpi || 0),
     });
   const noteCopy = kind === "credit_note"
-    ? "Reduces the customer balance and sales. Original invoices stay in Day Book."
+    ? (itemMode
+      ? "Sales return: returned items go back into stock, and the customer balance and sales reduce. Original invoices stay in Day Book."
+      : "Reduces the customer balance and sales. Original invoices stay in Day Book.")
     : kind === "debit_note"
-      ? "Reduces the supplier balance and purchases. Original invoices stay in Day Book."
+      ? (itemMode
+        ? "Purchase return: returned items leave stock, and the supplier balance and purchases reduce. Original invoices stay in Day Book."
+        : "Reduces the supplier balance and purchases. Original invoices stay in Day Book.")
       : kind === "sale"
         ? "Sale value is always the full invoice. Amount received is a separate collection against that invoice — never a reduced sale."
         : "FinTrack posts the balanced voucher for you. Open + Voucher if you need a custom journal.";
@@ -1316,7 +1336,7 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
       patchItemLine(index, { itemId: "", itemName: "", itemSku: "", itemType: "product", unit: "Nos" });
       return;
     }
-    const defaultRate = kind === "sale" ? item.sellingPrice : item.purchasePrice;
+    const defaultRate = kind === "sale" || kind === "credit_note" ? item.sellingPrice : item.purchasePrice;
     patchItemLine(index, {
       itemId: item.id,
       itemName: item.name,
@@ -1363,7 +1383,7 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
           const partyId = event.target.value;
           set({
             partyId,
-            settlements: settlementKinds ? syncSettlements(partyId, form.amount) : form.settlements,
+            settlements: settlementKinds ? syncSettlements(partyId, settlementAmount) : form.settlements,
           });
         }}><option value="">Select</option>{partyList.map(party => <option key={party.id} value={party.id}>{party.name}</option>)}</select></Field>}
         {(kind === "sale" || kind === "purchase") && (
@@ -1371,6 +1391,14 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
             <select value={itemMode ? "items" : "amount"} onChange={event => set({ entryMode: event.target.value })}>
               <option value="items">Line items</option>
               <option value="amount">Single amount</option>
+            </select>
+          </Field>
+        )}
+        {returnKind && (
+          <Field label="Entry">
+            <select value={itemMode ? "items" : "amount"} onChange={event => set({ noteEntryMode: event.target.value, settlements: [] })}>
+              <option value="amount">Amount only (rate difference / discount)</option>
+              <option value="items">Returned items (updates stock)</option>
             </select>
           </Field>
         )}
@@ -1435,10 +1463,9 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
     {itemMode && (
       <section className="acc-form-section acc-item-lines">
         <h3 className="acc-form-section-title">Line items</h3>
-        <div className="table acc-table-wrap"><table><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>GST%</th><th className="acc-num">Amount</th><th></th></tr></thead><tbody>
+        <div className="table acc-table-wrap"><table><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Discount</th><th>GST%</th><th className="acc-num">Amount</th><th></th></tr></thead><tbody>
           {(form.itemLines || [emptyItemLine()]).map((line, index) => {
-            const qty = Number(line.quantity || 0);
-            const rate = Number(line.rate || 0);
+            const lineTotals = normalizeItemLine(line);
             const stock = line.itemId ? stockByItem[line.itemId] : null;
             return (
               <tr key={index}>
@@ -1455,8 +1482,9 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
                 </td>
                 <td><input type="number" min="0" step="0.001" value={line.quantity} onChange={event => patchItemLine(index, { quantity: event.target.value })} /></td>
                 <td><input type="number" min="0" step="0.01" value={line.rate} onChange={event => patchItemLine(index, { rate: event.target.value, rateTouched: true })} /></td>
+                <td><input inputMode="decimal" value={line.discount || ""} placeholder="₹ or %" aria-label="Discount (amount or percent)" onChange={event => patchItemLine(index, { discount: event.target.value })} /></td>
                 <td><input type="number" min="0" max="100" step="0.01" value={line.gstRate} onChange={event => patchItemLine(index, { gstRate: event.target.value })} /></td>
-                <td className="acc-num">{money(qty * rate)}</td>
+                <td className="acc-num">{money(lineTotals.netAmount)}</td>
                 <td>{(form.itemLines || []).length > 1 && <button type="button" className="btn danger" onClick={() => setForm(current => ({ ...current, itemLines: current.itemLines.filter((_, i) => i !== index) }))}>Remove</button>}</td>
               </tr>
             );
@@ -1464,15 +1492,14 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
         </tbody></table></div>
         <div className="acc-item-line-cards">
           {(form.itemLines || [emptyItemLine()]).map((line, index) => {
-            const qty = Number(line.quantity || 0);
-            const rate = Number(line.rate || 0);
+            const lineTotals = normalizeItemLine(line);
             const stock = line.itemId ? stockByItem[line.itemId] : null;
             const lineName = activeItems.find(item => item.id === line.itemId)?.name || "Select item";
             return (
               <article key={index} className="acc-item-line-card">
                 <div className="acc-item-line-card-top">
                   <strong>{lineName}</strong>
-                  <span className="acc-item-line-amount">{money(qty * rate)}</span>
+                  <span className="acc-item-line-amount">{money(lineTotals.netAmount)}</span>
                 </div>
                 <label className="accounts-filter-field">
                   <span className="small">Item</span>
@@ -1493,6 +1520,9 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
                   <label className="accounts-filter-field"><span className="small">Rate</span>
                     <input type="number" min="0" step="0.01" value={line.rate} onChange={event => patchItemLine(index, { rate: event.target.value, rateTouched: true })} />
                   </label>
+                  <label className="accounts-filter-field"><span className="small">Discount</span>
+                    <input inputMode="decimal" value={line.discount || ""} placeholder="₹ or %" onChange={event => patchItemLine(index, { discount: event.target.value })} />
+                  </label>
                   <label className="accounts-filter-field"><span className="small">GST %</span>
                     <input type="number" min="0" max="100" step="0.01" value={line.gstRate} onChange={event => patchItemLine(index, { gstRate: event.target.value })} />
                   </label>
@@ -1507,6 +1537,10 @@ function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, sav
         <button type="button" className="btn" onClick={() => setForm(current => ({ ...current, itemLines: [...(current.itemLines || []), emptyItemLine()] }))}>+ Add item</button>
         {itemPreview && (
           <p className="small acc-gst-preview">
+            {(() => {
+              const discountTotal = roundMoney(itemPreview.lines.reduce((sum, line) => sum + (Number.isFinite(line.discountAmount) ? line.discountAmount : 0), 0));
+              return discountTotal > 0 ? `Discount ${money(discountTotal)} · ` : "";
+            })()}
             Subtotal {money(itemPreview.taxable)}
             {gstOn && itemPreview.tax > 0 ? (itemPreview.igst > 0
               ? ` · IGST ${money(itemPreview.igst)}`
@@ -1682,6 +1716,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [itemCategories, setItemCategories] = useState(cached?.itemCategories ?? []);
   const [stockMovements, setStockMovements] = useState(cached?.stockMovements ?? []);
   const [voucherItemLines, setVoucherItemLines] = useState(cached?.voucherItemLines ?? []);
+  const [inventorySettings, setInventorySettings] = useState({ available: false, allowNegativeStock: false });
   const [audit, setAudit] = useState([]);
   const [locks, setLocks] = useState([]);
   const [statements, setStatements] = useState([]);
@@ -1905,6 +1940,15 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   }, [token, expandedVoucherId, migrationRequired]);
 
   useEffect(() => {
+    if (!token || migrationRequired || section !== "inventory") return undefined;
+    let cancelled = false;
+    loadInventorySettings(token)
+      .then(next => { if (!cancelled) setInventorySettings(next); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [section, token, activeCompanyId, migrationRequired]);
+
+  useEffect(() => {
     if (!token || migrationRequired) return undefined;
     if (section !== "setup" && section !== "bank" && section !== "overview") return undefined;
     let cancelled = false;
@@ -1963,21 +2007,28 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     }
   }, [ledgerId, visibleAccounts]);
 
+  const wantStockValue = wantOverview || wantPnl || wantSheet;
+  const periodStock = useMemo(
+    () => (wantStockValue && items.length
+      ? periodStockValues({ items, movements: stockMovements, voucherItemLines, from: range.from, to: range.to })
+      : null),
+    [wantStockValue, items, stockMovements, voucherItemLines, range],
+  );
   const metrics = useMemo(
-    () => (wantOverview ? dashboardMetrics(visibleAccounts, vouchers, parties, { today: todayIso(), ...range }) : null),
-    [wantOverview, visibleAccounts, vouchers, parties, range],
+    () => (wantOverview ? dashboardMetrics(visibleAccounts, vouchers, parties, { today: todayIso(), ...range, stock: periodStock }) : null),
+    [wantOverview, visibleAccounts, vouchers, parties, range, periodStock],
   );
   const tb = useMemo(
     () => (wantTrial ? trialBalance(visibleAccounts, vouchers, range) : { rows: [], totalDebit: 0, totalCredit: 0, balanced: true }),
     [wantTrial, visibleAccounts, vouchers, range],
   );
   const pnl = useMemo(
-    () => (wantPnl ? profitAndLoss(visibleAccounts, vouchers, range) : { income: [], expenses: [], totalIncome: 0, totalExpense: 0, net: 0 }),
-    [wantPnl, visibleAccounts, vouchers, range],
+    () => (wantPnl ? profitAndLoss(visibleAccounts, vouchers, range, { stock: periodStock }) : { income: [], expenses: [], totalIncome: 0, totalExpense: 0, openingStock: 0, closingStock: 0, stockAdjustment: 0, net: 0 }),
+    [wantPnl, visibleAccounts, vouchers, range, periodStock],
   );
   const sheet = useMemo(
-    () => (wantSheet ? balanceSheet(visibleAccounts, vouchers, range) : { assets: [], liabilities: [], equity: [], totalAssets: 0, totalLiabilities: 0, totalEquity: 0, netProfit: 0, balanced: true }),
-    [wantSheet, visibleAccounts, vouchers, range],
+    () => (wantSheet ? balanceSheet(visibleAccounts, vouchers, range, { stock: periodStock }) : { assets: [], liabilities: [], equity: [], totalAssets: 0, totalLiabilities: 0, totalEquity: 0, netProfit: 0, balanced: true }),
+    [wantSheet, visibleAccounts, vouchers, range, periodStock],
   );
   const flow = useMemo(
     () => (wantFlow ? cashFlow(visibleAccounts, vouchers, range) : { inflow: 0, outflow: 0, transfers: 0, net: 0 }),
@@ -2231,6 +2282,65 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     });
     if (outcome.skipped) return false;
     return ok;
+  };
+
+  const saveItemRecord = async form => {
+    const savedId = await upsertItem(token, form);
+    const itemId = form.id || savedId;
+    if (form.itemType !== "product" || typeof itemId !== "string") return;
+    const previous = items.find(item => item.id === itemId)?.openingRate ?? null;
+    const next = String(form.openingRate ?? "").trim() === "" ? null : Number(form.openingRate);
+    if (previous !== next) await setItemOpeningRate(token, itemId, next);
+  };
+
+  const importItems = async rows => {
+    setSaving(true);
+    setError("");
+    const categoryIds = new Map(itemCategories.map(category => [category.name.trim().toLowerCase(), category.id]));
+    let imported = 0;
+    const failed = [];
+    try {
+      for (const row of rows) {
+        try {
+          let categoryId = null;
+          const categoryKey = row.categoryName.trim().toLowerCase();
+          if (categoryKey) {
+            if (!categoryIds.has(categoryKey)) categoryIds.set(categoryKey, await upsertItemCategory(token, { name: row.categoryName.trim() }));
+            categoryId = categoryIds.get(categoryKey) || null;
+          }
+          const itemId = await upsertItem(token, { ...row, categoryId });
+          if (row.itemType === "product" && row.openingRate !== "" && typeof itemId === "string") {
+            await setItemOpeningRate(token, itemId, row.openingRate);
+          }
+          imported += 1;
+        } catch (err) {
+          failed.push(`${row.sku}: ${err?.message || "could not save"}`);
+        }
+      }
+      if (failed.length) setError(`Some items were not imported. ${failed.slice(0, 3).join("; ")}${failed.length > 3 ? ` and ${failed.length - 3} more` : ""}`);
+      if (imported) await refresh();
+    } finally {
+      setSaving(false);
+    }
+    return `${imported} item${imported === 1 ? "" : "s"} imported.${failed.length ? ` ${failed.length} failed.` : ""}`;
+  };
+
+  // Each variance is its own stock RPC; report how far a partial run got.
+  const applyPhysicalCount = ({ date, variances }) => run(async () => {
+    let posted = 0;
+    for (const row of variances) {
+      try {
+        await adjustStock(token, { itemId: row.itemId, date, quantityDelta: row.quantityDelta, reasonNote: `Physical stock count ${date}` });
+        posted += 1;
+      } catch (err) {
+        throw new Error(`${row.name}: ${err.message || "could not adjust"}${posted ? ` (${posted} of ${variances.length} adjustments already posted)` : ""}`);
+      }
+    }
+  }, `${variances.length} stock adjustment${variances.length === 1 ? "" : "s"} posted from the physical count.`);
+
+  const saveStockRules = async payload => {
+    const ok = await run(() => saveInventorySettings(token, payload), payload.allowNegativeStock ? "Negative stock allowed." : "Negative stock blocked.");
+    if (ok) setInventorySettings(current => ({ ...current, allowNegativeStock: Boolean(payload.allowNegativeStock) }));
   };
 
   // Two stock RPCs cannot share a transaction, so undo the material
@@ -2599,7 +2709,7 @@ const openVoucher = () => {
     const gstOn = activeCompany?.gstRegistration === "regular" && ["sale", "purchase", "credit_note", "debit_note"].includes(simpleKind);
     const partyState = selectedParty?.stateCode || gstStateFromGstin(selectedParty?.gstin);
     const intra = isIntraGst(activeCompany?.stateCode, partyState);
-    const useItems = (simpleKind === "sale" || simpleKind === "purchase") && simpleForm.entryMode !== "amount";
+    const useItems = usesItemLines(simpleKind, simpleForm);
     const moneyParts = simpleForm.moneyMode === "cash_upi"
       ? { cash: Number(simpleForm.receivedCash || 0), upi: Number(simpleForm.receivedUpi || 0) }
       : null;
@@ -2943,7 +3053,7 @@ const openVoucher = () => {
       return { filename: `fintrack-trial-balance-${stamp}`, rows: [["Code", "Account", "Debit", "Credit"], ...tb.rows.map(row => [row.code, row.name, row.debit, row.credit]), ["", "Total", tb.totalDebit, tb.totalCredit]] };
     }
     if (active === "pnl") {
-      return { filename: `fintrack-profit-loss-${stamp}`, rows: [["Section", "Account", "Amount"], ...pnl.income.map(row => ["Income", row.name, row.amount]), ["Income", "Total income", pnl.totalIncome], ...pnl.expenses.map(row => ["Expense", row.name, row.amount]), ["Expense", "Total expenses", pnl.totalExpense], ["", "Net profit", pnl.net]] };
+      return { filename: `fintrack-profit-loss-${stamp}`, rows: [["Section", "Account", "Amount"], ...pnl.income.map(row => ["Income", row.name, row.amount]), ["Income", "Total income", pnl.totalIncome], ...pnl.expenses.map(row => ["Expense", row.name, row.amount]), ["Expense", "Total expenses", pnl.totalExpense], ...(pnl.openingStock || pnl.closingStock ? [["Stock", "Opening stock", -pnl.openingStock], ["Stock", "Closing stock", pnl.closingStock]] : []), ["", "Net profit", pnl.net]] };
     }
     if (active === "balance") {
       return { filename: `fintrack-balance-sheet-${stamp}`, rows: [["Section", "Code", "Account", "Amount"], ...sheet.assets.map(row => ["Asset", row.code, row.name, row.balance]), ...sheet.liabilities.map(row => ["Liability", row.code, row.name, row.balance]), ...sheet.equity.map(row => ["Equity", row.code, row.name, row.balance])] };
@@ -3684,7 +3794,38 @@ const openVoucher = () => {
           </> : <AccEmpty title="No customers or suppliers yet" copy="Accounts parties are independent of Daily Finance customers and Chit Fund members." actionLabel={canWrite ? "+ Add party" : ""} onAction={canWrite ? openParty : undefined} />}
         </div>}
 
-        {section === "manufacturing" && manufacturingEnabled && <ManufacturingWorkspace items={items} stockMovements={stockMovements} saving={saving} onItems={() => openSection("setup")} onTransactions={() => openSection("vouchers")} onProductionRun={recordProductionRun} />}
+        {section === "manufacturing" && manufacturingEnabled && <ManufacturingWorkspace items={items} stockMovements={stockMovements} saving={saving} onItems={() => openSection("inventory")} onTransactions={() => openSection("vouchers")} onProductionRun={recordProductionRun} />}
+        {section === "inventory" && <div className="acc-panel">
+          <AccInventoryWorkspace
+            items={items}
+            movements={stockMovements}
+            voucherItemLines={voucherItemLines}
+            range={range}
+            saving={saving}
+            canEdit={canWrite}
+            inventorySettings={inventorySettings}
+            onSaveInventorySettings={saveStockRules}
+            onImportItems={importItems}
+            onApplyCount={applyPhysicalCount}
+            itemsSetup={<AccItemsSetup
+              items={items}
+              categories={itemCategories}
+              movements={stockMovements}
+              voucherItemLines={voucherItemLines}
+              vouchers={vouchers}
+              saving={saving}
+              onSaveItem={form => run(() => saveItemRecord(form), form.id ? "Item updated." : "Item created.")}
+              onDeleteItem={item => run(() => deleteItem(token, item.id), "Item deleted.")}
+              onSetItemActive={(id, active) => run(() => setItemActive(token, id, active), active ? "Item reactivated." : "Item deactivated.")}
+              onSaveCategory={async payload => {
+                const ok = await run(() => upsertItemCategory(token, payload), "Category saved.");
+                if (!ok) throw new Error("Could not create category. Confirm migration 067 is applied, then try again.");
+              }}
+              onDeleteCategory={id => run(() => deleteItemCategory(token, id), "Category deleted.")}
+              onAdjustStock={payload => run(() => adjustStock(token, payload), "Stock adjustment saved.")}
+            />}
+          />
+        </div>}
 
         {section === "more" && <div className="acc-panel">
           <p className="copy">Ledger, banking, statements and setup. Day-to-day work stays on Home, Transactions, Parties and Reports.</p>
@@ -3738,6 +3879,12 @@ const openVoucher = () => {
           {(section === "pnl" || reportTab === "pnl") && section !== "trial" && section !== "balance" && <div className="grid two spacer">
             <div className="card"><strong>Income</strong>{pnl.income.filter(row => row.amount).map(row => <p key={row.id} className="row spacer"><span>{row.name}</span><strong>{money(row.amount)}</strong></p>)}<p className="row"><span>Total income</span><strong className="green">{money(pnl.totalIncome)}</strong></p></div>
             <div className="card"><strong>Expenses</strong>{pnl.expenses.filter(row => row.amount).map(row => <p key={row.id} className="row spacer"><span>{row.name}</span><strong>{money(row.amount)}</strong></p>)}<p className="row"><span>Total expenses</span><strong className="red">{money(pnl.totalExpense)}</strong></p></div>
+            {(pnl.openingStock || pnl.closingStock) ? <div className="card span"><strong>Stock (weighted average)</strong>
+              <p className="row spacer"><span>Opening stock (charged)</span><strong>{money(pnl.openingStock)}</strong></p>
+              <p className="row"><span>Closing stock (added back)</span><strong>{money(pnl.closingStock)}</strong></p>
+              <p className="row"><span>Stock adjustment to profit</span><strong className={pnl.stockAdjustment < 0 ? "red" : "green"}>{money(pnl.stockAdjustment)}</strong></p>
+              <p className="small">Purchases are expensed when booked; cost of goods sold = opening stock + purchases − closing stock.</p>
+            </div> : null}
             <div className="card span"><strong>Net {pnl.net < 0 ? "loss" : "profit"}</strong><p className={`metric-value ${pnl.net < 0 ? "red" : "green"}`}>{money(pnl.net)}</p></div>
           </div>}
           {(section === "balance" || reportTab === "balance") && section !== "trial" && section !== "pnl" && <div className="grid two spacer">
@@ -3883,7 +4030,7 @@ const openVoucher = () => {
           )}
           {section === "reports" && reportTab === "stock_moves" && (
             <div className="table spacer acc-table-wrap"><table><thead><tr><th>Date</th><th>Item</th><th>Direction</th><th className="acc-num">Qty</th><th>Reason</th><th>Voucher</th></tr></thead><tbody>
-              {stockMoveRows.map(row => <tr key={row.id}><td>{row.movementDate}</td><td>{row.itemName}</td><td>{row.direction}</td><td className="acc-num">{row.quantityDelta}</td><td>{row.reason}</td><td>{row.voucherNumber || "—"}</td></tr>)}
+              {stockMoveRows.map(row => <tr key={row.id}><td>{row.movementDate}</td><td>{row.itemName}</td><td>{row.direction}</td><td className="acc-num">{row.quantityDelta}</td><td>{stockReasonLabel(row.reason)}</td><td>{row.voucherNumber || "—"}</td></tr>)}
               {!stockMoveRows.length && <tr><td colSpan="6">No stock movements in this period.</td></tr>}
             </tbody></table></div>
           )}
@@ -4271,26 +4418,10 @@ const openVoucher = () => {
           </AccSetupSection>
           <AccSetupSection
             icon="I"
-            title="Items"
-            copy="Products and services for itemized sales/purchases and quantity stock. Stock is company-scoped quantity tracking only — it does not post Inventory/COGS ledgers (not perpetual inventory accounting)."
+            title="Items & inventory"
+            copy="Items, stock value, physical count, ageing, CSV import and stock rules now live in the Inventory section."
           >
-            <AccItemsSetup
-              items={items}
-              categories={itemCategories}
-              movements={stockMovements}
-              voucherItemLines={voucherItemLines}
-              vouchers={vouchers}
-              saving={saving}
-              onSaveItem={form => run(() => upsertItem(token, form), form.id ? "Item updated." : "Item created.")}
-              onDeleteItem={item => run(() => deleteItem(token, item.id), "Item deleted.")}
-              onSetItemActive={(id, active) => run(() => setItemActive(token, id, active), active ? "Item reactivated." : "Item deactivated.")}
-              onSaveCategory={async payload => {
-                const ok = await run(() => upsertItemCategory(token, payload), "Category saved.");
-                if (!ok) throw new Error("Could not create category. Confirm migration 067 is applied, then try again.");
-              }}
-              onDeleteCategory={id => run(() => deleteItemCategory(token, id), "Category deleted.")}
-              onAdjustStock={payload => run(() => adjustStock(token, payload), "Stock adjustment saved.")}
-            />
+            <button type="button" className="btn primary" onClick={() => openSection("inventory")}>Open Inventory</button>
           </AccSetupSection>
           <div id="accounts-period-lock"><AccSetupSection icon="L" title="Period locking" copy="Lock a closed period so posted vouchers in that range cannot be changed. Owner only.">
             {!canAdmin && <p className="small">Only the business owner can lock or reopen periods.</p>}

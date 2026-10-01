@@ -81,23 +81,34 @@ export function trialBalance(accounts, vouchers, range = {}) {
   return { rows, totalDebit, totalCredit, balanced: totalDebit === totalCredit };
 }
 
-export function profitAndLoss(accounts, vouchers, range = {}) {
+/**
+ * `stock` ({ openingStock, closingStock } from inventoryValuation.periodStockValues) adds the
+ * periodic trading adjustment: purchases stay expensed, closing stock is added back and
+ * opening stock is charged, so cost of goods sold = opening + purchases − closing.
+ */
+export function profitAndLoss(accounts, vouchers, range = {}, { stock = null } = {}) {
   const rows = ledgerBalances(accounts, vouchers, { ...range, includeOpening: false });
   const income = rows.filter(row => row.groupType === "income").map(row => ({ ...row, amount: row.balance }));
   const expenses = rows.filter(row => row.groupType === "expense").map(row => ({ ...row, amount: row.balance }));
   const totalIncome = roundMoney(income.reduce((sum, row) => sum + row.amount, 0));
   const totalExpense = roundMoney(expenses.reduce((sum, row) => sum + row.amount, 0));
+  const openingStock = roundMoney(stock?.openingStock || 0);
+  const closingStock = roundMoney(stock?.closingStock || 0);
+  const stockAdjustment = roundMoney(closingStock - openingStock);
   return {
     income,
     expenses,
     totalIncome,
     totalExpense,
-    net: roundMoney(totalIncome - totalExpense),
+    openingStock,
+    closingStock,
+    stockAdjustment,
+    net: roundMoney(totalIncome - totalExpense + stockAdjustment),
   };
 }
 
-export function balanceSheet(accounts, vouchers, range = {}) {
-  const pnl = profitAndLoss(accounts, vouchers, range);
+export function balanceSheet(accounts, vouchers, range = {}, { stock = null } = {}) {
+  const pnl = profitAndLoss(accounts, vouchers, range, { stock });
   const rows = ledgerBalances(accounts, vouchers, range);
   const assets = rows.filter(row => row.groupType === "asset");
   const liabilities = rows.filter(row => row.groupType === "liability");
@@ -106,6 +117,12 @@ export function balanceSheet(accounts, vouchers, range = {}) {
       ? { ...row, balance: roundMoney(row.balance + pnl.net) }
       : row
   ));
+  if (pnl.closingStock) {
+    assets.push({ id: "inventory:closing", code: "STOCK", name: "Closing stock (inventory)", groupType: "asset", balance: pnl.closingStock, derived: true });
+  }
+  if (pnl.openingStock) {
+    equity.push({ id: "inventory:opening", code: "STOCK-OPEN", name: "Opening stock carried in", groupType: "equity", balance: pnl.openingStock, derived: true });
+  }
   const totalAssets = roundMoney(assets.reduce((sum, row) => sum + row.balance, 0));
   const totalLiabilities = roundMoney(liabilities.reduce((sum, row) => sum + row.balance, 0));
   const totalEquity = roundMoney(equity.reduce((sum, row) => sum + row.balance, 0));
@@ -314,10 +331,10 @@ export function bankVoucherLines(accounts, vouchers, coaId, parties = []) {
   return rows.sort((a, b) => `${a.date}${a.voucherNumber}`.localeCompare(`${b.date}${b.voucherNumber}`));
 }
 
-export function overviewMetrics(accounts, vouchers, parties, range) {
+export function overviewMetrics(accounts, vouchers, parties, range, { stock = null } = {}) {
   const tb = trialBalance(accounts, vouchers, range);
-  const pnl = profitAndLoss(accounts, vouchers, range);
-  const sheet = balanceSheet(accounts, vouchers, range);
+  const pnl = profitAndLoss(accounts, vouchers, range, { stock });
+  const sheet = balanceSheet(accounts, vouchers, range, { stock });
   const cash = cashFlow(accounts, vouchers, range);
   const receivables = partyBalances(accounts, vouchers, parties, { kind: "receivable", ...range });
   const payables = partyBalances(accounts, vouchers, parties, { kind: "payable", ...range });
@@ -375,21 +392,21 @@ export function invoiceAgingTotals(rows = []) {
   return Object.fromEntries(Object.entries(buckets).map(([key, value]) => [key, roundMoney(value)]));
 }
 
-export function dashboardMetrics(accounts, vouchers, parties, { today, from, to } = {}) {
+export function dashboardMetrics(accounts, vouchers, parties, { today, from, to, stock = null } = {}) {
   const range = { from, to };
   const balances = ledgerBalances(accounts, vouchers, range);
-  const pnl = profitAndLoss(accounts, vouchers, range);
+  const pnl = profitAndLoss(accounts, vouchers, range, { stock });
   const receivables = partyBalances(accounts, vouchers, parties, { kind: "receivable", ...range });
   const payables = partyBalances(accounts, vouchers, parties, { kind: "payable", ...range });
   const byType = type => roundMoney(
     balances.filter(row => row.accountType === type).reduce((sum, row) => sum + row.balance, 0),
   );
   const cashAccount = findAccount(accounts, { accountType: "cash" });
-  const assets = roundMoney(balances.filter(row => row.groupType === "asset").reduce((sum, row) => sum + row.balance, 0));
+  const assets = roundMoney(balances.filter(row => row.groupType === "asset").reduce((sum, row) => sum + row.balance, 0) + pnl.closingStock);
   const liabilities = roundMoney(balances.filter(row => row.groupType === "liability").reduce((sum, row) => sum + row.balance, 0));
   const equity = roundMoney(balances.filter(row => row.groupType === "equity").reduce((sum, row) => (
     sum + (row.code === SYSTEM_CODES.retained ? roundMoney(row.balance + pnl.net) : row.balance)
-  ), 0));
+  ), 0) + pnl.openingStock);
   const tbRows = balances.filter(row => row.debit || row.credit);
   const accountByKey = new Map((accounts || []).flatMap(item => [[item.id, item], [item.code, item]]));
   const todayRows = (vouchers || []).filter(voucher => affectsLedgers(voucher) && voucher.date === today);

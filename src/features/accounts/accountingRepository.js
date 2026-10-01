@@ -329,7 +329,12 @@ export const postVoucher = async (token, payload) => {
       amount: Number(link.amount || 0),
     }));
   }
-  const id = await wrap(accRpc("acc_post_voucher", args, token));
+  const id = await wrap(accRpc("acc_post_voucher", args, token)).catch(err => {
+    if (/only supported on sales and purchase/i.test(String(err?.message || ""))) {
+      throw new Error("Returned items need migration 079 (079_accounts_inventory_returns_discounts.sql) in the Supabase SQL editor. Use \"Amount only\" until it is applied.");
+    }
+    throw err;
+  });
   if (payload.dueDate) await setVoucherDueDate(token, id, payload.dueDate);
   // Legacy path: older DBs without input_item_lines still accept a follow-up save.
   if (itemLines.length && payload.forceSeparateItemSave) {
@@ -480,6 +485,7 @@ const mapItem = row => ({
   hsnSac: row.hsn_sac || "",
   openingStock: Number(row.opening_stock || 0),
   openingStockDate: row.opening_stock_date || null,
+  openingRate: row.opening_rate === null || row.opening_rate === undefined ? null : Number(row.opening_rate),
   reorderLevel: Number(row.reorder_level || 0),
   isActive: row.is_active !== false,
 });
@@ -496,6 +502,7 @@ const mapVoucherItemLine = row => ({
   quantity: Number(row.quantity || 0),
   rate: Number(row.rate || 0),
   amount: Number(row.amount || 0),
+  discountAmount: Number(row.discount_amount || 0),
   gstRate: Number(row.gst_rate || 0),
   hsnSac: row.hsn_sac || "",
   taxableAmount: Number(row.taxable_amount || 0),
@@ -522,18 +529,52 @@ export const loadItemCategories = token => wrap(
     .then(rows => (rows || []).map(mapItemCategory)),
 );
 
+const ITEM_COLUMNS = "id,item_type,name,sku,category_id,unit,description,selling_price,purchase_price,gst_rate,hsn_sac,opening_stock,opening_stock_date,reorder_level,is_active";
+const itemsPath = columns => `/rest/v1/acc_items?select=${columns}&order=name.asc${companyEq()}`;
+
 export const loadItems = token => wrap(
-  accQuery(
-    `/rest/v1/acc_items?select=id,item_type,name,sku,category_id,unit,description,selling_price,purchase_price,gst_rate,hsn_sac,opening_stock,opening_stock_date,reorder_level,is_active&order=name.asc${companyEq()}`,
-    token,
-  ).then(rows => (rows || []).map(mapItem)),
+  accQuery(itemsPath(`${ITEM_COLUMNS},opening_rate`), token)
+    .catch(err => {
+      if (!/opening_rate/i.test(String(err?.message || ""))) throw err;
+      return accQuery(itemsPath(ITEM_COLUMNS), token);
+    })
+    .then(rows => (rows || []).map(mapItem)),
 );
 
+const migration080Error = err => {
+  if (!isMissing(err)) return err;
+  const error = new Error("Run migration 080_accounts_inventory_valuation_stock_rules.sql in the Supabase SQL editor to enable opening rate and stock settings.");
+  error.code = "MIGRATION_REQUIRED";
+  return error;
+};
+
+export const setItemOpeningRate = (token, itemId, openingRate) =>
+  accRpc("acc_set_item_opening_rate", {
+    input_item_id: itemId,
+    input_opening_rate: openingRate === "" || openingRate === null || openingRate === undefined ? null : Number(openingRate),
+  }, token).catch(err => { throw migration080Error(err); });
+
+export const loadInventorySettings = token =>
+  ignoreMissing(accQuery(`/rest/v1/acc_inventory_settings?select=allow_negative_stock${companyEq()}&limit=1`, token))
+    .then(rows => ({
+      available: rows !== null,
+      allowNegativeStock: Boolean(rows?.[0]?.allow_negative_stock),
+    }));
+
+export const saveInventorySettings = (token, { allowNegativeStock }) =>
+  accRpc("acc_save_inventory_settings", { input_allow_negative_stock: Boolean(allowNegativeStock) }, token)
+    .catch(err => { throw migration080Error(err); });
+
+const VOUCHER_ITEM_LINE_COLUMNS = "id,voucher_id,line_no,item_id,item_name,item_sku,item_type,unit,quantity,rate,amount,gst_rate,hsn_sac,taxable_amount,cgst_amount,sgst_amount,igst_amount";
+const voucherItemLinesPath = columns => `/rest/v1/acc_voucher_item_lines?select=${columns}&order=line_no.asc&limit=20000${companyEq()}`;
+
 export const loadVoucherItemLines = token => wrap(
-  accQuery(
-    `/rest/v1/acc_voucher_item_lines?select=id,voucher_id,line_no,item_id,item_name,item_sku,item_type,unit,quantity,rate,amount,gst_rate,hsn_sac,taxable_amount,cgst_amount,sgst_amount,igst_amount&order=line_no.asc&limit=20000${companyEq()}`,
-    token,
-  ).then(rows => (rows || []).map(mapVoucherItemLine)),
+  accQuery(voucherItemLinesPath(`${VOUCHER_ITEM_LINE_COLUMNS},discount_amount`), token)
+    .catch(err => {
+      if (!/discount_amount/i.test(String(err?.message || ""))) throw err;
+      return accQuery(voucherItemLinesPath(VOUCHER_ITEM_LINE_COLUMNS), token);
+    })
+    .then(rows => (rows || []).map(mapVoucherItemLine)),
 );
 
 export const loadStockMovements = token => wrap(

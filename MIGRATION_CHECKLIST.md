@@ -79,6 +79,8 @@ Run these in the Supabase SQL Editor **in order**. Each file is idempotent where
 | 076 | `076_fix_ambiguous_item_type.sql` | Fix `acc_apply_voucher_item_lines` ambiguous `item_type` column/variable clash when posting sales with line items |
 | 077 | `077_accounts_crm_pipeline.sql` | Accounts **Customer pipeline** (CRM stages Lead → Won/Lost) table + list/set RPCs. Never touches ledger balances |
 | 078 | `078_accounts_crm_pipeline_hardening.sql` | **Run right after 077.** Pipeline RPCs verify the company belongs to your organisation and the party belongs to that company |
+| 079 | `079_accounts_inventory_returns_discounts.sql` | Inventory: credit notes / debit notes with **returned items** move stock (`sales_return` in, `purchase_return` out with stock check); item lines store a per-line `discount_amount`; the same item may repeat on a voucher; cancel/reverse undoes return stock |
+| 080 | `080_accounts_inventory_valuation_stock_rules.sql` | Inventory: `acc_items.opening_rate` + `acc_set_item_opening_rate` (weighted-average valuation seed); `acc_inventory_settings` + `acc_save_inventory_settings` (allow negative stock per company); stock checks use the entry date and block entries that would make any later day negative (`acc_assert_stock_available_on`, used by item lines and stock adjustments). Apply after 079 |
 
 After running 041 (and 042 if Save & sync failed), open **Accounts**, set opening balances once on the Cashbook section, then tap **Sync from FinTrack** to backfill historical collections and disbursements. If Cashbook **Delete** does nothing, run 043. After 044, tap **Sync from FinTrack** again so monthly principal disbursements are posted. After 045, existing daily bankrupt `loss_amount` values are rewritten to disbursed − collected.
 

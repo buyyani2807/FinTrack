@@ -8,9 +8,11 @@ import {
   currentStockForItem,
   emptyItemForm,
   stockMovementReport,
+  stockReasonLabel,
   stockStatus,
   validateItemForm,
 } from "./inventoryModel.js";
+import { costItemMovements } from "./inventoryValuation.js";
 
 const money = formatInr;
 
@@ -66,6 +68,7 @@ export function AccItemsSetup({
   }, [items, search, typeFilter, activeFilter]);
 
   const detail = items.find(item => item.id === detailId) || null;
+  const detailValue = detail && detail.itemType === "product" ? costItemMovements(detail, movements, voucherItemLines) : null;
   const detailMoves = detail ? stockMovementReport(movements, items, { itemId: detail.id }).slice(0, 12) : [];
   const detailSales = detail
     ? voucherItemLines.filter(line => line.itemId === detail.id && vouchers.find(v => v.id === line.voucherId)?.voucherType === "sales")
@@ -95,6 +98,7 @@ export function AccItemsSetup({
       hsnSac: item.hsnSac || "",
       openingStock: String(item.openingStock ?? "0"),
       openingStockDate: item.openingStockDate || "",
+      openingRate: item.openingRate == null ? "" : String(item.openingRate),
       reorderLevel: String(item.reorderLevel ?? "0"),
       isActive: item.isActive !== false,
     });
@@ -341,6 +345,7 @@ export function AccItemsSetup({
               {form.itemType === "product" && <>
                 <Field label="Opening stock"><input type="number" min="0" step="0.001" value={form.openingStock} onChange={event => setForm(current => ({ ...current, openingStock: event.target.value }))} /></Field>
                 <Field label="Opening date"><input type="date" value={form.openingStockDate} onChange={event => setForm(current => ({ ...current, openingStockDate: event.target.value }))} /></Field>
+                <Field label="Opening rate (cost / unit)"><input type="number" min="0" step="0.01" value={form.openingRate ?? ""} placeholder={form.purchasePrice ? `Uses purchase price ${form.purchasePrice}` : "Uses purchase price"} onChange={event => setForm(current => ({ ...current, openingRate: event.target.value }))} /></Field>
                 <Field label="Reorder level"><input type="number" min="0" step="0.001" value={form.reorderLevel} onChange={event => setForm(current => ({ ...current, reorderLevel: event.target.value }))} /></Field>
               </>}
               <Field className="span" label="Description"><input value={form.description} onChange={event => setForm(current => ({ ...current, description: event.target.value }))} /></Field>
@@ -364,10 +369,10 @@ export function AccItemsSetup({
               <article className="card acc-metric-card"><div className="metric-label">Purchase</div><div className="metric-value">{money(detail.purchasePrice)}</div></article>
             </div>
             <p className="small">GST {detail.gstRate}% · HSN {detail.hsnSac || "—"} · Reorder {detail.reorderLevel} · {stockStatus(stockByItem[detail.id], detail.reorderLevel) === "low" ? "Low stock" : "Normal"}</p>
-            <p className="small">Item profitability will be available once sufficient cost data is recorded.</p>
+            {detailValue && <p className="small">Average cost {money(detailValue.averageCost)} · Stock value {money(detailValue.value)} (weighted average)</p>}
             <h3 className="acc-section-title">Recent stock movements</h3>
             <div className="table acc-table-wrap"><table><thead><tr><th>Date</th><th>Reason</th><th className="acc-num">Qty</th><th>Voucher</th></tr></thead><tbody>
-              {detailMoves.map(row => <tr key={row.id}><td>{row.movementDate}</td><td>{row.reason}</td><td className="acc-num">{row.quantityDelta > 0 ? `+${row.quantityDelta}` : row.quantityDelta}</td><td>{row.voucherNumber || "—"}</td></tr>)}
+              {detailMoves.map(row => <tr key={row.id}><td>{row.movementDate}</td><td>{stockReasonLabel(row.reason)}</td><td className="acc-num">{row.quantityDelta > 0 ? `+${row.quantityDelta}` : row.quantityDelta}</td><td>{row.voucherNumber || "—"}</td></tr>)}
               {!detailMoves.length && <tr><td colSpan="4">No movements yet.</td></tr>}
             </tbody></table></div>
             <p className="small">Sales lines: {detailSales.length} · Purchase lines: {detailPurchases.length}</p>

@@ -179,8 +179,8 @@ export function buildAccountsAttentionItems({
       severity: "medium",
       title: `${lowStockCount} item${lowStockCount === 1 ? "" : "s"} below reorder level`,
       detail: "Inventory reorder attention.",
-      actionLabel: "Open Items",
-      href: { panel: "accounts", section: "items" },
+      actionLabel: "Open Inventory",
+      href: { panel: "accounts", section: "inventory" },
     });
   }
   if (unmatchedBankLines > 0) {

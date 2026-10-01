@@ -668,6 +668,22 @@ html:has(.accounts-dashboard) .financier-nav {
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
+.accounts-dashboard .acc-inventory .accounts-section-nav {
+  flex-wrap: wrap;
+}
+
+.accounts-dashboard .acc-inventory .acc-count-input {
+  width: 110px;
+  text-align: right;
+}
+
+.accounts-dashboard .acc-inventory .acc-toggle-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-weight: 600;
+}
+
 .accounts-dashboard .acc-overview {
   display: grid;
   gap: 16px;
