@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { FilterSelect, SearchInput, SegmentedControl } from "../../../components/ui.jsx";
+import { FilterSelect, SearchInput } from "../../../components/ui.jsx";
 import { backfillCashbook } from "../cashbookRepository.js";
 import { CASHBOOK_SOURCE_FILTERS, sourceOriginLabel } from "../cashbookModel.js";
 import { money } from "../cashbookConfig.js";
@@ -8,7 +8,7 @@ import { PeriodPills } from "../components/PeriodPills.jsx";
 import { CashbookOverview } from "../components/CashbookOverview.jsx";
 
 const DIRECTION_OPTIONS = [
-  { id: "all", label: "All" },
+  { id: "all", label: "All types" },
   { id: "in", label: "Money in" },
   { id: "out", label: "Money out" },
   { id: "transfer", label: "Transfer" },
@@ -42,20 +42,25 @@ export function CashbookLedgerSection({
     <div className="accounts-panel">
       <CashbookOverview balances={allTimeOverview} movement={periodOverview} period={period} />
       <div className="card accounts-filter-card cashbook-filters spacer">
-        <div className="cashbook-filters-top">
-          <SearchInput label="Search transactions" placeholder="Search customer, receipt, reference…" value={search} onChange={event => setSearch(event.target.value)} />
+        <div className="cashbook-filters-scope">
           <PeriodPills {...periodProps} />
+          <span className="cashbook-filters-count" aria-live="polite">{cashbookRows.length} {cashbookRows.length === 1 ? "transaction" : "transactions"}</span>
         </div>
-        <div className="cashbook-filters-row">
-          <FilterSelect label="Account" value={accountFilter} onChange={setAccountFilter}>
-            <option value="all">All accounts</option>
-            {ledgers.map(ledger => <option key={ledger.id} value={ledger.id}>{ledger.name}</option>)}
-          </FilterSelect>
-          <FilterSelect label="Source" value={sourceFilter} onChange={setSourceFilter}>
-            {CASHBOOK_SOURCE_FILTERS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
-          </FilterSelect>
-          <SegmentedControl label="Money in or out" options={DIRECTION_OPTIONS} value={directionFilter} onChange={setDirectionFilter} className="cashbook-direction" />
-          {filtersActive && <button type="button" className="ft-clear-filters" onClick={clearFilters}><X size={14} aria-hidden="true" />Clear filters</button>}
+        <div className="cashbook-filters-refine">
+          <SearchInput label="Search transactions" placeholder="Search customer, receipt, reference…" value={search} onChange={event => setSearch(event.target.value)} />
+          <div className="cashbook-filters-chips">
+            <FilterSelect label="Account" value={accountFilter} onChange={setAccountFilter}>
+              <option value="all">All accounts</option>
+              {ledgers.map(ledger => <option key={ledger.id} value={ledger.id}>{ledger.name}</option>)}
+            </FilterSelect>
+            <FilterSelect label="Source" value={sourceFilter} onChange={setSourceFilter}>
+              {CASHBOOK_SOURCE_FILTERS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
+            </FilterSelect>
+            <FilterSelect label="Type" value={directionFilter} onChange={setDirectionFilter}>
+              {DIRECTION_OPTIONS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
+            </FilterSelect>
+            {filtersActive && <button type="button" className="ft-clear-filters" onClick={clearFilters}><X size={14} aria-hidden="true" />Clear</button>}
+          </div>
         </div>
       </div>
       <div className="accounts-action-row spacer">

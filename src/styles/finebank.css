@@ -543,22 +543,30 @@ input:disabled, select:disabled, textarea:disabled { background: var(--ft-surfac
 .ft-filter-select.is-active { border-color: var(--ft-primary); background: var(--ft-primary-soft); }
 .ft-filter-select.is-active .ft-filter-select-value, .ft-filter-select.is-active .ft-filter-select-chevron { color: var(--ft-primary); }
 
-/* Cashbook filters: search + period on top, refinements below */
-.cashbook-filters { display: grid; gap: 14px; padding: 16px !important; }
-.cashbook-filters-top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-.cashbook-filters-top .ft-search { flex: 1 1 280px; }
+/* Cashbook filters. Row 1 = time range (it also drives the totals above) + result count;
+   row 2 = everything that narrows the list, as one toolbar of equal-height controls. */
+.cashbook-filters { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 16px !important; }
+.cashbook-filters > *, .cashbook-filters-chips { min-width: 0; }
+.cashbook-filters-scope { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.cashbook-filters-count { margin-left: auto; color: var(--ft-muted); font-size: 13px; white-space: nowrap; }
+.cashbook-filters-refine { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cashbook-filters-refine .ft-search { flex: 1 1 260px; }
+.cashbook-filters-refine .ft-search > input { min-height: 38px; }
+.cashbook-filters-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cashbook-filters .ft-filter-select { min-height: 38px; border-radius: 10px; }
 .accounts-period-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .accounts-custom-range input[type="date"] { min-height: 36px !important; padding: 6px 10px !important; font-size: 13px; }
-.cashbook-filters-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 14px; border-top: 1px solid var(--ft-divider); }
 .ft-clear-filters { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; padding: 6px 8px; border: 0; border-radius: 6px; background: none; color: var(--ft-primary); font: 600 13px/1.2 var(--ft-font); cursor: pointer; }
 .ft-clear-filters:hover { background: var(--ft-primary-soft); }
 @media (width <= 680px) {
-  .cashbook-filters-top .ft-search, .accounts-period-bar, .accounts-period-bar > .ft-segmented { flex: 1 1 100%; }
-  .cashbook-direction { flex: 1 1 100%; }
-  /* full-width rows on phones: label left, value right, nothing truncated */
-  .ft-filter-select { flex: 1 1 100%; min-height: 40px; border-radius: 10px; }
-  .ft-filter-select-value { flex: 1; max-width: none; text-align: right; }
-  .ft-clear-filters { margin: 0 auto; }
+  .cashbook-filters-count { display: none; }
+  .accounts-period-bar, .accounts-period-bar > .ft-segmented, .cashbook-filters-refine .ft-search { flex: 1 1 100%; }
+  .accounts-custom-range { flex: 1 1 100%; flex-wrap: nowrap; }
+  .accounts-custom-range input[type="date"] { flex: 1 1 0; min-width: 0; }
+  /* chips: one strip that scrolls sideways, edge to edge inside the card */
+  .cashbook-filters-chips { flex: 1 1 100%; flex-wrap: nowrap; overflow-x: auto; margin: 0 -16px; padding: 2px 16px; scrollbar-width: none; }
+  .cashbook-filters-chips::-webkit-scrollbar { display: none; }
+  .cashbook-filters-chips > * { flex: none; }
 }
 .ft-icon-btn { display: inline-grid; place-items: center; width: 40px; height: 40px; flex: none; padding: 0; border: 0; border-radius: var(--ft-radius-sm); background: transparent; color: var(--ft-text-2); cursor: pointer; }
 .ft-icon-btn:hover { background: var(--ft-surface-hover); color: var(--ft-text); }
