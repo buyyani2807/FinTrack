@@ -229,6 +229,8 @@ td:has(> .btn + .btn) { line-height: 2.6; }
 .ft-auth-brandrow .ft-brand { color: var(--ft-text) !important; font-size: 22px; letter-spacing: .08em; }
 .ft-auth-product { padding: 4px 10px; border-radius: 999px; background: var(--ft-primary-soft); color: var(--ft-primary); font-weight: 600; font-size: 13px; }
 .ft-auth-title { margin: 0 0 8px; color: var(--ft-text); font-weight: 700; font-size: clamp(30px, 2.3vw, 44px); line-height: 1.2; letter-spacing: -.02em; }
+/* long sign-up heading stays on one line, scaling down to fit */
+.ft-auth-title.is-one-line { white-space: nowrap; font-size: clamp(22px, 2vw, 34px); }
 .ft-auth .login .sub.ft-auth-sub { margin: 0 0 28px !important; text-align: left; font-size: 15px !important; line-height: 1.5; }
 
 /* who is signing in */
@@ -397,10 +399,12 @@ td:has(> .btn + .btn) { line-height: 2.6; }
   .ft-auth-showcase { display: none; }
   .ft-auth .login.ft-auth-panel { min-height: 100svh; padding: 48px 24px; background: var(--ft-bg); }
   .ft-auth-brandrow { display: flex; }
+  .ft-auth-title.is-one-line { font-size: 28px; }
 }
 @media (width <= 680px) {
   .ft-auth .login.ft-auth-panel { align-items: flex-start; padding: 32px 16px; }
   .ft-auth-title { font-size: 28px; line-height: 34px; }
+  .ft-auth-title.is-one-line { font-size: min(28px, 6vw); }
   .ft-auth-modes { gap: 8px; }
   .ft-auth-mode { gap: 10px; padding: 10px; }
   .ft-auth-mode-icon { width: 36px; height: 36px; }

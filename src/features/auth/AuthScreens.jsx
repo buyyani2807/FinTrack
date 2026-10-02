@@ -21,7 +21,7 @@ const MODE_GUIDE = {
   agent: "Use the email and password your financier created for you under Collection Staff.",
   customer: "Your financier shares your portal ID (it starts with FT-) and a 6-digit PIN when they open your customer portal.",
   chitCustomer: "Your chit manager shares your portal ID (it starts with CF-) and a 6-digit PIN when you join a scheme.",
-  signUp: "Set up your finance business. You can add collection staff and customers after signing in.",
+  signUp: "Set up your finance business.",
 };
 
 // Plain-language versions of common sign-in errors; anything else is shown as it comes.
@@ -202,7 +202,7 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
           <Wordmark />
           {brandName !== "FinTrack" && <span className="ft-auth-product">{brandName.replace(/^FinTrack\s*/, "")}</span>}
         </div>
-        <h1 className="ft-auth-title">{mode === "signUp" ? "Create your business account" : "Welcome back"}</h1>
+        <h1 className={`ft-auth-title${mode === "signUp" ? " is-one-line" : ""}`}>{mode === "signUp" ? "Create your business account" : "Welcome back"}</h1>
         <p className="sub ft-auth-sub">{brandSub}</p>
 
         {mode !== "signUp" && <div className="ft-auth-modes" role="group" aria-label="Sign in as">
@@ -228,7 +228,7 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
           </> : <>
             {mode === "signUp" && <>
               <Field label="Business name"><IconInput icon={Building2} placeholder="e.g. Vivek Finance" aria-invalid={invalid.businessName || undefined} value={businessName} onChange={event => { setBusinessName(event.target.value); clearInvalid("businessName"); }} /></Field>
-              <Field label="Your full name"><IconInput icon={UserRound} aria-invalid={invalid.fullName || undefined} value={fullName} onChange={event => { setFullName(event.target.value); clearInvalid("fullName"); }} /></Field>
+              <Field label="Your full name"><IconInput icon={UserRound} placeholder="e.g. Vivek Kumar" aria-invalid={invalid.fullName || undefined} value={fullName} onChange={event => { setFullName(event.target.value); clearInvalid("fullName"); }} /></Field>
               {signupInviteRequired() && <Field label="Invite code"><IconInput icon={Ticket} value={inviteCode} onChange={event => setInviteCode(event.target.value)} /></Field>}
             </>}
             <Field label={isAgent ? "Agent email" : "Business email"}><IconInput icon={Mail} type="email" autoComplete="email" placeholder="you@business.com" aria-invalid={invalid.email || undefined} value={email} onChange={event => { setEmail(event.target.value); clearInvalid("email"); }} /></Field>
