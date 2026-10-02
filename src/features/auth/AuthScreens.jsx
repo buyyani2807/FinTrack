@@ -16,9 +16,8 @@ const SIGN_IN_MODES = [
   { id: "chitCustomer", label: "Chit customer", title: "Chit member", hint: "Schemes & bids", icon: Coins },
 ];
 
-// One line of guidance under the sign-in options: where this person's credentials come from.
+// One line of guidance under the sign-in options: where this person's credentials come from (none for Financier).
 const MODE_GUIDE = {
-  signIn: "Use the email and password you registered your business with.",
   agent: "Use the email and password your financier created for you under Collection Staff.",
   customer: "Your financier shares your portal ID (it starts with FT-) and a 6-digit PIN when they open your customer portal.",
   chitCustomer: "Your chit manager shares your portal ID (it starts with CF-) and a 6-digit PIN when you join a scheme.",
@@ -220,7 +219,7 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
           </button>)}
         </div>}
 
-        <p className="ft-auth-guide"><Info size={16} aria-hidden="true" />{MODE_GUIDE[mode]}</p>
+        {MODE_GUIDE[mode] && <p className="ft-auth-guide"><Info size={16} aria-hidden="true" />{MODE_GUIDE[mode]}</p>}
 
         <form ref={formRef} className="ft-auth-form" noValidate onSubmit={event => { event.preventDefault(); submit(); }}>
           {isCustomer ? <>
