@@ -25,6 +25,7 @@ import { downloadSalesInvoicePdf } from "../io/salesInvoicePdf.js";
 import { isValidUpiId, upiPayLink } from "../model/upiPay.js";
 import { QrSvg } from "../PayPage.jsx";
 import { AccMoreMenu } from "./AccUi.jsx";
+import { CloseButton } from "../../../components/ui.jsx";
 
 const money = formatInr;
 const qty = (value, unit) => `${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 3 })}${unit ? ` ${unit}` : ""}`;
@@ -58,7 +59,7 @@ function Modal({ title, close, children, actions, wide = false }) {
       <div className={`modal acc-modal${wide ? " acc-modal-wide" : ""}`} role="dialog" aria-modal="true" aria-label={title}>
         <div className="row">
           <h2 className="title">{title}</h2>
-          <button type="button" className="btn ghost" aria-label="Close" onClick={close}>Close</button>
+          <CloseButton onClick={close} />
         </div>
         {children}
         {actions ? <div className="acc-modal-actions">{actions}</div> : null}
@@ -172,7 +173,7 @@ function DocumentForm({ form, setForm, parties, items, stockByItem, gstCompany, 
       title={`${form.id ? "Edit" : "New"} ${config.label.toLowerCase()}`}
       close={() => !saving && onClose()}
       actions={<div className="tabs spacer">
-        <button type="button" className="btn" disabled={saving} onClick={onClose}>Cancel</button>
+        
         <button type="button" className="btn primary" disabled={saving} onClick={() => onSave(gstEnabled, intra)}>{saving ? "Saving…" : `Save ${config.label.toLowerCase()}`}</button>
       </div>}
     >

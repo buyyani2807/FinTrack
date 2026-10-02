@@ -49,7 +49,7 @@ function CollectModal({ stop, company, close, onSaved, token }) {
     }
   };
 
-  return <Modal>
+  return <Modal close={() => !busy && close()}>
     <h2 className="title">Collect from {stop.name}</h2>
     <p className="copy">Outstanding {formatInr(stop.outstanding)}{stop.overdue > 0 ? ` · Overdue ${formatInr(stop.overdue)}` : ""}</p>
     <div className="rc-mode-row spacer" role="group" aria-label="Payment mode">
@@ -78,7 +78,7 @@ function CollectModal({ stop, company, close, onSaved, token }) {
       : <p className="small muted spacer">{company?.upiId ? "Enter the amount to show a UPI QR." : "No UPI ID is set for this business, so no QR can be shown. Check the payment on the customer's phone."}</p>)}
     {error && <p className="red small">{error}</p>}
     <div className="row spacer">
-      <Button onClick={close} disabled={busy}>Cancel</Button>
+      
       <Button className="primary" disabled={busy} onClick={submit}>{busy ? "Saving…" : `Save ${amount > 0 ? formatInr(amount) : "collection"}`}</Button>
     </div>
   </Modal>;
@@ -87,7 +87,7 @@ function CollectModal({ stop, company, close, onSaved, token }) {
 function SuccessModal({ result, close }) {
   const message = collectionReceiptMessage(result);
   const canShare = canWhatsAppShare(result.partyPhone);
-  return <Modal>
+  return <Modal close={close}>
     <h2 className="title">{result.alreadyRecorded ? "Already recorded" : "Collection saved"}</h2>
     <p className="rc-success-amount green">{formatInr(result.amount)}</p>
     <p className="copy">{result.partyName} · {collectionModeLabel(result.mode)}{result.voucherNumber ? ` · Receipt ${result.voucherNumber}` : ""}</p>

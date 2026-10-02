@@ -17,6 +17,7 @@ import {
   weekdaysLabel,
 } from "../model/routeCollectionsModel.js";
 import { AccMoreMenu } from "./AccUi.jsx";
+import { CloseButton } from "../../../components/ui.jsx";
 
 const money = formatInr;
 
@@ -30,7 +31,7 @@ function Modal({ title, close, children, actions }) {
       <div className="modal acc-modal" role="dialog" aria-modal="true" aria-label={title}>
         <div className="row">
           <h2 className="title">{title}</h2>
-          <button type="button" className="btn ghost" aria-label="Close" onClick={close}>Close</button>
+          <CloseButton onClick={close} />
         </div>
         {children}
         {actions ? <div className="acc-modal-actions">{actions}</div> : null}
@@ -48,7 +49,7 @@ function RouteForm({ form, setForm, agents, saving, error, onSave, onClose }) {
     title={form.id ? "Edit route" : "New collection route"}
     close={() => !saving && onClose()}
     actions={<div className="tabs spacer">
-      <button type="button" className="btn" disabled={saving} onClick={onClose}>Cancel</button>
+      
       <button type="button" className="btn primary" disabled={saving || !form.name.trim()} onClick={onSave}>{saving ? "Saving…" : "Save route"}</button>
     </div>}
   >
@@ -97,7 +98,7 @@ function StopsEditor({ route, parties, stopRouteByParty, routeNameById, position
     title={`Customers on ${route.name}`}
     close={() => !saving && onClose()}
     actions={<div className="tabs spacer">
-      <button type="button" className="btn" disabled={saving} onClick={onClose}>Cancel</button>
+      
       <button type="button" className="btn primary" disabled={saving || !dirty} onClick={() => onSave(order)}>{saving ? "Saving…" : `Save ${order.length} stop${order.length === 1 ? "" : "s"}`}</button>
     </div>}
   >

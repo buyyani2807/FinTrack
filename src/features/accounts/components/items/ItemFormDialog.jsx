@@ -30,7 +30,7 @@ export function ItemFormDialog({ form, setShowForm, error, setForm, categories, 
         <Field className="span" label="Description"><input value={form.description} onChange={event => setForm(current => ({ ...current, description: event.target.value }))} /></Field>
       </div>
       <div className="tabs spacer">
-        <button type="button" className="btn" disabled={saving} onClick={() => setShowForm(false)}>Cancel</button>
+        
         <button type="button" className="btn primary" disabled={saving} onClick={saveItem}>{saving ? "Saving…" : "Save item"}</button>
       </div>
     </DialogModal>

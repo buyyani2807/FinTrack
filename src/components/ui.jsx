@@ -37,16 +37,18 @@ export const Badge = ({
   status,
   tone = status
 }) => <span className={`badge ${tone}`}>{status}</span>;
+// Popups close with the ✕ in the top-right corner (shown when `close` is given); there is no Cancel button.
 // `isolateClicks` stops clicks inside the dialog reaching clickable parents (e.g. cards).
 export const Modal = ({
   children,
+  close,
   isolateClicks = false
 }) => {
   const stop = isolateClicks ? event => event.stopPropagation() : undefined;
-  return <div className="modal-bg" onClick={stop}><div className="modal" onClick={stop}>{children}</div></div>;
+  return <div className="modal-bg" onClick={stop}><div className={`modal${close ? " has-corner-close" : ""}`} role="dialog" aria-modal="true" onClick={stop}>{close && <span className="modal-corner-close"><CloseButton onClick={close} /></span>}{children}</div></div>;
 };
 export function ConfirmDialog({ title, message, confirmLabel = "Confirm", danger = false, busy = false, error = "", close, onConfirm }) {
-  return <Modal><h2 className="title">{title}</h2><p className="copy">{message}</p>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button onClick={close} disabled={busy}>Cancel</Button><Button className={danger ? "danger primary" : "primary"} disabled={busy} onClick={onConfirm}>{busy ? "Please wait…" : confirmLabel}</Button></div></Modal>;
+  return <Modal close={() => !busy && close()}><h2 className="title">{title}</h2><p className="copy">{message}</p>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button className={danger ? "danger primary" : "primary"} disabled={busy} onClick={onConfirm}>{busy ? "Please wait…" : confirmLabel}</Button></div></Modal>;
 }
 // Dialog with a title row and Close button; `actions` render after the body.
 export function DialogModal({ title, close, children, actions, className = "" }) {

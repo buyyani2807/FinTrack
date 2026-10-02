@@ -249,3 +249,16 @@ test.describe("Settings", () => {
     await expect(page.getByRole("switch", { name: /Daily Finance/ })).toBeChecked();
   });
 });
+
+test.describe("Popups", () => {
+  test("close with the corner ✕ and have no Cancel button", async ({ page }) => {
+    await mockAccountsWorkspace(page);
+    await page.goto("/daily-finance");
+    await page.getByRole("button", { name: "+ New finance account" }).click({ timeout: 15_000 });
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Cancel" })).toHaveCount(0);
+    await dialog.getByRole("button", { name: "Close" }).click();
+    await expect(dialog).toHaveCount(0);
+  });
+});

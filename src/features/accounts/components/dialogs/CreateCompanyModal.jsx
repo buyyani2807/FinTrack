@@ -4,7 +4,7 @@ import { Field, Modal } from "../AccUi.jsx";
 
 export function CreateCompanyModal({ saving, setShowCreateCompany, companyDraft, run, token, setCompanyDraft }) {
   return (
-    <Modal title="Create company" close={() => !saving && setShowCreateCompany(false)} actions={<div className="tabs spacer"><button type="button" className="btn" disabled={saving} onClick={() => setShowCreateCompany(false)}>Cancel</button><button type="button" className="btn primary" disabled={saving || !String(companyDraft.name || "").trim()} onClick={() => run(async () => {
+    <Modal title="Create company" close={() => !saving && setShowCreateCompany(false)} actions={<div className="tabs spacer"><button type="button" className="btn primary" disabled={saving || !String(companyDraft.name || "").trim()} onClick={() => run(async () => {
       const created = await createAccountsCompany(token, companyDraft);
       const id = Array.isArray(created) ? created[0] : created;
       if (typeof id === "string") saveIndustry(id, companyDraft.industry || "retail");

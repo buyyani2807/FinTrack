@@ -557,6 +557,12 @@ input:disabled, select:disabled, textarea:disabled { background: var(--ft-surfac
 .ft-icon-btn { display: inline-grid; place-items: center; width: 40px; height: 40px; flex: none; padding: 0; border: 0; border-radius: var(--ft-radius-sm); background: transparent; color: var(--ft-text-2); cursor: pointer; }
 .ft-icon-btn:hover { background: var(--ft-surface-hover); color: var(--ft-text); }
 .ft-dialog-close { margin: -6px -8px 0 0; }
+/* popups: one ✕ in the top-right corner (no Cancel button); the actions line up on the left */
+.modal.has-corner-close { position: relative; }
+.modal-corner-close { position: absolute; top: 14px; right: 14px; z-index: 3; }
+.modal-corner-close .ft-dialog-close { margin: 0; }
+.modal.has-corner-close > :is(h2, .title, .toolbar, .row, form):nth-child(2) { padding-right: 44px; }
+.modal .row.spacer:has(> .btn), .modal .row.spacer:has(> button) { justify-content: flex-start !important; flex-wrap: wrap; gap: 8px; }
 
 /* ------------------------------------------------------------------ sidebar (Finance) */
 .financier-nav { background: var(--ft-sidebar-bg) !important; border: 0 !important; box-shadow: none !important; backdrop-filter: none !important; color: var(--ft-sidebar-text) !important; }

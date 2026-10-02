@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { GAUGE_SEGMENTS, calculateFintrackCreditScore, scoreToGaugeAngle } from "./creditScoreModel.js";
 import { formatInr } from "../../lib/formatMoney.js";
+import { CloseButton } from "../../components/ui.jsx";
 
 const money = formatInr;
 
@@ -70,7 +71,7 @@ export function CreditScoreDetails({ result, close, accountLabel }) {
   return <div className="modal-bg" onClick={close}><div className="modal credit-score-modal" onClick={event => event.stopPropagation()}>
     <div className="row">
       <h2 className="title">FinTrack Credit Score</h2>
-      <button type="button" className="btn" onClick={close}>Close</button>
+      <CloseButton onClick={close} />
     </div>
     <div className="credit-score-details-hero">
         <div className="credit-score-gauge-wrap"><CreditScoreGauge score={result.score} available={result.available} /></div>

@@ -3,6 +3,7 @@ import { downloadReceiptPdf } from "../io/receiptPdf.js";
 import { buildWhatsAppMessage, canWhatsAppShare, openManualWhatsAppShare } from "../io/receiptWhatsApp.js";
 import { formatReceiptDate, withReceiptBranding } from "../model/receiptModel.js";
 import { ReceiptViewerModal } from "./ReceiptViewerModal.jsx";
+import { CloseButton } from "../../../components/ui.jsx";
 
 export function ReceiptActions({ receipt, settings, token, onLogAction, compact = false }) {
   const [viewOpen, setViewOpen] = useState(false);
@@ -68,7 +69,7 @@ export function ReceiptSuccessModal({ receipt, settings, token, onLogAction, clo
   };
 
   return <>
-    <div className="modal-bg"><div className="modal receipt-success">
+    <div className="modal-bg"><div className="modal receipt-success has-corner-close" role="dialog" aria-modal="true" aria-label="Payment successful"><span className="modal-corner-close"><CloseButton onClick={close} /></span>
       <h2 className="title green">Payment Successful ✓</h2>
       <p className="copy">Receipt No: <strong className="gold">{receipt.receiptNumber}</strong></p>
       <p className="copy">{receipt.customerName} · {receipt.money(receipt.amount)} · {receipt.paymentMode}</p>

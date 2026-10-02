@@ -7,12 +7,12 @@ import { Button } from "../../../components/ui.jsx";
 import { Modal } from "./ChitUi.jsx";
 
 function ConfirmDangerModal({ title, children, confirmLabel, busy, error, onCancel, onConfirm }) {
-  return <Modal>
+  return <Modal close={() => !busy && onCancel()}>
     <h2 className="title">{title}</h2>
     {children}
     {error && <p className="red small">{error}</p>}
     <div className="row spacer">
-      <Button type="button" disabled={busy} onClick={onCancel}>Cancel</Button>
+      
       <Button className="danger" disabled={busy} onClick={onConfirm}>{busy ? "Working…" : confirmLabel}</Button>
     </div>
   </Modal>;
@@ -35,13 +35,13 @@ export function ChitDeletePaymentButton({ title, body, confirmLabel = "Delete pa
   </>;
 }
 export function ChitActivateSchemeModal({ scheme, memberCount, busy, error, onCancel, onConfirm }) {
-  return <Modal>
+  return <Modal close={() => !busy && onCancel()}>
     <h2 className="title">Activate {scheme.name}?</h2>
     <p className="copy">Activation locks the member list and starts the scheme. You need exactly {scheme.member_count} active members before continuing.</p>
     <p className="notice">Members enrolled: {memberCount} / {scheme.member_count}</p>
     {error && <p className="red small">{error}</p>}
     <div className="row spacer">
-      <Button type="button" disabled={busy} onClick={onCancel}>Cancel</Button>
+      
       <Button className="primary" disabled={busy} onClick={onConfirm}>{busy ? "Activating…" : "Activate scheme"}</Button>
     </div>
   </Modal>;

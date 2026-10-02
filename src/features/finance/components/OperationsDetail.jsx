@@ -17,11 +17,11 @@ import { collectionDetailVisibility } from "../model/workspaceAccess.js";
 
 export function AccountActionsMenu({ open, close, children }) {
   if (!open) return null;
-  return <Modal>
+  return <Modal close={close}>
     <h2 className="title">More actions</h2>
     <p className="copy">Portal, WhatsApp, and account lifecycle.</p>
     <div className="account-actions-menu">{children}</div>
-    <div className="row spacer"><Button onClick={close}>Cancel</Button></div>
+    
   </Modal>;
 }
 export function ProfitLoss({ loan }) {
