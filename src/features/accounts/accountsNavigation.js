@@ -120,3 +120,37 @@ export const MORE_LINKS = [
   ["gst", "GST", "Books preparation only"],
   ["setup", "Setup", "Company, GST, locks, backup"],
 ];
+
+// ---- URLs (see app/AppRoutes.jsx) ----
+// A view is { section, reportTab, sub }: `sub` is the document type (documents), the inventory tab (inventory) or the
+// collection-routes tab (routes). Trial Balance, P&L and Balance Sheet are their own sections but live under Reports.
+const SECTION_SLUGS = { vouchers: "transactions", bank: "banking", crm: "pipeline" };
+const PARTY_SLUGS = { parties: "ledger", receivables: "receivables", payables: "payables", routes: "routes" };
+const STATEMENTS = ["trial", "pnl", "balance"];
+const fromSlug = (map, slug) => Object.keys(map).find(key => map[key] === slug);
+
+export function accountsPath({ section = "overview", reportTab = "daybook", sub = null } = {}) {
+  if (PARTY_SLUGS[section]) return `/accounting/parties/${PARTY_SLUGS[section]}${section === "routes" && sub ? `/${sub}` : ""}`;
+  if (section === "reports" || section === "gst" || STATEMENTS.includes(section)) {
+    const report = STATEMENTS.includes(section) || section === "gst" ? section : reportTab || "daybook";
+    return `/accounting/reports/${report}`;
+  }
+  if ((section === "documents" || section === "inventory") && sub) return `/accounting/${section}/${sub}`;
+  return `/accounting/${SECTION_SLUGS[section] || section}`;
+}
+
+// The view for /accounting/:area/:sub/:subsub (each part optional). Unknown parts fall back to the area's default.
+export function accountsViewFromPath(area, sub, subsub) {
+  if (area === "parties") {
+    const section = fromSlug(PARTY_SLUGS, sub) || "parties";
+    return { section, reportTab: "daybook", sub: section === "routes" ? subsub || null : null };
+  }
+  if (area === "reports") {
+    const report = REPORT_TABS.some(item => item.id === sub) ? sub : "daybook";
+    return { section: STATEMENTS.includes(report) ? report : "reports", reportTab: report, sub: null };
+  }
+  const section = fromSlug(SECTION_SLUGS, area) || area;
+  const known = SECTIONS.some(item => item.id === section) && !PARTY_SLUGS[section] && section !== "cashbook";
+  if (!known) return { section: "overview", reportTab: "daybook", sub: null };
+  return { section, reportTab: "daybook", sub: section === "documents" || section === "inventory" ? sub || null : null };
+}

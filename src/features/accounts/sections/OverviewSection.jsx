@@ -149,17 +149,15 @@ export function OverviewSection({
         onOpenCollections={close}
         onNavigate={target => {
           if (typeof target === "string") openSection(target);
-          else if (target?.section) {
-            openSection(target.section);
-            if (target.reportTab) setReportTab(target.reportTab);
-          }
+          else if (target?.reportTab) setReportTab(target.reportTab);
+          else if (target?.section) openSection(target.section);
         }}
       />
 
       {accountsAttention?.count > 0 && <AttentionCenterCard attention={accountsAttention} onNavigate={href => {
         trackProductEvent("accounts_attention_navigate", { section: href?.section || "" });
-        if (href?.section) openSection(href.section);
         if (href?.reportTab) setReportTab(href.reportTab);
+        else if (href?.section) openSection(href.section);
       }} />}
 
       <AccCompareChart

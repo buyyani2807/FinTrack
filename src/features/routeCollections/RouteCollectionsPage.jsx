@@ -103,10 +103,11 @@ function SuccessModal({ result, close }) {
 }
 
 /** Collection agent's route sheet: today's customers in visiting order, collect with cash / UPI QR / cheque. */
-export function RouteCollectionsPage({ token, businessName, back }) {
+// The chosen route is the URL (/route-collections/:routeId, "today" by default; see app/AppRoutes.jsx).
+export function RouteCollectionsPage({ token, businessName, back, routeId = "today", onRouteChange }) {
   const [sheet, setSheet] = useState(undefined);
   const [error, setError] = useState("");
-  const [routeId, setRouteId] = useState("today");
+  const setRouteId = next => onRouteChange?.(next);
   const [search, setSearch] = useState("");
   const [hidePaid, setHidePaid] = useState(false);
   const [collectStop, setCollectStop] = useState(null);

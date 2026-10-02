@@ -45,12 +45,39 @@ export function AppRoutes() {
           <Route path="/monthly-finance/reports" element={<FinanceRoute module="monthly" section="reports" />} />
           <Route path="/monthly-finance/*" element={<Navigate to="/monthly-finance/todays-collections" replace />} />
 
-          <Route path="/chit-fund/:schemeId?" element={<RequireModule module="chit"><ChitFundRoute /></RequireModule>} />
-          <Route path="/cashbook" element={<RequireModule module="cashbook"><CashbookRoute /></RequireModule>} />
-          <Route path="/accounting" element={<RequireModule module="accounts"><AccountsRoute /></RequireModule>} />
+          <Route path="/chit-fund" element={<Navigate to="/chit-fund/schemes" replace />} />
+          {/* :tab = schemes | members | bids | payments | reports */}
+          <Route path="/chit-fund/:tab" element={<RequireModule module="chit"><ChitFundRoute /></RequireModule>} />
+          {/* :schemeTab = overview | members | payments, plus bids | dividends | live (auction) or schedule (fixed) */}
+          <Route path="/chit-fund/schemes/:schemeId/:schemeTab?" element={<RequireModule module="chit"><ChitFundRoute /></RequireModule>} />
+          <Route path="/chit-fund/schemes/:schemeId/members/:memberId" element={<RequireModule module="chit"><ChitFundRoute /></RequireModule>} />
+          <Route path="/chit-fund/*" element={<Navigate to="/chit-fund/schemes" replace />} />
+
+          <Route path="/cashbook" element={<Navigate to="/cashbook/cashbook" replace />} />
+          {/* :section = cashbook | expenses | bank | transfers | closing | reports */}
+          <Route path="/cashbook/:section" element={<RequireModule module="cashbook"><CashbookRoute /></RequireModule>} />
+          <Route path="/cashbook/*" element={<Navigate to="/cashbook/cashbook" replace />} />
+
+          <Route path="/accounting" element={<Navigate to="/accounting/overview" replace />} />
+          {/* :section = overview | transactions | documents | inventory | parties | reports | banking | setup | ledger | more | pipeline | manufacturing */}
+          <Route path="/accounting/:section" element={<RequireModule module="accounts"><AccountsRoute /></RequireModule>} />
+          <Route path="/accounting/documents/:docType" element={<RequireModule module="accounts"><AccountsRoute /></RequireModule>} />
+          <Route path="/accounting/inventory/:inventoryTab" element={<RequireModule module="accounts"><AccountsRoute /></RequireModule>} />
+          {/* :partyView = ledger | receivables | payables | routes */}
+          <Route path="/accounting/parties/:partyView" element={<RequireModule module="accounts"><AccountsRoute /></RequireModule>} />
+          <Route path="/accounting/parties/routes/:routesTab" element={<RequireModule module="accounts"><AccountsRoute /></RequireModule>} />
+          {/* :report = daybook | trial | pnl | balance | cashflow | receivables | payables | sales | purchases | gst | ledger | item_sales | … */}
+          <Route path="/accounting/reports/:report" element={<RequireModule module="accounts"><AccountsRoute /></RequireModule>} />
+          <Route path="/accounting/*" element={<Navigate to="/accounting/overview" replace />} />
+
           <Route path="/collection-staff" element={<RequireModule module="isOwner"><CollectionStaffRoute /></RequireModule>} />
+          <Route path="/collection-staff/:staffId" element={<RequireModule module="isOwner"><CollectionStaffRoute /></RequireModule>} />
           <Route path="/route-collections" element={<RouteCollectionsRoute />} />
-          <Route path="/settings" element={<RequireModule module="isOwner"><SettingsRoute /></RequireModule>} />
+          <Route path="/route-collections/:routeId" element={<RouteCollectionsRoute />} />
+          <Route path="/settings" element={<Navigate to="/settings/company" replace />} />
+          {/* :tab = company | whatsapp | reminders */}
+          <Route path="/settings/:tab" element={<RequireModule module="isOwner"><SettingsRoute /></RequireModule>} />
+          <Route path="/settings/*" element={<Navigate to="/settings/company" replace />} />
 
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>

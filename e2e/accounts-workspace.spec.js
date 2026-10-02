@@ -272,3 +272,39 @@ test.describe("Popups", () => {
     await expect(dialog).toHaveCount(0);
   });
 });
+
+test.describe("Nested routes", () => {
+  test("tabs and sub-tabs of every module are URLs", async ({ page }) => {
+    await mockAccountsWorkspace(page);
+    for (const [path, active] of [
+      ["/chit-fund/members", "Members"],
+      ["/cashbook/expenses", "Expenses"],
+      ["/settings/whatsapp", "WhatsApp messages"],
+      ["/accounting/documents/purchase_order", "Purchase orders"],
+      ["/accounting/parties/routes/collections", "Field collections"],
+      ["/accounting/reports/gst", "GST"],
+    ]) {
+      await page.goto(path);
+      await expect(page).toHaveURL(new RegExp(`${path}$`), { timeout: 15_000 });
+      await page.locator(".modal-bg").getByRole("button", { name: "Close" }).click({ timeout: 1500 }).catch(() => {});
+      await expect(page.locator("button.active", { hasText: active }).first()).toBeVisible();
+    }
+  });
+
+  test("clicking a tab changes the URL, and Back returns to the previous tab", async ({ page }) => {
+    await mockAccountsWorkspace(page);
+    await page.goto("/accounting/overview");
+    await page.getByRole("navigation", { name: "Accounts sections" }).getByRole("button", { name: "Inventory" }).click({ timeout: 15_000 });
+    await expect(page).toHaveURL(/\/accounting\/inventory$/);
+    await page.getByRole("button", { name: "Movements", exact: true }).click();
+    await expect(page).toHaveURL(/\/accounting\/inventory\/movements$/);
+    await page.goBack();
+    await expect(page).toHaveURL(/\/accounting\/inventory$/);
+
+    await page.goto("/collection-staff");
+    await page.getByRole("button", { name: "View / Assign" }).first().click({ timeout: 15_000 });
+    await expect(page).toHaveURL(/\/collection-staff\/[^/]+$/);
+    await page.reload();
+    await expect(page.getByRole("heading", { level: 1, name: "Suresh Agent" })).toBeVisible({ timeout: 15_000 });
+  });
+});

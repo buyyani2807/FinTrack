@@ -50,9 +50,11 @@ function FixedChitMemberDetails({ token, scheme, enrollment, lift, payments, bac
     setConfirmBusy(false);
   }}>{confirmBusy ? "Opening…" : "Resend WhatsApp confirmation"}</Button>}<ChitPortalAccess token={token} enrollment={enrollment} onChange={onPortalChange} /><ChitDeleteMemberControl token={token} scheme={scheme} enrollment={enrollment} onDeleted={onDeleted} /></div></div>{confirmNotice && <p className="notice">{confirmNotice}</p>}<div className="grid metrics"><Metric label="Lift month" value={lift ? `Month ${lift.month_number}` : "Not assigned"} color="blue" /><Metric label="Lift amount" value={lift ? money(lift.lift_amount) : "—"} color="gold" /><Metric label="Monthly payment" value={lift ? money(lift.monthly_payment) : "—"} /><Metric label="Remaining months" value={lift?.remaining_months ?? "—"} /><Metric label="Outstanding" value={money(Math.max(0, due - paid))} color="red" /><Metric label="User ID" value={portalId || "Not enabled"} color={portalId ? "gold" : ""} /></div><CreditScoreCard chitPayments={payments} accountLabel="chit" />{portalId && <p className="notice">Share this User ID with the member. Use Reset PIN to set the PIN they will use on Chit customer login, then share both privately.</p>}{lift && <div className="card spacer"><strong>Lift details</strong><div className="grid metrics"><Metric label="Manager commission" value={money(managerCommission)} /><Metric label="Amount paid to member" value={money(lift.amount_paid_to_member)} color="green" /><Metric label="Lift date" value={formatChitDate(lift.lift_date)} /><Metric label="Total remaining payment" value={money(lift.total_remaining_payment)} /></div></div>}<div className="card spacer"><strong>Payment history</strong><div className="table spacer chit-member-payments"><table><thead><tr><th>Month</th><th>Due date</th><th>Payment date</th><th>Expected</th><th>Paid</th><th>Balance</th><th>Late fee</th><th>Reference</th><th>Status</th><th></th></tr></thead><tbody>{payments.map(item => <tr key={item.id}><td>Month {item.payment_month}</td><td>{formatChitDate(item.due_date)}</td><td>{formatChitDate(item.paid_date)}</td><td>{money(item.amount_due)}</td><td>{money(item.amount_paid)}</td><td className="red">{money(Math.max(0, Number(item.amount_due) - Number(item.amount_paid)))}</td><td>{item.late_penalty ? money(item.late_penalty) : "—"}</td><td>{item.payment_reference || "—"}</td><td><ChitPaymentStatus row={item} /></td><td><Button onClick={() => recordPayment(item)}>{item.amount_paid ? "Edit payment" : "Record payment"}</Button>{Number(item.amount_paid) > 0 && <ChitDeletePaymentButton title="Delete payment?" body="This permanently removes the recorded payment." onConfirm={() => deletePayment(item.id)} />}</td></tr>)}</tbody></table>{!payments.length && <p className="small spacer">Payment rows appear after this scheme is activated.</p>}</div></div></main>;
 }
-export function FixedChitSchemeDetails({ token, scheme, back, onSchemeDeleted, orgSettings = {}, workspace = {}, onReceipt }) {
+export function FixedChitSchemeDetails({ token, scheme, back, tab: routeTab = "overview", onTabChange, memberId = null, onMemberChange, onSchemeDeleted, orgSettings = {}, workspace = {}, onReceipt }) {
   const [data, setData] = useState({ enrollments: [], fixedLifts: [], fixedPayments: [] });
-  const [tab, setTab] = useState("overview");
+  // The open tab and member page come from the URL (/chit-fund/schemes/:schemeId/:tab, …/members/:memberId).
+  const tab = ["overview", "schedule", "members", "payments"].includes(routeTab) ? routeTab : "overview";
+  const setTab = next => onTabChange?.(next);
   const [paymentMonth, setPaymentMonth] = useState(null);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState("");
@@ -60,7 +62,8 @@ export function FixedChitSchemeDetails({ token, scheme, back, onSchemeDeleted, o
   const [memberOpen, setMemberOpen] = useState(false);
   const [lift, setLift] = useState(null);
   const [payment, setPayment] = useState(null);
-  const [member, setMember] = useState(null);
+  const member = memberId ? data.enrollments.find(item => item.id === memberId) || null : null;
+  const setMember = next => { const id = next?.id || null; if (id !== memberId) onMemberChange?.(id); };
   const refresh = () => loadChitSchemeDetails(token, scheme.id).then(payload => { setData(payload); setBusy(false); setError(""); }).catch(err => { setError(err.message || "Could not load Fixed Chit details."); setBusy(false); });
   useEffect(() => {
     let ignore = false;

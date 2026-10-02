@@ -19,15 +19,21 @@ export function ResetStaffPasswordModal({ staff, close, save }) {
   return <Modal close={close}><h2 className="title">Reset staff password</h2><p className="copy">Set a new password for {staff.full_name}. Share it with them privately.</p><Field className="spacer" label="New password"><input type="password" minLength="8" autoComplete="new-password" value={password} onChange={event => setPassword(event.target.value)} /></Field>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button className="primary" disabled={busy || password.length < 8} onClick={submit}>{busy ? "Saving…" : "Reset password"}</Button></div></Modal>;
 }
 // A full page: the staff list, or one staff member with their customer assignments (opened from the list).
-export function CollectionStaffPage({ loans, loadAgents, createAgent, assignAgent, updateAgent }) {
-  const [agents, setAgents] = useState([]), [selected, setSelected] = useState(null), [search, setSearch] = useState(""), [showCreate, setShowCreate] = useState(false), [showEdit, setShowEdit] = useState(false), [showResetPassword, setShowResetPassword] = useState(false), [error, setError] = useState(""), [draftIds, setDraftIds] = useState([]), [saved, setSaved] = useState(""), [loading, setLoading] = useState(true);
+// The open staff member is the URL (/collection-staff/:staffId, see app/AppRoutes.jsx).
+export function CollectionStaffPage({ loans, loadAgents, createAgent, assignAgent, updateAgent, staffId = null, onSelect }) {
+  const [agents, setAgents] = useState([]), [search, setSearch] = useState(""), [showCreate, setShowCreate] = useState(false), [showEdit, setShowEdit] = useState(false), [showResetPassword, setShowResetPassword] = useState(false), [error, setError] = useState(""), [draftIds, setDraftIds] = useState([]), [saved, setSaved] = useState(""), [loading, setLoading] = useState(true);
   const refresh = async () => { setLoading(true); setError(""); try { setAgents(await loadAgents()); } catch (e) { setError(e.message || "Could not load staff."); } finally { setLoading(false); } };
   useEffect(() => { refresh(); }, []);
+  const selected = staffId ? agents.find(agent => agent.id === staffId) || null : null;
+  const resetDraft = agent => { setDraftIds(loans.filter(loan => loan.collectionAgentId === agent.id).map(loan => loan.id)); setSearch(""); setSaved(""); };
+  // Opening a staff member (from the list or a URL) starts their assignment draft from what is saved.
+  const [draftFor, setDraftFor] = useState(null);
+  if (selected && draftFor !== selected.id) { setDraftFor(selected.id); resetDraft(selected); }
   const assigned = loan => draftIds.includes(loan.id);
   const visibleLoans = staffAssignableLoans(loans, { selectedAgentId: selected?.id, search, statusOf: loanStatus }).sort(byCustomerName);
-  const choose = agent => { setSelected(agent); setDraftIds(loans.filter(loan => loan.collectionAgentId === agent.id).map(loan => loan.id)); setSearch(""); setSaved(""); };
+  const choose = agent => onSelect?.(agent.id);
   const toggle = id => setDraftIds(ids => ids.includes(id) ? ids.filter(value => value !== id) : [...ids, id]);
-  const saveStaff = async details => { try { const updated = await updateAgent({ id: selected.id, ...details }); setSelected(updated); setAgents(current => current.map(agent => agent.id === updated.id ? updated : agent)); setShowEdit(false); setSaved("Staff details saved successfully."); } catch (e) { setError(e.message || "Could not save staff details."); } };
+  const saveStaff = async details => { try { const updated = await updateAgent({ id: selected.id, ...details }); setAgents(current => current.map(agent => agent.id === updated.id ? updated : agent)); setShowEdit(false); setSaved("Staff details saved successfully."); } catch (e) { setError(e.message || "Could not save staff details."); } };
   const saveAssignments = async () => {
     try {
       const changes = loans.map(loan => {
@@ -43,7 +49,7 @@ export function CollectionStaffPage({ loans, loadAgents, createAgent, assignAgen
   return <main className="shell collection-staff-page">
     {selected
       ? <>
-        <BackButton onClick={() => setSelected(null)} />
+        <BackButton onClick={() => onSelect?.(null)} />
         <div className="toolbar"><div><h1 className="title">{selected.full_name}</h1><p className="copy">{[selected.email, selected.phone].filter(Boolean).join(" · ") || "No contact details"}</p></div><div className="tabs"><Button onClick={() => setShowEdit(true)}>Edit staff</Button><Button onClick={() => setShowResetPassword(true)}>Reset password</Button></div></div>
         {error && <p className="red small">{error}</p>}
         <div className="card">
@@ -51,7 +57,7 @@ export function CollectionStaffPage({ loans, loadAgents, createAgent, assignAgen
           {saved && <p className="green small">{saved}</p>}
           <div className="customer-search"><input aria-label="Search customers" placeholder="Search customers" value={search} onChange={e => setSearch(e.target.value)} /></div>
           <div className="table"><table><thead><tr><th>Customer</th><th>Finance</th><th>Outstanding</th><th>Assigned</th></tr></thead><tbody>{visibleLoans.map(loan => <tr key={loan.id}><td>{loan.customerName}<br /><span className="small">{loan.phone}</span></td><td>{financeKindLabel(loan.kind)}</td><td>{money(loanBalance(loan))}</td><td><input type="checkbox" aria-label={`Assign ${loan.customerName}`} checked={assigned(loan)} onChange={() => toggle(loan.id)} /></td></tr>)}</tbody></table></div>
-          <div className="row spacer collection-staff-actions"><Button onClick={() => choose(selected)}>Cancel</Button><Button className="primary" onClick={saveAssignments}>Save Changes</Button></div>
+          <div className="row spacer collection-staff-actions"><Button onClick={() => resetDraft(selected)}>Cancel</Button><Button className="primary" onClick={saveAssignments}>Save Changes</Button></div>
         </div>
       </>
       : <>

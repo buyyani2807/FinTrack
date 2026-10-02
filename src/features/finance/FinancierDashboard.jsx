@@ -27,6 +27,7 @@ import { TodayCollections } from "./components/TodayCollections.jsx";
 import { byCollectionOrderThenName, mergeAccountOrder, reorderIds } from "./model/collectionOrder";
 import { accountOutcome, annualRate, collectedOn, dailyProgress, isDailyCollectionDueOn, loanBalance, loanPaid, loanStatus, monthlyInterestPending, today } from "./model/loanState.js";
 import { realizedLoss, realizedProfit } from "./model/pnl.js";
+import { accountsPath } from "../accounts/accountsNavigation.js";
 import { accountPath, collectionsPath, financeSectionPath, modulePath, workspacePaths } from "../workspace/paths.js";
 
 // A shared default keeps the chit-attention effect's dependency stable; a fresh `[]` per render re-runs it forever.
@@ -270,8 +271,7 @@ export function Financier({
         return;
       }
       if (href?.panel === "accounts") {
-        if (href.section) sessionStorage.setItem("fintrack-open-accounts-section", href.section);
-        navigateTo(workspacePaths.accounts);
+        navigateTo(accountsPath({ section: href.reportTab ? "reports" : href.section || "overview", reportTab: href.reportTab || "daybook" }));
         return;
       }
       if (href?.panel === "daily" || href?.panel === "monthly") {

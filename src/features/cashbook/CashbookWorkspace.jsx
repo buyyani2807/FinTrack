@@ -34,8 +34,10 @@ import { ExpenseModal } from "./dialogs/ExpenseModal.jsx";
 import { TransferModal } from "./dialogs/TransferModal.jsx";
 import { DayClosingModal } from "./dialogs/DayClosingModal.jsx";
 
-export function CashbookWorkspace({ token, loans = [] }) {
-  const [section, setSection] = useState("cashbook");
+// The open section is the URL (/cashbook/:section, see app/AppRoutes.jsx).
+export function CashbookWorkspace({ token, loans = [], section: routeSection = "cashbook", onSectionChange }) {
+  const section = SECTIONS.some(item => item.id === routeSection) ? routeSection : "cashbook";
+  const setSection = next => onSectionChange?.(next);
   const [ledgers, setLedgers] = useState([]);
   const [entries, setEntries] = useState([]);
   const [closings, setClosings] = useState([]);

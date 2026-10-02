@@ -47,7 +47,9 @@ function SwitchRow({ checked, onChange, title, copy }) {
   </label>;
 }
 
-export function ReceiptSettingsPage({ token, close, onSettingsSaved }) {
+// The open tab is the URL (/settings/:tab, see app/AppRoutes.jsx); every tab route renders this same page, so unsaved
+// edits survive switching tabs.
+export function ReceiptSettingsPage({ token, close, onSettingsSaved, tab: routeTab = "company", onTabChange }) {
   const [form, setForm] = useState({
     companyName: "",
     companyAddress: "",
@@ -62,7 +64,8 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
-  const [tab, setTab] = useState("company");
+  const tab = SETTINGS_TABS.some(item => item.id === routeTab) ? routeTab : "company";
+  const setTab = next => onTabChange?.(next);
   // The settings as last loaded or saved, to show when there are unsaved changes.
   const [baseline, setBaseline] = useState(null);
   // The template being edited, so a variable chip is inserted at its cursor.

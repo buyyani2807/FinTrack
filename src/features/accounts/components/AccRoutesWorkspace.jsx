@@ -206,8 +206,12 @@ export function AccRoutesWorkspace({
   onSaveRoute,
   onDeleteRoute,
   onSetStops,
+  tab: routeTab = null,
+  onTabChange,
 }) {
-  const [tab, setTab] = useState("routes");
+  // The open tab is the URL (/accounting/parties/routes/:tab).
+  const tab = routeTab === "collections" ? "collections" : "routes";
+  const setTab = next => onTabChange?.(next);
   const [agents, setAgents] = useState([]);
   const [agentsError, setAgentsError] = useState("");
   const [form, setForm] = useState(null);

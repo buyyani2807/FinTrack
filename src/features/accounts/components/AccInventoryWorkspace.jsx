@@ -35,8 +35,12 @@ export function AccInventoryWorkspace({
   onSaveInventorySettings,
   onImportItems,
   onApplyCount,
+  tab: routeTab = null,
+  onTabChange,
 }) {
-  const [tab, setTab] = useState("summary");
+  // The open tab is the URL (/accounting/inventory/:tab).
+  const tab = TABS.some(item => item.id === routeTab) ? routeTab : "summary";
+  const setTab = next => onTabChange?.(next);
   const [asOf, setAsOf] = useState(todayIso());
   const [search, setSearch] = useState("");
   const [moveFrom, setMoveFrom] = useState(range.from || "");

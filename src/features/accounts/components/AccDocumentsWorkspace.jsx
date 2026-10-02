@@ -449,8 +449,12 @@ export function AccDocumentsWorkspace({
   onConvertToEntry,
   onSaveSettings,
   prefill = null,
+  tab: routeTab = null,
+  onTabChange,
 }) {
-  const [tab, setTab] = useState(prefill?.docType || "quotation");
+  // The document type tab is the URL (/accounting/documents/:docType).
+  const tab = TABS.some(item => item.id === routeTab) ? routeTab : "quotation";
+  const setTab = next => { if (next !== tab) onTabChange?.(next); };
   const [search, setSearch] = useState("");
   const [showClosed, setShowClosed] = useState(false);
   const [form, setForm] = useState(null);
@@ -458,7 +462,6 @@ export function AccDocumentsWorkspace({
   const [prefillKey, setPrefillKey] = useState(null);
   if (prefill?.key && prefill.key !== prefillKey && canEdit) {
     setPrefillKey(prefill.key);
-    setTab(prefill.docType);
     setFormError("");
     setForm({
       ...emptyDocumentForm(prefill.docType, todayIso()),

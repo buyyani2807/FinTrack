@@ -38,13 +38,16 @@ function ChitMemberDetails({ token, scheme, enrollment, cycles, bids, installmen
   }
   return <main className="shell"><BackButton onClick={back} /><div className="toolbar"><div><h1 className="title">{enrollmentName(enrollment)}</h1><p className="copy">{scheme.name} · Ticket {enrollment.ticket_number} · User ID: {portalId || "Not enabled"}</p></div><div className="row"><Button onClick={() => setShowStatement(true)}>Customer Statement</Button><ChitPortalAccess token={token} enrollment={enrollment} liveBidding onChange={onPortalChange} /><ChitDeleteMemberControl token={token} scheme={scheme} enrollment={enrollment} onDeleted={onDeleted} /></div></div><div className="grid metrics"><Metric label="Ticket" value={enrollment.ticket_number} color="blue" /><Metric label="Phone" value={enrollment.chit_members?.phone || "—"} /><Metric label="Bid winner" value={wins.length ? "Yes" : "No"} color={wins.length ? "green" : ""} /><Metric label="Outstanding" value={money(chitPaymentOutstanding(payments))} color="red" /><Metric label="User ID" value={portalId || "Not enabled"} color={portalId ? "gold" : ""} /></div><CreditScoreCard chitPayments={payments} accountLabel="chit" />{portalId && <p className="notice">Share this User ID with the member. Use Reset PIN to set the PIN they will use on Chit customer login, then share both privately.</p>}{wins.length ? <><div className="grid metrics"><Metric label="Winning month" value={`Month ${wins[0].month}`} color="gold" /><Metric label="Discount bid" value={money(wins[0].discountBid)} color="blue" /><Metric label="Payout (winner receives)" value={money(wins[0].payoutAmount)} color="gold" /><Metric label="Bid date" value={formatChitDate(wins[0].bidDate)} /></div><div className="card spacer"><strong>Bid history</strong><div className="table spacer"><table><thead><tr><th>Month</th><th>Discount bid</th><th>Payout</th><th>Bid date</th><th>Status</th></tr></thead><tbody>{wins.map(win => <tr key={win.month}><td>Month {win.month}</td><td>{money(win.discountBid)}</td><td>{money(win.payoutAmount)}</td><td>{formatChitDate(win.bidDate)}</td><td>{win.status}</td></tr>)}</tbody></table></div></div></> : <p className="notice">Bid Winner: No. This member has not won a monthly bid in this scheme.</p>}<ChitMemberPaymentHistory title="Payment history" rows={payments} empty="Installments appear after a monthly bid is recorded." /><div className="card spacer"><strong>Member details</strong><p className="small spacer">{enrollment.chit_members?.address || "Address not added"}</p><p className="small">Guarantor: {enrollment.guarantor_name} · {enrollment.guarantor_phone}</p></div></main>;
 }
-export function AuctionChitSchemeDetails({ token, scheme, back, onSchemeDeleted, orgSettings = {}, workspace = {}, onReceipt }) {
+export function AuctionChitSchemeDetails({ token, scheme, back, tab: routeTab = "overview", onTabChange, memberId = null, onMemberChange, onSchemeDeleted, orgSettings = {}, workspace = {}, onReceipt }) {
   const [data, setData] = useState({ enrollments: [], cycles: [], bids: [], installments: [] });
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [tab, setTab] = useState("overview");
-  const [member, setMember] = useState(null);
+  // The open tab and member page come from the URL (/chit-fund/schemes/:schemeId/:tab, …/members/:memberId).
+  const tab = ["overview", "members", "bids", "payments", "dividends", "live"].includes(routeTab) ? routeTab : "overview";
+  const setTab = next => onTabChange?.(next);
+  const member = memberId ? data.enrollments.find(item => item.id === memberId) || null : null;
+  const setMember = next => { const id = next?.id || null; if (id !== memberId) onMemberChange?.(id); };
   const [payment, setPayment] = useState(null);
   const [paymentMonth, setPaymentMonth] = useState(null);
   const [bidOpen, setBidOpen] = useState(false);

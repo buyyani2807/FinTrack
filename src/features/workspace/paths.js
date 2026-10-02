@@ -32,7 +32,15 @@ export const collectionsPath = kind => financeSectionPath(kind, "collections");
 // One customer's account opens in its module's Users tab with that account chosen, e.g. /daily-finance/users?account=fa1.
 export const accountPath = loan => `${financeSectionPath(loan.kind, "users")}?account=${encodeURIComponent(loan.id)}`;
 
-export const chitSchemePath = schemeId => `${workspacePaths.chit}/${encodeURIComponent(schemeId)}`;
+// Chit Fund: /chit-fund/:tab, /chit-fund/schemes/:schemeId/:schemeTab and /chit-fund/schemes/:schemeId/members/:memberId.
+export function chitPath({ tab = "schemes", schemeId = null, schemeTab = "overview", memberId = null } = {}) {
+  if (!schemeId) return `${workspacePaths.chit}/${tab}`;
+  const scheme = `${workspacePaths.chit}/schemes/${encodeURIComponent(schemeId)}`;
+  if (memberId) return `${scheme}/members/${encodeURIComponent(memberId)}`;
+  return `${scheme}/${schemeTab}`;
+}
+
+export const chitSchemePath = schemeId => chitPath({ schemeId });
 
 // Is `pathname` the route `target` or one of its child routes?
 export const isWithin = (pathname, target) => pathname === target || pathname.startsWith(`${target}/`);

@@ -25,15 +25,18 @@ function PredefinedChitMemberDetails({ token, scheme, enrollment, item, payments
   }
   return <main className="shell"><BackButton onClick={back} /><div className="toolbar"><div><h1 className="title">{enrollmentName(enrollment)}</h1><p className="copy">{scheme.name} · Ticket {enrollment.ticket_number} · Fixed Predefined Bid · User ID: {portalId || "Not enabled"}</p></div><div className="row"><Button onClick={() => setShowStatement(true)}>Customer Statement</Button><ChitPortalAccess token={token} enrollment={enrollment} onChange={onPortalChange} /><ChitDeleteMemberControl token={token} scheme={scheme} enrollment={enrollment} onDeleted={onDeleted} /></div></div><div className="grid metrics"><Metric label="Lift month" value={item ? `Month ${item.month_number}` : "Not assigned"} color="blue" /><Metric label="EMI" value={item ? money(item.emi) : "—"} /><Metric label="Bid amount" value={item ? money(item.bid_amount) : "—"} color="gold" /><Metric label="Net receivable" value={item ? money(item.net_receivable) : "—"} color="green" /><Metric label="Outstanding" value={money(Math.max(0, balance))} color="red" /><Metric label="User ID" value={portalId || "Not enabled"} color={portalId ? "gold" : ""} /></div><CreditScoreCard chitPayments={payments} accountLabel="chit" />{portalId && <p className="notice">Share this User ID with the member. Use Reset PIN to set the PIN they will use on Chit customer login, then share both privately.</p>}<div className="card spacer"><strong>Payment history</strong><div className="table spacer chit-member-payments"><table><thead><tr><th>Month</th><th>Due date</th><th>Payment date</th><th>Expected</th><th>Paid</th><th>Balance</th><th>Late fee</th><th>Reference</th><th>Status</th><th>Receipt</th><th></th></tr></thead><tbody>{payments.map(row => <tr key={row.id}><td>Month {row.payment_month}</td><td>{formatChitDate(row.due_date)}</td><td>{formatChitDate(row.paid_date)}</td><td>{money(row.amount_due)}</td><td>{money(row.amount_paid)}</td><td className="red">{money(Math.max(0, Number(row.amount_due) - Number(row.amount_paid)))}</td><td>{row.late_penalty ? money(row.late_penalty) : "—"}</td><td>{row.payment_reference || "—"}</td><td><ChitPaymentStatus row={row} /></td><td><ChitReceiptCell source="chit_predefined" paymentRow={row} memberName={enrollmentName(enrollment)} memberPhone={enrollment.chit_members?.phone || ""} scheme={scheme} orgSettings={orgSettings} workspace={workspace} token={token} onLogAction={onLogReceipt} /></td><td><Button onClick={() => recordPayment(row)}>{row.amount_paid ? "Edit" : "Record"} Payment</Button>{Number(row.amount_paid) > 0 && <ChitDeletePaymentButton title="Delete payment?" body="This permanently removes the recorded payment." onConfirm={() => deletePayment(row.id)} />}</td></tr>)}</tbody></table>{!payments.length && <p className="small spacer">Payment rows appear after this scheme is activated.</p>}</div></div></main>;
 }
-export function PredefinedBidSchemeDetails({ token, scheme, back, onSchemeDeleted, orgSettings = {}, workspace = {}, onReceipt, onLogReceipt }) {
+export function PredefinedBidSchemeDetails({ token, scheme, back, tab: routeTab = "overview", onTabChange, memberId = null, onMemberChange, onSchemeDeleted, orgSettings = {}, workspace = {}, onReceipt, onLogReceipt }) {
   const [data, setData] = useState({ enrollments: [], predefinedSchedule: [], predefinedPayments: [] });
-  const [tab, setTab] = useState("overview");
+  // The open tab and member page come from the URL (/chit-fund/schemes/:schemeId/:tab, …/members/:memberId).
+  const tab = ["overview", "schedule", "members", "payments"].includes(routeTab) ? routeTab : "overview";
+  const setTab = next => onTabChange?.(next);
   const [paymentMonth, setPaymentMonth] = useState(null);
   const [memberOpen, setMemberOpen] = useState(false);
   const [assignItem, setAssignItem] = useState(null);
   const [editItem, setEditItem] = useState(null);
   const [payment, setPayment] = useState(null);
-  const [member, setMember] = useState(null);
+  const member = memberId ? data.enrollments.find(item => item.id === memberId) || null : null;
+  const setMember = next => { const id = next?.id || null; if (id !== memberId) onMemberChange?.(id); };
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(true);

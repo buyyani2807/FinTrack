@@ -163,14 +163,16 @@ import { addMonths, gstFilingSchedule, monthKey, monthLabel, monthRange, readGst
 
 // Re-exported for the workspace preloader, which lazy-loads this module.
 export { prefetchAccounts } from "./data/accountsCache.js";
-export function AccountsModule({ token, close, onOpenCashbook, logout, workspace = {}, orgSettings: orgSettingsProp = null }) {
+// The open section, report and sub-tab come from the URL (see accountsPath / app/AppRoutes.jsx); `onNavigate` changes them.
+export function AccountsModule({ token, close, onOpenCashbook, logout, workspace = {}, orgSettings: orgSettingsProp = null, view = {}, onNavigate }) {
   const [cached] = useState(() => {
     const snapshot = readAccountsSnapshot(token);
     if (snapshot) setActiveAccountsCompanyId(snapshot.activeCompanyId || null);
     return snapshot;
   });
-  const [section, setSection] = useState("overview");
-  const [reportTab, setReportTab] = useState("daybook");
+  const section = view.section || "overview";
+  const reportTab = view.reportTab || "daybook";
+  const go = next => onNavigate?.({ section: "overview", reportTab: "daybook", sub: null, ...next });
   const [settings, setSettings] = useState(cached?.settings ?? null);
   const [orgSettings, setOrgSettings] = useState(orgSettingsProp || {});
   const [pendingSalesInvoiceId, setPendingSalesInvoiceId] = useState(null);
@@ -737,24 +739,20 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       return;
     }
     if (id === "gst") {
-      setSection("reports");
-      setReportTab("gst");
+      go({ section: "reports", reportTab: "gst" });
       window.scrollTo(0, 0);
       return;
     }
-    setSection(id);
-    if (id === "trial") setReportTab("trial");
-    if (id === "pnl") setReportTab("pnl");
-    if (id === "balance") setReportTab("balance");
-    if (id === "reports") setReportTab("daybook");
+    go({ section: id, reportTab: ["trial", "pnl", "balance"].includes(id) ? id : "daybook" });
     window.scrollTo(0, 0);
   };
 
   // A report from the Reports sub-tabs: the three statements are their own sections, the rest are tabs of the Reports page.
   const openReport = id => {
     if (["trial", "pnl", "balance"].includes(id)) openSection(id);
-    else { setSection("reports"); setReportTab(id); }
+    else go({ section: "reports", reportTab: id });
   };
+  const setReportTab = openReport;
 
   const switchCompany = id => {
     setAccounts([]);
@@ -1172,7 +1170,7 @@ const openVoucher = () => {
       notes: "Reorder from daily brief",
       lines,
     });
-    openSection("documents");
+    go({ section: "documents", sub: "purchase_order" });
   };
 
   const saveRoute = form => run(async () => {
@@ -1986,11 +1984,15 @@ const openVoucher = () => {
             onConvertToEntry={openSimpleFromDocument}
             onSaveSettings={saveDocSettings}
             prefill={documentPrefill}
+            tab={view.sub}
+            onTabChange={next => go({ section: "documents", sub: next })}
           />
         </div>}
         {section === "routes" && <div className="acc-panel">
           <AccRoutesWorkspace
             token={token}
+            tab={view.sub}
+            onTabChange={next => go({ section: "routes", sub: next })}
             routesData={collectionRoutes}
             parties={parties}
             positions={routePositions}
@@ -2003,6 +2005,8 @@ const openVoucher = () => {
           />
         </div>}
         {section === "inventory" && <InventorySection
+          tab={view.sub}
+          onTabChange={next => go({ section: "inventory", sub: next })}
           items={items}
           stockMovements={stockMovements}
           voucherItemLines={voucherItemLines}
