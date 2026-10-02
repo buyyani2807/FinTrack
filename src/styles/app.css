@@ -2498,23 +2498,6 @@ button.accounts-summary-card:hover {
     display: grid;
   }
 
-  .upcoming-payments-toolbar {
-    flex-direction: column;
-    align-items: stretch !important;
-  }
-
-  .upcoming-payments-filters {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
-    width: 100%;
-    display: grid;
-  }
-
-  .upcoming-payments-filters .btn.tab {
-    width: 100%;
-    min-height: 36px;
-  }
-
   .upcoming-payments-table {
     border: 0;
     padding: 0;
@@ -2759,83 +2742,6 @@ button.accounts-summary-card:hover {
   margin-bottom: 10px;
 }
 
-.upcoming-payments .tabs {
-  flex-wrap: wrap;
-}
-
-.upcoming-payments-toolbar {
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.upcoming-payments-heading {
-  flex: 1;
-  min-width: 0;
-}
-
-.upcoming-payments-toggle {
-  text-align: left;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  min-height: 44px;
-  padding: 8px 10px;
-  display: flex;
-}
-
-.upcoming-payments-toggle:focus-visible {
-  outline-offset: 2px;
-  outline: 2px solid var(--ft-primary);
-}
-
-.upcoming-payments-chevron {
-  color: var(--ft-primary);
-  justify-content: center;
-  width: 1.1em;
-  font-size: 14px;
-  display: inline-flex;
-}
-
-.upcoming-payments-title-wrap {
-  flex-direction: column;
-  flex: 1;
-  gap: 2px;
-  min-width: 0;
-  display: flex;
-}
-
-.upcoming-payments-count {
-  display: block;
-}
-
-.upcoming-payments-toggle-label {
-  white-space: nowrap;
-  color: var(--ft-muted);
-  margin-left: auto;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.upcoming-payments.is-collapsed {
-  padding-bottom: 14px;
-}
-
-.upcoming-payments-summary {
-  margin: 0;
-}
-
-.upcoming-payments-error {
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  display: flex;
-}
-
-.upcoming-payments-filters .btn.tab {
-  padding: 6px 10px;
-  font-size: 12px;
-}
-
 .upcoming-payments-table td:last-child, .upcoming-payments-table th:last-child {
   white-space: nowrap;
 }
@@ -2906,14 +2812,6 @@ button.accounts-summary-card:hover {
 }
 
 @media (width <= 720px) {
-  .upcoming-payments-toggle {
-    align-items: flex-start;
-  }
-
-  .upcoming-payments-toggle-label {
-    margin-left: 0;
-  }
-
   .statement-payments table, .statement-payments thead, .statement-payments tbody, .statement-payments th, .statement-payments td, .statement-payments tr {
     display: block;
   }

@@ -1152,3 +1152,46 @@ html[data-ft-role="owner"] .top-actions .top-theme { display: none; }
   .toolbar.finance-user-head > .tabs { display: grid !important; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; overflow: visible; }
   .toolbar.finance-user-head > .tabs > * { width: 100%; min-width: 0; white-space: normal; }
 }
+
+/* Upcoming payments / installment reminders: icon header with status line, Show / Hide pill, filter bar + list */
+.upcoming-payments { padding: 0 !important; overflow: hidden; }
+.upcoming-payments-head { display: flex; align-items: center; gap: 12px; width: 100%; padding: 16px 18px; border: 0; background: transparent; color: var(--ft-text); font: inherit; text-align: left; }
+button.upcoming-payments-head { cursor: pointer; transition: background .15s var(--ft-ease, ease); }
+button.upcoming-payments-head:hover { background: var(--ft-surface-hover); }
+button.upcoming-payments-head:focus-visible { outline: 2px solid var(--ft-primary); outline-offset: -2px; }
+.upcoming-payments-icon { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--ft-warning-soft); color: var(--ft-warning); }
+.upcoming-payments-title-wrap { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.upcoming-payments-title { display: flex; align-items: center; gap: 8px; }
+.upcoming-payments-title strong { color: var(--ft-text); font-size: 15px; font-weight: 700; line-height: 1.3; }
+.upcoming-payments-count { display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px; background: var(--ft-primary); color: var(--ft-on-primary); font-size: 12px; font-weight: 700; }
+.upcoming-payments-count.is-zero { background: var(--ft-surface-muted); color: var(--ft-muted); }
+.upcoming-payments-status { color: var(--ft-muted); font-size: 13px; }
+.upcoming-payments-toggle-label { flex: none; display: inline-flex; align-items: center; gap: 4px; min-height: 34px; padding: 0 12px 0 14px; border-radius: 999px; background: var(--ft-primary-soft); color: var(--ft-primary); font-size: 13px; font-weight: 600; }
+.upcoming-payments-toggle-label svg { transition: transform .2s var(--ft-ease, ease); }
+.upcoming-payments-toggle[aria-expanded="true"] .upcoming-payments-toggle-label svg { transform: rotate(180deg); }
+.upcoming-payments-body { padding: 14px 18px 18px; border-top: 1px solid var(--ft-divider, var(--ft-border)); }
+.upcoming-payments-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-bottom: 12px; }
+.upcoming-payments-bar .small { color: var(--ft-muted); }
+.upcoming-payments-empty { margin: 4px 0 0; padding: 18px; border: 1px dashed var(--ft-border-strong); border-radius: var(--ft-radius); color: var(--ft-muted); font-size: 13px; text-align: center; }
+.upcoming-payments-error { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin: 0 18px 16px; padding: 10px 12px; border-radius: var(--ft-radius-sm); background: var(--ft-danger-soft); }
+.upcoming-payments-body .upcoming-payments-error { margin: 0; }
+.upcoming-payments-error p { margin: 0; }
+.upcoming-payments-error .btn { display: inline-flex; align-items: center; gap: 6px; }
+.upcoming-payments-table { margin: 0; }
+.upcoming-payments-amount { color: var(--ft-text); font-weight: 700; font-variant-numeric: tabular-nums; }
+.upcoming-payments-due { display: block; color: var(--ft-text); }
+.upcoming-payments-when { display: inline-block; margin-top: 3px; padding: 1px 8px; border-radius: 999px; background: var(--ft-surface-muted); color: var(--ft-text-2); font-size: 11.5px; font-weight: 600; }
+.upcoming-payments-when.is-soon { background: var(--ft-warning-soft); color: var(--ft-warning); }
+.upcoming-payments-when.is-today { background: var(--ft-danger-soft); color: var(--ft-danger); }
+.upcoming-payments-table .btn.whatsapp { display: inline-flex; align-items: center; gap: 6px; }
+@media (width <= 680px) {
+  .upcoming-payments-head { align-items: flex-start; gap: 10px; padding: 14px; }
+  .upcoming-payments-icon { width: 36px; height: 36px; }
+  .upcoming-payments-toggle-label { padding: 0 10px; }
+  .upcoming-payments-body { padding: 12px 14px 14px; }
+  .upcoming-payments-bar .ft-segmented { width: 100%; }
+  .upcoming-payments-error { margin: 0 14px 14px; }
+  .upcoming-payments-when { margin-top: 0; margin-left: 6px; }
+  .upcoming-payments-due { display: inline; }
+  .upcoming-payments-table td .btn { width: 100%; justify-content: center; }
+}
