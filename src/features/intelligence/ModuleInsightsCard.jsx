@@ -26,20 +26,32 @@ function InsightList({ tone, title, items }) {
   );
 }
 
-// Customers to follow up: name on top, each reason on its own line beneath it.
+const capitalise = text => text.charAt(0).toUpperCase() + text.slice(1);
+
+// Customers to follow up as risk-coloured rows: name with the amount due, then every other reason on one line and the
+// credit score on its own line. All reasons the model gives are shown; only their placement changes.
 function PeopleList({ rows }) {
   return (
-    <ol className="module-intel-priority">
-      {rows.map((row, index) => (
-        <li key={row.id || row.name}>
-          <span className="module-intel-rank" aria-hidden="true">{index + 1}</span>
-          <div>
-            <strong>{row.name}</strong>
-            {row.why?.length ? <ul className="module-intel-why">{row.why.map(reason => <li key={reason}>{reason.charAt(0).toUpperCase() + reason.slice(1)}</li>)}</ul> : null}
-          </div>
-        </li>
-      ))}
-    </ol>
+    <ul className="module-intel-people">
+      {rows.map(row => {
+        const why = row.why || [];
+        const due = why.find(reason => /^₹[\d,.]+ due\b/.test(reason));
+        const credit = why.find(reason => /credit score/i.test(reason));
+        const rest = why.filter(reason => reason !== due && reason !== credit);
+        const [, dueAmount, dueWhen] = due?.match(/^(₹[\d,.]+) (due\b.*)$/) || [];
+        const tone = /high risk/i.test(credit || "") || rest.some(reason => /overdue/i.test(reason)) ? "high" : credit ? "medium" : "low";
+        return (
+          <li key={row.id || row.name} className={`module-intel-person risk-${tone}`}>
+            <div className="module-intel-person-top">
+              <strong>{row.name}</strong>
+              {due ? <span className="module-intel-person-due"><b>{dueAmount || due}</b>{dueWhen ? ` ${dueWhen}` : ""}</span> : null}
+            </div>
+            {rest.length ? <p>{rest.map(capitalise).join(" · ")}</p> : null}
+            {credit ? <p className="module-intel-person-credit">{capitalise(credit)}</p> : null}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

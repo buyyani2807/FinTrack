@@ -1064,14 +1064,21 @@ html[data-ft-role="owner"] .top-actions .top-theme { display: none; }
 .module-intel-points li { margin: 0 0 6px; color: var(--ft-text); font-size: 13px; line-height: 1.45; }
 .module-intel-points li:last-child { margin-bottom: 0; }
 .module-intel-points li::marker { color: var(--ft-muted); }
-.module-intel-priority { display: grid; gap: 14px; margin: 12px 0 0; padding: 0; list-style: none; }
-.module-intel-priority li { display: flex; align-items: flex-start; gap: 10px; margin: 0; }
-.module-intel-rank { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 999px; background: var(--ft-primary-soft); color: var(--ft-primary); font-size: 12px; font-weight: 700; }
-.module-intel-priority strong { display: block; color: var(--ft-text); font-size: 13.5px; line-height: 24px; }
-.module-intel-why { display: grid; gap: 2px; margin: 4px 0 0; padding: 0; list-style: none; }
-.module-intel-why li { position: relative; padding-left: 12px; color: var(--ft-muted); font-size: 12.5px; line-height: 1.45; }
-.module-intel-why li::before { content: ""; position: absolute; left: 0; top: .6em; width: 4px; height: 4px; border-radius: 50%; background: var(--ft-border-strong); }
-.module-intel-why li:first-child { color: var(--ft-text-2); font-weight: 600; }
+
+/* priority customers: risk bar on the left, name + amount due, reasons beneath */
+.module-intel-people { display: grid; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+.module-intel-person { position: relative; margin: 0; padding: 10px 12px 10px 16px; border: 1px solid var(--ft-border); border-radius: var(--ft-radius-sm, 10px); background: var(--ft-surface); overflow: hidden; }
+.module-intel-person::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--ft-primary); }
+.module-intel-person.risk-high::before { background: var(--ft-danger); }
+.module-intel-person.risk-medium::before { background: var(--ft-warning); }
+.module-intel-person-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.module-intel-person-top strong { min-width: 0; color: var(--ft-text); font-size: 14px; font-weight: 700; line-height: 1.35; }
+.module-intel-person-due { flex: none; color: var(--ft-muted); font-size: 12px; white-space: nowrap; }
+.module-intel-person-due b { color: var(--ft-text); font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.module-intel-person p { margin: 3px 0 0; color: var(--ft-text-2); font-size: 12.5px; line-height: 1.45; }
+.module-intel-person p.module-intel-person-credit { color: var(--ft-muted); }
+.module-intel-person.risk-high p.module-intel-person-credit { color: var(--ft-danger); font-weight: 600; }
+.module-intel-person.risk-medium p.module-intel-person-credit { color: var(--ft-warning); font-weight: 600; }
 
 @media (width <= 680px) {
   .attention-center, .module-intel { padding: 16px; border-radius: var(--ft-radius-lg); }
