@@ -117,17 +117,40 @@ test.describe("Workspace sidebar", () => {
 });
 
 test.describe("Daily Finance tabs", () => {
-  test("Overview, Customers and Reports keep the same page frame", async ({ page }) => {
+  test("every tab is its own route inside the same page frame", async ({ page }) => {
     await mockAccountsWorkspace(page);
     await page.goto("/daily-finance");
+    await expect(page).toHaveURL(/\/daily-finance\/overview$/, { timeout: 15_000 });
     const tabs = page.getByRole("navigation", { name: "Module sections" });
     await expect(tabs).toBeVisible({ timeout: 15_000 });
-    for (const tab of ["Customers", "Reports", "Overview"]) {
+    for (const [tab, path] of [["Today’s collections", "todays-collections"], ["Customers", "customers"], ["Users", "users"], ["Reports", "reports"], ["Overview", "overview"]]) {
       await tabs.getByRole("button", { name: tab, exact: true }).click();
+      await expect(page).toHaveURL(new RegExp(`/daily-finance/${path}$`));
       await expect(page.getByRole("heading", { name: "Daily Finance", level: 1 })).toBeVisible();
       await expect(tabs.getByRole("button", { name: tab, exact: true })).toHaveAttribute("aria-current", "page");
-      await expect(page.getByRole("button", { name: "Today’s collections" })).toBeVisible();
     }
+    // Today's collections is a tab now, not a button in the page header
+    await expect(page.locator(".toolbar").getByRole("button", { name: "Today’s collections" })).toHaveCount(0);
+  });
+
+  test("the Users tab shows the customer chosen in its dropdown", async ({ page }) => {
+    await mockAccountsWorkspace(page);
+    await page.goto("/daily-finance/users");
+    await expect(page.getByRole("status").getByText("Choose a customer")).toBeVisible({ timeout: 15_000 });
+    await page.getByLabel("Customer").selectOption("fa1");
+    await expect(page).toHaveURL(/\/daily-finance\/users\?account=fa1$/);
+    await expect(page.getByRole("heading", { name: "Ravi Kumar", level: 2 })).toBeVisible();
+    // the old account URL is gone and lands on Overview
+    await page.goto("/daily-finance/accounts/fa1");
+    await expect(page).toHaveURL(/\/daily-finance\/overview$/, { timeout: 15_000 });
+  });
+
+  test("View on a customer row opens the Users tab with that customer", async ({ page }) => {
+    await mockAccountsWorkspace(page);
+    await page.goto("/daily-finance/overview");
+    await page.locator("tr[data-account-id=\"fa1\"]").getByRole("button", { name: "View" }).click({ timeout: 15_000 });
+    await expect(page).toHaveURL(/\/daily-finance\/users\?account=fa1$/);
+    await expect(page.getByRole("heading", { name: "Ravi Kumar", level: 2 })).toBeVisible();
   });
 });
 
@@ -140,23 +163,6 @@ test.describe("Back buttons", () => {
       await page.locator(".modal-bg").getByRole("button", { name: "Close" }).click({ timeout: 1500 }).catch(() => {});
       await expect(page.getByRole("button", { name: /^← (Dashboard|Back)$/ })).toHaveCount(0);
     }
-  });
-});
-
-test.describe("Back button", () => {
-  test("sub-pages show a Back button instead of breadcrumbs and it returns to the parent", async ({ page }) => {
-    await mockAccountsWorkspace(page);
-    await page.goto("/daily-finance/todays-collections");
-    const back = page.getByRole("button", { name: "Back", exact: true });
-    await expect(back).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("navigation", { name: "Breadcrumb" })).toHaveCount(0);
-    await back.click();
-    await expect(page.getByRole("heading", { name: "Daily Finance", level: 1 })).toBeVisible();
-
-    await page.goto("/daily-finance/accounts/fa1");
-    await expect(page.getByRole("heading", { name: "Ravi Kumar", level: 1 })).toBeVisible({ timeout: 15_000 });
-    await page.getByRole("button", { name: "Back", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Daily Finance", level: 1 })).toBeVisible();
   });
 });
 

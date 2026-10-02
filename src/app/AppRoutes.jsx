@@ -29,15 +29,21 @@ export function AppRoutes() {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<FinanceRoute module="all" />} />
 
-          <Route path="/daily-finance" element={<FinanceRoute module="daily" />} />
-          <Route path="/daily-finance/todays-collections" element={<FinanceRoute module="daily" view="collections" />} />
-          <Route path="/daily-finance/accounts/:accountId" element={<FinanceRoute module="daily" view="account" />} />
-          <Route path="/daily-finance/*" element={<Navigate to="/daily-finance" replace />} />
+          <Route path="/daily-finance" element={<Navigate to="/daily-finance/overview" replace />} />
+          <Route path="/daily-finance/overview" element={<FinanceRoute module="daily" section="overview" />} />
+          <Route path="/daily-finance/todays-collections" element={<FinanceRoute module="daily" section="collections" />} />
+          <Route path="/daily-finance/customers" element={<FinanceRoute module="daily" section="customers" />} />
+          <Route path="/daily-finance/users" element={<FinanceRoute module="daily" section="users" />} />
+          <Route path="/daily-finance/reports" element={<FinanceRoute module="daily" section="reports" />} />
+          <Route path="/daily-finance/*" element={<Navigate to="/daily-finance/overview" replace />} />
 
-          <Route path="/monthly-finance" element={<FinanceRoute module="monthly" />} />
-          <Route path="/monthly-finance/todays-collections" element={<FinanceRoute module="monthly" view="collections" />} />
-          <Route path="/monthly-finance/accounts/:accountId" element={<FinanceRoute module="monthly" view="account" />} />
-          <Route path="/monthly-finance/*" element={<Navigate to="/monthly-finance" replace />} />
+          <Route path="/monthly-finance" element={<Navigate to="/monthly-finance/overview" replace />} />
+          <Route path="/monthly-finance/overview" element={<FinanceRoute module="monthly" section="overview" />} />
+          <Route path="/monthly-finance/todays-collections" element={<FinanceRoute module="monthly" section="collections" />} />
+          <Route path="/monthly-finance/customers" element={<FinanceRoute module="monthly" section="customers" />} />
+          <Route path="/monthly-finance/users" element={<FinanceRoute module="monthly" section="users" />} />
+          <Route path="/monthly-finance/reports" element={<FinanceRoute module="monthly" section="reports" />} />
+          <Route path="/monthly-finance/*" element={<Navigate to="/monthly-finance/overview" replace />} />
 
           <Route path="/chit-fund/:schemeId?" element={<RequireModule module="chit"><ChitFundRoute /></RequireModule>} />
           <Route path="/cashbook" element={<RequireModule module="cashbook"><CashbookRoute /></RequireModule>} />

@@ -14,16 +14,23 @@ export const workspacePaths = {
   settings: "/settings",
 };
 
-// Child routes of Daily / Monthly Finance (see src/app/AppRoutes.jsx). Overview / Customers / Reports are tabs kept in component state.
-export const COLLECTIONS_SEGMENT = "todays-collections";
-export const ACCOUNT_SEGMENT = "accounts";
+// Tabs of Daily / Monthly Finance; each is a child route, e.g. /daily-finance/customers (see src/app/AppRoutes.jsx).
+export const FINANCE_SECTIONS = {
+  overview: "overview",
+  collections: "todays-collections",
+  customers: "customers",
+  users: "users",
+  reports: "reports",
+};
 
 export const modulePath = kind => (kind === "daily" || kind === "monthly" ? workspacePaths[kind] : workspacePaths.dashboard);
 
-export const collectionsPath = kind => `${modulePath(kind)}/${COLLECTIONS_SEGMENT}`;
+export const financeSectionPath = (kind, section) => `${modulePath(kind)}/${FINANCE_SECTIONS[section] || FINANCE_SECTIONS.overview}`;
 
-// An account's detail page lives under its own module, e.g. /daily-finance/accounts/:accountId.
-export const accountPath = loan => `${modulePath(loan.kind)}/${ACCOUNT_SEGMENT}/${encodeURIComponent(loan.id)}`;
+export const collectionsPath = kind => financeSectionPath(kind, "collections");
+
+// One customer's account opens in its module's Users tab with that account chosen, e.g. /daily-finance/users?account=fa1.
+export const accountPath = loan => `${financeSectionPath(loan.kind, "users")}?account=${encodeURIComponent(loan.id)}`;
 
 export const chitSchemePath = schemeId => `${workspacePaths.chit}/${encodeURIComponent(schemeId)}`;
 

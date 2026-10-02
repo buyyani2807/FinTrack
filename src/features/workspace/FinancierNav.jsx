@@ -4,7 +4,7 @@ import { BookOpenText, CalendarDays, CalendarRange, Coins, LayoutGrid, LogOut, M
 import { Button } from "../../components/ui.jsx";
 import { ThemeToggle } from "../../components/ThemeToggle.jsx";
 import { assertModuleEntitled } from "../commercial/entitlements.js";
-import { isWithin, workspacePaths } from "./paths.js";
+import { financeSectionPath, isWithin, workspacePaths } from "./paths.js";
 
 const initialsOf = name => String(name || "").trim().split(/\s+/).slice(0, 2).map(word => word[0]?.toUpperCase() || "").join("") || "FT";
 
@@ -56,8 +56,8 @@ export function FinancierNav({ access, orgSettings = {}, businessName = "", logo
     <div className="nav-title ft-brand"><span className="ft-brand-strong">FIN</span>Track</div>
     <button type="button" className="ft-icon-btn ft-nav-close" aria-label="Close menu" onClick={closeDrawer}><X size={20} aria-hidden="true" /></button>
     <Button className={itemClass(isActive(workspacePaths.dashboard))} onClick={() => go(workspacePaths.dashboard)}><NavLabel icon={LayoutGrid} long="Dashboard" short="Dash" /></Button>
-    {access.daily && <Button className={itemClass(isActive(workspacePaths.daily))} onClick={() => go(workspacePaths.daily)}><NavLabel icon={CalendarDays} long="Daily Finance" short="Daily" /></Button>}
-    {access.monthly && <Button className={itemClass(isActive(workspacePaths.monthly))} onClick={() => go(workspacePaths.monthly)}><NavLabel icon={CalendarRange} long="Monthly Finance" short="Monthly" /></Button>}
+    {access.daily && <Button className={itemClass(isActive(workspacePaths.daily))} onClick={() => go(financeSectionPath("daily", "overview"))}><NavLabel icon={CalendarDays} long="Daily Finance" short="Daily" /></Button>}
+    {access.monthly && <Button className={itemClass(isActive(workspacePaths.monthly))} onClick={() => go(financeSectionPath("monthly", "overview"))}><NavLabel icon={CalendarRange} long="Monthly Finance" short="Monthly" /></Button>}
     {access.chit && <Button className={itemClass(isActive(workspacePaths.chit))} onClick={() => openEntitled("chit", workspacePaths.chit)}><NavLabel icon={Coins} long="Chit Fund" short="Chit" /></Button>}
     {access.cashbook && <Button className={itemClass(isActive(workspacePaths.cashbook))} onClick={() => openEntitled("cashbook", workspacePaths.cashbook)}><NavLabel icon={Wallet} long="Cashbook" short="Cash" /></Button>}
     {access.accounts && <Button className={itemClass(isActive(workspacePaths.accounts))} onClick={() => openEntitled("accounts", workspacePaths.accounts)}><NavLabel icon={BookOpenText} long="Accounts" short="Accounts" /></Button>}

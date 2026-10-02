@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router";
-import { Badge, Button, Metric } from "../../components/ui.jsx";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
+import { Badge, Button, EmptyState, FilterSelect, Metric } from "../../components/ui.jsx";
 import { TopActions } from "../../components/TopActions.jsx";
 import { claimTransactionConfirmation, loadPaymentReminderLog, loadTransactionConfirmationLog, loadUpcomingChitPayments, recordTransactionConfirmationResend, updateTransactionConfirmationStatus } from "../../lib/financeRepository";
 import { formatInr as money } from "../../lib/formatMoney.js";
@@ -26,7 +26,7 @@ import { TodayCollections } from "./components/TodayCollections.jsx";
 import { byCollectionOrderThenName, mergeAccountOrder, reorderIds } from "./model/collectionOrder";
 import { accountOutcome, annualRate, collectedOn, dailyProgress, isDailyCollectionDueOn, loanBalance, loanPaid, loanStatus, monthlyInterestPending, today } from "./model/loanState.js";
 import { realizedLoss, realizedProfit } from "./model/pnl.js";
-import { accountPath, collectionsPath, modulePath, workspacePaths } from "../workspace/paths.js";
+import { accountPath, collectionsPath, financeSectionPath, modulePath, workspacePaths } from "../workspace/paths.js";
 
 // A shared default keeps the chit-attention effect's dependency stable; a fresh `[]` per render re-runs it forever.
 const NO_CHIT_SCHEMES = [];
@@ -44,7 +44,7 @@ export function Financier({
   onLoadKyc,
   onSaveKyc, activeChitSchemes = NO_CHIT_SCHEMES
   , role = "staff", onStatusChange, onPaymentNoteChange, onPaymentCorrect, onPaymentDelete, onCollectionOrderChange,
-  authToken, orgSettings = {}, workspace = {}, onLogReceipt, module = "all", collections = false, accountId = null,
+  authToken, orgSettings = {}, workspace = {}, onLogReceipt, module = "all", section = null,
 }) {
   const [modal, setModal] = useState(null),
     [editLoan, setEditLoan] = useState(null),
@@ -55,11 +55,13 @@ export function Financier({
     [statusFilter, setStatusFilter] = useState("all"),
     [search, setSearch] = useState(""),
     [reportDate, setReportDate] = useState(today()),
-    [moduleSection, setModuleSection] = useState("overview"),
     [newAccountPortal, setNewAccountPortal] = useState(null);
-  // Today's collections and account detail are routes (see workspace/paths.js); the Overview / Customers / Reports
-  // tabs are plain state and reset to Overview on reload.
-  const collectionMode = collections, customerMode = !collections && moduleSection === "customers";
+  // Each Daily / Monthly Finance tab is a route (see app/AppRoutes.jsx); `section` says which one is open. The Users tab
+  // keeps the chosen account in the URL (?account=…).
+  const [searchParams] = useSearchParams();
+  const moduleSection = section || "overview";
+  const collectionMode = moduleSection === "collections", customerMode = moduleSection === "customers", usersMode = moduleSection === "users";
+  const accountId = usersMode ? searchParams.get("account") || null : null;
   const detail = accountId ? { id: accountId } : null;
   const [receiptSuccess, setReceiptSuccess] = useState(null);
   const [reminderLogState, setReminderLogState] = useState([]);
@@ -129,14 +131,13 @@ export function Financier({
   const activeLoans = loans.filter(loan => ["active", "overdue"].includes(loanStatus(loan)));
   const location = useLocation();
   const navigateTo = useNavigate();
-  const openAccount = loan => navigateTo(accountPath(loan), { state: { from: location.pathname } });
-  // Back returns to wherever the account was opened from; a bookmarked account falls back to its module.
-  const closeAccount = () => (location.state?.from ? navigateTo(-1) : navigateTo(modulePath(module)));
+  const openAccount = loan => navigateTo(accountPath(loan));
+  // After an account is deleted the Users tab goes back to "choose a customer".
+  const closeAccount = () => navigateTo(financeSectionPath(module, "users"), { replace: true });
+  const chooseAccount = id => navigateTo(id ? accountPath({ kind: module, id }) : financeSectionPath(module, "users"));
   const goModuleSection = next => {
-    if (next === "collections") return navigateTo(collectionsPath(module));
-    setModuleSection(next);
     if (next !== "customers") setStatusFilter("all");
-    if (collections) navigateTo(modulePath(module));
+    navigateTo(financeSectionPath(module, next));
   };
   // The tab, search and filters start afresh when the module changes or a sidebar link asks for it, and switching
   // accounts closes an open statement.
@@ -145,7 +146,6 @@ export function Financier({
   if (appliedView.module !== module || resetRequested || appliedView.accountId !== accountId) {
     setAppliedView({ module, resetKey: resetRequested ? location.key : appliedView.resetKey, accountId });
     if (appliedView.module !== module || resetRequested) {
-      setModuleSection("overview");
       setFilter(module);
       setStatusFilter("all");
       setSearch("");
@@ -155,14 +155,19 @@ export function Financier({
   useEffect(() => {
     if (module !== "all") window.scrollTo(0, 0);
   }, [module, appliedView.resetKey]);
+  // On narrow screens the tab row scrolls sideways; keep the open tab in view.
+  useEffect(() => {
+    document.querySelector(".module-section-nav .module-section-tab.active")?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  }, [moduleSection]);
   const dedicatedModule = !customerMode && (module === "daily" || module === "monthly");
   // Daily / Monthly Finance keep one page frame (header, title, actions, tabs) for Overview, Customers and Reports;
   // only the content below the tabs changes.
   const inModule = module === "daily" || module === "monthly";
   const moduleName = module === "monthly" ? "Monthly" : "Daily";
   const moduleHeader = <header className="top"><div><div className="brand">{businessName || "My Finance Business"}</div><div className="sub">{isOwner ? "Financier dashboard" : "Collection agent dashboard"} · {moduleName} collections</div></div><TopActions logout={logout} /></header>;
-  const moduleToolbar = <div className="toolbar"><div><h1 className="title">{moduleName} Finance</h1><p className="copy">{module === "monthly" ? "Monthly interest accounts and payment reminders." : "Daily 100-day collection accounts."}</p></div><div className="tabs"><Button onClick={() => goModuleSection("collections")}>Today’s collections</Button>{isOwner && <Button className="primary" onClick={() => setModal("new")}>+ New finance account</Button>}</div></div>;
-  const moduleNav = <nav className="module-section-nav" aria-label="Module sections"><button type="button" className={`module-section-tab ${moduleSection === "overview" ? "active" : ""}`} aria-current={moduleSection === "overview" ? "page" : undefined} onClick={() => goModuleSection("overview")}>Overview</button><button type="button" className={`module-section-tab ${moduleSection === "customers" ? "active" : ""}`} aria-current={moduleSection === "customers" ? "page" : undefined} onClick={() => goModuleSection("customers")}>Customers</button>{isOwner && <button type="button" className={`module-section-tab ${moduleSection === "reports" ? "active" : ""}`} aria-current={moduleSection === "reports" ? "page" : undefined} onClick={() => goModuleSection("reports")}>Reports</button>}</nav>;
+  const moduleToolbar = <div className="toolbar"><div><h1 className="title">{moduleName} Finance</h1><p className="copy">{module === "monthly" ? "Monthly interest accounts and payment reminders." : "Daily 100-day collection accounts."}</p></div>{isOwner && <div className="tabs"><Button className="primary" onClick={() => setModal("new")}>+ New finance account</Button></div>}</div>;
+  const moduleTabs = [["overview", "Overview"], ["collections", "Today’s collections"], ["customers", "Customers"], ["users", "Users"], ...(isOwner ? [["reports", "Reports"]] : [])];
+  const moduleNav = <nav className="module-section-nav" aria-label="Module sections">{moduleTabs.map(([id, label]) => <button key={id} type="button" className={`module-section-tab ${moduleSection === id ? "active" : ""}`} aria-current={moduleSection === id ? "page" : undefined} onClick={() => goModuleSection(id)}>{label}</button>)}</nav>;
   const customerPool = customerMode
     ? loans.filter(loan => (statusFilter === "all" || loanStatus(loan) === statusFilter) && (module === "all" || loan.kind === module))
     : activeLoans.filter(loan => module === "all" || loan.kind === module);
@@ -226,14 +231,20 @@ export function Financier({
     if (!detail) { setKyc(null); return; }
     onLoadKyc(detail).then(setKyc).catch(() => setKyc(null));
   }, [detail?.id]);
-  if (collectionMode) return <><TodayCollections loans={loans.filter(loan => loan.kind === module)} kind={module} back={() => goModuleSection("overview")} collect={setModal} view={openAccount} canReorder={isOwner} draggedId={draggedId} setDraggedId={setDraggedId} onReorder={targetId => reorderDashboard(module, targetId)} startTouchDrag={startTouchDrag} moveTouchDrag={moveTouchDrag} finishTouchDrag={finishTouchDrag} cancelTouchDrag={() => { touchTargetId.current = null; setDraggedId(null); }} />{modal && <Payment loan={modal} close={() => setModal(null)} save={addPayment} />}{receiptSuccess && <ReceiptSuccessModal receipt={receiptSuccess} settings={orgSettings} token={authToken} onLogAction={onLogReceipt} close={() => setReceiptSuccess(null)} />}</>;
-  if (detail) {
-    const loan = loans.find(l => l.id === detail.id);
-    if (!loan) return loans.length ? <main className="shell"><Button onClick={closeAccount}>← Back</Button><p className="copy spacer">This account could not be found.</p></main> : null;
-    if (statementLoan && isOwner) {
+  const newAccountModals = <>{isOwner && modal === "new" && <NewFinance kind={module} close={() => setModal(null)} save={createAccount} />}{portalNotice}</>;
+  if (inModule && collectionMode) return <main className={`shell finance-module-shell ${module}`}>{moduleHeader}{moduleToolbar}{moduleNav}<TodayCollections embedded loans={loans.filter(loan => loan.kind === module)} kind={module} collect={setModal} view={openAccount} canReorder={isOwner} draggedId={draggedId} setDraggedId={setDraggedId} onReorder={targetId => reorderDashboard(module, targetId)} startTouchDrag={startTouchDrag} moveTouchDrag={moveTouchDrag} finishTouchDrag={finishTouchDrag} cancelTouchDrag={() => { touchTargetId.current = null; setDraggedId(null); }} />{modal && modal !== "new" && <Payment loan={modal} close={() => setModal(null)} save={addPayment} />}{receiptSuccess && <ReceiptSuccessModal receipt={receiptSuccess} settings={orgSettings} token={authToken} onLogAction={onLogReceipt} close={() => setReceiptSuccess(null)} />}{newAccountModals}</main>;
+  if (inModule && usersMode) {
+    // Users tab: pick one customer account from the dropdown to see its full details below.
+    const accounts = loans.filter(loan => loan.kind === module).sort((a, b) => a.customerName.localeCompare(b.customerName));
+    const loan = detail ? loans.find(l => l.id === detail.id) : null;
+    if (loan && statementLoan && isOwner) {
       return <CustomerStatementPage mode="finance" loans={loans} focusLoan={statementLoan} settings={orgSettings} back={() => setStatementLoan(null)} />;
     }
-    return <main className="shell"><OperationsDetail loan={loan} relatedLoans={loans.filter(item => item.customerId && item.customerId === loan.customerId)} back={closeAccount} collect={setModal} edit={setEditLoan} remove={async account => { await onDeleteLoan(account); closeAccount(); }} portal={setPortalLoan} kyc={kyc} editKyc={setEditKycLoan} isOwner={isOwner} changeStatus={onStatusChange} editPaymentNote={onPaymentNoteChange} correctPayment={onPaymentCorrect} deletePayment={onPaymentDelete} orgSettings={orgSettings} authToken={authToken} workspace={workspace} onLogReceipt={onLogReceipt} reminderLog={reminderLogState} confirmationLog={confirmationLogState} onStatement={setStatementLoan} onResendConfirmation={account => runFinanceConfirmation(account, { resend: true })} />{modal && <Payment loan={modal} close={() => setModal(null)} save={addPayment} />}{isOwner && editLoan && <EditAccount loan={loan} close={() => setEditLoan(null)} save={onUpdateLoan} />}{isOwner && portalLoan && <CustomerPortalSetup loan={loan} close={() => setPortalLoan(null)} save={onSaveCustomerPortal} />}{isOwner && editKycLoan && <KycEditor loan={loan} current={kyc} close={() => setEditKycLoan(null)} save={async (account, aadhaar, pan) => { await onSaveKyc(account, aadhaar, pan); setKyc(await onLoadKyc(account)); }} />}{receiptSuccess && <ReceiptSuccessModal receipt={receiptSuccess} settings={orgSettings} token={authToken} onLogAction={onLogReceipt} close={() => setReceiptSuccess(null)} />}</main>;
+    const picker = <div className="card finance-user-picker"><FilterSelect label="Customer" value={loan ? loan.id : ""} allValue="" onChange={chooseAccount}><option value="">Choose a customer…</option>{accounts.map(account => <option key={account.id} value={account.id}>{`${account.customerName} · ${account.phone}${loanStatus(account) === "active" ? "" : ` · ${loanStatus(account)}`}`}</option>)}</FilterSelect><span className="small">{accounts.length} {moduleName.toLowerCase()} customer{accounts.length === 1 ? "" : "s"}</span></div>;
+    const body = loan
+      ? <><OperationsDetail embedded loan={loan} relatedLoans={loans.filter(item => item.customerId && item.customerId === loan.customerId)} collect={setModal} edit={setEditLoan} remove={async account => { await onDeleteLoan(account); closeAccount(); }} portal={setPortalLoan} kyc={kyc} editKyc={setEditKycLoan} isOwner={isOwner} changeStatus={onStatusChange} editPaymentNote={onPaymentNoteChange} correctPayment={onPaymentCorrect} deletePayment={onPaymentDelete} orgSettings={orgSettings} authToken={authToken} workspace={workspace} onLogReceipt={onLogReceipt} reminderLog={reminderLogState} confirmationLog={confirmationLogState} onStatement={setStatementLoan} onResendConfirmation={account => runFinanceConfirmation(account, { resend: true })} />{isOwner && editLoan && <EditAccount loan={loan} close={() => setEditLoan(null)} save={onUpdateLoan} />}{isOwner && portalLoan && <CustomerPortalSetup loan={loan} close={() => setPortalLoan(null)} save={onSaveCustomerPortal} />}{isOwner && editKycLoan && <KycEditor loan={loan} current={kyc} close={() => setEditKycLoan(null)} save={async (account, aadhaar, pan) => { await onSaveKyc(account, aadhaar, pan); setKyc(await onLoadKyc(account)); }} />}</>
+      : <EmptyState title={detail && loans.length ? "This customer could not be found" : "Choose a customer"} copy={detail && loans.length ? "The account may have been deleted. Pick another customer from the list." : `Pick a customer above to see their ${moduleName.toLowerCase()} account, payments and actions.`} />;
+    return <main className={`shell finance-module-shell ${module}`}>{moduleHeader}{moduleToolbar}{moduleNav}{picker}{body}{modal && modal !== "new" && <Payment loan={modal} close={() => setModal(null)} save={addPayment} />}{receiptSuccess && <ReceiptSuccessModal receipt={receiptSuccess} settings={orgSettings} token={authToken} onLogAction={onLogReceipt} close={() => setReceiptSuccess(null)} />}{newAccountModals}</main>;
   }
   if (!customerMode && module === "all") {
     const dailyCustomers = loans.filter(loan => loan.kind === "daily" && loanStatus(loan) === "active").sort(byCollectionOrderThenName);
