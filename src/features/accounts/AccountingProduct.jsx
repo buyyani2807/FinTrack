@@ -482,7 +482,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const wantGst = reportId === "gst";
   const wantInvoices = section === "receivables" || section === "payables" || reportId === "receivables" || reportId === "payables";
   const wantArAp = wantOverview || wantInvoices || section === "setup";
-  const wantLedger = section === "ledger";
+  const wantLedger = section === "ledger" || reportId === "ledger";
   const wantPartyBook = section === "parties";
 
   useEffect(() => {
