@@ -54,8 +54,9 @@ test.describe("Accounts workspace", () => {
     const dialog = page.locator(".modal-bg").last();
     const closeDialog = () => dialog.getByRole("button", { name: "Close", exact: true }).first().click();
 
-    for (const kind of ["sale", "purchase", "expense", "receipt", "payment", "credit_note", "debit_note", "transfer"]) {
-      await page.locator("select.acc-new-entry").selectOption(kind);
+    for (const kind of ["Sale", "Purchase", "Expense", "Receipt", "Payment", "Credit note", "Debit note", "Transfer"]) {
+      await page.getByRole("combobox", { name: "New entry" }).click();
+      await page.getByRole("option", { name: kind, exact: true }).click();
       await expect(dialog).toBeVisible();
       await closeDialog();
     }
@@ -138,7 +139,8 @@ test.describe("Daily Finance tabs", () => {
     await page.goto("/daily-finance/users");
     // customers are listed by name, so Lakshmi Devi comes first
     await expect(page.getByRole("heading", { name: "Lakshmi Devi", level: 2 })).toBeVisible({ timeout: 15_000 });
-    await page.getByLabel("Customer", { exact: true }).selectOption("fa1");
+    await page.getByRole("combobox", { name: "Customer", exact: true }).click();
+    await page.getByRole("option", { name: /^Ravi Kumar/ }).click();
     await expect(page).toHaveURL(/\/daily-finance\/users\?account=fa1$/);
     await expect(page.getByRole("heading", { name: "Ravi Kumar", level: 2 })).toBeVisible();
     await page.getByRole("button", { name: "Next customer" }).click();

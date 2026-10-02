@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useState } from "react";
 import { BellRing, ChevronDown, MessageCircle, RefreshCw } from "lucide-react";
-import { SegmentedControl } from "../../../components/ui.jsx";
+import { SegmentedControl, Spinner } from "../../../components/ui.jsx";
 import { buildChitUpcomingRows, buildMonthlyUpcoming, buildReminderReceipt, filterUpcomingPayments, formatDueDate, formatDueLabel } from "../model/upcomingPayments.js";
 import { buildReminderMessage, canWhatsAppShare, openManualWhatsAppShare } from "../io/receiptWhatsApp.js";
 import { loadPaymentReminderLog, loadUpcomingChitPayments, markPaymentReminderSent } from "../../../lib/financeRepository.js";
@@ -138,7 +138,7 @@ export function UpcomingPaymentsSection({ loans = [], token, settings, workspace
     <span className="upcoming-payments-icon" aria-hidden="true"><BellRing size={19} /></span>
     <span className="upcoming-payments-title-wrap">
       <span className="upcoming-payments-title"><strong>{title}</strong>{!loading && !error && <span className={`upcoming-payments-count${allItems.length ? "" : " is-zero"}`}>{allItems.length}</span>}</span>
-      <span className="upcoming-payments-status">{statusLine}</span>
+      <span className="upcoming-payments-status">{loading ? <Spinner size="sm" label="Loading reminders" /> : statusLine}</span>
     </span>
   </>;
 
@@ -157,7 +157,7 @@ export function UpcomingPaymentsSection({ loans = [], token, settings, workspace
 
     {showList && <div id={listId} className="upcoming-payments-body">
       {!loading && !error && allItems.length > 50 && <p className="small upcoming-payments-more">Showing first 50 of {allItems.length}</p>}
-      {loading && <p className="small upcoming-payments-empty" role="status">Loading installment reminders…</p>}
+      {loading && <Spinner label="Loading installment reminders" />}
       {!loading && error && errorRow}
       {!loading && !error && !allItems.length && <p className="upcoming-payments-empty">No payments due{dueWindow ? ` ${dueWindow}` : ""}. Reminders appear here as due dates come up.</p>}
       {!loading && !error && !!allItems.length && <div className={`table upcoming-payments-table ${isMonthly ? "monthly" : "chit"}`}><table><thead><tr><th>Customer</th>{!isMonthly && <><th>Scheme</th><th>Type</th></>}<th>Amount</th><th>Due</th><th><span className="ft-sr-only">Reminder</span></th></tr></thead><tbody>

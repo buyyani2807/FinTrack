@@ -3,6 +3,7 @@ import { Navigate, useNavigate, useOutletContext, useParams } from "react-router
 import { accountsPath, accountsViewFromPath } from "../../accounts/accountsNavigation.js";
 import { loadAccountsModule } from "../accountsModuleLoader.js";
 import { workspacePaths } from "../paths.js";
+import { Spinner } from "../../../components/ui.jsx";
 
 const AccountsModule = lazy(() => loadAccountsModule().then(module => ({ default: module.AccountsModule })));
 
@@ -17,7 +18,7 @@ export function AccountsRoute() {
   // An unknown section goes to Overview.
   if (view.section === "overview" && area !== "overview") return <Navigate to={accountsPath(view)} replace />;
   return <div className="accounts-dashboard">
-    <Suspense fallback={<div className="shell"><p className="copy">Loading Accounts…</p></div>}>
+    <Suspense fallback={<div className="shell"><Spinner label="Loading Accounts" /></div>}>
       <AccountsModule
         token={token}
         close={() => navigate(workspacePaths.dashboard)}

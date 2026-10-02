@@ -1,18 +1,13 @@
 import { AccMoreMenu } from "./AccUi.jsx";
+import { Select } from "../../../components/Select.jsx";
 import { SIMPLE_ENTRY_KINDS } from "../model/accountingModel.js";
 
 export function NewEntryActions({ openSimple, openVoucher, openParty }) {
   return (
     <>
-      <select className="acc-new-entry" defaultValue="" aria-label="New entry" onChange={event => {
-        if (event.target.value) {
-          openSimple(event.target.value);
-          event.target.value = "";
-        }
-      }}>
-        <option value="">+ New entry</option>
+      <Select className="acc-new-entry" value="" placeholder="+ New entry" aria-label="New entry" onChange={event => { if (event.target.value) openSimple(event.target.value); }}>
         {SIMPLE_ENTRY_KINDS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
-      </select>
+      </Select>
       <button type="button" className="btn primary acc-hide-mobile" onClick={openVoucher}>+ Voucher</button>
       <button type="button" className="btn acc-hide-mobile" onClick={openParty}>+ Party</button>
       <AccMoreMenu

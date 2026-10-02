@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { ExportButton, Spinner } from "../../../components/ui.jsx";
+import { Select } from "../../../components/Select.jsx";
 import { TabScroller } from "../../../components/TabScroller.jsx";
 import { formatInr } from "../../../lib/formatMoney.js";
 import { formatReceiptDate } from "../../receipts/model/receiptModel.js";
@@ -57,12 +59,12 @@ function RouteForm({ form, setForm, agents, saving, error, onSave, onClose }) {
     <div className="form">
       <Field label="Route name"><input value={form.name} maxLength={80} placeholder="e.g. Market road beat" autoFocus onChange={event => set("name", event.target.value)} /></Field>
       <Field label="Collection agent">
-        <select value={form.agentId} onChange={event => set("agentId", event.target.value)}>
+        <Select value={form.agentId} onChange={event => set("agentId", event.target.value)}>
           <option value="">Not assigned</option>
           {agents.filter(agent => agent.isActive || agent.id === form.agentId).map(agent => (
             <option key={agent.id} value={agent.id}>{agent.name || agent.phone || "Unnamed"}{agent.role === "owner" ? " (owner)" : ""}{agent.isActive ? "" : " (inactive)"}</option>
           ))}
-        </select>
+        </Select>
       </Field>
       <div className="span">
         <span className="small">Runs on (leave empty for every day)</span>
@@ -163,7 +165,7 @@ function FieldCollections({ token, today }) {
     <div className="accounts-action-row spacer">
       <Field label="From"><input type="date" value={from} max={to} onChange={event => setFrom(event.target.value)} /></Field>
       <Field label="To"><input type="date" value={to} min={from} onChange={event => setTo(event.target.value)} /></Field>
-      <button type="button" className="btn" disabled={!rows?.length} onClick={exportCsv}>Export CSV</button>
+      <ExportButton disabled={!rows?.length} onClick={exportCsv} />
     </div>
     {error && <p className="red small">{error}</p>}
     <h3 className="acc-routes-subhead">Cash handover by agent</h3>
@@ -180,7 +182,7 @@ function FieldCollections({ token, today }) {
         {COLLECTION_MODES.map(mode => <td key={mode.id} className="acc-num">{handover.totals.byMode[mode.id] ? money(handover.totals.byMode[mode.id]) : "—"}</td>)}
         <td className="acc-num"><strong>{money(handover.totals.total)}</strong></td>
       </tr>}
-      {rows === undefined && <tr><td colSpan={COLLECTION_MODES.length + 3}>Loading…</td></tr>}
+      {rows === undefined && <tr><td colSpan={COLLECTION_MODES.length + 3}><Spinner label="Loading collections" /></td></tr>}
       {rows && !handover.agents.length && <tr><td colSpan={COLLECTION_MODES.length + 3}>No field collections in these dates.</td></tr>}
     </tbody></table></div>
     <p className="small">Cash and cheques should match what each agent hands over. Reversed receipts are excluded from the totals.</p>

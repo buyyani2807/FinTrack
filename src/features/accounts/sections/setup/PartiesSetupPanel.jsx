@@ -1,4 +1,5 @@
 import { SegmentedControl } from "../../../../components/ui.jsx";
+import { Select } from "../../../../components/Select.jsx";
 import { AccEmpty, AccPager, AccSetupSection } from "../../components/AccUi.jsx";
 import { money, PARTY_TYPE_FILTERS } from "../../accountsFormat.js";
 import { PartyTypeBadge } from "../../components/PartyFields.jsx";
@@ -36,9 +37,9 @@ export function PartiesSetupPanel({
         </label>
         <label className="accounts-filter-field acc-party-type-select">
           <span className="small">Party type</span>
-          <select value={partyTypeFilter} onChange={event => setPartyTypeFilter(event.target.value)}>
+          <Select value={partyTypeFilter} onChange={event => setPartyTypeFilter(event.target.value)}>
             {PARTY_TYPE_FILTERS.map(item => <option key={item.id} value={item.id}>{item.label} ({partyCountByType[item.id] || 0})</option>)}
-          </select>
+          </Select>
         </label>
         <SegmentedControl
           label="Party type"

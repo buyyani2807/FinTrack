@@ -1,4 +1,6 @@
 import { AccMoreMenu, AccPager } from "../components/AccUi.jsx";
+import { Select } from "../../../components/Select.jsx";
+import { ExportGroup } from "../../../components/ui.jsx";
 import { todayIso } from "../../../lib/dates.js";
 import { downloadAccountsCsv, downloadAccountsExcel, downloadAccountsPdf } from "../io/accountingExport.js";
 import { money } from "../accountsFormat.js";
@@ -17,26 +19,23 @@ export function LedgerSection({
   pagedLedger,
   setListPage,
 }) {
+  const header = ["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"];
+  const rows = () => ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance]);
+  const exports = [
+    { id: "csv", label: "CSV", onClick: () => downloadAccountsCsv(`fintrack-ledger-${todayIso()}.csv`, [header, ...rows()]) },
+    { id: "xlsx", label: "Excel", onClick: () => downloadAccountsExcel(`fintrack-ledger-${todayIso()}.xlsx`, [header, ...rows()]) },
+    { id: "pdf", label: "PDF", onClick: () => downloadAccountsPdf(`fintrack-ledger-${todayIso()}.pdf`, { title: "Ledger", subtitle: `${ledger.account?.code || ""} ${ledger.account?.name || ""}`, rows: [header, ...rows()] }) },
+  ];
   return (
     <div className="acc-panel">
       <ReportRangeBar fy={fy} lastFy={lastFy} from={rangeFrom} to={rangeTo} onChange={setReportRange} />
       <div className="card accounts-filter-card spacer">
         <label className="accounts-filter-field"><span className="small">Account</span>
-          <select value={ledgerId} onChange={event => setLedgerId(event.target.value)}>{visibleAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</select>
+          <Select value={ledgerId} onChange={event => setLedgerId(event.target.value)}>{visibleAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</Select>
         </label>
         <div className="acc-btn-group">
-          <button type="button" className="btn acc-hide-mobile" onClick={() => downloadAccountsCsv(`fintrack-ledger-${todayIso()}.csv`, [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])])}>Export CSV</button>
-          <button type="button" className="btn acc-hide-mobile" onClick={() => downloadAccountsExcel(`fintrack-ledger-${todayIso()}.xlsx`, [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])])}>Export Excel</button>
-          <button type="button" className="btn acc-hide-mobile" onClick={() => downloadAccountsPdf(`fintrack-ledger-${todayIso()}.pdf`, { title: "Ledger", subtitle: `${ledger.account?.code || ""} ${ledger.account?.name || ""}`, rows: [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])] })}>Download PDF</button>
-          <AccMoreMenu
-            className="acc-show-mobile"
-            label="Export"
-            items={[
-              { id: "csv", label: "Export CSV", onClick: () => downloadAccountsCsv(`fintrack-ledger-${todayIso()}.csv`, [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])]) },
-              { id: "xlsx", label: "Export Excel", onClick: () => downloadAccountsExcel(`fintrack-ledger-${todayIso()}.xlsx`, [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])]) },
-              { id: "pdf", label: "Download PDF", onClick: () => downloadAccountsPdf(`fintrack-ledger-${todayIso()}.pdf`, { title: "Ledger", subtitle: `${ledger.account?.code || ""} ${ledger.account?.name || ""}`, rows: [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])] }) },
-            ]}
-          />
+          <ExportGroup className="acc-hide-mobile" formats={exports} />
+          <AccMoreMenu className="acc-show-mobile" label="Export" items={exports.map(item => ({ ...item, label: `Export ${item.label}` }))} />
         </div>
       </div>
       <div className="table spacer acc-table-wrap acc-ledger-table"><table><thead><tr><th>Date</th><th>Voucher</th><th>Narration</th><th className="acc-num">Debit</th><th className="acc-num">Credit</th><th className="acc-num">Balance</th></tr></thead><tbody>

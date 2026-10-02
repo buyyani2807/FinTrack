@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Button, Field, Modal } from "../../components/ui.jsx";
+import { Button, Field, Modal, Spinner } from "../../components/ui.jsx";
 import { formatInr } from "../../lib/formatMoney.js";
 import { QrSvg } from "../accounts/PayPage.jsx";
 import { upiPayLink } from "../accounts/model/upiPay.js";
@@ -146,7 +146,7 @@ export function RouteCollectionsPage({ token, businessName, back, routeId = "tod
   </header>;
 
   if (sheet === undefined) {
-    return <main className="shell rc-page">{header}<p className="copy spacer">Loading your route…</p></main>;
+    return <main className="shell rc-page">{header}<Spinner label="Loading your route" /></main>;
   }
   if (sheet === null) {
     return <main className="shell rc-page">{header}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Select } from "../../../../components/Select.jsx";
 import { PackageMinus, PackagePlus, Plus, Tags, X } from "lucide-react";
 import { todayIso } from "../../../../lib/dates.js";
 import { SegmentedControl } from "../../../../components/ui.jsx";
@@ -99,12 +100,12 @@ export function ItemsSidePanels({
         />
         <div className="form acc-settings-grid">
           <Field className="span" label="Product">
-            <select value={adjust.itemId} onChange={event => setAdjust(state => ({ ...state, itemId: event.target.value }))}>
+            <Select value={adjust.itemId} onChange={event => setAdjust(state => ({ ...state, itemId: event.target.value }))}>
               <option value="">Select product</option>
               {products.map(item => (
                 <option key={item.id} value={item.id}>{item.name} ({stockByItem[item.id]} {item.unit})</option>
               ))}
-            </select>
+            </Select>
           </Field>
           <Field label={`Quantity${chosen ? ` (${chosen.unit})` : ""}`}>
             <input type="number" min="0" step="0.001" inputMode="decimal" value={adjust.quantityDelta === "" ? "" : amount} placeholder="0" onChange={event => setAmount(event.target.value)} />

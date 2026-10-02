@@ -1,4 +1,5 @@
 import { todayIso } from "../../../../lib/dates.js";
+import { ExportButton } from "../../../../components/ui.jsx";
 import { STOCK_AGE_BUCKETS } from "../../model/inventoryValuation.js";
 import { FilterField as Field } from "../AccUi.jsx";
 import { SimpleMetric } from "../AccUi.jsx";
@@ -7,9 +8,9 @@ import { money, qty } from "../../accountsFormat.js";
 export function StockAgeingTab({ asOf, setAsOf, exportAgeing, ageing }) {
   return (
     <>
-      <div className="accounts-action-row spacer">
+      <div className="acc-list-toolbar spacer">
         <Field label="Age as on"><input type="date" value={asOf} onChange={event => setAsOf(event.target.value || todayIso())} /></Field>
-        <button type="button" className="btn" onClick={exportAgeing}>Export CSV</button>
+        <ExportButton className="acc-list-new" onClick={exportAgeing} />
       </div>
       <div className="acc-metric-grid spacer">
         {STOCK_AGE_BUCKETS.map(bucket => <SimpleMetric key={bucket.id} label={bucket.label} value={money(ageing.totals[bucket.id])} tone={bucket.id === "d180" && ageing.totals[bucket.id] ? "red" : ""} />)}

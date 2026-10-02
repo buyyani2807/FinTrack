@@ -1,4 +1,5 @@
 import { ChevronDown, Mail, Phone } from "lucide-react";
+import { Select } from "../../../components/Select.jsx";
 import { FilterSelect } from "../../../components/ui.jsx";
 import { formatReceiptDate } from "../../receipts/model/receiptModel.js";
 import { AccEmpty, AccPager } from "../components/AccUi.jsx";
@@ -38,21 +39,27 @@ export function PartiesSection({
       </div>
       {focusedParty ? <>
         <section className="card acc-party-ledger-identity">
-          <label className="acc-party-picker">
-            <span className="acc-party-avatar" aria-hidden="true">{initialsOf(focusedParty.name)}</span>
-            <span className="acc-party-picker-text" aria-hidden="true">
-              <span className="acc-party-picker-kicker">Party ledger</span>
-              <strong>{focusedParty.name}</strong>
-              <span className="acc-party-card-meta">
-                <PartyTypeBadge type={focusedParty.partyType} />
-                <span className={`acc-status-pill ${focusedParty.isActive === false ? "inactive" : "active"}`}>{focusedParty.isActive === false ? "Inactive" : "Active"}</span>
+          <Select
+            bare
+            className="acc-party-picker"
+            aria-label="Party"
+            value={focusedParty.id}
+            onChange={event => setPartyFocusId(event.target.value)}
+            renderValue={() => <>
+              <span className="acc-party-avatar" aria-hidden="true">{initialsOf(focusedParty.name)}</span>
+              <span className="acc-party-picker-text">
+                <span className="acc-party-picker-kicker">Party ledger</span>
+                <strong>{focusedParty.name}</strong>
+                <span className="acc-party-card-meta">
+                  <PartyTypeBadge type={focusedParty.partyType} />
+                  <span className={`acc-status-pill ${focusedParty.isActive === false ? "inactive" : "active"}`}>{focusedParty.isActive === false ? "Inactive" : "Active"}</span>
+                </span>
               </span>
-            </span>
-            <ChevronDown className="acc-party-picker-chevron" size={18} aria-hidden="true" />
-            <select aria-label="Party" value={focusedParty.id} onChange={event => setPartyFocusId(event.target.value)}>
-              {parties.map(party => <option key={party.id} value={party.id}>{party.name} · {partyTypeLabel(party.partyType)}{party.isActive === false ? " · inactive" : ""}</option>)}
-            </select>
-          </label>
+              <ChevronDown className="acc-party-picker-chevron" size={18} aria-hidden="true" />
+            </>}
+          >
+            {parties.map(party => <option key={party.id} value={party.id}>{party.name} · {partyTypeLabel(party.partyType)}{party.isActive === false ? " · inactive" : ""}</option>)}
+          </Select>
           <div className="acc-party-ledger-side">
             {(focusedParty.phone || focusedParty.email) ? <ul className="acc-party-ledger-contact">
               {focusedParty.phone ? <li><Phone size={14} aria-hidden="true" />{focusedParty.phone}</li> : null}

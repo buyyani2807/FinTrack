@@ -48,7 +48,7 @@ import {
 } from "./data/accountingRepository.js";
 import { isAccountsOnboardingDone, readIndustry } from "./components/AccOnboardingWizard.jsx";
 import { parsePartyCsv, planPartyImport } from "./io/partyCsvImport.js";
-import { AccMoreMenu, AccSkeleton, Modal, ReasonModal } from "./components/AccUi.jsx";
+import { AccMoreMenu, Modal, ReasonModal } from "./components/AccUi.jsx";
 import { guessColumnMapping, mapBankImportRows, readBankStatementFile } from "./io/bankStatementImport.js";
 import { backupDownloadFilename, buildAccountsCompanyBackup, parseAccountsCompanyBackup } from "./data/accountsBackup.js";
 import { assertBackupRestorable, restoreAccountsCompanyBackup } from "./data/accountsRestore.js";
@@ -161,6 +161,7 @@ import { creditCheck, documentFulfilment, documentLabel, pendingOrderRows } from
 import { receivablePositions } from "./model/routeCollectionsModel.js";
 import { buildOwnerDailyBrief, reorderPurchaseOrderLines } from "./model/ownerDailyBrief.js";
 import { addMonths, gstFilingSchedule, monthKey, monthLabel, monthRange, readGstFrequency, writeGstFrequency } from "./model/gstCalendar.js";
+import { Spinner } from "../../components/ui.jsx";
 
 // Re-exported for the workspace preloader, which lazy-loads this module.
 export { prefetchAccounts } from "./data/accountsCache.js";
@@ -1830,7 +1831,7 @@ const openVoucher = () => {
       <Toasts items={[{ id: "error", tone: "error", message: error, onClose: () => setError("") }, { id: "notice", message: notice, onClose: () => setNotice("") }]} />
       {readOnly && <div className="notice">Accounts access: <strong>viewer</strong>. You can review books and reports, but posting and setup changes are blocked.</div>}
       {migrationRequired && <div className="notice">Run <strong>052</strong> through <strong>076_fix_ambiguous_item_type.sql</strong> in the Supabase SQL editor (including <strong>059</strong>, <strong>064–067</strong>, <strong>070–076</strong>), then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
-      {loading && !settings ? <><p className="copy">Loading Accounts…</p><AccSkeleton /></> : <>
+      {loading && !settings ? <Spinner label="Loading Accounts" /> : <>
         {section === "overview" && <OverviewSection
           settings={settings}
           setupForm={setupForm}

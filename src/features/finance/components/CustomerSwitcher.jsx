@@ -1,4 +1,5 @@
 import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { Select } from "../../../components/Select.jsx";
 import { loanStatus } from "../model/loanState.js";
 
 const initialsOf = name => String(name || "").trim().split(/\s+/).slice(0, 2).map(word => word[0]?.toUpperCase() || "").join("") || "?";
@@ -14,19 +15,25 @@ export function CustomerSwitcher({ accounts, selectedId, onChange, kindLabel }) 
     if (next) onChange(next.id);
   };
   return <section className="card customer-switcher" aria-label="Choose customer">
-    <label className="customer-switcher-select">
-      <span className="customer-switcher-avatar" aria-hidden="true">{initialsOf(current?.customerName)}</span>
-      <span className="customer-switcher-text" aria-hidden="true">
-        <span className="customer-switcher-kicker">Customer</span>
-        <strong>{current?.customerName || "Choose a customer"}</strong>
-        {current && <span className="customer-switcher-meta">{current.phone}<i className={`customer-switcher-status is-${status}`}>{status}</i></span>}
-      </span>
-      <ChevronDown className="customer-switcher-chevron" size={20} aria-hidden="true" />
-      <select aria-label="Customer" value={current?.id || ""} onChange={event => onChange(event.target.value)}>
-        {!current && <option value="">Choose a customer…</option>}
-        {accounts.map(account => <option key={account.id} value={account.id}>{`${account.customerName} · ${account.phone}${loanStatus(account) === "active" ? "" : ` · ${loanStatus(account)}`}`}</option>)}
-      </select>
-    </label>
+    <Select
+      bare
+      className="customer-switcher-select"
+      aria-label="Customer"
+      value={current?.id || ""}
+      onChange={event => onChange(event.target.value)}
+      renderValue={() => <>
+        <span className="customer-switcher-avatar" aria-hidden="true">{initialsOf(current?.customerName)}</span>
+        <span className="customer-switcher-text">
+          <span className="customer-switcher-kicker">Customer</span>
+          <strong>{current?.customerName || "Choose a customer"}</strong>
+          {current && <span className="customer-switcher-meta">{current.phone}<i className={`customer-switcher-status is-${status}`}>{status}</i></span>}
+        </span>
+        <ChevronDown className="customer-switcher-chevron" size={20} aria-hidden="true" />
+      </>}
+    >
+      {!current && <option value="">Choose a customer…</option>}
+      {accounts.map(account => <option key={account.id} value={account.id}>{`${account.customerName} · ${account.phone}${loanStatus(account) === "active" ? "" : ` · ${loanStatus(account)}`}`}</option>)}
+    </Select>
     <div className="customer-switcher-nav">
       <span className="customer-switcher-count">{current ? <><b>{index + 1}</b> of {accounts.length}</> : `${accounts.length}`} {kindLabel} customer{accounts.length === 1 ? "" : "s"}</span>
       <span className="customer-switcher-steps">

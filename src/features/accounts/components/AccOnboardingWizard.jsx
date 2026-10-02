@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Select } from "../../../components/Select.jsx";
 import { INDIA_STATES } from "../model/accountingGst.js";
 
 const STEPS = [
@@ -180,9 +181,9 @@ export function AccOnboardingWizard({
             <input type="date" value={booksStartedOn} onChange={event => setBooksStartedOn(event.target.value)} />
           </label>
           <label className="accounts-filter-field span"><span className="small">Industry template</span>
-            <select value={industry} onChange={event => setIndustry(event.target.value)}>
+            <Select value={industry} onChange={event => setIndustry(event.target.value)}>
               {INDUSTRY_TEMPLATES.map(template => <option key={template.id} value={template.id}>{template.label}</option>)}
-            </select>
+            </Select>
             <span className="small">{INDUSTRY_TEMPLATES.find(template => template.id === industry)?.hint}</span>
             <span className="accounts-template-features">{selectedTemplate.features.map(feature => <span key={feature}>{feature}</span>)}</span>
           </label>
@@ -193,11 +194,11 @@ export function AccOnboardingWizard({
         <div className="form spacer">
           {!canAdmin && <p className="copy">Only the owner can change GST. Continue to the next step.</p>}
           <label className="accounts-filter-field"><span className="small">Registration</span>
-            <select value={gstRegistration} disabled={!canAdmin} onChange={event => setGstRegistration(event.target.value)}>
+            <Select value={gstRegistration} disabled={!canAdmin} onChange={event => setGstRegistration(event.target.value)}>
               <option value="unregistered">Unregistered</option>
               <option value="regular">Regular</option>
               <option value="composition">Composition</option>
-            </select>
+            </Select>
           </label>
           {gstRegistration !== "unregistered" && <>
             <label className="accounts-filter-field"><span className="small">GSTIN</span>
@@ -207,10 +208,10 @@ export function AccOnboardingWizard({
               <input value={legalName} disabled={!canAdmin} onChange={event => setLegalName(event.target.value)} />
             </label>
             <label className="accounts-filter-field"><span className="small">State</span>
-              <select value={stateCode} disabled={!canAdmin} onChange={event => setStateCode(event.target.value)}>
+              <Select value={stateCode} disabled={!canAdmin} onChange={event => setStateCode(event.target.value)}>
                 <option value="">Select state</option>
                 {INDIA_STATES.map(state => <option key={state.code} value={state.code}>{state.code} · {state.name}</option>)}
-              </select>
+              </Select>
             </label>
           </>}
         </div>
@@ -220,10 +221,10 @@ export function AccOnboardingWizard({
         <div className="form spacer">
           <p className="copy">Optional — add your first customer or supplier. You can skip.</p>
           <label className="accounts-filter-field"><span className="small">Type</span>
-            <select value={partyType} disabled={!canWrite} onChange={event => setPartyType(event.target.value)}>
+            <Select value={partyType} disabled={!canWrite} onChange={event => setPartyType(event.target.value)}>
               <option value="customer">Customer</option>
               <option value="supplier">Supplier</option>
-            </select>
+            </Select>
           </label>
           <label className="accounts-filter-field"><span className="small">Name</span>
             <input value={partyName} disabled={!canWrite} placeholder="e.g. ABC Traders" onChange={event => setPartyName(event.target.value)} />
@@ -242,10 +243,10 @@ export function AccOnboardingWizard({
             <input type="email" value={inviteEmail} disabled={!canAdmin} placeholder="ca@example.com" onChange={event => setInviteEmail(event.target.value)} />
           </label>
           <label className="accounts-filter-field"><span className="small">Role</span>
-            <select value={inviteRole} disabled={!canAdmin} onChange={event => setInviteRole(event.target.value)}>
+            <Select value={inviteRole} disabled={!canAdmin} onChange={event => setInviteRole(event.target.value)}>
               <option value="viewer">Viewer (read only)</option>
               <option value="accountant">Accountant (can post)</option>
-            </select>
+            </Select>
           </label>
         </div>
       )}

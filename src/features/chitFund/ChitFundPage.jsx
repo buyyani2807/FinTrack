@@ -27,7 +27,7 @@ import {
 import { validatePredefinedBidChit } from "./model/predefinedBidChit";
 import { roundMoney } from "./model/calculations";
 import { money, emptySchemeForm, groupRowsBySchemeId } from "./model/chitFormat.js";
-import { Button } from "../../components/ui.jsx";
+import { Button, Spinner } from "../../components/ui.jsx";
 import { ChitActivateSchemeModal } from "./components/ChitAdminControls.jsx";
 import { ChitSchemeForm, ChitTypeChooser, FixedChitSchemeForm, PredefinedBidSchemeForm } from "./components/ChitSchemeForms.jsx";
 import { ChitSchemeDetails, ChitSchemeDashboardSection, ChitLandingReports } from "./components/ChitSchemeDashboard.jsx";
@@ -225,7 +225,7 @@ export function ChitFundPage({ token, tab: routeTab = "schemes", schemeId = null
     await refresh();
   };
   // An open scheme waits for the scheme list; an unknown id falls back to the landing page.
-  if (schemeId && !selected && busy) return <main className="shell chit-fund-page"><p className="small spacer">Loading scheme…</p></main>;
+  if (schemeId && !selected && busy) return <main className="shell chit-fund-page"><Spinner label="Loading scheme" /></main>;
   if (selected) return <><ChitSchemeDetails key={selected.id} token={token} scheme={selected} tab={schemeTab} onTabChange={next => onNavigate?.({ schemeId: selected.id, schemeTab: next })} memberId={memberId} onMemberChange={id => onNavigate?.({ schemeId: selected.id, schemeTab: "members", memberId: id })} back={() => { onNavigate?.({ tab: "schemes" }); setReminderRefresh(current => current + 1); }} onSchemeDeleted={schemeDeleted} orgSettings={orgSettings} workspace={workspace} onReceipt={setReceiptSuccess} onLogReceipt={onLogReceipt} />{receiptSuccess && <ReceiptSuccessModal receipt={receiptSuccess} settings={orgSettings} token={token} onLogAction={onLogReceipt} close={() => setReceiptSuccess(null)} />}</>;
   return <main className="shell chit-fund-page">
     <div className="toolbar"><div><h1 className="title">Chit Fund</h1><p className="copy chit-fund-intro">Auction Chits use live bidding, Fixed Chits use scheduled lifts, and Fixed Predefined Bid Chits use an editable generated schedule.</p></div><Button className="primary" onClick={() => setModal("choose-type")}>+ New scheme</Button></div>
@@ -237,8 +237,8 @@ export function ChitFundPage({ token, tab: routeTab = "schemes", schemeId = null
     <Toasts items={[{ id: "error", tone: "error", message: error, onClose: () => setError("") }, { id: "notice", message: notice, onClose: () => setNotice("") }]} />
     {(landing === "schemes" || landing === "payments") && <UpcomingPaymentsSection moduleType="chit" loans={[]} token={token} settings={orgSettings} workspace={workspace} isOwner={workspace?.role !== "staff"} refreshKey={reminderRefresh} />}
     {landing === "schemes" && <ChitInsightsBrief schemes={schemes} enrollments={enrollments} cycles={cycles} fixedLifts={fixedLifts} predefinedSchedule={predefinedSchedule} token={token} onViewMembers={() => setLanding("members")} />}
-    {busy && !schemes.length && <p className="small spacer">Loading Chit Fund schemes…</p>}
-    {enriching && !!schemes.length && landing === "schemes" && <p className="small spacer">Loading current bids and member counts…</p>}
+    {busy && !schemes.length && <Spinner label="Loading Chit Fund schemes" />}
+    {enriching && !!schemes.length && landing === "schemes" && <p className="small spacer ft-loading-note"><Spinner size="sm" label="Loading" />Updating current bids and member counts</p>}
     {landing === "schemes" && <>
     <ChitSchemeDashboardSection kind="auction" rows={rows.filter(row => (row.scheme.chit_type || CHIT_TYPES.AUCTION) === CHIT_TYPES.AUCTION)} busy={busy} open={setSelected} edit={editScheme} activate={requestActivate} />
     <ChitSchemeDashboardSection kind="fixed" rows={rows.filter(row => row.scheme.chit_type === CHIT_TYPES.FIXED)} busy={busy} open={setSelected} edit={editScheme} activate={requestActivate} />

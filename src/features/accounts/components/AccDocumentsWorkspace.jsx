@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Select } from "../../../components/Select.jsx";
 import { Building2, Download, FileText, Image as ImageIcon, ShieldCheck, Upload, Wallet } from "lucide-react";
 import { TabScroller } from "../../../components/TabScroller.jsx";
 import { useActiveTabInView } from "./useActiveTabInView.js";
@@ -184,10 +185,10 @@ function DocumentForm({ form, setForm, parties, items, stockByItem, gstCompany, 
       {source && <p className="small">Made from {documentLabel(source.docType)} {source.docNumber}. Quantities are limited to what is still pending.</p>}
       <div className="form">
         <Field label={config.partyType === "supplier" ? "Supplier" : "Customer"}>
-          <select value={form.partyId} disabled={Boolean(source)} onChange={event => set({ partyId: event.target.value })}>
+          <Select value={form.partyId} disabled={Boolean(source)} onChange={event => set({ partyId: event.target.value })}>
             <option value="">Select</option>
             {partyList.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}
-          </select>
+          </Select>
         </Field>
         <Field label="Date"><input type="date" value={form.docDate} onChange={event => set({ docDate: event.target.value })} /></Field>
         {config.untilLabel && <Field label={config.untilLabel}><input type="date" value={form.validUntil || ""} onChange={event => set({ validUntil: event.target.value })} /></Field>}
@@ -206,10 +207,10 @@ function DocumentForm({ form, setForm, parties, items, stockByItem, gstCompany, 
                 <td>
                   {line.sourceLineId
                     ? <strong>{line.itemName}</strong>
-                    : <select value={line.itemId || ""} onChange={event => selectItem(index, event.target.value)}>
+                    : <Select value={line.itemId || ""} onChange={event => selectItem(index, event.target.value)}>
                       <option value="">Select item</option>
                       {activeItems.map(item => <option key={item.id} value={item.id}>{item.name} · {item.sku}</option>)}
-                    </select>}
+                    </Select>}
                   {!line.itemId && !line.sourceLineId && config.stock === 0 && (
                     <input className="spacer-xs" value={line.itemName || ""} placeholder="or type a description" onChange={event => patchLine(index, { itemName: event.target.value, itemType: "service" })} />
                   )}
@@ -302,9 +303,9 @@ function DocumentViewer({ doc, view, settings, onClose, onEdit, actions }) {
       </div>
       <div className="row spacer acc-doc-viewer-actions">
         <Field label="PDF size">
-          <select value={template} onChange={event => setTemplate(event.target.value)}>
+          <Select value={template} onChange={event => setTemplate(event.target.value)}>
             {Object.values(PDF_TEMPLATES).map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
-          </select>
+          </Select>
         </Field>
         <button type="button" className="btn" onClick={() => downloadTradeDocumentPdf(view, { template })}>Download PDF</button>
         {canShare

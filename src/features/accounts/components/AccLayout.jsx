@@ -1,4 +1,5 @@
 import { Building2, ChevronDown, Plus } from "lucide-react";
+import { Select } from "../../../components/Select.jsx";
 import { TabScroller } from "../../../components/TabScroller.jsx";
 import { useActiveTabInView } from "./useActiveTabInView.js";
 import { NAV_TREE, REPORT_TABS, navItemIsActive } from "../accountsNavigation.js";
@@ -49,25 +50,26 @@ export function AccCompanyBar({ companies, activeId, onSelect, onCreate, gstLabe
   return (
     <div className="acc-company-bar" role="group" aria-label="Company books context">
       <div className="acc-company-row">
-      <label className="acc-company-picker">
-        <Building2 className="acc-company-picker-icon" size={18} aria-hidden="true" />
-        <span className="acc-company-picker-name" aria-hidden="true">{active?.name || fallbackName || "No company yet"}</span>
-        {active?.isPrimary && <span className="acc-company-primary" aria-hidden="true">Primary</span>}
-        <ChevronDown className="acc-company-picker-chevron" size={16} aria-hidden="true" />
-        <select
-          className="acc-company-switch"
-          value={activeId || ""}
-          aria-label="Accounts company"
-          onChange={event => onSelect(event.target.value)}
-        >
-          {!companies.length && <option value="">No companies yet — run 059 or create one</option>}
-          {companies.filter(company => company.status !== "archived").map(company => (
-            <option key={company.id} value={company.id}>
-              {company.name}{company.isPrimary ? " · primary" : ""}
-            </option>
-          ))}
-        </select>
-      </label>
+      <Select
+        bare
+        className="acc-company-picker"
+        aria-label="Accounts company"
+        value={activeId || ""}
+        onChange={event => onSelect(event.target.value)}
+        renderValue={() => <>
+          <Building2 className="acc-company-picker-icon" size={18} aria-hidden="true" />
+          <span className="acc-company-picker-name">{active?.name || fallbackName || "No company yet"}</span>
+          {active?.isPrimary && <span className="acc-company-primary">Primary</span>}
+          <ChevronDown className="acc-company-picker-chevron" size={16} aria-hidden="true" />
+        </>}
+      >
+        {!companies.length && <option value="">No companies yet — run 059 or create one</option>}
+        {companies.filter(company => company.status !== "archived").map(company => (
+          <option key={company.id} value={company.id}>
+            {company.name}{company.isPrimary ? " · primary" : ""}
+          </option>
+        ))}
+      </Select>
       <button type="button" className="acc-company-new" onClick={onCreate}><Plus size={14} aria-hidden="true" />New company</button>
       </div>
       <div className="acc-company-meta-wrap"><ul className="acc-company-meta">

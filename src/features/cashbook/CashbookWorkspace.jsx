@@ -35,6 +35,7 @@ import { ManualEntryModal } from "./dialogs/ManualEntryModal.jsx";
 import { ExpenseModal } from "./dialogs/ExpenseModal.jsx";
 import { TransferModal } from "./dialogs/TransferModal.jsx";
 import { DayClosingModal } from "./dialogs/DayClosingModal.jsx";
+import { Spinner } from "../../components/ui.jsx";
 
 // The open section is the URL (/cashbook/:section, see app/AppRoutes.jsx).
 export function CashbookWorkspace({ token, loans = [], section: routeSection = "cashbook", onSectionChange }) {
@@ -279,7 +280,7 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
     <TabScroller><nav className="accounts-section-nav spacer" aria-label="Cashbook sections">
       {SECTIONS.map(item => <button key={item.id} type="button" className={`accounts-section-tab ${section === item.id ? "active" : ""}`} onClick={() => setSection(item.id)}>{item.label}</button>)}
     </nav></TabScroller>
-    {loading ? <p className="copy">Loading cashbook…</p> : <>
+    {loading ? <Spinner label="Loading cashbook" /> : <>
       {section === "cashbook" && <CashbookLedgerSection
         allTimeOverview={allTimeOverview}
         periodOverview={periodOverview}

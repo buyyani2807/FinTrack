@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
+import { Select } from "../../../components/Select.jsx";
 import { loadChitSchemeDetails } from "../../../lib/financeRepository";
 import { CHIT_TYPES } from "../model/fixedChit";
 import { buildChitMonthStatement, currentSchemeMonth, monthLabel as chitMonthLabel } from "../model/monthStatement";
 import { downloadChitMonthStatementPdf } from "../io/monthStatementPdf";
 import { money, schemeStatusLabel, enrollmentName } from "../model/chitFormat.js";
-import { Button, Field, Metric } from "../../../components/ui.jsx";
+import { Button, Field, Metric, Spinner } from "../../../components/ui.jsx";
 import { Badge } from "./ChitUi.jsx";
 import { AuctionChitSchemeDetails } from "../auction/AuctionChitSchemeDetails.jsx";
 import { FixedChitSchemeDetails } from "../fixed/FixedChitSchemeDetails.jsx";
@@ -103,11 +104,11 @@ export function ChitLandingReports({ token, schemes }) {
     <strong>Chit Fund reports</strong>
     <p className="copy">Scheme collection, member dues, bid history, and outstanding for the selected month. Open a scheme for dividends and live bid detail.</p>
     <div className="form spacer">
-      <Field label="Scheme"><select value={schemeId} onChange={event => { const next = schemes.find(item => item.id === event.target.value); setSchemeId(event.target.value); if (next) setMonthNumber(currentSchemeMonth(next)); }}>{schemes.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
-      <Field label="Month"><select value={monthNumber} onChange={event => setMonthNumber(Number(event.target.value))}>{months.map(month => <option key={month} value={month}>{chitMonthLabel(scheme?.start_date, month)}</option>)}</select></Field>
+      <Field label="Scheme"><Select value={schemeId} onChange={event => { const next = schemes.find(item => item.id === event.target.value); setSchemeId(event.target.value); if (next) setMonthNumber(currentSchemeMonth(next)); }}>{schemes.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</Select></Field>
+      <Field label="Month"><Select value={monthNumber} onChange={event => setMonthNumber(Number(event.target.value))}>{months.map(month => <option key={month} value={month}>{chitMonthLabel(scheme?.start_date, month)}</option>)}</Select></Field>
     </div>
     {error && <p className="red small">{error}</p>}
-    {busy && <p className="small">Loading statement…</p>}
+    {busy && <Spinner label="Loading statement" />}
     {statement && !busy && <>
       <div className="grid metrics">
         <Metric label="Expected" value={money(statement.expected)} color="gold" />
