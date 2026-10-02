@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { TabScroller } from "../../../components/TabScroller.jsx";
 import { useActiveTabInView } from "./useActiveTabInView.js";
 import { todayIso } from "../../../lib/dates.js";
 import { downloadAccountsCsv } from "../io/accountingExport.js";
@@ -23,6 +24,8 @@ const TABS = [
   { id: "settings", label: "Settings" },
 ];
 
+
+const DEFAULT_COUNT = "1";
 
 export function AccInventoryWorkspace({
   items = [],
@@ -71,14 +74,19 @@ export function AccInventoryWorkspace({
     () => (tab === "count" ? stockValuation({ items: products.filter(item => item.isActive !== false), movements, voucherItemLines, asOf: countDate }) : null),
     [tab, products, movements, voucherItemLines, countDate],
   );
+  // Every counted box starts at 1; clearing a box skips that item. `counts` only holds what the user typed.
+  const countValues = useMemo(
+    () => Object.fromEntries((countBook?.rows || []).map(row => [row.itemId, counts[row.itemId] ?? DEFAULT_COUNT])),
+    [countBook, counts],
+  );
   const variances = useMemo(() => {
     if (tab !== "count") return [];
     try {
-      return physicalCountVariances({ items: products, movements, voucherItemLines, counts, date: countDate });
+      return physicalCountVariances({ items: products, movements, voucherItemLines, counts: countValues, date: countDate });
     } catch {
       return [];
     }
-  }, [tab, products, movements, voucherItemLines, counts, countDate]);
+  }, [tab, products, movements, voucherItemLines, countValues, countDate]);
 
   const q = search.trim().toLowerCase();
   const matches = row => !q || `${row.name} ${row.sku || ""}`.toLowerCase().includes(q);
@@ -119,7 +127,7 @@ export function AccInventoryWorkspace({
     setCountError("");
     let rows;
     try {
-      rows = physicalCountVariances({ items: products, movements, voucherItemLines, counts, date: countDate });
+      rows = physicalCountVariances({ items: products, movements, voucherItemLines, counts: countValues, date: countDate });
     } catch (err) {
       setCountError(err.message);
       return;
@@ -134,11 +142,11 @@ export function AccInventoryWorkspace({
 
   return (
     <section className="acc-inventory" ref={tabsRef}>
-      <div className="accounts-section-nav">
+      <TabScroller className="is-sub"><nav className="accounts-section-nav" aria-label="Inventory pages">
         {TABS.map(item => (
           <button key={item.id} type="button" className={`accounts-section-tab ${tab === item.id ? "active" : ""}`} onClick={() => setTab(item.id)}>{item.label}</button>
         ))}
-      </div>
+      </nav></TabScroller>
 
       {tab === "summary" && valuation && <StockSummaryTab
         asOf={asOf}
@@ -171,7 +179,7 @@ export function AccInventoryWorkspace({
         countBook={countBook}
         matches={matches}
         variances={variances}
-        counts={counts}
+        counts={countValues}
         canEdit={canEdit}
         setCounts={setCounts}
         countError={countError}

@@ -1,4 +1,5 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { Toasts } from "../../components/Toasts.jsx";
 import "./accountingProduct.css";
 import {
   addBankStatement,
@@ -1826,8 +1827,7 @@ const openVoucher = () => {
         />}
         extras={canWrite ? <NewEntryActions openSimple={openSimple} openVoucher={openVoucher} openParty={openParty} /> : <span className="small">View-only · {accountsAccessRole || "viewer"}</span>}
       />
-      {error && <div className="notice acc-toast error" role="alert">{error}</div>}
-      {notice && <div className="notice accounts-notice-ok acc-toast ok" role="status">{notice}</div>}
+      <Toasts items={[{ id: "error", tone: "error", message: error, onClose: () => setError("") }, { id: "notice", message: notice, onClose: () => setNotice("") }]} />
       {readOnly && <div className="notice">Accounts access: <strong>viewer</strong>. You can review books and reports, but posting and setup changes are blocked.</div>}
       {migrationRequired && <div className="notice">Run <strong>052</strong> through <strong>076_fix_ambiguous_item_type.sql</strong> in the Supabase SQL editor (including <strong>059</strong>, <strong>064–067</strong>, <strong>070–076</strong>), then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
       {loading && !settings ? <><p className="copy">Loading Accounts…</p><AccSkeleton /></> : <>

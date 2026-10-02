@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { Activity, ArrowLeftRight, CalendarRange, ChevronDown, CreditCard, History, Landmark, ListTree, Lock, Package, Percent, Repeat, ShieldCheck, UserCog, Users } from "lucide-react";
 import { LIST_PAGE_SIZE } from "../model/accountsList.js";
 import { CloseButton, LabeledField } from "../../../components/ui.jsx";
 
@@ -159,14 +160,20 @@ export function AccPager({ page, pages, total, onPage, noun = "rows" }) {
     </div>
   );
 }
+// Setup sections pass a short code for their icon; each maps to a line icon (unknown codes show as text).
+const SETUP_ICONS = {
+  FY: CalendarRange, GST: Percent, "#": ListTree, P: Users, "✓": ShieldCheck, $: CreditCard, "♥": Activity,
+  "↔": ArrowLeftRight, I: Package, L: Lock, R: UserCog, "↻": Repeat, A: History, B: Landmark,
+};
 export function AccSetupSection({ icon, title, copy, actions, children, collapsible = false, summary = "" }) {
   const [open, setOpen] = useState(!collapsible);
   const panelId = useId();
   const toggleId = useId();
+  const SetupIcon = SETUP_ICONS[icon];
   return (
     <section className={`card acc-setup-card${collapsible && !open ? " collapsed" : ""}`}>
       <header className="acc-setup-head">
-        <span className="acc-setup-icon" aria-hidden="true">{icon}</span>
+        <span className="acc-setup-icon" aria-hidden="true">{SetupIcon ? <SetupIcon size={18} /> : icon}</span>
         <div className="acc-setup-copy">
           <h2>{title}</h2>
           {copy ? <p className="copy">{copy}</p> : null}
@@ -183,7 +190,7 @@ export function AccSetupSection({ icon, title, copy, actions, children, collapsi
           onClick={() => setOpen(current => !current)}
         >
           <span>{open ? `Hide ${summary}` : `Show ${summary}`}</span>
-          <span className="acc-setup-chevron" aria-hidden="true">{open ? "▲" : "▼"}</span>
+          <ChevronDown className="acc-setup-chevron" size={18} aria-hidden="true" />
         </button>
       )}
       <div

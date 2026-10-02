@@ -9,7 +9,6 @@ export function ItemsTable({ filtered, stockByItem, setDetailId, saving, openEdi
         <thead>
           <tr>
             <th>Item</th>
-            <th>SKU</th>
             <th>Type</th>
             <th>Unit</th>
             <th className="acc-num">Sell</th>
@@ -25,15 +24,17 @@ export function ItemsTable({ filtered, stockByItem, setDetailId, saving, openEdi
             const status = stockStatus(stock, item.reorderLevel);
             return (
               <tr key={item.id}>
-                <td><button type="button" className="link-button" onClick={() => setDetailId(item.id)}><strong>{item.name}</strong></button></td>
-                <td>{item.sku}</td>
-                <td>{item.itemType}</td>
+                <td className="acc-cell-stack">
+                  <button type="button" className="btn linkish" onClick={() => setDetailId(item.id)}>{item.name}</button>
+                  {item.sku || item.hsnSac ? <span className="small">{[item.sku, item.hsnSac && `HSN ${item.hsnSac}`].filter(Boolean).join(" · ")}</span> : null}
+                </td>
+                <td className="acc-cap">{item.itemType}</td>
                 <td>{item.unit}</td>
                 <td className="acc-num">{money(item.sellingPrice)}</td>
                 <td className="acc-num">{money(item.purchasePrice)}</td>
-                <td className="acc-num">{stock == null ? "—" : `${stock} ${item.unit}`}</td>
-                <td>{item.isActive === false ? "Inactive" : status === "low" ? "Low stock" : "Active"}</td>
-                <td className="acc-item-actions">
+                <td className={`acc-num${status === "low" && item.isActive !== false ? " acc-stock-low" : ""}`}>{stock == null ? "—" : `${stock} ${item.unit}`}</td>
+                <td>{item.isActive === false ? <span className="acc-doc-status tone-muted">Inactive</span> : status === "low" ? <span className="acc-doc-status tone-warn">Low stock</span> : <span className="acc-doc-status tone-green">Active</span>}</td>
+                <td><div className="acc-item-actions">
                   <button type="button" className="btn" disabled={saving} onClick={() => openEdit(item)}>Edit</button>
                   <AccMoreMenu
                     label="More"
@@ -44,11 +45,11 @@ export function ItemsTable({ filtered, stockByItem, setDetailId, saving, openEdi
                       { id: "delete", label: "Delete", danger: true, disabled: saving, onClick: () => onDeleteItem(item) },
                     ]}
                   />
-                </td>
+                </div></td>
               </tr>
             );
           })}
-          {!filtered.length && <tr><td colSpan="9">No items yet. Create Cement 50kg or a service to start.</td></tr>}
+          {!filtered.length && <tr><td colSpan="8">No items yet. Create Cement 50kg or a service to start.</td></tr>}
         </tbody>
       </table>
     </div>

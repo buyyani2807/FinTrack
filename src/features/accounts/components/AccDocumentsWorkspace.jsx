@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { Building2, Download, FileText, Image as ImageIcon, ShieldCheck, Upload, Wallet } from "lucide-react";
+import { TabScroller } from "../../../components/TabScroller.jsx";
 import { useActiveTabInView } from "./useActiveTabInView.js";
 import { formatInr } from "../../../lib/formatMoney.js";
 import { formatReceiptDate } from "../../receipts/model/receiptModel.js";
@@ -26,7 +28,7 @@ import { downloadSalesInvoicePdf } from "../io/salesInvoicePdf.js";
 import { isValidUpiId, upiPayLink } from "../model/upiPay.js";
 import { QrSvg } from "../PayPage.jsx";
 import { AccMoreMenu } from "./AccUi.jsx";
-import { CloseButton } from "../../../components/ui.jsx";
+import { CloseButton, SearchInput, SegmentedControl } from "../../../components/ui.jsx";
 
 const money = formatInr;
 const qty = (value, unit) => `${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 3 })}${unit ? ` ${unit}` : ""}`;
@@ -316,6 +318,17 @@ function DocumentViewer({ doc, view, settings, onClose, onEdit, actions }) {
   );
 }
 
+// One settings group: icon, title and a line on what it changes, then its fields.
+function SettingsBlock({ icon: Icon, title, copy, children }) {
+  return <section className="card acc-settings-block">
+    <header className="acc-settings-head">
+      <span className="acc-settings-icon" aria-hidden="true"><Icon size={18} /></span>
+      <div><h3>{title}</h3>{copy ? <p className="small">{copy}</p> : null}</div>
+    </header>
+    <div className="acc-settings-body">{children}</div>
+  </section>;
+}
+
 function DocumentSettingsPanel({ settings, company, workspace, canAdmin, saving, onSave }) {
   const [draft, setDraft] = useState(() => ({ ...settings }));
   const [logoError, setLogoError] = useState("");
@@ -353,81 +366,94 @@ function DocumentSettingsPanel({ settings, company, workspace, canAdmin, saving,
     }
   };
 
+  const comparable = value => JSON.stringify({ ...value, overdueBlockDays: Number(value.overdueBlockDays || 0) });
+  const dirty = comparable(draft) !== comparable(settings);
+  const save = () => onSave({ ...draft, overdueBlockDays: Number(draft.overdueBlockDays || 0) });
+
   return (
     <div className="acc-doc-settings spacer">
-      {!settings.available && <p className="card small">Run migration 081_accounts_trade_documents.sql in the Supabase SQL editor to save document settings.</p>}
-      {!canAdmin && <p className="small">Only the owner can change document settings.</p>}
-      <section className="card">
-        <strong>Business details on invoices and documents</strong>
-        <div className="form spacer">
-          <Field className="span" label="Address"><input value={draft.businessAddress} disabled={disabled} onChange={event => set({ businessAddress: event.target.value })} placeholder="Shop / office address" /></Field>
-          <Field label="Phone"><input value={draft.businessPhone} disabled={disabled} onChange={event => set({ businessPhone: event.target.value })} /></Field>
-          <Field label="Email"><input value={draft.businessEmail} disabled={disabled} onChange={event => set({ businessEmail: event.target.value })} /></Field>
-          <div className="span acc-doc-logo-row">
-            {draft.logoDataUrl ? <img src={draft.logoDataUrl} alt="Logo" className="acc-doc-logo" /> : <span className="small muted">No logo</span>}
-            <label className={`btn ${disabled ? "disabled" : ""}`.trim()}>
-              {draft.logoDataUrl ? "Change logo" : "Upload logo"}
-              <input type="file" accept="image/png,image/jpeg,image/webp" hidden disabled={disabled} onChange={chooseLogo} />
-            </label>
-            {draft.logoDataUrl && <button type="button" className="btn ghost" disabled={disabled} onClick={() => set({ logoDataUrl: "" })}>Remove</button>}
-            {logoError && <span className="small red">{logoError}</span>}
+      {!settings.available && <p className="notice small">Run migration 081_accounts_trade_documents.sql in the Supabase SQL editor to save document settings.</p>}
+      {!canAdmin && <p className="notice small">Only the owner can change document settings.</p>}
+      <SettingsBlock icon={Building2} title="Business details" copy="Printed in the header of every invoice, quotation, order and challan.">
+        <div className="acc-doc-logo-row">
+          <span className={`acc-doc-logo-tile${draft.logoDataUrl ? " has-logo" : ""}`}>
+            {draft.logoDataUrl ? <img src={draft.logoDataUrl} alt="Logo" className="acc-doc-logo" /> : <ImageIcon size={22} aria-hidden="true" />}
+          </span>
+          <div className="acc-doc-logo-text">
+            <strong>Logo</strong>
+            <span className="small">{logoError ? <span className="red">{logoError}</span> : "PNG, JPG or WebP. Shown at the top left of documents."}</span>
+            <div className="acc-doc-logo-actions">
+              <label className={`btn ${disabled ? "disabled" : ""}`.trim()}>
+                <Upload size={15} aria-hidden="true" />{draft.logoDataUrl ? "Change logo" : "Upload logo"}
+                <input type="file" accept="image/png,image/jpeg,image/webp" hidden disabled={disabled} onChange={chooseLogo} />
+              </label>
+              {draft.logoDataUrl && <button type="button" className="btn ghost" disabled={disabled} onClick={() => set({ logoDataUrl: "" })}>Remove</button>}
+            </div>
           </div>
         </div>
-      </section>
-
-      <section className="card spacer">
-        <strong>Invoice layout</strong>
-        <div className="form spacer">
-          <Field label="Default PDF size">
-            <select value={draft.invoiceTemplate} disabled={disabled} onChange={event => set({ invoiceTemplate: event.target.value })}>
-              {Object.values(PDF_TEMPLATES).map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
-            </select>
-          </Field>
-          <div className="acc-form-actions"><button type="button" className="btn" onClick={previewInvoice}>Download sample PDF</button></div>
-          <Field className="span" label="Invoice terms"><textarea rows="2" value={draft.invoiceTerms} disabled={disabled} onChange={event => set({ invoiceTerms: event.target.value })} placeholder="Goods once sold will not be taken back…" /></Field>
-          <Field className="span" label="Quotation terms"><textarea rows="2" value={draft.quotationTerms} disabled={disabled} onChange={event => set({ quotationTerms: event.target.value })} placeholder="Prices valid for 15 days. 50% advance…" /></Field>
+        <div className="form acc-settings-grid">
+          <Field className="span" label="Address"><input value={draft.businessAddress} disabled={disabled} onChange={event => set({ businessAddress: event.target.value })} placeholder="Shop / office address" /></Field>
+          <Field label="Phone"><input type="tel" value={draft.businessPhone} disabled={disabled} onChange={event => set({ businessPhone: event.target.value })} placeholder="98765 43210" /></Field>
+          <Field label="Email"><input type="email" value={draft.businessEmail} disabled={disabled} onChange={event => set({ businessEmail: event.target.value })} placeholder="accounts@business.in" /></Field>
         </div>
-      </section>
+      </SettingsBlock>
 
-      <section className="card spacer">
-        <strong>Payment details</strong>
-        <div className="form spacer">
-          <Field label="UPI ID"><input value={draft.upiId} disabled={disabled} onChange={event => set({ upiId: event.target.value.trim() })} placeholder="business@okaxis" /></Field>
+      <SettingsBlock icon={FileText} title="Invoice layout" copy="Paper size for PDFs, and the terms printed at the foot of invoices and quotations.">
+        <div className="acc-settings-inline">
+          <div className="acc-settings-inline-field">
+            <span className="acc-settings-label">Default PDF size</span>
+            <SegmentedControl label="Default PDF size" value={draft.invoiceTemplate} onChange={value => !disabled && set({ invoiceTemplate: value })} options={Object.values(PDF_TEMPLATES).map(option => ({ id: option.id, label: option.label }))} />
+          </div>
+          <button type="button" className="btn" onClick={previewInvoice}><Download size={15} aria-hidden="true" />Sample PDF</button>
+        </div>
+        <div className="form acc-settings-grid">
+          <Field label="Invoice terms"><textarea rows="3" value={draft.invoiceTerms} disabled={disabled} onChange={event => set({ invoiceTerms: event.target.value })} placeholder="Goods once sold will not be taken back…" /></Field>
+          <Field label="Quotation terms"><textarea rows="3" value={draft.quotationTerms} disabled={disabled} onChange={event => set({ quotationTerms: event.target.value })} placeholder="Prices valid for 15 days. 50% advance…" /></Field>
+        </div>
+      </SettingsBlock>
+
+      <SettingsBlock icon={Wallet} title="Payment details" copy="How customers pay you. Shown under the totals on invoices.">
+        <h4 className="acc-settings-subhead">UPI</h4>
+        <div className="form acc-settings-grid">
+          <Field label="UPI ID"><input value={draft.upiId} disabled={disabled} aria-invalid={!upiValid} onChange={event => set({ upiId: event.target.value.trim() })} placeholder="business@okaxis" /></Field>
           <Field label="Name shown in UPI app"><input value={draft.upiPayeeName} disabled={disabled} onChange={event => set({ upiPayeeName: event.target.value })} placeholder={company?.name || "Business name"} /></Field>
-          <label className="acc-toggle-row span">
-            <input type="checkbox" checked={draft.showUpiQr !== false} disabled={disabled} onChange={event => set({ showUpiQr: event.target.checked })} />
-            <span>Print a UPI QR for the balance due on invoices</span>
-          </label>
           {!upiValid && <p className="small red span">Enter a UPI ID like name@bank.</p>}
-          {draft.upiId && upiValid && <div className="span acc-doc-qr-preview">
-            <QrSvg text={upiPayLink({ upiId: draft.upiId, payeeName: draft.upiPayeeName || company?.name })} size={120} label="UPI QR preview" />
-            <p className="small">Scan with your own UPI app to check the payee name before sharing. Reminders sent on WhatsApp include a pay link when a UPI ID is set.</p>
-          </div>}
-          <Field label="Bank name"><input value={draft.bankName} disabled={disabled} onChange={event => set({ bankName: event.target.value })} /></Field>
-          <Field label="Account number"><input value={draft.bankAccountNumber} disabled={disabled} onChange={event => set({ bankAccountNumber: event.target.value })} /></Field>
-          <Field label="IFSC"><input value={draft.bankIfsc} disabled={disabled} onChange={event => set({ bankIfsc: event.target.value.toUpperCase() })} /></Field>
         </div>
-      </section>
-
-      <section className="card spacer">
-        <strong>Credit control on sales</strong>
-        <div className="form spacer">
-          <Field label="When a customer is over limit">
-            <select value={draft.creditControl} disabled={disabled} onChange={event => set({ creditControl: event.target.value })}>
-              <option value="off">Do nothing</option>
-              <option value="warn">Warn, allow the sale</option>
-              <option value="block">Block credit sales</option>
-            </select>
-          </Field>
-          <Field label="Also flag if an invoice is overdue by more than (days)">
-            <input type="number" min="0" max="365" value={draft.overdueBlockDays} disabled={disabled} onChange={event => set({ overdueBlockDays: event.target.value })} placeholder="0 = off" />
-          </Field>
-          <p className="small span">Set each customer's credit limit and credit days in Parties. Credit days also set the default due date on their invoices.</p>
+        <label className="settings-switch-row acc-settings-switch">
+          <span><strong>Print a UPI QR on invoices</strong><span className="small">The QR asks for the balance due, so customers can pay by scanning.</span></span>
+          <input type="checkbox" role="switch" className="ft-switch" checked={draft.showUpiQr !== false} disabled={disabled} onChange={event => set({ showUpiQr: event.target.checked })} />
+        </label>
+        {draft.upiId && upiValid && <div className="acc-doc-qr-preview">
+          <QrSvg text={upiPayLink({ upiId: draft.upiId, payeeName: draft.upiPayeeName || company?.name })} size={104} label="UPI QR preview" />
+          <p className="small"><strong>Check before sharing.</strong> Scan with your own UPI app to confirm the payee name. WhatsApp reminders include a pay link when a UPI ID is set.</p>
+        </div>}
+        <h4 className="acc-settings-subhead">Bank transfer</h4>
+        <div className="form acc-settings-grid is-3">
+          <Field label="Bank name"><input value={draft.bankName} disabled={disabled} onChange={event => set({ bankName: event.target.value })} placeholder="State Bank of India" /></Field>
+          <Field label="Account number"><input inputMode="numeric" value={draft.bankAccountNumber} disabled={disabled} onChange={event => set({ bankAccountNumber: event.target.value })} /></Field>
+          <Field label="IFSC"><input value={draft.bankIfsc} disabled={disabled} onChange={event => set({ bankIfsc: event.target.value.toUpperCase() })} placeholder="SBIN0001234" /></Field>
         </div>
-      </section>
+      </SettingsBlock>
 
-      <div className="accounts-action-row spacer">
-        <button type="button" className="btn primary" disabled={disabled || !upiValid} onClick={() => onSave({ ...draft, overdueBlockDays: Number(draft.overdueBlockDays || 0) })}>{saving ? "Saving…" : "Save document settings"}</button>
+      <SettingsBlock icon={ShieldCheck} title="Credit control on sales" copy="What happens when a customer goes over their credit limit. Set each customer's limit and credit days in Parties.">
+        <div className="acc-settings-inline-field">
+          <span className="acc-settings-label">When a customer is over limit</span>
+          <SegmentedControl label="When a customer is over limit" className="acc-credit-control" value={draft.creditControl} onChange={value => !disabled && set({ creditControl: value })} options={[{ id: "off", label: "Do nothing" }, { id: "warn", label: "Warn, allow sale" }, { id: "block", label: "Block credit sales" }]} />
+        </div>
+        <div className="form acc-settings-grid">
+          <Field label="Also flag invoices overdue by more than">
+            <span className="acc-input-suffix">
+              <input type="number" min="0" max="365" value={draft.overdueBlockDays} disabled={disabled} onChange={event => set({ overdueBlockDays: event.target.value })} placeholder="0" />
+              <span aria-hidden="true">days</span>
+            </span>
+          </Field>
+          <p className="small acc-settings-hint">0 turns this off. Credit days also set the default due date on a customer's invoices.</p>
+        </div>
+      </SettingsBlock>
+
+      <div className={`acc-settings-savebar${dirty ? " is-dirty" : ""}`}>
+        <span className="small">{dirty ? "You have unsaved changes" : "All changes saved"}</span>
+        <button type="button" className="btn primary" disabled={disabled || !upiValid || !dirty} onClick={save}>{saving ? "Saving…" : "Save document settings"}</button>
       </div>
     </div>
   );
@@ -595,11 +621,11 @@ export function AccDocumentsWorkspace({
 
   return (
     <section className="acc-documents" ref={tabsRef}>
-      <div className="accounts-section-nav">
+      <TabScroller className="is-sub"><nav className="accounts-section-nav" aria-label="Document pages">
         {TABS.map(item => (
           <button key={item.id} type="button" className={`accounts-section-tab ${tab === item.id ? "active" : ""}`} onClick={() => setTab(item.id)}>{item.label}</button>
         ))}
-      </div>
+      </nav></TabScroller>
 
       {!available && tab !== "settings" && (
         <div className="card spacer">
@@ -610,18 +636,18 @@ export function AccDocumentsWorkspace({
 
       {available && config && <>
         <p className="copy spacer">{TYPE_HINTS[tab]}</p>
-        <div className="accounts-action-row spacer">
-          <input className="accounts-search" placeholder="Search number, party or reference" value={search} onChange={event => setSearch(event.target.value)} />
-          <label className="acc-toggle-row"><input type="checkbox" checked={showClosed} onChange={event => setShowClosed(event.target.checked)} /><span>Show completed and cancelled</span></label>
-          {canEdit && <button type="button" className="btn primary" disabled={saving} onClick={() => openNew(tab)}>+ New {config.label.toLowerCase()}</button>}
+        <div className="acc-list-toolbar spacer">
+          <SearchInput label={`Search ${config.plural.toLowerCase()}`} className="acc-list-search" placeholder="Search number, party or reference" value={search} onChange={event => setSearch(event.target.value)} />
+          <SegmentedControl label="Show" className="acc-list-scope" value={showClosed ? "all" : "open"} onChange={value => setShowClosed(value === "all")} options={[{ id: "open", label: "Open" }, { id: "all", label: "All, incl. closed" }]} />
+          {canEdit && <button type="button" className="btn primary acc-list-new" disabled={saving} onClick={() => openNew(tab)}>+ New {config.label.toLowerCase()}</button>}
         </div>
         <div className="table spacer acc-table-wrap"><table><thead><tr>
           <th>Number</th><th>Date</th><th>{config.partyType === "supplier" ? "Supplier" : "Customer"}</th><th className="acc-num">Total</th><th>Status</th>{tab !== "quotation" && <th className="acc-num">Pending qty</th>}<th></th>
         </tr></thead><tbody>
           {rows.map(({ doc, summary, status }) => (
             <tr key={doc.id}>
-              <td><button type="button" className="btn linkish" onClick={() => setViewId(doc.id)}>{doc.docNumber}</button>{doc.reference ? <div className="small">{doc.reference}</div> : null}</td>
-              <td>{formatReceiptDate(doc.docDate)}{doc.validUntil && config.untilLabel ? <div className="small">{config.untilLabel.toLowerCase()} {formatReceiptDate(doc.validUntil)}</div> : null}</td>
+              <td className="acc-cell-stack"><button type="button" className="btn linkish" onClick={() => setViewId(doc.id)}>{doc.docNumber}</button>{doc.reference ? <span className="small">{doc.reference}</span> : null}</td>
+              <td className="acc-cell-stack"><span>{formatReceiptDate(doc.docDate)}</span>{doc.validUntil && config.untilLabel ? <span className="small">{config.untilLabel.toLowerCase()} {formatReceiptDate(doc.validUntil)}</span> : null}</td>
               <td>{partyById.get(doc.partyId)?.name || "—"}</td>
               <td className="acc-num">{money(doc.grandTotal)}</td>
               <td><StatusPill status={status} /></td>
@@ -636,28 +662,26 @@ export function AccDocumentsWorkspace({
               </td>
             </tr>
           ))}
-          {!rows.length && <tr><td colSpan={tab === "quotation" ? 6 : 7}>{showClosed ? `No ${config.plural.toLowerCase()} yet.` : `No open ${config.plural.toLowerCase()}. Tick "Show completed and cancelled" to see older ones.`}</td></tr>}
+          {!rows.length && <tr><td colSpan={tab === "quotation" ? 6 : 7}>{showClosed ? `No ${config.plural.toLowerCase()} yet.` : `No open ${config.plural.toLowerCase()}. Choose "All, incl. closed" to see completed and cancelled ones.`}</td></tr>}
         </tbody></table></div>
       </>}
 
       {available && tab === "pending" && <>
         <p className="copy spacer">Order lines still waiting to be delivered or received. Quantity drops when you make a challan, goods receipt, invoice or bill from the order.</p>
-        <div className="accounts-action-row spacer">
-          <Field label="Orders">
-            <select value={pendingSide} onChange={event => setPendingSide(event.target.value)}>
-              <option value="sales">Sales orders (to deliver)</option>
-              <option value="purchase">Purchase orders (to receive)</option>
-            </select>
-          </Field>
-          <p className="small">{pendingRows.length} line{pendingRows.length === 1 ? "" : "s"} · value {money(pendingRows.reduce((sum, row) => sum + row.pendingValue, 0))}</p>
+        <div className="acc-list-toolbar spacer">
+          <SegmentedControl label="Orders" className="acc-list-scope" value={pendingSide} onChange={setPendingSide} options={[{ id: "sales", label: "Sales · to deliver" }, { id: "purchase", label: "Purchases · to receive" }]} />
+          <dl className="acc-list-stats" aria-label="Pending totals">
+            <div><dt>Lines</dt><dd>{pendingRows.length}</dd></div>
+            <div><dt>Pending value</dt><dd>{money(pendingRows.reduce((sum, row) => sum + row.pendingValue, 0))}</dd></div>
+          </dl>
         </div>
         <div className="table spacer acc-table-wrap"><table><thead><tr><th>Order</th><th>Due</th><th>{pendingSide === "purchase" ? "Supplier" : "Customer"}</th><th>Item</th><th className="acc-num">Ordered</th><th className="acc-num">Pending</th><th className="acc-num">Value</th><th></th></tr></thead><tbody>
           {pendingRows.map(row => {
             const doc = docs.find(item => item.id === row.documentId);
             return (
               <tr key={row.lineId}>
-                <td><button type="button" className="btn linkish" onClick={() => setViewId(row.documentId)}>{row.docNumber}</button><div className="small">{formatReceiptDate(row.docDate)}</div></td>
-                <td className={row.overdue ? "red" : ""}>{row.dueDate ? formatReceiptDate(row.dueDate) : "—"}{row.overdue ? " · overdue" : ""}</td>
+                <td className="acc-cell-stack"><button type="button" className="btn linkish" onClick={() => setViewId(row.documentId)}>{row.docNumber}</button><span className="small">{formatReceiptDate(row.docDate)}</span></td>
+                <td className="acc-cell-stack"><span>{row.dueDate ? formatReceiptDate(row.dueDate) : "—"}</span>{row.overdue ? <span className="acc-doc-status tone-red">Overdue</span> : null}</td>
                 <td>{row.partyName}</td>
                 <td>{row.itemName}</td>
                 <td className="acc-num">{qty(row.ordered, row.unit)}</td>

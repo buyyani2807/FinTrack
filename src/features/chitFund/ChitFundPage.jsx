@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { Toasts } from "../../components/Toasts.jsx";
+import { TabScroller } from "../../components/TabScroller.jsx";
 import {
   activateChitScheme,
   createChitScheme,
@@ -227,13 +229,12 @@ export function ChitFundPage({ token, tab: routeTab = "schemes", schemeId = null
   if (selected) return <><ChitSchemeDetails key={selected.id} token={token} scheme={selected} tab={schemeTab} onTabChange={next => onNavigate?.({ schemeId: selected.id, schemeTab: next })} memberId={memberId} onMemberChange={id => onNavigate?.({ schemeId: selected.id, schemeTab: "members", memberId: id })} back={() => { onNavigate?.({ tab: "schemes" }); setReminderRefresh(current => current + 1); }} onSchemeDeleted={schemeDeleted} orgSettings={orgSettings} workspace={workspace} onReceipt={setReceiptSuccess} onLogReceipt={onLogReceipt} />{receiptSuccess && <ReceiptSuccessModal receipt={receiptSuccess} settings={orgSettings} token={token} onLogAction={onLogReceipt} close={() => setReceiptSuccess(null)} />}</>;
   return <main className="shell chit-fund-page">
     <div className="toolbar"><div><h1 className="title">Chit Fund</h1><p className="copy chit-fund-intro">Auction Chits use live bidding, Fixed Chits use scheduled lifts, and Fixed Predefined Bid Chits use an editable generated schedule.</p></div><Button className="primary" onClick={() => setModal("choose-type")}>+ New scheme</Button></div>
-    <nav className="module-section-nav" aria-label="Chit Fund sections">
+    <TabScroller><nav className="module-section-nav" aria-label="Chit Fund sections">
       {LANDING_TABS.map(([id, label]) => (
         <button key={id} type="button" className={`module-section-tab ${landing === id ? "active" : ""}`} aria-current={landing === id ? "page" : undefined} onClick={() => setLanding(id)}>{label}</button>
       ))}
-    </nav>
-    {error && <p className="red small">{error}</p>}
-    {notice && <p className="green small">{notice}</p>}
+    </nav></TabScroller>
+    <Toasts items={[{ id: "error", tone: "error", message: error, onClose: () => setError("") }, { id: "notice", message: notice, onClose: () => setNotice("") }]} />
     {(landing === "schemes" || landing === "payments") && <UpcomingPaymentsSection moduleType="chit" loans={[]} token={token} settings={orgSettings} workspace={workspace} isOwner={workspace?.role !== "staff"} refreshKey={reminderRefresh} />}
     {landing === "schemes" && <ChitInsightsBrief schemes={schemes} enrollments={enrollments} cycles={cycles} fixedLifts={fixedLifts} predefinedSchedule={predefinedSchedule} token={token} onViewMembers={() => setLanding("members")} />}
     {busy && !schemes.length && <p className="small spacer">Loading Chit Fund schemes…</p>}

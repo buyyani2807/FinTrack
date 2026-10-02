@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { TabScroller } from "../../../components/TabScroller.jsx";
 import { formatInr } from "../../../lib/formatMoney.js";
 import { formatReceiptDate } from "../../receipts/model/receiptModel.js";
 import { downloadAccountsCsv } from "../io/accountingExport.js";
@@ -246,10 +247,10 @@ export function AccRoutesWorkspace({
   };
 
   return <section className="acc-routes">
-    <div className="accounts-section-nav">
+    <TabScroller className="is-sub"><nav className="accounts-section-nav" aria-label="Collection route pages">
       <button type="button" className={`accounts-section-tab ${tab === "routes" ? "active" : ""}`} onClick={() => setTab("routes")}>Routes</button>
       <button type="button" className={`accounts-section-tab ${tab === "collections" ? "active" : ""}`} onClick={() => setTab("collections")}>Field collections</button>
-    </div>
+    </nav></TabScroller>
 
     {!available && <div className="card spacer">
       <strong>Collection routes need a database update</strong>

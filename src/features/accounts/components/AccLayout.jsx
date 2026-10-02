@@ -1,4 +1,5 @@
 import { Building2, ChevronDown, Plus } from "lucide-react";
+import { TabScroller } from "../../../components/TabScroller.jsx";
 import { useActiveTabInView } from "./useActiveTabInView.js";
 import { NAV_TREE, REPORT_TABS, navItemIsActive } from "../accountsNavigation.js";
 
@@ -19,18 +20,18 @@ export function AccSectionTabs({ section, reportTab, onNavigate, openReport }) {
   const openChild = id => (isReports ? openReport(id) : onNavigate(id));
   const ref = useActiveTabInView([section, reportTab]);
   return <div className="acc-section-tabs" ref={ref}>
-    <nav className="module-section-nav acc-section-nav" aria-label="Accounts sections">
+    <TabScroller><nav className="module-section-nav acc-section-nav" aria-label="Accounts sections">
       {TAB_ITEMS.map(item => {
         const active = item === current;
         return <button key={item.id} type="button" className={`module-section-tab${active ? " active" : ""}`} aria-current={active ? (item.children ? "true" : "page") : undefined} onClick={() => onNavigate(item.id)}>{item.label}</button>;
       })}
-    </nav>
-    {children && <nav className="acc-subsection-nav" aria-label={`${current.label} pages`}>
+    </nav></TabScroller>
+    {children && <TabScroller className="is-sub"><nav className="acc-subsection-nav" aria-label={`${current.label} pages`}>
       {children.map(child => {
         const active = child.id === childId;
         return <button key={child.id} type="button" className={`acc-subsection-tab${active ? " active" : ""}`} aria-current={active ? "page" : undefined} onClick={() => openChild(child.id)}>{child.label}</button>;
       })}
-    </nav>}
+    </nav></TabScroller>}
   </div>;
 }
 const niceDate = iso => {

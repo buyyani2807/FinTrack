@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { TabScroller } from "../../components/TabScroller.jsx";
 import { Navigate, useLocation, useNavigate, useSearchParams } from "react-router";
 import { Badge, Button, EmptyState, Metric, SegmentedControl } from "../../components/ui.jsx";
 import { TopActions } from "../../components/TopActions.jsx";
@@ -171,7 +172,7 @@ export function Financier({
   const moduleHeader = <header className="top"><div><div className="brand">{businessName || "My Finance Business"}</div><div className="sub">{isOwner ? "Financier dashboard" : "Collection agent dashboard"} · {moduleName} collections</div></div><TopActions logout={logout} /></header>;
   const moduleToolbar = <div className="toolbar"><div><h1 className="title">{moduleName} Finance</h1><p className="copy">{module === "monthly" ? "Monthly interest accounts and payment reminders." : "Daily 100-day collection accounts."}</p></div>{isOwner && <div className="tabs"><Button className="primary" onClick={() => setModal("new")}>+ New finance account</Button></div>}</div>;
   const moduleTabs = [["collections", "Today’s collections"], ["overview", "Overview"], ["customers", "Customers"], ["users", "Users"], ...(isOwner ? [["reports", "Reports"]] : [])];
-  const moduleNav = <nav className="module-section-nav" aria-label="Module sections">{moduleTabs.map(([id, label]) => <button key={id} type="button" className={`module-section-tab ${moduleSection === id ? "active" : ""}`} aria-current={moduleSection === id ? "page" : undefined} onClick={() => goModuleSection(id)}>{label}</button>)}</nav>;
+  const moduleNav = <TabScroller><nav className="module-section-nav" aria-label="Module sections">{moduleTabs.map(([id, label]) => <button key={id} type="button" className={`module-section-tab ${moduleSection === id ? "active" : ""}`} aria-current={moduleSection === id ? "page" : undefined} onClick={() => goModuleSection(id)}>{label}</button>)}</nav></TabScroller>;
   const customerPool = customerMode
     ? loans.filter(loan => (statusFilter === "all" || loanStatus(loan) === statusFilter) && (module === "all" || loan.kind === module))
     : activeLoans.filter(loan => module === "all" || loan.kind === module);

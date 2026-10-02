@@ -1,3 +1,4 @@
+import { ArrowRight } from "lucide-react";
 import { AccSetupSection } from "../components/AccUi.jsx";
 import { SubscriptionMonitoringPanel } from "../components/AccSetupWidgets.jsx";
 import { CompanySetupPanel } from "./setup/CompanySetupPanel.jsx";
@@ -153,7 +154,7 @@ export function SetupSection({
         title="Items & inventory"
         copy="Items, stock value, physical count, ageing, CSV import and stock rules now live in the Inventory section."
       >
-        <button type="button" className="btn primary" onClick={() => openSection("inventory")}>Open Inventory</button>
+        <button type="button" className="btn primary acc-setup-link-btn" onClick={() => openSection("inventory")}>Open Inventory<ArrowRight size={15} aria-hidden="true" /></button>
       </AccSetupSection>
       <PeriodLockPanel
         canAdmin={canAdmin}

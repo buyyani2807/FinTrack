@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { TabScroller } from "../../components/TabScroller.jsx";
 import { Building2, Check, ChevronDown, MessageCircle, RotateCcw, Bell } from "lucide-react";
 import { DEFAULT_WHATSAPP_TEMPLATES } from "./model/templateEngine.js";
 import { defaultConfirmationSettings } from "./io/transactionConfirmations.js";
@@ -161,9 +162,9 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved, tab: routeT
 
   return <main className="shell settings-page">
     <div className="toolbar"><div><h1 className="title">Settings</h1><p className="copy">Company branding, receipts, WhatsApp messages and payment reminders.</p></div></div>
-    <nav className="module-section-nav" aria-label="Settings sections">
+    <TabScroller><nav className="module-section-nav" aria-label="Settings sections">
       {SETTINGS_TABS.map(item => <button key={item.id} type="button" className={`module-section-tab ${tab === item.id ? "active" : ""}`} aria-current={tab === item.id ? "page" : undefined} onClick={() => setTab(item.id)}>{item.label}</button>)}
-    </nav>
+    </nav></TabScroller>
     <form onSubmit={submit} className="settings-form">
       {tab === "company" && <>
         <SettingsSection icon={Building2} title="Business details" copy="Shown on receipts, statements and WhatsApp messages.">
