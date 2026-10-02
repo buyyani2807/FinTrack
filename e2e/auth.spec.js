@@ -22,7 +22,7 @@ test.describe("Login hub tabs", () => {
   test("chit customer login shows portal ID field", async ({ page }) => {
     await page.getByRole("button", { name: "Chit customer" }).click();
     await expect(page.getByText("Chit portal ID")).toBeVisible();
-    await expect(page.getByText("6-digit PIN")).toBeVisible();
+    await expect(page.getByLabel("6-digit PIN")).toBeVisible();
     await expect(page.getByRole("button", { name: "Open chit dashboard" })).toBeVisible();
   });
 
@@ -61,5 +61,22 @@ test.describe("Password recovery view", () => {
     await expect(page.getByRole("heading", { name: "Set a new Financier password" })).toBeVisible();
     await expect(page.getByText("New password", { exact: true })).toBeVisible();
     await expect(page.getByText("Confirm new password", { exact: true })).toBeVisible();
+  });
+});
+
+test.describe("Login messages", () => {
+  test("empty fields are outlined and wrong credentials get a plain explanation", async ({ page }) => {
+    await page.route("**/api/auth/**", route => route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ error: "Invalid login credentials" }) }));
+    await page.goto("/");
+    await page.getByRole("button", { name: /^Sign in/ }).click();
+    const alert = page.getByRole("alert");
+    await expect(alert).toContainText("A few details are missing");
+    await expect(page.getByLabel("Business email")).toHaveAttribute("aria-invalid", "true");
+    await expect(page.getByLabel("Business email")).toBeFocused();
+    await page.getByLabel("Business email").fill("owner@vivek.in");
+    await page.getByLabel("Password", { exact: true }).fill("Secure@2026");
+    await page.getByRole("button", { name: /^Sign in/ }).click();
+    await expect(alert).toContainText("Couldn't sign you in");
+    await expect(alert).toContainText("The email or password is incorrect");
   });
 });

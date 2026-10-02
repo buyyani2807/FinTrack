@@ -252,7 +252,34 @@ td:has(> .btn + .btn) { line-height: 2.6; }
 .ft-auth-password .field label { padding-right: 140px; }
 /* small inline links sit on the text line (the 44px touch-target rule is for standalone links) */
 .ft-auth .ft-auth-switch .link-button, .ft-auth .ft-auth-legal .link-button { display: inline; margin: 0 !important; min-height: 0 !important; padding: 0 !important; vertical-align: baseline; line-height: inherit; }
-.ft-auth-message { margin: 0; }
+/* auth messages: icon + title + explanation, tinted by tone */
+.ft-auth-notice { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border: 1px solid; border-radius: 12px; font-size: 14px; line-height: 20px; animation: ft-auth-notice-in .18s var(--ft-ease); }
+.ft-auth-notice strong { display: block; margin-bottom: 2px; font-weight: 600; }
+.ft-auth-notice p { margin: 0; color: var(--ft-text-2); }
+.ft-auth-notice-icon { flex: none; margin-top: 1px; }
+.ft-auth-notice.is-error { border-color: color-mix(in srgb, var(--ft-danger) 35%, transparent); background: var(--ft-danger-soft); }
+.ft-auth-notice.is-error strong, .ft-auth-notice.is-error .ft-auth-notice-icon { color: var(--ft-danger); }
+.ft-auth-notice.is-success { border-color: color-mix(in srgb, var(--ft-success) 35%, transparent); background: var(--ft-success-soft); }
+.ft-auth-notice.is-success strong, .ft-auth-notice.is-success .ft-auth-notice-icon { color: var(--ft-success); }
+.ft-auth-notice.is-info { border-color: var(--ft-border); background: var(--ft-surface-subtle); }
+.ft-auth-notice.is-info strong { color: var(--ft-text); }
+.ft-auth-notice.is-info .ft-auth-notice-icon { color: var(--ft-primary); }
+@keyframes ft-auth-notice-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .ft-auth-notice { animation: none; } }
+/* guidance under the sign-in options, and small hints under fields */
+.ft-auth-guide { display: flex; align-items: flex-start; gap: 8px; margin: 14px 0 22px; color: var(--ft-muted); font-size: 13px; line-height: 19px; }
+.ft-auth-guide svg { flex: none; margin-top: 2px; color: var(--ft-subtle); }
+.ft-field-hint { margin: -8px 0 0; color: var(--ft-muted); font-size: 12px; }
+/* fields left empty or invalid */
+.ft-auth .field input[aria-invalid="true"] { border-color: var(--ft-danger) !important; box-shadow: 0 0 0 3px var(--ft-danger-soft) !important; }
+.ft-auth .ft-input-icon:has(input[aria-invalid="true"]) .ft-input-icon-glyph { color: var(--ft-danger); }
+/* single-panel auth screens (set a new password): the panel alone, centred, with its wordmark */
+.ft-auth.ft-auth-single { grid-template-columns: 1fr; }
+.ft-auth.ft-auth-single .login.ft-auth-panel { background: var(--ft-bg); }
+.ft-auth.ft-auth-single .ft-auth-panel-inner { max-width: 440px; padding: 32px; border: 1px solid var(--ft-border); border-radius: 20px; background: var(--ft-surface); box-shadow: var(--ft-shadow); }
+.ft-auth.ft-auth-single .ft-auth-brandrow { display: flex; margin-bottom: 24px; }
+.ft-auth.ft-auth-single .ft-auth-brandrow > .ft-brand { display: inline !important; }
+@media (width <= 680px) { .ft-auth.ft-auth-single .ft-auth-panel-inner { padding: 0; border: 0; background: none; box-shadow: none; } }
 .ft-auth .btn.primary.ft-auth-submit { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 52px !important; margin-top: 6px; border-radius: 10px !important; font-size: 16px !important; box-shadow: 0 10px 24px var(--ft-primary-soft-strong) !important; }
 .ft-auth-switch { margin: 28px 0 0; text-align: center; color: var(--ft-text-2); font-size: 14px; }
 .ft-auth-switch .link-button { min-height: 0 !important; padding: 0; border: 0; background: none; font-size: 14px; }
