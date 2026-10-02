@@ -106,7 +106,6 @@ body {
   margin: 0;
   padding: 8px 2px;
   border: 0;
-  border-top: 1px solid var(--ft-border);
   background: transparent;
   color: var(--ft-text);
   font: 700 13px DM Sans, system-ui, sans-serif;
