@@ -1,3 +1,4 @@
+import { ChevronDown, Users } from "lucide-react";
 import { Button, Metric } from "../../../components/ui.jsx";
 import { formatInr as money } from "../../../lib/formatMoney.js";
 import { FinanceInsightsBrief } from "./FinanceInsightsBrief.jsx";
@@ -60,16 +61,24 @@ export function DashboardFinanceSection({
     </div>
     <div className="dashboard-section-summary"><span className="dashboard-section-summary-dot" />{loans.length ? `${loans.length} active ${kind} account${loans.length === 1 ? "" : "s"} ready for collection` : `No active ${kind} accounts yet`}</div>
     <FinanceInsightsBrief kind={kind} loans={loans} isOwner={canReorder || showPnl} onViewCustomers={onToggleCustomers} />
+    {/* Expandable customer list: reads as a row you can open, with a clear Show / Hide action */}
     <button
       type="button"
       id={toggleId}
-      className="dashboard-customers-toggle"
+      className={`dashboard-customers-toggle${customersOpen ? " is-open" : ""}`}
       aria-expanded={customersOpen}
       aria-controls={panelId}
       onClick={onToggleCustomers}
     >
-      <span>{customerLabel || "Active Customers"} ({loans.length})</span>
-      <span className="dashboard-customers-chevron" aria-hidden="true">{customersOpen ? "▲" : "▼"}</span>
+      <span className="dashboard-customers-icon" aria-hidden="true"><Users size={18} /></span>
+      <span className="dashboard-customers-text">
+        <span className="dashboard-customers-title">{customerLabel || "Active Customers"}<span className="dashboard-customers-count">{loans.length}</span></span>
+        <span className="dashboard-customers-hint">{customersOpen ? "Showing the customer list" : loans.length ? "Tap to see names, balances and details" : "No customers to show yet"}</span>
+      </span>
+      <span className="dashboard-customers-action">
+        <span className="dashboard-customers-action-label">{customersOpen ? "Hide list" : "Show list"}</span>
+        <ChevronDown className="dashboard-customers-chevron" size={18} aria-hidden="true" />
+      </span>
     </button>
     <div
       id={panelId}

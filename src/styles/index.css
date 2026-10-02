@@ -96,47 +96,134 @@ body {
   margin-bottom: 8px;
 }
 
+/* Active customers: a bordered row with icon, count and a "Show list" action so it reads as expandable.
+   When open, the row and the list join into one bordered block. */
 .dashboard-customers-toggle {
   display: flex;
   width: 100%;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
-  min-height: 44px;
-  margin: 0;
-  padding: 8px 2px;
-  border: 0;
-  background: transparent;
+  min-height: 60px;
+  margin: 4px 0 0;
+  padding: 10px 14px;
+  border: 1px solid var(--ft-border);
+  border-radius: var(--ft-radius, 12px);
+  background: var(--ft-surface-subtle);
   color: var(--ft-text);
-  font: 700 13px DM Sans, system-ui, sans-serif;
+  font: inherit;
   text-align: left;
   cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
 }
 
 .dashboard-customers-toggle:hover {
-  color: var(--ft-primary);
+  border-color: var(--ft-primary);
+  background: var(--ft-surface);
+  box-shadow: var(--ft-shadow-sm, none);
 }
 
 .dashboard-customers-toggle:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--ft-primary) 33%, transparent);
   outline-offset: 2px;
-  border-radius: 8px;
+}
+
+.dashboard-customers-toggle.is-open,
+.dashboard-customers-toggle.is-open:hover {
+  border-color: var(--ft-border);
+  border-bottom-color: transparent;
+  box-shadow: none;
+  border-radius: var(--ft-radius, 12px) var(--ft-radius, 12px) 0 0;
+  background: var(--ft-surface);
+}
+
+.dashboard-customers-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--ft-primary-soft);
+  color: var(--ft-primary);
+}
+
+.dashboard-customers-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.dashboard-customers-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ft-text);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.dashboard-customers-count {
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--ft-primary);
+  color: var(--ft-on-primary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dashboard-customers-hint {
+  color: var(--ft-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.dashboard-customers-action {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--ft-primary-soft);
+  color: var(--ft-primary);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .dashboard-customers-chevron {
   flex-shrink: 0;
-  color: var(--ft-primary);
-  font-size: 11px;
-  line-height: 1;
-  transition: transform .18s ease;
+  transition: transform .2s ease;
+}
+
+.dashboard-customers-toggle.is-open .dashboard-customers-chevron {
+  transform: rotate(180deg);
 }
 
 .dashboard-customers-panel {
-  padding-top: 6px;
+  padding: 4px 14px 14px;
+  border: 1px solid var(--ft-border);
+  border-top: 0;
+  border-radius: 0 0 var(--ft-radius, 12px) var(--ft-radius, 12px);
+  background: var(--ft-surface);
 }
 
 .dashboard-customers-panel[hidden] {
   display: none;
+}
+
+@media (width <= 480px) {
+  .dashboard-customers-toggle { gap: 10px; padding: 10px 12px; }
+  .dashboard-customers-icon { width: 34px; height: 34px; }
+  /* chevron only on small phones; the hint line already says what tapping does */
+  .dashboard-customers-action { padding: 0 8px; }
+  .dashboard-customers-action-label { display: none; }
+  .dashboard-customers-panel { padding: 4px 10px 10px; }
 }
 
 .dashboard-customers-panel .dashboard-finance-table {

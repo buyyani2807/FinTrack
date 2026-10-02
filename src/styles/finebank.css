@@ -873,7 +873,7 @@ html[data-ft-role="owner"] .top-actions .top-theme { display: none; }
 .dashboard-finance-section, .chit-board, .dashboard-chit-panel { background: var(--ft-surface) !important; border: 1px solid transparent !important; box-shadow: var(--ft-shadow) !important; border-radius: var(--ft-radius) !important; }
 :root[data-theme="dark"] .dashboard-finance-section, :root[data-theme="dark"] .chit-board, :root[data-theme="dark"] .dashboard-chit-panel { border-color: var(--ft-border) !important; }
 .dashboard-finance-heading strong, .dashboard-customers-toggle, .chit-board-title strong { color: var(--ft-text) !important; }
-.dashboard-customers-toggle, .dashboard-finance-table { border-color: var(--ft-border) !important; }
+.dashboard-finance-table { border-color: var(--ft-border) !important; }
 .dashboard-reorder-hint { color: var(--ft-muted) !important; }
 .dashboard-finance-table tr, .upcoming-payments-table tr { background: var(--ft-surface) !important; border-color: var(--ft-divider) !important; }
 .customer-actions { background: var(--ft-surface) !important; border-color: var(--ft-border) !important; box-shadow: var(--ft-shadow-lg) !important; }
