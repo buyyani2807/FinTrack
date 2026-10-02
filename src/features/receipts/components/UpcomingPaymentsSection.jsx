@@ -143,26 +143,20 @@ export function UpcomingPaymentsSection({ loans = [], token, settings, workspace
   </>;
 
   return <section className={`card spacer upcoming-payments ${collapsible ? "collapsible" : ""} ${expanded ? "is-expanded" : "is-collapsed"}`} aria-label={title}>
-    {collapsible ? (
-      <button
-        type="button"
-        className="upcoming-payments-head upcoming-payments-toggle"
-        aria-expanded={expanded}
-        aria-controls={listId}
-        onClick={() => setExpanded(current => !current)}
-      >
-        {headText}
-        <span className="upcoming-payments-toggle-label">{expanded ? "Hide" : "Show"}<ChevronDown size={16} aria-hidden="true" /></span>
-      </button>
-    ) : <div className="upcoming-payments-head">{headText}</div>}
+    {/* Header row: title (opens / closes the list when collapsible), then the filter on the same line while the list
+        is showing, then Show / Hide. On phones the filter wraps under the title. */}
+    <div className="upcoming-payments-head">
+      {collapsible
+        ? <button type="button" className="upcoming-payments-toggle" aria-expanded={expanded} aria-controls={listId} onClick={() => setExpanded(current => !current)}>{headText}</button>
+        : <div className="upcoming-payments-toggle">{headText}</div>}
+      {showList && <SegmentedControl label="Reminder filters" className="upcoming-payments-filters" options={filters.map(([id, label]) => ({ id, label }))} value={filter} onChange={setFilter} />}
+      {collapsible && <button type="button" className="upcoming-payments-toggle-label" tabIndex={-1} aria-hidden="true" onClick={() => setExpanded(current => !current)}>{expanded ? "Hide" : "Show"}<ChevronDown size={16} aria-hidden="true" /></button>}
+    </div>
 
     {collapsible && !expanded && !loading && error && errorRow}
 
     {showList && <div id={listId} className="upcoming-payments-body">
-      <div className="upcoming-payments-bar">
-        <SegmentedControl label="Reminder filters" className="upcoming-payments-filters" options={filters.map(([id, label]) => ({ id, label }))} value={filter} onChange={setFilter} />
-        {!loading && !error && allItems.length > 50 && <span className="small">Showing first 50 of {allItems.length}</span>}
-      </div>
+      {!loading && !error && allItems.length > 50 && <p className="small upcoming-payments-more">Showing first 50 of {allItems.length}</p>}
       {loading && <p className="small upcoming-payments-empty" role="status">Loading installment reminders…</p>}
       {!loading && error && errorRow}
       {!loading && !error && !allItems.length && <p className="upcoming-payments-empty">No payments due{dueWindow ? ` ${dueWindow}` : ""}. Reminders appear here as due dates come up.</p>}

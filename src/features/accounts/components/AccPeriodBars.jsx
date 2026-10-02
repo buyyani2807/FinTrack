@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SegmentedControl } from "../../../components/ui.jsx";
 import { formatOverviewDate } from "../accountsFormat.js";
 
 export function AccOverviewContextBar({ fy, lastFy, from, to, onChange, equationHolds, integrationEnabled }) {
@@ -26,17 +27,13 @@ export function AccOverviewContextBar({ fy, lastFy, from, to, onChange, equation
       <div className="acc-ov-context-main">
         <div className="acc-ov-context-period">
           <span className="acc-ov-context-kicker">Report period</span>
-          <div className="acc-ov-seg" role="group" aria-label="Report period">
-            <button type="button" className={mode === "this" ? "active" : ""} aria-pressed={mode === "this"} onClick={() => setMode("this")}>
-              {fy.label}
-            </button>
-            <button type="button" className={mode === "last" ? "active" : ""} aria-pressed={mode === "last"} onClick={() => setMode("last")}>
-              {lastFy.label}
-            </button>
-            <button type="button" className={mode === "custom" ? "active" : ""} aria-pressed={mode === "custom"} onClick={() => setMode("custom")}>
-              Custom
-            </button>
-          </div>
+          <SegmentedControl
+            label="Report period"
+            className="acc-ov-period"
+            options={[{ id: "this", label: fy.label }, { id: "last", label: lastFy.label }, { id: "custom", label: "Custom" }]}
+            value={mode}
+            onChange={setMode}
+          />
         </div>
 
         <div className="acc-ov-context-dates" aria-live="polite">

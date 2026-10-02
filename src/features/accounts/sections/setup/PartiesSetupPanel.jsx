@@ -1,3 +1,4 @@
+import { SegmentedControl } from "../../../../components/ui.jsx";
 import { AccEmpty, AccPager, AccSetupSection } from "../../components/AccUi.jsx";
 import { money, PARTY_TYPE_FILTERS } from "../../accountsFormat.js";
 import { PartyTypeBadge } from "../../components/PartyFields.jsx";
@@ -39,18 +40,13 @@ export function PartiesSetupPanel({
             {PARTY_TYPE_FILTERS.map(item => <option key={item.id} value={item.id}>{item.label} ({partyCountByType[item.id] || 0})</option>)}
           </select>
         </label>
-        <div className="acc-party-chips" role="group" aria-label="Party type">
-          {PARTY_TYPE_FILTERS.map(item => (
-            <button
-              key={item.id}
-              type="button"
-              className={`acc-filter-chip ${partyTypeFilter === item.id ? "active" : ""}`}
-              onClick={() => setPartyTypeFilter(item.id)}
-            >
-              {item.label} <span>{partyCountByType[item.id] || 0}</span>
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          label="Party type"
+          className="acc-party-chips"
+          options={PARTY_TYPE_FILTERS.map(item => ({ id: item.id, label: <>{item.label} <span className="ft-segmented-count">{partyCountByType[item.id] || 0}</span></> }))}
+          value={partyTypeFilter}
+          onChange={setPartyTypeFilter}
+        />
       </div>
       <p className="small acc-party-count">
         {partySearch || partyTypeFilter !== "all"

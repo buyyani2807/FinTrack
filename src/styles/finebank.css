@@ -538,7 +538,7 @@ input:disabled, select:disabled, textarea:disabled { background: var(--ft-surfac
 .chit-type-switch > button { flex: 1 1 0; min-height: 38px; font-size: 14px; }
 @media (width <= 680px) {
   .ft-segmented { display: flex; }
-  .ft-segmented > button { flex: 1 1 0; padding: 6px 4px; }
+  .ft-segmented > button { flex: 1 0 auto; min-width: max-content; padding: 6px 10px; }
 }
 
 /* search box with a leading icon */
@@ -1105,7 +1105,7 @@ html[data-ft-role="owner"] .top-actions .top-theme { display: none; }
   .modal, .acc-modal { width: 100% !important; max-height: 92svh !important; border-radius: 20px 20px 0 0 !important; padding: 20px !important; }
   .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
   .btn { min-height: 44px !important; }
-  .accounts-dashboard .acc-ov-seg button, .accounts-dashboard .accounts-business-action, .accounts-dashboard .acc-ov-chart-row, .accounts-dashboard .acc-ov-link-btn, .link-button { min-height: 44px !important; }
+  .accounts-dashboard .accounts-business-action, .accounts-dashboard .acc-ov-chart-row, .accounts-dashboard .acc-ov-link-btn, .link-button { min-height: 44px !important; }
   .link-button { display: inline-flex; align-items: center; }
   .dashboard-finance-section, .dashboard-chit-panel { padding: 16px !important; }
 }
@@ -1155,10 +1155,11 @@ html[data-ft-role="owner"] .top-actions .top-theme { display: none; }
 
 /* Upcoming payments / installment reminders: icon header with status line, Show / Hide pill, filter bar + list */
 .upcoming-payments { padding: 0 !important; overflow: hidden; }
-.upcoming-payments-head { display: flex; align-items: center; gap: 12px; width: 100%; padding: 16px 18px; border: 0; background: transparent; color: var(--ft-text); font: inherit; text-align: left; }
-button.upcoming-payments-head { cursor: pointer; transition: background .15s var(--ft-ease, ease); }
-button.upcoming-payments-head:hover { background: var(--ft-surface-hover); }
-button.upcoming-payments-head:focus-visible { outline: 2px solid var(--ft-primary); outline-offset: -2px; }
+.upcoming-payments-head { display: flex; align-items: center; gap: 12px; padding: 12px 14px 12px 4px; }
+.upcoming-payments-toggle { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 4px 4px 4px 14px; border: 0; border-radius: var(--ft-radius-sm); background: transparent; color: var(--ft-text); font: inherit; text-align: left; }
+button.upcoming-payments-toggle { cursor: pointer; }
+button.upcoming-payments-toggle:focus-visible { outline: 2px solid var(--ft-primary); outline-offset: 2px; }
+.upcoming-payments.collapsible .upcoming-payments-head:hover .upcoming-payments-toggle-label { background: var(--ft-primary-soft-strong); }
 .upcoming-payments-icon { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--ft-warning-soft); color: var(--ft-warning); }
 .upcoming-payments-title-wrap { flex: 1; min-width: 0; display: grid; gap: 2px; }
 .upcoming-payments-title { display: flex; align-items: center; gap: 8px; }
@@ -1166,12 +1167,11 @@ button.upcoming-payments-head:focus-visible { outline: 2px solid var(--ft-primar
 .upcoming-payments-count { display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px; background: var(--ft-primary); color: var(--ft-on-primary); font-size: 12px; font-weight: 700; }
 .upcoming-payments-count.is-zero { background: var(--ft-surface-muted); color: var(--ft-muted); }
 .upcoming-payments-status { color: var(--ft-muted); font-size: 13px; }
-.upcoming-payments-toggle-label { flex: none; display: inline-flex; align-items: center; gap: 4px; min-height: 34px; padding: 0 12px 0 14px; border-radius: 999px; background: var(--ft-primary-soft); color: var(--ft-primary); font-size: 13px; font-weight: 600; }
+.upcoming-payments-toggle-label { flex: none; display: inline-flex; border: 0; font-family: inherit; cursor: pointer; align-items: center; gap: 4px; min-height: 34px; padding: 0 12px 0 14px; border-radius: 999px; background: var(--ft-primary-soft); color: var(--ft-primary); font-size: 13px; font-weight: 600; }
 .upcoming-payments-toggle-label svg { transition: transform .2s var(--ft-ease, ease); }
-.upcoming-payments-toggle[aria-expanded="true"] .upcoming-payments-toggle-label svg { transform: rotate(180deg); }
+.upcoming-payments.is-expanded .upcoming-payments-toggle-label svg { transform: rotate(180deg); }
 .upcoming-payments-body { padding: 14px 18px 18px; border-top: 1px solid var(--ft-divider, var(--ft-border)); }
-.upcoming-payments-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-bottom: 12px; }
-.upcoming-payments-bar .small { color: var(--ft-muted); }
+.upcoming-payments-more { margin: 0 0 10px; color: var(--ft-muted); }
 .upcoming-payments-empty { margin: 4px 0 0; padding: 18px; border: 1px dashed var(--ft-border-strong); border-radius: var(--ft-radius); color: var(--ft-muted); font-size: 13px; text-align: center; }
 .upcoming-payments-error { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin: 0 18px 16px; padding: 10px 12px; border-radius: var(--ft-radius-sm); background: var(--ft-danger-soft); }
 .upcoming-payments-body .upcoming-payments-error { margin: 0; }
@@ -1185,13 +1185,28 @@ button.upcoming-payments-head:focus-visible { outline: 2px solid var(--ft-primar
 .upcoming-payments-when.is-today { background: var(--ft-danger-soft); color: var(--ft-danger); }
 .upcoming-payments-table .btn.whatsapp { display: inline-flex; align-items: center; gap: 6px; }
 @media (width <= 680px) {
-  .upcoming-payments-head { align-items: flex-start; gap: 10px; padding: 14px; }
+  .upcoming-payments-head { flex-wrap: wrap; align-items: flex-start; gap: 10px; padding: 10px 12px 12px 2px; }
+  .upcoming-payments-toggle { padding-left: 12px; gap: 10px; }
+  .upcoming-payments-head > .upcoming-payments-filters { order: 3; width: calc(100% - 10px); margin-left: 10px; }
   .upcoming-payments-icon { width: 36px; height: 36px; }
   .upcoming-payments-toggle-label { padding: 0 10px; }
   .upcoming-payments-body { padding: 12px 14px 14px; }
-  .upcoming-payments-bar .ft-segmented { width: 100%; }
   .upcoming-payments-error { margin: 0 14px 14px; }
   .upcoming-payments-when { margin-top: 0; margin-left: 6px; }
   .upcoming-payments-due { display: inline; }
   .upcoming-payments-table td .btn { width: 100%; justify-content: center; }
+}
+
+/* Table filters use the segmented control and sit on the table's title line when there is room */
+.table-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.row.table-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.row.table-head > .title { margin: 0; }
+.ft-segmented { overflow-x: auto; scrollbar-width: none; }
+.ft-segmented::-webkit-scrollbar { display: none; }
+.ft-segmented-count { display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-left: 4px; padding: 0 5px; border-radius: 999px; background: var(--ft-surface-muted); color: var(--ft-muted); font-size: 11px; font-weight: 700; }
+.ft-segmented > button.active .ft-segmented-count { background: var(--ft-primary-soft); color: var(--ft-primary); }
+.ft-segmented > button { flex-shrink: 0; }
+@media (width <= 680px) {
+  .table-filters { width: 100%; }
+  .table-filters > .ft-segmented { max-width: 100%; }
 }
