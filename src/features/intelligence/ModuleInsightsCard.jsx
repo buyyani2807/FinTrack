@@ -26,6 +26,23 @@ function InsightList({ tone, title, items }) {
   );
 }
 
+// Customers to follow up: name on top, each reason on its own line beneath it.
+function PeopleList({ rows }) {
+  return (
+    <ol className="module-intel-priority">
+      {rows.map((row, index) => (
+        <li key={row.id || row.name}>
+          <span className="module-intel-rank" aria-hidden="true">{index + 1}</span>
+          <div>
+            <strong>{row.name}</strong>
+            {row.why?.length ? <ul className="module-intel-why">{row.why.map(reason => <li key={reason}>{reason.charAt(0).toUpperCase() + reason.slice(1)}</li>)}</ul> : null}
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 export function ModuleInsightsCard({
   report,
   failed = false,
@@ -46,6 +63,8 @@ export function ModuleInsightsCard({
 
   const attention = (report.attention || []).slice(0, 3);
   const actions = (report.actions || []).slice(0, 3);
+  // A details section that already lists the priority customers replaces the separate follow-up list.
+  const listsPeople = (report.details || []).some(section => section.people?.length);
   const hasDetails = (report.details || []).length || report.priorities?.length || report.alerts?.length;
 
   return (
@@ -86,25 +105,16 @@ export function ModuleInsightsCard({
                   {section.verified.map(item => <li key={item.label}><span>{item.label}</span><strong>{item.value}</strong></li>)}
                 </ul>
               ) : null}
+              {section.people?.length ? <PeopleList rows={section.people} /> : null}
               {section.insights?.length ? (
                 <ul className="module-intel-points">{section.insights.map(item => <li key={item}>{item}</li>)}</ul>
               ) : null}
             </article>
           ))}
-          {report.priorities?.length ? (
+          {report.priorities?.length && !listsPeople ? (
             <article className="module-intel-cat">
               <header><h3>Priority follow-up</h3></header>
-              <ol className="module-intel-priority">
-                {report.priorities.map((row, index) => (
-                  <li key={row.id || row.name}>
-                    <span className="module-intel-rank" aria-hidden="true">{index + 1}</span>
-                    <div>
-                      <strong>{row.name}</strong>
-                      {row.why?.length ? <span className="module-intel-why">{row.why.join(" · ")}</span> : null}
-                    </div>
-                  </li>
-                ))}
-              </ol>
+              <PeopleList rows={report.priorities} />
             </article>
           ) : null}
           {report.alerts?.length ? (

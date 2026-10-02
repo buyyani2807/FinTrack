@@ -177,8 +177,7 @@ export function interpretDailyFinanceFacts(facts) {
       {
         id: "priorities",
         title: "Collection priorities",
-        verified: facts.priorities.slice(0, 3).map(row => ({ label: row.name, value: money(row.dueToday) })),
-        insights: facts.priorities.map(row => `${row.name} — ${row.why.join("; ")}.`),
+        people: facts.priorities,
       },
     ],
     disclaimer: "Verified amounts come from Daily Finance collection logic. Insights are advisory and do not record payments, change credit scores, or close accounts.",
