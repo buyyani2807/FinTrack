@@ -122,7 +122,6 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
     <main className="login ft-auth-panel">
       <div className="ft-auth-panel-inner">
         <div className="ft-auth-brandrow">
-          <span className="ft-auth-mark ft-brand" aria-hidden="true">F</span>
           <Wordmark />
           {brandName !== "FinTrack" && <span className="ft-auth-product">{brandName.replace(/^FinTrack\s*/, "")}</span>}
         </div>
@@ -155,7 +154,7 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
             </>}
             <Field label={isAgent ? "Agent email" : "Business email"}><IconInput icon={Mail} type="email" autoComplete="email" placeholder="you@business.com" value={email} onChange={event => setEmail(event.target.value)} /></Field>
             <div className="ft-auth-password">
-              <Field label="Password"><PasswordInput icon={LockKeyhole} minLength="8" autoComplete={mode === "signIn" || isAgent ? "current-password" : "new-password"} value={password} onChange={event => setPassword(event.target.value)} /></Field>
+              <Field label="Password"><PasswordInput icon={LockKeyhole} minLength="8" placeholder="e.g. Secure@2026" autoComplete={mode === "signIn" || isAgent ? "current-password" : "new-password"} value={password} onChange={event => setPassword(event.target.value)} /></Field>
               {mode === "signIn" && <button type="button" className="link-button ft-auth-forgot" onClick={forgotPassword} disabled={busy}>Forgot password?</button>}
             </div>
           </>}
