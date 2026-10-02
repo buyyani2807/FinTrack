@@ -120,10 +120,10 @@ test.describe("Daily Finance tabs", () => {
   test("every tab is its own route inside the same page frame", async ({ page }) => {
     await mockAccountsWorkspace(page);
     await page.goto("/daily-finance");
-    await expect(page).toHaveURL(/\/daily-finance\/overview$/, { timeout: 15_000 });
+    await expect(page).toHaveURL(/\/daily-finance\/todays-collections$/, { timeout: 15_000 });
     const tabs = page.getByRole("navigation", { name: "Module sections" });
     await expect(tabs).toBeVisible({ timeout: 15_000 });
-    for (const [tab, path] of [["Today’s collections", "todays-collections"], ["Customers", "customers"], ["Users", "users"], ["Reports", "reports"], ["Overview", "overview"]]) {
+    for (const [tab, path] of [["Overview", "overview"], ["Customers", "customers"], ["Users", "users"], ["Reports", "reports"], ["Today’s collections", "todays-collections"]]) {
       await tabs.getByRole("button", { name: tab, exact: true }).click();
       await expect(page).toHaveURL(new RegExp(`/daily-finance/${path}$`));
       await expect(page.getByRole("heading", { name: "Daily Finance", level: 1 })).toBeVisible();
@@ -133,22 +133,26 @@ test.describe("Daily Finance tabs", () => {
     await expect(page.locator(".toolbar").getByRole("button", { name: "Today’s collections" })).toHaveCount(0);
   });
 
-  test("the Users tab shows the customer chosen in its dropdown", async ({ page }) => {
+  test("the Users tab opens the first customer and switches with the dropdown or arrows", async ({ page }) => {
     await mockAccountsWorkspace(page);
     await page.goto("/daily-finance/users");
-    await expect(page.getByRole("status").getByText("Choose a customer")).toBeVisible({ timeout: 15_000 });
-    await page.getByLabel("Customer").selectOption("fa1");
+    // customers are listed by name, so Lakshmi Devi comes first
+    await expect(page.getByRole("heading", { name: "Lakshmi Devi", level: 2 })).toBeVisible({ timeout: 15_000 });
+    await page.getByLabel("Customer", { exact: true }).selectOption("fa1");
     await expect(page).toHaveURL(/\/daily-finance\/users\?account=fa1$/);
     await expect(page.getByRole("heading", { name: "Ravi Kumar", level: 2 })).toBeVisible();
-    // the old account URL is gone and lands on Overview
+    await page.getByRole("button", { name: "Next customer" }).click();
+    await expect(page.getByRole("heading", { name: "Suresh Babu", level: 2 })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Next customer" })).toBeDisabled();
+    // the old account URL is gone and lands on the first tab
     await page.goto("/daily-finance/accounts/fa1");
-    await expect(page).toHaveURL(/\/daily-finance\/overview$/, { timeout: 15_000 });
+    await expect(page).toHaveURL(/\/daily-finance\/todays-collections$/, { timeout: 15_000 });
   });
 
   test("View on a customer row opens the Users tab with that customer", async ({ page }) => {
     await mockAccountsWorkspace(page);
     await page.goto("/daily-finance/overview");
-    await page.locator("tr[data-account-id=\"fa1\"]").getByRole("button", { name: "View" }).click({ timeout: 15_000 });
+    await page.locator(".finance-module-shell tr[data-account-id=\"fa1\"]").getByRole("button", { name: "View" }).click({ timeout: 15_000 });
     await expect(page).toHaveURL(/\/daily-finance\/users\?account=fa1$/);
     await expect(page.getByRole("heading", { name: "Ravi Kumar", level: 2 })).toBeVisible();
   });

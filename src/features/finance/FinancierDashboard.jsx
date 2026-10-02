@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router";
-import { Badge, Button, EmptyState, FilterSelect, Metric } from "../../components/ui.jsx";
+import { Navigate, useLocation, useNavigate, useSearchParams } from "react-router";
+import { Badge, Button, EmptyState, Metric } from "../../components/ui.jsx";
 import { TopActions } from "../../components/TopActions.jsx";
 import { claimTransactionConfirmation, loadPaymentReminderLog, loadTransactionConfirmationLog, loadUpcomingChitPayments, recordTransactionConfirmationResend, updateTransactionConfirmationStatus } from "../../lib/financeRepository";
 import { formatInr as money } from "../../lib/formatMoney.js";
@@ -19,6 +19,7 @@ import { CustomerStatementPage } from "../statements/CustomerStatementPage.jsx";
 import { EditAccount, NewFinance, Payment } from "./components/AccountForms.jsx";
 import { CustomerPortalSetup, KycEditor, NewAccountPortalNotice } from "./components/CustomerPortalKyc.jsx";
 import { DashboardFinanceSection } from "./components/DashboardFinanceSection.jsx";
+import { CustomerSwitcher } from "./components/CustomerSwitcher.jsx";
 import { FinanceInsightsBrief } from "./components/FinanceInsightsBrief.jsx";
 import { OperationsDetail } from "./components/OperationsDetail.jsx";
 import { PortfolioReport } from "./PortfolioReport.jsx";
@@ -157,8 +158,10 @@ export function Financier({
   }, [module, appliedView.resetKey]);
   // On narrow screens the tab row scrolls sideways; keep the open tab in view.
   useEffect(() => {
-    document.querySelector(".module-section-nav .module-section-tab.active")?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
-  }, [moduleSection]);
+    const tab = document.querySelector(".module-section-nav .module-section-tab.active");
+    const nav = tab?.parentElement;
+    if (nav && nav.scrollWidth > nav.clientWidth) nav.scrollLeft = tab.offsetLeft - (nav.clientWidth - tab.offsetWidth) / 2;
+  }, [moduleSection, detailId]);
   const dedicatedModule = !customerMode && (module === "daily" || module === "monthly");
   // Daily / Monthly Finance keep one page frame (header, title, actions, tabs) for Overview, Customers and Reports;
   // only the content below the tabs changes.
@@ -166,7 +169,7 @@ export function Financier({
   const moduleName = module === "monthly" ? "Monthly" : "Daily";
   const moduleHeader = <header className="top"><div><div className="brand">{businessName || "My Finance Business"}</div><div className="sub">{isOwner ? "Financier dashboard" : "Collection agent dashboard"} · {moduleName} collections</div></div><TopActions logout={logout} /></header>;
   const moduleToolbar = <div className="toolbar"><div><h1 className="title">{moduleName} Finance</h1><p className="copy">{module === "monthly" ? "Monthly interest accounts and payment reminders." : "Daily 100-day collection accounts."}</p></div>{isOwner && <div className="tabs"><Button className="primary" onClick={() => setModal("new")}>+ New finance account</Button></div>}</div>;
-  const moduleTabs = [["overview", "Overview"], ["collections", "Today’s collections"], ["customers", "Customers"], ["users", "Users"], ...(isOwner ? [["reports", "Reports"]] : [])];
+  const moduleTabs = [["collections", "Today’s collections"], ["overview", "Overview"], ["customers", "Customers"], ["users", "Users"], ...(isOwner ? [["reports", "Reports"]] : [])];
   const moduleNav = <nav className="module-section-nav" aria-label="Module sections">{moduleTabs.map(([id, label]) => <button key={id} type="button" className={`module-section-tab ${moduleSection === id ? "active" : ""}`} aria-current={moduleSection === id ? "page" : undefined} onClick={() => goModuleSection(id)}>{label}</button>)}</nav>;
   const customerPool = customerMode
     ? loans.filter(loan => (statusFilter === "all" || loanStatus(loan) === statusFilter) && (module === "all" || loan.kind === module))
@@ -240,10 +243,12 @@ export function Financier({
     if (loan && statementLoan && isOwner) {
       return <CustomerStatementPage mode="finance" loans={loans} focusLoan={statementLoan} settings={orgSettings} back={() => setStatementLoan(null)} />;
     }
-    const picker = <div className="card finance-user-picker"><FilterSelect label="Customer" value={loan ? loan.id : ""} allValue="" onChange={chooseAccount}><option value="">Choose a customer…</option>{accounts.map(account => <option key={account.id} value={account.id}>{`${account.customerName} · ${account.phone}${loanStatus(account) === "active" ? "" : ` · ${loanStatus(account)}`}`}</option>)}</FilterSelect><span className="small">{accounts.length} {moduleName.toLowerCase()} customer{accounts.length === 1 ? "" : "s"}</span></div>;
+    // With nobody chosen yet, open the first customer in the list.
+    if (!detail && accounts.length) return <Navigate to={accountPath(accounts[0])} replace />;
+    const picker = accounts.length ? <CustomerSwitcher accounts={accounts} selectedId={loan?.id || ""} onChange={chooseAccount} kindLabel={moduleName.toLowerCase()} /> : null;
     const body = loan
       ? <><OperationsDetail embedded loan={loan} relatedLoans={loans.filter(item => item.customerId && item.customerId === loan.customerId)} collect={setModal} edit={setEditLoan} remove={async account => { await onDeleteLoan(account); closeAccount(); }} portal={setPortalLoan} kyc={kyc} editKyc={setEditKycLoan} isOwner={isOwner} changeStatus={onStatusChange} editPaymentNote={onPaymentNoteChange} correctPayment={onPaymentCorrect} deletePayment={onPaymentDelete} orgSettings={orgSettings} authToken={authToken} workspace={workspace} onLogReceipt={onLogReceipt} reminderLog={reminderLogState} confirmationLog={confirmationLogState} onStatement={setStatementLoan} onResendConfirmation={account => runFinanceConfirmation(account, { resend: true })} />{isOwner && editLoan && <EditAccount loan={loan} close={() => setEditLoan(null)} save={onUpdateLoan} />}{isOwner && portalLoan && <CustomerPortalSetup loan={loan} close={() => setPortalLoan(null)} save={onSaveCustomerPortal} />}{isOwner && editKycLoan && <KycEditor loan={loan} current={kyc} close={() => setEditKycLoan(null)} save={async (account, aadhaar, pan) => { await onSaveKyc(account, aadhaar, pan); setKyc(await onLoadKyc(account)); }} />}</>
-      : <EmptyState title={detail && loans.length ? "This customer could not be found" : "Choose a customer"} copy={detail && loans.length ? "The account may have been deleted. Pick another customer from the list." : `Pick a customer above to see their ${moduleName.toLowerCase()} account, payments and actions.`} />;
+      : <EmptyState title={detail && accounts.length ? "This customer could not be found" : `No ${moduleName.toLowerCase()} customers yet`} copy={detail && accounts.length ? "The account may have been deleted. Pick another customer from the list." : "Customers appear here once you add a finance account."} />;
     return <main className={`shell finance-module-shell ${module}`}>{moduleHeader}{moduleToolbar}{moduleNav}{picker}{body}{modal && modal !== "new" && <Payment loan={modal} close={() => setModal(null)} save={addPayment} />}{receiptSuccess && <ReceiptSuccessModal receipt={receiptSuccess} settings={orgSettings} token={authToken} onLogAction={onLogReceipt} close={() => setReceiptSuccess(null)} />}{newAccountModals}</main>;
   }
   if (!customerMode && module === "all") {
