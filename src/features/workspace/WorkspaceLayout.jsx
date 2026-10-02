@@ -91,6 +91,7 @@ export function WorkspaceLayout({ session }) {
       orgSettings={orgSettings}
       workspace={workspace || {}}
       onLogReceipt={logReceipt}
+      activeChitSchemes={chitSchemes}
       module={financeView.module}
       collections={financeView.collections}
       accountId={financeView.accountId}

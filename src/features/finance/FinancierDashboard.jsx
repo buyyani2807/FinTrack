@@ -27,6 +27,9 @@ import { accountOutcome, annualRate, collectedOn, dailyProgress, isDailyCollecti
 import { realizedLoss, realizedProfit } from "./pnl.js";
 import { accountPath, collectionsPath, modulePath, workspacePaths } from "../workspace/paths.js";
 
+// A shared default keeps the chit-attention effect's dependency stable; a fresh `[]` per render re-runs it forever.
+const NO_CHIT_SCHEMES = [];
+
 export function Financier({
   loans,
   businessName,
@@ -38,7 +41,7 @@ export function Financier({
   onDeleteLoan,
   onSaveCustomerPortal,
   onLoadKyc,
-  onSaveKyc, activeChitSchemes = []
+  onSaveKyc, activeChitSchemes = NO_CHIT_SCHEMES
   , role = "staff", onStatusChange, onPaymentNoteChange, onPaymentCorrect, onPaymentDelete, onCollectionOrderChange,
   authToken, orgSettings = {}, workspace = {}, onLogReceipt, module = "all", collections = false, accountId = null,
 }) {
@@ -71,7 +74,7 @@ export function Financier({
   }, [authToken, detailId]);
   useEffect(() => {
     if (!isOwner || !authToken) {
-      setChitAttention([]);
+      setChitAttention(current => (current.length ? [] : current));
       return undefined;
     }
     let cancelled = false;
@@ -227,13 +230,16 @@ export function Financier({
   if (!customerMode && module === "all") {
     const dailyCustomers = loans.filter(loan => loan.kind === "daily" && loanStatus(loan) === "active").sort(byCollectionOrderThenName);
     const monthlyCustomers = loans.filter(loan => loan.kind === "monthly" && loanStatus(loan) === "active").sort(byCollectionOrderThenName);
+    // Agents only see the finance modules they hold assigned accounts in (e.g. a route-only agent sees neither).
+    const showDaily = isOwner || loans.some(loan => loan.kind === "daily");
+    const showMonthly = isOwner || loans.some(loan => loan.kind === "monthly");
     const attention = buildTodaysActionList({
       dailyLoans: dailyCustomers,
       monthlyLoans: monthlyCustomers.map(loan => ({ ...loan, attentionDueAmount: monthlyInterestPending(loan) })),
       chitAttention,
       today: today(),
     });
-    return <main className="shell dashboard-home"><header className="top"><div><div className="brand">{businessName || "My Finance Business"}</div><div className="sub">{isOwner ? "Financier dashboard" : "Collection agent dashboard"}</div></div><div className="top-actions"><Button onClick={logout}>Log out</Button></div></header><div className="toolbar"><div><h1 className="title">Dashboard</h1><p className="copy">Overview of your active finance customers and Chit Fund schemes.</p></div></div>{isOwner && <AttentionCenterCard attention={attention} kicker="Today's actions" onNavigate={href => {
+    return <main className="shell dashboard-home"><header className="top"><div><div className="brand">{businessName || "My Finance Business"}</div><div className="sub">{isOwner ? "Financier dashboard" : "Collection agent dashboard"}</div></div><div className="top-actions"><Button onClick={logout}>Log out</Button></div></header><div className="toolbar"><div><h1 className="title">Dashboard</h1><p className="copy">{isOwner ? "Overview of your active finance customers and Chit Fund schemes." : "Your assigned customers and collection routes."}</p></div></div>{isOwner && <AttentionCenterCard attention={attention} kicker="Today's actions" onNavigate={href => {
       trackProductEvent("attention_navigate", { module: href?.panel || "", section: href?.section || "" });
       if (href?.panel === "chit") {
         navigateTo(workspacePaths.chit);
@@ -252,7 +258,7 @@ export function Financier({
         if (href.detailId) { const target = loans.find(loan => loan.id === href.detailId); if (target) openAccount(target); }
         else navigateTo(modulePath(href.panel));
       }
-    }} />}{isOwner && authToken && <AccountsSummaryCard token={authToken} moneyFmt={money} onOpen={() => navigateTo(workspacePaths.cashbook)} />}{authToken && <RouteCollectionsEntryCard token={authToken} onOpen={() => navigateTo(workspacePaths.routeCollections)} />}<DashboardFinanceSection title="Daily Finance" customerLabel="Active Daily Customers" kind="daily" loans={dailyCustomers} customersOpen={dashboardCustomersOpen.daily} onToggleCustomers={() => setDashboardCustomersOpen(current => ({ ...current, daily: !current.daily }))} onView={openAccount} canReorder={isOwner} showPnl={isOwner} draggedId={draggedId} setDraggedId={setDraggedId} onReorder={id => reorderDashboard("daily", id)} startTouchDrag={startTouchDrag} moveTouchDrag={moveTouchDrag} finishTouchDrag={finishTouchDrag} cancelTouchDrag={() => { touchTargetId.current = null; setDraggedId(null); }} /><DashboardFinanceSection title="Monthly Finance" customerLabel="Active Monthly Customers" kind="monthly" loans={monthlyCustomers} customersOpen={dashboardCustomersOpen.monthly} onToggleCustomers={() => setDashboardCustomersOpen(current => ({ ...current, monthly: !current.monthly }))} onView={openAccount} canReorder={isOwner} showPnl={isOwner} draggedId={draggedId} setDraggedId={setDraggedId} onReorder={id => reorderDashboard("monthly", id)} startTouchDrag={startTouchDrag} moveTouchDrag={moveTouchDrag} finishTouchDrag={finishTouchDrag} cancelTouchDrag={() => { touchTargetId.current = null; setDraggedId(null); }} />{portalNotice}{receiptSuccess && <ReceiptSuccessModal receipt={receiptSuccess} settings={orgSettings} token={authToken} onLogAction={onLogReceipt} close={() => setReceiptSuccess(null)} />}</main>;
+    }} />}{isOwner && authToken && <AccountsSummaryCard token={authToken} moneyFmt={money} onOpen={() => navigateTo(workspacePaths.cashbook)} />}{authToken && <RouteCollectionsEntryCard token={authToken} onOpen={() => navigateTo(workspacePaths.routeCollections)} />}{!showDaily && !showMonthly && <section className="card"><p className="copy">No Daily or Monthly Finance customers are assigned to you yet.</p></section>}{showDaily && <DashboardFinanceSection title="Daily Finance" customerLabel="Active Daily Customers" kind="daily" loans={dailyCustomers} customersOpen={dashboardCustomersOpen.daily} onToggleCustomers={() => setDashboardCustomersOpen(current => ({ ...current, daily: !current.daily }))} onView={openAccount} canReorder={isOwner} showPnl={isOwner} draggedId={draggedId} setDraggedId={setDraggedId} onReorder={id => reorderDashboard("daily", id)} startTouchDrag={startTouchDrag} moveTouchDrag={moveTouchDrag} finishTouchDrag={finishTouchDrag} cancelTouchDrag={() => { touchTargetId.current = null; setDraggedId(null); }} />}{showMonthly && <DashboardFinanceSection title="Monthly Finance" customerLabel="Active Monthly Customers" kind="monthly" loans={monthlyCustomers} customersOpen={dashboardCustomersOpen.monthly} onToggleCustomers={() => setDashboardCustomersOpen(current => ({ ...current, monthly: !current.monthly }))} onView={openAccount} canReorder={isOwner} showPnl={isOwner} draggedId={draggedId} setDraggedId={setDraggedId} onReorder={id => reorderDashboard("monthly", id)} startTouchDrag={startTouchDrag} moveTouchDrag={moveTouchDrag} finishTouchDrag={finishTouchDrag} cancelTouchDrag={() => { touchTargetId.current = null; setDraggedId(null); }} />}{portalNotice}{receiptSuccess && <ReceiptSuccessModal receipt={receiptSuccess} settings={orgSettings} token={authToken} onLogAction={onLogReceipt} close={() => setReceiptSuccess(null)} />}</main>;
   }
   if (dedicatedModule && isOwner && moduleSection === "reports") {
     return <main className={`shell finance-module-shell ${module}`}><header className="top"><div><div className="brand">{businessName || "My Finance Business"}</div><div className="sub">{module === "monthly" ? "Monthly" : "Daily"} reports</div></div><Button onClick={logout}>Log out</Button></header><nav className="module-section-nav" aria-label="Module sections"><button type="button" className="module-section-tab" onClick={() => goModuleSection("overview")}>Overview</button><button type="button" className="module-section-tab" onClick={() => goModuleSection("customers")}>Customers</button><button type="button" className="module-section-tab active">Reports</button></nav><PortfolioReport loans={loans.filter(loan => loan.kind === module)} token={authToken} lockedKind={module} showChit={false} embedded title={`${module === "monthly" ? "Monthly" : "Daily"} Reports`} />{portalNotice}</main>;
