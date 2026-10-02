@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { renderPartyStatementPdf } from "../src/features/accounts/partyStatementPdf.js";
+import { renderPartyStatementPdf } from "../src/features/accounts/io/partyStatementPdf.js";
 
 test("party statement PDF includes party name and period", () => {
   const pdf = renderPartyStatementPdf({

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { collectionDetailVisibility, financeRolesAligned, ownerChromeAllowed, sessionUserRole, workspaceAccess, workspaceSessionAllowed } from "../src/features/finance/workspaceAccess.js";
+import { collectionDetailVisibility, financeRolesAligned, ownerChromeAllowed, sessionUserRole, workspaceAccess, workspaceSessionAllowed } from "../src/features/finance/model/workspaceAccess.js";
 
 test("owner tools stay hidden until the workspace role is known", () => {
   assert.deepEqual(workspaceAccess(null), { roleKnown: false, isOwner: false, isStaff: false });

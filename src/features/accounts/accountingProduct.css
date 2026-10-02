@@ -1,18 +1,18 @@
 /* Scoped to Accounts. Does not restyle Daily, Monthly, or Chit modules. */
 .accounts-dashboard {
-  --acc-bg: #0b1220;
-  --acc-surface: #121a27;
-  --acc-card: #172131;
-  --acc-card-elevated: #1c2738;
-  --acc-line: #2a3548;
-  --acc-line-strong: #3d4d66;
-  --acc-text: #f4f7fb;
-  --acc-muted: #8b9bb0;
-  --acc-gold: #e8b84a;
-  --acc-gold-ink: #1a1408;
-  --acc-green: #3dcc8c;
-  --acc-red: #f07178;
-  --acc-blue: #6eafff;
+  --acc-bg: var(--ft-bg);
+  --acc-surface: var(--ft-surface);
+  --acc-card: var(--ft-surface);
+  --acc-card-elevated: var(--ft-surface-subtle);
+  --acc-line: var(--ft-border);
+  --acc-line-strong: var(--ft-border-strong);
+  --acc-text: var(--ft-text);
+  --acc-muted: var(--ft-muted);
+  --acc-gold: var(--ft-primary);
+  --acc-gold-ink: var(--ft-on-primary);
+  --acc-green: var(--ft-success);
+  --acc-red: var(--ft-danger);
+  --acc-blue: var(--ft-info);
   --acc-control-h: 40px;
   --acc-input-h: 44px;
   --acc-compact-h: 36px;
@@ -31,16 +31,11 @@
   --acc-space-5: 24px;
   color: var(--acc-text);
   font-size: var(--acc-font);
-  background:
-    radial-gradient(1000px 480px at 6% -14%, #1a2740 0%, transparent 58%),
-    radial-gradient(700px 360px at 100% 0%, #152033 0%, transparent 50%),
+  background: radial-gradient(1000px 480px at 6% -14%, var(--ft-surface-subtle) 0%, transparent 58%),
+    radial-gradient(700px 360px at 100% 0%, var(--ft-surface) 0%, transparent 50%),
     var(--acc-bg);
   padding-left: 0 !important;
   -webkit-font-smoothing: antialiased;
-}
-
-html:has(.accounts-dashboard) .financier-nav {
-  display: none !important;
 }
 
 .accounts-dashboard .acc-shell {
@@ -61,7 +56,7 @@ html:has(.accounts-dashboard) .financier-nav {
   height: 100svh;
   max-height: 100svh;
   overflow: hidden;
-  background: linear-gradient(180deg, #151c29 0%, #121820 100%);
+  background: linear-gradient(180deg, var(--ft-surface) 0%, var(--ft-bg) 100%);
   border-right: 1px solid var(--acc-line);
   padding: 14px 8px 10px;
 }
@@ -112,7 +107,7 @@ html:has(.accounts-dashboard) .financier-nav {
   height: 40px;
   margin: 0 auto;
   border-radius: 10px;
-  background: #f4b94218;
+  background: color-mix(in srgb, var(--ft-primary) 9%, transparent);
   color: var(--acc-gold);
   font: 800 13px Syne, sans-serif;
 }
@@ -123,7 +118,7 @@ html:has(.accounts-dashboard) .financier-nav {
 
 .accounts-dashboard .acc-nav-group {
   margin: 14px 6px 6px;
-  color: #7d8ba0;
+  color: var(--ft-muted);
 }
 
 .accounts-dashboard .acc-nav-block {
@@ -140,7 +135,7 @@ html:has(.accounts-dashboard) .financier-nav {
   border-radius: 10px;
   padding: 10px 8px;
   background: transparent;
-  color: #d5deea;
+  color: var(--ft-text);
   min-height: 44px;
   cursor: pointer;
 }
@@ -166,13 +161,13 @@ html:has(.accounts-dashboard) .financier-nav {
 
 .accounts-dashboard .acc-nav-item:hover,
 .accounts-dashboard .acc-nav-item:focus-visible {
-  background: #f4b94216;
+  background: color-mix(in srgb, var(--ft-primary) 9%, transparent);
   color: var(--acc-gold);
   outline: none;
 }
 
 .accounts-dashboard .acc-nav-item.active {
-  background: #f4b9421f;
+  background: color-mix(in srgb, var(--ft-primary) 12%, transparent);
   color: var(--acc-gold);
 }
 
@@ -189,7 +184,7 @@ html:has(.accounts-dashboard) .financier-nav {
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: #c5d0de;
+  color: var(--ft-text-2);
   font-size: 12px;
   font-weight: 600;
 }
@@ -197,7 +192,7 @@ html:has(.accounts-dashboard) .financier-nav {
 .accounts-dashboard .acc-nav-sub:hover,
 .accounts-dashboard .acc-nav-sub:focus-visible,
 .accounts-dashboard .acc-nav-sub.active {
-  background: #f4b94214;
+  background: color-mix(in srgb, var(--ft-primary) 8%, transparent);
   color: var(--acc-gold);
   outline: none;
 }
@@ -211,7 +206,7 @@ html:has(.accounts-dashboard) .financier-nav {
   padding: 8px;
   border: 1px solid var(--acc-line);
   border-radius: 12px;
-  background: #171f2c;
+  background: var(--ft-surface);
   box-shadow: var(--acc-shadow);
 }
 
@@ -235,7 +230,7 @@ html:has(.accounts-dashboard) .financier-nav {
 .accounts-dashboard .acc-nav-toggle:hover,
 .accounts-dashboard .acc-nav-toggle:focus-visible {
   color: var(--acc-gold);
-  border-color: #f4b94255;
+  border-color: color-mix(in srgb, var(--ft-primary) 33%, transparent);
   outline: none;
 }
 
@@ -269,11 +264,11 @@ html:has(.accounts-dashboard) .financier-nav {
 .accounts-dashboard .acc-breadcrumb li:not(:last-child)::after {
   content: "→";
   margin-left: 6px;
-  color: #6d7a8e;
+  color: var(--ft-muted);
 }
 
 .accounts-dashboard .acc-breadcrumb li:last-child {
-  color: #d5deea;
+  color: var(--ft-text);
 }
 
 .accounts-dashboard .acc-bottom-nav {
@@ -329,7 +324,7 @@ html:has(.accounts-dashboard) .financier-nav {
   padding: 12px 14px;
   border: 1px solid var(--acc-line);
   border-radius: 12px;
-  background: #151b27;
+  background: var(--ft-surface);
 }
 
 .accounts-dashboard .acc-company-bar-field {
@@ -372,7 +367,7 @@ html:has(.accounts-dashboard) .financier-nav {
   padding: 10px 12px;
   border: 1px dashed var(--acc-line);
   border-radius: 10px;
-  background: #151b27;
+  background: var(--ft-surface);
 }
 
 .accounts-dashboard .acc-gst-setup-hint .copy {
@@ -427,7 +422,7 @@ html:has(.accounts-dashboard) .financier-nav {
   padding: 10px 12px;
   border: 1px solid var(--acc-line);
   border-radius: 10px;
-  background: #151b27;
+  background: var(--ft-surface);
   color: var(--acc-muted);
 }
 
@@ -509,7 +504,7 @@ html:has(.accounts-dashboard) .financier-nav {
 .accounts-dashboard .btn:hover:not(:disabled),
 .accounts-dashboard .acc-new-entry:hover {
   border-color: var(--acc-line-strong);
-  background: #1c2533;
+  background: var(--ft-surface);
 }
 
 .accounts-dashboard .btn.primary {
@@ -527,13 +522,13 @@ html:has(.accounts-dashboard) .financier-nav {
 
 .accounts-dashboard .btn.danger {
   color: var(--acc-red);
-  border-color: #ff7a7a55;
-  background: #201418;
+  border-color: color-mix(in srgb, var(--ft-danger) 33%, transparent);
+  background: var(--ft-surface);
 }
 
 .accounts-dashboard .btn.danger:hover:not(:disabled) {
-  background: #2a1719;
-  border-color: #ff7a7a88;
+  background: var(--ft-danger-soft);
+  border-color: color-mix(in srgb, var(--ft-danger) 53%, transparent);
 }
 
 .accounts-dashboard .btn:disabled,
@@ -572,7 +567,7 @@ html:has(.accounts-dashboard) .financier-nav {
 }
 
 .accounts-dashboard .accounts-period-pill.active {
-  background: #f4b94218;
+  background: color-mix(in srgb, var(--ft-primary) 9%, transparent);
   border-color: var(--acc-gold);
   color: var(--acc-gold);
 }
@@ -613,7 +608,7 @@ html:has(.accounts-dashboard) .financier-nav {
 }
 
 .accounts-dashboard .field > span {
-  color: #c5d0e0;
+  color: var(--ft-text-2);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -702,11 +697,11 @@ html:has(.accounts-dashboard) .financier-nav {
   white-space: nowrap;
 }
 
-.accounts-dashboard .acc-doc-status.tone-green { color: var(--acc-green); border-color: #4fd08d44; background: #4fd08d14; }
-.accounts-dashboard .acc-doc-status.tone-amber { color: var(--acc-gold); border-color: #f4b94255; background: #f4b94214; }
-.accounts-dashboard .acc-doc-status.tone-red { color: var(--acc-red); border-color: #ff7a7a55; background: #ff7a7a14; }
-.accounts-dashboard .acc-doc-status.tone-blue { color: var(--acc-blue); border-color: #7eb6ff44; background: #7eb6ff14; }
-.accounts-dashboard .acc-doc-status.tone-muted { color: var(--acc-muted); background: #93a0b514; }
+.accounts-dashboard .acc-doc-status.tone-green { color: var(--acc-green); border-color: color-mix(in srgb, var(--ft-success) 27%, transparent); background: color-mix(in srgb, var(--ft-success) 8%, transparent); }
+.accounts-dashboard .acc-doc-status.tone-amber { color: var(--acc-gold); border-color: color-mix(in srgb, var(--ft-primary) 33%, transparent); background: color-mix(in srgb, var(--ft-primary) 8%, transparent); }
+.accounts-dashboard .acc-doc-status.tone-red { color: var(--acc-red); border-color: color-mix(in srgb, var(--ft-danger) 33%, transparent); background: color-mix(in srgb, var(--ft-danger) 8%, transparent); }
+.accounts-dashboard .acc-doc-status.tone-blue { color: var(--acc-blue); border-color: color-mix(in srgb, var(--ft-info) 27%, transparent); background: color-mix(in srgb, var(--ft-info) 8%, transparent); }
+.accounts-dashboard .acc-doc-status.tone-muted { color: var(--acc-muted); background: color-mix(in srgb, var(--ft-border-strong) 8%, transparent); }
 
 .accounts-dashboard .acc-modal.acc-modal-wide {
   width: min(960px, calc(100vw - 32px));
@@ -751,9 +746,9 @@ html:has(.accounts-dashboard) .financier-nav {
   flex: 0 0 auto; min-width: 54px; text-align: center; padding: 1px 6px; border-radius: 999px; font-size: 11px; font-weight: 700;
   border: 1px solid var(--acc-line); color: var(--acc-muted);
 }
-.accounts-dashboard .acc-gstpack-checks .tone-error .acc-gstpack-sev { color: var(--acc-red); border-color: #ff7a7a55; background: #ff7a7a14; }
-.accounts-dashboard .acc-gstpack-checks .tone-warn .acc-gstpack-sev { color: var(--acc-gold); border-color: #f4b94255; background: #f4b94214; }
-.accounts-dashboard .acc-gstpack-checks .tone-ok .acc-gstpack-sev { color: var(--acc-green); border-color: #4fd08d44; background: #4fd08d14; }
+.accounts-dashboard .acc-gstpack-checks .tone-error .acc-gstpack-sev { color: var(--acc-red); border-color: color-mix(in srgb, var(--ft-danger) 33%, transparent); background: color-mix(in srgb, var(--ft-danger) 8%, transparent); }
+.accounts-dashboard .acc-gstpack-checks .tone-warn .acc-gstpack-sev { color: var(--acc-gold); border-color: color-mix(in srgb, var(--ft-primary) 33%, transparent); background: color-mix(in srgb, var(--ft-primary) 8%, transparent); }
+.accounts-dashboard .acc-gstpack-checks .tone-ok .acc-gstpack-sev { color: var(--acc-green); border-color: color-mix(in srgb, var(--ft-success) 27%, transparent); background: color-mix(in srgb, var(--ft-success) 8%, transparent); }
 .accounts-dashboard .acc-gstpack-filings { border-top: 1px solid var(--acc-line); padding-top: 12px; display: flex; flex-direction: column; gap: 8px; }
 .accounts-dashboard .acc-gstpack-filings-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
 .accounts-dashboard .acc-gstpack-filings ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
@@ -761,8 +756,8 @@ html:has(.accounts-dashboard) .financier-nav {
   display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;
   padding: 8px 10px; border: 1px solid var(--acc-line); border-radius: var(--acc-radius-sm);
 }
-.accounts-dashboard .acc-gstpack-filing.tone-filed { border-color: #4fd08d55; }
-.accounts-dashboard .acc-gstpack-filing.tone-overdue { border-color: #ff7a7a66; }
+.accounts-dashboard .acc-gstpack-filing.tone-filed { border-color: color-mix(in srgb, var(--ft-success) 33%, transparent); }
+.accounts-dashboard .acc-gstpack-filing.tone-overdue { border-color: color-mix(in srgb, var(--ft-danger) 40%, transparent); }
 .accounts-dashboard .acc-gstpack-mark { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .accounts-dashboard .acc-gstpack-mark input { min-height: 36px; max-width: 170px; }
 @media (max-width: 900px) { .accounts-dashboard .acc-gstpack-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -823,15 +818,15 @@ html:has(.accounts-dashboard) .financier-nav {
 }
 
 .accounts-dashboard .acc-credit-alert {
-  border: 1px solid #f4b94255;
-  background: #f4b94214;
+  border: 1px solid color-mix(in srgb, var(--ft-primary) 33%, transparent);
+  background: color-mix(in srgb, var(--ft-primary) 8%, transparent);
   border-radius: var(--acc-radius);
   padding: 10px 12px;
 }
 
 .accounts-dashboard .acc-credit-alert.block {
-  border-color: #ff7a7a55;
-  background: #ff7a7a14;
+  border-color: color-mix(in srgb, var(--ft-danger) 33%, transparent);
+  background: color-mix(in srgb, var(--ft-danger) 8%, transparent);
 }
 
 .accounts-dashboard .acc-credit-alert p {
@@ -851,7 +846,7 @@ html:has(.accounts-dashboard) .financier-nav {
   padding: 14px 16px;
   border: 1px solid var(--acc-line);
   border-radius: var(--acc-radius);
-  background: linear-gradient(135deg, #1c2534 0%, var(--acc-card) 55%, #1a2230 100%);
+  background: linear-gradient(135deg, var(--ft-surface) 0%, var(--acc-card) 55%, var(--ft-surface) 100%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
@@ -901,7 +896,7 @@ html:has(.accounts-dashboard) .financier-nav {
 }
 
 .accounts-dashboard .acc-ov-seg button.active {
-  background: #f4b9421f;
+  background: color-mix(in srgb, var(--ft-primary) 12%, transparent);
   color: var(--acc-gold);
 }
 
@@ -989,20 +984,20 @@ html:has(.accounts-dashboard) .financier-nav {
 
 .accounts-dashboard .acc-chip.ok {
   color: var(--acc-green);
-  border-color: #4fd08d44;
-  background: #4fd08d14;
+  border-color: color-mix(in srgb, var(--ft-success) 27%, transparent);
+  background: color-mix(in srgb, var(--ft-success) 8%, transparent);
 }
 
 .accounts-dashboard .acc-chip.warn {
   color: var(--acc-red);
-  border-color: #ff7a7a55;
-  background: #ff7a7a14;
+  border-color: color-mix(in srgb, var(--ft-danger) 33%, transparent);
+  background: color-mix(in srgb, var(--ft-danger) 8%, transparent);
 }
 
 .accounts-dashboard .acc-chip.info {
   color: var(--acc-blue);
-  border-color: #7eb6ff44;
-  background: #7eb6ff14;
+  border-color: color-mix(in srgb, var(--ft-info) 27%, transparent);
+  background: color-mix(in srgb, var(--ft-info) 8%, transparent);
 }
 
 .accounts-dashboard .acc-ov-block-head {
@@ -1139,8 +1134,8 @@ html:has(.accounts-dashboard) .financier-nav {
   height: 148px;
 }
 
-.accounts-dashboard .acc-ov-pie-bg { fill: #0f141d; }
-.accounts-dashboard .acc-ov-pie-hole { fill: #202737; }
+.accounts-dashboard .acc-ov-pie-bg { fill: var(--ft-text); }
+.accounts-dashboard .acc-ov-pie-hole { fill: var(--ft-text); }
 .accounts-dashboard .acc-ov-pie-ar { fill: var(--acc-blue); cursor: pointer; }
 .accounts-dashboard .acc-ov-pie-ap { fill: var(--acc-gold); cursor: pointer; }
 
@@ -1200,7 +1195,7 @@ html:has(.accounts-dashboard) .financier-nav {
   height: 10px;
   overflow: hidden;
   border-radius: 999px;
-  background: #0f141d;
+  background: var(--ft-bg);
 }
 
 .accounts-dashboard .acc-ov-chart-row.kind-ap .acc-ov-aging-bar .current { background: var(--acc-gold); }
@@ -1215,7 +1210,7 @@ html:has(.accounts-dashboard) .financier-nav {
 }
 
 .accounts-dashboard .acc-ov-aging-foot i.current { background: var(--acc-blue); }
-.accounts-dashboard .acc-ov-aging-foot i.overdue { background: #f08138; }
+.accounts-dashboard .acc-ov-aging-foot i.overdue { background: var(--ft-warning); }
 
 .accounts-dashboard .acc-intel {
   padding: 16px 18px;
@@ -1463,7 +1458,7 @@ html:has(.accounts-dashboard) .financier-nav {
 
 .accounts-dashboard .acc-ov-more-menu button:hover,
 .accounts-dashboard .acc-ov-more-menu button:focus-visible {
-  background: #243044;
+  background: var(--ft-surface-subtle);
   outline: none;
 }
 
@@ -1500,7 +1495,7 @@ html:has(.accounts-dashboard) .financier-nav {
 
 .accounts-dashboard .acc-landing-card:hover,
 .accounts-dashboard .acc-landing-card:focus-visible {
-  border-color: #4a5870;
+  border-color: var(--ft-border-strong);
   transform: translateY(-1px);
 }
 
@@ -1533,7 +1528,7 @@ html:has(.accounts-dashboard) .financier-nav {
 .accounts-dashboard .acc-table-wrap th,
 .accounts-dashboard .acc-table-wrap td {
   padding: 11px 12px;
-  border-bottom: 1px solid #273041;
+  border-bottom: 1px solid var(--ft-border);
   vertical-align: middle;
 }
 
@@ -1544,11 +1539,11 @@ html:has(.accounts-dashboard) .financier-nav {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   text-align: left;
-  background: #161d29;
+  background: var(--ft-surface);
 }
 
 .accounts-dashboard .acc-table-wrap tbody tr:hover {
-  background: #202837;
+  background: var(--ft-surface-subtle);
 }
 
 .accounts-dashboard .acc-num {
@@ -1592,15 +1587,15 @@ html:has(.accounts-dashboard) .financier-nav {
 }
 
 .accounts-dashboard .acc-toast.error {
-  border-color: #ff7a7a55;
-  color: #ffb4b4;
-  background: #2a1719;
+  border-color: color-mix(in srgb, var(--ft-danger) 33%, transparent);
+  color: var(--ft-danger);
+  background: var(--ft-danger-soft);
 }
 
 .accounts-dashboard .acc-toast.ok {
-  border-color: #4fd08d44;
-  color: #8be6b5;
-  background: #14241c;
+  border-color: color-mix(in srgb, var(--ft-success) 27%, transparent);
+  color: var(--ft-success);
+  background: var(--ft-success-soft);
 }
 
 .accounts-dashboard .acc-skeleton {
@@ -1611,9 +1606,9 @@ html:has(.accounts-dashboard) .financier-nav {
 
 .accounts-dashboard .acc-skel {
   height: 102px;
-  border: 1px solid #e4eaf2;
+  border: 1px solid var(--ft-border);
   border-radius: var(--acc-radius);
-  background: linear-gradient(90deg, #f1f5f9 0%, #fafcfe 50%, #f1f5f9 100%);
+  background: linear-gradient(90deg, var(--ft-surface) 0%, var(--ft-surface) 50%, var(--ft-surface) 100%);
   background-size: 200% 100%;
   animation: acc-pulse 1.2s ease-in-out infinite;
 }
@@ -1646,7 +1641,7 @@ html:has(.accounts-dashboard) .financier-nav {
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: #f4b94222;
+  background: color-mix(in srgb, var(--ft-primary) 13%, transparent);
   color: var(--acc-gold);
   font-size: 10px;
   font-weight: 800;
@@ -1682,7 +1677,7 @@ html:has(.accounts-dashboard) .financier-nav {
   padding: 8px;
   border: 1px solid var(--acc-line);
   border-radius: 12px;
-  background: #171f2c;
+  background: var(--ft-surface);
   box-shadow: var(--acc-shadow);
 }
 
@@ -1709,7 +1704,7 @@ html:has(.accounts-dashboard) .financier-nav {
 
 .accounts-dashboard .acc-user-menu button:hover,
 .accounts-dashboard .acc-user-menu button:focus-visible {
-  background: #f4b94216;
+  background: color-mix(in srgb, var(--ft-primary) 9%, transparent);
   color: var(--acc-gold);
 }
 
@@ -1818,7 +1813,7 @@ html:has(.accounts-dashboard) .financier-nav {
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: #f4b94218;
+  background: color-mix(in srgb, var(--ft-primary) 9%, transparent);
   color: var(--acc-gold);
   font: 800 12px Syne, sans-serif;
   letter-spacing: 0.02em;
@@ -1943,13 +1938,13 @@ html:has(.accounts-dashboard) .financier-nav {
 }
 
 .accounts-dashboard .acc-filter-chip span {
-  color: #c5d0e0;
+  color: var(--ft-text-2);
   font-variant-numeric: tabular-nums;
 }
 
 .accounts-dashboard .acc-filter-chip.active {
-  border-color: #f4b94266;
-  background: #f4b94216;
+  border-color: color-mix(in srgb, var(--ft-primary) 40%, transparent);
+  background: color-mix(in srgb, var(--ft-primary) 9%, transparent);
   color: var(--acc-gold);
 }
 
@@ -1977,36 +1972,36 @@ html:has(.accounts-dashboard) .financier-nav {
 
 .accounts-dashboard .acc-type-badge.customer {
   color: var(--acc-green);
-  border-color: #4fd08d44;
-  background: #4fd08d14;
+  border-color: color-mix(in srgb, var(--ft-success) 27%, transparent);
+  background: color-mix(in srgb, var(--ft-success) 8%, transparent);
 }
 
 .accounts-dashboard .acc-type-badge.supplier {
   color: var(--acc-blue);
-  border-color: #7eb6ff44;
-  background: #7eb6ff14;
+  border-color: color-mix(in srgb, var(--ft-info) 27%, transparent);
+  background: color-mix(in srgb, var(--ft-info) 8%, transparent);
 }
 
 .accounts-dashboard .acc-type-badge.employee {
   color: var(--acc-gold);
-  border-color: #f4b94255;
-  background: #f4b94214;
+  border-color: color-mix(in srgb, var(--ft-primary) 33%, transparent);
+  background: color-mix(in srgb, var(--ft-primary) 8%, transparent);
 }
 
 .accounts-dashboard .acc-type-badge.agent {
-  color: #c9b8ff;
-  border-color: #c9b8ff44;
-  background: #c9b8ff12;
+  color: var(--ft-info);
+  border-color: color-mix(in srgb, var(--ft-info) 27%, transparent);
+  background: color-mix(in srgb, var(--ft-info) 7%, transparent);
 }
 
 .accounts-dashboard .acc-type-badge.other {
   color: var(--acc-muted);
-  background: #93a0b514;
+  background: color-mix(in srgb, var(--ft-border-strong) 8%, transparent);
 }
 
 .accounts-dashboard .acc-status-pill.active {
   color: var(--acc-green);
-  border-color: #4fd08d33;
+  border-color: color-mix(in srgb, var(--ft-success) 20%, transparent);
 }
 
 .accounts-dashboard .acc-status-pill.inactive {
@@ -2015,37 +2010,37 @@ html:has(.accounts-dashboard) .financier-nav {
 
 .accounts-dashboard .acc-status-pill.suggested {
   color: var(--acc-gold);
-  border-color: #f4b94255;
-  background: #f4b94214;
+  border-color: color-mix(in srgb, var(--ft-primary) 33%, transparent);
+  background: color-mix(in srgb, var(--ft-primary) 8%, transparent);
 }
 
 .accounts-dashboard .acc-status-pill.inv-current {
   color: var(--acc-green);
-  border-color: #4fd08d44;
-  background: #4fd08d14;
+  border-color: color-mix(in srgb, var(--ft-success) 27%, transparent);
+  background: color-mix(in srgb, var(--ft-success) 8%, transparent);
 }
 
 .accounts-dashboard .acc-status-pill.inv-due {
   color: var(--acc-gold);
-  border-color: #f4b94255;
-  background: #f4b94214;
+  border-color: color-mix(in srgb, var(--ft-primary) 33%, transparent);
+  background: color-mix(in srgb, var(--ft-primary) 8%, transparent);
 }
 
 .accounts-dashboard .acc-status-pill.inv-overdue {
   color: var(--acc-red);
-  border-color: #ff7a7a55;
-  background: #ff7a7a14;
+  border-color: color-mix(in srgb, var(--ft-danger) 33%, transparent);
+  background: color-mix(in srgb, var(--ft-danger) 8%, transparent);
 }
 
 .accounts-dashboard .acc-status-pill.inv-paid {
   color: var(--acc-muted);
-  background: #93a0b514;
+  background: color-mix(in srgb, var(--ft-border-strong) 8%, transparent);
 }
 
 .accounts-dashboard .acc-status-pill.inv-partial {
   color: var(--acc-gold);
-  border-color: #f4b94255;
-  background: #f4b94214;
+  border-color: color-mix(in srgb, var(--ft-primary) 33%, transparent);
+  background: color-mix(in srgb, var(--ft-primary) 8%, transparent);
 }
 
 .accounts-dashboard .acc-sale-summary {
@@ -2240,8 +2235,8 @@ html:has(.accounts-dashboard) .financier-nav {
   padding: 0 8px;
   border-radius: 999px;
   border: 1px solid var(--acc-line);
-  background: #f4b94212;
-  color: #e8c98a;
+  background: color-mix(in srgb, var(--ft-primary) 7%, transparent);
+  color: var(--ft-primary);
   font-size: 11px;
   font-weight: 700;
   white-space: nowrap;
@@ -2249,7 +2244,7 @@ html:has(.accounts-dashboard) .financier-nav {
 
 .accounts-dashboard .acc-party-ledger-narration {
   max-width: 320px;
-  color: #d5deea;
+  color: var(--ft-text);
 }
 
 .accounts-dashboard .acc-party-ledger-balance {
@@ -2293,14 +2288,14 @@ html:has(.accounts-dashboard) .financier-nav {
 
 .accounts-dashboard .acc-voucher-chip.in {
   color: var(--acc-green);
-  border-color: #4fd08d44;
-  background: #4fd08d14;
+  border-color: color-mix(in srgb, var(--ft-success) 27%, transparent);
+  background: color-mix(in srgb, var(--ft-success) 8%, transparent);
 }
 
 .accounts-dashboard .acc-voucher-chip.out {
   color: var(--acc-red);
-  border-color: #ff7a7a44;
-  background: #ff7a7a14;
+  border-color: color-mix(in srgb, var(--ft-danger) 27%, transparent);
+  background: color-mix(in srgb, var(--ft-danger) 8%, transparent);
 }
 
 .accounts-dashboard .acc-bank {
@@ -2311,10 +2306,10 @@ html:has(.accounts-dashboard) .financier-nav {
 .accounts-dashboard .acc-bank-note {
   margin: 0;
   padding: 12px 14px;
-  border: 1px solid #f4b94233;
+  border: 1px solid color-mix(in srgb, var(--ft-primary) 20%, transparent);
   border-radius: var(--acc-radius);
-  background: #f4b94210;
-  color: #e8c98a;
+  background: color-mix(in srgb, var(--ft-primary) 6%, transparent);
+  color: var(--ft-primary);
   font-size: 13px;
   line-height: 1.45;
 }
@@ -2641,8 +2636,8 @@ html:has(.accounts-dashboard) .financier-nav {
 }
 
 .accounts-dashboard .acc-outstanding-toggle.on {
-  border-color: #f4b94266;
-  background: #f4b94214;
+  border-color: color-mix(in srgb, var(--ft-primary) 40%, transparent);
+  background: color-mix(in srgb, var(--ft-primary) 8%, transparent);
   color: var(--acc-gold);
 }
 
@@ -2653,7 +2648,7 @@ html:has(.accounts-dashboard) .financier-nav {
   height: 20px;
   border-radius: 999px;
   border: 1px solid var(--acc-line);
-  background: #2a3344;
+  background: var(--ft-surface-subtle);
 }
 
 .accounts-dashboard .acc-outstanding-toggle.on .acc-switch {
@@ -2668,7 +2663,7 @@ html:has(.accounts-dashboard) .financier-nav {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #f3f6fb;
+  background: var(--ft-surface);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
   transition: transform 0.16s ease;
 }
@@ -2711,7 +2706,7 @@ html:has(.accounts-dashboard) .financier-nav {
 }
 
 .accounts-dashboard .accounts-invoice-table tr.acc-invoice-overdue td {
-  background: #2a171912;
+  background: color-mix(in srgb, var(--ft-danger-soft) 7%, transparent);
 }
 
 .accounts-dashboard .acc-invoice-parties {
@@ -2786,7 +2781,7 @@ html:has(.accounts-dashboard) .financier-nav {
 
 .accounts-dashboard .acc-low-stock {
   margin-bottom: 12px;
-  border-color: #f4b94255;
+  border-color: color-mix(in srgb, var(--ft-primary) 33%, transparent);
 }
 
 .accounts-dashboard .acc-item-lines .acc-table-wrap {
@@ -2889,7 +2884,7 @@ html:has(.accounts-dashboard) .financier-nav {
     padding: 6px;
     border: 1px solid var(--acc-line);
     border-radius: 16px;
-    background: #151b27ef;
+    background: color-mix(in srgb, var(--ft-surface) 94%, transparent);
     box-shadow: var(--acc-shadow);
   }
   .accounts-dashboard .acc-bottom-item {
@@ -2898,12 +2893,12 @@ html:has(.accounts-dashboard) .financier-nav {
     border: 0;
     border-radius: 12px;
     background: transparent;
-    color: #c5d0de;
+    color: var(--ft-text-2);
     font-size: 11px;
     font-weight: 700;
   }
   .accounts-dashboard .acc-bottom-item.active {
-    background: #f4b94218;
+    background: color-mix(in srgb, var(--ft-primary) 9%, transparent);
     color: var(--acc-gold);
   }
   .accounts-dashboard .acc-main {
@@ -3287,7 +3282,7 @@ html:has(.accounts-dashboard) .financier-nav {
   padding: 14px;
   border: 1px solid var(--acc-line);
   border-radius: var(--acc-radius);
-  background: #141c29;
+  background: var(--ft-surface);
 }
 
 .accounts-dashboard .acc-form-section-title {
@@ -3461,7 +3456,7 @@ html:has(.accounts-dashboard) .financier-nav {
 @media (max-width: 1050px) {
   .accounts-dashboard .acc-bottom-nav {
     backdrop-filter: blur(12px);
-    background: #121925f2;
+    background: color-mix(in srgb, var(--ft-surface) 95%, transparent);
   }
   .accounts-dashboard .acc-page-head-end .btn,
   .accounts-dashboard .acc-page-head-end .acc-new-entry {
@@ -3604,7 +3599,7 @@ html:has(.accounts-dashboard) .financier-nav {
 }
 
 .accounts-dashboard .acc-invoice-card.is-overdue {
-  border-color: #8f3d44;
+  border-color: var(--ft-danger);
 }
 
 .accounts-dashboard .acc-invoice-card-top {
@@ -3615,9 +3610,8 @@ html:has(.accounts-dashboard) .financier-nav {
 }
 
 .accounts-dashboard .acc-intel {
-  border-color: #3a4a63;
-  background:
-    linear-gradient(135deg, #1a2436 0%, #172131 55%, #151d2c 100%);
+  border-color: var(--ft-border-strong);
+  background: linear-gradient(135deg, var(--ft-surface) 0%, var(--ft-surface) 55%, var(--ft-surface) 100%);
 }
 
 .accounts-dashboard .acc-intel-kicker {
@@ -3776,7 +3770,7 @@ html:has(.accounts-dashboard) .financier-nav {
   height: 18px;
   margin-top: 1px;
   border-radius: 50%;
-  background: #3a1b20;
+  background: var(--ft-danger-soft);
   color: var(--acc-red);
   font: 700 12px/18px inherit;
   text-align: center;
@@ -4216,11 +4210,11 @@ html:has(.accounts-dashboard) .financier-nav {
     min-width: min(100%, 160px);
   }
 }
-.accounts-template-features{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}.accounts-template-features span{display:inline-flex;align-items:center;padding:4px 8px;border:1px solid #f4b94255;border-radius:999px;background:#f4b94212;color:#f7dc99;font-size:10px;font-weight:600}.accounts-template-features span::before{content:'✓';margin-right:4px;color:#4fd08d}
-.accounts-industry-card{margin:14px 0 18px;padding:16px 18px;background:linear-gradient(135deg,#202b3e,#171d29)}.accounts-industry-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.accounts-industry-head h2{margin:3px 0 0;font:700 19px Syne,sans-serif;color:#f4f6fb}.accounts-industry-badge{padding:4px 8px;border:1px solid #f4b94255;border-radius:999px;color:#f4b942;background:#f4b94212;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
-.manufacturing-flow-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.manufacturing-flow-card{padding:17px;text-align:left;color:#f4f6fb;cursor:pointer}.manufacturing-flow-card:hover{border-color:#f4b94288;transform:translateY(-1px)}.manufacturing-flow-card strong{display:block;margin-top:10px}.manufacturing-flow-card p{margin:6px 0 0}.manufacturing-flow-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:#f4b9421c;color:#f4b942;font-weight:800}.manufacturing-landing-card{border-left:3px solid #f4b942}@media(max-width:680px){.manufacturing-flow-grid{grid-template-columns:1fr}}
-.accounts-business-pulse{padding:1.15rem;border:1px solid color-mix(in srgb,var(--line) 78%,transparent);background:linear-gradient(145deg,color-mix(in srgb,var(--card) 94%,var(--accent) 6%),var(--card))}.accounts-business-pulse-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1rem}.accounts-business-pulse-head .acc-section-title{margin:.2rem 0 0}.accounts-business-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:.7rem}.accounts-business-kpis .acc-metric{min-height:84px}.accounts-business-actions{display:flex;align-items:center;flex-wrap:wrap;gap:.55rem;margin-top:1rem}.accounts-business-actions>.small{margin-right:.2rem}.accounts-business-action{display:inline-flex;align-items:center;gap:.5rem;border:1px solid var(--line);border-radius:999px;padding:.55rem .8rem;background:var(--surface);color:var(--text);cursor:pointer;font-weight:650}.accounts-business-action:hover{border-color:var(--accent);transform:translateY(-1px)}.accounts-business-action.green{border-color:color-mix(in srgb,#22c55e 45%,var(--line))}.accounts-business-action.red{border-color:color-mix(in srgb,#ef4444 45%,var(--line))}.accounts-business-action.blue{border-color:color-mix(in srgb,#3b82f6 45%,var(--line))}.accounts-business-action.gold{border-color:color-mix(in srgb,#eab308 45%,var(--line))}.accounts-business-action.purple{border-color:color-mix(in srgb,#a855f7 45%,var(--line))}@media(max-width:1050px){.accounts-business-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:620px){.accounts-business-pulse-head{flex-direction:column;gap:.25rem}.accounts-business-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.accounts-business-actions{align-items:stretch}.accounts-business-actions>.small{width:100%}.accounts-business-action{justify-content:space-between;flex:1 1 calc(50% - .55rem)}}
-.accounts-business-alert{display:flex;align-items:center;gap:.7rem;margin-top:1rem;padding:.7rem .8rem;border:1px solid color-mix(in srgb,#f59e0b 45%,var(--line));border-radius:12px;background:color-mix(in srgb,#f59e0b 8%,var(--card))}.accounts-business-alert>div{flex:1;min-width:0}.accounts-business-alert>div strong{display:block}.accounts-business-alert-icon{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#f59e0b;color:#15100a;font-weight:800}.accounts-business-alert .btn{white-space:nowrap}@media(max-width:620px){.accounts-business-alert{align-items:flex-start;flex-wrap:wrap}.accounts-business-alert .btn{margin-left:2.2rem}}
+.accounts-template-features{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}.accounts-template-features span{display:inline-flex;align-items:center;padding:4px 8px;border: 1px solid color-mix(in srgb, var(--ft-primary) 33%, transparent);border-radius:999px;background: color-mix(in srgb, var(--ft-primary) 7%, transparent);color: var(--ft-primary);font-size:10px;font-weight:600}.accounts-template-features span::before{content:'✓';margin-right:4px;color: var(--ft-success)}
+.accounts-industry-card{margin:14px 0 18px;padding:16px 18px;background: linear-gradient(135deg,var(--ft-surface-subtle),var(--ft-surface))}.accounts-industry-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.accounts-industry-head h2{margin:3px 0 0;font:700 19px Syne,sans-serif;color: var(--ft-text)}.accounts-industry-badge{padding:4px 8px;border: 1px solid color-mix(in srgb, var(--ft-primary) 33%, transparent);border-radius:999px;color: var(--ft-primary);background: color-mix(in srgb, var(--ft-primary) 7%, transparent);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.manufacturing-flow-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.manufacturing-flow-card{padding:17px;text-align:left;color: var(--ft-text);cursor:pointer}.manufacturing-flow-card:hover{border-color: color-mix(in srgb, var(--ft-primary) 53%, transparent);transform:translateY(-1px)}.manufacturing-flow-card strong{display:block;margin-top:10px}.manufacturing-flow-card p{margin:6px 0 0}.manufacturing-flow-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background: color-mix(in srgb, var(--ft-primary) 11%, transparent);color: var(--ft-primary);font-weight:800}.manufacturing-landing-card{border-left: 3px solid var(--ft-primary)}@media(max-width:680px){.manufacturing-flow-grid{grid-template-columns:1fr}}
+.accounts-business-pulse{padding:1.15rem;border:1px solid color-mix(in srgb,var(--line) 78%,transparent);background:linear-gradient(145deg,color-mix(in srgb,var(--card) 94%,var(--accent) 6%),var(--card))}.accounts-business-pulse-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1rem}.accounts-business-pulse-head .acc-section-title{margin:.2rem 0 0}.accounts-business-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:.7rem}.accounts-business-kpis .acc-metric{min-height:84px}.accounts-business-actions{display:flex;align-items:center;flex-wrap:wrap;gap:.55rem;margin-top:1rem}.accounts-business-actions>.small{margin-right:.2rem}.accounts-business-action{display:inline-flex;align-items:center;gap:.5rem;border:1px solid var(--line);border-radius:999px;padding:.55rem .8rem;background:var(--surface);color:var(--text);cursor:pointer;font-weight:650}.accounts-business-action:hover{border-color:var(--accent);transform:translateY(-1px)}.accounts-business-action.green{border-color: color-mix(in srgb,var(--ft-success) 45%,var(--line))}.accounts-business-action.red{border-color: color-mix(in srgb,var(--ft-danger) 45%,var(--line))}.accounts-business-action.blue{border-color: color-mix(in srgb,var(--ft-info) 45%,var(--line))}.accounts-business-action.gold{border-color: color-mix(in srgb,var(--ft-primary) 45%,var(--line))}.accounts-business-action.purple{border-color: color-mix(in srgb,var(--ft-info) 45%,var(--line))}@media(max-width:1050px){.accounts-business-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:620px){.accounts-business-pulse-head{flex-direction:column;gap:.25rem}.accounts-business-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.accounts-business-actions{align-items:stretch}.accounts-business-actions>.small{width:100%}.accounts-business-action{justify-content:space-between;flex:1 1 calc(50% - .55rem)}}
+.accounts-business-alert{display:flex;align-items:center;gap:.7rem;margin-top:1rem;padding:.7rem .8rem;border: 1px solid color-mix(in srgb,var(--ft-primary) 45%,var(--line));border-radius:12px;background: color-mix(in srgb,var(--ft-primary) 8%,var(--card))}.accounts-business-alert>div{flex:1;min-width:0}.accounts-business-alert>div strong{display:block}.accounts-business-alert-icon{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background: var(--ft-primary);color: var(--ft-on-primary);font-weight:800}.accounts-business-alert .btn{white-space:nowrap}@media(max-width:620px){.accounts-business-alert{align-items:flex-start;flex-wrap:wrap}.accounts-business-alert .btn{margin-left:2.2rem}}
 .accounts-collab-guide{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin:0 0 1rem;padding:.85rem 1rem;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line));border-radius:12px;background:color-mix(in srgb,var(--accent) 7%,var(--card))}.accounts-collab-guide p{margin:.25rem 0 0;max-width:70ch}.accounts-collab-guide .acc-chip{white-space:nowrap}@media(max-width:620px){.accounts-collab-guide{align-items:flex-start;flex-direction:column}}
 .crm-pipeline-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.75rem;margin-top:1rem}.crm-stage{min-height:240px;padding:.85rem}.crm-stage-head{display:flex;justify-content:space-between;align-items:center;padding-bottom:.7rem;border-bottom:1px solid var(--line);margin-bottom:.7rem}.crm-stage-head span{display:grid;place-items:center;min-width:24px;height:24px;border-radius:999px;background:color-mix(in srgb,var(--accent) 16%,var(--card));font-size:12px}.crm-customer-card{display:grid;gap:.3rem;padding:.7rem;margin-bottom:.6rem;border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,var(--surface) 65%,var(--card))}.crm-customer-card select{font-size:12px;padding:.3rem}.crm-customer-card strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}@media(max-width:1100px){.crm-pipeline-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:680px){.crm-pipeline-grid{grid-template-columns:1fr}.crm-stage{min-height:0}}
 .production-readiness-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.75rem}.production-readiness-grid .card{padding:.85rem}.production-readiness-grid .card p{min-height:54px}@media(max-width:900px){.production-readiness-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:620px){.production-readiness-grid{grid-template-columns:1fr}}
@@ -4234,19 +4228,19 @@ html:has(.accounts-dashboard) .financier-nav {
  * paints the legacy dark surfaces while the feature chunk is loading.
  */
 .accounts-dashboard {
-  --acc-bg: var(--ft-bg, #f6f8fb) !important;
+  --acc-bg: var(--ft-bg, var(--ft-surface)) !important;
   --acc-surface: var(--ft-surface, #fff) !important;
   --acc-card: var(--ft-surface, #fff) !important;
-  --acc-card-elevated: var(--ft-surface-subtle, #f8fafc) !important;
-  --acc-line: var(--ft-border, #dbe3ee) !important;
-  --acc-line-strong: var(--ft-border-strong, #c8d3e1) !important;
-  --acc-text: var(--ft-text, #172033) !important;
-  --acc-muted: var(--ft-muted, #667085) !important;
-  --acc-gold: var(--ft-warning, #b7791f) !important;
+  --acc-card-elevated: var(--ft-surface-subtle, var(--ft-surface)) !important;
+  --acc-line: var(--ft-border, var(--ft-border)) !important;
+  --acc-line-strong: var(--ft-border-strong, var(--ft-border-strong)) !important;
+  --acc-text: var(--ft-text, var(--ft-text)) !important;
+  --acc-muted: var(--ft-muted, var(--ft-muted)) !important;
+  --acc-gold: var(--ft-warning, var(--ft-primary)) !important;
   --acc-gold-ink: #fff !important;
-  --acc-green: var(--ft-success, #168a63) !important;
-  --acc-red: var(--ft-danger, #d14355) !important;
-  --acc-blue: var(--ft-info, #356fc4) !important;
+  --acc-green: var(--ft-success, var(--ft-success-soft)) !important;
+  --acc-red: var(--ft-danger, var(--ft-danger)) !important;
+  --acc-blue: var(--ft-info, var(--ft-info)) !important;
   --acc-shadow: var(--ft-shadow, 0 8px 24px rgba(16, 24, 40, .07)) !important;
   --acc-shadow-soft: var(--ft-shadow-sm, 0 1px 2px rgba(16, 24, 40, .04)) !important;
   background: var(--acc-bg) !important;
@@ -4279,18 +4273,18 @@ html:has(.accounts-dashboard) .financier-nav {
 }
 
 .accounts-dashboard .acc-ov-context {
-  background: linear-gradient(135deg, #f7faff 0%, #fff 58%, #fff9ed 100%) !important;
+  background: linear-gradient(135deg, var(--ft-surface) 0%, #fff 58%, var(--ft-surface) 100%) !important;
   border-color: var(--acc-line) !important;
   box-shadow: var(--acc-shadow-soft) !important;
 }
 
 .accounts-dashboard .accounts-industry-card {
-  background: linear-gradient(135deg, #f0f6ff, #fff8e9) !important;
-  border-color: #d9e5f4 !important;
+  background: linear-gradient(135deg, var(--ft-surface), var(--ft-surface-muted)) !important;
+  border-color: var(--ft-border) !important;
 }
 
 .accounts-dashboard .accounts-business-pulse {
-  background: linear-gradient(145deg, #fff, #f7faff) !important;
+  background: linear-gradient(145deg, #fff, var(--ft-surface)) !important;
 }
 
 .accounts-dashboard .accounts-business-action,
@@ -4320,31 +4314,31 @@ html:has(.accounts-dashboard) .financier-nav {
 .accounts-dashboard .acc-nav-sub,
 .accounts-dashboard .acc-nav-toggle,
 .accounts-dashboard .acc-bottom-item {
-  color: #475467 !important;
+  color: var(--ft-muted) !important;
 }
 
 .accounts-dashboard .acc-nav-item:hover,
 .accounts-dashboard .acc-nav-item.active,
 .accounts-dashboard .acc-nav-sub.active,
 .accounts-dashboard .acc-bottom-item.active {
-  background: #eaf1ff !important;
-  color: #315fba !important;
+  background: var(--ft-surface-muted) !important;
+  color: var(--ft-info) !important;
 }
 
 .accounts-dashboard .acc-table-wrap th,
 .accounts-dashboard .acc-table-wrap td {
-  border-color: #e7ecf3 !important;
+  border-color: var(--ft-border) !important;
 }
 
 .accounts-dashboard .acc-table-wrap th {
-  background: #f8fafc !important;
+  background: var(--ft-surface) !important;
   color: var(--acc-muted) !important;
 }
 
 .accounts-dashboard .acc-table-wrap tbody tr:hover,
 .accounts-dashboard .acc-ov-more-menu button:hover,
 .accounts-dashboard .acc-ov-more-menu button:focus-visible {
-  background: #f3f7fc !important;
+  background: var(--ft-surface) !important;
 }
 
 @media (max-width: 1050px) {

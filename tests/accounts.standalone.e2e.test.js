@@ -22,7 +22,7 @@ import {
   saleLines,
   simpleEntryDraft,
   voucherTotals,
-} from "../src/features/accounts/accountingModel.js";
+} from "../src/features/accounts/model/accountingModel.js";
 import {
   accountLedger,
   balanceSheet,
@@ -34,7 +34,7 @@ import {
   partyLedger,
   profitAndLoss,
   trialBalance,
-} from "../src/features/accounts/accountingReports.js";
+} from "../src/features/accounts/model/accountingReports.js";
 
 const chart = DEFAULT_CHART_OF_ACCOUNTS.map(row => ({ ...row, id: row.code }));
 const fy = indianFinancialYear("2026-04-01");

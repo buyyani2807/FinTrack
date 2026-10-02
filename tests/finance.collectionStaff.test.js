@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { financeKindLabel, staffAssignableLoans } from "../src/features/finance/collectionStaff.js";
+import { financeKindLabel, staffAssignableLoans } from "../src/features/finance/model/collectionStaff.js";
 
 const statusOf = loan => loan.status;
 

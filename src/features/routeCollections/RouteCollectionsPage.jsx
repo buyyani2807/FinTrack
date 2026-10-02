@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button, Field, Modal } from "../../components/ui.jsx";
 import { formatInr } from "../../lib/formatMoney.js";
 import { QrSvg } from "../accounts/PayPage.jsx";
-import { upiPayLink } from "../accounts/upiPay.js";
+import { upiPayLink } from "../accounts/model/upiPay.js";
 import {
   COLLECTION_MODES,
   collectionModeLabel,
@@ -10,8 +10,8 @@ import {
   routeSheetView,
   validateCollection,
   weekdaysLabel,
-} from "../accounts/routeCollectionsModel.js";
-import { canWhatsAppShare, openManualWhatsAppShare } from "../receipts/receiptWhatsApp.js";
+} from "../accounts/model/routeCollectionsModel.js";
+import { canWhatsAppShare, openManualWhatsAppShare } from "../receipts/io/receiptWhatsApp.js";
 import { loadAgentRouteSheet, newCollectionRequestId, recordRouteCollection } from "./routeCollectionsApi.js";
 import "./routeCollections.css";
 
@@ -140,7 +140,7 @@ export function RouteCollectionsPage({ token, businessName, back }) {
     </div>
     <div className="top-actions">
       <Button onClick={() => refresh()}>Refresh</Button>
-      <Button onClick={back}>← Dashboard</Button>
+      {back && <Button onClick={back}>← Dashboard</Button>}
     </div>
   </header>;
 

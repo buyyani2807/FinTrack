@@ -4,8 +4,8 @@
  *
  * Weights (0–1) can be adjusted later without rewriting allocation logic.
  */
-import { monthlyRateOnDate } from "../finance/calculations.js";
-import { dailyFirstDueDate as sharedDailyFirstDueDate } from "../finance/loanState.js";
+import { monthlyRateOnDate } from "../finance/model/calculations.js";
+import { dailyFirstDueDate as sharedDailyFirstDueDate } from "../finance/model/loanState.js";
 
 export const SCORE_MIN = 300;
 export const SCORE_MAX = 900;

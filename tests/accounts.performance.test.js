@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { assembleVouchers } from "../src/features/accounts/accountsVoucherAssembly.js";
-import { pageSlice, groupByKey } from "../src/features/accounts/accountsList.js";
-import { dashboardMetrics, invoiceRegister, partyBalances } from "../src/features/accounts/accountingReports.js";
-import { DEFAULT_CHART_OF_ACCOUNTS } from "../src/features/accounts/accountingModel.js";
+import { assembleVouchers } from "../src/features/accounts/model/accountsVoucherAssembly.js";
+import { pageSlice, groupByKey } from "../src/features/accounts/model/accountsList.js";
+import { dashboardMetrics, invoiceRegister, partyBalances } from "../src/features/accounts/model/accountingReports.js";
+import { DEFAULT_CHART_OF_ACCOUNTS } from "../src/features/accounts/model/accountingModel.js";
 
 const accounts = DEFAULT_CHART_OF_ACCOUNTS.map(row => ({ ...row, id: row.code }));
 

@@ -7,8 +7,9 @@ import {
   todayIso,
 } from "./statementModel.js";
 import { downloadCustomerStatementPdf } from "./statementPdf.js";
-import { canWhatsAppShare, openManualWhatsAppShare } from "../receipts/receiptWhatsApp.js";
+import { canWhatsAppShare, openManualWhatsAppShare } from "../receipts/io/receiptWhatsApp.js";
 import { formatInr } from "../../lib/formatMoney.js";
+import { BackButton } from "../../components/ui.jsx";
 
 const money = formatInr;
 
@@ -136,10 +137,10 @@ export function CustomerStatementPage({
   };
 
   return <main className="shell customer-statement-page">
+    <BackButton onClick={back} />
     <div className="toolbar">
       <div>
-        <button type="button" className="btn" onClick={back}>← Back</button>
-        <h1 className="title spacer">Customer Statement</h1>
+        <h1 className="title">Customer Statement</h1>
         <p className="copy">{bundle.customerName} · {bundle.phone || "No phone"} · As of {formatReceiptDate(bundle.asOf)}</p>
       </div>
       <div className="tabs receipt-actions">

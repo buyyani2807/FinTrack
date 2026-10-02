@@ -4,7 +4,7 @@ import {
   assertVoucherAttachmentMeta,
   normalizeAttachmentContentType,
   VOUCHER_ATTACHMENT_MAX_BYTES,
-} from "../src/features/accounts/voucherAttachments.js";
+} from "../src/features/accounts/data/voucherAttachments.js";
 
 test("attachment content type is inferred from file extension", () => {
   assert.equal(normalizeAttachmentContentType("", "bill.PDF"), "application/pdf");

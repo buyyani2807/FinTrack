@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addDays, addMonths, loanBalance, today } from "../src/features/finance/loanState.js";
-import { buildDailyFinanceFacts, buildMonthlyFinanceFacts, interpretDailyFinanceFacts, interpretMonthlyFinanceFacts } from "../src/features/finance/financeIntelligence.js";
-import { buildChitFacts, interpretChitFacts } from "../src/features/chitFund/chitIntelligence.js";
-import { CHIT_TYPES } from "../src/features/chitFund/fixedChit.js";
+import { addDays, addMonths, loanBalance, today } from "../src/features/finance/model/loanState.js";
+import { buildDailyFinanceFacts, buildMonthlyFinanceFacts, interpretDailyFinanceFacts, interpretMonthlyFinanceFacts } from "../src/features/finance/model/financeIntelligence.js";
+import { buildChitFacts, interpretChitFacts } from "../src/features/chitFund/model/chitIntelligence.js";
+import { CHIT_TYPES } from "../src/features/chitFund/model/fixedChit.js";
 
 const asOf = today();
 

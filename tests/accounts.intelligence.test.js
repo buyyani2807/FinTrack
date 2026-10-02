@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { DEFAULT_CHART_OF_ACCOUNTS } from "../src/features/accounts/accountingModel.js";
-import { buildAccountsFacts, interpretAccountsFacts, previousComparisonRange } from "../src/features/accounts/accountsIntelligence.js";
+import { DEFAULT_CHART_OF_ACCOUNTS } from "../src/features/accounts/model/accountingModel.js";
+import { buildAccountsFacts, interpretAccountsFacts, previousComparisonRange } from "../src/features/accounts/model/accountsIntelligence.js";
 
 const accounts = DEFAULT_CHART_OF_ACCOUNTS.map(row => ({ ...row, id: row.code }));
 

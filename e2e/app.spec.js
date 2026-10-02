@@ -38,3 +38,28 @@ test.describe("Legal pages", () => {
     await expect(page.getByText("Service description")).toBeVisible();
   });
 });
+
+test.describe("Accessibility", () => {
+  test("sign-in fields are labelled for screen readers", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByLabel("Business email")).toBeVisible();
+    await expect(page.getByLabel("Password")).toBeVisible();
+    await page.getByRole("button", { name: "Customer login" }).click();
+    await expect(page.getByLabel("Customer portal ID")).toBeVisible();
+    await expect(page.getByLabel("6-digit PIN")).toBeVisible();
+  });
+});
+
+test.describe("Sign-in form", () => {
+  test("password can be shown and hidden", async ({ page }) => {
+    await page.goto("/");
+    const password = page.getByLabel("Password", { exact: true });
+    await password.fill("secret-pass");
+    await expect(password).toHaveAttribute("type", "password");
+    await page.getByRole("button", { name: "Show characters" }).click();
+    await expect(password).toHaveAttribute("type", "text");
+    await page.getByRole("button", { name: "Hide characters" }).click();
+    await expect(password).toHaveAttribute("type", "password");
+    await expect(password).toHaveValue("secret-pass");
+  });
+});

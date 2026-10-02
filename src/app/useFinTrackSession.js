@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { useNavigate } from "react-router";
-import { financeRolesAligned, ownerChromeAllowed, sessionUserRole, workspaceSessionAllowed } from "../features/finance/workspaceAccess.js";
+import { financeRolesAligned, ownerChromeAllowed, sessionUserRole, workspaceSessionAllowed } from "../features/finance/model/workspaceAccess.js";
 import { legalViewFromLocation } from "../features/legal/LegalPage.jsx";
 import { loadFinanceAccounts, loadWorkspace } from "../lib/financeRepository";
 import { supabase } from "../lib/supabase";

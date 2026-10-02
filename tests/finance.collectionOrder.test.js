@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { byCollectionOrderThenName, mergeAccountOrder, reorderIds } from "../src/features/finance/collectionOrder.js";
+import { byCollectionOrderThenName, mergeAccountOrder, reorderIds } from "../src/features/finance/model/collectionOrder.js";
 
 test("reorders ids without mutating the source list", () => {
   const ids = ["a", "b", "c"];

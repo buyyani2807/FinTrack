@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { calculateDividend, closeCycle, selectWinningBid, validateBid } from "../src/features/chitFund/calculations.js";
+import { calculateDividend, closeCycle, selectWinningBid, validateBid } from "../src/features/chitFund/model/calculations.js";
 
 test("accepts a payout bid within configured percentage limits", () => {
   assert.deepEqual(validateBid({ bidAmount: 80000, chitValue: 100000, minBidPercent: 70, maxBidPercent: 95 }), { bidAmount: 80000, bidPercent: 80 });

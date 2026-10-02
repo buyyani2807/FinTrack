@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { investedAmount, realizedLoss, realizedProfit } from "../src/features/finance/pnl.js";
+import { investedAmount, realizedLoss, realizedProfit } from "../src/features/finance/model/pnl.js";
 
 test("daily bankruptcy loss is unreturned capital, not remaining receivable", () => {
   const loan = {

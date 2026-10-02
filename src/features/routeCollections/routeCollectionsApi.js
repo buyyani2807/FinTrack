@@ -1,5 +1,5 @@
 import { supabase } from "../../lib/supabase";
-import { mapCollectionResult, mapRouteSheet } from "../accounts/routeCollectionsModel.js";
+import { mapCollectionResult, mapRouteSheet } from "../accounts/model/routeCollectionsModel.js";
 
 // Agent-side calls. These RPCs are scoped to the signed-in agent's routes, so no Accounts company header is sent.
 const isMissing = err => /could not find|does not exist|schema cache|404|PGRST202/i.test(String(err?.message || err?.code || ""));

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { chitTypeLabel, membershipEnrollmentId, portalMemberships } from "../src/features/chitFund/memberPortal.js";
+import { chitTypeLabel, membershipEnrollmentId, portalMemberships } from "../src/features/chitFund/model/memberPortal.js";
 
 test("one membership does not require a scheme switcher", () => {
   assert.equal(portalMemberships({ memberships: [{ enrollmentId: "e1" }] }).length, 1);

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mergeAccountTransaction } from "../src/features/finance/paymentState.js";
+import { mergeAccountTransaction } from "../src/features/finance/model/paymentState.js";
 
 test("mergeAccountTransaction appends a payment to one account only", () => {
   const loans = [

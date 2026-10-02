@@ -8,7 +8,7 @@ import {
   memberPaymentsForEnrollment,
   normalizeMemberPayment,
   portalPaymentRows,
-} from "../src/features/chitFund/memberPayments.js";
+} from "../src/features/chitFund/model/memberPayments.js";
 
 test("auction and fixed payment rows share expected/paid/balance fields", () => {
   assert.deepEqual(chitPaymentAmounts({ net_amount_due: 4500, amount_paid: 2000 }), {

@@ -3,13 +3,13 @@ import assert from "node:assert/strict";
 import {
   assertBackupRestorable,
   buildAccountsCompanyBackup,
-} from "../src/features/accounts/accountsBackup.js";
+} from "../src/features/accounts/data/accountsBackup.js";
 import { buildChitAttentionItems } from "../src/features/intelligence/attentionCenter.js";
 import {
   buildOutstandingSummaryMessage,
   buildPartyStatementMessage,
   buildPurchaseDocumentMessage,
-} from "../src/features/accounts/salesInvoiceModel.js";
+} from "../src/features/accounts/model/salesInvoiceModel.js";
 
 test("restore requires matching empty company", () => {
   const company = { id: "co-1", name: "A" };

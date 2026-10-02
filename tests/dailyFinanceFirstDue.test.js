@@ -5,13 +5,13 @@ import {
   dailyCollectionPendingOn,
   dailyFirstDueDate,
   isDailyCollectionDueOn,
-} from "../src/features/finance/loanState.js";
+} from "../src/features/finance/model/loanState.js";
 import { buildAttentionCenter } from "../src/features/intelligence/attentionCenter.js";
 import {
   calculateFintrackCreditScore,
   dailyInstallments,
 } from "../src/features/creditScore/creditScoreModel.js";
-import { buildDailyFinanceFacts } from "../src/features/finance/financeIntelligence.js";
+import { buildDailyFinanceFacts } from "../src/features/finance/model/financeIntelligence.js";
 
 const start = "2026-09-08";
 const tomorrow = addDays(start, 1);

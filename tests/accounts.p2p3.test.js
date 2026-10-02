@@ -6,7 +6,7 @@ import {
   gstinValidationMessage,
   isValidGstin,
   validateGstSettings,
-} from "../src/features/accounts/accountingGst.js";
+} from "../src/features/accounts/model/accountingGst.js";
 
 test("GSTIN checksum matches the GSTN modulo-36 algorithm", () => {
   assert.equal(gstinChecksum("27AAPFU0939F1Z"), "V");

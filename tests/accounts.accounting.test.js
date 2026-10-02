@@ -42,7 +42,7 @@ import {
   standaloneVisibleAccounts,
   validatePartyForm,
   voucherTotals,
-} from "../src/features/accounts/accountingModel.js";
+} from "../src/features/accounts/model/accountingModel.js";
 import {
   accountLedger,
   balanceSheet,
@@ -59,8 +59,8 @@ import {
   partyTotalsFromInvoices,
   profitAndLoss,
   trialBalance,
-} from "../src/features/accounts/accountingReports.js";
-import { buildAccountsXlsx, renderAccountsPdf } from "../src/features/accounts/accountingExport.js";
+} from "../src/features/accounts/model/accountingReports.js";
+import { buildAccountsXlsx, renderAccountsPdf } from "../src/features/accounts/io/accountingExport.js";
 
 const accounts = DEFAULT_CHART_OF_ACCOUNTS.map(row => ({ ...row, id: row.code }));
 

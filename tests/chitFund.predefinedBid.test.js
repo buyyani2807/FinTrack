@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { predefinedBidSchedule, validatePredefinedBidChit } from "../src/features/chitFund/predefinedBidChit.js";
+import { predefinedBidSchedule, validatePredefinedBidChit } from "../src/features/chitFund/model/predefinedBidChit.js";
 
 const example = {
   chitValue: 5_000_000,

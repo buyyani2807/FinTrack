@@ -6,7 +6,7 @@ import {
   backupDownloadFilename,
   buildAccountsCompanyBackup,
   parseAccountsCompanyBackup,
-} from "../src/features/accounts/accountsBackup.js";
+} from "../src/features/accounts/data/accountsBackup.js";
 
 test("builds and parses a company-scoped Accounts backup", () => {
   const company = {

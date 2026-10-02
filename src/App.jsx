@@ -4,7 +4,7 @@ import { AppRoutes } from "./app/AppRoutes.jsx";
 import { AppShell, LoadingScreen } from "./app/AppShell.jsx";
 import { useFinTrackSession } from "./app/useFinTrackSession.js";
 import { PayPage } from "./features/accounts/PayPage.jsx";
-import { isPayPagePath } from "./features/accounts/upiPay.js";
+import { isPayPagePath } from "./features/accounts/model/upiPay.js";
 import { LegalPage } from "./features/legal/LegalPage.jsx";
 
 function SessionApp() {

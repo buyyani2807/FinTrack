@@ -3,7 +3,7 @@
  * Advisory only: never invents balances or writes accounting data.
  */
 
-import { dailyCollectionPendingOn } from "../finance/loanState.js";
+import { dailyCollectionPendingOn } from "../finance/model/loanState.js";
 
 export function buildAttentionCenter({
   dailyLoans = [],

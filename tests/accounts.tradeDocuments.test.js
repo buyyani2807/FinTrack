@@ -11,15 +11,15 @@ import {
   documentFulfilment,
   emptyDocumentForm,
   pendingOrderRows,
-} from "../src/features/accounts/tradeDocumentModel.js";
-import { isValidUpiId, parsePayPageParams, payPageUrl, upiPayLink } from "../src/features/accounts/upiPay.js";
+} from "../src/features/accounts/model/tradeDocumentModel.js";
+import { isValidUpiId, parsePayPageParams, payPageUrl, upiPayLink } from "../src/features/accounts/model/upiPay.js";
 import { encodeQr } from "../src/lib/qrCode.js";
-import { jpegInfo, renderDocumentPdf, textWidth, wrapText } from "../src/features/accounts/documentPdf.js";
-import { renderTradeDocumentPdf } from "../src/features/accounts/tradeDocumentPdf.js";
-import { buildArReminderMessage, buildSalesInvoice, buildSalesInvoiceMessage } from "../src/features/accounts/salesInvoiceModel.js";
-import { renderSalesInvoicePdf } from "../src/features/accounts/salesInvoicePdf.js";
-import { costItemMovements } from "../src/features/accounts/inventoryValuation.js";
-import { itemizedEntryDraft, mapVoucherItemLinesForRpc } from "../src/features/accounts/inventoryModel.js";
+import { jpegInfo, renderDocumentPdf, textWidth, wrapText } from "../src/features/accounts/io/documentPdf.js";
+import { renderTradeDocumentPdf } from "../src/features/accounts/io/tradeDocumentPdf.js";
+import { buildArReminderMessage, buildSalesInvoice, buildSalesInvoiceMessage } from "../src/features/accounts/model/salesInvoiceModel.js";
+import { renderSalesInvoicePdf } from "../src/features/accounts/io/salesInvoicePdf.js";
+import { costItemMovements } from "../src/features/accounts/model/inventoryValuation.js";
+import { itemizedEntryDraft, mapVoucherItemLinesForRpc } from "../src/features/accounts/model/inventoryModel.js";
 
 const line = (id, quantity, rate, extra = {}) => ({
   id, itemId: `item-${id}`, itemName: `Item ${id}`, itemType: "product", unit: "Nos", quantity, rate,

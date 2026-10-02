@@ -14,11 +14,11 @@ import {
   routeSheetView,
   validateCollection,
   weekdaysLabel,
-} from "../src/features/accounts/routeCollectionsModel.js";
-import { addMonths, gstFilingSchedule, gstReturnsForPeriod, monthRange, quarterLabel } from "../src/features/accounts/gstCalendar.js";
-import { buildGstMonthlyPack } from "../src/features/accounts/gstMonthlyPack.js";
-import { zipStore } from "../src/features/accounts/accountingExport.js";
-import { gstinChecksum } from "../src/features/accounts/accountingGst.js";
+} from "../src/features/accounts/model/routeCollectionsModel.js";
+import { addMonths, gstFilingSchedule, gstReturnsForPeriod, monthRange, quarterLabel } from "../src/features/accounts/model/gstCalendar.js";
+import { buildGstMonthlyPack } from "../src/features/accounts/model/gstMonthlyPack.js";
+import { zipStore } from "../src/features/accounts/io/accountingExport.js";
+import { gstinChecksum } from "../src/features/accounts/model/accountingGst.js";
 import {
   buildOwnerDailyBrief,
   collectList,
@@ -28,8 +28,8 @@ import {
   reorderBySupplier,
   reorderList,
   reorderPurchaseOrderLines,
-} from "../src/features/accounts/ownerDailyBrief.js";
-import { pendingOrderRows } from "../src/features/accounts/tradeDocumentModel.js";
+} from "../src/features/accounts/model/ownerDailyBrief.js";
+import { pendingOrderRows } from "../src/features/accounts/model/tradeDocumentModel.js";
 
 const gstin = body => `${body}${gstinChecksum(body)}`;
 

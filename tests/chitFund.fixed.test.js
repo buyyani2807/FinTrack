@@ -11,7 +11,7 @@ import {
   normalizeFixedCommissionAmount,
   resolveFixedManagerCommission,
   validateFixedChit,
-} from "../src/features/chitFund/fixedChit.js";
+} from "../src/features/chitFund/model/fixedChit.js";
 
 const example = {
   chitValue: 100000,

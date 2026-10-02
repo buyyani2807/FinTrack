@@ -1,4 +1,4 @@
-import { mergeAccountTransaction } from "../features/finance/paymentState.js";
+import { mergeAccountTransaction } from "../features/finance/model/paymentState.js";
 import { assignCollectionAgents, createCollectionAgent, createFinanceAccount, deleteFinanceAccount, deleteFinancePayment, enableCustomerPortal, loadCustomerKyc, loadManagedAgents, logReceiptActivity, recordPayment, resetCustomerPortalPin, saveCollectionOrder, saveCustomerKyc, setAccountStatus, updateCollectionAgent, updateFinanceAccount, updateFinancePayment, updatePaymentNotes } from "../lib/financeRepository";
 
 const generateCustomerPortalPin = () => String(100000 + Math.floor(Math.random() * 900000));

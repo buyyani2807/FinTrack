@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { memberHasBlockingActivity, memberRemovalCopy, schemeRemovalCopy } from "../src/features/chitFund/schemeAdmin.js";
+import { memberHasBlockingActivity, memberRemovalCopy, schemeRemovalCopy } from "../src/features/chitFund/model/schemeAdmin.js";
 
 test("member removal copy names the member and scheme", () => {
   const copy = memberRemovalCopy("Anita", "Festival Auction");

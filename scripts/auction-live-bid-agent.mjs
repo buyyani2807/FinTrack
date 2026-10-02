@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { runLiveAuctionAgentSuite } from "../src/features/chitFund/liveAuctionAgent.js";
+import { runLiveAuctionAgentSuite } from "../src/features/chitFund/model/liveAuctionAgent.js";
 
 const remoteRequested = String(process.env.FINTRACK_LIVE_AUCTION_TEST || "").toLowerCase() === "staging";
 

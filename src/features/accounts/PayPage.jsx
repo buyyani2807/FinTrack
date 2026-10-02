@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { formatInr } from "../../lib/formatMoney.js";
 import { encodeQr, qrSvgPath } from "../../lib/qrCode.js";
-import { parsePayPageParams, upiPayLink } from "./upiPay.js";
+import { parsePayPageParams, upiPayLink } from "./model/upiPay.js";
 
 const PAY_PAGE_CSS = `
 .pay-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }

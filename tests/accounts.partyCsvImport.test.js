@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parsePartyCsv, planPartyImport } from "../src/features/accounts/partyCsvImport.js";
+import { parsePartyCsv, planPartyImport } from "../src/features/accounts/io/partyCsvImport.js";
 
 test("party CSV keeps columns aligned when cells are empty", () => {
   const rows = parsePartyCsv("Name,Phone,Email,Address\nRavi Traders,,ravi@example.com,Hyderabad\n\"Sri, Co\",9876543210,,\"12 \"\"A\"\" Street\"");

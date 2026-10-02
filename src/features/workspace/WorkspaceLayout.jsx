@@ -97,7 +97,7 @@ export function WorkspaceLayout({ session }) {
       accountId={financeView.accountId}
     />}
     {showOwnerChrome
-      ? <div className="financier-tools"><FinancierNav access={access} orgSettings={orgSettings} /><Outlet context={routeContext} /></div>
+      ? <div className="financier-tools"><FinancierNav access={access} orgSettings={orgSettings} businessName={workspace?.businessName} logout={logout} /><Outlet context={routeContext} /></div>
       : <Outlet context={routeContext} />}
   </>;
 }

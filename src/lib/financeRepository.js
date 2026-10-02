@@ -1,6 +1,6 @@
 import { supabase } from "./supabase";
-import { CHIT_TYPES } from "../features/chitFund/fixedChit.js";
-import { flattenSchemePaymentsForReminders } from "../features/receipts/upcomingPayments.js";
+import { CHIT_TYPES } from "../features/chitFund/model/fixedChit.js";
+import { flattenSchemePaymentsForReminders } from "../features/receipts/model/upcomingPayments.js";
 
 const asNumber = value => Number(value || 0);
 const memberDisplayName = row => row?.chit_members?.full_name || row?.full_name || "";
