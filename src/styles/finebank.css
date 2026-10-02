@@ -1752,3 +1752,16 @@ button.upcoming-payments-toggle:focus-visible { outline: 2px solid var(--ft-prim
   @keyframes ft-boot-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
 }
 @media (width <= 680px) { .ft-boot-mark { font-size: 32px; } }
+
+/* Phones: Today's actions — the action is a full-width footer under a hairline (beside the module chip when shown) */
+@media (width <= 680px) {
+  .attention-center-item { gap: 0; padding: 14px 14px 12px 18px; }
+  .attention-center-foot { gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--ft-divider); }
+  .attention-center-foot > .btn.attention-center-action { justify-content: center; min-height: 40px; }
+  .attention-center-foot > .btn.attention-center-action:only-child { flex: 1; }
+  .attention-center-foot > .attention-center-module + .btn.attention-center-action { margin-left: auto; }
+}
+/* Phones: Today's collections — Details and Collect share one size */
+@media (width <= 680px) {
+  .dashboard-finance-table.collection-route-table td:last-child > .btn { box-sizing: border-box; width: 96px; min-width: 96px; height: 40px !important; min-height: 40px !important; margin: 0 !important; padding: 0 12px !important; justify-content: center; font-size: 14px !important; line-height: 1 !important; }
+}

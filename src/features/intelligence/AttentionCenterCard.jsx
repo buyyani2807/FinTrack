@@ -47,7 +47,7 @@ export function AttentionCenterCard({ attention, onNavigate, kicker }) {
                   {item.detail ? <p className="small">{item.detail}</p> : null}
                 </div>
                 <div className="attention-center-foot">
-                  {module ? <span className="attention-center-module"><ModuleIcon size={13} aria-hidden="true" />{module.label}</span> : <span />}
+                  {module ? <span className="attention-center-module"><ModuleIcon size={13} aria-hidden="true" />{module.label}</span> : null}
                   {onNavigate && item.href ? (
                     <button type="button" className="btn attention-center-action" onClick={() => onNavigate(item.href)}>
                       {item.actionLabel || "Open"}<ArrowRight size={15} aria-hidden="true" />
