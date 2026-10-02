@@ -73,7 +73,7 @@ test.describe("Login messages", () => {
     await expect(alert).toContainText("A few details are missing");
     await expect(page.getByLabel("Business email")).toHaveAttribute("aria-invalid", "true");
     await expect(page.getByLabel("Business email")).toBeFocused();
-    await page.getByLabel("Business email").fill("owner@vivek.in");
+    await page.getByLabel("Business email").fill("owner@example.com");
     await page.getByLabel("Password", { exact: true }).fill("Secure@2026");
     await page.getByRole("button", { name: /^Sign in/ }).click();
     await expect(alert).toContainText("Couldn't sign you in");

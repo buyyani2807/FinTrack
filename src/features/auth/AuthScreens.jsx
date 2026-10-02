@@ -227,8 +227,8 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
             <Field label="6-digit PIN"><PasswordInput icon={KeyRound} inputMode="numeric" minLength="6" autoComplete="current-password" placeholder="6 digits" aria-invalid={invalid.password || undefined} value={password} onChange={event => { setPassword(event.target.value); clearInvalid("password"); }} /></Field>
           </> : <>
             {mode === "signUp" && <>
-              <Field label="Business name"><IconInput icon={Building2} placeholder="e.g. Vivek Finance" aria-invalid={invalid.businessName || undefined} value={businessName} onChange={event => { setBusinessName(event.target.value); clearInvalid("businessName"); }} /></Field>
-              <Field label="Your full name"><IconInput icon={UserRound} placeholder="e.g. Vivek Kumar" aria-invalid={invalid.fullName || undefined} value={fullName} onChange={event => { setFullName(event.target.value); clearInvalid("fullName"); }} /></Field>
+              <Field label="Business name"><IconInput icon={Building2} placeholder="e.g. Sri Lakshmi Finance" aria-invalid={invalid.businessName || undefined} value={businessName} onChange={event => { setBusinessName(event.target.value); clearInvalid("businessName"); }} /></Field>
+              <Field label="Your full name"><IconInput icon={UserRound} placeholder="e.g. Ravi Teja" aria-invalid={invalid.fullName || undefined} value={fullName} onChange={event => { setFullName(event.target.value); clearInvalid("fullName"); }} /></Field>
               {signupInviteRequired() && <Field label="Invite code"><IconInput icon={Ticket} value={inviteCode} onChange={event => setInviteCode(event.target.value)} /></Field>}
             </>}
             <Field label={isAgent ? "Agent email" : "Business email"}><IconInput icon={Mail} type="email" autoComplete="email" placeholder="you@business.com" aria-invalid={invalid.email || undefined} value={email} onChange={event => { setEmail(event.target.value); clearInvalid("email"); }} /></Field>
