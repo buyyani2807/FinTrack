@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useActiveTabInView } from "./useActiveTabInView.js";
 import { todayIso } from "../../../lib/dates.js";
 import { downloadAccountsCsv } from "../io/accountingExport.js";
 import { stockMovementReport } from "../model/inventoryModel.js";
@@ -41,6 +42,7 @@ export function AccInventoryWorkspace({
   // The open tab is the URL (/accounting/inventory/:tab).
   const tab = TABS.some(item => item.id === routeTab) ? routeTab : "summary";
   const setTab = next => onTabChange?.(next);
+  const tabsRef = useActiveTabInView([tab]);
   const [asOf, setAsOf] = useState(todayIso());
   const [search, setSearch] = useState("");
   const [moveFrom, setMoveFrom] = useState(range.from || "");
@@ -131,7 +133,7 @@ export function AccInventoryWorkspace({
   };
 
   return (
-    <section className="acc-inventory">
+    <section className="acc-inventory" ref={tabsRef}>
       <div className="accounts-section-nav">
         {TABS.map(item => (
           <button key={item.id} type="button" className={`accounts-section-tab ${tab === item.id ? "active" : ""}`} onClick={() => setTab(item.id)}>{item.label}</button>

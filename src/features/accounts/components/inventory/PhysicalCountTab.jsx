@@ -30,7 +30,7 @@ export function PhysicalCountTab({
           return <tr key={row.itemId}>
             <td>{row.name} <span className="small">{row.sku}</span></td>
             <td className="acc-num">{qty(row.quantity, row.unit)}</td>
-            <td className="acc-num"><input type="number" min="0" step="0.001" className="acc-count-input" value={counts[row.itemId] ?? ""} disabled={!canEdit} onChange={event => setCounts(current => ({ ...current, [row.itemId]: event.target.value }))} /></td>
+            <td className="acc-num"><input type="number" min="0" step="0.001" className="acc-count-input" aria-label={`Counted quantity for ${row.name}`} value={counts[row.itemId] ?? ""} disabled={!canEdit} onChange={event => setCounts(current => ({ ...current, [row.itemId]: event.target.value }))} /></td>
             <td className={`acc-num ${variance ? (variance.quantityDelta < 0 ? "red" : "green") : ""}`}>{variance ? (variance.quantityDelta > 0 ? `+${qty(variance.quantityDelta)}` : qty(variance.quantityDelta)) : ""}</td>
             <td className="acc-num">{variance ? money(variance.valueImpact) : ""}</td>
           </tr>;

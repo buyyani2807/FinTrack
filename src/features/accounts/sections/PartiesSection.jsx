@@ -7,7 +7,6 @@ import { PartyTypeBadge } from "../components/PartyFields.jsx";
 export function PartiesSection({
   canWrite,
   openParty,
-  openSection,
   focusedParty,
   setPartyFocusId,
   parties,
@@ -30,8 +29,6 @@ export function PartiesSection({
         <p className="copy">Accounting customers and suppliers are independent of Daily Finance customers and Chit Fund members.</p>
         <div className="acc-party-ledger-links">
           {canWrite && <button type="button" className="btn primary" onClick={openParty}>+ Party</button>}
-          <button type="button" className="btn" onClick={() => openSection("receivables")}>Receivables</button>
-          <button type="button" className="btn" onClick={() => openSection("payables")}>Payables</button>
         </div>
       </div>
       <div className="card acc-party-ledger-filters">

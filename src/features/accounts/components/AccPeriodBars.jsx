@@ -83,21 +83,27 @@ export function ReportRangeBar({ fy, lastFy, from, to, onChange }) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const thisFy = from === fy.from && to === fy.to;
   const prevFy = from === lastFy.from && to === lastFy.to;
+  // One row on wide screens: quick period, the two dates, and a short note. On phones it opens as a bottom sheet.
   const body = (
     <>
-      <div className="accounts-period-pills">
-        <button type="button" className={`btn accounts-period-pill ${thisFy ? "active" : ""}`} onClick={() => onChange(fy.from, fy.to)}>This FY</button>
-        <button type="button" className={`btn accounts-period-pill ${prevFy ? "active" : ""}`} onClick={() => onChange(lastFy.from, lastFy.to)}>Last FY</button>
+      <div className="acc-range-row">
+        <SegmentedControl
+          label="Report period"
+          className="acc-range-quick"
+          options={[{ id: "this", label: "This FY" }, { id: "last", label: "Last FY" }]}
+          value={thisFy ? "this" : prevFy ? "last" : ""}
+          onChange={id => (id === "this" ? onChange(fy.from, fy.to) : onChange(lastFy.from, lastFy.to))}
+        />
+        <div className="accounts-custom-range">
+          <label className="accounts-filter-field"><span className="small">From</span>
+            <input type="date" value={from} onChange={event => onChange(event.target.value, to)} />
+          </label>
+          <label className="accounts-filter-field"><span className="small">To</span>
+            <input type="date" value={to} onChange={event => onChange(from, event.target.value)} />
+          </label>
+        </div>
+        <p className="small acc-range-note">Changing the dates never rewrites posted vouchers.</p>
       </div>
-      <div className="accounts-custom-range">
-        <label className="accounts-filter-field"><span className="small">From</span>
-          <input type="date" value={from} onChange={event => onChange(event.target.value, to)} />
-        </label>
-        <label className="accounts-filter-field"><span className="small">To</span>
-          <input type="date" value={to} onChange={event => onChange(from, event.target.value)} />
-        </label>
-      </div>
-      <p className="small">Reports use this date range. Changing it does not rewrite posted vouchers.</p>
       <button type="button" className="btn primary acc-filter-done" onClick={() => setFiltersOpen(false)}>Done</button>
     </>
   );

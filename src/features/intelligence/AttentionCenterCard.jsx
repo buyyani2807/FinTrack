@@ -20,6 +20,7 @@ export function AttentionCenterCard({ attention, onNavigate, kicker }) {
   const heading = kicker || attention.kicker || "Attention center";
   const shown = expanded ? items : items.slice(0, INITIAL_ITEMS);
   const hidden = items.length - shown.length;
+  const showModule = new Set(items.map(item => (item.module === "gst" ? "accounts" : item.module))).size > 1;
 
   return (
     <section className="card attention-center" aria-label={heading}>
@@ -37,7 +38,7 @@ export function AttentionCenterCard({ attention, onNavigate, kicker }) {
       ) : (
         <ul className="attention-center-list">
           {shown.map(item => {
-            const module = MODULES[item.module];
+            const module = showModule ? MODULES[item.module] : null;
             const ModuleIcon = module?.icon;
             return (
               <li key={item.id} className={`attention-center-item severity-${item.severity || "medium"}`}>

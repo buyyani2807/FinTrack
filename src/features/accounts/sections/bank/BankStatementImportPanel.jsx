@@ -51,7 +51,7 @@ export function BankStatementImportPanel({
       <h3 className="acc-section-title">Statement lines</h3>
       <div className="table acc-table-wrap acc-bank-line-table"><table><thead><tr><th>Date</th><th>Description</th><th className="acc-num">Amount</th><th>In / Out</th><th></th></tr></thead><tbody>
         {bankForm.lines.map((line, index) => <tr key={index}>
-          <td><input type="date" value={line.lineDate} onChange={event => patchBankLine(index, { lineDate: event.target.value })} /></td>
+          <td><input type="date" aria-label={`Line ${index + 1} date`} value={line.lineDate} onChange={event => patchBankLine(index, { lineDate: event.target.value })} /></td>
           <td className="acc-bank-desc"><input value={line.description} placeholder="e.g. UPI from customer" onChange={event => patchBankLine(index, { description: event.target.value })} /></td>
           <td><input className="acc-num-input" type="number" min="0" step="0.01" placeholder="0.00" value={line.amount} onChange={event => patchBankLine(index, { amount: event.target.value })} /></td>
           <td><select value={line.direction} onChange={event => patchBankLine(index, { direction: event.target.value })}><option value="in">In</option><option value="out">Out</option></select></td>
@@ -62,7 +62,7 @@ export function BankStatementImportPanel({
         {bankForm.lines.map((line, index) => (
           <article key={index} className="card acc-bank-line-card">
             <div className="acc-bank-meta">
-              <Field label="Date"><input type="date" value={line.lineDate} onChange={event => patchBankLine(index, { lineDate: event.target.value })} /></Field>
+              <Field label="Date"><input type="date" aria-label={`Line ${index + 1} date`} value={line.lineDate} onChange={event => patchBankLine(index, { lineDate: event.target.value })} /></Field>
               <Field label="In / Out"><select value={line.direction} onChange={event => patchBankLine(index, { direction: event.target.value })}><option value="in">Money in</option><option value="out">Money out</option></select></Field>
               <Field className="span" label="Description"><input value={line.description} placeholder="e.g. UPI from customer" onChange={event => patchBankLine(index, { description: event.target.value })} /></Field>
               <Field label="Amount"><input className="acc-num-input" type="number" min="0" step="0.01" placeholder="0.00" value={line.amount} onChange={event => patchBankLine(index, { amount: event.target.value })} /></Field>

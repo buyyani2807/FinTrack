@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useActiveTabInView } from "./useActiveTabInView.js";
 import { formatInr } from "../../../lib/formatMoney.js";
 import { formatReceiptDate } from "../../receipts/model/receiptModel.js";
 import { canWhatsAppShare, openManualWhatsAppShare } from "../../receipts/io/receiptWhatsApp.js";
@@ -455,6 +456,7 @@ export function AccDocumentsWorkspace({
   // The document type tab is the URL (/accounting/documents/:docType).
   const tab = TABS.some(item => item.id === routeTab) ? routeTab : "quotation";
   const setTab = next => { if (next !== tab) onTabChange?.(next); };
+  const tabsRef = useActiveTabInView([tab]);
   const [search, setSearch] = useState("");
   const [showClosed, setShowClosed] = useState(false);
   const [form, setForm] = useState(null);
@@ -592,7 +594,7 @@ export function AccDocumentsWorkspace({
   const config = DOCUMENT_TYPES[tab];
 
   return (
-    <section className="acc-documents">
+    <section className="acc-documents" ref={tabsRef}>
       <div className="accounts-section-nav">
         {TABS.map(item => (
           <button key={item.id} type="button" className={`accounts-section-tab ${tab === item.id ? "active" : ""}`} onClick={() => setTab(item.id)}>{item.label}</button>

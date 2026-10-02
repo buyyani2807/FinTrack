@@ -1,4 +1,5 @@
 import { Building2, ChevronDown, Plus } from "lucide-react";
+import { useActiveTabInView } from "./useActiveTabInView.js";
 import { NAV_TREE, REPORT_TABS, navItemIsActive } from "../accountsNavigation.js";
 
 // Accounts sections as horizontal tabs inside the page (like Daily Finance's Overview / Customers / Reports).
@@ -16,7 +17,8 @@ export function AccSectionTabs({ section, reportTab, onNavigate, openReport }) {
   const children = isReports ? REPORT_TABS : current?.children;
   const childId = isReports ? (STATEMENT_SECTIONS.includes(section) ? section : section === "reports" ? reportTab : section) : section;
   const openChild = id => (isReports ? openReport(id) : onNavigate(id));
-  return <div className="acc-section-tabs">
+  const ref = useActiveTabInView([section, reportTab]);
+  return <div className="acc-section-tabs" ref={ref}>
     <nav className="module-section-nav acc-section-nav" aria-label="Accounts sections">
       {TAB_ITEMS.map(item => {
         const active = item === current;
