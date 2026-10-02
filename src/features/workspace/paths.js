@@ -1,6 +1,6 @@
 import { isModuleEnabled } from "../commercial/entitlements.js";
 
-// URL paths for the financier workspace; each sidebar option is one route. The route table in src/App.jsx uses
+// URL paths for the financier workspace; each sidebar option is one route. The route table in src/app/AppRoutes.jsx uses
 // these same paths, so change both together.
 export const workspacePaths = {
   dashboard: "/dashboard",
@@ -14,7 +14,7 @@ export const workspacePaths = {
   settings: "/settings",
 };
 
-// Child routes of Daily / Monthly Finance (see src/App.jsx). Overview / Customers / Reports are tabs kept in component state.
+// Child routes of Daily / Monthly Finance (see src/app/AppRoutes.jsx). Overview / Customers / Reports are tabs kept in component state.
 export const COLLECTIONS_SEGMENT = "todays-collections";
 export const ACCOUNT_SEGMENT = "accounts";
 
