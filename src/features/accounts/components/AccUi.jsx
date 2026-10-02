@@ -36,9 +36,26 @@ export function AccMoreMenu({
   buttonClassName = "btn",
 }) {
   const [open, setOpen] = useState(false);
+  const [menuStyle, setMenuStyle] = useState(null);
   const root = useRef(null);
   const menuId = useId();
   const visible = (items || []).filter(item => item && item.label);
+
+  // Tables scroll inside an overflow box that would clip an absolute menu, so the menu is fixed to the
+  // viewport next to its button (and opens upwards when there is no room below).
+  const toggle = event => {
+    if (open) { setOpen(false); return; }
+    const rect = event.currentTarget.getBoundingClientRect();
+    const height = visible.length * 42 + 14;
+    const below = window.innerHeight - rect.bottom - 6;
+    const style = below >= height || rect.top < height
+      ? { top: rect.bottom + 6, bottom: "auto" }
+      : { top: "auto", bottom: window.innerHeight - rect.top + 6 };
+    if (align === "start") Object.assign(style, { left: Math.max(8, rect.left), right: "auto" });
+    else Object.assign(style, { left: "auto", right: Math.max(8, window.innerWidth - rect.right) });
+    setMenuStyle({ position: "fixed", ...style });
+    setOpen(true);
+  };
 
   useEffect(() => {
     if (!open) return undefined;
@@ -48,11 +65,19 @@ export function AccMoreMenu({
     const onKey = event => {
       if (event.key === "Escape") setOpen(false);
     };
+    const onMove = event => {
+      if (!root.current?.contains(event.target)) setOpen(false);
+    };
+    const onResize = () => setOpen(false);
     document.addEventListener("mousedown", onDoc);
     document.addEventListener("keydown", onKey);
+    document.addEventListener("scroll", onMove, true);
+    window.addEventListener("resize", onResize);
     return () => {
       document.removeEventListener("mousedown", onDoc);
       document.removeEventListener("keydown", onKey);
+      document.removeEventListener("scroll", onMove, true);
+      window.removeEventListener("resize", onResize);
     };
   }, [open]);
 
@@ -66,12 +91,12 @@ export function AccMoreMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={menuId}
-        onClick={() => setOpen(current => !current)}
+        onClick={toggle}
       >
         {label}
       </button>
       {open ? (
-        <div className="acc-more-menu" id={menuId} role="menu">
+        <div className="acc-more-menu" id={menuId} role="menu" style={menuStyle || undefined}>
           {visible.map(item => (
             <button
               key={item.id || item.label}
