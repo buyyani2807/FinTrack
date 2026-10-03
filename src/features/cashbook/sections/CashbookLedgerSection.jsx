@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { FilterSelect, SearchInput } from "../../../components/ui.jsx";
+import { ExportButton, FilterSelect, SearchInput } from "../../../components/ui.jsx";
 import { backfillCashbook } from "../cashbookRepository.js";
 import { CASHBOOK_SOURCE_FILTERS, sourceOriginLabel } from "../cashbookModel.js";
 import { money } from "../cashbookConfig.js";
@@ -65,7 +65,7 @@ export function CashbookLedgerSection({
       </div>
       <div className="accounts-action-row spacer">
         <button type="button" className="btn primary" onClick={openManual}>+ Add transaction</button>
-        <button type="button" className="btn" onClick={() => exportCsv(cashbookRows)}>Export CSV</button>
+        <ExportButton onClick={() => exportCsv(cashbookRows)} />
         <button type="button" className="btn" onClick={() => backfillCashbook(token).then(refresh)}>Sync from FinTrack</button>
       </div>
       <div className="accounts-entry-list">

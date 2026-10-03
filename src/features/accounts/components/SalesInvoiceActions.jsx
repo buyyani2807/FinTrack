@@ -4,6 +4,7 @@ import { canWhatsAppShare, openManualWhatsAppShare } from "../../receipts/io/rec
 import { buildArReminderMessage, buildOutstandingSummaryMessage, buildPartyStatementMessage, buildPaymentAdviceMessage, buildPurchaseDocumentMessage, buildSalesInvoiceMessage } from "../model/salesInvoiceModel.js";
 import { downloadSalesInvoicePdf } from "../io/salesInvoicePdf.js";
 import { downloadPartyStatementPdf } from "../io/partyStatementPdf.js";
+import { CloseButton } from "../../../components/ui.jsx";
 
 export function SalesInvoiceViewerModal({ invoice, settings = {}, close }) {
   const whatsAppAvailable = canWhatsAppShare(invoice?.customerPhone);
@@ -11,7 +12,8 @@ export function SalesInvoiceViewerModal({ invoice, settings = {}, close }) {
 
   return (
     <div className="modal-bg">
-      <div className="modal receipt-view">
+      <div className="modal receipt-view has-corner-close" role="dialog" aria-modal="true" aria-label="Sales invoice">
+        <span className="modal-corner-close"><CloseButton onClick={close} /></span>
         <div className="receipt-paper">
           <div className="receipt-header">
             <strong>{invoice.companyName}</strong>
@@ -79,7 +81,6 @@ export function SalesInvoiceViewerModal({ invoice, settings = {}, close }) {
               WhatsApp
             </button>
           )}
-          <button type="button" className="btn primary" onClick={close}>Close</button>
         </div>
       </div>
     </div>
@@ -124,7 +125,8 @@ export function SalesInvoiceSuccessModal({ invoice, settings = {}, close }) {
   return (
     <>
       <div className="modal-bg">
-        <div className="modal receipt-success">
+        <div className="modal receipt-success has-corner-close" role="dialog" aria-modal="true" aria-label="Invoice saved">
+          <span className="modal-corner-close"><CloseButton onClick={close} /></span>
           <h2 className="title green">Sale recorded ✓</h2>
           <p className="copy">Invoice No: <strong className="gold">{invoice.invoiceNumber}</strong></p>
           <p className="copy">{invoice.companyName} → {invoice.customerName} · {m(invoice.amount)} · {invoice.settlement}</p>

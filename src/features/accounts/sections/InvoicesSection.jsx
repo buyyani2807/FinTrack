@@ -1,4 +1,5 @@
 import { AccMoreMenu, AccPager } from "../components/AccUi.jsx";
+import { ExportGroup } from "../../../components/ui.jsx";
 import { money } from "../accountsFormat.js";
 import { ReportRangeBar } from "../components/AccPeriodBars.jsx";
 import { InvoiceTable } from "../components/InvoiceTable.jsx";
@@ -56,9 +57,7 @@ export function InvoicesSection({
           Outstanding only
         </button>
         <div className="acc-invoice-exports">
-          <button type="button" className="btn acc-hide-mobile" onClick={() => exportReport("csv")}>Export CSV</button>
-          <button type="button" className="btn acc-hide-mobile" onClick={() => exportReport("xlsx")}>Export Excel</button>
-          <button type="button" className="btn acc-hide-mobile" onClick={() => exportReport("pdf")}>Download PDF</button>
+          <ExportGroup className="acc-hide-mobile" formats={[{ id: "csv", label: "CSV", onClick: () => exportReport("csv") }, { id: "xlsx", label: "Excel", onClick: () => exportReport("xlsx") }, { id: "pdf", label: "PDF", onClick: () => exportReport("pdf") }]} />
           <AccMoreMenu
             className="acc-show-mobile"
             label="Export"

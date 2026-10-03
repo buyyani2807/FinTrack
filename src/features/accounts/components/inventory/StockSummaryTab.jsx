@@ -1,4 +1,5 @@
 import { todayIso } from "../../../../lib/dates.js";
+import { ExportButton, SearchInput } from "../../../../components/ui.jsx";
 import { stockStatus } from "../../model/inventoryModel.js";
 import { FilterField as Field, AccTable } from "../AccUi.jsx";
 import { SimpleMetric } from "../AccUi.jsx";
@@ -7,10 +8,10 @@ import { money, qty } from "../../accountsFormat.js";
 export function StockSummaryTab({ asOf, setAsOf, search, setSearch, exportSummary, valuation, matches }) {
   return (
     <>
-      <div className="accounts-action-row spacer">
+      <div className="acc-list-toolbar spacer">
         <Field label="Stock as on"><input type="date" value={asOf} onChange={event => setAsOf(event.target.value || todayIso())} /></Field>
-        <input className="accounts-search" placeholder="Search item or SKU" value={search} onChange={event => setSearch(event.target.value)} />
-        <button type="button" className="btn" onClick={exportSummary}>Export CSV</button>
+        <SearchInput label="Search items" className="acc-list-search" placeholder="Search item or SKU" value={search} onChange={event => setSearch(event.target.value)} />
+        <ExportButton className="acc-list-new" onClick={exportSummary} />
       </div>
       <div className="acc-metric-grid three spacer">
         <SimpleMetric label="Stock value (weighted average)" value={money(valuation.totalValue)} />

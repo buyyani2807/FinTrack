@@ -1,6 +1,7 @@
 import { downloadReceiptPdf } from "../io/receiptPdf.js";
 import { buildWhatsAppMessage, canWhatsAppShare, openManualWhatsAppShare } from "../io/receiptWhatsApp.js";
 import { formatReceiptDate, withReceiptBranding } from "../model/receiptModel.js";
+import { CloseButton } from "../../../components/ui.jsx";
 
 export function ReceiptViewerModal({ receipt, settings, token, onLogAction, close }) {
   const brandedReceipt = withReceiptBranding(receipt, settings);
@@ -13,7 +14,8 @@ export function ReceiptViewerModal({ receipt, settings, token, onLogAction, clos
     }
   };
 
-  return <div className="modal-bg"><div className="modal receipt-view">
+  return <div className="modal-bg"><div className="modal receipt-view has-corner-close" role="dialog" aria-modal="true" aria-label="Payment receipt">
+    <span className="modal-corner-close"><CloseButton onClick={close} /></span>
     <div className="receipt-paper">
       <div className="receipt-header">
         <strong>{receipt.companyName}</strong>
@@ -49,7 +51,6 @@ export function ReceiptViewerModal({ receipt, settings, token, onLogAction, clos
     <div className="row spacer">
       <button type="button" className="btn" onClick={async () => { await log("downloaded"); downloadReceiptPdf(receipt); }}>Download PDF</button>
       {whatsAppAvailable && <button type="button" className="btn whatsapp" onClick={() => { openManualWhatsAppShare({ phone: receipt.customerPhone, message: buildWhatsAppMessage(brandedReceipt, settings) }); log("whatsapp_clicked"); }}>WhatsApp</button>}
-      <button type="button" className="btn primary" onClick={close}>Close</button>
     </div>
   </div></div>;
 }

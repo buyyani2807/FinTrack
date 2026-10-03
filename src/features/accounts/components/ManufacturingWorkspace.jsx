@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Select } from "../../../components/Select.jsx";
 import { todayIso } from "../../../lib/dates.js";
 import { Field, AccMetric, Modal } from "./AccUi.jsx";
 
@@ -33,13 +34,13 @@ export function ManufacturingWorkspace({ items = [], stockMovements = [], onItem
       <button type="button" className="card manufacturing-flow-card" onClick={() => onTransactions?.()}><span className="manufacturing-flow-icon">₹</span><strong>4. Sell & analyse</strong><p className="copy">Invoice finished goods and review margin, stock, and production costs.</p></button>
     </div>
     <div className="notice">Production runs use the existing auditable stock-movement workflow. Ledger posting and costing remain unchanged.</div>
-    {runOpen && <Modal title="Record production run" close={() => !saving && setRunOpen(false)} actions={<div className="tabs spacer"><button type="button" className="btn" disabled={saving} onClick={() => setRunOpen(false)}>Cancel</button><button type="button" className="btn primary" disabled={saving || !run.materialId || !run.outputId || Number(run.materialQty) <= 0 || Number(run.outputQty) <= 0 || run.materialId === run.outputId} onClick={submitRun}>{saving ? "Saving…" : "Save production run"}</button></div>}>
+    {runOpen && <Modal title="Record production run" close={() => !saving && setRunOpen(false)} actions={<div className="tabs spacer"><button type="button" className="btn primary" disabled={saving || !run.materialId || !run.outputId || Number(run.materialQty) <= 0 || Number(run.outputQty) <= 0 || run.materialId === run.outputId} onClick={submitRun}>{saving ? "Saving…" : "Save production run"}</button></div>}>
       <p className="copy">This records one material consumption and one finished-goods increase. Use a separate run for each batch.</p>
       <div className="form">
         <Field label="Date"><input type="date" value={run.date} onChange={event => setRun(current => ({ ...current, date: event.target.value }))} /></Field>
-        <Field label="Material consumed"><select value={run.materialId} onChange={event => setRun(current => ({ ...current, materialId: event.target.value }))}><option value="">Select material</option>{products.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
+        <Field label="Material consumed"><Select value={run.materialId} onChange={event => setRun(current => ({ ...current, materialId: event.target.value }))}><option value="">Select material</option>{products.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</Select></Field>
         <Field label="Material quantity"><input type="number" min="0" step="0.001" value={run.materialQty} onChange={event => setRun(current => ({ ...current, materialQty: event.target.value }))} /></Field>
-        <Field label="Finished goods produced"><select value={run.outputId} onChange={event => setRun(current => ({ ...current, outputId: event.target.value }))}><option value="">Select output</option>{products.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
+        <Field label="Finished goods produced"><Select value={run.outputId} onChange={event => setRun(current => ({ ...current, outputId: event.target.value }))}><option value="">Select output</option>{products.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</Select></Field>
         <Field label="Output quantity"><input type="number" min="0" step="0.001" value={run.outputQty} onChange={event => setRun(current => ({ ...current, outputQty: event.target.value }))} /></Field>
         <Field className="span" label="Batch note"><input value={run.note} placeholder="e.g. Batch 24 · 100 units" onChange={event => setRun(current => ({ ...current, note: event.target.value }))} /></Field>
       </div>

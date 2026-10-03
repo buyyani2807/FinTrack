@@ -1,4 +1,5 @@
 import { loadAccountsRoles, setAccountsUserRole, inviteTeamMember, listTeamInvites, revokeTeamInvite } from "../../data/accountingRepository.js";
+import { Select } from "../../../../components/Select.jsx";
 import { Field, AccSetupSection, AccTable } from "../../components/AccUi.jsx";
 
 export function AccessRolesPanel({
@@ -33,10 +34,10 @@ export function AccessRolesPanel({
       <div className="form">
         <Field label="Email"><input type="email" value={inviteDraft.email} onChange={event => setInviteDraft(current => ({ ...current, email: event.target.value }))} placeholder="ca@example.com" /></Field>
         <Field label="Role">
-          <select value={inviteDraft.role} onChange={event => setInviteDraft(current => ({ ...current, role: event.target.value }))}>
+          <Select value={inviteDraft.role} onChange={event => setInviteDraft(current => ({ ...current, role: event.target.value }))}>
             <option value="viewer">Viewer (read only)</option>
             <option value="accountant">Accountant (can post)</option>
-          </select>
+          </Select>
         </Field>
         <Field label="Note (optional)"><input value={inviteDraft.note} onChange={event => setInviteDraft(current => ({ ...current, note: event.target.value }))} placeholder="e.g. FY 2026-27 review" /></Field>
       </div>
@@ -70,10 +71,10 @@ export function AccessRolesPanel({
       <div className="form">
         <Field label="User ID (auth UUID)"><input value={roleDraft.userId} onChange={event => setRoleDraft(current => ({ ...current, userId: event.target.value.trim() }))} placeholder="Paste Supabase auth user UUID" /></Field>
         <Field label="Role">
-          <select value={roleDraft.role} onChange={event => setRoleDraft(current => ({ ...current, role: event.target.value }))}>
+          <Select value={roleDraft.role} onChange={event => setRoleDraft(current => ({ ...current, role: event.target.value }))}>
             <option value="accountant">Accountant (read + write)</option>
             <option value="viewer">Viewer (read only)</option>
-          </select>
+          </Select>
         </Field>
       </div>
       <div className="acc-form-actions">

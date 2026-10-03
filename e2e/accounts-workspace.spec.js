@@ -121,17 +121,45 @@ test.describe("Workspace sidebar", () => {
 });
 
 test.describe("Daily Finance tabs", () => {
-  test("Overview, Customers and Reports keep the same page frame", async ({ page }) => {
+  test("every tab is its own route inside the same page frame", async ({ page }) => {
     await mockAccountsWorkspace(page);
     await page.goto("/daily-finance");
+    await expect(page).toHaveURL(/\/daily-finance\/todays-collections$/, { timeout: 15_000 });
     const tabs = page.getByRole("navigation", { name: "Module sections" });
     await expect(tabs).toBeVisible({ timeout: 15_000 });
-    for (const tab of ["Customers", "Reports", "Overview"]) {
+    for (const [tab, path] of [["Overview", "overview"], ["Customers", "customers"], ["Users", "users"], ["Reports", "reports"], ["Today’s collections", "todays-collections"]]) {
       await tabs.getByRole("button", { name: tab, exact: true }).click();
+      await expect(page).toHaveURL(new RegExp(`/daily-finance/${path}$`));
       await expect(page.getByRole("heading", { name: "Daily Finance", level: 1 })).toBeVisible();
       await expect(tabs.getByRole("button", { name: tab, exact: true })).toHaveAttribute("aria-current", "page");
-      await expect(page.getByRole("button", { name: "Today’s collections" })).toBeVisible();
     }
+    // Today's collections is a tab now, not a button in the page header
+    await expect(page.locator(".toolbar").getByRole("button", { name: "Today’s collections" })).toHaveCount(0);
+  });
+
+  test("the Users tab opens the first customer and switches with the dropdown or arrows", async ({ page }) => {
+    await mockAccountsWorkspace(page);
+    await page.goto("/daily-finance/users");
+    // customers are listed by name, so Lakshmi Devi comes first
+    await expect(page.getByRole("heading", { name: "Lakshmi Devi", level: 2 })).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("combobox", { name: "Customer", exact: true }).click();
+    await page.getByRole("option", { name: /^Ravi Kumar/ }).click();
+    await expect(page).toHaveURL(/\/daily-finance\/users\?account=fa1$/);
+    await expect(page.getByRole("heading", { name: "Ravi Kumar", level: 2 })).toBeVisible();
+    await page.getByRole("button", { name: "Next customer" }).click();
+    await expect(page.getByRole("heading", { name: "Suresh Babu", level: 2 })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Next customer" })).toBeDisabled();
+    // the old account URL is gone and lands on the first tab
+    await page.goto("/daily-finance/accounts/fa1");
+    await expect(page).toHaveURL(/\/daily-finance\/todays-collections$/, { timeout: 15_000 });
+  });
+
+  test("View on a customer row opens the Users tab with that customer", async ({ page }) => {
+    await mockAccountsWorkspace(page);
+    await page.goto("/daily-finance/overview");
+    await page.locator(".finance-module-shell tr[data-account-id=\"fa1\"]").getByRole("button", { name: "View" }).click({ timeout: 15_000 });
+    await expect(page).toHaveURL(/\/daily-finance\/users\?account=fa1$/);
+    await expect(page.getByRole("heading", { name: "Ravi Kumar", level: 2 })).toBeVisible();
   });
 });
 
@@ -144,23 +172,6 @@ test.describe("Back buttons", () => {
       await page.locator(".modal-bg").getByRole("button", { name: "Close" }).click({ timeout: 1500 }).catch(() => {});
       await expect(page.getByRole("button", { name: /^← (Dashboard|Back)$/ })).toHaveCount(0);
     }
-  });
-});
-
-test.describe("Back button", () => {
-  test("sub-pages show a Back button instead of breadcrumbs and it returns to the parent", async ({ page }) => {
-    await mockAccountsWorkspace(page);
-    await page.goto("/daily-finance/todays-collections");
-    const back = page.getByRole("button", { name: "Back", exact: true });
-    await expect(back).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("navigation", { name: "Breadcrumb" })).toHaveCount(0);
-    await back.click();
-    await expect(page.getByRole("heading", { name: "Daily Finance", level: 1 })).toBeVisible();
-
-    await page.goto("/daily-finance/accounts/fa1");
-    await expect(page.getByRole("heading", { name: "Ravi Kumar", level: 1 })).toBeVisible({ timeout: 15_000 });
-    await page.getByRole("button", { name: "Back", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Daily Finance", level: 1 })).toBeVisible();
   });
 });
 
@@ -251,5 +262,54 @@ test.describe("Settings", () => {
     await expect(page.getByRole("textbox", { name: "Payment receipt", exact: true })).toBeVisible();
     await tabs.getByRole("button", { name: "Reminders" }).click();
     await expect(page.getByRole("switch", { name: /Daily Finance/ })).toBeChecked();
+  });
+});
+
+test.describe("Popups", () => {
+  test("close with the corner ✕ and have no Cancel button", async ({ page }) => {
+    await mockAccountsWorkspace(page);
+    await page.goto("/daily-finance");
+    await page.getByRole("button", { name: "+ New finance account" }).click({ timeout: 15_000 });
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Cancel" })).toHaveCount(0);
+    await dialog.getByRole("button", { name: "Close" }).click();
+    await expect(dialog).toHaveCount(0);
+  });
+});
+
+test.describe("Nested routes", () => {
+  test("tabs and sub-tabs of every module are URLs", async ({ page }) => {
+    await mockAccountsWorkspace(page);
+    for (const [path, active] of [
+      ["/chit-fund/members", "Members"],
+      ["/cashbook/expenses", "Expenses"],
+      ["/settings/whatsapp", "WhatsApp messages"],
+      ["/accounting/documents/purchase_order", "Purchase orders"],
+      ["/accounting/parties/routes/collections", "Field collections"],
+      ["/accounting/reports/gst", "GST"],
+    ]) {
+      await page.goto(path);
+      await expect(page).toHaveURL(new RegExp(`${path}$`), { timeout: 15_000 });
+      await page.locator(".modal-bg").getByRole("button", { name: "Close" }).click({ timeout: 1500 }).catch(() => {});
+      await expect(page.locator("button.active", { hasText: active }).first()).toBeVisible();
+    }
+  });
+
+  test("clicking a tab changes the URL, and Back returns to the previous tab", async ({ page }) => {
+    await mockAccountsWorkspace(page);
+    await page.goto("/accounting/overview");
+    await page.getByRole("navigation", { name: "Accounts sections" }).getByRole("button", { name: "Inventory" }).click({ timeout: 15_000 });
+    await expect(page).toHaveURL(/\/accounting\/inventory$/);
+    await page.getByRole("button", { name: "Movements", exact: true }).click();
+    await expect(page).toHaveURL(/\/accounting\/inventory\/movements$/);
+    await page.goBack();
+    await expect(page).toHaveURL(/\/accounting\/inventory$/);
+
+    await page.goto("/collection-staff");
+    await page.getByRole("button", { name: "View / Assign" }).first().click({ timeout: 15_000 });
+    await expect(page).toHaveURL(/\/collection-staff\/[^/]+$/);
+    await page.reload();
+    await expect(page.getByRole("heading", { level: 1, name: "Suresh Agent" })).toBeVisible({ timeout: 15_000 });
   });
 });

@@ -1,4 +1,6 @@
 import { useEffect, useId, useMemo, useState } from "react";
+import { BellRing, ChevronDown, MessageCircle, RefreshCw } from "lucide-react";
+import { SegmentedControl, Spinner } from "../../../components/ui.jsx";
 import { buildChitUpcomingRows, buildMonthlyUpcoming, buildReminderReceipt, filterUpcomingPayments, formatDueDate, formatDueLabel } from "../model/upcomingPayments.js";
 import { buildReminderMessage, canWhatsAppShare, openManualWhatsAppShare } from "../io/receiptWhatsApp.js";
 import { loadPaymentReminderLog, loadUpcomingChitPayments, markPaymentReminderSent } from "../../../lib/financeRepository.js";
@@ -15,6 +17,7 @@ const openReminderWhatsApp = (item, settings) => {
 
 const MONTHLY_FILTERS = [["7days", "7 days"], ["3days", "3 days"], ["today", "Due today"], ["all", "All"]];
 const CHIT_FILTERS = [["3days", "3 days"], ["today", "Due today"]];
+const FILTER_WINDOW = { "7days": "in the next 7 days", "3days": "in the next 3 days", today: "today", all: "" };
 
 export function UpcomingPaymentsSection({ loans = [], token, settings, workspace, isOwner, moduleType, refreshKey = 0 }) {
   const isMonthly = moduleType === "monthly";
@@ -118,83 +121,60 @@ export function UpcomingPaymentsSection({ loans = [], token, settings, workspace
     loadPaymentReminderLog(token).then(setReminderLog).catch(() => setReminderLog([]));
   };
 
-  const countLabel = loading
-    ? "Loading…"
+  // One status line under the title: loading, unavailable, or how many payments fall in the chosen window.
+  const dueWindow = FILTER_WINDOW[filter] ?? "";
+  const statusLine = loading
+    ? "Loading reminders…"
     : error
-      ? "Unavailable"
-      : `${allItems.length} reminder${allItems.length === 1 ? "" : "s"}`;
+      ? "Reminders are unavailable right now"
+      : allItems.length
+        ? `${allItems.length} payment${allItems.length === 1 ? "" : "s"} due${dueWindow ? ` ${dueWindow}` : ""}`
+        : `Nothing due${dueWindow ? ` ${dueWindow}` : ""}`;
+  const errorRow = <div className="upcoming-payments-error" role="alert">
+    <p className="small red">{error}</p>
+    <button type="button" className="btn" onClick={retryLoad}><RefreshCw size={15} aria-hidden="true" />Retry</button>
+  </div>;
+  const headText = <>
+    <span className="upcoming-payments-icon" aria-hidden="true"><BellRing size={19} /></span>
+    <span className="upcoming-payments-title-wrap">
+      <span className="upcoming-payments-title"><strong>{title}</strong>{!loading && !error && <span className={`upcoming-payments-count${allItems.length ? "" : " is-zero"}`}>{allItems.length}</span>}</span>
+      <span className="upcoming-payments-status">{loading ? <Spinner size="sm" label="Loading reminders" /> : statusLine}</span>
+    </span>
+  </>;
 
-  return <div className={`card spacer upcoming-payments ${collapsible ? "collapsible" : ""} ${expanded ? "is-expanded" : "is-collapsed"}`}>
-    <div className="toolbar upcoming-payments-toolbar">
-      <div className="upcoming-payments-heading">
-        {collapsible ? (
-          <button
-            type="button"
-            className="btn upcoming-payments-toggle"
-            aria-expanded={expanded}
-            aria-controls={listId}
-            onClick={() => setExpanded(current => !current)}
-          >
-            <span className="upcoming-payments-chevron" aria-hidden="true">{expanded ? "▾" : "▸"}</span>
-            <span className="upcoming-payments-title-wrap">
-              <strong>{title}</strong>
-              <span className="small upcoming-payments-count">{countLabel}</span>
-            </span>
-            <span className="upcoming-payments-toggle-label">{expanded ? "Hide reminders" : "Show reminders"}</span>
-          </button>
-        ) : (
-          <strong>{title}</strong>
-        )}
-      </div>
-      <div className="tabs upcoming-payments-filters" role="group" aria-label="Reminder filters">
-        {filters.map(([id, label]) =>
-          <button key={id} type="button" className={`btn tab ${filter === id ? "active" : ""}`} aria-pressed={filter === id} onClick={() => setFilter(id)}>{label}</button>,
-        )}
-      </div>
+  return <section className={`card spacer upcoming-payments ${collapsible ? "collapsible" : ""} ${expanded ? "is-expanded" : "is-collapsed"}`} aria-label={title}>
+    {/* Header row: title (opens / closes the list when collapsible), then the filter on the same line while the list
+        is showing, then Show / Hide. On phones the filter wraps under the title. */}
+    <div className="upcoming-payments-head">
+      {collapsible
+        ? <button type="button" className="upcoming-payments-toggle" aria-expanded={expanded} aria-controls={listId} onClick={() => setExpanded(current => !current)}>{headText}</button>
+        : <div className="upcoming-payments-toggle">{headText}</div>}
+      {showList && <SegmentedControl label="Reminder filters" className="upcoming-payments-filters" options={filters.map(([id, label]) => ({ id, label }))} value={filter} onChange={setFilter} />}
+      {collapsible && <button type="button" className="upcoming-payments-toggle-label" tabIndex={-1} aria-hidden="true" onClick={() => setExpanded(current => !current)}>{expanded ? "Hide" : "Show"}<ChevronDown size={16} aria-hidden="true" /></button>}
     </div>
 
-    {collapsible && !expanded && loading && <p className="small upcoming-payments-summary" role="status">Loading installment reminders…</p>}
-    {collapsible && !expanded && !loading && error && (
-      <div className="upcoming-payments-error" role="alert">
-        <p className="small red">{error}</p>
-        <button type="button" className="btn" onClick={retryLoad}>Retry</button>
-      </div>
-    )}
-    {collapsible && !expanded && !loading && !error && (
-      <p className="small upcoming-payments-summary">
-        {allItems.length
-          ? `${allItems.length} reminder${allItems.length === 1 ? "" : "s"} match this filter. Expand to view and send WhatsApp reminders.`
-          : "No upcoming payments match this filter."}
-      </p>
-    )}
+    {collapsible && !expanded && !loading && error && errorRow}
 
     {showList && <div id={listId} className="upcoming-payments-body">
-      {loading && <p className="small" role="status">Loading installment reminders…</p>}
-      {!loading && error && (
-        <div className="upcoming-payments-error" role="alert">
-          <p className="small red">{error}</p>
-          <button type="button" className="btn" onClick={retryLoad}>Retry</button>
-        </div>
-      )}
-      {!loading && !error && !allItems.length && <p className="small">No upcoming payments match this filter.</p>}
-      {!loading && !error && !!allItems.length && <>
-        {allItems.length > 50 && <p className="small">Showing first 50 of {allItems.length} reminders.</p>}
-        <div className={`table spacer upcoming-payments-table ${isMonthly ? "monthly" : "chit"}`}><table><thead><tr><th>Customer</th>{!isMonthly && <><th>Scheme</th><th>Type</th></>}<th>Amount</th><th>Due</th><th></th></tr></thead><tbody>
+      {!loading && !error && allItems.length > 50 && <p className="small upcoming-payments-more">Showing first 50 of {allItems.length}</p>}
+      {loading && <Spinner label="Loading installment reminders" />}
+      {!loading && error && errorRow}
+      {!loading && !error && !allItems.length && <p className="upcoming-payments-empty">No payments due{dueWindow ? ` ${dueWindow}` : ""}. Reminders appear here as due dates come up.</p>}
+      {!loading && !error && !!allItems.length && <div className={`table upcoming-payments-table ${isMonthly ? "monthly" : "chit"}`}><table><thead><tr><th>Customer</th>{!isMonthly && <><th>Scheme</th><th>Type</th></>}<th>Amount</th><th>Due</th><th><span className="ft-sr-only">Reminder</span></th></tr></thead><tbody>
         {visibleItems.map(item => <tr key={`${item.type}-${item.sourceId}-${item.cycleKey}`}>
           <td><strong>{item.customerName}</strong>{isMonthly && item.phone && <div className="small">{item.phone}</div>}</td>
           {!isMonthly && <><td>{item.schemeName || "Chit Fund"}</td><td><span className="chit-type-badge">{item.chitTypeLabel || "—"}</span></td></>}
-          <td className="gold">{money(item.amount)}</td>
-          <td>{formatDueDate(item)} · {formatDueLabel(item)}</td>
+          <td className="upcoming-payments-amount">{money(item.amount)}</td>
+          <td><span className="upcoming-payments-due">{formatDueDate(item)}</span><span className={`upcoming-payments-when${item.daysRemaining <= 0 ? " is-today" : item.daysRemaining <= 3 ? " is-soon" : ""}`}>{formatDueLabel(item)}</span></td>
           <td>{canWhatsAppShare(item.phone)
             ? openedKeys[reminderKey(item)]
               ? <button type="button" className="btn primary" onClick={() => confirmReminderSent(item)}>Mark sent</button>
-              : <button type="button" className="btn whatsapp" onClick={() => sendReminder(item)}>WhatsApp</button>
+              : <button type="button" className="btn whatsapp" onClick={() => sendReminder(item)}><MessageCircle size={15} aria-hidden="true" />WhatsApp</button>
             : <span className="small">No phone</span>}</td>
         </tr>)}
-      </tbody></table></div>
-      </>}
+      </tbody></table></div>}
     </div>}
-  </div>;
+  </section>;
 }
 
 export function UpcomingPaymentCard({ item, settings, token, reminderLog = [], onReminderSent }) {

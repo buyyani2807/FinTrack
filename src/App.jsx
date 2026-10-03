@@ -1,20 +1,16 @@
 // FinTrack MVP. This browser-only build is for testing; add a secure backend,
 // authentication, audit trails, and local compliance review before production.
+import { BrowserRouter } from "react-router";
 import { AppRoutes } from "./app/AppRoutes.jsx";
-import { AppShell, LoadingScreen } from "./app/AppShell.jsx";
-import { useFinTrackSession } from "./app/useFinTrackSession.js";
-import { PayPage } from "./features/accounts/PayPage.jsx";
-import { isPayPagePath } from "./features/accounts/model/upiPay.js";
-import { LegalPage } from "./features/legal/LegalPage.jsx";
+import { AppShell } from "./app/AppShell.jsx";
 
-function SessionApp() {
-  const session = useFinTrackSession();
-  if (session.legalView) return <AppShell><LegalPage view={session.legalView} /></AppShell>;
-  if (session.isLoading) return <AppShell><LoadingScreen /></AppShell>;
-  return <AppShell><AppRoutes session={session} /></AppShell>;
-}
-
+// The router and the app shell; every URL and its component is listed in app/AppRoutes.jsx.
 export default function App() {
-  if (isPayPagePath()) return <AppShell><PayPage /></AppShell>;
-  return <SessionApp />;
+  return (
+    <BrowserRouter>
+      <AppShell>
+        <AppRoutes />
+      </AppShell>
+    </BrowserRouter>
+  );
 }

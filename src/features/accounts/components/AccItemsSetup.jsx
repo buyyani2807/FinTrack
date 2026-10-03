@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { TriangleAlert } from "lucide-react";
+import { FilterSelect, SearchInput } from "../../../components/ui.jsx";
 import { todayIso } from "../../../lib/dates.js";
 import { currentStockForItem, emptyItemForm, stockMovementReport, stockStatus, validateItemForm } from "../model/inventoryModel.js";
 import { costItemMovements } from "../model/inventoryValuation.js";
@@ -111,33 +113,38 @@ export function AccItemsSetup({
   return (
     <section className="acc-items-setup">
       {lowStock.length > 0 && (
-        <div className="acc-low-stock card">
-          <strong>Low stock</strong>
-          <ul>
-            {lowStock.map(item => (
-              <li key={item.id}>
-                <button type="button" className="link-button" onClick={() => setDetailId(item.id)}>
-                  {item.name} — {stockByItem[item.id]} {item.unit} remaining
-                </button>
-              </li>
-            ))}
-          </ul>
+        <div className="acc-low-stock" role="status">
+          <span className="acc-low-stock-icon" aria-hidden="true"><TriangleAlert size={18} /></span>
+          <div className="acc-low-stock-body">
+            <strong>{lowStock.length} item{lowStock.length === 1 ? " is" : "s are"} low on stock</strong>
+            <ul>
+              {lowStock.map(item => (
+                <li key={item.id}>
+                  <button type="button" className="acc-low-stock-chip" onClick={() => setDetailId(item.id)}>
+                    {item.name}<b>{stockByItem[item.id]} {item.unit} left</b>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       )}
 
-      <div className="acc-items-toolbar">
-        <input className="accounts-search" placeholder="Search name, SKU, HSN" value={search} onChange={event => setSearch(event.target.value)} />
-        <select value={typeFilter} onChange={event => setTypeFilter(event.target.value)}>
-          <option value="all">All types</option>
-          <option value="product">Products</option>
-          <option value="service">Services</option>
-        </select>
-        <select value={activeFilter} onChange={event => setActiveFilter(event.target.value)}>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-          <option value="all">All</option>
-        </select>
-        <button type="button" className="btn primary" onClick={openCreate}>+ Item</button>
+      <div className="acc-list-toolbar acc-items-toolbar">
+        <SearchInput label="Search items" className="acc-list-search" placeholder="Search name, SKU, HSN" value={search} onChange={event => setSearch(event.target.value)} />
+        <div className="acc-list-filters">
+          <FilterSelect label="Type" value={typeFilter} onChange={setTypeFilter}>
+            <option value="all">All</option>
+            <option value="product">Products</option>
+            <option value="service">Services</option>
+          </FilterSelect>
+          <FilterSelect label="Status" value={activeFilter} onChange={setActiveFilter} allValue="active">
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="all">All</option>
+          </FilterSelect>
+        </div>
+        <button type="button" className="btn primary acc-list-new" onClick={openCreate}>+ Item</button>
       </div>
 
       <ItemsTable

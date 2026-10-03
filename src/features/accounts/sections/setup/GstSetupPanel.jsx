@@ -1,4 +1,5 @@
 import { saveGstSettings } from "../../data/accountingRepository.js";
+import { Select } from "../../../../components/Select.jsx";
 import { Field, AccSetupSection } from "../../components/AccUi.jsx";
 import { INDIA_STATES, gstStateFromGstin, validateGstSettings } from "../../model/accountingGst.js";
 
@@ -8,19 +9,19 @@ export function GstSetupPanel({ activeCompany, canAdmin, gstForm, setGstForm, sa
       {!canAdmin && <p className="small">View GST details below. Only the owner can change GST registration settings.</p>}
       <div className="form">
         <Field label="Registration">
-          <select value={gstForm.gstRegistration} disabled={!canAdmin} onChange={event => setGstForm(current => ({ ...current, gstRegistration: event.target.value }))}>
+          <Select value={gstForm.gstRegistration} disabled={!canAdmin} onChange={event => setGstForm(current => ({ ...current, gstRegistration: event.target.value }))}>
             <option value="unregistered">Unregistered</option>
             <option value="regular">Regular</option>
             <option value="composition">Composition</option>
-          </select>
+          </Select>
         </Field>
         <Field label="GSTIN"><input value={gstForm.gstin} disabled={!canAdmin} placeholder="e.g. 36AAAAA0000A1Z3" onChange={event => setGstForm(current => ({ ...current, gstin: event.target.value, stateCode: gstStateFromGstin(event.target.value) || current.stateCode }))} /></Field>
         <Field label="Legal name"><input value={gstForm.legalName} disabled={!canAdmin} onChange={event => setGstForm(current => ({ ...current, legalName: event.target.value }))} /></Field>
         <Field label="State">
-          <select value={gstForm.stateCode} disabled={!canAdmin} onChange={event => setGstForm(current => ({ ...current, stateCode: event.target.value }))}>
+          <Select value={gstForm.stateCode} disabled={!canAdmin} onChange={event => setGstForm(current => ({ ...current, stateCode: event.target.value }))}>
             <option value="">Select state</option>
             {INDIA_STATES.map(state => <option key={state.code} value={state.code}>{state.code} · {state.name}</option>)}
-          </select>
+          </Select>
         </Field>
       </div>
       {canAdmin && (

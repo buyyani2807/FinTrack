@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Button, Field, Modal } from "../../components/ui.jsx";
+import { Button, Field, Modal, Spinner } from "../../components/ui.jsx";
 import { formatInr } from "../../lib/formatMoney.js";
 import { QrSvg } from "../accounts/PayPage.jsx";
 import { upiPayLink } from "../accounts/model/upiPay.js";
@@ -49,7 +49,7 @@ function CollectModal({ stop, company, close, onSaved, token }) {
     }
   };
 
-  return <Modal>
+  return <Modal close={() => !busy && close()}>
     <h2 className="title">Collect from {stop.name}</h2>
     <p className="copy">Outstanding {formatInr(stop.outstanding)}{stop.overdue > 0 ? ` · Overdue ${formatInr(stop.overdue)}` : ""}</p>
     <div className="rc-mode-row spacer" role="group" aria-label="Payment mode">
@@ -78,7 +78,7 @@ function CollectModal({ stop, company, close, onSaved, token }) {
       : <p className="small muted spacer">{company?.upiId ? "Enter the amount to show a UPI QR." : "No UPI ID is set for this business, so no QR can be shown. Check the payment on the customer's phone."}</p>)}
     {error && <p className="red small">{error}</p>}
     <div className="row spacer">
-      <Button onClick={close} disabled={busy}>Cancel</Button>
+      
       <Button className="primary" disabled={busy} onClick={submit}>{busy ? "Saving…" : `Save ${amount > 0 ? formatInr(amount) : "collection"}`}</Button>
     </div>
   </Modal>;
@@ -87,7 +87,7 @@ function CollectModal({ stop, company, close, onSaved, token }) {
 function SuccessModal({ result, close }) {
   const message = collectionReceiptMessage(result);
   const canShare = canWhatsAppShare(result.partyPhone);
-  return <Modal>
+  return <Modal close={close}>
     <h2 className="title">{result.alreadyRecorded ? "Already recorded" : "Collection saved"}</h2>
     <p className="rc-success-amount green">{formatInr(result.amount)}</p>
     <p className="copy">{result.partyName} · {collectionModeLabel(result.mode)}{result.voucherNumber ? ` · Receipt ${result.voucherNumber}` : ""}</p>
@@ -103,10 +103,11 @@ function SuccessModal({ result, close }) {
 }
 
 /** Collection agent's route sheet: today's customers in visiting order, collect with cash / UPI QR / cheque. */
-export function RouteCollectionsPage({ token, businessName, back }) {
+// The chosen route is the URL (/route-collections/:routeId, "today" by default; see app/AppRoutes.jsx).
+export function RouteCollectionsPage({ token, businessName, back, routeId = "today", onRouteChange }) {
   const [sheet, setSheet] = useState(undefined);
   const [error, setError] = useState("");
-  const [routeId, setRouteId] = useState("today");
+  const setRouteId = next => onRouteChange?.(next);
   const [search, setSearch] = useState("");
   const [hidePaid, setHidePaid] = useState(false);
   const [collectStop, setCollectStop] = useState(null);
@@ -145,7 +146,7 @@ export function RouteCollectionsPage({ token, businessName, back }) {
   </header>;
 
   if (sheet === undefined) {
-    return <main className="shell rc-page">{header}<p className="copy spacer">Loading your route…</p></main>;
+    return <main className="shell rc-page">{header}<Spinner label="Loading your route" /></main>;
   }
   if (sheet === null) {
     return <main className="shell rc-page">{header}

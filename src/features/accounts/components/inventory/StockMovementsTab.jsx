@@ -1,4 +1,5 @@
 import { stockReasonLabel } from "../../model/inventoryModel.js";
+import { Select } from "../../../../components/Select.jsx";
 import { FilterField as Field, AccTable } from "../AccUi.jsx";
 import { qty } from "../../accountsFormat.js";
 
@@ -9,10 +10,10 @@ export function StockMovementsTab({ moveFrom, setMoveFrom, moveTo, setMoveTo, mo
         <Field label="From"><input type="date" value={moveFrom} onChange={event => setMoveFrom(event.target.value)} /></Field>
         <Field label="To"><input type="date" value={moveTo} onChange={event => setMoveTo(event.target.value)} /></Field>
         <Field label="Item">
-          <select value={moveItemId} onChange={event => setMoveItemId(event.target.value)}>
+          <Select value={moveItemId} onChange={event => setMoveItemId(event.target.value)}>
             <option value="">All products</option>
             {products.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
-          </select>
+          </Select>
         </Field>
       </div>
       <AccTable columns={["Date", "Item", "Reason", { label: "Qty", num: true }, "Voucher / note"]} empty={!moveRows.length && "No stock movements for this filter."}>

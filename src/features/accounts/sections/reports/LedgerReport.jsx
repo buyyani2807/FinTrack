@@ -1,4 +1,5 @@
 import { money } from "../../accountsFormat.js";
+import { Select } from "../../../../components/Select.jsx";
 import { AccTable } from "../../components/AccUi.jsx";
 
 export function LedgerReport({ ledgerId, setLedgerId, visibleAccounts, ledger }) {
@@ -6,7 +7,7 @@ export function LedgerReport({ ledgerId, setLedgerId, visibleAccounts, ledger })
     <>
       <div className="card accounts-filter-card spacer">
         <label className="accounts-filter-field"><span className="small">Account</span>
-          <select value={ledgerId} onChange={event => setLedgerId(event.target.value)}>{visibleAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</select>
+          <Select value={ledgerId} onChange={event => setLedgerId(event.target.value)}>{visibleAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</Select>
         </label>
       </div>
       <AccTable columns={["Date", "Voucher", "Narration", { label: "Debit", num: true }, { label: "Credit", num: true }, { label: "Balance", num: true }]} empty={!ledger.rows.length && "No postings on this ledger in this period."}>

@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Toasts } from "../../components/Toasts.jsx";
+import { TabScroller } from "../../components/TabScroller.jsx";
 import {
   backfillCashbook,
   createBankAccount,
@@ -33,9 +35,12 @@ import { ManualEntryModal } from "./dialogs/ManualEntryModal.jsx";
 import { ExpenseModal } from "./dialogs/ExpenseModal.jsx";
 import { TransferModal } from "./dialogs/TransferModal.jsx";
 import { DayClosingModal } from "./dialogs/DayClosingModal.jsx";
+import { Spinner } from "../../components/ui.jsx";
 
-export function CashbookWorkspace({ token, loans = [] }) {
-  const [section, setSection] = useState("cashbook");
+// The open section is the URL (/cashbook/:section, see app/AppRoutes.jsx).
+export function CashbookWorkspace({ token, loans = [], section: routeSection = "cashbook", onSectionChange }) {
+  const section = SECTIONS.some(item => item.id === routeSection) ? routeSection : "cashbook";
+  const setSection = next => onSectionChange?.(next);
   const [ledgers, setLedgers] = useState([]);
   const [entries, setEntries] = useState([]);
   const [closings, setClosings] = useState([]);
@@ -271,12 +276,11 @@ export function CashbookWorkspace({ token, loans = [] }) {
 
   return <div className="accounts-module shell">
     <header className="top"><div><h1 className="title">Cashbook</h1><p className="copy">Cash, bank and UPI for this Finance workspace. Independent of Accounts companies and their double-entry books.</p></div></header>
-    {error && <div className="notice">{error}</div>}
-    {notice && <div className="notice accounts-notice-ok">{notice}</div>}
-    <nav className="accounts-section-nav spacer" aria-label="Cashbook sections">
+    <Toasts items={[{ id: "error", tone: "error", message: error, onClose: () => setError("") }, { id: "notice", message: notice, onClose: () => setNotice("") }]} />
+    <TabScroller><nav className="accounts-section-nav spacer" aria-label="Cashbook sections">
       {SECTIONS.map(item => <button key={item.id} type="button" className={`accounts-section-tab ${section === item.id ? "active" : ""}`} onClick={() => setSection(item.id)}>{item.label}</button>)}
-    </nav>
-    {loading ? <p className="copy">Loading cashbook…</p> : <>
+    </nav></TabScroller>
+    {loading ? <Spinner label="Loading cashbook" /> : <>
       {section === "cashbook" && <CashbookLedgerSection
         allTimeOverview={allTimeOverview}
         periodOverview={periodOverview}

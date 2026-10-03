@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Select } from "../../components/Select.jsx";
 import {
   buildChitStatementBundle,
   buildCustomerStatementBundle,
@@ -154,9 +155,9 @@ export function CustomerStatementPage({
     <div className="card spacer statement-controls">
       <div className="form">
         <label className="field"><span>Account</span>
-          <select value={selectedAccountId} onChange={event => setSelectedAccountId(event.target.value)} disabled={mode === "chit"}>
+          <Select value={selectedAccountId} onChange={event => setSelectedAccountId(event.target.value)} disabled={mode === "chit"}>
             {accountOptions.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
-          </select>
+          </Select>
         </label>
         <label className="field"><span>Statement As Of</span>
           <input type="date" value={asOf} onChange={event => setAsOf(event.target.value)} />

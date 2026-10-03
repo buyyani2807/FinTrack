@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Building2, Check, ChevronDown, MessageCircle, RotateCcw, Bell } from "lucide-react";
+import { TabScroller } from "../../components/TabScroller.jsx";
+import { Bell, Building2, CalendarDays, CalendarRange, Check, ChevronDown, Coins, MessageCircle, Plus, ReceiptText, RotateCcw } from "lucide-react";
 import { DEFAULT_WHATSAPP_TEMPLATES } from "./model/templateEngine.js";
 import { defaultConfirmationSettings } from "./io/transactionConfirmations.js";
 import { loadOrganizationSettings, saveOrganizationSettings } from "../../lib/financeRepository.js";
@@ -28,6 +29,8 @@ const TEMPLATE_GROUPS = [
 const TEMPLATE_VARIABLES = "{customer_name} {member_name} {amount} {receipt_number} {account_id} {account_number} {financed_amount} {amount_paid} {interest_amount} {interest_rate} {total_repayment} {daily_installment} {monthly_installment} {repayment_days} {start_date} {completion_date} {first_payment_date} {scheme_name} {chit_value} {chit_type} {month_number} {payment_month} {day_progress} {winning_bid} {amount_lifted} {commission} {discount} {dividend} {remaining_months} {lift_date} {company_name} {company_phone}".split(" ");
 
 const REMINDER_DAYS = [7, 3, 1, 0];
+const REMINDER_GROUPS = [{ id: "monthly", label: "Monthly Finance", icon: CalendarRange }, { id: "chit", label: "Chit Fund", icon: Coins }];
+const initialsOf = name => String(name || "").trim().split(/\s+/).slice(0, 2).map(word => word[0]?.toUpperCase() || "").join("") || "FT";
 const reminderDayLabel = day => (day === 0 ? "On due date" : `${day} day${day === 1 ? "" : "s"} before`);
 
 function SettingsSection({ icon: Icon, title, copy, children }) {
@@ -40,14 +43,17 @@ function SettingsSection({ icon: Icon, title, copy, children }) {
   </section>;
 }
 
-function SwitchRow({ checked, onChange, title, copy }) {
+function SwitchRow({ icon: RowIcon, checked, onChange, title, copy }) {
   return <label className="settings-switch-row">
-    <span><strong>{title}</strong>{copy && <span className="small">{copy}</span>}</span>
+    {RowIcon && <span className="settings-list-icon" aria-hidden="true"><RowIcon size={18} /></span>}
+    <span className="settings-list-text"><strong>{title}</strong>{copy && <span className="small">{copy}</span>}</span>
     <input type="checkbox" role="switch" className="ft-switch" checked={checked} onChange={onChange} />
   </label>;
 }
 
-export function ReceiptSettingsPage({ token, close, onSettingsSaved }) {
+// The open tab is the URL (/settings/:tab, see app/AppRoutes.jsx); every tab route renders this same page, so unsaved
+// edits survive switching tabs.
+export function ReceiptSettingsPage({ token, close, onSettingsSaved, tab: routeTab = "company", onTabChange }) {
   const [form, setForm] = useState({
     companyName: "",
     companyAddress: "",
@@ -62,7 +68,10 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
-  const [tab, setTab] = useState("company");
+  // A logo URL that failed to load shows the initials instead (until the URL changes).
+  const [logoFailed, setLogoFailed] = useState("");
+  const tab = SETTINGS_TABS.some(item => item.id === routeTab) ? routeTab : "company";
+  const setTab = next => onTabChange?.(next);
   // The settings as last loaded or saved, to show when there are unsaved changes.
   const [baseline, setBaseline] = useState(null);
   // The template being edited, so a variable chip is inserted at its cursor.
@@ -145,6 +154,7 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved }) {
     ...(form.reminderSettings?.confirmations || {}),
   };
 
+  const logoOk = /^https?:\/\/\S+$/i.test(form.companyLogoUrl || "") && logoFailed !== form.companyLogoUrl;
   const dirty = baseline !== null && JSON.stringify(form) !== baseline;
   const insertVariable = variable => {
     const target = lastTemplate.current;
@@ -158,27 +168,54 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved }) {
 
   return <main className="shell settings-page">
     <div className="toolbar"><div><h1 className="title">Settings</h1><p className="copy">Company branding, receipts, WhatsApp messages and payment reminders.</p></div></div>
-    <nav className="module-section-nav" aria-label="Settings sections">
+    <TabScroller><nav className="module-section-nav" aria-label="Settings sections">
       {SETTINGS_TABS.map(item => <button key={item.id} type="button" className={`module-section-tab ${tab === item.id ? "active" : ""}`} aria-current={tab === item.id ? "page" : undefined} onClick={() => setTab(item.id)}>{item.label}</button>)}
-    </nav>
+    </nav></TabScroller>
     <form onSubmit={submit} className="settings-form">
-      {tab === "company" && <>
-        <SettingsSection icon={Building2} title="Business details" copy="Shown on receipts, statements and WhatsApp messages.">
-          <div className="form settings-grid">
-            <Field label="Company / Financer name"><input value={form.companyName} onChange={e => set("companyName", e.target.value)} /></Field>
-            <Field label="Phone"><input value={form.companyPhone} onChange={e => set("companyPhone", e.target.value)} /></Field>
-            <Field label="Email"><input value={form.companyEmail} onChange={e => set("companyEmail", e.target.value)} /></Field>
-            <Field label="Logo URL"><input value={form.companyLogoUrl} onChange={e => set("companyLogoUrl", e.target.value)} placeholder="https://..." /></Field>
-            <Field className="span" label="Address"><input value={form.companyAddress} onChange={e => set("companyAddress", e.target.value)} /></Field>
+      {tab === "company" && <div className="settings-company">
+        <div className="settings-company-main">
+          <SettingsSection icon={Building2} title="Business details" copy="Your name, contact and logo, shown on receipts, statements and WhatsApp messages.">
+            <div className="settings-logo-row">
+              <span className="settings-logo-tile" aria-hidden="true">{logoOk ? <img src={form.companyLogoUrl} alt="" onError={() => setLogoFailed(form.companyLogoUrl)} /> : initialsOf(form.companyName)}</span>
+              <Field className="settings-logo-field" label="Logo URL"><input type="url" value={form.companyLogoUrl} onChange={e => set("companyLogoUrl", e.target.value.trim())} placeholder="https://yourbusiness.in/logo.png" /></Field>
+            </div>
+            <div className="form settings-grid">
+              <Field className="span" label="Company / Financer name"><input value={form.companyName} onChange={e => set("companyName", e.target.value)} placeholder="e.g. Sri Lakshmi Finance" /></Field>
+              <Field label="Phone"><input type="tel" inputMode="tel" value={form.companyPhone} onChange={e => set("companyPhone", e.target.value)} placeholder="98765 43210" /></Field>
+              <Field label="Email"><input type="email" value={form.companyEmail} onChange={e => set("companyEmail", e.target.value)} placeholder="accounts@yourbusiness.in" /></Field>
+              <Field className="span" label="Address"><textarea rows={2} value={form.companyAddress} onChange={e => set("companyAddress", e.target.value)} placeholder="Shop / office address" /></Field>
+            </div>
+          </SettingsSection>
+          <SettingsSection icon={ReceiptText} title="Receipt" copy="The closing lines printed at the bottom of every receipt and PDF.">
+            <div className="form settings-grid">
+              <Field className="span" label="Receipt footer"><input value={form.receiptFooter} maxLength={120} onChange={e => set("receiptFooter", e.target.value)} placeholder="Thank you for your payment." /></Field>
+              <Field className="span" label="Terms / notes (optional)"><textarea rows={3} value={form.receiptTerms} onChange={e => set("receiptTerms", e.target.value)} placeholder="e.g. Payments are due by the 5th of every month." /></Field>
+            </div>
+          </SettingsSection>
+        </div>
+        <aside className="card settings-preview" aria-label="Receipt preview">
+          <span className="settings-preview-kicker">Live preview</span>
+          <div className="settings-preview-paper">
+            <div className="settings-preview-brand">
+              <span className="settings-logo-tile is-small" aria-hidden="true">{logoOk ? <img src={form.companyLogoUrl} alt="" /> : initialsOf(form.companyName)}</span>
+              <div>
+                <strong>{form.companyName || "Your business name"}</strong>
+                {(form.companyPhone || form.companyEmail) && <span>{[form.companyPhone, form.companyEmail].filter(Boolean).join(" · ")}</span>}
+              </div>
+            </div>
+            {form.companyAddress && <p className="settings-preview-address">{form.companyAddress}</p>}
+            <div className="settings-preview-rule" />
+            <dl className="settings-preview-lines">
+              <div><dt>Receipt</dt><dd>R-0001</dd></div>
+              <div><dt>Customer</dt><dd>Ravi Kumar</dd></div>
+              <div><dt>Paid</dt><dd className="is-amount">₹500</dd></div>
+            </dl>
+            <div className="settings-preview-rule" />
+            <p className="settings-preview-footer">{form.receiptFooter || "Thank you for your payment."}</p>
+            {form.receiptTerms && <p className="settings-preview-terms">{form.receiptTerms}</p>}
           </div>
-        </SettingsSection>
-        <SettingsSection icon={Check} title="Receipt" copy="Printed at the bottom of every receipt and PDF.">
-          <div className="form settings-grid">
-            <Field className="span" label="Receipt footer"><input value={form.receiptFooter} onChange={e => set("receiptFooter", e.target.value)} /></Field>
-            <Field className="span" label="Terms / notes"><textarea rows={3} value={form.receiptTerms} onChange={e => set("receiptTerms", e.target.value)} /></Field>
-          </div>
-        </SettingsSection>
-      </>}
+        </aside>
+      </div>}
 
       {tab === "whatsapp" && <>
         <SettingsSection icon={MessageCircle} title="WhatsApp messages" copy="Optional. WhatsApp buttons work without saving these and without an API key or provider account. A saved template's wording is used; otherwise FinTrack sends the built-in message. View/PDF still shows the full receipt.">
@@ -212,24 +249,34 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved }) {
       </>}
 
       {tab === "reminders" && <>
-        <SettingsSection icon={Bell} title="Payment reminders" copy="When FinTrack lists a customer in the reminders for an upcoming due date.">
-          <div className="settings-reminders">
-            {[["monthly", "Monthly Finance"], ["chit", "Chit Fund"]].map(([group, label]) => <fieldset key={group} className="settings-reminder-group">
-              <legend>{label}</legend>
-              <div className="settings-day-chips">
-                {REMINDER_DAYS.map(day => <label key={day} className={`settings-day-chip${form.reminderSettings?.[group]?.[day] ? " is-on" : ""}`}>
-                  <input type="checkbox" checked={!!form.reminderSettings?.[group]?.[day]} onChange={() => toggleReminder(group, day)} />
-                  <Check size={14} aria-hidden="true" />{reminderDayLabel(day)}
-                </label>)}
-              </div>
-            </fieldset>)}
-          </div>
+        <SettingsSection icon={Bell} title="Payment reminders" copy="When a customer appears in the reminders list before a due date. Pick any combination.">
+          <ul className="settings-list">
+            {REMINDER_GROUPS.map(({ id: group, label, icon: GroupIcon }) => {
+              const on = REMINDER_DAYS.filter(day => form.reminderSettings?.[group]?.[day]).length;
+              return <li key={group} className="settings-list-row settings-reminder-row">
+                <span className="settings-list-icon" aria-hidden="true"><GroupIcon size={18} /></span>
+                <div className="settings-list-text">
+                  <strong>{label}</strong>
+                  <span className="small">{on ? `${on} of ${REMINDER_DAYS.length} reminders on` : "No reminders"}</span>
+                </div>
+                <div className="settings-day-chips" role="group" aria-label={`${label} reminders`}>
+                  {REMINDER_DAYS.map(day => {
+                    const checked = !!form.reminderSettings?.[group]?.[day];
+                    return <label key={day} className={`settings-day-chip${checked ? " is-on" : ""}`}>
+                      <input type="checkbox" checked={checked} onChange={() => toggleReminder(group, day)} />
+                      {checked ? <Check size={14} aria-hidden="true" /> : <Plus size={14} aria-hidden="true" />}{reminderDayLabel(day)}
+                    </label>;
+                  })}
+                </div>
+              </li>;
+            })}
+          </ul>
         </SettingsSection>
-        <SettingsSection icon={MessageCircle} title="Automatic WhatsApp confirmations" copy="After a successful save, FinTrack can open WhatsApp with the confirmation message (same wa.me flow as receipts). The save always succeeds even if WhatsApp cannot open.">
+        <SettingsSection icon={MessageCircle} title="Automatic WhatsApp confirmations" copy="After a successful save, FinTrack opens WhatsApp with the confirmation message, the same way as receipts. The save still succeeds if WhatsApp cannot open.">
           <div className="settings-switches">
-            <SwitchRow title="Daily Finance" copy="New account confirmation" checked={confirmations.daily_account !== false} onChange={() => toggleConfirmation("daily_account")} />
-            <SwitchRow title="Monthly Finance" copy="New account confirmation" checked={confirmations.monthly_account !== false} onChange={() => toggleConfirmation("monthly_account")} />
-            <SwitchRow title="Chit Fund" copy="Lift confirmation" checked={confirmations.chit_lift !== false} onChange={() => toggleConfirmation("chit_lift")} />
+            <SwitchRow icon={CalendarDays} title="Daily Finance" copy="New account confirmation" checked={confirmations.daily_account !== false} onChange={() => toggleConfirmation("daily_account")} />
+            <SwitchRow icon={CalendarRange} title="Monthly Finance" copy="New account confirmation" checked={confirmations.monthly_account !== false} onChange={() => toggleConfirmation("monthly_account")} />
+            <SwitchRow icon={Coins} title="Chit Fund" copy="Lift confirmation" checked={confirmations.chit_lift !== false} onChange={() => toggleConfirmation("chit_lift")} />
           </div>
         </SettingsSection>
       </>}

@@ -1,4 +1,5 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { Toasts } from "../../components/Toasts.jsx";
 import "./accountingProduct.css";
 import {
   addBankStatement,
@@ -47,7 +48,7 @@ import {
 } from "./data/accountingRepository.js";
 import { isAccountsOnboardingDone, readIndustry } from "./components/AccOnboardingWizard.jsx";
 import { parsePartyCsv, planPartyImport } from "./io/partyCsvImport.js";
-import { AccMoreMenu, AccSkeleton, Modal, ReasonModal } from "./components/AccUi.jsx";
+import { AccMoreMenu, Modal, ReasonModal } from "./components/AccUi.jsx";
 import { guessColumnMapping, mapBankImportRows, readBankStatementFile } from "./io/bankStatementImport.js";
 import { backupDownloadFilename, buildAccountsCompanyBackup, parseAccountsCompanyBackup } from "./data/accountsBackup.js";
 import { assertBackupRestorable, restoreAccountsCompanyBackup } from "./data/accountsRestore.js";
@@ -160,17 +161,20 @@ import { creditCheck, documentFulfilment, documentLabel, pendingOrderRows } from
 import { receivablePositions } from "./model/routeCollectionsModel.js";
 import { buildOwnerDailyBrief, reorderPurchaseOrderLines } from "./model/ownerDailyBrief.js";
 import { addMonths, gstFilingSchedule, monthKey, monthLabel, monthRange, readGstFrequency, writeGstFrequency } from "./model/gstCalendar.js";
+import { Spinner } from "../../components/ui.jsx";
 
 // Re-exported for the workspace preloader, which lazy-loads this module.
 export { prefetchAccounts } from "./data/accountsCache.js";
-export function AccountsModule({ token, close, onOpenCashbook, logout, workspace = {}, orgSettings: orgSettingsProp = null }) {
+// The open section, report and sub-tab come from the URL (see accountsPath / app/AppRoutes.jsx); `onNavigate` changes them.
+export function AccountsModule({ token, close, onOpenCashbook, logout, workspace = {}, orgSettings: orgSettingsProp = null, view = {}, onNavigate }) {
   const [cached] = useState(() => {
     const snapshot = readAccountsSnapshot(token);
     if (snapshot) setActiveAccountsCompanyId(snapshot.activeCompanyId || null);
     return snapshot;
   });
-  const [section, setSection] = useState("overview");
-  const [reportTab, setReportTab] = useState("daybook");
+  const section = view.section || "overview";
+  const reportTab = view.reportTab || "daybook";
+  const go = next => onNavigate?.({ section: "overview", reportTab: "daybook", sub: null, ...next });
   const [settings, setSettings] = useState(cached?.settings ?? null);
   const [orgSettings, setOrgSettings] = useState(orgSettingsProp || {});
   const [pendingSalesInvoiceId, setPendingSalesInvoiceId] = useState(null);
@@ -737,24 +741,20 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       return;
     }
     if (id === "gst") {
-      setSection("reports");
-      setReportTab("gst");
+      go({ section: "reports", reportTab: "gst" });
       window.scrollTo(0, 0);
       return;
     }
-    setSection(id);
-    if (id === "trial") setReportTab("trial");
-    if (id === "pnl") setReportTab("pnl");
-    if (id === "balance") setReportTab("balance");
-    if (id === "reports") setReportTab("daybook");
+    go({ section: id, reportTab: ["trial", "pnl", "balance"].includes(id) ? id : "daybook" });
     window.scrollTo(0, 0);
   };
 
   // A report from the Reports sub-tabs: the three statements are their own sections, the rest are tabs of the Reports page.
   const openReport = id => {
     if (["trial", "pnl", "balance"].includes(id)) openSection(id);
-    else { setSection("reports"); setReportTab(id); }
+    else go({ section: "reports", reportTab: id });
   };
+  const setReportTab = openReport;
 
   const switchCompany = id => {
     setAccounts([]);
@@ -1172,7 +1172,7 @@ const openVoucher = () => {
       notes: "Reorder from daily brief",
       lines,
     });
-    openSection("documents");
+    go({ section: "documents", sub: "purchase_order" });
   };
 
   const saveRoute = form => run(async () => {
@@ -1828,11 +1828,10 @@ const openVoucher = () => {
         />}
         extras={canWrite ? <NewEntryActions openSimple={openSimple} openVoucher={openVoucher} openParty={openParty} /> : <span className="small">View-only · {accountsAccessRole || "viewer"}</span>}
       />
-      {error && <div className="notice acc-toast error" role="alert">{error}</div>}
-      {notice && <div className="notice accounts-notice-ok acc-toast ok" role="status">{notice}</div>}
+      <Toasts items={[{ id: "error", tone: "error", message: error, onClose: () => setError("") }, { id: "notice", message: notice, onClose: () => setNotice("") }]} />
       {readOnly && <div className="notice">Accounts access: <strong>viewer</strong>. You can review books and reports, but posting and setup changes are blocked.</div>}
       {migrationRequired && <div className="notice">Run <strong>052</strong> through <strong>076_fix_ambiguous_item_type.sql</strong> in the Supabase SQL editor (including <strong>059</strong>, <strong>064–067</strong>, <strong>070–076</strong>), then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
-      {loading && !settings ? <><p className="copy">Loading Accounts…</p><AccSkeleton /></> : <>
+      {loading && !settings ? <Spinner label="Loading Accounts" /> : <>
         {section === "overview" && <OverviewSection
           settings={settings}
           setupForm={setupForm}
@@ -1986,11 +1985,15 @@ const openVoucher = () => {
             onConvertToEntry={openSimpleFromDocument}
             onSaveSettings={saveDocSettings}
             prefill={documentPrefill}
+            tab={view.sub}
+            onTabChange={next => go({ section: "documents", sub: next })}
           />
         </div>}
         {section === "routes" && <div className="acc-panel">
           <AccRoutesWorkspace
             token={token}
+            tab={view.sub}
+            onTabChange={next => go({ section: "routes", sub: next })}
             routesData={collectionRoutes}
             parties={parties}
             positions={routePositions}
@@ -2003,6 +2006,8 @@ const openVoucher = () => {
           />
         </div>}
         {section === "inventory" && <InventorySection
+          tab={view.sub}
+          onTabChange={next => go({ section: "inventory", sub: next })}
           items={items}
           stockMovements={stockMovements}
           voucherItemLines={voucherItemLines}

@@ -1,11 +1,11 @@
 import { useNavigate, useOutletContext, useParams } from "react-router";
 import { ChitFundPage } from "../../chitFund/ChitFundPage.jsx";
-import { workspacePaths } from "../paths.js";
+import { chitPath } from "../paths.js";
 
-// /chit and /chit/:schemeId (opens that scheme, e.g. from a dashboard card).
+// /chit-fund/:tab, /chit-fund/schemes/:schemeId/:schemeTab and /chit-fund/schemes/:schemeId/members/:memberId.
 export function ChitFundRoute() {
   const { token, orgSettings, workspace, onLogReceipt, setChitSchemes } = useOutletContext();
-  const { schemeId = null } = useParams();
+  const { tab = "schemes", schemeId = null, schemeTab = "overview", memberId = null } = useParams();
   const navigate = useNavigate();
   return <div className="chit-dashboard ft-route-page">
     <ChitFundPage
@@ -13,8 +13,11 @@ export function ChitFundRoute() {
       orgSettings={orgSettings}
       workspace={workspace}
       onLogReceipt={onLogReceipt}
-      openSchemeId={schemeId}
-      onOpenSchemeConsumed={() => navigate(workspacePaths.chit, { replace: true })}
+      tab={tab}
+      schemeId={schemeId}
+      schemeTab={memberId ? "members" : schemeTab}
+      memberId={memberId}
+      onNavigate={target => navigate(chitPath(target))}
       onSchemesChanged={schemes => setChitSchemes((schemes || []).filter(scheme => scheme.status === "active"))}
     />
   </div>;

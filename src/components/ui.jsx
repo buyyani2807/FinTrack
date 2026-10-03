@@ -1,5 +1,6 @@
-import { Children, cloneElement, isValidElement, useId, useState } from "react";
-import { ArrowLeft, ChevronDown, ChevronRight, Eye, EyeOff, Inbox, Search, X } from "lucide-react";
+import { cloneElement, isValidElement, useId, useState } from "react";
+import { Select } from "./Select.jsx";
+import { ArrowLeft, ChevronRight, Download, Eye, EyeOff, Inbox, Search, X } from "lucide-react";
 
 // Shared presentational building blocks used across the finance app.
 export const Button = ({
@@ -37,16 +38,18 @@ export const Badge = ({
   status,
   tone = status
 }) => <span className={`badge ${tone}`}>{status}</span>;
+// Popups close with the ✕ in the top-right corner (shown when `close` is given); there is no Cancel button.
 // `isolateClicks` stops clicks inside the dialog reaching clickable parents (e.g. cards).
 export const Modal = ({
   children,
+  close,
   isolateClicks = false
 }) => {
   const stop = isolateClicks ? event => event.stopPropagation() : undefined;
-  return <div className="modal-bg" onClick={stop}><div className="modal" onClick={stop}>{children}</div></div>;
+  return <div className="modal-bg" onClick={stop}><div className={`modal${close ? " has-corner-close" : ""}`} role="dialog" aria-modal="true" onClick={stop}>{close && <span className="modal-corner-close"><CloseButton onClick={close} /></span>}{children}</div></div>;
 };
 export function ConfirmDialog({ title, message, confirmLabel = "Confirm", danger = false, busy = false, error = "", close, onConfirm }) {
-  return <Modal><h2 className="title">{title}</h2><p className="copy">{message}</p>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button onClick={close} disabled={busy}>Cancel</Button><Button className={danger ? "danger primary" : "primary"} disabled={busy} onClick={onConfirm}>{busy ? "Please wait…" : confirmLabel}</Button></div></Modal>;
+  return <Modal close={() => !busy && close()}><h2 className="title">{title}</h2><p className="copy">{message}</p>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button className={danger ? "danger primary" : "primary"} disabled={busy} onClick={onConfirm}>{busy ? "Please wait…" : confirmLabel}</Button></div></Modal>;
 }
 // Dialog with a title row and Close button; `actions` render after the body.
 export function DialogModal({ title, close, children, actions, className = "" }) {
@@ -96,11 +99,17 @@ export function EmptyState({ title, copy = "", action = null, icon = <Inbox size
   </div>;
 }
 
-export function LoadingState({ label = "Loading…", rows = 3 }) {
-  return <div className="ft-loading" role="status" aria-live="polite">
+// Loading indicator: a spinning ring, with the label for screen readers only. `size="sm"` sits inline (status lines,
+// table cells); the default is centred in its block with breathing room.
+export function Spinner({ label = "Loading", size = "md", className = "" }) {
+  return <span className={`ft-spinner-wrap is-${size}${className ? ` ${className}` : ""}`} role="status" aria-live="polite">
+    <span className="ft-spinner" aria-hidden="true" />
     <span className="ft-sr-only">{label}</span>
-    {Array.from({ length: rows }, (_, index) => <span key={index} className="ft-skeleton" aria-hidden="true" />)}
-  </div>;
+  </span>;
+}
+
+export function LoadingState({ label = "Loading" }) {
+  return <Spinner label={label} />;
 }
 
 // Password field with a show/hide toggle. Passes every input prop through, so Field can label it.
@@ -140,16 +149,16 @@ export function SegmentedControl({ label, options, value, onChange, className = 
   </div>;
 }
 
-// Compact filter dropdown chip: "Account  All accounts ⌄". The native select covers the whole chip (so a tap anywhere
-// opens the system list); highlighted while it filters (value differs from `allValue`).
+// Compact filter dropdown chip: "Account  All accounts ⌄", opening the themed list; highlighted while it filters
+// (value differs from `allValue`).
 export function FilterSelect({ label, value, onChange, allValue = "all", children }) {
-  const selected = Children.toArray(children).find(child => isValidElement(child) && String(child.props.value) === String(value));
-  return <label className={`ft-filter-select${value !== allValue ? " is-active" : ""}`}>
-    <span className="ft-filter-select-label">{label}</span>
-    <span className="ft-filter-select-value" aria-hidden="true">{selected?.props.children ?? value}</span>
-    <ChevronDown className="ft-filter-select-chevron" size={16} aria-hidden="true" />
-    <select value={value} onChange={event => onChange(event.target.value)}>{children}</select>
-  </label>;
+  return <Select
+    className={`ft-filter-select${String(value) !== String(allValue) ? " is-active" : ""}`}
+    aria-label={label}
+    value={value}
+    onChange={event => onChange(event.target.value)}
+    renderValue={option => <><span className="ft-filter-select-label">{label}</span><span className="ft-filter-select-value">{option?.label ?? value}</span></>}
+  >{children}</Select>;
 }
 
 // Search box with a leading icon.
@@ -158,4 +167,19 @@ export function SearchInput({ label, className = "", ...props }) {
     <Search className="ft-search-icon" size={18} aria-hidden="true" />
     <input type="search" aria-label={label} {...props} />
   </label>;
+}
+
+// Download action: icon, "Export" and the file format as a small badge ("Export · CSV").
+export function ExportButton({ format = "CSV", label = "Export", className = "", ...props }) {
+  return <button type="button" className={`btn ft-export-btn${className ? ` ${className}` : ""}`} {...props}>
+    <Download size={16} aria-hidden="true" />{label}<span className="ft-export-format">{format}</span>
+  </button>;
+}
+
+// Several formats of the same export as one joined control: "⤓ Export | CSV | Excel | PDF".
+export function ExportGroup({ formats, className = "" }) {
+  return <div className={`ft-export-group${className ? ` ${className}` : ""}`} role="group" aria-label="Export">
+    <span className="ft-export-group-label"><Download size={16} aria-hidden="true" />Export</span>
+    {formats.map(item => <button key={item.id} type="button" onClick={item.onClick} disabled={item.disabled}>{item.label}</button>)}
+  </div>;
 }

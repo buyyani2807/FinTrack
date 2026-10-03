@@ -1,4 +1,5 @@
 import { PARTY_TYPES } from "../model/accountingModel.js";
+import { Select } from "../../../components/Select.jsx";
 import { INDIA_STATES, gstStateFromGstin } from "../model/accountingGst.js";
 import { partyTypeLabel } from "../accountsFormat.js";
 import { Field } from "./AccUi.jsx";
@@ -11,9 +12,9 @@ export function PartyFormFields({ form, setForm, typeLocked = false }) {
   return (
     <div className="form acc-party-form">
       <Field required label="Type">
-        <select value={form.partyType} disabled={typeLocked} onChange={event => set({ partyType: event.target.value })}>
+        <Select value={form.partyType} disabled={typeLocked} onChange={event => set({ partyType: event.target.value })}>
           {PARTY_TYPES.map(type => <option key={type.id} value={type.id}>{type.label}</option>)}
-        </select>
+        </Select>
       </Field>
       <Field required label="Name"><input value={form.name} placeholder="e.g. Sai Traders" onChange={event => set({ name: event.target.value })} /></Field>
       <Field label="Phone"><input value={form.phone} placeholder="10-digit mobile" onChange={event => set({ phone: event.target.value })} /></Field>
@@ -21,18 +22,18 @@ export function PartyFormFields({ form, setForm, typeLocked = false }) {
       <Field className="span" label="Address"><input value={form.address} placeholder="optional" onChange={event => set({ address: event.target.value })} /></Field>
       <Field label="GSTIN"><input value={form.gstin} placeholder="optional" onChange={event => set({ gstin: event.target.value, stateCode: event.target.value ? (gstStateFromGstin(event.target.value) || form.stateCode) : form.stateCode })} /></Field>
       <Field label="GST registration">
-        <select value={form.gstRegistration || ""} onChange={event => set({ gstRegistration: event.target.value })}>
+        <Select value={form.gstRegistration || ""} onChange={event => set({ gstRegistration: event.target.value })}>
           <option value="">Not set</option>
           <option value="regular">Regular</option>
           <option value="composition">Composition</option>
           <option value="unregistered">Unregistered</option>
-        </select>
+        </Select>
       </Field>
       <Field label="State">
-        <select value={form.stateCode || ""} onChange={event => set({ stateCode: event.target.value })}>
+        <Select value={form.stateCode || ""} onChange={event => set({ stateCode: event.target.value })}>
           <option value="">Select state</option>
           {INDIA_STATES.map(state => <option key={state.code} value={state.code}>{state.code} · {state.name}</option>)}
-        </select>
+        </Select>
       </Field>
       <Field label="Notes"><input value={form.notes} placeholder="optional" onChange={event => set({ notes: event.target.value })} /></Field>
       {(form.partyType === "customer" || form.partyType === "supplier") && <>

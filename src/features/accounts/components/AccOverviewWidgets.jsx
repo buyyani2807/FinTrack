@@ -3,7 +3,7 @@ import { VOUCHER_TYPES, voucherTotals } from "../model/accountingModel.js";
 import { money } from "../accountsFormat.js";
 import { AccMetric } from "./AccUi.jsx";
 
-export function AccountsBusinessPulse({ metrics, receivables, payables, items, stockMovements, attention, onNavigate, onOpenCollections }) {
+export function AccountsBusinessPulse({ metrics, receivables, payables, items, stockMovements, onNavigate, onOpenCollections }) {
   const lowStockCount = useMemo(() => (items || []).filter(item => {
     const current = Number(item.current_stock ?? item.stock ?? item.quantity ?? 0);
     const reorder = Number(item.reorder_level ?? item.reorderPoint ?? 0);
@@ -33,11 +33,7 @@ export function AccountsBusinessPulse({ metrics, receivables, payables, items, s
       {actions.map(action => <button key={action.label} type="button" className={`accounts-business-action ${action.tone}`} onClick={() => onNavigate(action.section)}>{action.label}<span aria-hidden="true">→</span></button>)}
       {onOpenCollections && <button type="button" className="accounts-business-action purple" onClick={onOpenCollections}>Open collections<span aria-hidden="true">→</span></button>}
     </div>
-    {attention?.count > 0 && <div className="accounts-business-alert" role="status">
-      <span className="accounts-business-alert-icon" aria-hidden="true">!</span>
-      <div><strong>{attention.summary}</strong><span className="small"> Review the most urgent item to keep your books moving.</span></div>
-      <button type="button" className="btn" onClick={() => onNavigate(attention.items?.[0]?.href || "reports")}>Review now →</button>
-    </div>}
+    {/* Items needing review are listed in the Attention center card right below. */}
   </section>;
 }
 const piePoint = (cx, cy, r, angle) => {

@@ -1,4 +1,5 @@
 import { roundMoney } from "../../model/accountingModel.js";
+import { Select } from "../../../../components/Select.jsx";
 import { emptyItemLine, normalizeItemLine } from "../../model/inventoryModel.js";
 import { money, gstStatusLabel } from "../../accountsFormat.js";
 import { Field, AccTable } from "../AccUi.jsx";
@@ -33,14 +34,14 @@ export function ItemLinesSection({
           return (
             <tr key={index}>
               <td>
-                <select value={line.itemId || ""} onChange={event => selectItem(index, event.target.value)}>
+                <Select value={line.itemId || ""} onChange={event => selectItem(index, event.target.value)}>
                   <option value="">Search / select item</option>
                   {activeItems.map(item => (
                     <option key={item.id} value={item.id}>
                       {item.name} · {item.sku}{item.itemType === "product" && stockByItem[item.id] != null ? ` · stock ${stockByItem[item.id]} ${item.unit}` : ""}
                     </option>
                   ))}
-                </select>
+                </Select>
                 {stock != null && <div className="small">Stock {stock} {line.unit || ""}</div>}
               </td>
               <td><input type="number" min="0" step="0.001" value={line.quantity} onChange={event => patchItemLine(index, { quantity: event.target.value })} /></td>
@@ -66,14 +67,14 @@ export function ItemLinesSection({
               </div>
               <label className="accounts-filter-field">
                 <span className="small">Item</span>
-                <select value={line.itemId || ""} onChange={event => selectItem(index, event.target.value)}>
+                <Select value={line.itemId || ""} onChange={event => selectItem(index, event.target.value)}>
                   <option value="">Search / select item</option>
                   {activeItems.map(item => (
                     <option key={item.id} value={item.id}>
                       {item.name} · {item.sku}{item.itemType === "product" && stockByItem[item.id] != null ? ` · stock ${stockByItem[item.id]} ${item.unit}` : ""}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
               {stock != null && <p className="small">Stock {stock} {line.unit || ""}</p>}
               <div className="acc-item-line-card-grid">

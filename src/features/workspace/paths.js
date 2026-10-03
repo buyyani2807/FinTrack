@@ -1,6 +1,7 @@
 import { isModuleEnabled } from "../commercial/entitlements.js";
 
-// URL paths for the financier workspace; each sidebar option is one route.
+// URL paths for the financier workspace; each sidebar option is one route. The route table in src/app/AppRoutes.jsx uses
+// these same paths, so change both together.
 export const workspacePaths = {
   dashboard: "/dashboard",
   daily: "/daily-finance",
@@ -13,36 +14,36 @@ export const workspacePaths = {
   settings: "/settings",
 };
 
-// Child routes of Daily / Monthly Finance. (Overview / Customers / Reports are tabs kept in component state.)
-export const COLLECTIONS_SEGMENT = "todays-collections";
-export const ACCOUNT_SEGMENT = "accounts";
+// Tabs of Daily / Monthly Finance; each is a child route, e.g. /daily-finance/customers (see src/app/AppRoutes.jsx).
+export const FINANCE_SECTIONS = {
+  overview: "overview",
+  collections: "todays-collections",
+  customers: "customers",
+  users: "users",
+  reports: "reports",
+};
 
 export const modulePath = kind => (kind === "daily" || kind === "monthly" ? workspacePaths[kind] : workspacePaths.dashboard);
 
-export const collectionsPath = kind => `${modulePath(kind)}/${COLLECTIONS_SEGMENT}`;
+export const financeSectionPath = (kind, section) => `${modulePath(kind)}/${FINANCE_SECTIONS[section] || FINANCE_SECTIONS.overview}`;
 
-// An account's detail page lives under its own module, e.g. /daily-finance/accounts/:accountId.
-export const accountPath = loan => `${modulePath(loan.kind)}/${ACCOUNT_SEGMENT}/${encodeURIComponent(loan.id)}`;
+export const collectionsPath = kind => financeSectionPath(kind, "collections");
 
-export const chitSchemePath = schemeId => `${workspacePaths.chit}/${encodeURIComponent(schemeId)}`;
+// One customer's account opens in its module's Users tab with that account chosen, e.g. /daily-finance/users?account=fa1.
+export const accountPath = loan => `${financeSectionPath(loan.kind, "users")}?account=${encodeURIComponent(loan.id)}`;
+
+// Chit Fund: /chit-fund/:tab, /chit-fund/schemes/:schemeId/:schemeTab and /chit-fund/schemes/:schemeId/members/:memberId.
+export function chitPath({ tab = "schemes", schemeId = null, schemeTab = "overview", memberId = null } = {}) {
+  if (!schemeId) return `${workspacePaths.chit}/${tab}`;
+  const scheme = `${workspacePaths.chit}/schemes/${encodeURIComponent(schemeId)}`;
+  if (memberId) return `${scheme}/members/${encodeURIComponent(memberId)}`;
+  return `${scheme}/${schemeTab}`;
+}
+
+export const chitSchemePath = schemeId => chitPath({ schemeId });
 
 // Is `pathname` the route `target` or one of its child routes?
 export const isWithin = (pathname, target) => pathname === target || pathname.startsWith(`${target}/`);
-
-// What the finance dashboard (Financier) shows for a path, or null when the route is a different page.
-export function financeViewForPath(pathname) {
-  const path = pathname.replace(/\/+$/, "");
-  if (path === workspacePaths.dashboard) return { module: "all", collections: false, accountId: null };
-  for (const module of ["daily", "monthly"]) {
-    const root = workspacePaths[module];
-    if (path === root) return { module, collections: false, accountId: null };
-    if (!path.startsWith(`${root}/`)) continue;
-    const [segment, id, ...rest] = path.slice(root.length + 1).split("/");
-    if (segment === ACCOUNT_SEGMENT && id && !rest.length) return { module, collections: false, accountId: decodeURIComponent(id) };
-    return segment === COLLECTIONS_SEGMENT && !id ? { module, collections: true, accountId: null } : null;
-  }
-  return null;
-}
 
 // Which workspace modules this user may open. Owner-only modules also need the owner role.
 export function workspaceModuleAccess(orgSettings = {}, workspace = {}) {

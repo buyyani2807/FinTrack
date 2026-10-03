@@ -21,7 +21,7 @@ test.describe("FinTrack login hub", () => {
     await page.goto("/");
     await page.getByRole("button", { name: "Customer login" }).click();
     await expect(page.getByText("Customer portal ID")).toBeVisible();
-    await expect(page.getByText("6-digit PIN")).toBeVisible();
+    await expect(page.getByLabel("6-digit PIN")).toBeVisible();
   });
 });
 

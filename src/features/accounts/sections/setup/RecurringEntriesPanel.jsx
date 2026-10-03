@@ -1,4 +1,5 @@
 import { loadRecurringTemplates, upsertRecurringTemplate, deleteRecurringTemplate } from "../../data/accountingRepository.js";
+import { Select } from "../../../../components/Select.jsx";
 import { Field, AccSetupSection, AccTable } from "../../components/AccUi.jsx";
 import { MONEY_MODES } from "../../model/accountingModel.js";
 import { todayIso } from "../../../../lib/dates.js";
@@ -28,27 +29,27 @@ export function RecurringEntriesPanel({
       <div className="form">
         <Field label="Name"><input value={recurringDraft.name} onChange={event => setRecurringDraft(current => ({ ...current, name: event.target.value }))} placeholder="e.g. Office rent" /></Field>
         <Field label="Kind">
-          <select value={recurringDraft.kind} onChange={event => setRecurringDraft(current => ({ ...current, kind: event.target.value }))}>
+          <Select value={recurringDraft.kind} onChange={event => setRecurringDraft(current => ({ ...current, kind: event.target.value }))}>
             {RECURRING_KINDS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
-          </select>
+          </Select>
         </Field>
         <Field label="Frequency">
-          <select value={recurringDraft.frequency} onChange={event => setRecurringDraft(current => ({ ...current, frequency: event.target.value }))}>
+          <Select value={recurringDraft.frequency} onChange={event => setRecurringDraft(current => ({ ...current, frequency: event.target.value }))}>
             {RECURRING_FREQUENCIES.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
-          </select>
+          </Select>
         </Field>
         <Field label="Next run"><input type="date" value={recurringDraft.nextRunOn} onChange={event => setRecurringDraft(current => ({ ...current, nextRunOn: event.target.value }))} /></Field>
         <Field label="Amount"><input className="acc-num-input" type="number" min="0" step="0.01" value={recurringDraft.amount} onChange={event => setRecurringDraft(current => ({ ...current, amount: event.target.value }))} /></Field>
         <Field label="Party">
-          <select value={recurringDraft.partyId} onChange={event => setRecurringDraft(current => ({ ...current, partyId: event.target.value }))}>
+          <Select value={recurringDraft.partyId} onChange={event => setRecurringDraft(current => ({ ...current, partyId: event.target.value }))}>
             <option value="">Optional</option>
             {parties.filter(party => party.isActive !== false).map(party => <option key={party.id} value={party.id}>{party.name}</option>)}
-          </select>
+          </Select>
         </Field>
         <Field label="Payment mode">
-          <select value={recurringDraft.mode} onChange={event => setRecurringDraft(current => ({ ...current, mode: event.target.value }))}>
+          <Select value={recurringDraft.mode} onChange={event => setRecurringDraft(current => ({ ...current, mode: event.target.value }))}>
             {MONEY_MODES.map(mode => <option key={mode.id} value={mode.id}>{mode.label}</option>)}
-          </select>
+          </Select>
         </Field>
         <Field className="span" label="Narration"><input value={recurringDraft.narration} onChange={event => setRecurringDraft(current => ({ ...current, narration: event.target.value }))} /></Field>
       </div>

@@ -19,6 +19,8 @@ export function InventorySection({
   saveItemRecord,
   token,
   costLines,
+  tab,
+  onTabChange,
 }) {
   return (
     <div className="acc-panel">
@@ -33,6 +35,8 @@ export function InventorySection({
         onSaveInventorySettings={saveStockRules}
         onImportItems={importItems}
         onApplyCount={applyPhysicalCount}
+        tab={tab}
+        onTabChange={onTabChange}
         itemsSetup={<AccItemsSetup
           items={items}
           categories={itemCategories}

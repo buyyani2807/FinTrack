@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Select } from "../../../components/Select.jsx";
 import { formatInr } from "../../../lib/formatMoney.js";
 import { downloadAccountsZip } from "../io/accountingExport.js";
 import { GST_FREQUENCIES, addMonths, daysBetweenIso, dueLabel, gstReturnsForPeriod, monthKey, monthLabel } from "../model/gstCalendar.js";
@@ -81,9 +82,9 @@ export function AccGstPackCard({
         <p className="small">One ZIP with GSTR-1 and GSTR-3B preparation, sales and purchase registers, HSN summary, day book and a checks list.</p>
       </div>
       <label className="accounts-filter-field"><span className="small">Month</span>
-        <select value={period} onChange={event => setPeriod(event.target.value)}>
+        <Select value={period} onChange={event => setPeriod(event.target.value)}>
           {months.map(key => <option key={key} value={key}>{monthLabel(key)}{key === current ? " (in progress)" : ""}</option>)}
-        </select>
+        </Select>
       </label>
     </header>
 
@@ -113,9 +114,9 @@ export function AccGstPackCard({
       <div className="acc-gstpack-filings-head">
         <strong>Returns for {monthLabel(period)}</strong>
         {registration === "regular" && <label className="accounts-filter-field"><span className="small">You file</span>
-          <select value={frequency} onChange={event => onFrequencyChange?.(event.target.value)}>
+          <Select value={frequency} onChange={event => onFrequencyChange?.(event.target.value)}>
             {GST_FREQUENCIES.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
-          </select>
+          </Select>
         </label>}
       </div>
       {filings === null && <p className="small">Run migration 082 to track which returns are filed.</p>}

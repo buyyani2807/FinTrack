@@ -1,3 +1,4 @@
+import { Select } from "../../../components/Select.jsx";
 import {
   MONEY_MODES,
   SIMPLE_EXPENSE_CODES,
@@ -143,29 +144,29 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
         <Field label="Date"><input type="date" max={maxDate} value={form.date} onChange={event => set({ date: event.target.value })} /></Field>
         {(kind === "sale" || kind === "purchase") && (
           <Field label="Payment">
-            <select value={form.settlement} onChange={event => set({
+            <Select value={form.settlement} onChange={event => set({
               settlement: event.target.value,
               amountReceived: event.target.value === "paid" ? "" : form.amountReceived,
             })}>
               <option value="credit">Credit / invoice</option>
               <option value="paid">Paid in full now</option>
-            </select>
+            </Select>
           </Field>
         )}
         {showMoneyMode && (
           <Field label="Payment mode">
-            <select value={form.moneyMode} onChange={event => set({ moneyMode: event.target.value, receivedCash: "", receivedUpi: "" })}>
+            <Select value={form.moneyMode} onChange={event => set({ moneyMode: event.target.value, receivedCash: "", receivedUpi: "" })}>
               {MONEY_MODES.map(mode => <option key={mode.id} value={mode.id}>{mode.label}</option>)}
-            </select>
+            </Select>
           </Field>
         )}
         {(kind === "sale" || kind === "purchase") && form.settlement === "credit" && <Field label="Due date"><input type="date" value={form.dueDate || addDaysIso(form.date, 7)} onChange={event => set({ dueDate: event.target.value })} /></Field>}
-        {kind === "expense" && <Field label="Expense"><select value={form.expenseCode} onChange={event => set({ expenseCode: event.target.value })}>{expenseOptions.map(([code, name]) => <option key={code} value={code}>{name}</option>)}</select></Field>}
+        {kind === "expense" && <Field label="Expense"><Select value={form.expenseCode} onChange={event => set({ expenseCode: event.target.value })}>{expenseOptions.map(([code, name]) => <option key={code} value={code}>{name}</option>)}</Select></Field>}
         {kind === "transfer" && <>
-          <Field label="From"><select value={form.fromAccountId || ""} onChange={event => set({ fromAccountId: event.target.value })}><option value="">Select account</option>{transferAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</select></Field>
-          <Field label="To"><select value={form.toAccountId || ""} onChange={event => set({ toAccountId: event.target.value })}><option value="">Select account</option>{transferAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</select></Field>
+          <Field label="From"><Select value={form.fromAccountId || ""} onChange={event => set({ fromAccountId: event.target.value })}><option value="">Select account</option>{transferAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</Select></Field>
+          <Field label="To"><Select value={form.toAccountId || ""} onChange={event => set({ toAccountId: event.target.value })}><option value="">Select account</option>{transferAccounts.map(account => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</Select></Field>
         </>}
-        {needsParty && <Field label={needsParty === "supplier" ? "Supplier" : "Customer"}><select value={form.partyId} onChange={event => {
+        {needsParty && <Field label={needsParty === "supplier" ? "Supplier" : "Customer"}><Select value={form.partyId} onChange={event => {
           const partyId = event.target.value;
           const creditDays = parties.find(party => party.id === partyId)?.creditDays;
           set({
@@ -173,21 +174,21 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
             settlements: settlementKinds ? syncSettlements(partyId, settlementAmount) : form.settlements,
             ...((kind === "sale" || kind === "purchase") && creditDays != null ? { dueDate: addDaysIso(form.date, creditDays) } : {}),
           });
-        }}><option value="">Select</option>{partyList.map(party => <option key={party.id} value={party.id}>{party.name}</option>)}</select></Field>}
+        }}><option value="">Select</option>{partyList.map(party => <option key={party.id} value={party.id}>{party.name}</option>)}</Select></Field>}
         {(kind === "sale" || kind === "purchase") && (
           <Field label="Entry">
-            <select value={itemMode ? "items" : "amount"} onChange={event => set({ entryMode: event.target.value })}>
+            <Select value={itemMode ? "items" : "amount"} onChange={event => set({ entryMode: event.target.value })}>
               <option value="items">Line items</option>
               <option value="amount">Single amount</option>
-            </select>
+            </Select>
           </Field>
         )}
         {returnKind && (
           <Field label="Entry">
-            <select value={itemMode ? "items" : "amount"} onChange={event => set({ noteEntryMode: event.target.value, settlements: [] })}>
+            <Select value={itemMode ? "items" : "amount"} onChange={event => set({ noteEntryMode: event.target.value, settlements: [] })}>
               <option value="amount">Amount only (rate difference / discount)</option>
               <option value="items">Returned items (updates stock)</option>
-            </select>
+            </Select>
           </Field>
         )}
       </div>

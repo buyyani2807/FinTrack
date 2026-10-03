@@ -15,7 +15,7 @@ export function ItemCards({ filtered, stockByItem, setDetailId, saving, openEdit
                 <strong>{item.name}</strong>
                 <p className="small">{item.sku} · {item.itemType}</p>
               </div>
-              <span className="small">{item.isActive === false ? "Inactive" : status === "low" ? "Low stock" : "Active"}</span>
+              {item.isActive === false ? <span className="acc-doc-status tone-muted">Inactive</span> : status === "low" ? <span className="acc-doc-status tone-warn">Low stock</span> : <span className="acc-doc-status tone-green">Active</span>}
             </div>
             <p className="acc-ledger-card-amounts">
               <span>Sell <strong>{money(item.sellingPrice)}</strong></span>
