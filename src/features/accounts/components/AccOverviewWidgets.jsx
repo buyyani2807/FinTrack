@@ -136,7 +136,7 @@ export function AccOverviewRecent({ rows, onViewAll }) {
             <button type="button" className="acc-ov-link-btn acc-ov-recent-all" onClick={onViewAll}>View all</button>
           </div>
         ) : (
-          <p className="acc-ov-recent-empty">No transactions yet. Use + New entry to record one.</p>
+          <p className="acc-ov-recent-empty">No transactions yet. Use New to record one.</p>
         )}
       </div>
     </section>

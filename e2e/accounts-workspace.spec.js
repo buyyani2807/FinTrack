@@ -54,15 +54,19 @@ test.describe("Accounts workspace", () => {
     const dialog = page.locator(".modal-bg").last();
     const closeDialog = () => dialog.getByRole("button", { name: "Close", exact: true }).first().click();
 
-    for (const kind of ["sale", "purchase", "expense", "receipt", "payment", "credit_note", "debit_note", "transfer"]) {
-      await page.locator("select.acc-new-entry").selectOption(kind);
+    const openNew = () => page.getByRole("button", { name: "New", exact: true }).click();
+    for (const kind of ["Sale", "Purchase", "Expense", "Receipt", "Payment", "Credit note", "Debit note", "Transfer"]) {
+      await openNew();
+      await page.getByRole("menuitem", { name: kind, exact: true }).click();
       await expect(dialog).toBeVisible();
       await closeDialog();
     }
-    await page.getByRole("button", { name: "+ Voucher" }).click();
+    await openNew();
+    await page.getByRole("menuitem", { name: "Advanced voucher", exact: true }).click();
     await expect(dialog.getByRole("heading", { name: "Post voucher" })).toBeVisible();
     await closeDialog();
-    await page.getByRole("button", { name: "+ Party" }).click();
+    await openNew();
+    await page.getByRole("menuitem", { name: "Party", exact: true }).click();
     await expect(dialog.getByRole("heading", { name: "Add party" })).toBeVisible();
     await closeDialog();
 

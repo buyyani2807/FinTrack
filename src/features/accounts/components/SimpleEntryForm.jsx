@@ -106,7 +106,7 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
         : "Reduces the supplier balance and purchases. Original invoices stay in Day Book.")
       : kind === "sale"
         ? "Sale value is always the full invoice. Amount received is a separate collection against that invoice — never a reduced sale."
-        : "FinTrack posts the balanced voucher for you. Open + Voucher if you need a custom journal.";
+        : "FinTrack posts the balanced voucher for you. Choose Advanced voucher from New if you need a custom journal.";
 
   const patchItemLine = (index, patch) => {
     setForm(current => {

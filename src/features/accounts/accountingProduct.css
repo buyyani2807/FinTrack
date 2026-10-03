@@ -3915,6 +3915,12 @@
   cursor: not-allowed;
 }
 
+.accounts-dashboard .acc-more-sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--acc-line);
+}
+
 .accounts-dashboard .acc-show-mobile {
   display: none !important;
 }

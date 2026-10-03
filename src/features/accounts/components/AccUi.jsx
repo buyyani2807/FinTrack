@@ -39,7 +39,7 @@ export function AccMoreMenu({
   const [menuStyle, setMenuStyle] = useState(null);
   const root = useRef(null);
   const menuId = useId();
-  const visible = (items || []).filter(item => item && item.label);
+  const visible = (items || []).filter(item => item && (item.separator || item.label));
 
   // Tables scroll inside an overflow box that would clip an absolute menu, so the menu is fixed to the
   // viewport next to its button (and opens upwards when there is no room below).
@@ -97,7 +97,9 @@ export function AccMoreMenu({
       </button>
       {open ? (
         <div className="acc-more-menu" id={menuId} role="menu" style={menuStyle || undefined}>
-          {visible.map(item => (
+          {visible.map(item => item.separator ? (
+            <div key={item.id || "separator"} className="acc-more-sep" role="separator" />
+          ) : (
             <button
               key={item.id || item.label}
               type="button"
