@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { monthlyInterestOnBalance, dailyInstallmentAmount, monthlyRateOnDate, rateChangesAfterEdit } from "../src/features/finance/model/calculations.js";
+import { nextMonthlyPayment } from "../src/features/receipts/model/receiptModel.js";
 
 test("monthly interest uses the monthly percent, not annual/12", () => {
   assert.equal(monthlyInterestOnBalance(100000, 3), 3000);
@@ -71,4 +72,33 @@ test("same-day rate edit updates today's row and does not seed history when star
     { effectiveDate: "2026-01-15", annualRate: 3 },
     { effectiveDate: "2026-08-31", annualRate: 3.5 },
   ]);
+});
+
+test("an early interest payment clears the coming monthly reminder", () => {
+  const loan = {
+    kind: "monthly",
+    status: "active",
+    startDate: "2026-09-08",
+    principal: 100000,
+    annualRate: 1,
+    rateChanges: [],
+    transactions: [],
+  };
+  const unpaid = nextMonthlyPayment(loan, "2026-10-03");
+  assert.equal(unpaid.dueDate, "2026-10-08");
+  assert.equal(unpaid.amount, 1000);
+  assert.equal(unpaid.daysRemaining, 5);
+
+  const paidEarly = nextMonthlyPayment({
+    ...loan,
+    transactions: [{ date: "2026-10-03", interestAmount: 1000, principalAmount: 0 }],
+  }, "2026-10-03");
+  assert.equal(paidEarly.dueDate, "2026-11-08");
+
+  const partial = nextMonthlyPayment({
+    ...loan,
+    transactions: [{ date: "2026-10-03", interestAmount: 400, principalAmount: 0 }],
+  }, "2026-10-03");
+  assert.equal(partial.dueDate, "2026-10-08");
+  assert.equal(partial.amount, 600);
 });

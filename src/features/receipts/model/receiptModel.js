@@ -1,4 +1,5 @@
 import { monthlyInterestOnBalance, monthlyRateOnDate } from "../../finance/model/calculations.js";
+import { todayIso } from "../../../lib/dates.js";
 import { formatInr } from "../../../lib/formatMoney.js";
 
 const money = formatInr;
@@ -238,17 +239,21 @@ const addMonths = (start, n) => {
 
 export function nextMonthlyPayment(loan, asOf = "") {
   if (loan.kind !== "monthly" || loan.status === "closed" || loan.status === "bankrupt") return null;
-  const balance = loanBalanceAt(loan, asOf || "9999-12-31");
-  if (balance <= 0) return null;
-  const today = asOf || new Date().toISOString().slice(0, 10);
+  const today = asOf || todayIso();
+  // Interest already received is applied to the oldest cycle first, so an early payment clears the coming due date.
+  let interestCredit = (loan.transactions || [])
+    .filter(transaction => String(transaction.date || "").slice(0, 10) <= today)
+    .reduce((sum, transaction) => sum + Number(transaction.interestAmount || 0), 0);
   for (let n = 1; n <= 600; n += 1) {
     const dueDate = addMonths(loan.startDate, n);
-    if (dueDate >= today) {
-      const rate = monthlyRateOnDate(loan, dueDate);
-      const amount = Math.round(monthlyInterestOnBalance(balance, rate));
-      const daysRemaining = Math.max(0, Math.floor((new Date(`${dueDate}T12:00:00`) - new Date(`${today}T12:00:00`)) / 86400000));
-      return { dueDate, amount, daysRemaining, outstanding: balance, cycleKey: dueDate };
-    }
+    const balance = loanBalanceAt(loan, dueDate);
+    if (balance <= 0) return null;
+    const interest = monthlyInterestOnBalance(balance, monthlyRateOnDate(loan, dueDate));
+    const remaining = Math.max(0, interest - interestCredit);
+    interestCredit = Math.max(0, interestCredit - interest);
+    if (remaining <= 0 || dueDate < today) continue;
+    const daysRemaining = Math.max(0, Math.floor((new Date(`${dueDate}T12:00:00`) - new Date(`${today}T12:00:00`)) / 86400000));
+    return { dueDate, amount: remaining, daysRemaining, outstanding: balance, cycleKey: dueDate };
   }
   return null;
 }
