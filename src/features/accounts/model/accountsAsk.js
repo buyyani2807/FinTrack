@@ -16,7 +16,60 @@ export const ASK_PROMPTS = [
 
 const norm = value => String(value || "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
 
+const MONTHS = [
+  ["january", "jan"],
+  ["february", "feb"],
+  ["march", "mar"],
+  ["april", "apr"],
+  ["may"],
+  ["june", "jun"],
+  ["july", "jul"],
+  ["august", "aug"],
+  ["september", "sep", "sept"],
+  ["october", "oct"],
+  ["november", "nov"],
+  ["december", "dec"],
+];
+
 const rangeLabel = range => `${range.from || "start"} to ${range.to || "today"}`;
+
+function monthBounds(year, monthIndex) {
+  const month = String(monthIndex + 1).padStart(2, "0");
+  const last = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+  return {
+    from: `${year}-${month}-01`,
+    to: `${year}-${month}-${String(last).padStart(2, "0")}`,
+  };
+}
+
+function monthInQuestion(question, range, today) {
+  const q = norm(question);
+  let monthIndex = -1;
+  let monthName = "";
+  for (let index = 0; index < MONTHS.length; index += 1) {
+    if (!MONTHS[index].some(name => new RegExp(`\\b${name}\\b`).test(q))) continue;
+    monthIndex = index;
+    monthName = MONTHS[index][0];
+    break;
+  }
+  if (monthIndex < 0) return null;
+  const yearMatch = q.match(/\b(20\d{2})\b/);
+  let year = yearMatch ? Number(yearMatch[1]) : 0;
+  if (!year && range?.from && range?.to) {
+    const startYear = Number(String(range.from).slice(0, 4));
+    const endYear = Number(String(range.to).slice(0, 4));
+    for (let candidate = startYear; candidate <= endYear; candidate += 1) {
+      const bounds = monthBounds(candidate, monthIndex);
+      if (bounds.from <= range.to && bounds.to >= range.from) {
+        year = candidate;
+        break;
+      }
+    }
+  }
+  if (!year) year = Number(String(today || "").slice(0, 4)) || new Date().getFullYear();
+  const label = `${monthName.charAt(0).toUpperCase()}${monthName.slice(1)} ${year}`;
+  return { range: monthBounds(year, monthIndex), label };
+}
 
 const takeLines = (rows, limit = 8) => {
   const shown = rows.slice(0, limit);
@@ -68,7 +121,8 @@ export function classifyAccountsQuestion(question, { parties = [], accounts = []
   if (/\b(what did i sell|what sold|top selling|best selling|top item|sales this period)\b/.test(q)) return { id: "topItem" };
   if (/\b(what did i buy|what did i purchase|purchases this period)\b/.test(q)) return { id: "purchases" };
   if (/\b(low stock|reorder)\b/.test(q)) return { id: "lowStock" };
-  if (/\b(profit|loss|income|revenue|expense)\b/.test(q)) return { id: "profit" };
+  if (/\bexpenses?\b/.test(q) && !/\b(profit|loss|income|revenue)\b/.test(q)) return { id: "expenses" };
+  if (/\b(profit|loss|income|revenue|expenses?)\b/.test(q)) return { id: "profit" };
   if (party) return { id: "partyBalance", party };
   return { id: "unknown" };
 }
@@ -117,11 +171,13 @@ function duesAnswer({ title, sourceName, link, rows, empty, noun }) {
 }
 
 function booksSnapshot(input) {
-  const range = input.range || {};
+  const selected = input.range || {};
   const today = input.today;
+  const mentioned = monthInQuestion(input.question, selected, today);
+  const range = mentioned?.range || selected;
   const metrics = dashboardMetrics(input.accounts, input.vouchers, input.parties, { today, ...range });
   const pnl = profitAndLoss(input.accounts, input.vouchers, range);
-  return { range, today, metrics, pnl, label: rangeLabel(range) };
+  return { range, today, metrics, pnl, label: mentioned?.label || rangeLabel(range) };
 }
 
 function expenseAnswer(expense, pnl, label) {
@@ -130,7 +186,7 @@ function expenseAnswer(expense, pnl, label) {
   return {
     matched: true,
     title: expense.name,
-    summary: `${expense.name} is ${money(amount)} in this period.`,
+    summary: `${expense.name} is ${money(amount)} for ${label}.`,
     source: `Profit and loss · ${expense.code || ""} ${expense.name} · ${label}`.replace(/\s+/g, " ").trim(),
     link: "pnl",
     lines: [{ label: expense.name, detail: expense.code || "", amount }],
@@ -229,7 +285,7 @@ const unknownAnswer = () => ({
 });
 
 export function askAccountsBooks(question, input = {}) {
-  const books = booksSnapshot(input);
+  const books = booksSnapshot({ ...input, question });
   const intent = classifyAccountsQuestion(question, input);
   const asked = { ...input, question };
   if (intent.id === "empty" || intent.id === "unknown") return unknownAnswer();
@@ -283,6 +339,18 @@ export function askAccountsBooks(question, input = {}) {
   }
   if (intent.id === "expense") return expenseAnswer(intent.expense, books.pnl, books.label);
   if (intent.id === "cash") return cashAnswer(books.metrics, books.label, intent.cashbook);
+  if (intent.id === "expenses") {
+    const rows = [...(books.pnl.expenses || [])].filter(row => row.amount > 0).sort((a, b) => b.amount - a.amount);
+    const { shown, extra } = takeLines(rows);
+    return {
+      matched: true,
+      title: "Expenses",
+      summary: `Expenses are ${money(books.pnl.totalExpense)} for ${books.label}${extra ? `. Showing ${shown.length} of ${rows.length}` : ""}.`,
+      source: `Profit and loss · ${books.label}`,
+      link: "pnl",
+      lines: shown.map(row => ({ label: row.name, detail: row.code || "", amount: row.amount })),
+    };
+  }
   if (intent.id === "profit") {
     return {
       matched: true,

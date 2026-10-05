@@ -93,6 +93,27 @@ test("a party question quotes that party's bills", () => {
   assert.match(answer.lines[0].detail, /Primer/);
 });
 
+test("expenses alone quotes that total, and a named month stays inside that month", () => {
+  const septemberRent = {
+    ...rent,
+    id: "PAY-2",
+    voucherNumber: "PAY-2",
+    date: "2026-09-08",
+    lines: [
+      { coaId: "5010", code: "5010", debit: 3000, credit: 0 },
+      { coaId: "1000", code: "1000", debit: 0, credit: 3000 },
+    ],
+  };
+  const answer = askAccountsBooks("expenses for september 2026", input([rent, septemberRent], {
+    range: { from: "2026-04-01", to: "2027-03-31" },
+  }));
+  assert.equal(answer.matched, true);
+  assert.match(answer.summary, /Expenses are ₹3,000/);
+  assert.match(answer.summary, /September 2026/);
+  assert.equal(answer.lines[0].label, "Salary");
+  assert.equal(answer.lines.some(line => line.amount === 8000), false);
+});
+
 test("an outside question invents no amount", () => {
   const answer = askAccountsBooks("What is the weather in Mumbai?", input([
     sale("SALE-1", "2026-04-10", 10000, "p1"),
