@@ -1,28 +1,41 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { purchaseFormFromBill } from "../../model/billScan.js";
 
-function fileToJpeg(file) {
+function readFile(file) {
   return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const image = new Image();
-    image.onload = () => {
-      const scale = Math.min(1, 1600 / Math.max(image.width, image.height));
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.max(1, Math.round(image.width * scale));
-      canvas.height = Math.max(1, Math.round(image.height * scale));
-      canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob(blob => {
-        URL.revokeObjectURL(url);
-        if (!blob) reject(new Error("Could not read that photo."));
-        else resolve(blob);
-      }, "image/jpeg", 0.72);
-    };
-    image.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error("Could not read that photo."));
-    };
-    image.src = url;
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Could not read that photo. Use a JPEG or PNG."));
+    reader.readAsDataURL(file);
   });
+}
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Could not read that photo. Use a JPEG or PNG."));
+    image.src = src;
+  });
+}
+
+async function fileToJpeg(file) {
+  const source = await readFile(file);
+  const image = await loadImage(source);
+  const scale = Math.min(1, 1600 / Math.max(image.width, image.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.width * scale));
+  canvas.height = Math.max(1, Math.round(image.height * scale));
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Could not read that photo. Use a JPEG or PNG.");
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  const blob = await new Promise((resolve, reject) => {
+    canvas.toBlob(result => {
+      if (result) resolve(result);
+      else reject(new Error("Could not read that photo. Use a JPEG or PNG."));
+    }, "image/jpeg", 0.72);
+  });
+  return blob;
 }
 
 function blobToBase64(blob) {
@@ -39,11 +52,6 @@ export function BillPhotoDraft({ token, parties, items, form, setForm, today }) 
   const [preview, setPreview] = useState("");
   const [notes, setNotes] = useState([]);
   const [error, setError] = useState("");
-  const previewRef = useRef("");
-
-  useEffect(() => () => {
-    if (previewRef.current) URL.revokeObjectURL(previewRef.current);
-  }, []);
 
   const onFile = async event => {
     const file = event.target.files?.[0];
@@ -54,10 +62,7 @@ export function BillPhotoDraft({ token, parties, items, form, setForm, today }) 
     setNotes([]);
     try {
       const jpeg = await fileToJpeg(file);
-      const nextPreview = URL.createObjectURL(jpeg);
-      if (previewRef.current) URL.revokeObjectURL(previewRef.current);
-      previewRef.current = nextPreview;
-      setPreview(nextPreview);
+      setPreview(await readFile(jpeg));
       const data = await blobToBase64(jpeg);
       const response = await fetch("/api/accounts/bill-scan", {
         method: "POST",
@@ -87,7 +92,7 @@ export function BillPhotoDraft({ token, parties, items, form, setForm, today }) 
         {preview ? <img src={preview} alt="Supplier bill" /> : null}
         <label className="btn">
           {busy ? "Reading the bill…" : "Scan bill"}
-          <input type="file" accept="image/*" capture="environment" disabled={busy} onChange={onFile} />
+          <input type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" disabled={busy} onChange={onFile} />
         </label>
       </div>
       {error ? <p className="small acc-bill-scan-error" role="alert">{error}</p> : null}
