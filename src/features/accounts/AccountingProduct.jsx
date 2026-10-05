@@ -1943,6 +1943,7 @@ const openVoucher = () => {
           workspace={workspace}
           setListPage={setListPage}
           invoicePartyRows={invoicePartyRows}
+          voucherItemLines={voucherItemLines}
         />}
 
         {section === "parties" && <PartiesSection
@@ -1964,6 +1965,8 @@ const openVoucher = () => {
           workspace={workspace}
           pagedPartyBook={pagedPartyBook}
           setListPage={setListPage}
+          vouchers={vouchers}
+          voucherItemLines={voucherItemLines}
         />}
 
         {section === "manufacturing" && manufacturingEnabled && <ManufacturingWorkspace items={items} stockMovements={stockMovements} saving={saving} onItems={() => openSection("inventory")} onTransactions={() => openSection("vouchers")} onProductionRun={recordProductionRun} />}

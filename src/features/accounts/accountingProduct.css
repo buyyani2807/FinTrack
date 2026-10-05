@@ -2612,6 +2612,34 @@
   font-variant-numeric: tabular-nums;
 }
 
+.accounts-dashboard .acc-invoice-ref-btn {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.accounts-dashboard .acc-goods-row td {
+  background: var(--acc-surface-2, transparent);
+  padding-top: 8px;
+  padding-bottom: 12px;
+}
+
+.accounts-dashboard .acc-goods-lines {
+  width: 100%;
+  margin: 0;
+}
+
+.accounts-dashboard .acc-goods-stack {
+  display: grid;
+  gap: 10px;
+}
+
 .accounts-dashboard .accounts-invoice-table .acc-invoice-paid {
   color: var(--acc-muted);
 }

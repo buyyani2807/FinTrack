@@ -479,6 +479,7 @@ export function partyLedger(accounts, vouchers, party, { from, to, voucherType }
     if (from && voucher.date < from) continue;
     rows.push({
       date: voucher.date,
+      voucherId: voucher.id,
       voucherNumber: voucher.voucherNumber,
       voucherType: voucher.voucherType,
       narration: voucher.narration,
@@ -574,7 +575,9 @@ export function invoiceRegister(accounts, vouchers, parties = [], { kind = "rece
         partyName: partyById[voucherPartyId]?.name || (voucherPartyId ? voucherPartyId : isAr ? "Cash sale" : "Cash purchase"),
         partyPhone: partyById[voucherPartyId]?.phone || "",
         partyType: partyById[voucherPartyId]?.partyType || (isAr ? "customer" : "supplier"),
+        voucherId: voucher.id,
         reference: voucher.voucherNumber,
+        narration: voucher.narration || "",
         invoiceDate: voucher.date,
         dueDate: voucher.dueDate || addDaysIso(voucher.date, 7),
         amount,
@@ -621,7 +624,9 @@ export function invoiceRegister(accounts, vouchers, parties = [], { kind = "rece
           partyName: partyById[linePartyId]?.name || linePartyId,
           partyPhone: partyById[linePartyId]?.phone || "",
           partyType: partyById[linePartyId]?.partyType || (isAr ? "customer" : "supplier"),
+          voucherId: voucher.id,
           reference: voucher.voucherNumber,
+          narration: voucher.narration || "",
           invoiceDate: voucher.date,
           dueDate: voucher.dueDate || addDaysIso(voucher.date, 7),
           amount: increase,

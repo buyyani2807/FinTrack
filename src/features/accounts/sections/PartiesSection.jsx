@@ -1,8 +1,10 @@
+import { Fragment, useState } from "react";
 import { ChevronDown, Mail, Phone } from "lucide-react";
 import { Select } from "../../../components/Select.jsx";
 import { FilterSelect } from "../../../components/ui.jsx";
 import { formatReceiptDate } from "../../receipts/model/receiptModel.js";
 import { AccEmpty, AccPager } from "../components/AccUi.jsx";
+import { GoodsLines, SettledGoods, linesForVoucher } from "../components/InvoiceTable.jsx";
 import { VOUCHER_TYPES } from "../model/accountingModel.js";
 import { OutstandingWhatsAppButton, PartyStatementButton } from "../components/SalesInvoiceActions.jsx";
 import { money, partyTypeLabel } from "../accountsFormat.js";
@@ -28,7 +30,27 @@ export function PartiesSection({
   workspace,
   pagedPartyBook,
   setListPage,
+  vouchers = [],
+  voucherItemLines = [],
 }) {
+  const [openKey, setOpenKey] = useState(null);
+  const goodsFor = row => {
+    const voucher = vouchers.find(item => item.id === row.voucherId);
+    const settled = row.voucherType === "receipt" || row.voucherType === "payment" || row.voucherType === "credit_note" || row.voucherType === "debit_note";
+    if (settled) {
+      return <SettledGoods voucher={voucher} vouchers={vouchers} voucherItemLines={voucherItemLines} kind={row.voucherType === "payment" || row.voucherType === "debit_note" ? "payable" : "receivable"} />;
+    }
+    if (row.voucherType === "sales" || row.voucherType === "purchase") {
+      return (
+        <GoodsLines
+          lines={linesForVoucher(voucherItemLines, row.voucherId)}
+          narration={row.narration}
+          empty={row.voucherType === "purchase" ? "This purchase was entered as an amount, with no item lines." : "This sale was entered as an amount, with no item lines."}
+        />
+      );
+    }
+    return <p className="small">{row.narration || "No item lines on this voucher."}</p>;
+  };
   return (
     <div className="acc-panel acc-party-ledger">
       <div className="acc-party-ledger-toolbar">
@@ -109,33 +131,53 @@ export function PartiesSection({
           <div className={`is-key ${partyBook.advance > 0 ? "is-ok" : partyBook.outstanding ? "is-due" : ""}`.trim()}><dt>{partyBook.advance > 0 ? "Advance" : "Outstanding"}</dt><dd>{money(partyBook.advance > 0 ? partyBook.advance : partyBook.outstanding)}</dd></div>
         </dl>
         <div className="table acc-table-wrap acc-party-ledger-table"><table><thead><tr><th>Date</th><th>Voucher</th><th>Type</th><th>Narration</th><th className="acc-num">Debit</th><th className="acc-num">Credit</th><th className="acc-num">Balance</th></tr></thead><tbody>
-          {pagedPartyBook.items.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}>
-            <td className="acc-nowrap">{formatReceiptDate(row.date)}</td>
-            <td><strong>{row.voucherNumber}</strong></td>
-            <td><span className="acc-voucher-chip">{VOUCHER_TYPES[row.voucherType]?.label || row.voucherType}</span></td>
-            <td className="acc-party-ledger-narration">{row.narration || "—"}</td>
-            <td className="acc-num">{row.debit ? money(row.debit) : ""}</td>
-            <td className="acc-num">{row.credit ? money(row.credit) : ""}</td>
-            <td className="acc-num acc-party-ledger-balance">{money(row.balance)}</td>
-          </tr>)}
+          {pagedPartyBook.items.map((row, index) => {
+            const key = `${row.voucherId || row.voucherNumber}-${index}`;
+            const open = openKey === key;
+            return (
+              <Fragment key={key}>
+                <tr>
+                  <td className="acc-nowrap">{formatReceiptDate(row.date)}</td>
+                  <td>
+                    <button type="button" className="acc-invoice-ref-btn" aria-expanded={open} onClick={() => setOpenKey(current => current === key ? null : key)}>
+                      {row.voucherNumber}
+                    </button>
+                  </td>
+                  <td><span className="acc-voucher-chip">{VOUCHER_TYPES[row.voucherType]?.label || row.voucherType}</span></td>
+                  <td className="acc-party-ledger-narration">{row.narration || "—"}</td>
+                  <td className="acc-num">{row.debit ? money(row.debit) : ""}</td>
+                  <td className="acc-num">{row.credit ? money(row.credit) : ""}</td>
+                  <td className="acc-num acc-party-ledger-balance">{money(row.balance)}</td>
+                </tr>
+                {open ? <tr className="acc-goods-row"><td colSpan={7}>{goodsFor(row)}</td></tr> : null}
+              </Fragment>
+            );
+          })}
           {!partyBook.rows.length && <tr><td colSpan="7">No transactions for this party in the selected dates.</td></tr>}
         </tbody></table></div>
         <AccPager page={pagedPartyBook.page} pages={pagedPartyBook.pages} total={pagedPartyBook.total} onPage={setListPage} noun="transactions" />
         <div className="acc-party-ledger-cards">
-          {pagedPartyBook.items.map((row, index) => (
-            <article key={`${row.voucherNumber}-${index}`} className="card acc-party-ledger-card">
-              <div className="acc-party-ledger-card-top">
-                <strong>{row.voucherNumber}</strong>
-                <span className="acc-voucher-chip">{VOUCHER_TYPES[row.voucherType]?.label || row.voucherType}</span>
-              </div>
-              <p className="small">{formatReceiptDate(row.date)}{row.narration ? ` · ${row.narration}` : ""}</p>
-              <p className="acc-party-ledger-card-amounts">
-                {row.debit ? <span>Debit <strong>{money(row.debit)}</strong></span> : null}
-                {row.credit ? <span>Credit <strong>{money(row.credit)}</strong></span> : null}
-                <span>Balance <strong>{money(row.balance)}</strong></span>
-              </p>
-            </article>
-          ))}
+          {pagedPartyBook.items.map((row, index) => {
+            const key = `${row.voucherId || row.voucherNumber}-${index}`;
+            const open = openKey === key;
+            return (
+              <article key={key} className="card acc-party-ledger-card">
+                <div className="acc-party-ledger-card-top">
+                  <button type="button" className="acc-invoice-ref-btn" aria-expanded={open} onClick={() => setOpenKey(current => current === key ? null : key)}>
+                    {row.voucherNumber}
+                  </button>
+                  <span className="acc-voucher-chip">{VOUCHER_TYPES[row.voucherType]?.label || row.voucherType}</span>
+                </div>
+                <p className="small">{formatReceiptDate(row.date)}{row.narration ? ` · ${row.narration}` : ""}</p>
+                <p className="acc-party-ledger-card-amounts">
+                  {row.debit ? <span>Debit <strong>{money(row.debit)}</strong></span> : null}
+                  {row.credit ? <span>Credit <strong>{money(row.credit)}</strong></span> : null}
+                  <span>Balance <strong>{money(row.balance)}</strong></span>
+                </p>
+                {open ? goodsFor(row) : null}
+              </article>
+            );
+          })}
           {!partyBook.rows.length && <p className="copy">No transactions for this party in the selected dates.</p>}
         </div>
       </> : <AccEmpty title="No customers or suppliers yet" copy="Accounts parties are independent of Daily Finance customers and Chit Fund members." actionLabel={canWrite ? "+ Add party" : ""} onAction={canWrite ? openParty : undefined} />}
