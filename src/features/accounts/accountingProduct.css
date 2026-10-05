@@ -3321,6 +3321,49 @@
   color: var(--acc-muted);
 }
 
+.accounts-dashboard .acc-bill-scan-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.accounts-dashboard .acc-bill-scan-row img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border: 1px solid var(--acc-line);
+  border-radius: 8px;
+}
+
+.accounts-dashboard .acc-bill-scan label.btn {
+  position: relative;
+  cursor: pointer;
+}
+
+.accounts-dashboard .acc-bill-scan input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.accounts-dashboard .acc-bill-scan-notes {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--acc-muted);
+  font-size: 12px;
+}
+
+.accounts-dashboard .acc-bill-scan-error {
+  margin: 0;
+  color: var(--ft-danger, #b42318);
+}
+
 .accounts-dashboard .acc-form-section .form {
   margin: 0;
 }

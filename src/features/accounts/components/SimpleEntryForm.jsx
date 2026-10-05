@@ -19,8 +19,9 @@ import { EntryAmountSection } from "./simpleEntry/EntryAmountSection.jsx";
 import { ItemLinesSection } from "./simpleEntry/ItemLinesSection.jsx";
 import { SaleSummaryCard } from "./simpleEntry/SaleSummaryCard.jsx";
 import { BillwiseSettlement } from "./simpleEntry/BillwiseSettlement.jsx";
+import { BillPhotoDraft } from "./simpleEntry/BillPhotoDraft.jsx";
 
-export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, saving, maxDate, gstCompany, onGstSetup, items = [], stockByItem = {}, openInvoices = [], creditInfo = null }) {
+export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, saving, maxDate, gstCompany, onGstSetup, items = [], stockByItem = {}, openInvoices = [], creditInfo = null, token }) {
   const customers = parties.filter(party => party.partyType === "customer" && (party.isActive !== false || party.id === form.partyId));
   const suppliers = parties.filter(party => party.partyType === "supplier" && (party.isActive !== false || party.id === form.partyId));
   const expenseOptions = SIMPLE_EXPENSE_CODES.filter(([code]) => accounts.some(account => account.code === code) || code === "5990");
@@ -138,6 +139,9 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
 
   return <>
     <p className="copy">{noteCopy}</p>
+    {kind === "purchase" && (
+      <BillPhotoDraft token={token} parties={parties} items={items} form={form} setForm={setForm} today={maxDate} />
+    )}
     <section className="acc-form-section">
       <h3 className="acc-form-section-title">Details</h3>
       <div className="form">

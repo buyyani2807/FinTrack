@@ -35,7 +35,7 @@ export function ItemLinesSection({
             <tr key={index}>
               <td>
                 <Select value={line.itemId || ""} onChange={event => selectItem(index, event.target.value)}>
-                  <option value="">Search / select item</option>
+                  <option value="">{line.itemName && !line.itemId ? `From the bill: ${line.itemName}` : "Search / select item"}</option>
                   {activeItems.map(item => (
                     <option key={item.id} value={item.id}>
                       {item.name} · {item.sku}{item.itemType === "product" && stockByItem[item.id] != null ? ` · stock ${stockByItem[item.id]} ${item.unit}` : ""}
@@ -43,6 +43,7 @@ export function ItemLinesSection({
                   ))}
                 </Select>
                 {stock != null && <div className="small">Stock {stock} {line.unit || ""}</div>}
+                {!line.itemId && line.itemName ? <div className="small">From the bill: {line.itemName}</div> : null}
               </td>
               <td><input type="number" min="0" step="0.001" value={line.quantity} onChange={event => patchItemLine(index, { quantity: event.target.value })} /></td>
               <td><input type="number" min="0" step="0.01" value={line.rate} onChange={event => patchItemLine(index, { rate: event.target.value, rateTouched: true })} /></td>
@@ -58,7 +59,7 @@ export function ItemLinesSection({
         {(form.itemLines || [emptyItemLine()]).map((line, index) => {
           const lineTotals = normalizeItemLine(line);
           const stock = line.itemId ? stockByItem[line.itemId] : null;
-          const lineName = activeItems.find(item => item.id === line.itemId)?.name || "Select item";
+          const lineName = activeItems.find(item => item.id === line.itemId)?.name || line.itemName || "Select item";
           return (
             <article key={index} className="acc-item-line-card">
               <div className="acc-item-line-card-top">
@@ -68,7 +69,7 @@ export function ItemLinesSection({
               <label className="accounts-filter-field">
                 <span className="small">Item</span>
                 <Select value={line.itemId || ""} onChange={event => selectItem(index, event.target.value)}>
-                  <option value="">Search / select item</option>
+                  <option value="">{line.itemName && !line.itemId ? `From the bill: ${line.itemName}` : "Search / select item"}</option>
                   {activeItems.map(item => (
                     <option key={item.id} value={item.id}>
                       {item.name} · {item.sku}{item.itemType === "product" && stockByItem[item.id] != null ? ` · stock ${stockByItem[item.id]} ${item.unit}` : ""}
