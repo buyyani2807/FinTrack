@@ -1179,6 +1179,81 @@
 .accounts-dashboard .acc-ov-aging-foot i.current { background: var(--acc-blue); }
 .accounts-dashboard .acc-ov-aging-foot i.overdue { background: var(--ft-warning); }
 
+.accounts-dashboard .acc-ask {
+  padding: 16px 18px;
+}
+
+.accounts-dashboard .acc-ask-head {
+  margin-bottom: 12px;
+}
+
+.accounts-dashboard .acc-ask-form {
+  display: flex;
+  gap: 8px;
+}
+
+.accounts-dashboard .acc-ask-form input {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--acc-line);
+  border-radius: 10px;
+  background: var(--acc-surface);
+  color: var(--acc-text);
+  font: inherit;
+}
+
+.accounts-dashboard .acc-ask-prompts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.accounts-dashboard .acc-ask-answer {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--acc-line);
+}
+
+.accounts-dashboard .acc-ask-answer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.accounts-dashboard .acc-ask-answer p {
+  margin: 8px 0 0;
+}
+
+.accounts-dashboard .acc-ask-lines {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.accounts-dashboard .acc-ask-lines li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--acc-line);
+}
+
+.accounts-dashboard .acc-ask-lines strong {
+  display: block;
+  font-weight: 600;
+}
+
+.accounts-dashboard .acc-ask-lines em {
+  display: block;
+  color: var(--acc-muted);
+  font-style: normal;
+  font-size: 12px;
+}
+
 .accounts-dashboard .acc-intel {
   padding: 16px 18px;
 }

@@ -6,6 +6,7 @@ import { trackProductEvent } from "../../commercial/productAnalytics.js";
 import { todayIso } from "../../../lib/dates.js";
 import { INDIA_STATES } from "../model/accountingGst.js";
 import { AccIntelligenceBrief } from "../components/AccIntelligenceBrief.jsx";
+import { AccAskBooks } from "../components/AccAskBooks.jsx";
 import { emptyPartyForm } from "../accountsFormDefaults.js";
 import { money } from "../accountsFormat.js";
 import { AccOverviewContextBar } from "../components/AccPeriodBars.jsx";
@@ -166,6 +167,18 @@ export function OverviewSection({
         onReceivables={() => openSection("receivables")}
         onPayables={() => openSection("payables")}
       />
+
+      {settings && <AccAskBooks
+        accounts={visibleAccounts}
+        vouchers={vouchers}
+        parties={parties}
+        items={items}
+        stockMovements={stockMovements}
+        voucherItemLines={voucherItemLines}
+        range={range}
+        today={todayIso()}
+        onNavigate={openSection}
+      />}
 
       <AccIntelligenceBrief
         accounts={visibleAccounts}
