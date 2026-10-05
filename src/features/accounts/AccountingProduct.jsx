@@ -1944,6 +1944,8 @@ const openVoucher = () => {
           setListPage={setListPage}
           invoicePartyRows={invoicePartyRows}
           voucherItemLines={voucherItemLines}
+          stockMovements={stockMovements}
+          items={items}
         />}
 
         {section === "parties" && <PartiesSection
@@ -1967,6 +1969,8 @@ const openVoucher = () => {
           setListPage={setListPage}
           vouchers={vouchers}
           voucherItemLines={voucherItemLines}
+          stockMovements={stockMovements}
+          items={items}
         />}
 
         {section === "manufacturing" && manufacturingEnabled && <ManufacturingWorkspace items={items} stockMovements={stockMovements} saving={saving} onItems={() => openSection("inventory")} onTransactions={() => openSection("vouchers")} onProductionRun={recordProductionRun} />}
@@ -2071,6 +2075,8 @@ const openVoucher = () => {
           workspace={workspace}
           settings={settings}
           voucherItemLines={voucherItemLines}
+          stockMovements={stockMovements}
+          items={items}
           complianceFilings={complianceFilings}
           gstFrequency={gstFrequency}
           changeGstFrequency={changeGstFrequency}

@@ -4,7 +4,7 @@ import { Select } from "../../../components/Select.jsx";
 import { FilterSelect } from "../../../components/ui.jsx";
 import { formatReceiptDate } from "../../receipts/model/receiptModel.js";
 import { AccEmpty, AccPager } from "../components/AccUi.jsx";
-import { GoodsLines, SettledGoods, linesForVoucher } from "../components/InvoiceTable.jsx";
+import { GoodsLines, SettledGoods, goodsLinesFor } from "../components/InvoiceTable.jsx";
 import { VOUCHER_TYPES } from "../model/accountingModel.js";
 import { OutstandingWhatsAppButton, PartyStatementButton } from "../components/SalesInvoiceActions.jsx";
 import { money, partyTypeLabel } from "../accountsFormat.js";
@@ -32,20 +32,22 @@ export function PartiesSection({
   setListPage,
   vouchers = [],
   voucherItemLines = [],
+  stockMovements = [],
+  items = [],
 }) {
   const [openKey, setOpenKey] = useState(null);
   const goodsFor = row => {
     const voucher = vouchers.find(item => item.id === row.voucherId);
     const settled = row.voucherType === "receipt" || row.voucherType === "payment" || row.voucherType === "credit_note" || row.voucherType === "debit_note";
     if (settled) {
-      return <SettledGoods voucher={voucher} vouchers={vouchers} voucherItemLines={voucherItemLines} kind={row.voucherType === "payment" || row.voucherType === "debit_note" ? "payable" : "receivable"} />;
+      return <SettledGoods voucher={voucher} vouchers={vouchers} voucherItemLines={voucherItemLines} stockMovements={stockMovements} items={items} kind={row.voucherType === "payment" || row.voucherType === "debit_note" ? "payable" : "receivable"} />;
     }
     if (row.voucherType === "sales" || row.voucherType === "purchase") {
       return (
         <GoodsLines
-          lines={linesForVoucher(voucherItemLines, row.voucherId)}
+          lines={goodsLinesFor({ voucherId: row.voucherId, voucherItemLines, stockMovements, items })}
           narration={row.narration}
-          empty={row.voucherType === "purchase" ? "This purchase was entered as an amount, with no item lines." : "This sale was entered as an amount, with no item lines."}
+          empty={row.voucherType === "purchase" ? "This purchase was saved as an amount. The items were not recorded on the bill." : "This sale was saved as an amount. The items were not recorded on the bill."}
         />
       );
     }

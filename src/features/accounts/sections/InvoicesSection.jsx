@@ -22,6 +22,8 @@ export function InvoicesSection({
   setListPage,
   invoicePartyRows,
   voucherItemLines,
+  stockMovements,
+  items,
 }) {
   return (
     <div className="acc-panel acc-invoice-page">
@@ -70,7 +72,7 @@ export function InvoicesSection({
           />
         </div>
       </div>
-      <InvoiceTable rows={pagedInvoiceRows.items} kind={isInvoicePayables ? "payable" : "receivable"} orgSettings={orgSettings} activeCompany={activeCompany} workspace={workspace} voucherItemLines={voucherItemLines} />
+      <InvoiceTable rows={pagedInvoiceRows.items} kind={isInvoicePayables ? "payable" : "receivable"} orgSettings={orgSettings} activeCompany={activeCompany} workspace={workspace} voucherItemLines={voucherItemLines} stockMovements={stockMovements} items={items} />
       <AccPager
         page={pagedInvoiceRows.page}
         pages={pagedInvoiceRows.pages}

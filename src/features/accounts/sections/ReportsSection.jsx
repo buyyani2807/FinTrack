@@ -49,6 +49,8 @@ export function ReportsSection({
   stockMoveRows,
   settings,
   voucherItemLines,
+  stockMovements,
+  items,
   complianceFilings,
   gstFrequency,
   changeGstFrequency,
@@ -69,11 +71,11 @@ export function ReportsSection({
         <p className="small">Internal cash/bank/UPI transfers ({money(flow.transfers || 0)}) are excluded from inflow and outflow. Closing cash still follows the ledgers.</p>
       </>}
       {section === "reports" && reportTab === "receivables" && <>
-        <InvoiceTable rows={pagedArInvoices.items} kind="receivable" orgSettings={orgSettings} activeCompany={activeCompany} workspace={workspace} voucherItemLines={voucherItemLines} />
+        <InvoiceTable rows={pagedArInvoices.items} kind="receivable" orgSettings={orgSettings} activeCompany={activeCompany} workspace={workspace} voucherItemLines={voucherItemLines} stockMovements={stockMovements} items={items} />
         <AccPager page={pagedArInvoices.page} pages={pagedArInvoices.pages} total={pagedArInvoices.total} onPage={setListPage} noun="invoices" />
       </>}
       {section === "reports" && reportTab === "payables" && <>
-        <InvoiceTable rows={pagedApInvoices.items} kind="payable" orgSettings={orgSettings} activeCompany={activeCompany} workspace={workspace} voucherItemLines={voucherItemLines} />
+        <InvoiceTable rows={pagedApInvoices.items} kind="payable" orgSettings={orgSettings} activeCompany={activeCompany} workspace={workspace} voucherItemLines={voucherItemLines} stockMovements={stockMovements} items={items} />
         <AccPager page={pagedApInvoices.page} pages={pagedApInvoices.pages} total={pagedApInvoices.total} onPage={setListPage} noun="invoices" />
       </>}
       {section === "reports" && reportTab === "sales" && <AccTable columns={["Date", "Number", "Narration", { label: "Amount", num: true }]} empty={!salesRows.length && "No sales vouchers in this period."}>

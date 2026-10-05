@@ -11,8 +11,39 @@ const invoiceStatusTone = status => {
   return "inv-current";
 };
 
+const GENERIC_NOTE = /^(cash(\s*\+\s*upi)?|upi|bank transfer|credit)\s+(sale|purchase)$/i;
+
+export function usefulNote(narration) {
+  const text = String(narration || "").trim();
+  if (!text || GENERIC_NOTE.test(text)) return "";
+  return text;
+}
+
 export function linesForVoucher(voucherItemLines, voucherId) {
   return (voucherItemLines || []).filter(line => line.voucherId === voucherId);
+}
+
+export function goodsLinesFor({ voucherId, voucherItemLines, stockMovements = [], items = [] }) {
+  const saved = linesForVoucher(voucherItemLines, voucherId);
+  if (saved.length) return saved;
+  const byItem = new Map();
+  for (const move of stockMovements) {
+    if (move.voucherId !== voucherId || !move.itemId) continue;
+    const item = items.find(entry => entry.id === move.itemId);
+    const qty = Math.abs(Number(move.quantityDelta || 0));
+    const current = byItem.get(move.itemId) || {
+      id: move.id,
+      itemName: item?.name || "Item",
+      itemSku: item?.sku || "",
+      unit: item?.unit || "",
+      quantity: 0,
+      rate: null,
+      amount: null,
+    };
+    current.quantity += qty;
+    byItem.set(move.itemId, current);
+  }
+  return [...byItem.values()];
 }
 
 export function GoodsLines({ lines, narration, empty }) {
@@ -32,18 +63,18 @@ export function GoodsLines({ lines, narration, empty }) {
             <tr key={line.id || `${line.lineNo}-${line.itemName}`}>
               <td>{line.itemName || "Item"}{line.itemSku ? <span className="small"> · {line.itemSku}</span> : null}</td>
               <td className="acc-num">{line.quantity} {line.unit || ""}</td>
-              <td className="acc-num">{money(line.rate)}</td>
-              <td className="acc-num">{money(line.amount)}</td>
+              <td className="acc-num">{line.rate == null ? "" : money(line.rate)}</td>
+              <td className="acc-num">{line.amount == null ? "" : money(line.amount)}</td>
             </tr>
           ))}
         </tbody>
       </table>
     );
   }
-  return <p className="small">{narration || empty}</p>;
+  return <p className="small">{usefulNote(narration) || empty}</p>;
 }
 
-export function SettledGoods({ voucher, vouchers, voucherItemLines, kind }) {
+export function SettledGoods({ voucher, vouchers, voucherItemLines, stockMovements, items, kind }) {
   const links = Array.isArray(voucher?.settlements) ? voucher.settlements.filter(link => link.invoiceVoucherId && Number(link.amount) > 0) : [];
   const noun = kind === "payable" ? "purchase" : "sale";
   if (!links.length) {
@@ -57,9 +88,9 @@ export function SettledGoods({ voucher, vouchers, voucherItemLines, kind }) {
           <div key={`${link.invoiceVoucherId}-${link.amount}`}>
             <p className="small"><strong>{invoice?.voucherNumber || "Bill"}</strong> · settled {money(link.amount)}</p>
             <GoodsLines
-              lines={linesForVoucher(voucherItemLines, link.invoiceVoucherId)}
+              lines={goodsLinesFor({ voucherId: link.invoiceVoucherId, voucherItemLines, stockMovements, items })}
               narration={invoice?.narration}
-              empty={`This ${noun} was entered as an amount, with no item lines.`}
+              empty={`This ${noun} was saved as an amount. The items were not recorded on the bill.`}
             />
           </div>
         );
@@ -68,7 +99,7 @@ export function SettledGoods({ voucher, vouchers, voucherItemLines, kind }) {
   );
 }
 
-export function InvoiceTable({ rows, kind, orgSettings, activeCompany, workspace, voucherItemLines = [] }) {
+export function InvoiceTable({ rows, kind, orgSettings, activeCompany, workspace, voucherItemLines = [], stockMovements = [], items = [] }) {
   const [openId, setOpenId] = useState(null);
   const emptyTitle = kind === "payable" ? "No outstanding payables" : "No outstanding receivables";
   const emptyCopy = kind === "payable"
@@ -100,9 +131,14 @@ export function InvoiceTable({ rows, kind, orgSettings, activeCompany, workspace
               const open = openId === row.id;
               const goods = (
                 <GoodsLines
-                  lines={linesForVoucher(voucherItemLines, row.voucherId || String(row.id).split(":")[0])}
+                  lines={goodsLinesFor({
+                    voucherId: row.voucherId || String(row.id).split(":")[0],
+                    voucherItemLines,
+                    stockMovements,
+                    items,
+                  })}
                   narration={row.narration}
-                  empty={kind === "payable" ? "This purchase was entered as an amount, with no item lines." : "This sale was entered as an amount, with no item lines."}
+                  empty={kind === "payable" ? "This purchase was saved as an amount. The items were not recorded on the bill." : "This sale was saved as an amount. The items were not recorded on the bill."}
                 />
               );
               return (
@@ -163,9 +199,14 @@ export function InvoiceTable({ rows, kind, orgSettings, activeCompany, workspace
             </div>
             {openId === row.id && (
               <GoodsLines
-                lines={linesForVoucher(voucherItemLines, row.voucherId || String(row.id).split(":")[0])}
+                lines={goodsLinesFor({
+                  voucherId: row.voucherId || String(row.id).split(":")[0],
+                  voucherItemLines,
+                  stockMovements,
+                  items,
+                })}
                 narration={row.narration}
-                empty={kind === "payable" ? "This purchase was entered as an amount, with no item lines." : "This sale was entered as an amount, with no item lines."}
+                empty={kind === "payable" ? "This purchase was saved as an amount. The items were not recorded on the bill." : "This sale was saved as an amount. The items were not recorded on the bill."}
               />
             )}
           </article>
