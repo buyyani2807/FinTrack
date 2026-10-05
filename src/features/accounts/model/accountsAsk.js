@@ -88,16 +88,21 @@ function matchParty(question, parties = []) {
   return best;
 }
 
-function matchExpense(question, accounts = []) {
+function nameInQuestion(question, name) {
+  const normalized = norm(name);
+  if (normalized.length < 3) return false;
+  const words = normalized.split(" ");
+  if (words.length === 1) return new RegExp(`\\b${normalized}s?\\b`).test(question);
+  return question.includes(normalized);
+}
+
+function matchLedger(question, accounts = []) {
   let best = null;
   for (const account of accounts) {
-    if (account.groupType !== "expense" && account.accountType !== "expense") continue;
-    const name = norm(account.name);
-    if (name.length < 3) continue;
-    const words = name.split(" ");
-    const hit = question.includes(name) || (words.length === 1 && new RegExp(`\\b${words[0]}\\b`).test(question));
-    if (!hit) continue;
-    if (!best || name.length > norm(best.name).length) best = account;
+    const group = account.groupType || account.accountType;
+    if (group !== "expense" && group !== "income") continue;
+    if (!nameInQuestion(question, account.name)) continue;
+    if (!best || norm(account.name).length > norm(best.name).length) best = account;
   }
   return best;
 }
@@ -108,8 +113,8 @@ export function classifyAccountsQuestion(question, { parties = [], accounts = []
   const party = matchParty(q, parties);
   if (party && /\b(sold|sell|sale|sales|bought|buy|purchase|purchased)\b/.test(q)) return { id: "partyBills", party };
   if (/\bgst\b|gstr|input tax|output tax/.test(q)) return { id: "gst" };
-  const expense = matchExpense(q, accounts);
-  if (expense && !/\b(who|owe|owes|owing|receivable|payable)\b/.test(q)) return { id: "expense", expense };
+  const ledger = matchLedger(q, accounts);
+  if (ledger && !/\b(who|owe|owes|owing|receivable|payable)\b/.test(q)) return { id: "ledger", ledger };
   if (/\boverdue\b|\bpast due\b/.test(q)) {
     if (/\b(pay|supplier|payable)\b/.test(q)) return { id: "payablesOverdue" };
     if (/\b(receiv|customer)\b/.test(q) || /\bowe me\b/.test(q)) return { id: "receivablesOverdue" };
@@ -120,8 +125,11 @@ export function classifyAccountsQuestion(question, { parties = [], accounts = []
   if (/\b(cashbook|cash book|cash|bank|upi)\b/.test(q)) return { id: "cash", cashbook: /\b(cashbook|cash book)\b/.test(q) };
   if (/\b(what did i sell|what sold|top selling|best selling|top item|sales this period)\b/.test(q)) return { id: "topItem" };
   if (/\b(what did i buy|what did i purchase|purchases this period)\b/.test(q)) return { id: "purchases" };
+  if (/\bsales?\b/.test(q)) return { id: "topItem" };
+  if (/\bpurchases?\b/.test(q)) return { id: "purchases" };
   if (/\b(low stock|reorder)\b/.test(q)) return { id: "lowStock" };
   if (/\bexpenses?\b/.test(q) && !/\b(profit|loss|income|revenue)\b/.test(q)) return { id: "expenses" };
+  if (/\b(incomes?|revenue)\b/.test(q) && !/\b(profit|loss|expense)\b/.test(q)) return { id: "income" };
   if (/\b(profit|loss|income|revenue|expenses?)\b/.test(q)) return { id: "profit" };
   if (party) return { id: "partyBalance", party };
   return { id: "unknown" };
@@ -150,7 +158,7 @@ const openInvoices = (accounts, vouchers, parties, { kind, today, range, outstan
     outstandingOnly,
   });
 
-function duesAnswer({ title, sourceName, link, rows, empty, noun }) {
+function duesAnswer({ title, sourceName, link, rows, empty, noun, period }) {
   const totals = partyOutstanding(rows);
   const total = roundMoney(totals.reduce((sum, row) => sum + row.amount, 0));
   const { shown, extra } = takeLines(totals);
@@ -158,10 +166,10 @@ function duesAnswer({ title, sourceName, link, rows, empty, noun }) {
     matched: true,
     title,
     summary: total > 0
-      ? `${noun} ${money(total)}${extra ? `. Showing ${shown.length} of ${totals.length}` : ""}.`
+      ? `${noun} ${money(total)} for ${period}${extra ? `. Showing ${shown.length} of ${totals.length}` : ""}.`
       : empty,
     source: sourceName,
-    link: total > 0 ? link : link,
+    link,
     lines: shown.map(row => ({
       label: row.label,
       detail: `${row.bills} bill${row.bills === 1 ? "" : "s"}`,
@@ -175,21 +183,42 @@ function booksSnapshot(input) {
   const today = input.today;
   const mentioned = monthInQuestion(input.question, selected, today);
   const range = mentioned?.range || selected;
-  const metrics = dashboardMetrics(input.accounts, input.vouchers, input.parties, { today, ...range });
+  const metrics = dashboardMetrics(input.accounts, input.vouchers, input.parties, {
+    today,
+    ...(mentioned ? { to: range.to } : range),
+  });
   const pnl = profitAndLoss(input.accounts, input.vouchers, range);
-  return { range, today, metrics, pnl, label: mentioned?.label || rangeLabel(range) };
+  return { range, today, metrics, pnl, label: mentioned?.label || rangeLabel(range), named: Boolean(mentioned) };
 }
 
-function expenseAnswer(expense, pnl, label) {
-  const row = (pnl.expenses || []).find(item => item.code === expense.code || item.id === expense.id || item.name === expense.name);
+function ledgerRows(account, pnl) {
+  const group = account.groupType || account.accountType;
+  return group === "income" ? pnl.income : pnl.expenses;
+}
+
+function ledgerAnswer(account, pnl, label) {
+  const row = (ledgerRows(account, pnl) || []).find(item => item.code === account.code || item.id === account.id || item.name === account.name);
   const amount = roundMoney(row?.amount || 0);
   return {
     matched: true,
-    title: expense.name,
-    summary: `${expense.name} is ${money(amount)} for ${label}.`,
-    source: `Profit and loss · ${expense.code || ""} ${expense.name} · ${label}`.replace(/\s+/g, " ").trim(),
+    title: account.name,
+    summary: `${account.name} is ${money(amount)} for ${label}.`,
+    source: `Profit and loss · ${account.code || ""} ${account.name} · ${label}`.replace(/\s+/g, " ").trim(),
     link: "pnl",
-    lines: [{ label: expense.name, detail: expense.code || "", amount }],
+    lines: [{ label: account.name, detail: account.code || "", amount }],
+  };
+}
+
+function groupAnswer({ title, noun, rows, total, label }) {
+  const active = [...(rows || [])].filter(row => row.amount > 0).sort((a, b) => b.amount - a.amount);
+  const { shown, extra } = takeLines(active);
+  return {
+    matched: true,
+    title,
+    summary: `${noun} ${money(total)} for ${label}${extra ? `. Showing ${shown.length} of ${active.length}` : ""}.`,
+    source: `Profit and loss · ${label}`,
+    link: "pnl",
+    lines: shown.map(row => ({ label: row.name, detail: row.code || "", amount: row.amount })),
   };
 }
 
@@ -199,8 +228,8 @@ function cashAnswer(metrics, label, cashbook) {
     matched: true,
     title: "Cash, bank and UPI",
     summary: cashbook
-      ? `Cash is ${money(metrics.cash)}, bank is ${money(metrics.bank)} and UPI is ${money(metrics.upi)}. The Finance cashbook is its own list.`
-      : `Cash is ${money(metrics.cash)}, bank is ${money(metrics.bank)} and UPI is ${money(metrics.upi)}.`,
+      ? `Cash is ${money(metrics.cash)}, bank is ${money(metrics.bank)} and UPI is ${money(metrics.upi)} for ${label}. The Finance cashbook is its own list.`
+      : `Cash is ${money(metrics.cash)}, bank is ${money(metrics.bank)} and UPI is ${money(metrics.upi)} for ${label}.`,
     source: `Cash, bank and UPI ledgers · ${label}`,
     link: cashbook ? "cashbook" : "ledger",
     lines: [
@@ -218,13 +247,14 @@ function itemNames(voucherItemLines, voucherId) {
     .map(line => line.itemName);
 }
 
-function partyBillsAnswer(party, input, label) {
+function partyBillsAnswer(party, input, books) {
   const buying = /\b(bought|buy|purchase|purchased)\b/.test(norm(input.question));
   const kind = buying || party.partyType === "supplier" ? "payable" : "receivable";
+  const label = books.label;
   const rows = openInvoices(input.accounts, input.vouchers, input.parties, {
     kind,
     today: input.today,
-    range: input.range,
+    range: books.range,
     outstandingOnly: false,
   }).filter(row => row.partyId === party.id);
   const total = roundMoney(rows.reduce((sum, row) => sum + Number(row.amount || 0), 0));
@@ -234,8 +264,8 @@ function partyBillsAnswer(party, input, label) {
     matched: true,
     title: party.name,
     summary: rows.length
-      ? `${verb} ${party.name} in this period are ${money(total)}${extra ? `. Showing ${shown.length} of ${rows.length}` : ""}.`
-      : `${verb} ${party.name} have no bills in this period.`,
+      ? `${verb} ${party.name} are ${money(total)} for ${label}${extra ? `. Showing ${shown.length} of ${rows.length}` : ""}.`
+      : `${verb} ${party.name} have no bills for ${label}.`,
     source: `${kind === "payable" ? "Payables" : "Receivables"} register · ${label}`,
     link: kind === "payable" ? "payables" : "receivables",
     lines: shown.map(row => {
@@ -249,18 +279,19 @@ function partyBillsAnswer(party, input, label) {
   };
 }
 
-function partyBalanceAnswer(party, input, label) {
+function partyBalanceAnswer(party, input, books) {
   const kind = party.partyType === "supplier" ? "payable" : "receivable";
+  const label = books.label;
   const rows = openInvoices(input.accounts, input.vouchers, input.parties, {
     kind,
     today: input.today,
-    range: input.range,
+    range: books.range,
   }).filter(row => row.partyId === party.id);
   const total = roundMoney(rows.reduce((sum, row) => sum + Number(row.outstanding || 0), 0));
   const { shown } = takeLines(rows.filter(row => Number(row.outstanding) > 0));
   const summary = kind === "payable"
-    ? (total > 0 ? `You owe ${party.name} ${money(total)}.` : `You have nothing outstanding to ${party.name} in this period.`)
-    : (total > 0 ? `${party.name} owes ${money(total)}.` : `${party.name} has nothing outstanding in this period.`);
+    ? (total > 0 ? `You owe ${party.name} ${money(total)} for ${label}.` : `You have nothing outstanding to ${party.name} for ${label}.`)
+    : (total > 0 ? `${party.name} owes ${money(total)} for ${label}.` : `${party.name} has nothing outstanding for ${label}.`);
   return {
     matched: true,
     title: party.name,
@@ -298,9 +329,10 @@ export function askAccountsBooks(question, input = {}) {
       link: "receivables",
       rows: filtered,
       empty: intent.id === "receivablesOverdue"
-        ? "No receivable is overdue in this period."
-        : "No customer has an outstanding bill in this period.",
+        ? `No receivable is overdue for ${books.label}.`
+        : `No customer has an outstanding bill for ${books.label}.`,
       noun: intent.id === "receivablesOverdue" ? "Overdue receivables are" : "Customers owe",
+      period: books.label,
     });
   }
   if (intent.id === "payables" || intent.id === "payablesOverdue") {
@@ -312,9 +344,10 @@ export function askAccountsBooks(question, input = {}) {
       link: "payables",
       rows: filtered,
       empty: intent.id === "payablesOverdue"
-        ? "No payable is overdue in this period."
-        : "No supplier bill is outstanding in this period.",
+        ? `No payable is overdue for ${books.label}.`
+        : `No supplier bill is outstanding for ${books.label}.`,
       noun: intent.id === "payablesOverdue" ? "Overdue payables are" : "You owe",
+      period: books.label,
     });
   }
   if (intent.id === "overdue") {
@@ -331,31 +364,37 @@ export function askAccountsBooks(question, input = {}) {
     return {
       matched: true,
       title: "Overdue",
-      summary: `Overdue receivables are ${money(arTotal)} and overdue payables are ${money(apTotal)}.`,
+      summary: `Overdue receivables are ${money(arTotal)} and overdue payables are ${money(apTotal)} for ${books.label}.`,
       source: `Receivables and payables registers · ${books.label}`,
       link: arTotal >= apTotal ? "receivables" : "payables",
       lines,
     };
   }
-  if (intent.id === "expense") return expenseAnswer(intent.expense, books.pnl, books.label);
+  if (intent.id === "ledger") return ledgerAnswer(intent.ledger, books.pnl, books.label);
   if (intent.id === "cash") return cashAnswer(books.metrics, books.label, intent.cashbook);
   if (intent.id === "expenses") {
-    const rows = [...(books.pnl.expenses || [])].filter(row => row.amount > 0).sort((a, b) => b.amount - a.amount);
-    const { shown, extra } = takeLines(rows);
-    return {
-      matched: true,
+    return groupAnswer({
       title: "Expenses",
-      summary: `Expenses are ${money(books.pnl.totalExpense)} for ${books.label}${extra ? `. Showing ${shown.length} of ${rows.length}` : ""}.`,
-      source: `Profit and loss · ${books.label}`,
-      link: "pnl",
-      lines: shown.map(row => ({ label: row.name, detail: row.code || "", amount: row.amount })),
-    };
+      noun: "Expenses are",
+      rows: books.pnl.expenses,
+      total: books.pnl.totalExpense,
+      label: books.label,
+    });
+  }
+  if (intent.id === "income") {
+    return groupAnswer({
+      title: "Income",
+      noun: "Income is",
+      rows: books.pnl.income,
+      total: books.pnl.totalIncome,
+      label: books.label,
+    });
   }
   if (intent.id === "profit") {
     return {
       matched: true,
       title: "Profit this period",
-      summary: `Income is ${money(books.pnl.totalIncome)}, expenses are ${money(books.pnl.totalExpense)} and net profit is ${money(books.pnl.net)}.`,
+      summary: `Income is ${money(books.pnl.totalIncome)}, expenses are ${money(books.pnl.totalExpense)} and net profit is ${money(books.pnl.net)} for ${books.label}.`,
       source: `Profit and loss · ${books.label}`,
       link: "pnl",
       lines: [
@@ -370,7 +409,7 @@ export function askAccountsBooks(question, input = {}) {
     return {
       matched: true,
       title: "GST this period",
-      summary: `Output GST is ${money(gst.outputTax)}, input GST is ${money(gst.inputTax)} and net GST is ${money(gst.netPayable)}.`,
+      summary: `Output GST is ${money(gst.outputTax)}, input GST is ${money(gst.inputTax)} and net GST is ${money(gst.netPayable)} for ${books.label}.`,
       source: `GST books · ${books.label}`,
       link: "gst",
       lines: [
@@ -390,8 +429,8 @@ export function askAccountsBooks(question, input = {}) {
       matched: true,
       title,
       summary: shown.length
-        ? `${shown[0].name} is ${money(shown[0].amount)}${extra ? `. Showing ${shown.length} of ${rows.length}` : ""}.`
-        : "No item lines were posted on bills in this period.",
+        ? `${shown[0].name} is ${money(shown[0].amount)} for ${books.label}${extra ? `. Showing ${shown.length} of ${rows.length}` : ""}.`
+        : `No item lines were posted on bills for ${books.label}.`,
       source: `${intent.id === "purchases" ? "Item purchases" : "Item sales"} · ${books.label}`,
       link: "inventory",
       lines: shown.map(row => ({
@@ -402,11 +441,14 @@ export function askAccountsBooks(question, input = {}) {
     };
   }
   if (intent.id === "lowStock") {
+    const movements = books.named
+      ? (input.stockMovements || []).filter(row => !row.movementDate || row.movementDate <= books.range.to)
+      : input.stockMovements;
     const rows = (input.items || [])
       .filter(item => item.itemType === "product" && item.isActive !== false)
       .map(item => ({
         name: item.name,
-        stock: currentStockForItem(item, input.stockMovements),
+        stock: currentStockForItem(item, movements),
         reorderLevel: item.reorderLevel,
         unit: item.unit,
       }))
@@ -418,7 +460,7 @@ export function askAccountsBooks(question, input = {}) {
       summary: shown.length
         ? `${rows.length} product${rows.length === 1 ? " is" : "s are"} below reorder level${extra ? `. Showing ${shown.length}` : ""}.`
         : "No product is below its reorder level.",
-      source: "Stock on hand",
+      source: books.named ? `Stock on hand · ${books.label}` : "Stock on hand",
       link: "inventory",
       lines: shown.map(row => ({
         label: row.name,
@@ -427,7 +469,7 @@ export function askAccountsBooks(question, input = {}) {
       })),
     };
   }
-  if (intent.id === "partyBills") return partyBillsAnswer(intent.party, asked, books.label);
-  if (intent.id === "partyBalance") return partyBalanceAnswer(intent.party, asked, books.label);
+  if (intent.id === "partyBills") return partyBillsAnswer(intent.party, asked, books);
+  if (intent.id === "partyBalance") return partyBalanceAnswer(intent.party, asked, books);
   return unknownAnswer();
 }

@@ -114,6 +114,37 @@ test("expenses alone quotes that total, and a named month stays inside that mont
   assert.equal(answer.lines.some(line => line.amount === 8000), false);
 });
 
+test("a named month applies to profit, income, sales, dues and a party", () => {
+  const april = sale("SALE-APR", "2026-04-10", 10000, "p1", "2026-04-17");
+  const september = sale("SALE-SEP", "2026-09-10", 2500, "p1", "2026-09-17");
+  const books = input([april, september], {
+    range: { from: "2026-04-01", to: "2027-03-31" },
+    voucherItemLines: [
+      { voucherId: "SALE-APR", itemName: "Primer", quantity: 1, amount: 10000 },
+      { voucherId: "SALE-SEP", itemName: "Coat", quantity: 1, amount: 2500 },
+    ],
+  });
+  const profit = askAccountsBooks("profit for september 2026", books);
+  assert.match(profit.summary, /net profit is ₹2,500 for September 2026/);
+  assert.equal(profit.lines.some(line => line.amount === 10000), false);
+
+  const income = askAccountsBooks("income for september 2026", books);
+  assert.match(income.summary, /Income is ₹2,500 for September 2026/);
+  assert.equal(income.lines[0].label, "Sales");
+
+  const sales = askAccountsBooks("sales for september 2026", books);
+  assert.match(sales.summary, /Sales is ₹2,500 for September 2026/);
+
+  const dues = askAccountsBooks("who owes me in september 2026", books);
+  assert.match(dues.summary, /Customers owe ₹2,500 for September 2026/);
+  assert.equal(dues.lines.some(line => line.amount === 10000), false);
+
+  const party = askAccountsBooks("what did I sell to ABC Traders in september 2026", books);
+  assert.match(party.summary, /₹2,500 for September 2026/);
+  assert.equal(party.lines[0].label, "SALE-SEP");
+  assert.match(party.lines[0].detail, /Coat/);
+});
+
 test("an outside question invents no amount", () => {
   const answer = askAccountsBooks("What is the weather in Mumbai?", input([
     sale("SALE-1", "2026-04-10", 10000, "p1"),

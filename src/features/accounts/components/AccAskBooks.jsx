@@ -36,7 +36,7 @@ export function AccAskBooks({
       <header className="acc-ask-head">
         <div>
           <p className="acc-intel-kicker">Ask the books</p>
-          <p className="acc-intel-note">Answers quote posted reports for {range?.from} to {range?.to}. They leave vouchers unchanged.</p>
+          <p className="acc-intel-note">Answers use {range?.from} to {range?.to}. Name a month, such as September 2026, to use that month instead.</p>
         </div>
       </header>
       <form className="acc-ask-form" onSubmit={event => { event.preventDefault(); ask(query); }}>
