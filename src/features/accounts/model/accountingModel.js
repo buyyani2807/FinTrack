@@ -1167,6 +1167,24 @@ export function integrationVoucherFromCashbookGroup(accounts, entries, { finance
       }),
     };
   }
+  if (sample.sourceType === "opening_balance" && moneyIn > 0) {
+    return {
+      voucherType: "journal",
+      date: sample.entryDate,
+      narration: sample.description || "Opening balance",
+      sourceModule: "cashbook",
+      sourceType: sample.sourceType,
+      sourceTransactionId: sample.sourceId,
+      lines: receiptLines({
+        accounts,
+        cash,
+        upi,
+        bank,
+        receivableCode: SYSTEM_CODES.capital,
+        description: sample.description,
+      }),
+    };
+  }
   if (sample.sourceType === "expense" || (moneyOut > 0 && moneyIn === 0 && sample.sourceType === "manual")) {
     return {
       voucherType: "payment",

@@ -822,7 +822,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
         // Only a returned company UUID is meaningful to the refresh helper.
         // Other save actions may return payloads for their own callers.
         const preferredCompanyId = typeof workResult === "string" && workResult ? workResult : undefined;
-        setNotice(success);
+        setNotice(typeof success === "function" ? success(workResult) : success);
         await refresh(preferredCompanyId || undefined);
         ok = true;
       } catch (err) {

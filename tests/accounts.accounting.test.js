@@ -266,6 +266,23 @@ test("integration ON posts one receipt for a split collection and never duplicat
   assert.equal(again.length, 0);
 });
 
+test("cashbook opening posts a journal that debits cash and credits capital", () => {
+  const cashbook = [{
+    sourceType: "opening_balance",
+    sourceId: "cash-ledger",
+    entryDate: "2026-04-01",
+    description: "Opening Cash Balance",
+    moneyIn: 50000,
+    moneyOut: 0,
+    ledgerType: "cash",
+  }];
+  const created = buildIntegrationVouchers(accounts, cashbook, { enabled: true });
+  assert.equal(created.length, 1);
+  assert.equal(created[0].voucherType, "journal");
+  assert.equal(created[0].lines.find(line => line.code === SYSTEM_CODES.cash).debit, 50000);
+  assert.equal(created[0].lines.find(line => line.code === SYSTEM_CODES.capital).credit, 50000);
+});
+
 test("integration uses paid-to-customer cashbook amount for disbursements", () => {
   const cashbook = [{
     sourceType: "finance_disbursement",
