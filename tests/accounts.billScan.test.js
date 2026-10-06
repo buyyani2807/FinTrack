@@ -216,11 +216,11 @@ test("the same supplier, date, and amount is a duplicate purchase even without a
   }, { parties, items, today: "2026-10-06", vouchers: [purchase("PUR-000002")] });
   assert.equal(different.duplicate, null);
   const marked = markDuplicateInvoices([
-    { id: "a", partyId: "s1", partyName: "Initial Coatings", invoiceDate: "2026-09-15", amount: 12614.8 },
-    { id: "b", partyId: "s1", partyName: "Initial Coatings", invoiceDate: "2026-09-15", amount: 12614.8 },
-    { id: "c", partyId: "s1", partyName: "Initial Coatings", invoiceDate: "2026-09-16", amount: 12614.8 },
+    { id: "a", reference: "PUR-000002", partyId: "s1", partyName: "Initial Coatings", invoiceDate: "2026-09-15", amount: 12614.8 },
+    { id: "b", reference: "PUR-000003", partyId: "s1", partyName: "Initial Coatings", invoiceDate: "2026-09-15", amount: 12614.8 },
+    { id: "c", reference: "PUR-000004", partyId: "s1", partyName: "Initial Coatings", invoiceDate: "2026-09-15", amount: 12614.8 },
   ]);
-  assert.equal(marked[0].possibleDuplicate, true);
-  assert.equal(marked[1].possibleDuplicate, true);
-  assert.equal(marked[2].possibleDuplicate, undefined);
+  assert.equal(marked.find(row => row.reference === "PUR-000002").possibleDuplicate, undefined);
+  assert.equal(marked.find(row => row.reference === "PUR-000003").possibleDuplicate, true);
+  assert.equal(marked.find(row => row.reference === "PUR-000004").possibleDuplicate, true);
 });

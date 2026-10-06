@@ -86,14 +86,17 @@ function duplicateVouchers(vouchers, parties) {
     groups.set(key, list);
   }
   return [...groups.values()].filter(group => group.length > 1).slice(0, 5).map(group => {
-    const name = partyName(parties, group[0].partyId);
-    const numbers = group.map(voucher => voucher.voucherNumber).filter(Boolean).join(", ");
+    const ordered = [...group].sort((a, b) => String(a.voucherNumber || "").localeCompare(String(b.voucherNumber || ""), undefined, { numeric: true }));
+    const original = ordered[0];
+    const copies = ordered.slice(1);
+    const name = partyName(parties, original.partyId);
+    const numbers = copies.map(voucher => voucher.voucherNumber).filter(Boolean).join(", ");
     return item({
-      id: `dup-voucher-${group.map(voucher => voucher.id || voucher.voucherNumber).join("-")}`,
+      id: `dup-voucher-${ordered.map(voucher => voucher.id || voucher.voucherNumber).join("-")}`,
       module: "accounts",
       tone: "duplicate",
       title: numbers || "Vouchers",
-      detail: `${group.length} posted ${voucherTypeLabel(group[0].voucherType)} on ${group[0].date || "the same date"} share ${money(debitTotal(group[0]))}${name ? ` for ${name}` : ""}.`,
+      detail: `${copies.length === 1 ? "This matches" : "These match"} ${original.voucherNumber || "the first voucher"} on ${original.date || "the same date"} for ${money(debitTotal(original))}${name ? `, ${name}` : ""}.`,
       actionLabel: "Open transactions",
       href: { panel: "accounts", section: "vouchers" },
     });

@@ -272,7 +272,8 @@ export function markDuplicateInvoices(rows = []) {
   const flagged = new Set();
   for (const list of groups.values()) {
     if (list.length < 2 || !(roundMoney(list[0]?.amount) > 0)) continue;
-    for (const row of list) flagged.add(row.id);
+    const copies = [...list].sort((a, b) => String(a.reference || "").localeCompare(String(b.reference || ""), undefined, { numeric: true })).slice(1);
+    for (const row of copies) flagged.add(row.id);
   }
   return rows.map(row => flagged.has(row.id) ? { ...row, possibleDuplicate: true } : row);
 }

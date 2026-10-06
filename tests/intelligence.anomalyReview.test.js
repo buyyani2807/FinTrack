@@ -36,8 +36,8 @@ test("three identical purchases are a possible duplicate", () => {
     vouchers: [purchase("PUR-000002"), purchase("PUR-000003"), purchase("PUR-000004")],
   });
   assert.equal(review.items[0].label, "Possible duplicate");
-  assert.match(review.items[0].title, /PUR-000002, PUR-000003, PUR-000004/);
-  assert.match(review.items[0].detail, /purchases/);
+  assert.equal(review.items[0].title, "PUR-000003, PUR-000004");
+  assert.match(review.items[0].detail, /PUR-000002/);
   assert.match(review.items[0].detail, /Initial Coatings/);
 });
 
