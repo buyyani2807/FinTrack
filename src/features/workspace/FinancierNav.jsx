@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from "react-router";
 import { useEffect, useState } from "react";
-import { BookOpenText, CalendarDays, CalendarRange, Coins, LayoutGrid, LogOut, Menu, Settings, Users, Wallet, X } from "lucide-react";
+import { BookOpenText, CalendarDays, CalendarRange, Coins, LayoutGrid, LogOut, Menu, MessageCircle, Settings, Users, Wallet, X } from "lucide-react";
 import { Button } from "../../components/ui.jsx";
 import { ThemeToggle } from "../../components/ThemeToggle.jsx";
 import { assertModuleEntitled } from "../commercial/entitlements.js";
@@ -17,7 +17,7 @@ function NavLabel({ icon: Icon, long, short }) {
 
 // Owner sidebar. Every option navigates to its route. On phones it is a drawer opened from the top bar's menu button
 // that covers the whole screen; on tablets an icon rail; on desktop the full sidebar.
-export function FinancierNav({ access, orgSettings = {}, businessName = "", logout }) {
+export function FinancierNav({ access, orgSettings = {}, businessName = "", logout, onAsk, askEnabled = false }) {
   const location = useLocation();
   const navigate = useNavigate();
   const path = location.pathname.replace(/\/+$/, "");
@@ -63,6 +63,7 @@ export function FinancierNav({ access, orgSettings = {}, businessName = "", logo
     {access.accounts && <Button className={itemClass(isActive(workspacePaths.accounts))} onClick={() => openEntitled("accounts", workspacePaths.accounts)}><NavLabel icon={BookOpenText} long="Accounts" short="Accounts" /></Button>}
     {access.isOwner && <Button className={itemClass(isActive(workspacePaths.collectionStaff))} onClick={() => go(workspacePaths.collectionStaff)}><NavLabel icon={Users} long="Collection Staff" short="Staff" /></Button>}
     {access.isOwner && <Button className={itemClass(isActive(workspacePaths.settings))} onClick={() => go(workspacePaths.settings)}><NavLabel icon={Settings} long="Settings" short="Settings" /></Button>}
+    {askEnabled && onAsk ? <Button onClick={() => { closeDrawer(); onAsk(); }}><NavLabel icon={MessageCircle} long="Ask FinTrack" short="Ask" /></Button> : null}
     <div className="nav-footer">
       <ThemeToggle className="nav-theme" />
       {logout && <Button className="nav-logout" onClick={logout}><NavLabel icon={LogOut} long="Logout" short="Logout" /></Button>}

@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { Outlet, useNavigate, useOutletContext } from "react-router";
 import { loadActiveChitSchemes } from "../../lib/financeRepository";
+import { todayIso } from "../../lib/dates.js";
+import { isModuleEnabled } from "../commercial/entitlements.js";
+import { FintrackAssistant } from "../intelligence/assistant/FintrackAssistant.jsx";
+import { visibleFinanceLoans } from "../intelligence/assistant/askFintrack.js";
 import { loadAccountsModule } from "./accountsModuleLoader.js";
 import { FinancierNav } from "./FinancierNav.jsx";
 import { workspacePaths, workspaceModuleAccess } from "./paths.js";
@@ -20,6 +24,8 @@ export function WorkspaceLayout() {
   // Owner-only routes also require the owner layout (a staff session never gets them, whatever the workspace says).
   const access = showOwnerChrome ? moduleAccess : { ...moduleAccess, isOwner: false, chit: false, cashbook: false, accounts: false };
   const [chitSchemes, setChitSchemes] = useState([]);
+  const [askOpen, setAskOpen] = useState(false);
+  const askEnabled = isModuleEnabled(orgSettings, "ai");
 
   useEffect(() => {
     if (!showOwnerChrome || !token) return undefined;
@@ -66,7 +72,51 @@ export function WorkspaceLayout() {
   return <>
     {dataError && <div className="notice" style={{ position: "fixed", top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 20 }}>{dataError}</div>}
     {showOwnerChrome
-      ? <div className="financier-tools"><FinancierNav access={access} orgSettings={orgSettings} businessName={workspace?.businessName} logout={logout} /><Outlet context={routeContext} /></div>
-      : <Outlet context={routeContext} />}
+      ? <div className="financier-tools"><FinancierNav access={access} orgSettings={orgSettings} businessName={workspace?.businessName} logout={logout} askEnabled={askEnabled} onAsk={() => setAskOpen(true)} /><Outlet context={routeContext} /></div>
+      : <>
+        {askEnabled ? <div className="ft-ask-staff-bar"><button type="button" className="btn" onClick={() => setAskOpen(true)}>Ask FinTrack</button></div> : null}
+        <Outlet context={routeContext} />
+      </>}
+    <FintrackAssistant
+      open={askOpen}
+      onClose={() => setAskOpen(false)}
+      onNavigate={path => navigate(path)}
+      loadBooks={access.accounts && token ? () => loadAssistantBooks(token) : null}
+      context={{
+        today: todayIso(),
+        orgSettings,
+        isOwner: Boolean(access.isOwner),
+        agentId: workspace?.id || "",
+        agentName: workspace?.fullName || "",
+        collectionScope: workspace?.collectionScope || "",
+        allowAccounts: Boolean(access.accounts),
+        allowChit: Boolean(access.chit),
+        loans: visibleFinanceLoans(loans, {
+          isOwner: Boolean(access.isOwner),
+          agentId: workspace?.id || "",
+          collectionScope: workspace?.collectionScope || "",
+        }),
+        chitSchemes,
+      }}
+    />
   </>;
+}
+
+async function loadAssistantBooks(token) {
+  const { fetchAccountsBundle } = await import("../accounts/data/accountsCache.js");
+  const bundle = await fetchAccountsBundle(token);
+  const today = todayIso();
+  const [year, month] = today.split("-").map(Number);
+  const startYear = month >= 4 ? year : year - 1;
+  const fyTo = `${startYear + 1}-03-31`;
+  return {
+    accounts: bundle.accounts || [],
+    vouchers: bundle.vouchers || [],
+    parties: bundle.parties || [],
+    items: bundle.items || [],
+    stockMovements: bundle.stockMovements || [],
+    voucherItemLines: bundle.voucherItemLines || [],
+    companyName: bundle.settings?.companyName || "",
+    range: { from: `${startYear}-04-01`, to: today < fyTo ? today : fyTo },
+  };
 }
