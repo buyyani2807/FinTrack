@@ -11,7 +11,7 @@ export function InventorySettingsTab({ inventorySettings, saving, canEdit, onSav
       <label className="settings-switch-row acc-settings-switch">
         <span>
           <strong>Allow negative stock</strong>
-          <span className="small">Off (recommended): a sale, purchase return or adjustment is blocked if stock on its date — or on any later date — would go below zero. Turn on if you bill before recording purchases and fix stock later.</span>
+          <span className="small">Off (recommended): a sale, purchase return or adjustment is blocked when the quantity is more than the stock on hand. Turn on to allow stock to go below zero.</span>
         </span>
         <input
           type="checkbox"
