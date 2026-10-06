@@ -1,4 +1,6 @@
-import { addDaysIso, roundMoney } from "./accountingModel.js";
+import { addDaysIso, isPosted, roundMoney } from "./accountingModel.js";
+import { gstStateFromGstin, isIntraGst } from "./accountingGst.js";
+import { suggestExpense } from "./bookSuggestions.js";
 import { emptyItemLine } from "./inventoryModel.js";
 
 const GST_RATES = [0, 0.25, 3, 5, 12, 18, 28, 40];
@@ -71,8 +73,34 @@ export function normalizeBillScan(raw) {
     billNumber: clip(source.billNumber || source.bill_number || source.invoiceNumber, 40),
     billDate: parseDate(source.billDate || source.bill_date || source.date),
     paid: source.paid === true || String(source.paymentStatus || source.payment_status || "").toLowerCase() === "paid",
+    paymentStatus: paymentStatusOf(source),
+    documentKind: documentKindOf(source),
+    taxable: moneyOrBlank(source.taxable),
+    cgst: moneyOrBlank(source.cgst),
+    sgst: moneyOrBlank(source.sgst),
+    igst: moneyOrBlank(source.igst),
+    total: moneyOrBlank(source.total),
     lines,
   };
+}
+
+const DOCUMENT_KINDS = new Set(["invoice", "receipt", "payment_proof", "cheque"]);
+
+function documentKindOf(source) {
+  const raw = String(source.documentKind || source.document_kind || source.kind || "invoice").toLowerCase().replace(/[\s-]+/g, "_");
+  return DOCUMENT_KINDS.has(raw) ? raw : "invoice";
+}
+
+function paymentStatusOf(source) {
+  const text = String(source.paymentStatus || source.payment_status || "").toLowerCase();
+  if (source.paid === true || text === "paid") return "paid";
+  if (text === "unpaid" || text === "due" || text === "credit") return "unpaid";
+  return "unknown";
+}
+
+function moneyOrBlank(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 ? roundMoney(number) : null;
 }
 
 function oneMatch(rows) {
@@ -156,5 +184,85 @@ export function purchaseFormFromBill(scan, { parties = [], items = [], form = {}
       ...(itemLines.length ? { itemLines } : {}),
     },
     warnings,
+  };
+}
+
+const KIND_LABELS = {
+  invoice: "Supplier invoice",
+  receipt: "Receipt",
+  payment_proof: "Payment proof",
+  cheque: "Cheque",
+};
+
+function missingBillFields(bill) {
+  const missing = [];
+  if (!bill.supplierName) missing.push("Supplier");
+  if (!bill.billNumber) missing.push("Invoice number");
+  if (!bill.billDate) missing.push("Invoice date");
+  if (!bill.lines.length) missing.push("Line items");
+  if (bill.paymentStatus === "unknown") missing.push("Payment status");
+  if (!bill.supplierGstin && bill.documentKind === "invoice") missing.push("GSTIN");
+  return missing;
+}
+
+export function findDuplicateBill(bill, vouchers = [], partyId = "") {
+  const number = normName(bill.billNumber).replace(/\s/g, "");
+  if (number.length < 4) return null;
+  const hits = (vouchers || []).filter(voucher => {
+    if (!isPosted(voucher)) return false;
+    const narration = normName(`${voucher.narration || ""} ${voucher.voucherNumber || ""}`).replace(/\s/g, "");
+    if (!narration.includes(number)) return false;
+    if (partyId && voucher.partyId && voucher.partyId !== partyId) return false;
+    return true;
+  });
+  return hits[0] || null;
+}
+
+function gstSuggestion(bill, companyState) {
+  const partyState = gstStateFromGstin(bill.supplierGstin);
+  const rate = bill.lines.find(line => Number(line.gstRate) > 0)?.gstRate || "";
+  if (!partyState || !companyState) {
+    return { supply: "", rate, label: "GSTIN or company state is missing, so CGST/SGST versus IGST is not chosen." };
+  }
+  const intra = isIntraGst(companyState, partyState);
+  return {
+    supply: intra ? "intra" : "inter",
+    rate,
+    label: intra
+      ? `Intra-state CGST + SGST${rate ? ` at ${rate}%` : ""}.`
+      : `Inter-state IGST${rate ? ` at ${rate}%` : ""}.`,
+  };
+}
+
+/** Review a scanned document. Nothing is written until the caller applies the draft and saves. */
+export function reviewBillScan(scan, { parties = [], items = [], form = {}, today = "", vouchers = [], accounts = [], companyState = "" } = {}) {
+  const bill = normalizeBillScan(scan);
+  const draft = purchaseFormFromBill(bill, { parties, items, form, today });
+  const party = (parties || []).find(item => item.id === draft.form.partyId) || null;
+  const duplicate = findDuplicateBill(bill, vouchers, party?.id || "");
+  const expense = suggestExpense([bill.supplierName, ...bill.lines.map(line => line.name)].filter(Boolean).join(" "), vouchers, accounts);
+  const gst = gstSuggestion(bill, companyState);
+  const missing = missingBillFields(bill);
+  const matchedLines = (draft.form.itemLines || []).filter(line => line.itemId).length;
+  const confidence = !bill.supplierName && !bill.lines.length
+    ? "low"
+    : missing.length === 0 && party && matchedLines === bill.lines.length
+      ? "high"
+      : "medium";
+  const warnings = [...draft.warnings];
+  if (bill.documentKind !== "invoice") {
+    warnings.unshift(`This reads as a ${KIND_LABELS[bill.documentKind].toLowerCase()}. It stays a draft until you use it and save.`);
+  }
+  if (duplicate) warnings.unshift(`Possible duplicate of ${duplicate.voucherNumber || "a posted voucher"} on ${duplicate.date || "file"}.`);
+  return {
+    bill,
+    documentLabel: KIND_LABELS[bill.documentKind],
+    confidence,
+    missing,
+    duplicate: duplicate ? { voucherNumber: duplicate.voucherNumber || "", date: duplicate.date || "" } : null,
+    supplier: party ? { id: party.id, name: party.name } : null,
+    expense: expense ? { expenseCode: expense.expenseCode, expenseName: expense.expenseName, amount: expense.amount, date: expense.date } : null,
+    gst,
+    draft: { ...draft, warnings },
   };
 }

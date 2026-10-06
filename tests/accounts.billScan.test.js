@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizeBillScan, purchaseFormFromBill } from "../src/features/accounts/model/billScan.js";
+import { normalizeBillScan, purchaseFormFromBill, reviewBillScan } from "../src/features/accounts/model/billScan.js";
+import { DEFAULT_CHART_OF_ACCOUNTS, buildVoucher, paymentLines } from "../src/features/accounts/model/accountingModel.js";
 import handler, { modelCandidates, readFailure } from "../api/accounts/bill-scan.js";
 
 const parties = [
@@ -94,4 +95,87 @@ test("normalize drops unreadable lines and a future bill date is clamped by the 
   }, { parties, items, today: "2026-10-05" });
   assert.equal(draft.form.date, "2026-10-05");
   assert.equal(draft.form.partyId, "s1");
+});
+
+test("a bill review lists missing fields, a duplicate, GST class, and an expense ledger without posting", () => {
+  const accounts = DEFAULT_CHART_OF_ACCOUNTS.map(row => ({ ...row, id: row.code }));
+  const rent = buildVoucher({
+    voucherType: "payment",
+    voucherNumber: "PMT-000002",
+    date: "2026-09-07",
+    lines: paymentLines({ accounts, cash: 6000, expenseCode: "5000" }),
+    narration: "Rent for September",
+    partyId: "s1",
+  });
+  const duplicate = {
+    status: "posted",
+    partyId: "s1",
+    voucherNumber: "PUR-000010",
+    date: "2026-09-02",
+    narration: "Bill INV-4412",
+  };
+  const cancelled = { ...duplicate, status: "cancelled", voucherNumber: "PUR-000009" };
+  const otherParty = { ...duplicate, partyId: "other", voucherNumber: "PUR-000008" };
+  const review = reviewBillScan({
+    documentKind: "receipt",
+    supplierName: "Rent",
+    billNumber: "INV-4412",
+    billDate: "2026-10-01",
+    paymentStatus: "paid",
+    total: 6000,
+    lines: [],
+  }, {
+    parties,
+    items,
+    today: "2026-10-05",
+    companyState: "29",
+    vouchers: [rent, duplicate, cancelled, otherParty],
+    accounts,
+  });
+
+  assert.equal(review.documentLabel, "Receipt");
+  assert.equal(review.confidence, "medium");
+  assert.deepEqual(review.missing, ["Line items"]);
+  assert.equal(review.duplicate.voucherNumber, "PUR-000010");
+  assert.equal(review.expense.expenseCode, "5000");
+  assert.equal(review.expense.amount, 6000);
+  assert.match(review.gst.label, /missing/);
+  assert.equal(review.draft.form.voucherId, undefined);
+  assert.equal(review.draft.form.partyId, "");
+  assert.ok(review.draft.warnings.some(line => /PUR-000010/.test(line)));
+  assert.ok(review.draft.warnings.some(line => /receipt/.test(line)));
+
+  const intra = reviewBillScan({
+    documentKind: "invoice",
+    supplierName: "City Supplies",
+    supplierGstin: "29ABCDE1234F1Z5",
+    billNumber: "INV-9001",
+    billDate: "2026-09-02",
+    paymentStatus: "unpaid",
+    lines: [{ name: "primer", quantity: 3, amount: 900, gstRate: 18 }],
+  }, { parties, items, today: "2026-10-05", companyState: "29", vouchers: [], accounts });
+  assert.equal(intra.confidence, "high");
+  assert.deepEqual(intra.missing, []);
+  assert.equal(intra.duplicate, null);
+  assert.equal(intra.supplier.id, "s1");
+  assert.equal(intra.gst.supply, "intra");
+  assert.equal(intra.draft.form.itemLines[0].itemId, "i1");
+
+  const inter = reviewBillScan({
+    supplierGstin: "29ABCDE1234F1Z5",
+    supplierName: "City Supplies",
+    billNumber: "B19",
+    billDate: "2026-09-02",
+    paymentStatus: "paid",
+    lines: [{ name: "primer", quantity: 1, rate: 10, gstRate: 18 }],
+  }, {
+    parties,
+    items,
+    today: "2026-10-05",
+    companyState: "36",
+    vouchers: [duplicate],
+    accounts,
+  });
+  assert.equal(inter.gst.supply, "inter");
+  assert.equal(inter.duplicate, null);
 });

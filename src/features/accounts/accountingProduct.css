@@ -3385,6 +3385,43 @@
   color: var(--ft-danger, #b42318);
 }
 
+.accounts-dashboard .acc-bill-review {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--acc-line);
+  border-radius: 10px;
+}
+
+.accounts-dashboard .acc-bill-review dl {
+  display: grid;
+  grid-template-columns: 8.5rem 1fr;
+  gap: 4px 10px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.accounts-dashboard .acc-bill-review dt {
+  color: var(--acc-muted);
+}
+
+.accounts-dashboard .acc-bill-review dd {
+  margin: 0;
+}
+
+.accounts-dashboard .acc-bill-keep {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.accounts-dashboard .acc-bill-review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .accounts-dashboard .acc-form-section .form {
   margin: 0;
 }

@@ -145,7 +145,7 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
   return <>
     <p className="copy">{noteCopy}</p>
     {kind === "purchase" && (
-      <BillPhotoDraft token={token} parties={parties} items={items} form={form} setForm={setForm} today={maxDate} />
+      <BillPhotoDraft token={token} parties={parties} items={items} form={form} setForm={setForm} today={maxDate} vouchers={vouchers} accounts={accounts} companyState={gstCompany?.stateCode || ""} />
     )}
     <section className="acc-form-section">
       <h3 className="acc-form-section-title">Details</h3>

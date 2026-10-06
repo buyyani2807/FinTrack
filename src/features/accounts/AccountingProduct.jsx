@@ -1538,6 +1538,26 @@ const openVoucher = () => {
         /* posting succeeded; schedule can be advanced manually */
       }
     }
+    let billAttached = null;
+    if (voucherId && simpleForm.billPhoto?.data) {
+      billAttached = false;
+      try {
+        const meta = assertVoucherAttachmentMeta({
+          fileName: simpleForm.billPhoto.fileName || "supplier-bill.jpg",
+          contentType: "image/jpeg",
+          byteSize: simpleForm.billPhoto.byteSize,
+        });
+        await addVoucherAttachment(token, {
+          voucherId,
+          fileName: meta.fileName,
+          contentType: meta.contentType,
+          contentBase64: simpleForm.billPhoto.data,
+        });
+        billAttached = true;
+      } catch {
+        billAttached = false;
+      }
+    }
     if (pending?.lineId && voucherId) {
       try {
         const nextVouchers = await loadVouchers(token);
@@ -1552,7 +1572,13 @@ const openVoucher = () => {
         /* posting succeeded; match can be done manually */
       }
     }
-  }, `${SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry"} saved successfully`);
+    return { billAttached };
+  }, result => {
+    const label = SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry";
+    return result?.billAttached === false
+      ? `${label} saved. The bill photo was not attached.`
+      : `${label} saved successfully`;
+  });
 
   const openSalesInvoice = voucher => {
     if (!voucher || voucher.voucherType !== "sales") return;
