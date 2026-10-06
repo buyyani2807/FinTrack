@@ -7,6 +7,7 @@ import {
   COLLECTION_MODES,
   collectionModeLabel,
   collectionReceiptMessage,
+  routeSheetBrand,
   routeSheetView,
   validateCollection,
   weekdaysLabel,
@@ -136,7 +137,7 @@ export function RouteCollectionsPage({ token, businessName, back, routeId = "tod
 
   const header = <header className="top">
     <div>
-      <div className="brand">{businessName || "Route collections"}</div>
+      <div className="brand">{routeSheetBrand(sheet, view, { routeId, fallback: businessName || "Route collections" })}</div>
       <div className="sub">Route collections{sheet?.agentName ? ` · ${sheet.agentName}` : ""}{sheet?.date ? ` · ${longDate(sheet.date)}` : ""}</div>
     </div>
     <div className="top-actions">

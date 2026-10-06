@@ -11,6 +11,7 @@ import {
   receivablePositions,
   routeOverview,
   routeRunsOn,
+  routeSheetBrand,
   routeSheetView,
   validateCollection,
   weekdaysLabel,
@@ -81,6 +82,8 @@ test("route sheet: today's routes in visiting order with collected amounts", () 
   const highway = routeSheetView(sheet, { routeId: "r2" });
   assert.deepEqual(highway.stops.map(stop => stop.partyId), ["p3"]);
   assert.equal(view.routes[0].dueStops, 2);
+  assert.equal(routeSheetBrand(sheet, view, { fallback: "Sudheer Finance" }), "Sri Traders");
+  assert.equal(routeSheetBrand(null, null, { fallback: "Sudheer Finance" }), "Sudheer Finance");
 });
 
 test("collection validation: amount, mode, reference and outstanding cap", () => {

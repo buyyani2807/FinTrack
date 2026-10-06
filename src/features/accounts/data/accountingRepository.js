@@ -880,7 +880,7 @@ export const loadCollectionRoutes = token => ignoreMissing(Promise.all([
 ]).then(([routes, stops]) => ({ routes: routes || [], stops: stops || [] })));
 
 export const loadCollectionAgents = token =>
-  supabase.rpc("acc_list_collection_agents", {}, token)
+  supabase.rpc("acc_list_collection_agents", {}, token, companyHeaders())
     .then(rows => (Array.isArray(rows) ? rows : []))
     .catch(err => { throw migration082Error(err); });
 

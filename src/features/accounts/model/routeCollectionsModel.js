@@ -63,7 +63,21 @@ export const mapCollectionAgent = row => ({
   phone: row.phone || "",
   role: row.role || "staff",
   isActive: row.is_active !== false,
+  collectionScope: row.collection_scope || "",
+  accountsCompanyId: row.accounts_company_id || "",
 });
+
+/** The Accounts company the agent is collecting for on this sheet. */
+export function routeSheetBrand(sheet, view, { routeId = "today", fallback = "" } = {}) {
+  const routes = routeId === "today"
+    ? (view?.routes || []).filter(route => route.runsToday)
+    : (view?.routes || []).filter(route => route.id === routeId);
+  const ids = [...new Set(routes.map(route => route.companyId).filter(Boolean))];
+  const names = ids.map(id => (sheet?.companies || []).find(company => company.id === id)?.name).filter(Boolean);
+  if (names.length) return names.join(" · ");
+  if ((sheet?.companies || []).length === 1 && sheet.companies[0].name) return sheet.companies[0].name;
+  return fallback;
+}
 
 export function mapRouteSheet(raw = {}) {
   const sheet = typeof raw === "string" ? JSON.parse(raw) : (raw || {});

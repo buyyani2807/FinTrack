@@ -102,8 +102,18 @@ export async function loadWorkspace(token) {
   const profile = rows[0];
   const organization = Array.isArray(profile?.organizations) ? profile.organizations[0] : profile?.organizations;
   if (profile?.role !== "owner" && profile?.role !== "staff") throw new Error("Could not load workspace role.");
+  let businessName = organization?.name || "My Finance Business";
+  if (profile.role === "staff") {
+    try {
+      const companyName = await supabase.rpc("my_agent_company_name", {}, token);
+      const name = typeof companyName === "string" ? companyName.trim() : "";
+      if (name) businessName = name;
+    } catch {
+      // Sign-in still works. The route sheet names the company once collections load.
+    }
+  }
   return {
-    businessName: organization?.name || "My Finance Business",
+    businessName,
     fullName: profile?.full_name || "",
     role: profile.role,
     active: profile?.is_active !== false,

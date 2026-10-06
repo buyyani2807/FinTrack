@@ -21,7 +21,28 @@ export function ResetStaffPasswordModal({ staff, close, save }) {
 }
 // A full page: the staff list, or one staff member with their customer assignments (opened from the list).
 // The open staff member is the URL (/collection-staff/:staffId, see app/AppRoutes.jsx).
-export function CollectionStaffPage({ loans, loadAgents, createAgent, assignAgent, updateAgent, staffId = null, onSelect }) {
+const worksForChoice = agent => (
+  agent?.collection_scope === "accounts" && agent.accounts_company_id
+    ? `accounts:${agent.accounts_company_id}`
+    : agent?.collection_scope === "finance" ? "finance" : ""
+);
+const worksForLabel = (agent, companies = []) => {
+  if (agent?.collection_scope === "finance") return "Finance and chit";
+  if (agent?.collection_scope === "accounts") return companies.find(company => company.id === agent.accounts_company_id)?.name || "Accounts company";
+  return "Not set";
+};
+const companyLinkFromChoice = choice => {
+  if (choice === "finance") return { collectionScope: "finance", accountsCompanyId: null };
+  if (String(choice || "").startsWith("accounts:")) return { collectionScope: "accounts", accountsCompanyId: choice.slice("accounts:".length) };
+  return null;
+};
+
+function WorksForField({ value, onChange, companies }) {
+  const choices = companies.filter(company => company.status !== "archived" || value === `accounts:${company.id}`);
+  return <Field label="Collects for"><Select value={value} onChange={event => onChange(event.target.value)}><option value="">Select</option><option value="finance">Finance and chit customers</option>{choices.map(company => <option key={company.id} value={`accounts:${company.id}`}>{company.name}</option>)}</Select></Field>;
+}
+
+export function CollectionStaffPage({ loans, loadAgents, createAgent, assignAgent, updateAgent, staffId = null, onSelect, companies = [] }) {
   const [agents, setAgents] = useState([]), [search, setSearch] = useState(""), [showCreate, setShowCreate] = useState(false), [showEdit, setShowEdit] = useState(false), [showResetPassword, setShowResetPassword] = useState(false), [error, setError] = useState(""), [draftIds, setDraftIds] = useState([]), [saved, setSaved] = useState(""), [loading, setLoading] = useState(true);
   const refresh = async () => { setLoading(true); setError(""); try { setAgents(await loadAgents()); } catch (e) { setError(e.message || "Could not load staff."); } finally { setLoading(false); } };
   useEffect(() => { refresh(); }, []);
@@ -51,7 +72,7 @@ export function CollectionStaffPage({ loans, loadAgents, createAgent, assignAgen
     {selected
       ? <>
         <BackButton onClick={() => onSelect?.(null)} />
-        <div className="toolbar"><div><h1 className="title">{selected.full_name}</h1><p className="copy">{[selected.email, selected.phone].filter(Boolean).join(" · ") || "No contact details"}</p></div><div className="tabs"><Button onClick={() => setShowEdit(true)}>Edit staff</Button><Button onClick={() => setShowResetPassword(true)}>Reset password</Button></div></div>
+        <div className="toolbar"><div><h1 className="title">{selected.full_name}</h1><p className="copy">{[[selected.email, selected.phone].filter(Boolean).join(" · "), worksForLabel(selected, companies)].filter(Boolean).join(" · ") || "No contact details"}</p></div><div className="tabs"><Button onClick={() => setShowEdit(true)}>Edit staff</Button><Button onClick={() => setShowResetPassword(true)}>Reset password</Button></div></div>
         {error && <p className="red small">{error}</p>}
         <div className="card">
           <div className="toolbar"><div><strong>Assigned customers</strong><p className="small">Select customers, then save. {draftIds.length} customers selected.</p></div></div>
@@ -64,18 +85,28 @@ export function CollectionStaffPage({ loans, loadAgents, createAgent, assignAgen
       : <>
         <div className="toolbar"><div><h1 className="title">Collection Staff</h1><p className="copy">Create staff, review existing staff, and assign customer accounts.</p></div><div className="tabs"><Button className="primary" onClick={() => setShowCreate(true)}>+ Create New Agent</Button></div></div>
         {error && <p className="red small">{error}</p>}
-        <div className="card">{loading ? <Spinner label="Loading collection staff" /> : !agents.length ? <EmptyState title="No collection staff yet" copy="Add staff to give them their own sign-in. They see only the customers you assign and record only their own collections." action={<Button className="primary" onClick={() => setShowCreate(true)}>+ Create New Agent</Button>} /> : <div className="table"><table><thead><tr><th>Agent</th><th>Email</th><th>Mobile</th><th>Status</th><th>Assigned customers</th><th></th></tr></thead><tbody>{agents.map(agent => <tr key={agent.id}><td>{agent.full_name}</td><td>{agent.email || "—"}</td><td>{agent.phone || "—"}</td><td><Badge status={agent.is_active ? "active" : "closed"} /></td><td>{agent.assigned_customer_count || 0}</td><td><Button onClick={() => choose(agent)}>View / Assign</Button></td></tr>)}</tbody></table></div>}</div>
+        <div className="card">{loading ? <Spinner label="Loading collection staff" /> : !agents.length ? <EmptyState title="No collection staff yet" copy="Add staff to give them their own sign-in. They see only the customers you assign and record only their own collections." action={<Button className="primary" onClick={() => setShowCreate(true)}>+ Create New Agent</Button>} /> : <div className="table"><table><thead><tr><th>Agent</th><th>Email</th><th>Mobile</th><th>Collects for</th><th>Status</th><th>Assigned customers</th><th></th></tr></thead><tbody>{agents.map(agent => <tr key={agent.id}><td>{agent.full_name}</td><td>{agent.email || "—"}</td><td>{agent.phone || "—"}</td><td>{worksForLabel(agent, companies)}</td><td><Badge status={agent.is_active ? "active" : "closed"} /></td><td>{agent.assigned_customer_count || 0}</td><td><Button onClick={() => choose(agent)}>View / Assign</Button></td></tr>)}</tbody></table></div>}</div>
       </>}
-    {showEdit && <EditCollectionStaff staff={selected} close={() => setShowEdit(false)} save={saveStaff} />}{showResetPassword && selected && <ResetStaffPasswordModal staff={selected} close={() => setShowResetPassword(false)} save={async password => { await updateAgent({ id: selected.id, name: selected.full_name, email: selected.email, phone: selected.phone, active: selected.is_active, password }); setSaved("Password reset successfully."); }} />}{showCreate && <CreateAgent close={() => { setShowCreate(false); refresh(); }} save={async details => { await createAgent(details); }} />}
+    {showEdit && <EditCollectionStaff staff={selected} companies={companies} close={() => setShowEdit(false)} save={saveStaff} />}{showResetPassword && selected && <ResetStaffPasswordModal staff={selected} close={() => setShowResetPassword(false)} save={async password => { await updateAgent({ id: selected.id, name: selected.full_name, email: selected.email, phone: selected.phone, active: selected.is_active, password }); setSaved("Password reset successfully."); }} />}{showCreate && <CreateAgent companies={companies} close={() => { setShowCreate(false); refresh(); }} save={async details => { await createAgent(details); }} />}
   </main>;
 }
-export function EditCollectionStaff({ staff, close, save }) {
-  const [name, setName] = useState(staff.full_name || ""), [email, setEmail] = useState(staff.email || ""), [phone, setPhone] = useState(staff.phone || ""), [active, setActive] = useState(staff.is_active !== false), [busy, setBusy] = useState(false);
-  const submit = async () => { if (!name.trim() || !email.trim()) return; setBusy(true); try { await save({ name, email, phone, active }); } finally { setBusy(false); } };
-  return <Modal close={close}><h2 className="title">Edit collection staff</h2><p className="copy">Update contact details or account status. Password changes use the separate Reset password action.</p><div className="form spacer"><Field label="Staff name"><input value={name} onChange={e => setName(e.target.value)} /></Field><Field label="Email address"><input type="email" value={email} onChange={e => setEmail(e.target.value)} /></Field><Field label="Mobile number"><input inputMode="tel" value={phone} onChange={e => setPhone(e.target.value)} /></Field><Field label="Status"><Select value={active ? "active" : "inactive"} onChange={e => setActive(e.target.value === "active")}><option value="active">Active</option><option value="inactive">Inactive</option></Select></Field></div><div className="row spacer"><Button className="primary" disabled={busy || !name.trim() || !email.trim()} onClick={submit}>{busy ? "Saving…" : "Save Changes"}</Button></div></Modal>;
+export function EditCollectionStaff({ staff, companies = [], close, save }) {
+  const [name, setName] = useState(staff.full_name || ""), [email, setEmail] = useState(staff.email || ""), [phone, setPhone] = useState(staff.phone || ""), [active, setActive] = useState(staff.is_active !== false), [worksFor, setWorksFor] = useState(worksForChoice(staff)), [busy, setBusy] = useState(false);
+  const submit = async () => {
+    const link = companyLinkFromChoice(worksFor);
+    if (!name.trim() || !email.trim() || !link) return;
+    setBusy(true);
+    try { await save({ name, email, phone, active, ...link }); } finally { setBusy(false); }
+  };
+  return <Modal close={close}><h2 className="title">Edit collection staff</h2><p className="copy">Update contact details or which company this agent collects for. Password changes use the separate Reset password action.</p><div className="form spacer"><Field label="Staff name"><input value={name} onChange={e => setName(e.target.value)} /></Field><Field label="Email address"><input type="email" value={email} onChange={e => setEmail(e.target.value)} /></Field><Field label="Mobile number"><input inputMode="tel" value={phone} onChange={e => setPhone(e.target.value)} /></Field><WorksForField value={worksFor} onChange={setWorksFor} companies={companies} /><Field label="Status"><Select value={active ? "active" : "inactive"} onChange={e => setActive(e.target.value === "active")}><option value="active">Active</option><option value="inactive">Inactive</option></Select></Field></div><div className="row spacer"><Button className="primary" disabled={busy || !name.trim() || !email.trim() || !worksFor} onClick={submit}>{busy ? "Saving…" : "Save Changes"}</Button></div></Modal>;
 }
-export function CreateAgent({ close, save }) {
-  const [name, setName] = useState(""), [email, setEmail] = useState(""), [phone, setPhone] = useState(""), [password, setPassword] = useState(""), [error, setError] = useState(""), [busy, setBusy] = useState(false);
-  const submit = async () => { setBusy(true); setError(""); try { await save({ name, email, phone, password, active: true }); close(); } catch (e) { setError(e.message || "Could not create agent."); } finally { setBusy(false); } };
-  return <Modal close={close}><h2 className="title">Add collection staff</h2><p className="copy">Staff get only assigned accounts and can record their own collections.</p><div className="form spacer"><Field label="Staff name"><input value={name} onChange={e => setName(e.target.value)} /></Field><Field label="Email address"><input type="email" value={email} onChange={e => setEmail(e.target.value)} /></Field><Field label="Mobile number"><input inputMode="tel" value={phone} onChange={e => setPhone(e.target.value)} /></Field><Field label="Password"><input type="password" minLength="8" value={password} onChange={e => setPassword(e.target.value)} /></Field></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button className="primary" disabled={busy} onClick={submit}>{busy ? "Creating…" : "Create staff"}</Button></div></Modal>;
+export function CreateAgent({ close, save, companies = [] }) {
+  const [name, setName] = useState(""), [email, setEmail] = useState(""), [phone, setPhone] = useState(""), [password, setPassword] = useState(""), [worksFor, setWorksFor] = useState(""), [error, setError] = useState(""), [busy, setBusy] = useState(false);
+  const submit = async () => {
+    const link = companyLinkFromChoice(worksFor);
+    if (!link) { setError("Choose whether this agent collects for an Accounts company or for finance and chit customers."); return; }
+    setBusy(true); setError("");
+    try { await save({ name, email, phone, password, active: true, ...link }); close(); } catch (e) { setError(e.message || "Could not create agent."); } finally { setBusy(false); }
+  };
+  return <Modal close={close}><h2 className="title">Add collection staff</h2><p className="copy">Staff sign in under the company you choose. Accounts agents collect that company's route customers. Finance and chit agents collect the customers you assign here.</p><div className="form spacer"><Field label="Staff name"><input value={name} onChange={e => setName(e.target.value)} /></Field><Field label="Email address"><input type="email" value={email} onChange={e => setEmail(e.target.value)} /></Field><Field label="Mobile number"><input inputMode="tel" value={phone} onChange={e => setPhone(e.target.value)} /></Field><Field label="Password"><input type="password" minLength="8" value={password} onChange={e => setPassword(e.target.value)} /></Field><WorksForField value={worksFor} onChange={setWorksFor} companies={companies} /></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button className="primary" disabled={busy || !worksFor} onClick={submit}>{busy ? "Creating…" : "Create staff"}</Button></div></Modal>;
 }

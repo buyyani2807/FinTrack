@@ -5,7 +5,7 @@ import { TabScroller } from "../../../components/TabScroller.jsx";
 import { formatInr } from "../../../lib/formatMoney.js";
 import { formatReceiptDate } from "../../receipts/model/receiptModel.js";
 import { downloadAccountsCsv } from "../io/accountingExport.js";
-import { loadCollectionAgents, loadRouteCollectionsReport } from "../data/accountingRepository.js";
+import { getActiveAccountsCompanyId, loadCollectionAgents, loadRouteCollectionsReport } from "../data/accountingRepository.js";
 import {
   COLLECTION_MODES,
   WEEKDAYS,
@@ -45,9 +45,20 @@ function Modal({ title, close, children, actions }) {
 
 const emptyRouteForm = () => ({ id: null, name: "", agentId: "", weekdays: [], notes: "", isActive: true });
 
-function RouteForm({ form, setForm, agents, saving, error, onSave, onClose }) {
+function routeAgentChoices(agents, companyId, selectedId) {
+  return agents.filter(agent => {
+    if (agent.id === selectedId) return true;
+    if (!agent.isActive) return false;
+    if (agent.collectionScope === "finance") return false;
+    if (agent.collectionScope === "accounts" && companyId && agent.accountsCompanyId && agent.accountsCompanyId !== companyId) return false;
+    return true;
+  });
+}
+
+function RouteForm({ form, setForm, agents, companyId, saving, error, onSave, onClose }) {
   const set = (key, value) => setForm(current => ({ ...current, [key]: value }));
   const toggleDay = id => set("weekdays", form.weekdays.includes(id) ? form.weekdays.filter(day => day !== id) : [...form.weekdays, id].sort((a, b) => a - b));
+  const choices = routeAgentChoices(agents, companyId, form.agentId);
   return <Modal
     title={form.id ? "Edit route" : "New collection route"}
     close={() => !saving && onClose()}
@@ -61,7 +72,7 @@ function RouteForm({ form, setForm, agents, saving, error, onSave, onClose }) {
       <Field label="Collection agent">
         <Select value={form.agentId} onChange={event => set("agentId", event.target.value)}>
           <option value="">Not assigned</option>
-          {agents.filter(agent => agent.isActive || agent.id === form.agentId).map(agent => (
+          {choices.map(agent => (
             <option key={agent.id} value={agent.id}>{agent.name || agent.phone || "Unnamed"}{agent.role === "owner" ? " (owner)" : ""}{agent.isActive ? "" : " (inactive)"}</option>
           ))}
         </Select>
@@ -75,7 +86,7 @@ function RouteForm({ form, setForm, agents, saving, error, onSave, onClose }) {
       <Field className="span" label="Notes for the agent"><input value={form.notes} maxLength={300} placeholder="Start point, timings, landmarks" onChange={event => set("notes", event.target.value)} /></Field>
       <label className="acc-toggle-row span"><input type="checkbox" checked={form.isActive} onChange={event => set("isActive", event.target.checked)} /><span>Active (shown to the agent)</span></label>
     </div>
-    {!agents.length && <p className="small">Add Collection Staff from the main dashboard (Collection staff) to assign agents.</p>}
+    {!choices.length && <p className="small">Create collection staff and choose this Accounts company. Finance and chit agents stay on the finance dashboard.</p>}
     {error && <p className="red small">{error}</p>}
   </Modal>;
 }
@@ -300,7 +311,7 @@ export function AccRoutesWorkspace({
 
     {available && tab === "collections" && <FieldCollections token={token} today={today} />}
 
-    {form && <RouteForm form={form} setForm={setForm} agents={agents} saving={saving} error={formError} onSave={saveForm} onClose={() => setForm(null)} />}
+    {form && <RouteForm form={form} setForm={setForm} agents={agents} companyId={getActiveAccountsCompanyId()} saving={saving} error={formError} onSave={saveForm} onClose={() => setForm(null)} />}
     {stopsRoute && <StopsEditor
       route={stopsRoute}
       parties={parties}
