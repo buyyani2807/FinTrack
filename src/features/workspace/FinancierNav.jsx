@@ -50,14 +50,12 @@ export function FinancierNav({ access, orgSettings = {}, businessName = "", logo
   <header className="ft-mobile-header">
     <button type="button" className="ft-icon-btn ft-mobile-menu-btn" aria-label="Open menu" aria-expanded={drawerOpen} aria-controls="workspace-nav" onClick={() => setDrawerKey(location.key)}><Menu size={22} aria-hidden="true" /></button>
     <span className="ft-brand ft-mobile-brand"><span className="ft-brand-strong">FIN</span>Track</span>
-    {askEnabled && onAsk ? <button type="button" className="ft-icon-btn ft-mobile-ask" aria-label="Ask FinTrack" onClick={onAsk}><MessageCircle size={22} aria-hidden="true" /></button> : null}
   </header>
   {drawerOpen && <div className="ft-nav-backdrop" aria-hidden="true" onClick={closeDrawer} />}
   <aside className={`financier-nav${drawerOpen ? " is-open" : ""}`} id="workspace-nav" aria-label="Workspace">
     <div className="nav-title ft-brand"><span className="ft-brand-strong">FIN</span>Track</div>
     <button type="button" className="ft-icon-btn ft-nav-close" aria-label="Close menu" onClick={closeDrawer}><X size={20} aria-hidden="true" /></button>
     <Button className={itemClass(isActive(workspacePaths.dashboard))} onClick={() => go(workspacePaths.dashboard)}><NavLabel icon={LayoutGrid} long="Dashboard" short="Dash" /></Button>
-    {askEnabled && onAsk ? <Button onClick={() => { closeDrawer(); onAsk(); }}><NavLabel icon={MessageCircle} long="Ask FinTrack" short="Ask" /></Button> : null}
     {access.daily && <Button className={itemClass(isActive(workspacePaths.daily))} onClick={() => go(financeSectionPath("daily", "collections"))}><NavLabel icon={CalendarDays} long="Daily Finance" short="Daily" /></Button>}
     {access.monthly && <Button className={itemClass(isActive(workspacePaths.monthly))} onClick={() => go(financeSectionPath("monthly", "collections"))}><NavLabel icon={CalendarRange} long="Monthly Finance" short="Monthly" /></Button>}
     {access.chit && <Button className={itemClass(isActive(workspacePaths.chit))} onClick={() => openEntitled("chit", workspacePaths.chit)}><NavLabel icon={Coins} long="Chit Fund" short="Chit" /></Button>}
@@ -65,6 +63,7 @@ export function FinancierNav({ access, orgSettings = {}, businessName = "", logo
     {access.accounts && <Button className={itemClass(isActive(workspacePaths.accounts))} onClick={() => openEntitled("accounts", workspacePaths.accounts)}><NavLabel icon={BookOpenText} long="Accounts" short="Accounts" /></Button>}
     {access.isOwner && <Button className={itemClass(isActive(workspacePaths.collectionStaff))} onClick={() => go(workspacePaths.collectionStaff)}><NavLabel icon={Users} long="Collection Staff" short="Staff" /></Button>}
     {access.isOwner && <Button className={itemClass(isActive(workspacePaths.settings))} onClick={() => go(workspacePaths.settings)}><NavLabel icon={Settings} long="Settings" short="Settings" /></Button>}
+    {askEnabled && onAsk ? <Button onClick={() => { closeDrawer(); onAsk(); }}><NavLabel icon={MessageCircle} long="Ask FinTrack" short="Ask" /></Button> : null}
     <div className="nav-footer">
       <ThemeToggle className="nav-theme" />
       {logout && <Button className="nav-logout" onClick={logout}><NavLabel icon={LogOut} long="Logout" short="Logout" /></Button>}
