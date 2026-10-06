@@ -2,6 +2,7 @@ import { createParty, initializeAccounting, saveAccountingSettings, saveGstSetti
 import { AccOnboardingWizard, markAccountsOnboardingDone } from "../components/AccOnboardingWizard.jsx";
 import { Field, AccMetric } from "../components/AccUi.jsx";
 import { AttentionCenterCard } from "../../intelligence/AttentionCenterCard.jsx";
+import { AnomalyReviewCard } from "../../intelligence/AnomalyReviewCard.jsx";
 import { trackProductEvent } from "../../commercial/productAnalytics.js";
 import { todayIso } from "../../../lib/dates.js";
 import { INDIA_STATES } from "../model/accountingGst.js";
@@ -39,6 +40,7 @@ export function OverviewSection({
   items,
   stockMovements,
   accountsAttention,
+  anomalyReview,
   close,
   openSection,
   setReportTab,
@@ -159,6 +161,11 @@ export function OverviewSection({
         trackProductEvent("accounts_attention_navigate", { section: href?.section || "" });
         if (href?.reportTab) setReportTab(href.reportTab);
         else if (href?.section) openSection(href.section);
+      }} />}
+
+      {anomalyReview && <AnomalyReviewCard review={anomalyReview} showWhenClear onNavigate={href => {
+        trackProductEvent("accounts_review_navigate", { section: href?.section || "" });
+        if (href?.section) openSection(href.section);
       }} />}
 
       <AccCompareChart

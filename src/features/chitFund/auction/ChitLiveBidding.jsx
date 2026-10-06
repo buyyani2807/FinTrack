@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Select } from "../../../components/Select.jsx";
 import { endChitLiveAuction, loadChitLiveAuction, pauseChitLiveAuction, startChitLiveAuction } from "../../../lib/financeRepository";
 import { buildAuctionLiftPayload } from "../../receipts/io/transactionConfirmations.js";
 import { LIVE_BID_MODEL, enrollmentPortalId, liveAuctionLimits, liveBidPayout } from "../model/liveBidding";
+import { AnomalyReviewCard } from "../../intelligence/AnomalyReviewCard.jsx";
+import { buildAnomalyReview } from "../../intelligence/anomalyReview.js";
 import { disbursementPayoutError, disbursementPayoutSplit } from "../../finance/model/disbursementMode";
 import { today, money, formatTime, byMemberName } from "../model/chitFormat.js";
 import { fireChitLiftWhatsApp } from "../io/chitNotifications.js";
@@ -32,6 +34,17 @@ export function ChitLiveBidding({ token, scheme, data, onFinalized, orgSettings 
   // eslint-disable-next-line react-hooks/exhaustive-deps -- live.auction identity is represented by id and status
   }, [live?.auction?.id, live?.auction?.status, scheme.id, token]);
   const auction = live?.auction;
+  const auctionReview = useMemo(() => buildAnomalyReview({
+    today: today(),
+    now: new Date().toISOString(),
+    auctions: live ? [{
+      id: auction?.id,
+      name: scheme.name,
+      status: auction?.status,
+      startedAt: auction?.started_at,
+      bids: live.bids || [],
+    }] : [],
+  }), [live, auction?.id, auction?.status, auction?.started_at, scheme.name]);
   const liveMembers = [...(live?.members || [])].sort(byMemberName);
   const eligible = liveMembers.filter(member => member.eligible);
   const leading = live?.leading_bid;
@@ -116,6 +129,7 @@ export function ChitLiveBidding({ token, scheme, data, onFinalized, orgSettings 
     </div>
     {LIVE_BID_MODEL === "highest_bid_wins" && leadingMember && <p className="notice">Leading discount bid: Ticket {leadingMember.ticket_number} · {leadingMember.full_name} · {money(leading.bid_amount)} · Winner receives {money(winnerPayout)}</p>}
     {auction?.status === "open" && <p className="notice">Waiting for members to post bids from Chit customer login. You monitor here and end bidding when ready. The highest bid is recorded as that month’s winner.</p>}
+    {live && <AnomalyReviewCard review={auctionReview} />}
     <div className="grid two spacer">
       <div className="card"><strong>Participants</strong><div className="table spacer"><table><thead><tr><th>Ticket</th><th>Member</th><th>Status</th><th>Portal</th></tr></thead><tbody>{liveMembers.map(member => { const enrolled = data.enrollments.find(item => item.id === member.enrollment_id); return <tr key={member.enrollment_id}><td>{member.ticket_number}</td><td>{member.full_name}</td><td>{member.status === "eligible" ? "Eligible" : member.status === "already_won" ? "Already won" : member.status}</td><td>{enrollmentPortalId(enrolled) || "Not enabled"}</td></tr>; })}</tbody></table>{!liveMembers.length && <p className="small">No members in this scheme.</p>}</div></div>
       <div className="card"><strong>Bid history</strong><div className="table spacer"><table><thead><tr><th>Time</th><th>Member</th><th>Amount</th><th>Status</th></tr></thead><tbody>{(live?.bids || []).map(bid => <tr key={bid.id}><td>{formatTime(bid.submitted_at)}</td><td>Ticket {bid.ticket_number} · {bid.member_name}</td><td>{money(bid.bid_amount)}</td><td>{bid.status === "winner" ? "Winner" : bid.status === "not_selected" ? "Not selected" : "Valid"}</td></tr>)}</tbody></table>{!(live?.bids || []).length && <p className="small">No live bids yet.</p>}</div></div>

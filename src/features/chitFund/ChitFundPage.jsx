@@ -17,6 +17,9 @@ import {
 import { ReceiptSuccessModal } from "../receipts/components/ReceiptActions.jsx";
 import { UpcomingPaymentsSection } from "../receipts/components/UpcomingPaymentsSection.jsx";
 import { ChitInsightsBrief } from "./components/ChitInsightsBrief.jsx";
+import { AnomalyReviewCard } from "../intelligence/AnomalyReviewCard.jsx";
+import { buildAnomalyReview } from "../intelligence/anomalyReview.js";
+import { today } from "../finance/model/loanState.js";
 import {
   CHIT_TYPES,
   fixedCommissionFromPercent,
@@ -237,6 +240,7 @@ export function ChitFundPage({ token, tab: routeTab = "schemes", schemeId = null
     <Toasts items={[{ id: "error", tone: "error", message: error, onClose: () => setError("") }, { id: "notice", message: notice, onClose: () => setNotice("") }]} />
     {(landing === "schemes" || landing === "payments") && <UpcomingPaymentsSection moduleType="chit" loans={[]} token={token} settings={orgSettings} workspace={workspace} isOwner={workspace?.role !== "staff"} refreshKey={reminderRefresh} />}
     {landing === "schemes" && <ChitInsightsBrief schemes={schemes} enrollments={enrollments} cycles={cycles} fixedLifts={fixedLifts} predefinedSchedule={predefinedSchedule} token={token} onViewMembers={() => setLanding("members")} />}
+    {landing === "schemes" && <AnomalyReviewCard review={buildAnomalyReview({ today: today(), schemes, cycles })} onNavigate={() => setLanding("bids")} />}
     {busy && !schemes.length && <Spinner label="Loading Chit Fund schemes" />}
     {enriching && !!schemes.length && landing === "schemes" && <p className="small spacer ft-loading-note"><Spinner size="sm" label="Loading" />Updating current bids and member counts</p>}
     {landing === "schemes" && <>

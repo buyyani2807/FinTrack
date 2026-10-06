@@ -53,6 +53,8 @@ import { guessColumnMapping, mapBankImportRows, readBankStatementFile } from "./
 import { backupDownloadFilename, buildAccountsCompanyBackup, parseAccountsCompanyBackup } from "./data/accountsBackup.js";
 import { assertBackupRestorable, restoreAccountsCompanyBackup } from "./data/accountsRestore.js";
 import { buildAccountsAttentionItems } from "../intelligence/attentionCenter.js";
+import { buildAnomalyReview } from "../intelligence/anomalyReview.js";
+import { loadCashbookEntries } from "../cashbook/cashbookRepository.js";
 import { trackProductEvent } from "../commercial/productAnalytics.js";
 import { assertVoucherAttachmentMeta, normalizeAttachmentContentType, readFileAsBase64 } from "./data/voucherAttachments.js";
 import {
@@ -199,6 +201,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [audit, setAudit] = useState([]);
   const [locks, setLocks] = useState([]);
   const [statements, setStatements] = useState([]);
+  const [cashbookEntries, setCashbookEntries] = useState(null);
   const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -463,13 +466,15 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
           }
           return;
         }
-        const [nextStatements, nextLocks] = await Promise.all([
+        const [nextStatements, nextLocks, nextCashbook] = await Promise.all([
           loadBankStatements(token).catch(() => []),
           section === "overview" ? loadPeriodLocks(token).catch(() => null) : Promise.resolve(null),
+          section === "overview" ? loadCashbookEntries(token).catch(() => null) : Promise.resolve(undefined),
         ]);
         if (!cancelled) {
           setStatements(nextStatements || []);
           if (nextLocks) setLocks(nextLocks);
+          if (section === "overview") setCashbookEntries(nextCashbook);
         }
       } catch (err) {
         if (!cancelled) setError(err.message || "Could not load this screen.");
@@ -635,6 +640,18 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       disclaimer: "Advisory only — never changes books.",
     };
   }, [wantOverview, accounts, vouchers, parties, range, items, stockMovements, statements, activeCompany]);
+  const anomalyReview = useMemo(() => {
+    if (!wantOverview) return null;
+    return buildAnomalyReview({
+      vouchers,
+      accounts,
+      parties,
+      statements,
+      locks,
+      cashbookEntries,
+      today: todayIso(),
+    });
+  }, [wantOverview, vouchers, accounts, parties, statements, locks, cashbookEntries]);
   const stockByItem = useMemo(() => {
     const map = {};
     for (const item of items) map[item.id] = currentStockForItem(item, stockMovements);
@@ -1914,6 +1931,7 @@ const openVoucher = () => {
           items={items}
           stockMovements={stockMovements}
           accountsAttention={accountsAttention}
+          anomalyReview={anomalyReview}
           close={close}
           openSection={openSection}
           setReportTab={setReportTab}
