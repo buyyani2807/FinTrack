@@ -2816,6 +2816,15 @@
   margin-bottom: 8px;
 }
 
+/* Number fields follow the page theme. color-scheme: dark on Accounts inputs
+   paints the typed value in a light colour on the light background. */
+.accounts-dashboard input[type="number"] {
+  color: var(--acc-text);
+  -webkit-text-fill-color: var(--acc-text);
+  caret-color: var(--acc-text);
+  color-scheme: inherit;
+}
+
 @media (max-width: 900px) {
   .accounts-dashboard .acc-items-side-grid {
     grid-template-columns: 1fr;
