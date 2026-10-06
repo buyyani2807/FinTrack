@@ -2816,13 +2816,25 @@
   margin-bottom: 8px;
 }
 
-/* Number fields follow the page theme. color-scheme: dark on Accounts inputs
-   paints the typed value in a light colour on the light background. */
+/* Table number boxes were shrinking to the spinner, so the typed quantity
+   sat outside the visible area. Keep them wide enough to show the digits. */
 .accounts-dashboard input[type="number"] {
   color: var(--acc-text);
   -webkit-text-fill-color: var(--acc-text);
   caret-color: var(--acc-text);
-  color-scheme: inherit;
+  color-scheme: light;
+}
+
+.accounts-dashboard td input[type="number"] {
+  min-width: 4.75rem;
+  padding-inline: 8px;
+  appearance: textfield;
+}
+
+.accounts-dashboard td input[type="number"]::-webkit-inner-spin-button,
+.accounts-dashboard td input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 @media (max-width: 900px) {
