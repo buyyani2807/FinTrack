@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Button, BackButton } from "../../../components/ui.jsx";
 import { formatInr as money } from "../../../lib/formatMoney.js";
+import { buildCollectionCopilot } from "../model/collectionCopilot.js";
+import { CollectionCopilotCard } from "./CollectionCopilotCard.jsx";
 import { byCollectionOrderThenName } from "../model/collectionOrder";
 import { annualRate, dailyBalance, isDailyCollectionDueOn, loanBalance, monthlyBalance, today } from "../model/loanState.js";
 import { paymentValue } from "../model/paymentFormat.js";
@@ -111,6 +113,8 @@ export function TodayCollections({
   collect,
   view,
   canReorder = false,
+  isOwner = true,
+  businessName = "",
   draggedId,
   setDraggedId,
   onReorder,
@@ -132,6 +136,7 @@ export function TodayCollections({
   const matchesSearch = loan => `${loan.customerName} ${loan.phone} ${loan.address || ""}`.toLowerCase().includes(search.trim().toLowerCase());
   const shownDailyLoans = dailyLoans.filter(matchesSearch).sort(byCollectionOrderThenName);
   const shownMonthlyLoans = monthlyLoans.filter(matchesSearch).sort(byCollectionOrderThenName);
+  const copilot = buildCollectionCopilot(activeLoans, { kind, asOf: today(), isOwner, businessName });
   const routeTableProps = {
     paidToday,
     canReorder,
@@ -155,5 +160,5 @@ export function TodayCollections({
   }, [kind]);
   // Embedded as a Daily / Monthly Finance tab, the module page supplies the frame (title, tabs); only the date line stays.
   const Wrapper = embedded ? "section" : "main";
-  return <Wrapper className={embedded ? "collection-shell collection-embedded" : "shell collection-shell"}>{embedded ? <p className="copy collection-date">{today()} · Customers due today and what has been collected.</p> : <><BackButton onClick={back} /><header className="top"><div><h1 className="title">Today’s collections</h1><p className="copy">{today()} · Daily collection and monthly-interest accounts.</p></div></header></>}<div className="collection-search"><input aria-label="Search customer" placeholder="Search by customer name, phone, or address" value={search} onChange={event => setSearch(event.target.value)} />{search && <Button onClick={() => setSearch("")}>Clear</Button>}</div><div className="collection-summary"><div><span>Collected today</span><strong>{collectedToday} / {dueAccountCount}</strong></div><div><span>Received today</span><strong className="green">{money(receivedToday)}</strong></div><div><span>Daily + monthly due</span><strong className="gold">{money(expectedToday)}</strong></div></div>{canReorder && (shownDailyLoans.length > 1 || shownMonthlyLoans.length > 1) && <p className="small dashboard-reorder-hint">Drag the handle to save your {kind} collection order. It is restored after refresh and sign-in.</p>}<div className="collection-section"><h2>Daily finance <span>{shownDailyLoans.length} shown</span></h2><TodayCollectionRouteTable rows={shownDailyLoans} sectionKind="daily" {...routeTableProps} /></div><div className="collection-section"><h2>Monthly finance <span>{shownMonthlyLoans.length} shown</span></h2><p className="copy">Monthly cards show interest due on the current outstanding principal.</p><TodayCollectionRouteTable rows={shownMonthlyLoans} sectionKind="monthly" {...routeTableProps} /></div></Wrapper>;
+  return <Wrapper className={embedded ? "collection-shell collection-embedded" : "shell collection-shell"}>{embedded ? <p className="copy collection-date">{today()} · Customers due today and what has been collected.</p> : <><BackButton onClick={back} /><header className="top"><div><h1 className="title">Today’s collections</h1><p className="copy">{today()} · Daily collection and monthly-interest accounts.</p></div></header></>}<div className="collection-search"><input aria-label="Search customer" placeholder="Search by customer name, phone, or address" value={search} onChange={event => setSearch(event.target.value)} />{search && <Button onClick={() => setSearch("")}>Clear</Button>}</div><div className="collection-summary"><div><span>Collected today</span><strong>{collectedToday} / {dueAccountCount}</strong></div><div><span>Received today</span><strong className="green">{money(receivedToday)}</strong></div><div><span>Daily + monthly due</span><strong className="gold">{money(expectedToday)}</strong></div></div><CollectionCopilotCard copilot={copilot} />{canReorder && (shownDailyLoans.length > 1 || shownMonthlyLoans.length > 1) && <p className="small dashboard-reorder-hint">Drag the handle to save your {kind} collection order. It is restored after refresh and sign-in.</p>}<div className="collection-section"><h2>Daily finance <span>{shownDailyLoans.length} shown</span></h2><TodayCollectionRouteTable rows={shownDailyLoans} sectionKind="daily" {...routeTableProps} /></div><div className="collection-section"><h2>Monthly finance <span>{shownMonthlyLoans.length} shown</span></h2><p className="copy">Monthly cards show interest due on the current outstanding principal.</p><TodayCollectionRouteTable rows={shownMonthlyLoans} sectionKind="monthly" {...routeTableProps} /></div></Wrapper>;
 }

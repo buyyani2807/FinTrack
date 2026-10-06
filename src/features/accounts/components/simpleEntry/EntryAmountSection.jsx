@@ -80,7 +80,10 @@ export function EntryAmountSection({
             <button type="button" className="btn" onClick={() => onApplyExpenseSuggestion(expenseSuggestion)}>
               Suggest {expenseSuggestion.expenseName} · {money(expenseSuggestion.amount)}
             </button>
-            {" "}from the last posted {expenseSuggestion.expenseName.toLowerCase()}. You still save the entry.
+            {" "}from the last posted {expenseSuggestion.expenseName.toLowerCase()}. Confidence {expenseSuggestion.confidence || "medium"}. You still save the entry.
+            {expenseSuggestion.similar?.length ? (
+              <span className="small"> Similar: {expenseSuggestion.similar.map(item => `${item.date} ${item.voucherNumber} ${money(item.amount)}`).join("; ")}</span>
+            ) : null}
           </p>
         ) : null}
       </div>

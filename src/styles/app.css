@@ -1874,6 +1874,20 @@ button.accounts-summary-card:hover {
   max-width: 970px;
 }
 
+.collection-copilot { margin: 0 0 16px; }
+.collection-copilot h2 { margin: 4px 0 8px; font-size: 1.15rem; }
+.collection-copilot-list { list-style: none; margin: 12px 0; padding: 0; display: grid; gap: 10px; }
+.collection-copilot-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; }
+.collection-copilot-list .small { display: block; color: var(--ft-muted); }
+.collection-copilot-actions { margin: 8px 0 0; padding-left: 18px; }
+.collection-copilot-draft { display: grid; gap: 8px; margin-top: 12px; }
+.collection-copilot-draft textarea, .collection-copilot-draft select { width: 100%; font: inherit; }
+.collection-copilot-confirm { display: flex; gap: 8px; align-items: flex-start; }
+.collection-copilot-draft-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (width <= 680px) {
+  .collection-copilot-list li { grid-template-columns: 1fr; }
+}
+
 .collection-summary {
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;

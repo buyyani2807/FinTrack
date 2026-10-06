@@ -60,12 +60,46 @@ export function suggestExpense(narration, vouchers = [], accounts = []) {
   if (!hits.length) return null;
   hits.sort((a, b) => `${b.date}${b.voucherNumber}`.localeCompare(`${a.date}${a.voucherNumber}`));
   const best = hits[0];
+  const sameAmount = hits.every(hit => hit.expenseCode !== best.expenseCode || hit.amount === best.amount);
   return {
     expenseCode: best.expenseCode,
     expenseName: best.expenseName,
     amount: best.amount,
     date: best.date,
+    confidence: hits.length >= 2 && sameAmount ? "high" : "medium",
+    similar: hits.slice(0, 3).map(hit => ({
+      date: hit.date,
+      voucherNumber: hit.voucherNumber,
+      amount: hit.amount,
+      expenseName: hit.expenseName,
+    })),
   };
+}
+
+/** Advisory bank review. Accept, edit, and reject stay with the person using the screen. */
+export function reconciliationReview(line) {
+  if (!line || line.matchStatus === "matched" || line.matchStatus === "ignored") return null;
+  const best = line.matchCandidates?.[0];
+  if (line.matchStatus === "suggested" && best) {
+    return {
+      proposal: [best.date, best.voucherNumber, best.partyName].filter(Boolean).join(" · "),
+      confidence: line.matchConfidence ?? best.confidence ?? null,
+      reason: (best.reasons || []).join(", ") || line.matchHint || "",
+      records: [best.voucherNumber].filter(Boolean),
+      difference: roundMoney(Number(line.amount || 0) - Number(best.amount || 0)),
+    };
+  }
+  if (line.entrySuggestion) {
+    const label = [line.entrySuggestion.expenseName || line.entrySuggestion.partyName, line.entrySuggestion.reference].filter(Boolean).join(" · ");
+    return {
+      proposal: label,
+      confidence: null,
+      reason: "Statement text matches this party, invoice, or expense.",
+      records: [line.entrySuggestion.reference || label].filter(Boolean),
+      difference: 0,
+    };
+  }
+  return null;
 }
 
 /**
