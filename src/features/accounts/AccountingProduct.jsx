@@ -95,6 +95,7 @@ import {
   invoiceAgingTotals,
   invoiceRegister,
   partyBalances,
+  suggestBillWiseAllocations,
   partyLedger,
   partyTotalsFromInvoices,
   profitAndLoss,
@@ -1057,29 +1058,50 @@ const openVoucher = () => {
       setError("Your Accounts role is view-only.");
       return;
     }
-    const kind = line.direction === "out" ? "payment" : "receipt";
+    const suggestion = line.entrySuggestion || null;
+    const kind = suggestion?.kind || (line.direction === "out" ? "payment" : "receipt");
     const moneyRows = moneyAccounts(visibleAccounts);
+    const amount = Number(line.amount || 0);
+    let settlements = [];
+    if (suggestion?.partyId && (kind === "receipt" || kind === "payment")) {
+      const registerKind = kind === "receipt" ? "receivable" : "payable";
+      const open = invoiceRegister(visibleAccounts, vouchers, parties, { kind: registerKind, today: todayIso(), outstandingOnly: true })
+        .filter(row => row.partyId === suggestion.partyId);
+      const reference = String(suggestion.reference || "").toLowerCase();
+      const preferred = reference
+        ? [
+          ...open.filter(row => String(row.reference || "").toLowerCase() === reference),
+          ...open.filter(row => String(row.reference || "").toLowerCase() !== reference),
+        ]
+        : open;
+      settlements = suggestBillWiseAllocations(preferred, amount);
+    }
     setSimpleKind(kind);
     setSimpleRequestId(newClientRequestId());
     setPendingRecurringId(null);
     setPendingBankMatch({
       lineId: line.id,
       coaId: statement?.coaId || "",
-      amount: Number(line.amount || 0),
+      amount,
       direction: line.direction || "in",
     });
     setSimpleForm({
       ...emptySimpleForm(),
       date: line.lineDate || todayIso(),
       amount: String(line.amount || ""),
+      partyId: suggestion?.partyId || "",
+      expenseCode: suggestion?.expenseCode || "5000",
       moneyMode: "bank",
       settlement: "cash",
+      settlements,
       narration: [line.description, line.reference].filter(Boolean).join(" · ") || "Bank statement entry",
       fromAccountId: moneyRows.find(account => account.accountType === "cash")?.id || moneyRows[0]?.id || "",
       toAccountId: statement?.coaId || moneyRows.find(account => account.accountType === "bank")?.id || "",
     });
     setShowSimple(true);
-    setNotice("Select the party, then save. FinTrack will suggest matching this bank line after posting.");
+    setNotice(suggestion
+      ? "Review the suggestion, then save. Nothing is posted until you save."
+      : "Select the party, then save. FinTrack will suggest matching this bank line after posting.");
   };
 
   const openSimpleFromRecurring = template => {
@@ -2209,7 +2231,7 @@ const openVoucher = () => {
         setCompanyDraft={setCompanyDraft}
       />}
       {showSimple && <Modal title={SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry"} close={closeSimple}>
-        <SimpleEntryForm kind={simpleKind} accounts={visibleAccounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} maxDate={todayIso()} gstCompany={activeCompany} onGstSetup={() => { setShowSimple(false); openSection("setup"); }} items={items} stockByItem={stockByItem} openInvoices={settlementOpenInvoices} creditInfo={saleCreditInfo} token={token} />
+        <SimpleEntryForm kind={simpleKind} accounts={visibleAccounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} maxDate={todayIso()} gstCompany={activeCompany} onGstSetup={() => { setShowSimple(false); openSection("setup"); }} items={items} stockByItem={stockByItem} openInvoices={settlementOpenInvoices} creditInfo={saleCreditInfo} token={token} vouchers={vouchers} />
       </Modal>}
       {showParty && <PartyModal
         partyForm={partyForm}

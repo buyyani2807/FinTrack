@@ -1,5 +1,5 @@
 import { AccEmpty } from "../components/AccUi.jsx";
-import { bankVoucherLines, defaultBankStatementLines } from "../model/accountingReports.js";
+import { bankVoucherLines, defaultBankStatementLines, invoiceRegister } from "../model/accountingReports.js";
 import { BankStatementImportPanel } from "./bank/BankStatementImportPanel.jsx";
 import { BankStatementCard } from "./bank/BankStatementCard.jsx";
 
@@ -28,6 +28,10 @@ export function BankSection({
   token,
   openSimpleFromBankLine,
 }) {
+  const openInvoices = [
+    ...invoiceRegister(accounts, vouchers, parties, { kind: "receivable", outstandingOnly: true }),
+    ...invoiceRegister(accounts, vouchers, parties, { kind: "payable", outstandingOnly: true }),
+  ];
   return (
     <div className="acc-panel acc-bank">
       <p className="acc-bank-note">Matching marks statement lines against posted voucher lines. It never changes cash, bank, P&amp;L, or the trial balance.</p>
@@ -50,7 +54,7 @@ export function BankSection({
           ...line,
           matched: matchedLineIds.has(line.id),
         }));
-        const displayLines = defaultBankStatementLines(statement.lines, voucherLines);
+        const displayLines = defaultBankStatementLines(statement.lines, voucherLines, { parties, openInvoices, accounts });
         const unmatched = displayLines.filter(line => line.matchStatus !== "matched" && line.matchStatus !== "ignored").length;
         const suggested = displayLines.filter(line => line.matchStatus === "suggested").length;
         return <BankStatementCard

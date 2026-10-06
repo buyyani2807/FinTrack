@@ -21,6 +21,8 @@ export function EntryAmountSection({
   partyState,
   gstCompany,
   onGstSetup,
+  expenseSuggestion = null,
+  onApplyExpenseSuggestion,
 }) {
   return (
     <section className="acc-form-section">
@@ -72,7 +74,15 @@ export function EntryAmountSection({
             {onGstSetup ? <button type="button" className="btn" onClick={onGstSetup}>Open GST setup</button> : null}
           </div>
         )}
-        <Field className="span" label="Note (optional)"><input value={form.narration} onChange={event => set({ narration: event.target.value })} placeholder="Received from Ravi" /></Field>
+        <Field className="span" label="Note (optional)"><input value={form.narration} onChange={event => set({ narration: event.target.value })} placeholder={kind === "expense" ? "Rent for October" : "Received from Ravi"} /></Field>
+        {expenseSuggestion ? (
+          <p className="small span">
+            <button type="button" className="btn" onClick={() => onApplyExpenseSuggestion(expenseSuggestion)}>
+              Suggest {expenseSuggestion.expenseName} · {money(expenseSuggestion.amount)}
+            </button>
+            {" "}from the last posted {expenseSuggestion.expenseName.toLowerCase()}. You still save the entry.
+          </p>
+        ) : null}
       </div>
     </section>
   );

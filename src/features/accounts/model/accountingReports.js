@@ -12,6 +12,7 @@ import {
   signedBalance,
   voucherTotals,
 } from "./accountingModel.js";
+import { suggestBankEntry, textHasPhrase } from "./bookSuggestions.js";
 
 const inRange = (date, from, to) => (!from || date >= from) && (!to || date <= to);
 
@@ -244,13 +245,19 @@ export function matchBankLine(statementLine, voucherLines = [], options = {}) {
       reasons.push("near date");
     }
     const narration = String(line.narration || line.voucherNumber || "").toLowerCase();
-    const party = String(line.partyName || "").toLowerCase();
+    const party = String(line.partyName || "");
+    const statementText = `${description} ${reference}`;
+    const voucherNo = String(line.voucherNumber || "");
     if (reference && (narration.includes(reference) || String(line.voucherNumber || "").toLowerCase().includes(reference))) {
       score += 12;
       reasons.push("reference");
     }
-    if (party && description.includes(party)) {
-      score += 10;
+    if (voucherNo.length >= 4 && textHasPhrase(statementText, voucherNo)) {
+      score += 25;
+      reasons.push("invoice");
+    }
+    if (party && textHasPhrase(statementText, party)) {
+      score += 22;
       reasons.push("party");
     }
     if (description && narration) {
@@ -305,7 +312,14 @@ function tokenOverlap(a, b) {
 }
 
 export const defaultBankStatementLines = (lines = [], voucherLines = [], options = {}) =>
-  lines.map(line => matchBankLine(line, voucherLines, options));
+  lines.map(line => {
+    const matched = matchBankLine(line, voucherLines, options);
+    if (matched.matchStatus === "matched" || matched.matchStatus === "ignored" || matched.matchStatus === "suggested") {
+      return matched;
+    }
+    const entrySuggestion = suggestBankEntry(matched, options);
+    return entrySuggestion ? { ...matched, entrySuggestion } : matched;
+  });
 
 export function bankVoucherLines(accounts, vouchers, coaId, parties = []) {
   const account = (accounts || []).find(item => item.id === coaId || item.code === coaId);

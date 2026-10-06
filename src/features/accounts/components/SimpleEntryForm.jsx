@@ -11,6 +11,7 @@ import {
 } from "../model/accountingModel.js";
 import { gstStateFromGstin, isIntraGst } from "../model/accountingGst.js";
 import { suggestBillWiseAllocations } from "../model/accountingReports.js";
+import { suggestExpense } from "../model/bookSuggestions.js";
 import { aggregateItemizedGst, emptyItemLine, usesItemLines } from "../model/inventoryModel.js";
 import { creditCheck } from "../model/tradeDocumentModel.js";
 import { money } from "../accountsFormat.js";
@@ -21,7 +22,7 @@ import { SaleSummaryCard } from "./simpleEntry/SaleSummaryCard.jsx";
 import { BillwiseSettlement } from "./simpleEntry/BillwiseSettlement.jsx";
 import { BillPhotoDraft } from "./simpleEntry/BillPhotoDraft.jsx";
 
-export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, saving, maxDate, gstCompany, onGstSetup, items = [], stockByItem = {}, openInvoices = [], creditInfo = null, token }) {
+export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, saving, maxDate, gstCompany, onGstSetup, items = [], stockByItem = {}, openInvoices = [], creditInfo = null, token, vouchers = [] }) {
   const customers = parties.filter(party => party.partyType === "customer" && (party.isActive !== false || party.id === form.partyId));
   const suppliers = parties.filter(party => party.partyType === "supplier" && (party.isActive !== false || party.id === form.partyId));
   const expenseOptions = SIMPLE_EXPENSE_CODES.filter(([code]) => accounts.some(account => account.code === code) || code === "5990");
@@ -98,6 +99,10 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
       cash: Number(form.receivedCash || 0),
       upi: Number(form.receivedUpi || 0),
     });
+  const expenseSuggestion = kind === "expense" ? suggestExpense(form.narration, vouchers, accounts) : null;
+  const expenseSuggestionApplied = expenseSuggestion
+    && form.expenseCode === expenseSuggestion.expenseCode
+    && roundMoney(form.amount) === expenseSuggestion.amount;
   const noteCopy = kind === "credit_note"
     ? (itemMode
       ? "Sales return: returned items go back into stock, and the customer balance and sales reduce. Original invoices stay in Day Book."
@@ -217,6 +222,11 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
         partyState={partyState}
         gstCompany={gstCompany}
         onGstSetup={onGstSetup}
+        expenseSuggestion={expenseSuggestionApplied ? null : expenseSuggestion}
+        onApplyExpenseSuggestion={suggestion => set({
+          expenseCode: suggestion.expenseCode,
+          amount: String(suggestion.amount),
+        })}
       />
     )}
 

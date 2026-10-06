@@ -1,6 +1,8 @@
 import { money } from "../accountsFormat.js";
 import { Select } from "../../../components/Select.jsx";
 
+const suggestionLabel = suggestion => [suggestion.expenseName || suggestion.partyName, suggestion.reference].filter(Boolean).join(" · ");
+
 export const BankMatchControls = ({ line, selected, options, saving, canWrite = true, onSelect, onMatch, onUnmatch, onIgnore, onCreate }) => (
   <>
     {line.matchHint ? <p className="small acc-bank-match-hint">{line.matchHint}</p> : null}
@@ -22,7 +24,7 @@ export const BankMatchControls = ({ line, selected, options, saving, canWrite = 
         : canWrite ? <>
           <button type="button" className="btn primary" disabled={saving || !selected} onClick={onMatch}>Match</button>
           <button type="button" className="btn" disabled={saving} onClick={onIgnore}>Ignore</button>
-          {onCreate ? <button type="button" className="btn" disabled={saving} onClick={onCreate}>Create entry</button> : null}
+          {onCreate ? <button type="button" className="btn" disabled={saving} onClick={onCreate}>{line.entrySuggestion ? `Suggest ${suggestionLabel(line.entrySuggestion)}` : "Create entry"}</button> : null}
         </> : null}
   </>
 );
