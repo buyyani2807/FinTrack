@@ -24,6 +24,58 @@ async function agentCompanyLink(body, organizationId, { required = false } = {})
   return { patch: { collection_scope: "accounts", accounts_company_id: body.accountsCompanyId } };
 }
 
+async function routeCustomersByAgent(organizationId) {
+  if (!isUuid(organizationId)) return {};
+  const routeResponse = await fetch(`${supabaseUrl}/rest/v1/acc_collection_routes?organization_id=eq.${organizationId}&select=id,name,is_active,agent_id,company_id`, { headers: headers(serviceKey) });
+  if (!routeResponse.ok) return {};
+  const routes = await routeResponse.json();
+  if (!Array.isArray(routes) || !routes.length) return {};
+  const routeIds = routes.map(route => route.id).filter(isUuid);
+  if (!routeIds.length) return {};
+  const stopResponse = await fetch(`${supabaseUrl}/rest/v1/acc_collection_route_stops?organization_id=eq.${organizationId}&select=route_id,party_id,stop_order&route_id=in.(${routeIds.join(",")})`, { headers: headers(serviceKey) });
+  const stops = stopResponse.ok ? await stopResponse.json() : [];
+  if (!Array.isArray(stops) || !stops.length) return {};
+  const partyIds = [...new Set(stops.map(stop => stop.party_id).filter(isUuid))];
+  const partyResponse = partyIds.length
+    ? await fetch(`${supabaseUrl}/rest/v1/acc_parties?organization_id=eq.${organizationId}&select=id,name,phone&id=in.(${partyIds.join(",")})`, { headers: headers(serviceKey) })
+    : null;
+  const parties = partyResponse?.ok ? await partyResponse.json() : [];
+  const partyById = new Map((Array.isArray(parties) ? parties : []).map(party => [party.id, party]));
+  const routeById = new Map(routes.map(route => [route.id, route]));
+  const byAgent = {};
+  for (const stop of stops) {
+    const route = routeById.get(stop.route_id);
+    if (!route?.agent_id) continue;
+    const party = partyById.get(stop.party_id) || {};
+    const row = {
+      partyId: stop.party_id,
+      name: party.name || "Customer",
+      phone: party.phone || "",
+      routeId: route.id,
+      routeName: route.name || "",
+      routeActive: route.is_active !== false,
+      stopOrder: Number(stop.stop_order || 0),
+      companyId: route.company_id || "",
+    };
+    if (!byAgent[route.agent_id]) byAgent[route.agent_id] = [];
+    byAgent[route.agent_id].push(row);
+  }
+  for (const rows of Object.values(byAgent)) {
+    rows.sort((a, b) => a.routeName.localeCompare(b.routeName) || a.stopOrder - b.stopOrder || a.name.localeCompare(b.name));
+  }
+  return byAgent;
+}
+
+function routeCustomersFor(agent, byAgent) {
+  const rows = byAgent[agent.id] || [];
+  if (agent.collection_scope === "finance") return [];
+  if (agent.collection_scope === "accounts" && agent.accounts_company_id) {
+    const forCompany = rows.filter(row => row.companyId === agent.accounts_company_id);
+    return forCompany.length ? forCompany : rows;
+  }
+  return rows;
+}
+
 async function separateAgentBooks(organizationId, agentId, patch) {
   if (!isUuid(agentId) || !isUuid(organizationId) || !patch?.collection_scope) return;
   const write = (path, body) => fetch(`${supabaseUrl}/rest/v1/${path}`, {
@@ -63,9 +115,16 @@ export default async function handler(req, res) {
       }
       const assignmentsResponse = await fetch(`${supabaseUrl}/rest/v1/finance_accounts?organization_id=eq.${profile.organization_id}&select=collection_agent_id`, { headers: headers(serviceKey) });
       if (!agentsResponse.ok || !assignmentsResponse.ok) return json(res, 500, { error: "Could not load collection agents" });
-      const [agents, assignments] = await Promise.all([agentsResponse.json(), assignmentsResponse.json()]);
+      const [agents, assignments, routeCustomers] = await Promise.all([
+        agentsResponse.json(),
+        assignmentsResponse.json(),
+        routeCustomersByAgent(profile.organization_id),
+      ]);
       const assignedCounts = assignments.reduce((counts, account) => { if (account.collection_agent_id) counts[account.collection_agent_id] = (counts[account.collection_agent_id] || 0) + 1; return counts; }, {});
-      return json(res, 200, agents.map(agent => ({ ...agent, assigned_customer_count: assignedCounts[agent.id] || 0 })));
+      return json(res, 200, agents.map(agent => {
+        const customers = routeCustomersFor(agent, routeCustomers);
+        return { ...agent, assigned_customer_count: assignedCounts[agent.id] || 0, route_customers: customers, route_customer_count: customers.length };
+      }));
     }
     if (req.method === "PATCH") {
       const { id, name, email, phone = "", active, password } = req.body || {};

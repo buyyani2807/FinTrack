@@ -881,20 +881,25 @@ export const loadCollectionRoutes = token => ignoreMissing(Promise.all([
 
 const companyRequest = (companyId, token, path) => supabase.query(path, token, { headers: { "x-acc-company-id": companyId } });
 
-/** Route stops for one Accounts-company agent, read with that company's header. */
+/** Route stops for one Accounts-company agent. Same company header the Routes screen uses. */
 export async function loadAgentRouteCustomers(token, agent) {
   const companyId = agent?.accounts_company_id;
   if (!token || !agent?.id || !companyId) return { routes: [], stops: [], parties: [] };
-  const routes = await companyRequest(companyId, token, `/rest/v1/acc_collection_routes?select=id,name,is_active,agent_id&company_id=eq.${encodeURIComponent(companyId)}&agent_id=eq.${encodeURIComponent(agent.id)}&order=name.asc`);
-  const mine = routes || [];
-  if (!mine.length) return { routes: mine, stops: [], parties: [] };
-  const stops = await companyRequest(companyId, token, `/rest/v1/acc_collection_route_stops?select=route_id,party_id,stop_order&company_id=eq.${encodeURIComponent(companyId)}&order=stop_order.asc&limit=20000`);
-  const mineStops = (stops || []).filter(stop => mine.some(route => route.id === stop.route_id));
-  const partyIds = [...new Set(mineStops.map(stop => stop.party_id).filter(Boolean))];
-  const parties = partyIds.length
-    ? await companyRequest(companyId, token, `/rest/v1/acc_parties?select=id,name,phone&company_id=eq.${encodeURIComponent(companyId)}&id=in.(${partyIds.map(id => encodeURIComponent(id)).join(",")})`)
-    : [];
-  return { routes: mine, stops: mineStops, parties: parties || [] };
+  const previous = getActiveAccountsCompanyId();
+  setActiveAccountsCompanyId(companyId);
+  try {
+    const data = await loadCollectionRoutes(token);
+    const routes = (data?.routes || []).filter(route => String(route.agent_id || "") === String(agent.id));
+    const routeIds = new Set(routes.map(route => route.id));
+    const stops = (data?.stops || []).filter(stop => routeIds.has(stop.route_id));
+    const partyIds = [...new Set(stops.map(stop => stop.party_id).filter(Boolean))];
+    const parties = partyIds.length
+      ? await companyRequest(companyId, token, `/rest/v1/acc_parties?select=id,name,phone&id=in.(${partyIds.map(id => encodeURIComponent(id)).join(",")})`)
+      : [];
+    return { routes, stops, parties: parties || [] };
+  } finally {
+    setActiveAccountsCompanyId(previous);
+  }
 }
 
 /** How many route customers each agent has, grouped by the Accounts company those routes belong to. */

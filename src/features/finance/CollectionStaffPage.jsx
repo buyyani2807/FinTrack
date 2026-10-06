@@ -48,14 +48,16 @@ export function CollectionStaffPage({ loans, loadAgents, createAgent, assignAgen
   useEffect(() => { refresh(); }, []);
   const selected = staffId ? agents.find(agent => agent.id === staffId) || null : null;
   const accountsAgent = agentCollectsAccounts(selected);
+  const listedFromAgent = Array.isArray(selected?.route_customers) && selected.route_customers.length ? selected.route_customers : null;
+  const shownRouteCustomers = listedFromAgent || routeCustomers;
   useEffect(() => {
-    if (!loadRouteCounts || !agents.some(agentCollectsAccounts)) return undefined;
+    if (!loadRouteCounts || !agents.some(agent => agentCollectsAccounts(agent) && !Array.isArray(agent.route_customers))) return undefined;
     let cancelled = false;
     loadRouteCounts(agents).then(counts => { if (!cancelled) setRouteCounts(counts || {}); }).catch(() => { if (!cancelled) setRouteCounts({}); });
     return () => { cancelled = true; };
   }, [agents, loadRouteCounts]);
   useEffect(() => {
-    if (!accountsAgent || !loadRouteCustomers) { setRouteCustomers([]); return undefined; }
+    if (!accountsAgent || listedFromAgent || !loadRouteCustomers || !selected?.id) { setRouteLoading(false); return undefined; }
     let cancelled = false;
     setRouteLoading(true);
     loadRouteCustomers(selected)
@@ -63,7 +65,7 @@ export function CollectionStaffPage({ loans, loadAgents, createAgent, assignAgen
       .catch(err => { if (!cancelled) { setRouteCustomers([]); setError(err?.message || "Could not load route customers."); } })
       .finally(() => { if (!cancelled) setRouteLoading(false); });
     return () => { cancelled = true; };
-  }, [accountsAgent, selected, loadRouteCustomers]);
+  }, [accountsAgent, listedFromAgent, selected, loadRouteCustomers]);
   const resetDraft = agent => { setDraftIds(loans.filter(loan => loan.collectionAgentId === agent.id).map(loan => loan.id)); setSearch(""); setSaved(""); };
   // Opening a staff member (from the list or a URL) starts their assignment draft from what is saved.
   const [draftFor, setDraftFor] = useState(null);
@@ -72,7 +74,7 @@ export function CollectionStaffPage({ loans, loadAgents, createAgent, assignAgen
   const visibleLoans = staffAssignableLoans(loans, { selectedAgentId: selected?.id, search, statusOf: loanStatus }).sort(byCustomerName);
   const choose = agent => onSelect?.(agent.id);
   const toggle = id => setDraftIds(ids => ids.includes(id) ? ids.filter(value => value !== id) : [...ids, id]);
-  const saveStaff = async details => { try { const updated = await updateAgent({ id: selected.id, ...details }); setAgents(current => current.map(agent => agent.id === updated.id ? updated : agent)); setShowEdit(false); setSaved("Staff details saved successfully."); } catch (e) { setError(e.message || "Could not save staff details."); } };
+  const saveStaff = async details => { try { const updated = await updateAgent({ id: selected.id, ...details }); setAgents(current => current.map(agent => agent.id === updated.id ? { ...agent, ...updated, route_customers: updated.route_customers || agent.route_customers } : agent)); setShowEdit(false); setSaved("Staff details saved successfully."); } catch (e) { setError(e.message || "Could not save staff details."); } };
   const saveAssignments = async () => {
     if (accountsAgent) return;
     try {
@@ -96,8 +98,8 @@ export function CollectionStaffPage({ loans, loadAgents, createAgent, assignAgen
           <div className="toolbar"><div><strong>Route customers</strong><p className="small">{worksForLabel(selected, companies)} customers on this agent's collection routes. Add or remove them under Accounts, with {worksForLabel(selected, companies)} selected, in Parties → Routes.</p></div>{onOpenRoutes && <Button onClick={() => onOpenRoutes(selected.accounts_company_id)}>Open routes</Button>}</div>
           {saved && <p className="green small">{saved}</p>}
           <div className="customer-search"><input aria-label="Search route customers" placeholder="Search customers" value={search} onChange={e => setSearch(e.target.value)} /></div>
-          {routeLoading ? <Spinner label="Loading route customers" /> : <div className="table"><table><thead><tr><th>Customer</th><th>Route</th><th>Phone</th></tr></thead><tbody>{routeCustomers.filter(customer => `${customer.name} ${customer.phone} ${customer.routeName}`.toLowerCase().includes(search.trim().toLowerCase())).map(customer => <tr key={`${customer.routeId}:${customer.partyId}`}><td>{customer.name}</td><td>{customer.routeName}{customer.routeActive ? "" : " · Paused"}</td><td>{customer.phone || "—"}</td></tr>)}</tbody></table></div>}
-          {!routeLoading && !routeCustomers.length && <p className="copy spacer">No customers on a route for this agent yet. Open routes for {worksForLabel(selected, companies)} and assign {selected.full_name}.</p>}
+          {routeLoading && !shownRouteCustomers.length ? <Spinner label="Loading route customers" /> : <div className="table"><table><thead><tr><th>Customer</th><th>Route</th><th>Phone</th></tr></thead><tbody>{shownRouteCustomers.filter(customer => `${customer.name} ${customer.phone} ${customer.routeName}`.toLowerCase().includes(search.trim().toLowerCase())).map(customer => <tr key={`${customer.routeId}:${customer.partyId}`}><td>{customer.name}</td><td>{customer.routeName}{customer.routeActive ? "" : " · Paused"}</td><td>{customer.phone || "—"}</td></tr>)}</tbody></table></div>}
+          {!routeLoading && !shownRouteCustomers.length && <p className="copy spacer">No customers on a route for this agent yet. Open routes for {worksForLabel(selected, companies)} and assign {selected.full_name}.</p>}
         </div> : <div className="card">
           <div className="toolbar"><div><strong>Assigned customers</strong><p className="small">Finance and chit customers only. Select customers, then save. {draftIds.length} customers selected.</p></div></div>
           {saved && <p className="green small">{saved}</p>}
@@ -109,7 +111,7 @@ export function CollectionStaffPage({ loans, loadAgents, createAgent, assignAgen
       : <>
         <div className="toolbar"><div><h1 className="title">Collection Staff</h1><p className="copy">Accounts agents collect that company's route customers. Finance and chit agents collect the customers you assign here.</p></div><div className="tabs"><Button className="primary" onClick={() => setShowCreate(true)}>+ Create New Agent</Button></div></div>
         {error && <p className="red small">{error}</p>}
-        <div className="card">{loading ? <Spinner label="Loading collection staff" /> : !agents.length ? <EmptyState title="No collection staff yet" copy="Add staff to give them their own sign-in. They see only the customers you assign and record only their own collections." action={<Button className="primary" onClick={() => setShowCreate(true)}>+ Create New Agent</Button>} /> : <div className="table"><table><thead><tr><th>Agent</th><th>Email</th><th>Mobile</th><th>Collects for</th><th>Status</th><th>Assigned customers</th><th></th></tr></thead><tbody>{agents.map(agent => <tr key={agent.id}><td>{agent.full_name}</td><td>{agent.email || "—"}</td><td>{agent.phone || "—"}</td><td>{worksForLabel(agent, companies)}</td><td><Badge status={agent.is_active ? "active" : "closed"} /></td><td>{agentCollectsAccounts(agent) ? (routeCounts[agent.id] || 0) : (agent.assigned_customer_count || 0)}</td><td><Button onClick={() => choose(agent)}>{agentCollectsAccounts(agent) ? "View" : "View / Assign"}</Button></td></tr>)}</tbody></table></div>}</div>
+        <div className="card">{loading ? <Spinner label="Loading collection staff" /> : !agents.length ? <EmptyState title="No collection staff yet" copy="Add staff to give them their own sign-in. They see only the customers you assign and record only their own collections." action={<Button className="primary" onClick={() => setShowCreate(true)}>+ Create New Agent</Button>} /> : <div className="table"><table><thead><tr><th>Agent</th><th>Email</th><th>Mobile</th><th>Collects for</th><th>Status</th><th>Assigned customers</th><th></th></tr></thead><tbody>{agents.map(agent => <tr key={agent.id}><td>{agent.full_name}</td><td>{agent.email || "—"}</td><td>{agent.phone || "—"}</td><td>{worksForLabel(agent, companies)}</td><td><Badge status={agent.is_active ? "active" : "closed"} /></td><td>{agentCollectsAccounts(agent) ? (Array.isArray(agent.route_customers) ? agent.route_customers.length : (routeCounts[agent.id] || 0)) : (agent.assigned_customer_count || 0)}</td><td><Button onClick={() => choose(agent)}>{agentCollectsAccounts(agent) ? "View" : "View / Assign"}</Button></td></tr>)}</tbody></table></div>}</div>
       </>}
     {showEdit && <EditCollectionStaff staff={selected} companies={companies} close={() => setShowEdit(false)} save={saveStaff} />}{showResetPassword && selected && <ResetStaffPasswordModal staff={selected} close={() => setShowResetPassword(false)} save={async password => { await updateAgent({ id: selected.id, name: selected.full_name, email: selected.email, phone: selected.phone, active: selected.is_active, password }); setSaved("Password reset successfully."); }} />}{showCreate && <CreateAgent companies={companies} close={() => { setShowCreate(false); refresh(); }} save={async details => { await createAgent(details); }} />}
   </main>;
