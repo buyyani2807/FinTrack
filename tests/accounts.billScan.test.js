@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { normalizeBillScan, purchaseFormFromBill } from "../src/features/accounts/model/billScan.js";
-import handler, { readFailure } from "../api/accounts/bill-scan.js";
+import handler, { modelCandidates, readFailure } from "../api/accounts/bill-scan.js";
 
 const parties = [
   { id: "s1", name: "City Supplies", partyType: "supplier", gstin: "29ABCDE1234F1Z5", isActive: true, creditDays: 15 },
@@ -10,6 +10,13 @@ const parties = [
 const items = [
   { id: "i1", name: "Primer", sku: "PR-1", itemType: "product", unit: "Litre", gstRate: "18", hsnSac: "3208", isActive: true },
 ];
+
+test("a new Gemini project uses a current flash model", () => {
+  const models = modelCandidates("gemini-2.5-flash");
+  assert.equal(models[0], "gemini-2.5-flash");
+  assert.ok(models.includes("gemini-3.5-flash-lite"));
+  assert.equal(models.includes("gemini-2.5-flash-lite"), false);
+});
 
 test("a rejected Gemini key is not described as a bad photo", () => {
   const message = readFailure(401, { error: { message: "API key not valid. Please pass a valid API key." } });

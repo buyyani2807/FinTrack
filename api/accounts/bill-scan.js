@@ -4,7 +4,10 @@ import { normalizeBillScan } from "../../src/features/accounts/model/billScan.js
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const anonKey = process.env.VITE_SUPABASE_ANON_KEY;
 const geminiKey = process.env.GEMINI_API_KEY;
-const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+
+export function modelCandidates(preferred = process.env.GEMINI_MODEL) {
+  return [...new Set([preferred, "gemini-3.5-flash-lite", "gemini-3.8-flash"].filter(Boolean))];
+}
 
 const json = (res, status, body) => res.status(status).json(body);
 
@@ -45,7 +48,7 @@ export function readFailure(status, payload) {
     return "Google rejected the Gemini key. Replace GEMINI_API_KEY in Vercel, then redeploy staging.";
   }
   if (status === 404 || /not found|not supported/i.test(safe)) {
-    return "The bill reader model is not available. Redeploy after this update.";
+    return "Google could not run the bill reader. Redeploy staging, then try the sample bill again.";
   }
   if (safe) return `The bill could not be read. ${safe}`;
   return "The bill could not be read. Try the sample bill again.";
@@ -75,31 +78,39 @@ export default async function handler(req, res) {
   if (data.length > 2_000_000) return json(res, 413, { error: "That photo is too large. Take it again, closer to the bill." });
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(geminiModel)}:generateContent`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": geminiKey,
+    let payload = {};
+    let status = 502;
+    for (const model of modelCandidates()) {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": geminiKey,
+          },
+          signal: AbortSignal.timeout(25000),
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: PROMPT },
+                { inlineData: { mimeType, data } },
+              ],
+            }],
+            generationConfig: { temperature: 0, responseMimeType: "application/json" },
+          }),
         },
-        signal: AbortSignal.timeout(25000),
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: PROMPT },
-              { inlineData: { mimeType, data } },
-            ],
-          }],
-          generationConfig: { temperature: 0, responseMimeType: "application/json" },
-        }),
-      },
-    );
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) return json(res, 502, { error: readFailure(response.status, payload) });
-    const text = modelText(payload);
-    if (!text) return json(res, 502, { error: readFailure(response.status, payload) });
-    return json(res, 200, { bill: normalizeBillScan(parseModelJson(text)) });
+      );
+      payload = await response.json().catch(() => ({}));
+      status = response.status;
+      if (response.ok) {
+        const text = modelText(payload);
+        if (!text) return json(res, 502, { error: readFailure(status, payload) });
+        return json(res, 200, { bill: normalizeBillScan(parseModelJson(text)) });
+      }
+      if (status !== 404) break;
+    }
+    return json(res, 502, { error: readFailure(status, payload) });
   } catch (error) {
     return json(res, 502, { error: error?.message || "The bill could not be read. Try the sample bill again." });
   }
