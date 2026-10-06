@@ -42,30 +42,30 @@ function WorksForField({ value, onChange, companies }) {
   return <Field label="Collects for"><Select value={value} onChange={event => onChange(event.target.value)}><option value="">Select</option><option value="finance">Finance and chit customers</option>{choices.map(company => <option key={company.id} value={`accounts:${company.id}`}>{company.name}</option>)}</Select></Field>;
 }
 
-export function CollectionStaffPage({ loans, loadAgents, createAgent, assignAgent, updateAgent, staffId = null, onSelect, companies = [], loadRouteCustomers, loadRouteCounts, onOpenRoutes }) {
-  const [agents, setAgents] = useState([]), [search, setSearch] = useState(""), [showCreate, setShowCreate] = useState(false), [showEdit, setShowEdit] = useState(false), [showResetPassword, setShowResetPassword] = useState(false), [error, setError] = useState(""), [draftIds, setDraftIds] = useState([]), [saved, setSaved] = useState(""), [loading, setLoading] = useState(true), [routeCounts, setRouteCounts] = useState({}), [routeCustomers, setRouteCustomers] = useState([]), [routeLoading, setRouteLoading] = useState(false);
-  const refresh = async () => { setLoading(true); setError(""); try { setAgents(await loadAgents()); } catch (e) { setError(e.message || "Could not load staff."); } finally { setLoading(false); } };
+export function CollectionStaffPage({ loans, loadAgents, createAgent, assignAgent, updateAgent, staffId = null, onSelect, companies = [], loadRouteCustomers, onOpenRoutes }) {
+  const [agents, setAgents] = useState([]), [search, setSearch] = useState(""), [showCreate, setShowCreate] = useState(false), [showEdit, setShowEdit] = useState(false), [showResetPassword, setShowResetPassword] = useState(false), [error, setError] = useState(""), [draftIds, setDraftIds] = useState([]), [saved, setSaved] = useState(""), [loading, setLoading] = useState(true);
+  const refresh = async () => {
+    setLoading(true); setError("");
+    try {
+      const list = await loadAgents();
+      const enriched = await Promise.all((list || []).map(async agent => {
+        if (!agentCollectsAccounts(agent) || !loadRouteCustomers) return agent;
+        try {
+          const result = await loadRouteCustomers(agent);
+          const fromBooks = mapAgentRouteCustomers(result?.routes, result?.stops, result?.parties, result?.agentId || agent.id);
+          if (fromBooks.length) return { ...agent, route_customers: fromBooks };
+        } catch (err) {
+          setError(err?.message || "Could not load route customers.");
+        }
+        return agent;
+      }));
+      setAgents(enriched);
+    } catch (e) { setError(e.message || "Could not load staff."); } finally { setLoading(false); }
+  };
   useEffect(() => { refresh(); }, []);
   const selected = staffId ? agents.find(agent => agent.id === staffId) || null : null;
   const accountsAgent = agentCollectsAccounts(selected);
-  const listedFromAgent = Array.isArray(selected?.route_customers) && selected.route_customers.length ? selected.route_customers : null;
-  const shownRouteCustomers = listedFromAgent || routeCustomers;
-  useEffect(() => {
-    if (!loadRouteCounts || !agents.some(agent => agentCollectsAccounts(agent) && !Array.isArray(agent.route_customers))) return undefined;
-    let cancelled = false;
-    loadRouteCounts(agents).then(counts => { if (!cancelled) setRouteCounts(counts || {}); }).catch(() => { if (!cancelled) setRouteCounts({}); });
-    return () => { cancelled = true; };
-  }, [agents, loadRouteCounts]);
-  useEffect(() => {
-    if (!accountsAgent || listedFromAgent || !loadRouteCustomers || !selected?.id) { setRouteLoading(false); return undefined; }
-    let cancelled = false;
-    setRouteLoading(true);
-    loadRouteCustomers(selected)
-      .then(result => { if (!cancelled) setRouteCustomers(mapAgentRouteCustomers(result?.routes, result?.stops, result?.parties)); })
-      .catch(err => { if (!cancelled) { setRouteCustomers([]); setError(err?.message || "Could not load route customers."); } })
-      .finally(() => { if (!cancelled) setRouteLoading(false); });
-    return () => { cancelled = true; };
-  }, [accountsAgent, listedFromAgent, selected, loadRouteCustomers]);
+  const shownRouteCustomers = Array.isArray(selected?.route_customers) ? selected.route_customers : [];
   const resetDraft = agent => { setDraftIds(loans.filter(loan => loan.collectionAgentId === agent.id).map(loan => loan.id)); setSearch(""); setSaved(""); };
   // Opening a staff member (from the list or a URL) starts their assignment draft from what is saved.
   const [draftFor, setDraftFor] = useState(null);
@@ -98,8 +98,8 @@ export function CollectionStaffPage({ loans, loadAgents, createAgent, assignAgen
           <div className="toolbar"><div><strong>Route customers</strong><p className="small">{worksForLabel(selected, companies)} customers on this agent's collection routes. Add or remove them under Accounts, with {worksForLabel(selected, companies)} selected, in Parties → Routes.</p></div>{onOpenRoutes && <Button onClick={() => onOpenRoutes(selected.accounts_company_id)}>Open routes</Button>}</div>
           {saved && <p className="green small">{saved}</p>}
           <div className="customer-search"><input aria-label="Search route customers" placeholder="Search customers" value={search} onChange={e => setSearch(e.target.value)} /></div>
-          {routeLoading && !shownRouteCustomers.length ? <Spinner label="Loading route customers" /> : <div className="table"><table><thead><tr><th>Customer</th><th>Route</th><th>Phone</th></tr></thead><tbody>{shownRouteCustomers.filter(customer => `${customer.name} ${customer.phone} ${customer.routeName}`.toLowerCase().includes(search.trim().toLowerCase())).map(customer => <tr key={`${customer.routeId}:${customer.partyId}`}><td>{customer.name}</td><td>{customer.routeName}{customer.routeActive ? "" : " · Paused"}</td><td>{customer.phone || "—"}</td></tr>)}</tbody></table></div>}
-          {!routeLoading && !shownRouteCustomers.length && <p className="copy spacer">No customers on a route for this agent yet. Open routes for {worksForLabel(selected, companies)} and assign {selected.full_name}.</p>}
+          {loading ? <Spinner label="Loading route customers" /> : <div className="table"><table><thead><tr><th>Customer</th><th>Route</th><th>Phone</th></tr></thead><tbody>{shownRouteCustomers.filter(customer => `${customer.name} ${customer.phone} ${customer.routeName}`.toLowerCase().includes(search.trim().toLowerCase())).map(customer => <tr key={`${customer.routeId}:${customer.partyId}`}><td>{customer.name}</td><td>{customer.routeName}{customer.routeActive ? "" : " · Paused"}</td><td>{customer.phone || "—"}</td></tr>)}</tbody></table></div>}
+          {!loading && !shownRouteCustomers.length && <p className="copy spacer">No customers on a route for this agent yet. Open routes for {worksForLabel(selected, companies)} and assign {selected.full_name}.</p>}
         </div> : <div className="card">
           <div className="toolbar"><div><strong>Assigned customers</strong><p className="small">Finance and chit customers only. Select customers, then save. {draftIds.length} customers selected.</p></div></div>
           {saved && <p className="green small">{saved}</p>}
@@ -111,7 +111,7 @@ export function CollectionStaffPage({ loans, loadAgents, createAgent, assignAgen
       : <>
         <div className="toolbar"><div><h1 className="title">Collection Staff</h1><p className="copy">Accounts agents collect that company's route customers. Finance and chit agents collect the customers you assign here.</p></div><div className="tabs"><Button className="primary" onClick={() => setShowCreate(true)}>+ Create New Agent</Button></div></div>
         {error && <p className="red small">{error}</p>}
-        <div className="card">{loading ? <Spinner label="Loading collection staff" /> : !agents.length ? <EmptyState title="No collection staff yet" copy="Add staff to give them their own sign-in. They see only the customers you assign and record only their own collections." action={<Button className="primary" onClick={() => setShowCreate(true)}>+ Create New Agent</Button>} /> : <div className="table"><table><thead><tr><th>Agent</th><th>Email</th><th>Mobile</th><th>Collects for</th><th>Status</th><th>Assigned customers</th><th></th></tr></thead><tbody>{agents.map(agent => <tr key={agent.id}><td>{agent.full_name}</td><td>{agent.email || "—"}</td><td>{agent.phone || "—"}</td><td>{worksForLabel(agent, companies)}</td><td><Badge status={agent.is_active ? "active" : "closed"} /></td><td>{agentCollectsAccounts(agent) ? (Array.isArray(agent.route_customers) ? agent.route_customers.length : (routeCounts[agent.id] || 0)) : (agent.assigned_customer_count || 0)}</td><td><Button onClick={() => choose(agent)}>{agentCollectsAccounts(agent) ? "View" : "View / Assign"}</Button></td></tr>)}</tbody></table></div>}</div>
+        <div className="card">{loading ? <Spinner label="Loading collection staff" /> : !agents.length ? <EmptyState title="No collection staff yet" copy="Add staff to give them their own sign-in. They see only the customers you assign and record only their own collections." action={<Button className="primary" onClick={() => setShowCreate(true)}>+ Create New Agent</Button>} /> : <div className="table"><table><thead><tr><th>Agent</th><th>Email</th><th>Mobile</th><th>Collects for</th><th>Status</th><th>Assigned customers</th><th></th></tr></thead><tbody>{agents.map(agent => <tr key={agent.id}><td>{agent.full_name}</td><td>{agent.email || "—"}</td><td>{agent.phone || "—"}</td><td>{worksForLabel(agent, companies)}</td><td><Badge status={agent.is_active ? "active" : "closed"} /></td><td>{agentCollectsAccounts(agent) ? (agent.route_customers?.length || 0) : (agent.assigned_customer_count || 0)}</td><td><Button onClick={() => choose(agent)}>{agentCollectsAccounts(agent) ? "View" : "View / Assign"}</Button></td></tr>)}</tbody></table></div>}</div>
       </>}
     {showEdit && <EditCollectionStaff staff={selected} companies={companies} close={() => setShowEdit(false)} save={saveStaff} />}{showResetPassword && selected && <ResetStaffPasswordModal staff={selected} close={() => setShowResetPassword(false)} save={async password => { await updateAgent({ id: selected.id, name: selected.full_name, email: selected.email, phone: selected.phone, active: selected.is_active, password }); setSaved("Password reset successfully."); }} />}{showCreate && <CreateAgent companies={companies} close={() => { setShowCreate(false); refresh(); }} save={async details => { await createAgent(details); }} />}
   </main>;

@@ -15,9 +15,22 @@ export const agentCollectsAccounts = agent => agent?.collection_scope === "accou
 
 export const agentCollectsFinance = agent => agent?.collection_scope === "finance";
 
+const sameId = (left, right) => String(left || "").toLowerCase() === String(right || "").toLowerCase();
+
+/** Routes this agent collects: their own, otherwise this company's routes that have no agent, otherwise the only route. */
+export function routesForAgent(routes = [], agentId) {
+  const list = routes || [];
+  const mine = list.filter(route => sameId(route.agent_id, agentId));
+  if (mine.length) return mine;
+  const unassigned = list.filter(route => !route.agent_id);
+  if (unassigned.length) return unassigned;
+  return list.length === 1 ? list : [];
+}
+
 /** Customers on the routes assigned to one Accounts-company agent. */
-export function mapAgentRouteCustomers(routes = [], stops = [], parties = []) {
-  const routeById = new Map(routes.map(route => [route.id, route]));
+export function mapAgentRouteCustomers(routes = [], stops = [], parties = [], agentId = "") {
+  const chosen = agentId ? routesForAgent(routes, agentId) : routes;
+  const routeById = new Map(chosen.map(route => [route.id, route]));
   const partyById = new Map(parties.map(party => [party.id, party]));
   return stops
     .filter(stop => routeById.has(stop.route_id))

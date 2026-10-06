@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { agentCollectsAccounts, agentCollectsFinance, financeKindLabel, mapAgentRouteCustomers, routeCustomerCounts, staffAssignableLoans } from "../src/features/finance/model/collectionStaff.js";
+import { agentCollectsAccounts, agentCollectsFinance, financeKindLabel, mapAgentRouteCustomers, routeCustomerCounts, routesForAgent, staffAssignableLoans } from "../src/features/finance/model/collectionStaff.js";
 
 const statusOf = loan => loan.status;
 
@@ -56,4 +56,14 @@ test("route customers stay with the agent's company routes", () => {
     ["Mahaveer Traders", "Srihitha Infra"],
   );
   assert.deepEqual(routeCustomerCounts(routes, stops), { sai: 2, other: 1 });
+  assert.deepEqual(routesForAgent(routes, "missing").map(route => route.id), []);
+  assert.deepEqual(routesForAgent([{ id: "r1", agent_id: null }, { id: "r2", agent_id: "other" }], "sai").map(route => route.id), ["r1"]);
+  assert.deepEqual(
+    mapAgentRouteCustomers(routes, stops, parties, "missing").map(row => row.name),
+    [],
+  );
+  assert.deepEqual(
+    mapAgentRouteCustomers([{ id: "r1", name: "KPHB", agent_id: null }], stops, parties, "sai").map(row => row.name),
+    ["Mahaveer Traders", "Srihitha Infra"],
+  );
 });

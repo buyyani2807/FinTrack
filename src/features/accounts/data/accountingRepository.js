@@ -881,22 +881,23 @@ export const loadCollectionRoutes = token => ignoreMissing(Promise.all([
 
 const companyRequest = (companyId, token, path) => supabase.query(path, token, { headers: { "x-acc-company-id": companyId } });
 
-/** Route stops for one Accounts-company agent. Same company header the Routes screen uses. */
+/** Route stops for one Accounts-company agent. Same company load the Routes screen uses. */
 export async function loadAgentRouteCustomers(token, agent) {
   const companyId = agent?.accounts_company_id;
   if (!token || !agent?.id || !companyId) return { routes: [], stops: [], parties: [] };
   const previous = getActiveAccountsCompanyId();
   setActiveAccountsCompanyId(companyId);
   try {
-    const data = await loadCollectionRoutes(token);
-    const routes = (data?.routes || []).filter(route => String(route.agent_id || "") === String(agent.id));
-    const routeIds = new Set(routes.map(route => route.id));
-    const stops = (data?.stops || []).filter(stop => routeIds.has(stop.route_id));
-    const partyIds = [...new Set(stops.map(stop => stop.party_id).filter(Boolean))];
-    const parties = partyIds.length
-      ? await companyRequest(companyId, token, `/rest/v1/acc_parties?select=id,name,phone&id=in.(${partyIds.map(id => encodeURIComponent(id)).join(",")})`)
-      : [];
-    return { routes, stops, parties: parties || [] };
+    const [data, parties] = await Promise.all([
+      loadCollectionRoutes(token),
+      loadParties(token).catch(() => []),
+    ]);
+    return {
+      routes: data?.routes || [],
+      stops: data?.stops || [],
+      parties: parties || [],
+      agentId: agent.id,
+    };
   } finally {
     setActiveAccountsCompanyId(previous);
   }

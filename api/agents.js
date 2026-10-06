@@ -24,54 +24,64 @@ async function agentCompanyLink(body, organizationId, { required = false } = {})
   return { patch: { collection_scope: "accounts", accounts_company_id: body.accountsCompanyId } };
 }
 
-async function routeCustomersByAgent(organizationId) {
-  if (!isUuid(organizationId)) return {};
-  const routeResponse = await fetch(`${supabaseUrl}/rest/v1/acc_collection_routes?organization_id=eq.${organizationId}&select=id,name,is_active,agent_id,company_id`, { headers: headers(serviceKey) });
-  if (!routeResponse.ok) return {};
-  const routes = await routeResponse.json();
-  if (!Array.isArray(routes) || !routes.length) return {};
-  const routeIds = routes.map(route => route.id).filter(isUuid);
-  if (!routeIds.length) return {};
-  const stopResponse = await fetch(`${supabaseUrl}/rest/v1/acc_collection_route_stops?organization_id=eq.${organizationId}&select=route_id,party_id,stop_order&route_id=in.(${routeIds.join(",")})`, { headers: headers(serviceKey) });
-  const stops = stopResponse.ok ? await stopResponse.json() : [];
-  if (!Array.isArray(stops) || !stops.length) return {};
-  const partyIds = [...new Set(stops.map(stop => stop.party_id).filter(isUuid))];
-  const partyResponse = partyIds.length
-    ? await fetch(`${supabaseUrl}/rest/v1/acc_parties?organization_id=eq.${organizationId}&select=id,name,phone&id=in.(${partyIds.join(",")})`, { headers: headers(serviceKey) })
-    : null;
-  const parties = partyResponse?.ok ? await partyResponse.json() : [];
-  const partyById = new Map((Array.isArray(parties) ? parties : []).map(party => [party.id, party]));
-  const routeById = new Map(routes.map(route => [route.id, route]));
-  const byAgent = {};
-  for (const stop of stops) {
-    const route = routeById.get(stop.route_id);
-    if (!route?.agent_id) continue;
-    const party = partyById.get(stop.party_id) || {};
-    const row = {
-      partyId: stop.party_id,
-      name: party.name || "Customer",
-      phone: party.phone || "",
-      routeId: route.id,
-      routeName: route.name || "",
-      routeActive: route.is_active !== false,
-      stopOrder: Number(stop.stop_order || 0),
-      companyId: route.company_id || "",
-    };
-    if (!byAgent[route.agent_id]) byAgent[route.agent_id] = [];
-    byAgent[route.agent_id].push(row);
-  }
-  for (const rows of Object.values(byAgent)) {
-    rows.sort((a, b) => a.routeName.localeCompare(b.routeName) || a.stopOrder - b.stopOrder || a.name.localeCompare(b.name));
-  }
-  return byAgent;
+function routeCustomerRow(route, stop, partyById) {
+  const party = partyById.get(stop.party_id) || {};
+  return {
+    partyId: stop.party_id,
+    name: party.name || "Customer",
+    phone: party.phone || "",
+    routeId: route.id,
+    routeName: route.name || "",
+    routeActive: route.is_active !== false,
+    stopOrder: Number(stop.stop_order || 0),
+    companyId: route.company_id || "",
+    agentId: route.agent_id || "",
+  };
 }
 
-function routeCustomersFor(agent, byAgent) {
-  const rows = byAgent[agent.id] || [];
+async function routeCustomersByAgent(organizationId) {
+  if (!isUuid(organizationId)) return { byAgent: {}, unassignedByCompany: {} };
+  const read = async path => {
+    const response = await fetch(`${supabaseUrl}/rest/v1/${path}`, { headers: headers(serviceKey) });
+    if (!response.ok) return [];
+    const body = await response.json();
+    return Array.isArray(body) ? body : [];
+  };
+  const [routes, stops, parties] = await Promise.all([
+    read(`acc_collection_routes?organization_id=eq.${organizationId}&select=id,name,is_active,agent_id,company_id`),
+    read(`acc_collection_route_stops?organization_id=eq.${organizationId}&select=route_id,party_id,stop_order`),
+    read(`acc_parties?organization_id=eq.${organizationId}&select=id,name,phone`),
+  ]);
+  const partyById = new Map(parties.map(party => [party.id, party]));
+  const routeById = new Map(routes.map(route => [route.id, route]));
+  const byAgent = {};
+  const unassignedByCompany = {};
+  for (const stop of stops) {
+    const route = routeById.get(stop.route_id);
+    if (!route) continue;
+    const row = routeCustomerRow(route, stop, partyById);
+    if (route.agent_id) {
+      if (!byAgent[route.agent_id]) byAgent[route.agent_id] = [];
+      byAgent[route.agent_id].push(row);
+    } else if (route.company_id) {
+      if (!unassignedByCompany[route.company_id]) unassignedByCompany[route.company_id] = [];
+      unassignedByCompany[route.company_id].push(row);
+    }
+  }
+  for (const rows of [...Object.values(byAgent), ...Object.values(unassignedByCompany)]) {
+    rows.sort((a, b) => a.routeName.localeCompare(b.routeName) || a.stopOrder - b.stopOrder || a.name.localeCompare(b.name));
+  }
+  return { byAgent, unassignedByCompany };
+}
+
+function routeCustomersFor(agent, { byAgent = {}, unassignedByCompany = {} } = {}) {
   if (agent.collection_scope === "finance") return [];
+  const rows = byAgent[agent.id] || [];
   if (agent.collection_scope === "accounts" && agent.accounts_company_id) {
     const forCompany = rows.filter(row => row.companyId === agent.accounts_company_id);
-    return forCompany.length ? forCompany : rows;
+    if (forCompany.length) return forCompany;
+    if (rows.length) return rows;
+    return unassignedByCompany[agent.accounts_company_id] || [];
   }
   return rows;
 }
