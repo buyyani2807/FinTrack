@@ -58,6 +58,7 @@ export function BillPhotoDraft({ token, parties, items, form, setForm, today, vo
   const [review, setReview] = useState(null);
   const [keepPhoto, setKeepPhoto] = useState(false);
   const [applied, setApplied] = useState(false);
+  const [acceptDuplicate, setAcceptDuplicate] = useState(false);
   const [error, setError] = useState("");
   const photoFits = Boolean(photo && photo.byteSize > 0 && photo.byteSize <= VOUCHER_ATTACHMENT_MAX_BYTES);
 
@@ -72,6 +73,7 @@ export function BillPhotoDraft({ token, parties, items, form, setForm, today, vo
     setReview(null);
     setApplied(false);
     setKeepPhoto(false);
+    setAcceptDuplicate(false);
     clearPhotoOnForm();
     try {
       const jpeg = await fileToJpeg(file);
@@ -110,6 +112,7 @@ export function BillPhotoDraft({ token, parties, items, form, setForm, today, vo
     setPhoto(null);
     setKeepPhoto(false);
     setApplied(false);
+    setAcceptDuplicate(false);
     clearPhotoOnForm();
   };
 
@@ -167,7 +170,13 @@ export function BillPhotoDraft({ token, parties, items, form, setForm, today, vo
           </label>
           {!photoFits ? <p className="small">This photo is larger than 512 KB, so it stays on screen and is not stored with the voucher.</p> : null}
           <div className="acc-bill-review-actions">
-            <button type="button" className="btn primary" disabled={applied} onClick={useDraft}>{applied ? "Draft in the form" : "Use this draft"}</button>
+            {(review.duplicates || []).length ? (
+              <label className="small acc-bill-keep">
+                <input type="checkbox" checked={acceptDuplicate} onChange={event => setAcceptDuplicate(event.target.checked)} />
+                Use this draft anyway. I have checked it is not the same bill as {(review.duplicates || []).map(voucher => voucher.voucherNumber).filter(Boolean).join(", ")}.
+              </label>
+            ) : null}
+            <button type="button" className="btn primary" disabled={applied || ((review.duplicates || []).length > 0 && !acceptDuplicate)} onClick={useDraft}>{applied ? "Draft in the form" : "Use this draft"}</button>
             <button type="button" className="btn" onClick={discard}>Discard</button>
           </div>
           {applied ? <p className="small">Draft is in the form. Check it, then save. Nothing is posted until you save.</p> : null}

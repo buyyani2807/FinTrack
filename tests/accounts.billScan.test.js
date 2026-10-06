@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizeBillScan, purchaseFormFromBill, reviewBillScan } from "../src/features/accounts/model/billScan.js";
+import { markDuplicateInvoices, normalizeBillScan, purchaseFormFromBill, reviewBillScan } from "../src/features/accounts/model/billScan.js";
 import { DEFAULT_CHART_OF_ACCOUNTS, buildVoucher, paymentLines } from "../src/features/accounts/model/accountingModel.js";
 import handler, { modelCandidates, readFailure } from "../api/accounts/bill-scan.js";
 
@@ -178,4 +178,49 @@ test("a bill review lists missing fields, a duplicate, GST class, and an expense
   });
   assert.equal(inter.gst.supply, "inter");
   assert.equal(inter.duplicate, null);
+});
+
+test("the same supplier, date, and amount is a duplicate purchase even without an invoice number", () => {
+  const purchase = number => ({
+    status: "posted",
+    voucherType: "purchase",
+    voucherNumber: number,
+    date: "2026-09-15",
+    partyId: "s1",
+    narration: "",
+    lines: [{ debit: 12614.8 }, { credit: 12614.8 }],
+  });
+  const review = reviewBillScan({
+    supplierName: "City Supplies",
+    supplierGstin: "29ABCDE1234F1Z5",
+    billDate: "2026-09-15",
+    paymentStatus: "unpaid",
+    total: 12614.8,
+    lines: [{ name: "Initial Coatings", quantity: 1, rate: 10690.51, gstRate: 18 }],
+  }, {
+    parties,
+    items,
+    today: "2026-10-06",
+    vouchers: [purchase("PUR-000002"), purchase("PUR-000003"), purchase("PUR-000004")],
+  });
+  assert.deepEqual(review.duplicates.map(row => row.voucherNumber), ["PUR-000002", "PUR-000003", "PUR-000004"]);
+  assert.match(review.draft.warnings[0], /PUR-000002, PUR-000003, PUR-000004/);
+
+  const different = reviewBillScan({
+    supplierName: "City Supplies",
+    supplierGstin: "29ABCDE1234F1Z5",
+    billDate: "2026-09-15",
+    paymentStatus: "unpaid",
+    total: 500,
+    lines: [],
+  }, { parties, items, today: "2026-10-06", vouchers: [purchase("PUR-000002")] });
+  assert.equal(different.duplicate, null);
+  const marked = markDuplicateInvoices([
+    { id: "a", partyId: "s1", partyName: "Initial Coatings", invoiceDate: "2026-09-15", amount: 12614.8 },
+    { id: "b", partyId: "s1", partyName: "Initial Coatings", invoiceDate: "2026-09-15", amount: 12614.8 },
+    { id: "c", partyId: "s1", partyName: "Initial Coatings", invoiceDate: "2026-09-16", amount: 12614.8 },
+  ]);
+  assert.equal(marked[0].possibleDuplicate, true);
+  assert.equal(marked[1].possibleDuplicate, true);
+  assert.equal(marked[2].possibleDuplicate, undefined);
 });

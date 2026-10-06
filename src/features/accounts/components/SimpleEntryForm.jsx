@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Select } from "../../../components/Select.jsx";
 import {
   MONEY_MODES,
@@ -21,8 +22,10 @@ import { ItemLinesSection } from "./simpleEntry/ItemLinesSection.jsx";
 import { SaleSummaryCard } from "./simpleEntry/SaleSummaryCard.jsx";
 import { BillwiseSettlement } from "./simpleEntry/BillwiseSettlement.jsx";
 import { BillPhotoDraft } from "./simpleEntry/BillPhotoDraft.jsx";
+import { billNumberFromNarration, findPostedPurchaseDuplicates } from "../model/billScan.js";
 
 export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, saving, maxDate, gstCompany, onGstSetup, items = [], stockByItem = {}, openInvoices = [], creditInfo = null, token, vouchers = [] }) {
+  const [allowedDuplicateKey, setAllowedDuplicateKey] = useState("");
   const customers = parties.filter(party => party.partyType === "customer" && (party.isActive !== false || party.id === form.partyId));
   const suppliers = parties.filter(party => party.partyType === "supplier" && (party.isActive !== false || party.id === form.partyId));
   const expenseOptions = SIMPLE_EXPENSE_CODES.filter(([code]) => accounts.some(account => account.code === code) || code === "5990");
@@ -99,6 +102,20 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
       cash: Number(form.receivedCash || 0),
       upi: Number(form.receivedUpi || 0),
     });
+  const purchaseAmounts = kind === "purchase"
+    ? [itemMode ? Number((gstOn ? itemPreview?.total : itemPreview?.taxable) || 0) : Number(form.amount || 0), Number(itemPreview?.taxable || 0), Number(itemPreview?.total || 0)]
+    : [];
+  const purchaseDuplicates = kind === "purchase"
+    ? findPostedPurchaseDuplicates({
+      partyId: form.partyId,
+      date: form.date,
+      amounts: purchaseAmounts,
+      billNumber: billNumberFromNarration(form.narration),
+      vouchers,
+    })
+    : [];
+  const duplicateKey = purchaseDuplicates.map(voucher => voucher.id || voucher.voucherNumber).join("|");
+  const duplicateConfirmed = Boolean(duplicateKey) && allowedDuplicateKey === duplicateKey;
   const expenseSuggestion = kind === "expense" ? suggestExpense(form.narration, vouchers, accounts) : null;
   const expenseSuggestionApplied = expenseSuggestion
     && form.expenseCode === expenseSuggestion.expenseCode
@@ -284,6 +301,17 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
       />
     )}
 
-    <div className="tabs spacer"><button type="button" className="btn primary" disabled={saving || (settlementKinds && settlementTotal > Number(form.amount || 0) + 0.001) || (saleSummary && saleSummary.amountReceived > saleSummary.invoiceTotal + 0.001) || (showMoneyMode && form.moneyMode === "cash_upi" && splitTargetAmount > 0 && !cashUpiValid)} onClick={onSubmit}>{saving ? "Saving…" : "Save"}</button></div>
+    {purchaseDuplicates.length ? (
+      <div className="acc-credit-alert spacer" role="alert">
+        <strong>Possible duplicate</strong>
+        <p className="small">{purchaseDuplicates.map(voucher => voucher.voucherNumber).filter(Boolean).join(", ")} {purchaseDuplicates.length === 1 ? "is" : "are"} already posted for this supplier on {form.date} for the same amount.</p>
+        <label className="small acc-bill-keep">
+          <input type="checkbox" checked={duplicateConfirmed} onChange={event => setAllowedDuplicateKey(event.target.checked ? duplicateKey : "")} />
+          Post this purchase anyway
+        </label>
+      </div>
+    ) : null}
+
+    <div className="tabs spacer"><button type="button" className="btn primary" disabled={saving || (purchaseDuplicates.length > 0 && !duplicateConfirmed) || (settlementKinds && settlementTotal > Number(form.amount || 0) + 0.001) || (saleSummary && saleSummary.amountReceived > saleSummary.invoiceTotal + 0.001) || (showMoneyMode && form.moneyMode === "cash_upi" && splitTargetAmount > 0 && !cashUpiValid)} onClick={onSubmit}>{saving ? "Saving…" : "Save"}</button></div>
   </>;
 }

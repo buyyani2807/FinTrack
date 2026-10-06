@@ -29,6 +29,13 @@ function dateOnly(value) {
   return /^\d{4}-\d{2}-\d{2}/.test(text) ? text.slice(0, 10) : "";
 }
 
+function voucherTypeLabel(type) {
+  if (type === "receipt") return "receipts";
+  if (type === "purchase") return "purchases";
+  if (type === "sales") return "sales";
+  return "payments";
+}
+
 function debitTotal(voucher) {
   return roundMoney((voucher?.lines || []).reduce((sum, line) => sum + Number(line.debit || 0), 0));
 }
@@ -70,7 +77,7 @@ function duplicateVouchers(vouchers, parties) {
   const groups = new Map();
   for (const voucher of vouchers || []) {
     if (!isPosted(voucher)) continue;
-    if (voucher.voucherType !== "receipt" && voucher.voucherType !== "payment") continue;
+    if (!["receipt", "payment", "purchase", "sales"].includes(voucher.voucherType)) continue;
     const total = debitTotal(voucher);
     if (!(total > 0)) continue;
     const key = [voucher.voucherType, voucher.date, voucher.partyId || "", total].join("|");
@@ -85,8 +92,8 @@ function duplicateVouchers(vouchers, parties) {
       id: `dup-voucher-${group.map(voucher => voucher.id || voucher.voucherNumber).join("-")}`,
       module: "accounts",
       tone: "duplicate",
-      title: numbers || "Receipts or payments",
-      detail: `${group.length} posted ${group[0].voucherType === "receipt" ? "receipts" : "payments"} on ${group[0].date || "the same date"} share ${money(debitTotal(group[0]))}${name ? ` for ${name}` : ""}.`,
+      title: numbers || "Vouchers",
+      detail: `${group.length} posted ${voucherTypeLabel(group[0].voucherType)} on ${group[0].date || "the same date"} share ${money(debitTotal(group[0]))}${name ? ` for ${name}` : ""}.`,
       actionLabel: "Open transactions",
       href: { panel: "accounts", section: "vouchers" },
     });

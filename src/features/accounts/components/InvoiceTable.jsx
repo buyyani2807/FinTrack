@@ -2,6 +2,7 @@ import { Fragment, useState } from "react";
 import { AccEmpty } from "./AccUi.jsx";
 import { ArReminderButton, PaymentAdviceButton } from "./SalesInvoiceActions.jsx";
 import { money } from "../accountsFormat.js";
+import { markDuplicateInvoices } from "../model/billScan.js";
 
 const invoiceStatusTone = status => {
   if (status === "Overdue") return "inv-overdue";
@@ -108,6 +109,7 @@ export function InvoiceTable({ rows, kind, orgSettings, activeCompany, workspace
   if (!rows.length) {
     return <AccEmpty title={emptyTitle} copy={emptyCopy} />;
   }
+  const shown = markDuplicateInvoices(rows);
   return (
     <>
       <div className="table spacer acc-table-wrap accounts-invoice-table acc-invoice-desktop">
@@ -127,7 +129,7 @@ export function InvoiceTable({ rows, kind, orgSettings, activeCompany, workspace
             </tr>
           </thead>
           <tbody>
-            {rows.map(row => {
+            {shown.map(row => {
               const open = openId === row.id;
               const goods = (
                 <GoodsLines
@@ -151,6 +153,7 @@ export function InvoiceTable({ rows, kind, orgSettings, activeCompany, workspace
                       <button type="button" className="acc-invoice-ref-btn" aria-expanded={open} onClick={() => setOpenId(current => current === row.id ? null : row.id)}>
                         {row.reference}
                       </button>
+                      {row.possibleDuplicate ? <span className="small acc-bill-scan-error">Possible duplicate</span> : null}
                     </td>
                     <td>{row.invoiceDate}</td>
                     <td>{row.dueDate}</td>
@@ -173,7 +176,7 @@ export function InvoiceTable({ rows, kind, orgSettings, activeCompany, workspace
         </table>
       </div>
       <div className="acc-invoice-cards spacer">
-        {rows.map(row => (
+        {shown.map(row => (
           <article key={row.id} className={`card acc-invoice-card${row.status === "Overdue" ? " is-overdue" : ""}`}>
             <div className="acc-invoice-card-top">
               <div>
@@ -182,6 +185,7 @@ export function InvoiceTable({ rows, kind, orgSettings, activeCompany, workspace
                   <button type="button" className="acc-invoice-ref-btn" aria-expanded={openId === row.id} onClick={() => setOpenId(current => current === row.id ? null : row.id)}>
                     {row.reference}
                   </button>
+                  {row.possibleDuplicate ? <span className="small acc-bill-scan-error"> · Possible duplicate</span> : null}
                   {" · due "}{row.dueDate}
                 </p>
               </div>

@@ -205,17 +205,86 @@ function missingBillFields(bill) {
   return missing;
 }
 
-export function findDuplicateBill(bill, vouchers = [], partyId = "") {
-  const number = normName(bill.billNumber).replace(/\s/g, "");
-  if (number.length < 4) return null;
-  const hits = (vouchers || []).filter(voucher => {
-    if (!isPosted(voucher)) return false;
-    const narration = normName(`${voucher.narration || ""} ${voucher.voucherNumber || ""}`).replace(/\s/g, "");
-    if (!narration.includes(number)) return false;
-    if (partyId && voucher.partyId && voucher.partyId !== partyId) return false;
-    return true;
-  });
-  return hits[0] || null;
+function voucherDebit(voucher) {
+  return roundMoney((voucher?.lines || []).reduce((sum, line) => sum + Number(line.debit || 0), 0));
+}
+
+/** Amounts a scanned bill might equal on a posted purchase: printed total, taxable, or taxable plus GST. */
+export function purchaseDuplicateAmounts(bill) {
+  const source = bill && typeof bill === "object" ? bill : {};
+  const amounts = [];
+  const push = value => {
+    const number = roundMoney(value);
+    if (number > 0 && !amounts.includes(number)) amounts.push(number);
+  };
+  push(source.total);
+  if (source.taxable != null || source.cgst != null || source.sgst != null || source.igst != null) {
+    push(Number(source.taxable || 0) + Number(source.cgst || 0) + Number(source.sgst || 0) + Number(source.igst || 0));
+  }
+  let net = 0;
+  let gross = 0;
+  for (const line of source.lines || []) {
+    const taxable = roundMoney(Number(line.quantity) * Number(line.rate));
+    net += taxable;
+    const rate = Number(line.gstRate) || 0;
+    gross += roundMoney(taxable * (1 + rate / 100));
+  }
+  push(net);
+  push(gross);
+  return amounts;
+}
+
+export function billNumberFromNarration(narration) {
+  const match = String(narration || "").match(/Bill\s+([^·]+)/i);
+  return match ? match[1].trim() : "";
+}
+
+/** Posted purchases that repeat this supplier bill. A match is the same bill number, or the same supplier, date, and amount. */
+export function findPostedPurchaseDuplicates({ partyId = "", date = "", amount = 0, amounts = [], billNumber = "", vouchers = [] } = {}) {
+  const number = normName(billNumber).replace(/\s/g, "");
+  const wanted = [...amounts, amount].map(value => roundMoney(value)).filter(value => value > 0);
+  const hits = [];
+  for (const voucher of vouchers || []) {
+    if (!isPosted(voucher)) continue;
+    const narration = normName(voucher.narration || "").replace(/\s/g, "");
+    const numberHit = number.length >= 4 && narration.includes(number);
+    const purchase = !voucher.voucherType || voucher.voucherType === "purchase";
+    const total = voucherDebit(voucher);
+    const amountHit = purchase && partyId && voucher.partyId === partyId && date && voucher.date === date
+      && wanted.some(value => Math.abs(value - total) <= 1);
+    if (!numberHit && !amountHit) continue;
+    if (partyId && voucher.partyId && voucher.partyId !== partyId) continue;
+    hits.push(voucher);
+  }
+  return hits;
+}
+
+/** Payables or receivables that share a party, invoice date, and amount. */
+export function markDuplicateInvoices(rows = []) {
+  const groups = new Map();
+  for (const row of rows) {
+    const amount = roundMoney(row?.amount);
+    const key = [row?.partyId || row?.partyName || "", row?.invoiceDate || "", amount].join("|");
+    const list = groups.get(key) || [];
+    list.push(row);
+    groups.set(key, list);
+  }
+  const flagged = new Set();
+  for (const list of groups.values()) {
+    if (list.length < 2 || !(roundMoney(list[0]?.amount) > 0)) continue;
+    for (const row of list) flagged.add(row.id);
+  }
+  return rows.map(row => flagged.has(row.id) ? { ...row, possibleDuplicate: true } : row);
+}
+
+export function findDuplicateBill(bill, vouchers = [], partyId = "", date = "") {
+  return findPostedPurchaseDuplicates({
+    partyId,
+    date: date || bill.billDate || "",
+    amounts: purchaseDuplicateAmounts(bill),
+    billNumber: bill.billNumber,
+    vouchers,
+  })[0] || null;
 }
 
 function gstSuggestion(bill, companyState) {
@@ -239,7 +308,14 @@ export function reviewBillScan(scan, { parties = [], items = [], form = {}, toda
   const bill = normalizeBillScan(scan);
   const draft = purchaseFormFromBill(bill, { parties, items, form, today });
   const party = (parties || []).find(item => item.id === draft.form.partyId) || null;
-  const duplicate = findDuplicateBill(bill, vouchers, party?.id || "");
+  const duplicates = findPostedPurchaseDuplicates({
+    partyId: party?.id || "",
+    date: draft.form.date || bill.billDate || "",
+    amounts: purchaseDuplicateAmounts(bill),
+    billNumber: bill.billNumber,
+    vouchers,
+  });
+  const duplicate = duplicates[0] || null;
   const expense = suggestExpense([bill.supplierName, ...bill.lines.map(line => line.name)].filter(Boolean).join(" "), vouchers, accounts);
   const gst = gstSuggestion(bill, companyState);
   const missing = missingBillFields(bill);
@@ -253,13 +329,17 @@ export function reviewBillScan(scan, { parties = [], items = [], form = {}, toda
   if (bill.documentKind !== "invoice") {
     warnings.unshift(`This reads as a ${KIND_LABELS[bill.documentKind].toLowerCase()}. It stays a draft until you use it and save.`);
   }
-  if (duplicate) warnings.unshift(`Possible duplicate of ${duplicate.voucherNumber || "a posted voucher"} on ${duplicate.date || "file"}.`);
+  if (duplicates.length) {
+    const numbers = duplicates.map(voucher => voucher.voucherNumber).filter(Boolean).join(", ");
+    warnings.unshift(`Possible duplicate of ${numbers || "a posted purchase"}. The same supplier bill is already posted.`);
+  }
   return {
     bill,
     documentLabel: KIND_LABELS[bill.documentKind],
     confidence,
     missing,
     duplicate: duplicate ? { voucherNumber: duplicate.voucherNumber || "", date: duplicate.date || "" } : null,
+    duplicates: duplicates.map(voucher => ({ voucherNumber: voucher.voucherNumber || "", date: voucher.date || "" })),
     supplier: party ? { id: party.id, name: party.name } : null,
     expense: expense ? { expenseCode: expense.expenseCode, expenseName: expense.expenseName, amount: expense.amount, date: expense.date } : null,
     gst,

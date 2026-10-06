@@ -21,6 +21,26 @@ test("matching receipts are a possible duplicate and nothing is posted or labell
   assert.equal(JSON.stringify(review).includes("is fraudulent"), false);
 });
 
+test("three identical purchases are a possible duplicate", () => {
+  const purchase = number => ({
+    status: "posted",
+    voucherType: "purchase",
+    voucherNumber: number,
+    date: "2026-09-15",
+    partyId: "p1",
+    lines: [{ debit: 12614.8 }],
+  });
+  const review = buildAnomalyReview({
+    today,
+    parties: [{ id: "p1", name: "Initial Coatings" }],
+    vouchers: [purchase("PUR-000002"), purchase("PUR-000003"), purchase("PUR-000004")],
+  });
+  assert.equal(review.items[0].label, "Possible duplicate");
+  assert.match(review.items[0].title, /PUR-000002, PUR-000003, PUR-000004/);
+  assert.match(review.items[0].detail, /purchases/);
+  assert.match(review.items[0].detail, /Initial Coatings/);
+});
+
 test("a voucher far above the earlier amounts, a late recording, reversals, and a lock are flagged", () => {
   const usual = [100, 100, 120, 110].map((amount, index) => posted({
     id: `u${index}`,
