@@ -330,7 +330,16 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     }
   }, [token]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const companyId = params.get("company") || undefined;
+    if (companyId) {
+      params.delete("company");
+      const query = params.toString();
+      window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`);
+    }
+    refresh(companyId);
+  }, [refresh]);
 
   useEffect(() => {
     if (!token) return undefined;

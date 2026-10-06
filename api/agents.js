@@ -24,6 +24,25 @@ async function agentCompanyLink(body, organizationId, { required = false } = {})
   return { patch: { collection_scope: "accounts", accounts_company_id: body.accountsCompanyId } };
 }
 
+async function separateAgentBooks(organizationId, agentId, patch) {
+  if (!isUuid(agentId) || !isUuid(organizationId) || !patch?.collection_scope) return;
+  const write = (path, body) => fetch(`${supabaseUrl}/rest/v1/${path}`, {
+    method: "PATCH",
+    headers: { ...headers(serviceKey), Prefer: "return=minimal" },
+    body: JSON.stringify(body),
+  });
+  if (patch.collection_scope === "accounts") {
+    await write(`finance_accounts?organization_id=eq.${organizationId}&collection_agent_id=eq.${agentId}`, { collection_agent_id: null });
+    if (patch.accounts_company_id) {
+      await write(`acc_collection_routes?organization_id=eq.${organizationId}&agent_id=eq.${agentId}&company_id=neq.${patch.accounts_company_id}`, { agent_id: null });
+    }
+    return;
+  }
+  if (patch.collection_scope === "finance") {
+    await write(`acc_collection_routes?organization_id=eq.${organizationId}&agent_id=eq.${agentId}`, { agent_id: null });
+  }
+}
+
 export default async function handler(req, res) {
   if (!["GET", "POST", "PATCH"].includes(req.method)) return json(res, 405, { error: "Method not allowed" });
   if (!supabaseUrl || !serviceKey) return json(res, 500, { error: "Agent management is not configured yet" });
@@ -63,6 +82,7 @@ export default async function handler(req, res) {
         const detail = await updated.text();
         return json(res, 500, { error: /collection_scope|accounts_company_id/i.test(detail) ? "Run migration 085_agent_company.sql in the Supabase SQL editor, then save the agent again." : "Could not save staff changes" });
       }
+      await separateAgentBooks(profile.organization_id, id, companyLink.patch);
       return json(res, 200, (await updated.json())[0]);
     }
     const { name, email, phone = "", password, active = true } = req.body || {};
@@ -82,6 +102,7 @@ export default async function handler(req, res) {
       const detail = await saved.text();
       return json(res, 500, { error: /collection_scope|accounts_company_id/i.test(detail) ? "Run migration 085_agent_company.sql in the Supabase SQL editor, then create the agent again." : "Agent login was created but its profile could not be saved" });
     }
+    await separateAgentBooks(profile.organization_id, agentId, companyLink.patch);
     return json(res, 201, { id: agentId, name: name.trim(), email: email.trim().toLowerCase() });
   } catch (error) { return json(res, 500, { error: error.message || "Could not create agent" }); }
 }

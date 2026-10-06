@@ -879,6 +879,43 @@ export const loadCollectionRoutes = token => ignoreMissing(Promise.all([
   accQuery(`/rest/v1/acc_collection_route_stops?select=route_id,party_id,stop_order&order=stop_order.asc&limit=20000${companyEq()}`, token),
 ]).then(([routes, stops]) => ({ routes: routes || [], stops: stops || [] })));
 
+const companyRequest = (companyId, token, path) => supabase.query(path, token, { headers: { "x-acc-company-id": companyId } });
+
+/** Route stops for one Accounts-company agent, read with that company's header. */
+export async function loadAgentRouteCustomers(token, agent) {
+  const companyId = agent?.accounts_company_id;
+  if (!token || !agent?.id || !companyId) return { routes: [], stops: [], parties: [] };
+  const routes = await companyRequest(companyId, token, `/rest/v1/acc_collection_routes?select=id,name,is_active,agent_id&company_id=eq.${encodeURIComponent(companyId)}&agent_id=eq.${encodeURIComponent(agent.id)}&order=name.asc`);
+  const mine = routes || [];
+  if (!mine.length) return { routes: mine, stops: [], parties: [] };
+  const stops = await companyRequest(companyId, token, `/rest/v1/acc_collection_route_stops?select=route_id,party_id,stop_order&company_id=eq.${encodeURIComponent(companyId)}&order=stop_order.asc&limit=20000`);
+  const mineStops = (stops || []).filter(stop => mine.some(route => route.id === stop.route_id));
+  const partyIds = [...new Set(mineStops.map(stop => stop.party_id).filter(Boolean))];
+  const parties = partyIds.length
+    ? await companyRequest(companyId, token, `/rest/v1/acc_parties?select=id,name,phone&company_id=eq.${encodeURIComponent(companyId)}&id=in.(${partyIds.map(id => encodeURIComponent(id)).join(",")})`)
+    : [];
+  return { routes: mine, stops: mineStops, parties: parties || [] };
+}
+
+/** How many route customers each agent has, grouped by the Accounts company those routes belong to. */
+export async function loadRouteCustomerCounts(token, agents = []) {
+  const companyIds = [...new Set(agents.filter(agent => agent.collection_scope === "accounts" && agent.accounts_company_id).map(agent => agent.accounts_company_id))];
+  const counts = {};
+  await Promise.all(companyIds.map(async companyId => {
+    const [routes, stops] = await Promise.all([
+      companyRequest(companyId, token, `/rest/v1/acc_collection_routes?select=id,agent_id&company_id=eq.${encodeURIComponent(companyId)}`),
+      companyRequest(companyId, token, `/rest/v1/acc_collection_route_stops?select=route_id&company_id=eq.${encodeURIComponent(companyId)}&limit=20000`),
+    ]);
+    const agentByRoute = new Map((routes || []).filter(route => route.agent_id).map(route => [route.id, route.agent_id]));
+    for (const stop of stops || []) {
+      const agentId = agentByRoute.get(stop.route_id);
+      if (!agentId) continue;
+      counts[agentId] = (counts[agentId] || 0) + 1;
+    }
+  }));
+  return counts;
+}
+
 export const loadCollectionAgents = token =>
   supabase.rpc("acc_list_collection_agents", {}, token, companyHeaders())
     .then(rows => (Array.isArray(rows) ? rows : []))

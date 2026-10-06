@@ -10,13 +10,16 @@ export function FinanceRoute({ module, section = "overview" }) {
   const { access, session, chitSchemes } = useOutletContext();
   const navigate = useNavigate();
   if (module !== "all" && !access[module]) return <Navigate to={workspacePaths.dashboard} replace />;
-  // Reports are for owners; collection agents land on Overview.
-  if (section === "reports" && !access.isOwner) return <Navigate to={financeSectionPath(module, "overview")} replace />;
-
   const {
     loans, workspace, setLoans, createLoan, savePayment, updateLoan, removeLoan, saveCustomerPortal, getKyc, updateKyc,
     changeStatus, changePaymentNotes, correctPayment, removePayment, changeCollectionOrder, showOwnerChrome, logout, user, logReceipt,
   } = session;
+  if (!showOwnerChrome && workspace?.collectionScope === "accounts" && (module === "daily" || module === "monthly")) {
+    return <Navigate to={workspacePaths.routeCollections} replace />;
+  }
+  // Reports are for owners; collection agents land on Overview.
+  if (section === "reports" && !access.isOwner) return <Navigate to={financeSectionPath(module, "overview")} replace />;
+
   return <>
     <Financier
       loans={loans}

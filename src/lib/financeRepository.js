@@ -103,7 +103,16 @@ export async function loadWorkspace(token) {
   const organization = Array.isArray(profile?.organizations) ? profile.organizations[0] : profile?.organizations;
   if (profile?.role !== "owner" && profile?.role !== "staff") throw new Error("Could not load workspace role.");
   let businessName = organization?.name || "My Finance Business";
+  let collectionScope = "";
+  let accountsCompanyId = "";
   if (profile.role === "staff") {
+    try {
+      const [self] = await supabase.query(`/rest/v1/profiles?id=eq.${profile.id}&select=collection_scope,accounts_company_id&limit=1`, token);
+      collectionScope = self?.collection_scope || "";
+      accountsCompanyId = self?.accounts_company_id || "";
+    } catch {
+      // Columns arrive with migration 085. Until then the agent keeps the workspace name.
+    }
     try {
       const companyName = await supabase.rpc("my_agent_company_name", {}, token);
       const name = typeof companyName === "string" ? companyName.trim() : "";
@@ -114,6 +123,8 @@ export async function loadWorkspace(token) {
   }
   return {
     businessName,
+    collectionScope,
+    accountsCompanyId,
     fullName: profile?.full_name || "",
     role: profile.role,
     active: profile?.is_active !== false,
