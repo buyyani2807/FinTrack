@@ -85,7 +85,7 @@ export function AuctionChitSchemeDetails({ token, scheme, back, tab: routeTab = 
   };
   if (member) return <ChitMemberDetails token={token} scheme={scheme} enrollment={member} cycles={data.cycles} bids={data.bids} installments={data.installments} back={() => setMember(null)} orgSettings={orgSettings} onPortalChange={async () => { const details = await loadChitSchemeDetails(token, scheme.id); setData(details); setMember(details.enrollments.find(item => item.id === member.id) || member); }} onDeleted={async removed => { setMember(null); setNotice(`${enrollmentName(removed)} was removed from ${scheme.name}.`); await refresh(); }} />;
   return <main className="shell">
-    <BackButton onClick={back} /><div className="toolbar"><div><h1 className="title">{scheme.name}</h1><p className="copy">{scheme.duration_months} months · {data.enrollments.length}/{scheme.member_count} members · {schemeStatusLabel(scheme.status)}</p></div>
+    <BackButton onClick={back} /><div className="toolbar"><div><p className="page-company-name">{workspace?.businessName || "My Finance Business"}</p><h1 className="title">{scheme.name}</h1><p className="copy">{scheme.duration_months} months · {data.enrollments.length}/{scheme.member_count} members · {schemeStatusLabel(scheme.status)}</p></div>
       <ChitSchemeHeaderActions token={token} scheme={scheme} memberCount={data.enrollments.length} onAddMember={() => setMemberOpen(true)} onSchemeDeleted={onSchemeDeleted} extra={scheme.status === "active" ? <Button className="primary" onClick={() => setTab("live")}>Start live bidding</Button> : null} />
     </div>
     <div className="tabs spacer">
