@@ -82,6 +82,7 @@ export function WorkspaceLayout() {
       onClose={() => setAskOpen(false)}
       onNavigate={path => navigate(path)}
       loadBooks={access.accounts && token ? () => loadAssistantBooks(token) : null}
+      loadCashbook={access.cashbook && token ? () => loadAssistantCashbook(token) : null}
       context={{
         today: todayIso(),
         orgSettings,
@@ -90,6 +91,7 @@ export function WorkspaceLayout() {
         agentName: workspace?.fullName || "",
         collectionScope: workspace?.collectionScope || "",
         allowAccounts: Boolean(access.accounts),
+        allowCashbook: Boolean(access.cashbook),
         allowChit: Boolean(access.chit),
         loans: visibleFinanceLoans(loans, {
           isOwner: Boolean(access.isOwner),
@@ -100,6 +102,12 @@ export function WorkspaceLayout() {
       }}
     />
   </>;
+}
+
+async function loadAssistantCashbook(token) {
+  const { loadCashbookEntries, loadLedgerAccounts } = await import("../cashbook/cashbookRepository.js");
+  const [ledgers, entries] = await Promise.all([loadLedgerAccounts(token), loadCashbookEntries(token)]);
+  return { ledgers: ledgers || [], entries: entries || [] };
 }
 
 async function loadAssistantBooks(token) {

@@ -174,6 +174,68 @@ test("the ai pack can turn Ask off", () => {
   assert.match(answer.summary, /feature pack/);
 });
 
+test("a cashbook balance question uses the finance cashbook, not the accounts cash ledger", () => {
+  const cashbook = {
+    ledgers: [
+      { id: "cash", accountType: "cash" },
+      { id: "bank", accountType: "bank" },
+      { id: "upi", accountType: "upi" },
+    ],
+    entries: [
+      { ledgerAccountId: "cash", entryDate: "2026-10-01", moneyIn: 851000, moneyOut: 0, transactionType: "receipt" },
+      { ledgerAccountId: "bank", entryDate: "2026-10-01", moneyIn: 2400500, moneyOut: 0, transactionType: "receipt" },
+      { ledgerAccountId: "upi", entryDate: "2026-10-01", moneyIn: 1345000, moneyOut: 0, transactionType: "receipt" },
+    ],
+  };
+  const books = {
+    accounts,
+    vouchers: [
+      buildVoucher({
+        voucherType: "sales",
+        voucherNumber: "SAL-000009",
+        date: "2026-10-02",
+        lines: saleLines({ accounts, amount: 1000, settlement: "paid", moneyMode: "cash" }),
+      }),
+    ],
+    parties: [],
+    companyName: "Mahaveer Paper",
+    range: { from: "2026-04-01", to: today },
+  };
+  const answer = askFintrack("What is the cashbook cash balance?", owner({
+    allowCashbook: true,
+    cashbook,
+    books,
+  }));
+  assert.equal(answer.source.module, "Cashbook");
+  assert.equal(answer.source.report, "Cashbook balances");
+  assert.equal(answer.link.path, "/cashbook/cashbook");
+  assert.match(answer.summary, /Cashbook cash is ₹8,51,000/);
+  assert.match(answer.summary, /running balances/);
+  assert.equal(answer.lines.find(line => line.label === "Cash").amount, 851000);
+  assert.equal(answer.lines.find(line => line.label === "Today's in").amount, 0);
+  const accountsLine = answer.lines.find(line => line.label === "Mahaveer Paper cash ledger");
+  assert.ok(accountsLine);
+  assert.notEqual(accountsLine.amount, 851000);
+  assert.match(accountsLine.detail, /separate from the cashbook/);
+  assert.equal(answer.filters.includes("Mahaveer Paper"), false);
+  assert.match(answer.warning, /not today's movement/);
+
+  const accountsCash = askFintrack("What is the cash balance?", owner({ allowCashbook: true, cashbook, books }));
+  assert.equal(accountsCash.source.module, "Accounts");
+  assert.equal(accountsCash.lines.some(line => line.amount === 851000), false);
+
+  const differ = askFintrack("Why does Cashbook differ from Accounts?", owner({ allowCashbook: true, cashbook, books }));
+  assert.equal(differ.title, "Cashbook and Accounts");
+  assert.match(differ.summary, /separate books/);
+
+  const pending = askFintrack("What is the cashbook cash balance?", owner({ allowCashbook: true }));
+  assert.equal(pending.needs, "cashbook");
+
+  const blocked = askFintrack("What is the cashbook cash balance?", owner({ allowCashbook: false }));
+  assert.equal(blocked.matched, false);
+  assert.match(blocked.summary, /cannot open the Finance cashbook/);
+});
+
 test("ask rate limit stops the 31st question in the same minute", () => {
   const allow = createAskLimiter({ limit: 2, windowMs: 1000 });
   assert.equal(allow(1_000).ok, true);

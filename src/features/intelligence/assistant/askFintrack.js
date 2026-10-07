@@ -1,7 +1,8 @@
 import { formatInr } from "../../../lib/formatMoney.js";
 import { isModuleEnabled } from "../../commercial/entitlements.js";
 import { indianFinancialYear, roundMoney } from "../../accounts/model/accountingModel.js";
-import { invoiceRegister, profitAndLoss } from "../../accounts/model/accountingReports.js";
+import { dashboardMetrics, invoiceRegister, profitAndLoss } from "../../accounts/model/accountingReports.js";
+import { aggregateOverview } from "../../cashbook/cashbookModel.js";
 import { askAccountsBooks } from "../../accounts/model/accountsAsk.js";
 import { suggestExpense } from "../../accounts/model/bookSuggestions.js";
 import { buildDailyFinanceFacts, buildMonthlyFinanceFacts } from "../../finance/model/financeIntelligence.js";
@@ -217,6 +218,7 @@ function classify(question) {
   if (/forecast|predict|next month.*(collect|expect)|expected profit/.test(q)) return "forecast";
   if (/duplicate (receipt|payment|voucher)|possible duplicate|unusual voucher/.test(q)) return "duplicates";
   if (/cashbook differ|differ from accounts|accounts differ/.test(q)) return "cashbookDiff";
+  if (/\b(cashbook|cash book)\b/.test(q)) return "cashbookBalance";
   if (/open the gst|gst report/.test(q)) return "gst";
   if (/why did profit|profit decrease|profit drop/.test(q)) return "profitChange";
   if (/expenses? increased|which expenses/.test(q)) return "expenseChange";
@@ -483,6 +485,80 @@ function missedTwoFinance(context) {
     warning: scopeWarning(context),
     today: context.today,
     range: { from: context.today, to: context.today, label: context.today },
+  });
+}
+
+function cashbookBalance(context) {
+  if (!context.allowCashbook) {
+    return envelope({
+      title: "Cashbook",
+      summary: "This sign-in cannot open the Finance cashbook.",
+      sourceModule: "Cashbook",
+      report: "Cashbook balances",
+      today: context.today,
+      matched: false,
+      filters: scopeFilters(context).filter(filter => filter !== context.books?.companyName),
+    });
+  }
+  const loaded = context.cashbook?.ledgers && context.cashbook?.entries;
+  if (!loaded) {
+    return envelope({
+      title: "Loading Cashbook",
+      summary: "Ask needs the Finance cashbook for this question.",
+      sourceModule: "Cashbook",
+      report: "Cashbook balances",
+      today: context.today,
+      matched: false,
+      needs: "cashbook",
+    });
+  }
+  if (context.allowAccounts && context.books == null && !context.accountsLoaded) {
+    return envelope({
+      title: "Loading Accounts",
+      summary: "Ask is reading the Finance cashbook, then the Accounts cash ledger for this company.",
+      sourceModule: "Cashbook",
+      report: "Cashbook balances",
+      today: context.today,
+      matched: false,
+      needs: "accounts",
+    });
+  }
+  const today = context.today;
+  const overview = aggregateOverview(context.cashbook.ledgers, context.cashbook.entries, { from: today, to: today });
+  const lines = [
+    { label: "Cash", detail: "Running balance", amount: overview.cash },
+    { label: "Bank", detail: "Running balance", amount: overview.bank },
+    { label: "UPI", detail: "Running balance", amount: overview.upi },
+    { label: "Total", detail: "Running balance", amount: overview.total },
+    { label: "Today's in", detail: today, amount: overview.moneyIn },
+    { label: "Today's out", detail: today, amount: overview.moneyOut },
+  ];
+  let accountsSentence = "";
+  if (context.books?.accounts && context.books?.vouchers) {
+    const metrics = dashboardMetrics(context.books.accounts, context.books.vouchers, context.books.parties || [], {
+      today,
+      from: context.books.range?.from,
+      to: context.books.range?.to || today,
+    });
+    const company = context.books.companyName || "Accounts";
+    lines.push({
+      label: `${company} cash ledger`,
+      detail: "Accounts, separate from the cashbook",
+      amount: metrics.cash,
+    });
+    accountsSentence = ` ${company} cash ledger is ${money(metrics.cash)}. That figure is the Accounts book, not the cashbook.`;
+  }
+  return envelope({
+    title: "Cashbook",
+    summary: `Cashbook cash is ${money(overview.cash)}, bank is ${money(overview.bank)} and UPI is ${money(overview.upi)}. These are running balances of every recorded cashbook entry.${accountsSentence}`,
+    lines,
+    sourceModule: "Cashbook",
+    report: "Cashbook balances",
+    link: { path: "/cashbook/cashbook", label: "Cashbook" },
+    filters: ["Finance cashbook"],
+    warning: "Cash, bank, and UPI here are running cashbook balances. They are not today's movement, and they are not the Accounts cash ledger.",
+    today,
+    range: { from: today, to: today, label: "Running balances" },
   });
 }
 
@@ -837,6 +913,7 @@ export function askFintrack(question, context = {}) {
   if (intent === "chitMissed") return chitMissed(context);
   if (intent === "missedTwo") return missedTwoFinance(context);
   if (intent === "cashbookDiff") return cashbookDiff(context);
+  if (intent === "cashbookBalance") return cashbookBalance(context);
   if (intent === "profitChange") return profitChange(context);
   if (intent === "expenseChange") return expenseChange(context);
   if (intent === "receivablesWeek") return receivablesWeek(context);

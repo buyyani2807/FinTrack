@@ -6,7 +6,7 @@ import "./assistant.css";
 
 const limiter = createAskLimiter();
 
-export function FintrackAssistant({ open, onClose, context, onNavigate, loadBooks }) {
+export function FintrackAssistant({ open, onClose, context, onNavigate, loadBooks, loadCashbook }) {
   const location = useLocation();
   const titleId = useId();
   const inputRef = useRef(null);
@@ -41,10 +41,17 @@ export function FintrackAssistant({ open, onClose, context, onNavigate, loadBook
     setError("");
     setLoading(true);
     try {
-      let next = askFintrack(text, context);
+      let ctx = context;
+      let next = askFintrack(text, ctx);
+      if (next.needs === "cashbook" && loadCashbook) {
+        const cashbook = await loadCashbook();
+        ctx = { ...ctx, cashbook };
+        next = askFintrack(text, ctx);
+      }
       if (next.needs === "accounts" && loadBooks) {
         const books = await loadBooks();
-        next = askFintrack(text, { ...context, books });
+        ctx = { ...ctx, books, accountsLoaded: true };
+        next = askFintrack(text, ctx);
       }
       setAnswer(next);
     } catch (err) {

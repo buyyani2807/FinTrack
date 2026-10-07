@@ -16,7 +16,7 @@ export function AccountsSummaryCard({ token, moneyFmt = money, onOpen }) {
   }, [token]);
   if (!overview) return null;
   return <button type="button" className="card accounts-summary-card spacer" onClick={onOpen}>
-    <div className="toolbar accounts-summary-heading"><strong>Cashbook</strong><span className="small">Today&apos;s movement · Open</span></div>
+    <div className="toolbar accounts-summary-heading"><strong>Cashbook</strong><span className="small">Running balances · Open</span></div>
     <div className="accounts-summary-grid">
       <div><span className="small">Cash</span><strong className="gold">{moneyFmt(overview.cash)}</strong></div>
       <div><span className="small">Bank</span><strong>{moneyFmt(overview.bank)}</strong></div>
