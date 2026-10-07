@@ -1,7 +1,8 @@
 -- Sync linked cashbook rows into the finance company's Accounts books.
 -- The finance company is the Accounts company whose name matches the financier
--- workspace. It is not the Accounts company currently open, and it is not the
--- primary company when that primary company is a different business.
+-- workspace. A primary company still named "Company 1" is that same business:
+-- it is renamed, and an empty extra copy is archived. A primary company with
+-- its own name, such as a trading company, stays separate.
 -- Run after 087_chit_cycle_month_range.sql.
 
 create or replace function public.acc_finance_books_company_id(input_org_id uuid)
@@ -13,6 +14,10 @@ as $$
 declare
   finance_name text;
   company_id uuid;
+  primary_id uuid;
+  primary_name text;
+  named_id uuid;
+  dup_id uuid;
   started date;
   fy integer;
 begin
@@ -21,6 +26,95 @@ begin
   where o.id = input_org_id;
   if finance_name is null then
     return public.acc_primary_company_id(input_org_id);
+  end if;
+
+  select c.id, c.name into primary_id, primary_name
+  from public.acc_companies c
+  where c.organization_id = input_org_id
+    and c.is_primary
+    and c.status = 'active'
+  limit 1;
+
+  -- "Company 1" is the placeholder opened with the books. It is the finance
+  -- business, so the list should show the finance name once.
+  if primary_id is not null and lower(trim(primary_name)) = 'company 1' then
+    for dup_id in
+      select c.id
+      from public.acc_companies c
+      where c.organization_id = input_org_id
+        and c.status = 'active'
+        and c.id <> primary_id
+        and lower(trim(c.name)) = lower(finance_name)
+    loop
+      if not exists (
+        select 1 from public.acc_vouchers v
+        where v.company_id = dup_id and v.status <> 'cancelled'
+      ) and not exists (
+        select 1 from public.acc_parties p where p.company_id = dup_id
+      ) and not exists (
+        select 1 from public.acc_bank_statements b where b.company_id = dup_id
+      ) then
+        update public.acc_companies
+          set status = 'archived', updated_at = now()
+          where id = dup_id;
+        perform public.acc_write_audit(
+          input_org_id, 'company', dup_id, 'archive',
+          jsonb_build_object('status', 'active', 'name', finance_name),
+          jsonb_build_object('status', 'archived'),
+          'Removed the extra finance company that duplicated Company 1',
+          dup_id
+        );
+      end if;
+    end loop;
+
+    select c.id into named_id
+    from public.acc_companies c
+    where c.organization_id = input_org_id
+      and c.status = 'active'
+      and c.id <> primary_id
+      and lower(trim(c.name)) = lower(finance_name)
+    limit 1;
+
+    if named_id is not null
+       and not exists (
+         select 1 from public.acc_vouchers v
+         where v.company_id = primary_id and v.status <> 'cancelled'
+       )
+       and exists (
+         select 1 from public.acc_vouchers v
+         where v.company_id = named_id and v.status <> 'cancelled'
+       )
+    then
+      update public.acc_companies
+        set is_primary = false, status = 'archived', updated_at = now()
+        where id = primary_id;
+      update public.acc_companies
+        set is_primary = true, updated_at = now()
+        where id = named_id;
+      update public.acc_settings
+        set company_name = finance_name, updated_at = now()
+        where organization_id = input_org_id;
+      return named_id;
+    end if;
+
+    if named_id is null then
+      update public.acc_companies
+        set name = finance_name, updated_at = now()
+        where id = primary_id;
+      update public.acc_settings
+        set company_name = finance_name, updated_at = now()
+        where organization_id = input_org_id
+          and (company_name is null or lower(trim(company_name)) = 'company 1');
+      perform public.acc_seed_coa_for_company(input_org_id, primary_id);
+      perform public.acc_write_audit(
+        input_org_id, 'company', primary_id, 'rename',
+        jsonb_build_object('name', primary_name),
+        jsonb_build_object('name', finance_name),
+        'Primary company renamed from Company 1 to the finance business',
+        primary_id
+      );
+      return primary_id;
+    end if;
   end if;
 
   select c.id into company_id
