@@ -130,6 +130,7 @@ test("a collection drop, a repeated collection, a broken daily pattern, and a la
         startDate: "2026-01-01",
         customerName: "Old route",
         transactions: [
+          { date: "2026-09-23", amount: 12000 },
           { date: "2026-09-24", amount: 8000 },
           { date: "2026-09-25", amount: 1000 },
           { date: "2026-09-26", amount: 1000 },
@@ -157,7 +158,7 @@ test("a collection drop, a repeated collection, a broken daily pattern, and a la
       },
       {
         id: "agent",
-        kind: "monthly",
+        kind: "daily",
         status: "active",
         customerName: "Office",
         transactions: [
@@ -167,12 +168,25 @@ test("a collection drop, a repeated collection, a broken daily pattern, and a la
           { date: "2026-10-04", amount: 8000, collectorName: "Sai" },
         ],
       },
+      {
+        id: "monthly-total",
+        kind: "monthly",
+        status: "active",
+        customerName: "Office book",
+        transactions: [
+          { date: "2026-09-20", amount: 90000, interestAmount: 100, collectorName: "Sai" },
+          { date: "2026-09-21", amount: 90000, interestAmount: 100, collectorName: "Sai" },
+          { date: "2026-09-22", amount: 90000, interestAmount: 100, collectorName: "Sai" },
+          { date: "2026-10-04", amount: 90000, interestAmount: 100, collectorName: "Sai" },
+        ],
+      },
     ],
   });
   assert.ok(review.items.some(item => item.id === "collection-drop"));
   assert.ok(review.items.some(item => item.label === "Possible duplicate" && item.title === "Meena"));
   assert.ok(review.items.some(item => item.title === "Ravi" && /previous 14 days/.test(item.detail)));
-  assert.ok(review.items.some(item => item.title === "Sai" && /2026-10-04/.test(item.detail)));
+  assert.ok(review.items.some(item => item.title === "Daily collections" && /2026-10-04/.test(item.detail) && /8,000/.test(item.detail)));
+  assert.equal(review.items.some(item => /90,000/.test(item.detail)), false);
 });
 
 test("auction history and live bids are explained without changing the winner", () => {

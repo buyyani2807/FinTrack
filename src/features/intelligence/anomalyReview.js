@@ -5,6 +5,7 @@
 
 import { formatInr } from "../../lib/formatMoney.js";
 import { SYSTEM_CODES, isPosted, isReversed, roundMoney } from "../accounts/model/accountingModel.js";
+import { paymentValue } from "../finance/model/paymentFormat.js";
 import { addDays, collectedOn, dailyCollectionPendingOn } from "../finance/model/loanState.js";
 
 const LABELS = {
@@ -495,13 +496,14 @@ function agentAmounts(loans, today) {
   const start = addDays(today, -20);
   const byAgent = new Map();
   for (const loan of loans || []) {
+    if (loan.kind && loan.kind !== "daily") continue;
     for (const tx of loan.transactions || []) {
-      const amount = Number(tx.amount || 0);
-      if (!(amount > 0) || !tx.date || tx.date < start || tx.date > today) continue;
-      const name = tx.collectorName || "";
-      if (!name) continue;
+      const amount = paymentValue(loan, tx);
+      const date = dateOnly(tx.date);
+      if (!(amount > 0) || !date || date < start || date > today) continue;
+      const name = tx.collectorName || "Daily collections";
       const days = byAgent.get(name) || new Map();
-      days.set(tx.date, roundMoney((days.get(tx.date) || 0) + amount));
+      days.set(date, roundMoney((days.get(date) || 0) + amount));
       byAgent.set(name, days);
     }
   }
@@ -517,8 +519,8 @@ function agentAmounts(loans, today) {
         id: `agent-${name}-${date}`,
         module: "daily",
         tone: "unusual",
-        title: name,
-        detail: `Collections recorded under this name on ${date} are ${money(amount)}, above the recent daily amount of about ${money(baseline)}.`,
+        title: "Daily collections",
+        detail: `Daily Finance received ${money(amount)} on ${date}. A recent collection day is about ${money(baseline)}.`,
         actionLabel: "Open collections",
         href: { panel: "daily", section: "collections" },
       }));
