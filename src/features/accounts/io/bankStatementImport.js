@@ -158,7 +158,9 @@ export function mapBankImportRows({ headers, rows, mapping }) {
     const debit = Math.abs(parseIndianAmount(get("debit")));
     const credit = Math.abs(parseIndianAmount(get("credit")));
     const signedAmount = parseIndianAmount(get("amount"));
-    const balance = parseIndianAmount(get("balance"));
+    const balanceRaw = get("balance");
+    const hasBalance = mapping.balance != null && mapping.balance >= 0 && String(balanceRaw ?? "").trim() !== "";
+    const balance = hasBalance ? parseIndianAmount(balanceRaw) : null;
     let direction = directionFromText(get("direction"));
     let amount = 0;
 
@@ -187,14 +189,14 @@ export function mapBankImportRows({ headers, rows, mapping }) {
 
     lines.push({
       lineDate: date,
-      description: reference ? (description ? `${description} · ${reference}` : reference) : description,
+      description,
       reference,
       amount: String(amount),
       direction,
-      balance: balance || "",
+      balance: hasBalance ? String(balance) : "",
     });
 
-    if (balance || balance === 0) {
+    if (hasBalance && Number.isFinite(balance)) {
       if (openingBalance === "" && lines.length === 1) {
         const prior = direction === "in" ? balance - amount : balance + amount;
         openingBalance = String(Number(prior.toFixed(2)));

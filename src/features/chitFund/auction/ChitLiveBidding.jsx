@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Select } from "../../../components/Select.jsx";
 import { endChitLiveAuction, loadChitLiveAuction, pauseChitLiveAuction, startChitLiveAuction } from "../../../lib/financeRepository";
 import { buildAuctionLiftPayload } from "../../receipts/io/transactionConfirmations.js";
-import { LIVE_BID_MODEL, enrollmentPortalId, liveAuctionLimits, liveBidPayout } from "../model/liveBidding";
+import { LIVE_BID_MODEL, cycleNumberInRange, enrollmentPortalId, liveAuctionLimits, liveBidPayout, nextOpenChitMonth } from "../model/liveBidding";
 import { AnomalyReviewCard } from "../../intelligence/AnomalyReviewCard.jsx";
 import { buildAnomalyReview } from "../../intelligence/anomalyReview.js";
 import { disbursementPayoutError, disbursementPayoutSplit } from "../../finance/model/disbursementMode";
@@ -69,7 +69,18 @@ export function ChitLiveBidding({ token, scheme, data, onFinalized, orgSettings 
     } catch (err) { setError(err.message || "Live bidding request failed."); return false; }
     finally { setBusy(false); }
   };
-  const start = () => run(() => startChitLiveAuction(token, scheme.id, live?.next_cycle_number, today()));
+  const nextMonth = nextOpenChitMonth(data.cycles, scheme.duration_months);
+  const shownMonth = auction
+    ? (cycleNumberInRange(auction.cycle_number, scheme.duration_months) ? `Month ${auction.cycle_number}` : "—")
+    : (nextMonth ? `Month ${nextMonth}` : "—");
+  const start = () => {
+    if (auction?.status === "paused") return run(() => startChitLiveAuction(token, scheme.id, auction.cycle_number, today()));
+    if (!nextMonth) {
+      setError("All months for this scheme already have bids.");
+      return false;
+    }
+    return run(() => startChitLiveAuction(token, scheme.id, nextMonth, today()));
+  };
   const stop = () => run(() => pauseChitLiveAuction(token, scheme.id));
   const endAuction = () => run(async () => {
     const payoutErr = disbursementPayoutError(payoutMode, winnerPayout, payoutCash, payoutUpi);
@@ -112,7 +123,7 @@ export function ChitLiveBidding({ token, scheme, data, onFinalized, orgSettings 
       <Metric label="Manager commission" value={money(limits.commission)} />
       <Metric label="Bidding starts above" value={money(limits.commission)} color="blue" />
       <Metric label="Max bid (30%)" value={money(limits.maxBid)} />
-      <Metric label="Current month" value={auction ? `Month ${auction.cycle_number}` : `Month ${live?.next_cycle_number || data.cycles.length + 1}`} color="blue" />
+      <Metric label="Current month" value={shownMonth} color="blue" />
       <Metric label="Total members" value={`${data.enrollments.length}/${scheme.member_count}`} />
       <Metric label="Eligible members" value={eligible.length} color="green" />
       <Metric label="Leading discount bid" value={leading ? money(leading.bid_amount) : "—"} color="gold" />

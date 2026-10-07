@@ -30,6 +30,7 @@ import {
 import { validatePredefinedBidChit } from "./model/predefinedBidChit";
 import { roundMoney } from "./model/calculations";
 import { money, emptySchemeForm, groupRowsBySchemeId } from "./model/chitFormat.js";
+import { latestInRangeCycle } from "./model/liveBidding.js";
 import { Button, Spinner } from "../../components/ui.jsx";
 import { ChitActivateSchemeModal } from "./components/ChitAdminControls.jsx";
 import { ChitSchemeForm, ChitTypeChooser, FixedChitSchemeForm, PredefinedBidSchemeForm } from "./components/ChitSchemeForms.jsx";
@@ -127,7 +128,7 @@ export function ChitFundPage({ token, tab: routeTab = "schemes", schemeId = null
     const predefinedByScheme = groupRowsBySchemeId(predefinedSchedule);
     return schemes.map(scheme => {
       const schemeCycles = [...(cyclesByScheme.get(scheme.id) || [])].sort((a, b) => a.cycle_number - b.cycle_number);
-      const current = schemeCycles.at(-1);
+      const current = latestInRangeCycle(schemeCycles, scheme.duration_months);
       const members = enrollmentsByScheme.get(scheme.id) || [];
       const winner = members.find(item => item.id === current?.winning_enrollment_id);
       const schemeFixedLifts = fixedLiftsByScheme.get(scheme.id) || [];

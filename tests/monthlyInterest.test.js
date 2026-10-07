@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import { monthlyInterestOnBalance, dailyInstallmentAmount, monthlyRateOnDate, rateChangesAfterEdit } from "../src/features/finance/model/calculations.js";
 import { nextMonthlyPayment } from "../src/features/receipts/model/receiptModel.js";
+import { monthlyCollectionDue } from "../src/features/finance/model/loanState.js";
 
 test("monthly interest uses the monthly percent, not annual/12", () => {
   assert.equal(monthlyInterestOnBalance(100000, 3), 3000);
@@ -101,4 +102,21 @@ test("an early interest payment clears the coming monthly reminder", () => {
   }, "2026-10-03");
   assert.equal(partial.dueDate, "2026-10-08");
   assert.equal(partial.amount, 600);
+});
+
+test("monthly collections stay collected after this month's interest is paid", () => {
+  const loan = {
+    kind: "monthly",
+    status: "active",
+    startDate: "2026-09-08",
+    principal: 100000,
+    annualRate: 1,
+    rateChanges: [],
+    transactions: [],
+  };
+  assert.deepEqual(monthlyCollectionDue(loan, "2026-10-03"), { amount: 1000, pending: true, settled: false });
+  assert.deepEqual(monthlyCollectionDue({
+    ...loan,
+    transactions: [{ date: "2026-10-02", interestAmount: 1000, principalAmount: 0 }],
+  }, "2026-10-07"), { amount: 0, pending: false, settled: true });
 });

@@ -322,6 +322,15 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       if (bundle.settings?.companyName || bundle.settings?.booksStartedOn) {
         setSetupForm({ companyName: bundle.settings.companyName, booksStartedOn: bundle.settings.booksStartedOn || todayIso() });
       }
+      if (sectionRef.current === "setup") {
+        const nextLocks = await loadPeriodLocks(token);
+        if (gen !== refreshGen.current) return;
+        setLocks(nextLocks);
+      } else if (sectionRef.current === "bank") {
+        const nextStatements = await loadBankStatements(token);
+        if (gen !== refreshGen.current) return;
+        setStatements(nextStatements || []);
+      }
     } catch (err) {
       if (gen !== refreshGen.current) return;
       if (err.code === "MIGRATION_REQUIRED") setMigrationRequired(true);

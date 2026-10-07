@@ -51,7 +51,7 @@ export function BankStatementCard({
           const selected = matchChoice[line.id] || line.matchedVoucherLineId || "";
           return <tr key={line.id}>
             <td>{line.lineDate}</td>
-            <td>{line.description || "—"}{line.reference ? <span className="small"> · {line.reference}</span> : null}</td>
+            <td>{line.description || "—"}{line.reference && !String(line.description || "").includes(line.reference) ? <span className="small"> · {line.reference}</span> : null}</td>
             <td className="acc-num">{money(line.amount)} <span className={`acc-voucher-chip ${line.direction === "out" ? "out" : "in"}`}>{line.direction === "out" ? "Out" : "In"}</span></td>
             <td><span className={`acc-status-pill ${bankMatchTone(line.matchStatus)}`}>{bankMatchLabel(line.matchStatus)}</span></td>
             <td className="acc-bank-match-select">

@@ -30,10 +30,28 @@ test("parses CSV bank export and maps debit/credit lines with reference", () => 
   assert.equal(mapped.lines[0].direction, "out");
   assert.equal(mapped.lines[0].amount, "1500");
   assert.equal(mapped.lines[0].reference, "UTR123");
-  assert.match(mapped.lines[0].description, /UTR123/);
+  assert.equal(mapped.lines[0].description, "UPI-VENDOR-PAY");
   assert.equal(mapped.lines[1].direction, "in");
   assert.equal(mapped.lines[1].amount, "2500.5");
   assert.equal(mapped.closingBalance, "51000.5");
+});
+
+test("a statement without a balance column does not invent opening or closing balances", () => {
+  const csv = [
+    "date,description,reference,debit,credit",
+    "2026-10-07,E2E-TEST-BANK,E2E-REF,1,0",
+  ].join("\n");
+  const { headers, rows } = parseDelimitedText(csv);
+  const mapping = guessColumnMapping(headers);
+  assert.equal(mapping.balance, undefined);
+  const mapped = mapBankImportRows({ headers, rows, mapping });
+  assert.equal(mapped.lines.length, 1);
+  assert.equal(mapped.lines[0].description, "E2E-TEST-BANK");
+  assert.equal(mapped.lines[0].reference, "E2E-REF");
+  assert.equal(mapped.lines[0].direction, "out");
+  assert.equal(mapped.lines[0].amount, "1");
+  assert.equal(mapped.openingBalance, "");
+  assert.equal(mapped.closingBalance, "");
 });
 
 test("parses Indian amounts and dates used by bank imports", () => {

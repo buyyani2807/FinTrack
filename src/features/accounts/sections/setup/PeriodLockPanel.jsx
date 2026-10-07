@@ -13,7 +13,11 @@ export function PeriodLockPanel({ canAdmin, lockForm, setLockForm, saving, run, 
       <div className="acc-form-actions">
         <button type="button" className="btn primary" disabled={saving} onClick={event => {
           event.currentTarget.scrollIntoView({ block: "center", behavior: "smooth" });
-          run(() => lockAccountingPeriod(token, lockForm.from, lockForm.to), "Period locked.");
+          run(async () => {
+            if (!lockForm.from || !lockForm.to) throw new Error("Enter both the From date and the To date.");
+            if (lockForm.from > lockForm.to) throw new Error("The From date must be on or before the To date.");
+            await lockAccountingPeriod(token, lockForm.from, lockForm.to);
+          }, "Period locked.");
         }}>{saving ? "Saving…" : "Lock period"}</button>
       </div>
       <AccTable spaced={false} columns={["Period", "Status", ""]}>

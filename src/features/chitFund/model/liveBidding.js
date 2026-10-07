@@ -56,6 +56,36 @@ export function validateLiveBid({
   return { bidAmount: amount, bidPercent: roundMoney(amount / value * 100), payoutAmount, payoutPercent };
 }
 
+export function cycleNumberInRange(cycleNumber, durationMonths) {
+  const month = Number(cycleNumber);
+  const duration = Number(durationMonths);
+  if (!Number.isInteger(month) || month < 1) return false;
+  if (Number.isInteger(duration) && duration > 0 && month > duration) return false;
+  return true;
+}
+
+export function latestInRangeCycle(cycles, durationMonths) {
+  return [...(cycles || [])]
+    .filter(cycle => cycleNumberInRange(cycle.cycle_number ?? cycle.month_number, durationMonths))
+    .sort((a, b) => Number(a.cycle_number ?? a.month_number) - Number(b.cycle_number ?? b.month_number))
+    .at(-1) || null;
+}
+
+export function nextOpenChitMonth(cycles, durationMonths) {
+  const duration = Number(durationMonths);
+  const limit = Number.isInteger(duration) && duration > 0 ? duration : 0;
+  const used = new Set(
+    (cycles || [])
+      .map(cycle => Number(cycle.cycle_number ?? cycle.month_number))
+      .filter(month => cycleNumberInRange(month, durationMonths)),
+  );
+  const last = limit || (used.size ? Math.max(...used) + 1 : 1);
+  for (let month = 1; month <= last; month += 1) {
+    if (!used.has(month)) return month;
+  }
+  return null;
+}
+
 export function winsForEnrollment(cycles = [], bids = [], enrollmentId, chitValue) {
   const cycleById = Object.fromEntries(cycles.map(cycle => [cycle.id, cycle]));
   const value = Number(chitValue);

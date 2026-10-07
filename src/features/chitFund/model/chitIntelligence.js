@@ -2,6 +2,7 @@ import { formatInr } from "../../../lib/formatMoney.js";
 import { CHIT_TYPES, normalizeFixedCommissionAmount } from "./fixedChit.js";
 import { chitTypeLabel } from "./memberPortal.js";
 import { currentSchemeMonth } from "./monthStatement.js";
+import { cycleNumberInRange } from "./liveBidding.js";
 import { chitPaymentAmounts } from "./memberPayments.js";
 import { buildChitUpcomingRows } from "../../receipts/model/upcomingPayments.js";
 
@@ -46,7 +47,7 @@ export function buildChitFacts({
   const predefinedSchemes = activeSchemes.filter(scheme => schemeType(scheme) === CHIT_TYPES.FIXED_PREDEFINED_BID);
 
   const auctionInsights = auctionSchemes.map(scheme => {
-    const schemeCycles = cycles.filter(cycle => cycle.scheme_id === scheme.id && Number(cycle.winning_bid_amount) > 0)
+    const schemeCycles = cycles.filter(cycle => cycle.scheme_id === scheme.id && Number(cycle.winning_bid_amount) > 0 && cycleNumberInRange(cycle.cycle_number, scheme.duration_months))
       .sort((a, b) => a.cycle_number - b.cycle_number);
     const amounts = schemeCycles.map(cycle => Number(cycle.winning_bid_amount));
     const latest = schemeCycles.at(-1);

@@ -16,7 +16,10 @@ export function ChitBidModal({ token, scheme, enrollments, nextMonth, close, don
   const submit = async event => {
     event.preventDefault();
     const winner = enrollments.find(item => item.id === f.winner);
+    const month = Number(f.month);
+    const duration = Number(scheme.duration_months);
     if (!winner || !(Number(f.amount) > 0)) return setError("Select a winning member and enter a valid bid amount.");
+    if (!Number.isInteger(month) || month < 1 || (duration > 0 && month > duration)) return setError(`Month must be between 1 and ${duration || 1}.`);
     setBusy(true); setError("");
     try {
       const payout = Number(f.amount);

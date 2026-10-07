@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { leadingLiveBid, liveAuctionLimits, liveBidPayout, validateLiveBid, winsForEnrollment } from "../src/features/chitFund/model/liveBidding.js";
+import { latestInRangeCycle, leadingLiveBid, liveAuctionLimits, liveBidPayout, nextOpenChitMonth, validateLiveBid, winsForEnrollment } from "../src/features/chitFund/model/liveBidding.js";
 
 test("live bidding follows highest bid wins", () => {
   const leader = leadingLiveBid([
@@ -65,4 +65,15 @@ test("live auction win history separates stored payout from discount bid", () =>
   );
   assert.equal(wins[0].payoutAmount, 700000);
   assert.equal(wins[0].discountBid, 300000);
+});
+
+test("the next auction month ignores a cycle number outside the scheme length", () => {
+  const cycles = [
+    { cycle_number: 1 },
+    { cycle_number: 2 },
+    { cycle_number: 75000 },
+  ];
+  assert.equal(nextOpenChitMonth(cycles, 10), 3);
+  assert.equal(latestInRangeCycle(cycles, 10).cycle_number, 2);
+  assert.equal(nextOpenChitMonth([{ cycle_number: 75000 }], 10), 1);
 });

@@ -1,5 +1,5 @@
 import { monthlyInterestOnBalance, monthlyRateOnDate } from "./calculations.js";
-import { paymentValue } from "../../receipts/model/receiptModel.js";
+import { nextMonthlyPayment, paymentValue } from "../../receipts/model/receiptModel.js";
 
 const indiaCalendarDate = date => {
   const parts = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
@@ -94,6 +94,38 @@ export const monthlyDueRows = loan => {
 export const monthlyInterestDue = loan => monthlyDueRows(loan).reduce((s, r) => s + r.interest, 0);
 
 export const monthlyInterestPending = loan => Math.max(0, monthlyInterestDue(loan) - monthlyInterestPaid(loan));
+
+const interestPendingAsOf = (loan, asOf) => {
+  let due = 0;
+  for (let n = 1; ; n += 1) {
+    const dueDate = addMonths(loan.startDate, n);
+    if (dueDate > asOf) break;
+    const balance = monthlyBalance(loan, dueDate);
+    if (!balance) break;
+    due += monthlyInterestOnBalance(balance, annualRate(loan, dueDate));
+  }
+  const paid = (loan.transactions || [])
+    .filter(transaction => String(transaction.date || "").slice(0, 10) <= asOf)
+    .reduce((sum, transaction) => sum + Number(transaction.interestAmount || 0), 0);
+  return Math.max(0, due - paid);
+};
+
+/** Same pending-interest figure the collection copilot uses for this month. */
+export function monthlyCollectionDue(loan, asOf = today()) {
+  if (loan.kind !== "monthly" || loan.status === "closed" || loan.status === "bankrupt") {
+    return { amount: 0, pending: false, settled: false };
+  }
+  const overdue = interestPendingAsOf(loan, asOf);
+  if (overdue > 0) return { amount: overdue, pending: true, settled: false };
+  const next = nextMonthlyPayment(loan, asOf);
+  const month = String(asOf).slice(0, 7);
+  if (next && String(next.dueDate).slice(0, 7) === month && Number(next.amount) > 0) {
+    return { amount: Math.round(Number(next.amount)), pending: true, settled: false };
+  }
+  const paidInterest = (loan.transactions || []).some(transaction => Number(transaction.interestAmount) > 0);
+  const covered = !next || String(next.dueDate).slice(0, 7) > month;
+  return { amount: 0, pending: false, settled: covered && paidInterest };
+}
 
 export const missedMonths = loan => {
   let remaining = monthlyInterestPaid(loan);
