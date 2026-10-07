@@ -1,3 +1,4 @@
+-- Superseded by 090_finance_company_on_signup.sql. Paste 090, not this file, for new businesses.
 -- Company 1 and the finance business are the same books.
 -- Rename the placeholder primary company to the finance workspace name
 -- and archive the empty extra company created with that name.
