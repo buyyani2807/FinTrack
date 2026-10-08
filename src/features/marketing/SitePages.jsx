@@ -125,7 +125,6 @@ export function AboutPage() {
     <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>About</p>
     <h1>Accounting, collections, and chit funds in one workspace.</h1>
     <p className="mkt-lead">FinTrack is for finance businesses that collect daily or monthly, for chit fund operators, and for small and medium businesses that keep company books. Shops and service firms use the same login.</p>
-    <p className="mkt-lead">Sudheer Kumar Buyyani is the CEO and Founder. <Link className="mkt-text-link" to={marketingPaths.founder}>Read his background</Link>.</p>
     <div className="mkt-role-views">
       <div>
         <h2>Financier</h2>
