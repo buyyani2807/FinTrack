@@ -3,6 +3,15 @@ import { Field, AccSetupSection } from "../../components/AccUi.jsx";
 import { todayIso } from "../../../../lib/dates.js";
 import { gstStatusLabel } from "../../accountsFormat.js";
 
+function companyDetailsChanged(form, company) {
+  if (!company?.id) return true;
+  const name = String(form?.companyName || "").trim();
+  const savedName = String(company.name || "").trim();
+  const started = String(form?.booksStartedOn || "").slice(0, 10);
+  const savedStarted = String(company.booksStartedOn || "").slice(0, 10);
+  return name !== savedName || started !== savedStarted;
+}
+
 export function CompanySetupPanel({
   setupForm,
   setSetupForm,
@@ -25,6 +34,7 @@ export function CompanySetupPanel({
   setCompanyDraft,
   setShowCreateCompany,
 }) {
+  const companyChanged = companyDetailsChanged(setupForm, activeCompany);
   return (
     <AccSetupSection icon="FY" title="Company / financial year" copy="Indian financial year is 1 April to 31 March. Saving the name here updates the current Accounts company, not Finance.">
       <div className="form">
@@ -32,7 +42,7 @@ export function CompanySetupPanel({
         <Field label="Books start date"><input type="date" value={setupForm.booksStartedOn} onChange={event => setSetupForm(current => ({ ...current, booksStartedOn: event.target.value }))} /></Field>
       </div>
       <div className="acc-form-actions">
-        <button type="button" className="btn primary" disabled={!canAdmin || saving} onClick={() => {
+        <button type="button" className="btn primary" disabled={!canAdmin || saving || !companyChanged} title={canAdmin && !companyChanged ? "No company changes to save" : undefined} onClick={() => {
           if (!canAdmin) {
             setError("Only the business owner can change company settings.");
             return;

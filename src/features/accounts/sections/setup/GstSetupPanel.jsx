@@ -1,9 +1,20 @@
 import { saveGstSettings } from "../../data/accountingRepository.js";
 import { Select } from "../../../../components/Select.jsx";
 import { Field, AccSetupSection } from "../../components/AccUi.jsx";
-import { INDIA_STATES, gstStateFromGstin, validateGstSettings } from "../../model/accountingGst.js";
+import { INDIA_STATES, gstStateFromGstin, normalizeGstin, validateGstSettings } from "../../model/accountingGst.js";
+
+function gstDetailsChanged(form, company) {
+  if (!company?.id) return true;
+  const registration = form?.gstRegistration || "unregistered";
+  const savedRegistration = company.gstRegistration || "unregistered";
+  return registration !== savedRegistration
+    || normalizeGstin(form?.gstin) !== normalizeGstin(company.gstin)
+    || String(form?.legalName || "").trim() !== String(company.legalName || "").trim()
+    || String(form?.stateCode || "") !== String(company.stateCode || "");
+}
 
 export function GstSetupPanel({ activeCompany, canAdmin, gstForm, setGstForm, saving, setError, run, token }) {
+  const gstChanged = gstDetailsChanged(gstForm, activeCompany);
   return (
     <AccSetupSection icon="GST" title={`GST${activeCompany?.name ? ` · ${activeCompany.name}` : ""}`} copy="GST is per company. These settings never apply to another Accounts company or to Daily / Monthly Finance. Books reports only — not GST portal filing. Owner manages GST registration.">
       {!canAdmin && <p className="small">View GST details below. Only the owner can change GST registration settings.</p>}
@@ -26,7 +37,7 @@ export function GstSetupPanel({ activeCompany, canAdmin, gstForm, setGstForm, sa
       </div>
       {canAdmin && (
         <div className="acc-form-actions">
-          <button type="button" className="btn primary" disabled={saving} onClick={() => {
+          <button type="button" className="btn primary" disabled={saving || !gstChanged} title={!gstChanged ? "No GST changes to save" : undefined} onClick={() => {
             const message = validateGstSettings(gstForm);
             if (message) { setError(message); return; }
             run(() => saveGstSettings(token, { ...gstForm, stateName: INDIA_STATES.find(state => state.code === gstForm.stateCode)?.name || "" }), "GST settings saved.");
