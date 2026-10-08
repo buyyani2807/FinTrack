@@ -51,8 +51,7 @@ export function CollectionCopilotCard({ copilot }) {
   };
 
   return (
-    <section className="card collection-copilot" aria-label="Collection copilot">
-      <p className="acc-intel-kicker">Collection copilot</p>
+    <section className="card collection-copilot" aria-label="Who to collect first">
       <h2>Who to collect first</h2>
       <p>{copilot.summary}</p>
       {copilot.scopedToAssigned ? <p className="small">Showing customers assigned to you.</p> : null}

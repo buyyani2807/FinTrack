@@ -135,7 +135,7 @@ export const FEATURES = [
     problem: "On-time, late, and missed payments are hard to weigh at a glance.",
     how: ["FinTrack reads the payments already on the account.", "It shows a score, a band, and the reasons.", "You use it as context. It does not change the balance or a credit limit."],
     capabilities: ["Score from recorded payments", "On-time, late, missed, and overdue context", "Trend when enough history exists", "Shown on the account, not sent to a bureau"],
-    benefits: ["Payment behaviour is easier to see", "The score stays inside your workspace", "Nothing is decided for you"],
+    benefits: ["Payment behaviour is easier to see", "The score stays inside your workspace", "Helps you decide whether to give finance the next time", "Nothing is decided for you"],
     related: ["customers", "collections", "anomaly-detection"],
     appPath: "/dashboard",
     icon: "Gauge",
