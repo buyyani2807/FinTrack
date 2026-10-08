@@ -1,5 +1,7 @@
 /* global process */
 // Secure Vercel endpoint. Add SUPABASE_SERVICE_ROLE_KEY to Vercel only; never put it in the browser.
+import { agentCredentialError, internalAgentEmail, issueAgentPortal, temporaryAuthPassword } from "./lib/agentPortal.js";
+
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const anonKey = process.env.VITE_SUPABASE_ANON_KEY;
@@ -7,6 +9,21 @@ const anonKey = process.env.VITE_SUPABASE_ANON_KEY;
 const json = (res, status, body) => res.status(status).json(body);
 const headers = token => ({ apikey: serviceKey || anonKey, Authorization: `Bearer ${token}`, "Content-Type": "application/json" });
 const isUuid = value => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || ""));
+const contactEmail = value => {
+  const email = String(value || "").trim().toLowerCase();
+  if (!email) return "";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
+  return email;
+};
+
+async function portalIdsByProfile(ids) {
+  const list = ids.filter(isUuid);
+  if (!list.length) return {};
+  const response = await fetch(`${supabaseUrl}/rest/v1/agent_portal_credentials?profile_id=in.(${list.join(",")})&select=profile_id,portal_id`, { headers: headers(serviceKey) });
+  if (!response.ok) return {};
+  const rows = await response.json().catch(() => []);
+  return Object.fromEntries((Array.isArray(rows) ? rows : []).map(row => [row.profile_id, row.portal_id]));
+}
 
 async function agentCompanyLink(body, organizationId, { required = false } = {}) {
   const scope = body.collectionScope;
@@ -130,23 +147,33 @@ export default async function handler(req, res) {
         assignmentsResponse.json(),
         routeCustomersByAgent(profile.organization_id),
       ]);
+      const portalIds = await portalIdsByProfile(agents.map(agent => agent.id));
       const assignedCounts = assignments.reduce((counts, account) => { if (account.collection_agent_id) counts[account.collection_agent_id] = (counts[account.collection_agent_id] || 0) + 1; return counts; }, {});
       return json(res, 200, agents.map(agent => {
         const customers = routeCustomersFor(agent, routeCustomers);
-        return { ...agent, assigned_customer_count: assignedCounts[agent.id] || 0, route_customers: customers, route_customer_count: customers.length };
+        return { ...agent, portal_id: portalIds[agent.id] || "", assigned_customer_count: assignedCounts[agent.id] || 0, route_customers: customers, route_customer_count: customers.length };
       }));
     }
     if (req.method === "PATCH") {
-      const { id, name, email, phone = "", active, password } = req.body || {};
-      if (!id || !name?.trim() || !email?.trim()) return json(res, 400, { error: "Name and email are required" });
-      if (password && password.length < 8) return json(res, 400, { error: "New password must be at least 8 characters" });
-      const existing = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${id}&organization_id=eq.${profile.organization_id}&role=eq.staff&select=id`, { headers: headers(serviceKey) });
-      if (!(await existing.json()).length) return json(res, 404, { error: "Collection staff member not found" });
-      const authChanges = await fetch(`${supabaseUrl}/auth/v1/admin/users/${id}`, { method: "PUT", headers: headers(serviceKey), body: JSON.stringify({ email: email.trim().toLowerCase(), email_confirm: true, ...(password ? { password } : {}) }) });
-      if (!authChanges.ok) return json(res, 500, { error: "Could not save the staff login details" });
+      const { id, name, email, phone = "", active, issuePin } = req.body || {};
+      if (!isUuid(id)) return json(res, 400, { error: "Collection staff member not found" });
+      const existing = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${id}&organization_id=eq.${profile.organization_id}&role=eq.staff&select=id,full_name`, { headers: headers(serviceKey) });
+      const [staff] = await existing.json();
+      if (!staff) return json(res, 404, { error: "Collection staff member not found" });
+      if (issuePin) {
+        try {
+          const issued = await issueAgentPortal(id);
+          return json(res, 200, { id, name: staff.full_name, portalId: issued.portalId, pin: issued.pin });
+        } catch (error) {
+          return json(res, 500, { error: agentCredentialError(error) });
+        }
+      }
+      const emailAddress = contactEmail(email);
+      if (emailAddress === null) return json(res, 400, { error: "Enter a valid email address, or leave it blank." });
+      if (!name?.trim()) return json(res, 400, { error: "Name is required" });
       const companyLink = await agentCompanyLink(req.body || {}, profile.organization_id);
       if (companyLink.error) return json(res, companyLink.status, { error: companyLink.error });
-      const updated = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${id}`, { method: "PATCH", headers: { ...headers(serviceKey), Prefer: "return=representation" }, body: JSON.stringify({ full_name: name.trim(), email: email.trim().toLowerCase(), phone: phone.trim(), is_active: Boolean(active), ...companyLink.patch }) });
+      const updated = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${id}`, { method: "PATCH", headers: { ...headers(serviceKey), Prefer: "return=representation" }, body: JSON.stringify({ full_name: name.trim(), email: emailAddress, phone: phone.trim(), is_active: Boolean(active), ...companyLink.patch }) });
       if (!updated.ok) {
         const detail = await updated.text();
         return json(res, 500, { error: /collection_scope|accounts_company_id/i.test(detail) ? "Run migration 085_agent_company.sql in the Supabase SQL editor, then save the agent again." : "Could not save staff changes" });
@@ -154,16 +181,18 @@ export default async function handler(req, res) {
       await separateAgentBooks(profile.organization_id, id, companyLink.patch);
       return json(res, 200, (await updated.json())[0]);
     }
-    const { name, email, phone = "", password, active = true } = req.body || {};
-    if (!name?.trim() || !email?.trim() || !password || password.length < 8) return json(res, 400, { error: "Name, email and a password of at least 8 characters are required" });
+    const { name, email, phone = "", active = true } = req.body || {};
+    const emailAddress = contactEmail(email);
+    if (!name?.trim()) return json(res, 400, { error: "Name is required" });
+    if (emailAddress === null) return json(res, 400, { error: "Enter a valid email address, or leave it blank." });
     const companyLink = await agentCompanyLink(req.body || {}, profile.organization_id, { required: true });
     if (companyLink.error) return json(res, companyLink.status, { error: companyLink.error });
-    const created = await fetch(`${supabaseUrl}/auth/v1/admin/users`, { method: "POST", headers: headers(serviceKey), body: JSON.stringify({ email: email.trim().toLowerCase(), password, email_confirm: true }) });
+    const created = await fetch(`${supabaseUrl}/auth/v1/admin/users`, { method: "POST", headers: headers(serviceKey), body: JSON.stringify({ email: internalAgentEmail(), password: temporaryAuthPassword(), email_confirm: true }) });
     const newUser = await created.json();
     if (!created.ok) return json(res, 400, { error: newUser.message || "Could not create the agent account" });
     const agentId = newUser.id || newUser.user?.id;
     if (!agentId) return json(res, 500, { error: "Agent authentication account was created but its ID was unavailable" });
-    const saved = await fetch(`${supabaseUrl}/rest/v1/profiles`, { method: "POST", headers: { ...headers(serviceKey), Prefer: "return=representation" }, body: JSON.stringify({ id: agentId, organization_id: profile.organization_id, full_name: name.trim(), email: email.trim().toLowerCase(), role: "staff", phone: phone.trim(), is_active: Boolean(active), ...companyLink.patch }) });
+    const saved = await fetch(`${supabaseUrl}/rest/v1/profiles`, { method: "POST", headers: { ...headers(serviceKey), Prefer: "return=representation" }, body: JSON.stringify({ id: agentId, organization_id: profile.organization_id, full_name: name.trim(), email: emailAddress, role: "staff", phone: phone.trim(), is_active: Boolean(active), ...companyLink.patch }) });
     if (!saved.ok) {
       // Compensate for the Auth user creation so failed requests do not leave
       // an unusable/orphaned login behind.
@@ -171,7 +200,14 @@ export default async function handler(req, res) {
       const detail = await saved.text();
       return json(res, 500, { error: /collection_scope|accounts_company_id/i.test(detail) ? "Run migration 085_agent_company.sql in the Supabase SQL editor, then create the agent again." : "Agent login was created but its profile could not be saved" });
     }
+    let issued;
+    try {
+      issued = await issueAgentPortal(agentId);
+    } catch (error) {
+      await fetch(`${supabaseUrl}/auth/v1/admin/users/${agentId}`, { method: "DELETE", headers: headers(serviceKey) });
+      return json(res, 500, { error: agentCredentialError(error) });
+    }
     await separateAgentBooks(profile.organization_id, agentId, companyLink.patch);
-    return json(res, 201, { id: agentId, name: name.trim(), email: email.trim().toLowerCase() });
+    return json(res, 201, { id: agentId, name: name.trim(), email: emailAddress, portalId: issued.portalId, pin: issued.pin });
   } catch (error) { return json(res, 500, { error: error.message || "Could not create agent" }); }
 }

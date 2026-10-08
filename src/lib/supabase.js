@@ -130,6 +130,12 @@ export const supabase = {
         throw error;
       }
     },
+    signInAgent: async (portalId, pin) => {
+      const session = await authApi("agent-login", { method: "POST", body: JSON.stringify({ portalId, pin }) });
+      rememberAccessToken(session.access_token);
+      clearLegacyStorage();
+      return session;
+    },
     resetPasswordForEmail: email => request("/auth/v1/recover", {
       method: "POST",
       body: JSON.stringify({ email, redirect_to: `${window.location.origin}?reset-password=1` }),

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { SECURITY_POINTS, SOLUTIONS, featureBySlug } from "./catalog.js";
 import { featurePath, marketingPaths } from "./paths.js";
+import { InstallGuide } from "./InstallGuide.jsx";
 import { ProductCta } from "./ProductCta.jsx";
 import { ProductPreview } from "./ProductPreview.jsx";
 
@@ -33,26 +34,29 @@ export function SolutionsPage() {
 }
 
 const STEPS = [
-  { title: "Open one workspace", text: "Financier sign in opens the owner workspace, or create the business account when signup is open. Collection agents, customers, and chit members use their own login on the same screen." },
+  { title: "Open one workspace", text: "Financier sign in opens the owner workspace, or create the business account when signup is open. A collection agent, a customer, and a chit member each sign in on the same screen with their own ID and PIN." },
   { title: "Record the work", text: "Add daily or monthly customers, enroll a chit scheme, or post a voucher on the company you have open." },
   { title: "Review what FinTrack highlights", text: "Insights, unusual days, bill drafts, and bank suggestions are there to read. You record the payment, accept the match, or save the voucher." },
   { title: "Share only when you mean to", text: "Download a receipt or statement, or open WhatsApp with a draft. The message is sent when you send it. Portals show a customer or member their own records." },
 ];
 
 export function HowItWorksPage() {
-  return <section className="mkt-section">
-    <PageTitle title="How FinTrack works" />
-    <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>How it works</p>
-    <h1>You stay in control of every record.</h1>
-    <p className="mkt-lead">FinTrack organises the workspace and suggests a next look. Posting, bidding results, and messages wait for a person.</p>
-    <div className="mkt-grid two mkt-steps">
-      {STEPS.map(step => <article key={step.title} className="mkt-card mkt-step">
-        <h2>{step.title}</h2>
-        <p>{step.text}</p>
-      </article>)}
-    </div>
-    <div className="mkt-cta-row"><ProductCta primary /><Link className="mkt-btn" to={marketingPaths.features}>Explore features</Link></div>
-  </section>;
+  return <>
+    <section className="mkt-section">
+      <PageTitle title="How FinTrack works" />
+      <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>How it works</p>
+      <h1>You stay in control of every record.</h1>
+      <p className="mkt-lead">FinTrack organises the workspace and suggests a next look. Posting, bidding results, and messages wait for a person.</p>
+      <div className="mkt-grid two mkt-steps">
+        {STEPS.map(step => <article key={step.title} className="mkt-card mkt-step">
+          <h2>{step.title}</h2>
+          <p>{step.text}</p>
+        </article>)}
+      </div>
+      <div className="mkt-cta-row"><ProductCta primary /><Link className="mkt-btn" to={marketingPaths.features}>Explore features</Link></div>
+    </section>
+    <InstallGuide />
+  </>;
 }
 
 export function SecurityPage() {
@@ -129,7 +133,7 @@ export function AboutPage() {
       </div>
       <div>
         <h2>Collection agent</h2>
-        <p className="mkt-lead">Agent login opens the accounts and routes you assign. The owner books, chit book, and company accounts stay closed.</p>
+        <p className="mkt-lead">Agent login uses an agent ID and PIN and opens the accounts and routes you assign. The owner books, chit book, and company accounts stay closed.</p>
         <ProductPreview scene="finance" />
       </div>
     </div>
@@ -194,6 +198,7 @@ export function ContactPage() {
 
 export function ResourcesPage() {
   const links = [
+    [`${marketingPaths.how}#install`, "Install on iPhone or Android", "Add FinTrack to the home screen and open it from its own icon."],
     [marketingPaths.how, "How it works", "The path from sign-in to a record you confirm."],
     [marketingPaths.features, "Feature directory", "Every module currently in the product."],
     [marketingPaths.security, "Security", "Roles, companies, locks, and review."],

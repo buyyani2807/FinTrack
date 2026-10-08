@@ -19,7 +19,7 @@ const SIGN_IN_MODES = [
 
 // One line of guidance under the sign-in options: where this person's credentials come from (none for Financier).
 const MODE_GUIDE = {
-  agent: "Use the email and password your financier created for you under Collection Staff.",
+  agent: "Your financier shares your agent ID (it starts with AG-) and a 6-digit PIN when they add you under Collection Staff.",
   customer: "Your financier shares your portal ID (it starts with FT-) and a 6-digit PIN when they open your customer portal.",
   chitCustomer: "Your chit manager shares your portal ID (it starts with CF-) and a 6-digit PIN when you join a scheme.",
   signUp: "Set up your finance business.",
@@ -28,6 +28,7 @@ const MODE_GUIDE = {
 // Plain-language versions of common sign-in errors; anything else is shown as it comes.
 const friendlyError = text => {
   const message = String(text || "");
+  if (/invalid agent id or pin/i.test(message)) return "The agent ID or PIN is incorrect.";
   if (/invalid login credentials|invalid (email|password)|wrong password/i.test(message)) return "The email or password is incorrect. Check both and try again, or use Forgot password.";
   if (/email not confirmed/i.test(message)) return "This email address has not been confirmed yet. Open the confirmation email, then sign in.";
   if (/user already registered|already exists/i.test(message)) return "An account with this email already exists. Sign in instead, or use Forgot password.";
@@ -121,21 +122,22 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
     const result = await supabase.auth.signIn(email, password);
     const profile = await loadWorkspace(result.access_token);
     if (!profile.active) { await supabase.auth.signOut(); throw new Error("This account has been disabled. Contact your financier."); }
-    if (mode === "agent" && profile.role !== "staff") throw new Error("This account is not a Collection Agent. Use Financier sign in.");
-    if (mode === "signIn" && profile.role === "staff") throw new Error("Use Collection Agent sign in for this account.");
+    if (mode === "agent" && profile.role !== "staff") { await supabase.auth.signOut(); throw new Error("This account is not a Collection Agent. Use Financier sign in."); }
+    if (mode === "signIn" && profile.role === "staff") { await supabase.auth.signOut(); throw new Error("Use Collection Agent sign in for this account."); }
     onLogin({ role: sessionUserRole(profile.role), authToken: result.access_token, name: profile.fullName, workspace: profile });
   };
   const submit = async () => {
     const empty = { portalId: !portalId, password: !password, email: !String(email || "").trim(), businessName: !businessName, fullName: !fullName };
     const missing = fields => fields.filter(field => empty[field]);
+    if (mode === "agent" && missing(["portalId", "password"]).length) { flagMissing(missing(["portalId", "password"]), "Enter your agent ID and PIN."); return; }
     if ((mode === "customer" || mode === "chitCustomer") && missing(["portalId", "password"]).length) { flagMissing(missing(["portalId", "password"]), mode === "chitCustomer" ? "Enter your Chit portal ID and PIN." : "Enter your portal ID and PIN."); return; }
     if (mode === "signUp" && allowSignup && missing(["businessName", "fullName"]).length) { flagMissing(missing(["businessName", "fullName"]), "Enter your business name and your name."); return; }
-    if ((mode === "signIn" || mode === "agent") && missing(["email", "password"]).length) { flagMissing(missing(["email", "password"]), "Enter your business email and password."); return; }
+    if (mode === "signIn" && missing(["email", "password"]).length) { flagMissing(missing(["email", "password"]), "Enter your business email and password."); return; }
     // The same rules the browser's own checks applied (email format, 8-character password, 6-digit PIN).
-    const usesEmail = mode === "signIn" || mode === "agent" || (mode === "signUp" && allowSignup);
+    const usesEmail = mode === "signIn" || (mode === "signUp" && allowSignup);
     if (usesEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim())) { flagMissing(["email"], "Enter a valid email address, like you@business.com.", "Check your email address"); return; }
     if (usesEmail && password.length < 8) { flagMissing(["password"], "Passwords have at least 8 characters.", "Check your password"); return; }
-    if ((mode === "customer" || mode === "chitCustomer") && password.length < 6) { flagMissing(["password"], "Your PIN has 6 digits.", "Check your PIN"); return; }
+    if ((mode === "customer" || mode === "chitCustomer" || mode === "agent") && password.length < 6) { flagMissing(["password"], "Your PIN has 6 digits.", "Check your PIN"); return; }
     setNotice(null); setInvalid({}); setBusy(true);
     try {
       if (mode === "customer") {
@@ -144,6 +146,13 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
       } else if (mode === "chitCustomer") {
         if (!portalId || !password) throw new Error("Enter your Chit portal ID and PIN.");
         onChitCustomerLogin(await chitCustomerPortalLogin(portalId, password));
+      } else if (mode === "agent") {
+        if (!portalId || !password) throw new Error("Enter your agent ID and PIN.");
+        const session = await supabase.auth.signInAgent(portalId, password);
+        const profile = await loadWorkspace(session.access_token);
+        if (!profile.active) { await supabase.auth.signOut(); throw new Error("This account has been disabled. Contact your financier."); }
+        if (profile.role !== "staff") { await supabase.auth.signOut(); throw new Error("This account is not a Collection Agent. Use Financier sign in."); }
+        onLogin({ role: sessionUserRole(profile.role), authToken: session.access_token, name: profile.fullName, workspace: profile });
       } else if (mode === "signUp") {
         if (!allowSignup) throw new Error("New business signup is invite-only. Contact FinTrack support for access.");
         if (!businessName || !fullName) throw new Error("Enter your business name and your name.");
@@ -192,7 +201,7 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
     } catch (error) { setNotice({ tone: "error", title: "Couldn't send the reset email", text: friendlyError(error.message) || "Unable to send the password reset email." }); }
     finally { setBusy(false); }
   };
-  const isFinanceCustomer = mode === "customer", isChitCustomer = mode === "chitCustomer", isCustomer = isFinanceCustomer || isChitCustomer, isAgent = mode === "agent";
+  const isFinanceCustomer = mode === "customer", isChitCustomer = mode === "chitCustomer", isCustomer = isFinanceCustomer || isChitCustomer, isAgent = mode === "agent", isPortalLogin = isCustomer || isAgent;
   const brandName = !isCustomer && !isAgent && accountsIntent ? "FinTrack Accounts" : "FinTrack";
   const brandSub = isChitCustomer ? "View your chit schemes, payments, and live bids when they apply" : isFinanceCustomer ? "View your finance balance and payment history" : isAgent ? "Collection Agent workspace" : accountsIntent ? "Sign in to your small-business books. Daily Finance and Chit Fund stay optional." : "Secure workspace for finance businesses";
   const submitLabel = busy ? "Please wait…" : isChitCustomer ? "Open chit dashboard" : isFinanceCustomer ? "Open my dashboard" : mode === "signUp" ? "Create business account" : "Sign in";
@@ -225,8 +234,8 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
         {MODE_GUIDE[mode] && <p className="ft-auth-guide"><Info size={16} aria-hidden="true" />{MODE_GUIDE[mode]}</p>}
 
         <form ref={formRef} className="ft-auth-form" noValidate onSubmit={event => { event.preventDefault(); submit(); }}>
-          {isCustomer ? <>
-            <Field label={isChitCustomer ? "Chit portal ID" : "Customer portal ID"}><IconInput icon={IdCard} placeholder={isChitCustomer ? "e.g. CF-1A2B3C4D" : "e.g. FT-1A2B3C4D"} aria-invalid={invalid.portalId || undefined} value={portalId} onChange={event => { setPortalId(event.target.value.toUpperCase()); clearInvalid("portalId"); }} /></Field>
+          {isPortalLogin ? <>
+            <Field label={isAgent ? "Agent ID" : isChitCustomer ? "Chit portal ID" : "Customer portal ID"}><IconInput icon={IdCard} placeholder={isAgent ? "e.g. AG-1A2B3C4D" : isChitCustomer ? "e.g. CF-1A2B3C4D" : "e.g. FT-1A2B3C4D"} aria-invalid={invalid.portalId || undefined} value={portalId} onChange={event => { setPortalId(event.target.value.toUpperCase()); clearInvalid("portalId"); }} /></Field>
             <Field label="6-digit PIN"><PasswordInput icon={KeyRound} inputMode="numeric" minLength="6" autoComplete="current-password" placeholder="6 digits" aria-invalid={invalid.password || undefined} value={password} onChange={event => { setPassword(event.target.value); clearInvalid("password"); }} /></Field>
           </> : <>
             {mode === "signUp" && <>
@@ -234,7 +243,7 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
               <Field label="Your full name"><IconInput icon={UserRound} placeholder="e.g. Ravi Teja" aria-invalid={invalid.fullName || undefined} value={fullName} onChange={event => { setFullName(event.target.value); clearInvalid("fullName"); }} /></Field>
               {signupInviteRequired() && <Field label="Invite code"><IconInput icon={Ticket} value={inviteCode} onChange={event => setInviteCode(event.target.value)} /></Field>}
             </>}
-            <Field label={isAgent ? "Agent email" : "Business email"}><IconInput icon={Mail} type="email" autoComplete="email" placeholder="you@business.com" aria-invalid={invalid.email || undefined} value={email} onChange={event => { setEmail(event.target.value); clearInvalid("email"); }} /></Field>
+            <Field label="Business email"><IconInput icon={Mail} type="email" autoComplete="email" placeholder="you@business.com" aria-invalid={invalid.email || undefined} value={email} onChange={event => { setEmail(event.target.value); clearInvalid("email"); }} /></Field>
             <div className="ft-auth-password">
               <Field label="Password"><PasswordInput icon={LockKeyhole} minLength="8" placeholder="e.g. Secure@2026" autoComplete={mode === "signIn" || isAgent ? "current-password" : "new-password"} aria-invalid={invalid.password || undefined} value={password} onChange={event => { setPassword(event.target.value); clearInvalid("password"); }} /></Field>
               {mode === "signIn" && <button type="button" className="link-button ft-auth-forgot" onClick={forgotPassword} disabled={busy}>Forgot password?</button>}

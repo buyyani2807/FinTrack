@@ -13,10 +13,12 @@ test.describe("Login hub tabs", () => {
     await expect(page.getByRole("button", { name: "Forgot password?" })).toBeVisible();
   });
 
-  test("agent login shows agent email field", async ({ page }) => {
+  test("agent login shows agent ID and PIN", async ({ page }) => {
     await page.getByRole("button", { name: "Agent login" }).click();
-    await expect(page.getByText("Agent email")).toBeVisible();
+    await expect(page.getByText("Agent ID")).toBeVisible();
+    await expect(page.getByLabel("6-digit PIN")).toBeVisible();
     await expect(page.getByText("Collection Agent workspace")).toBeVisible();
+    await expect(page.getByText(/starts with AG-/)).toBeVisible();
   });
 
   test("chit customer login shows portal ID field", async ({ page }) => {

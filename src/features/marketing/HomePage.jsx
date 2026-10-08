@@ -156,7 +156,7 @@ export function HomePage() {
     <section className="mkt-section">
       <div className="mkt-wrap">
         <h2>The mobile app Tally does not have.</h2>
-        <p className="mkt-lead">Add FinTrack from the browser and record the day’s work on the phone. The owner and the collection agent sign in with email. A customer or chit member uses a portal ID and PIN.</p>
+        <p className="mkt-lead">Add FinTrack from the browser and record the day’s work on the phone. The owner signs in with email. A collection agent, a customer, or a chit member uses a portal ID and PIN.</p>
         <div className="mkt-cta-row">
           <Link className="mkt-btn" to={`${marketingPaths.how}#install`}>Install on iPhone or Android</Link>
         </div>

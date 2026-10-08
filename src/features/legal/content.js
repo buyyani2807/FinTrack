@@ -11,7 +11,7 @@ export const LEGAL_PAGES = {
       },
       {
         heading: "Data we collect",
-        body: "We store business account details, customer and chit member contact information, loan and chit payment records, optional KYC fields (Aadhaar and PAN stored encrypted server-side), collection notes, and portal login metadata. Financier accounts use Supabase Auth email and password.",
+        body: "We store business account details, customer and chit member contact information, loan and chit payment records, optional KYC fields (Aadhaar and PAN stored encrypted server-side), collection notes, and portal login metadata. Financier accounts use email and password. Collection agents, finance customers, and chit members use an ID and PIN.",
       },
       {
         heading: "How we use data",
@@ -19,7 +19,7 @@ export const LEGAL_PAGES = {
       },
       {
         heading: "Security",
-        body: "Financial writes go through secured database functions. Organization data is isolated with row-level security. Customer portal PINs are hashed. Refresh tokens for financier login are stored in HttpOnly cookies when deployed with FinTrack auth routes.",
+        body: "Financial writes go through secured database functions. Organization data is isolated with row-level security. Customer, chit member, and collection agent PINs are hashed. Refresh tokens for financier and agent login are stored in HttpOnly cookies when deployed with FinTrack auth routes.",
       },
       {
         heading: "Retention and deletion",
