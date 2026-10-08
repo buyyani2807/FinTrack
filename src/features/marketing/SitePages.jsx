@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { SECURITY_POINTS, SOLUTIONS, featureBySlug } from "./catalog.js";
 import { featurePath, marketingPaths } from "./paths.js";
 import { ProductCta } from "./ProductCta.jsx";
+import { ProductPreview } from "./ProductPreview.jsx";
 
 function PageTitle({ title }) {
   useEffect(() => { document.title = title; }, [title]);
@@ -10,7 +11,8 @@ function PageTitle({ title }) {
 }
 
 export function SolutionsPage() {
-  return <section className="mkt-section">
+  return <>
+  <section className="mkt-section">
     <PageTitle title="FinTrack solutions" />
     <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Solutions</p>
     <h1>One platform, for the work you already do.</h1>
@@ -25,7 +27,9 @@ export function SolutionsPage() {
         })}</div>
       </article>)}
     </div>
-  </section>;
+  </section>
+  <PageClose />
+  </>;
 }
 
 const STEPS = [
@@ -52,7 +56,8 @@ export function HowItWorksPage() {
 }
 
 export function SecurityPage() {
-  return <section className="mkt-section">
+  return <>
+  <section className="mkt-section">
     <PageTitle title="FinTrack security" />
     <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Security</p>
     <h1>Access, isolation, and review.</h1>
@@ -63,7 +68,9 @@ export function SecurityPage() {
         <p>{point.text}</p>
       </article>)}
     </div>
-  </section>;
+  </section>
+  <PageClose />
+  </>;
 }
 
 const PLAN_INCLUDES = [
@@ -97,16 +104,43 @@ export function PricingPage() {
   </section>;
 }
 
+export function PageClose() {
+  return <section className="mkt-band">
+    <div className="mkt-wrap">
+      <h2>Start with the full workspace.</h2>
+      <p>One plan includes every module. Start free opens sign-in. It does not charge a card.</p>
+      <div className="mkt-cta-row"><ProductCta primary /><Link className="mkt-btn light" to={marketingPaths.contact}>Talk to us</Link></div>
+    </div>
+  </section>;
+}
+
 export function AboutPage() {
-  return <section className="mkt-section">
+  return <>
+  <section className="mkt-section">
     <PageTitle title="About FinTrack" />
     <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>About</p>
-    <h1>Built so the records sit together.</h1>
-    <p className="mkt-lead">Accounting, payments, customers, collections, and the chit book are one login. Ask FinTrack and the other suggestions read those records. You decide what gets posted or sent.</p>
-    <div className="mkt-grid three">
-      <article className="mkt-card"><h2>For the financier</h2><p>Financier sign in opens the dashboard, books, schemes, staff, and settings.</p></article>
-      <article className="mkt-card"><h2>For the collector</h2><p>A collection agent signs in to assigned accounts and routes, not the full owner books.</p></article>
-      <article className="mkt-card"><h2>For the customer</h2><p>A portal ID and PIN open that person’s finance account or chit ticket.</p></article>
+    <h1>Accounting, collections, and chit funds in one workspace.</h1>
+    <p className="mkt-lead">FinTrack is for finance businesses that collect daily or monthly, for chit fund operators, and for small and medium businesses that keep company books. Shops and service firms use the same login.</p>
+    <div className="mkt-role-views">
+      <div>
+        <h2>Financier</h2>
+        <p className="mkt-lead">Financier sign in opens the owner workspace: the dashboard, company books, schemes, staff, and settings.</p>
+        <ProductPreview scene="accounts" />
+      </div>
+      <div>
+        <h2>Collection agent</h2>
+        <p className="mkt-lead">Agent login opens the accounts and routes you assign. The owner books, chit book, and company accounts stay closed.</p>
+        <ProductPreview scene="finance" />
+      </div>
+    </div>
+    <p className="mkt-lead">A finance customer or chit member uses a portal ID and PIN and sees only their own account or ticket. Each sign-in is separate, so sharing access with a collector does not open the owner workspace. <Link className="mkt-text-link" to={marketingPaths.security}>Read the access controls</Link>.</p>
+    <div className="mkt-split" style={{ marginTop: 36 }}>
+      <div>
+        <h2>Ask FinTrack shows a suggestion. You confirm it.</h2>
+        <p className="mkt-lead">Ask “Who is unpaid today?” and the answer comes from this workspace. You still record the payment. A bill photo stays a draft until you save it. A bank line stays a suggestion until you accept the match. A forecast inside Ask FinTrack is a sketch, and it is not posted into the books.</p>
+        <Link className="mkt-text-link" to={featurePath("ask-the-books")}>Read Ask the books</Link>
+      </div>
+      <ProductPreview scene="intelligence" />
     </div>
     <article className="mkt-profile">
       <div className="mkt-profile-photo">
@@ -128,8 +162,9 @@ export function AboutPage() {
         </div>
       </div>
     </article>
-    <div className="mkt-cta-row"><Link className="mkt-btn" to={marketingPaths.contact}>Talk to us</Link></div>
-  </section>;
+  </section>
+  <PageClose />
+  </>;
 }
 
 export function ContactPage() {
@@ -166,12 +201,15 @@ export function ResourcesPage() {
     [marketingPaths.about, "About FinTrack", "Who the workspace is for."],
     [marketingPaths.contact, "Request a demo", "A local note until contact is connected."],
   ];
-  return <section className="mkt-section">
+  return <>
+  <section className="mkt-section">
     <PageTitle title="FinTrack resources" />
     <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Resources</p>
     <h1>Read the product before you sign in.</h1>
     <div className="mkt-grid three">
       {links.map(([to, title, text]) => <Link key={to} to={to} className="mkt-card"><h2>{title}</h2><p>{text}</p></Link>)}
     </div>
-  </section>;
+  </section>
+  <PageClose />
+  </>;
 }

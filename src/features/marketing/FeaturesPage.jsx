@@ -4,6 +4,7 @@ import { FEATURE_CATEGORIES, featuresInCategory } from "./catalog.js";
 import { FeatureIcon } from "./icons.jsx";
 import { featurePath } from "./paths.js";
 import { ProductPreview } from "./ProductPreview.jsx";
+import { PageClose } from "./SitePages.jsx";
 
 const CATEGORY_SCENE = {
   finance: "finance",
@@ -54,5 +55,6 @@ export function FeaturesPage() {
       </div>
       </div>
     </section>)}
+    <PageClose />
   </>;
 }

@@ -130,8 +130,8 @@ html[data-theme="dark"] .mkt {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 44px;
-  padding: 0 16px;
+  min-height: 46px;
+  padding: 0 18px;
   border-radius: 10px;
   border: 1px solid #c9d5d1;
   background: var(--mkt-card);
@@ -141,6 +141,11 @@ html[data-theme="dark"] .mkt {
 }
 .mkt-btn.primary { background: var(--mkt-accent); border-color: var(--mkt-accent); color: #fff; }
 .mkt-btn.primary:hover { background: #155e55; }
+html[data-theme="dark"] .mkt-btn.primary { background: #1c9a84; border-color: #1c9a84; color: #fff; }
+html[data-theme="dark"] .mkt-btn:not(.primary):not(.light) { background: #1c2833; border-color: #8aa0b0; color: #f4f7f8; }
+html[data-theme="dark"] .mkt-card { border-color: #4a6274; }
+html[data-theme="dark"] .mkt-section h2,
+html[data-theme="dark"] .mkt-role-views h2 { color: #fff; }
 .mkt-btn.ghost { background: transparent; }
 .mkt-btn.light { background: transparent; border-color: rgba(255, 255, 255, 0.45); color: #fff; }
 .mkt-btn:focus-visible, .mkt a:focus-visible, .mkt button:focus-visible {
@@ -442,6 +447,9 @@ html[data-theme="dark"] .mkt-tint { background: #0c1218; }
 .mkt-profile .mkt-lead { margin-top: 8px; font-size: 16px; }
 .mkt-profile .mkt-kicker { margin-bottom: 10px; }
 .mkt-profile .mkt-grid { margin-top: 18px; }
+.mkt-role-views { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 28px; align-items: start; }
+.mkt-role-views h2 { font-size: clamp(24px, 3vw, 32px); }
+.mkt-role-views .mkt-lead { margin-bottom: 16px; }
 
 .mkt-faq-wrap { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 28px; align-items: start; }
 .mkt-faq { border-top: 1px solid var(--mkt-line); }
@@ -459,7 +467,7 @@ html[data-theme="dark"] .mkt-tint { background: #0c1218; }
 .mkt-faq-item p { margin: 0 0 16px; color: var(--mkt-muted); }
 
 @media (max-width: 980px) {
-  .mkt-hero-grid, .mkt-split, .mkt-split.flip, .mkt-detail, .mkt-footer-grid, .mkt-profile, .mkt-grid.three, .mkt-grid.four, .mkt-grid.six, .mkt-faq-wrap, .mkt-app-body {
+  .mkt-hero-grid, .mkt-split, .mkt-split.flip, .mkt-detail, .mkt-footer-grid, .mkt-profile, .mkt-role-views, .mkt-grid.three, .mkt-grid.four, .mkt-grid.six, .mkt-faq-wrap, .mkt-app-body {
     grid-template-columns: 1fr;
   }
   .mkt-split.flip > :first-child { order: 0; }
