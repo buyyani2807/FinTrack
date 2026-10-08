@@ -7,7 +7,6 @@ export const marketingPaths = {
   security: "/security",
   pricing: "/pricing",
   about: "/about",
-  founder: "/about#founder",
   contact: "/contact",
   resources: "/resources",
   login: "/login",
