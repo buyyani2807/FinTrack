@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import { FEATURE_PACKS } from "../commercial/featurePacks.js";
 import { SECURITY_POINTS, SOLUTIONS, featureBySlug } from "./catalog.js";
 import { featurePath, marketingPaths } from "./paths.js";
 import { ProductCta } from "./ProductCta.jsx";
@@ -67,27 +66,33 @@ export function SecurityPage() {
   </section>;
 }
 
-const PACK_NOTES = {
-  finance: "Daily and monthly finance, dashboard, receipts, and Ask FinTrack.",
-  chit: "Chit schemes, dashboard, receipts, and Ask FinTrack.",
-  business: "Accounts, cashbook, dashboard, receipts, and Ask FinTrack.",
-  full: "Finance, chit, and accounts together. This is the workspace the app opens today.",
-};
+const PLAN_INCLUDES = [
+  "Accounts, cashbook, and GST preparation",
+  "Daily and monthly finance",
+  "Chit schemes and live bidding",
+  "Collection staff and customer portals",
+  "Receipts, and Ask FinTrack when you confirm",
+];
 
 export function PricingPage() {
   return <section className="mkt-section">
     <PageTitle title="FinTrack pricing" />
     <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Pricing</p>
-    <h1>Plans are not billed yet.</h1>
-    <p className="mkt-lead">Start free opens the full workspace. A monthly price is not shown here because billing is not connected, and nothing on this page is charged.</p>
-    <div className="mkt-grid four">
-      {Object.values(FEATURE_PACKS).map(pack => <article key={pack.id} className="mkt-card">
-        <h2>{pack.label}</h2>
-        <p>{PACK_NOTES[pack.id]}</p>
-        <p className="mkt-sample">No price published</p>
-      </article>)}
-    </div>
-    <div className="mkt-cta-row"><Link className="mkt-btn primary" to={marketingPaths.contact}>Request a demo</Link><Link className="mkt-btn" to={marketingPaths.login}>Login</Link></div>
+    <h1>One plan. Every module.</h1>
+    <p className="mkt-lead">Accounting, finance, collections, chit funds, and AI are the same price. There is no add-on for a module.</p>
+    <article className="mkt-plan">
+      <h2>FinTrack</h2>
+      <div className="mkt-plan-prices">
+        <p className="mkt-price">₹499 <span>/ month</span></p>
+        <div>
+          <p className="mkt-price">₹5,000 <span>/ year</span></p>
+          <p className="mkt-muted">₹988 less than twelve monthly payments.</p>
+        </div>
+      </div>
+      <ul className="mkt-ticks">{PLAN_INCLUDES.map(item => <li key={item}>{item}</li>)}</ul>
+      <div className="mkt-cta-row"><ProductCta primary /><Link className="mkt-btn" to={marketingPaths.contact}>Request a demo</Link></div>
+      <p className="mkt-note">This page states the price. Signing up does not charge a card.</p>
+    </article>
   </section>;
 }
 
@@ -156,7 +161,7 @@ export function ResourcesPage() {
     [marketingPaths.how, "How it works", "The path from sign-in to a record you confirm."],
     [marketingPaths.features, "Feature directory", "Every module currently in the product."],
     [marketingPaths.security, "Security", "Roles, companies, locks, and review."],
-    [marketingPaths.pricing, "Pricing", "Billing is not connected yet."],
+    [marketingPaths.pricing, "Pricing", "₹499 a month, or ₹5,000 a year, for every module."],
     [marketingPaths.about, "About FinTrack", "Who the workspace is for."],
     [marketingPaths.contact, "Request a demo", "A local note until contact is connected."],
   ];

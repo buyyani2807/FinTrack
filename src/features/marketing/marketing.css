@@ -33,6 +33,7 @@ html[data-theme="dark"] .mkt {
 .app .mkt h1,
 .app .mkt h2,
 .app .mkt h3,
+.app .mkt .mkt-price,
 .app .mkt .mkt-brand,
 .app .mkt .mkt-panel strong {
   font-family: Poppins, sans-serif !important;
@@ -267,6 +268,31 @@ html[data-theme="dark"] .mkt-tint { background: #0c1218; }
 .mkt-dots i:nth-child(2) { background: #e2b656; }
 .mkt-dots i:nth-child(3) { background: #6db58a; }
 .mkt-sample { color: var(--mkt-accent); letter-spacing: 0.04em; text-transform: uppercase; }
+.mkt-plan {
+  max-width: 760px;
+  margin-top: 28px;
+  padding: 28px;
+  border: 1px solid var(--mkt-line);
+  border-radius: 20px;
+  background: var(--mkt-card);
+}
+.mkt-plan-prices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 28px; align-items: start; margin-top: 16px; }
+.mkt-plan-prices .mkt-muted { margin: 8px 0 0; }
+.mkt-price {
+  margin: 0;
+  color: var(--mkt-ink);
+  font-size: clamp(32px, 4vw, 44px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+@media (max-width: 700px) {
+  .mkt-plan-prices { grid-template-columns: 1fr; }
+}
+.mkt-price span { color: var(--mkt-muted); font-size: 16px; font-weight: 600; letter-spacing: 0; }
+.mkt-plan .mkt-ticks { margin-top: 18px; }
+.mkt-plan .mkt-note { margin: 14px 0 0; }
 .mkt-app-body { display: grid; grid-template-columns: 132px minmax(0, 1fr); min-height: 280px; }
 .mkt-app-side {
   display: flex;
