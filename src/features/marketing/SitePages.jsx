@@ -78,10 +78,11 @@ export function PricingPage() {
   return <section className="mkt-section">
     <PageTitle title="FinTrack pricing" />
     <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Pricing</p>
-    <h1>One plan. Every module.</h1>
-    <p className="mkt-lead">Accounting, finance, collections, chit funds, and AI are the same price. There is no add-on for a module.</p>
+    <h1>One plan for all modules.</h1>
+    <p className="mkt-lead">₹499 a month, or ₹5,000 a year, is the whole workspace. Accounts, finance, chit funds, collections, portals, and AI are included. There is no second plan and no module add-on.</p>
     <article className="mkt-plan">
       <h2>FinTrack</h2>
+      <p className="mkt-muted">All modules included</p>
       <div className="mkt-plan-prices">
         <p className="mkt-price">₹499 <span>/ month</span></p>
         <div>
@@ -161,7 +162,7 @@ export function ResourcesPage() {
     [marketingPaths.how, "How it works", "The path from sign-in to a record you confirm."],
     [marketingPaths.features, "Feature directory", "Every module currently in the product."],
     [marketingPaths.security, "Security", "Roles, companies, locks, and review."],
-    [marketingPaths.pricing, "Pricing", "₹499 a month, or ₹5,000 a year, for every module."],
+    [marketingPaths.pricing, "Pricing", "One plan for all modules: ₹499 a month, or ₹5,000 a year."],
     [marketingPaths.about, "About FinTrack", "Who the workspace is for."],
     [marketingPaths.contact, "Request a demo", "A local note until contact is connected."],
   ];

@@ -276,6 +276,7 @@ html[data-theme="dark"] .mkt-tint { background: #0c1218; }
   border-radius: 20px;
   background: var(--mkt-card);
 }
+.mkt-plan > .mkt-muted { margin: 6px 0 0; }
 .mkt-plan-prices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 28px; align-items: start; margin-top: 16px; }
 .mkt-plan-prices .mkt-muted { margin: 8px 0 0; }
 .mkt-price {
