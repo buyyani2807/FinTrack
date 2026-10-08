@@ -165,7 +165,7 @@ export function FounderPage() {
       <div className="mkt-grid two">
         <article className="mkt-card">
           <h2>Experience</h2>
-          <p>More than 15 years in the IT industry, working in the United States, Ireland, and India. That includes time at Deloitte and Oracle Corporation.</p>
+          <p>More than 15 years of experience in the IT industry across the United States, Ireland, and India, including roles as a Database Administrator, Cloud Architect, and DevOps Engineer at Deloitte and Oracle Corporation.</p>
         </article>
         <article className="mkt-card">
           <h2>Education</h2>
