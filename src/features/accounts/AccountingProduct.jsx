@@ -64,6 +64,8 @@ import {
   addDaysIso,
   assertBalancedVoucher,
   assertCanChangePartyType,
+  partyTypeAfterFailedSave,
+  partyTypeChangeNeedsConfirm,
   assertCanDeleteLedger,
   assertCanDeleteParty,
   assertCoaParent,
@@ -228,6 +230,8 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [simpleRequestId, setSimpleRequestId] = useState(() => newClientRequestId());
   const [lines, setLines] = useState([emptyLine(), emptyLine()]);
   const [partyForm, setPartyForm] = useState(emptyPartyForm);
+  const [partyTypeBaseline, setPartyTypeBaseline] = useState("");
+  const [partyTypeConfirmed, setPartyTypeConfirmed] = useState(false);
   const [partyImportStatus, setPartyImportStatus] = useState("");
   const [coaForm, setCoaForm] = useState(emptyCoaForm);
   const [setupForm, setSetupForm] = useState({ companyName: "", booksStartedOn: todayIso() });
@@ -1286,7 +1290,13 @@ const openVoucher = () => {
   };
 
   const openParty = (party = null) => {
+    if (!canWrite) {
+      setError("Your Accounts role is view-only.");
+      return;
+    }
+    setPartyTypeConfirmed(false);
     if (party?.id) {
+      setPartyTypeBaseline(party.partyType || "customer");
       setPartyForm({
         id: party.id,
         partyType: party.partyType || "customer",
@@ -1302,6 +1312,7 @@ const openVoucher = () => {
         creditDays: party.creditDays == null ? "" : String(party.creditDays),
       });
     } else {
+      setPartyTypeBaseline("");
       setPartyForm(emptyPartyForm());
     }
     setShowParty(true);
@@ -1310,17 +1321,25 @@ const openVoucher = () => {
   const closeParty = () => {
     if (saving) return;
     setShowParty(false);
+    setPartyTypeBaseline("");
+    setPartyTypeConfirmed(false);
     setPartyForm(emptyPartyForm());
   };
 
   const saveParty = () => {
+    if (!canWrite) { setError("Your Accounts role is view-only."); return; }
     const message = validatePartyForm(partyForm);
     if (message) { setError(message); return; }
     const existing = partyForm.id ? parties.find(party => party.id === partyForm.id) : null;
+    const typeChanged = Boolean(existing && existing.partyType !== partyForm.partyType);
     try {
-      if (existing) assertCanChangePartyType(existing, partyForm.partyType, vouchers);
+      if (existing && typeChanged) assertCanChangePartyType(existing, partyForm.partyType);
     } catch (err) {
       setError(err.message);
+      return;
+    }
+    if (typeChanged && partyTypeChangeNeedsConfirm(existing, partyForm.partyType, vouchers) && !partyTypeConfirmed) {
+      setError("Confirm that historical vouchers stay unchanged before saving the new party type.");
       return;
     }
     const createdLabel = partyForm.partyType === "customer" ? "Customer created successfully"
@@ -1337,15 +1356,24 @@ const openVoucher = () => {
       : creditLimit > 0 || creditDays != null;
     run(async () => {
       let partyId = partyForm.id;
-      if (partyForm.id) await updateParty(token, partyForm);
-      else {
+      if (partyForm.id) {
+        try {
+          await updateParty(token, partyForm);
+        } catch (err) {
+          if (typeChanged) setPartyForm(current => ({ ...current, partyType: partyTypeAfterFailedSave(existing) }));
+          setPartyTypeConfirmed(false);
+          throw err;
+        }
+      } else {
         const created = await createParty(token, partyForm);
         partyId = Array.isArray(created) ? created[0] : created;
       }
       if (creditChanged && typeof partyId === "string") await setPartyCredit(token, partyId, { creditLimit, creditDays });
       setShowParty(false);
+      setPartyTypeBaseline("");
+      setPartyTypeConfirmed(false);
       setPartyForm(emptyPartyForm());
-    }, partyForm.id ? "Party updated successfully" : createdLabel);
+    }, partyForm.id ? (typeChanged ? "Party type updated. Historical vouchers are unchanged." : "Party updated successfully") : createdLabel);
   };
 
   const importParties = async event => {
@@ -1408,7 +1436,7 @@ const openVoucher = () => {
     setPartySearch("");
   };
 
-  const partyActions = party => (
+  const partyActions = party => canWrite ? (
     <div className="acc-party-actions acc-btn-group">
       <button type="button" className="btn" disabled={saving} onClick={() => openParty(party)}>Edit</button>
       <AccMoreMenu
@@ -1421,7 +1449,7 @@ const openVoucher = () => {
         ]}
       />
     </div>
-  );
+  ) : null;
 
   const submitSimple = () => run(async () => {
     const activeCompany = companies.find(item => item.id === activeCompanyId);
@@ -2293,6 +2321,9 @@ const openVoucher = () => {
         saveParty={saveParty}
         setPartyForm={setPartyForm}
         vouchers={vouchers}
+        originalType={partyTypeBaseline}
+        typeConfirmed={partyTypeConfirmed}
+        onConfirmType={setPartyTypeConfirmed}
       />}
       {partyDeleteDialog?.mode === "confirm" && <DeletePartyModal
         saving={saving}

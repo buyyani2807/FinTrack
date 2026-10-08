@@ -90,6 +90,7 @@ export function PartiesSection({
               {focusedParty.email ? <li><Mail size={14} aria-hidden="true" />{focusedParty.email}</li> : null}
             </ul> : null}
             <div className="acc-party-ledger-actions">
+              {canWrite ? <button type="button" className="btn" onClick={() => openParty(focusedParty)}>Edit</button> : null}
               <PartyStatementButton
                 party={focusedParty}
                 partyBook={partyBook}

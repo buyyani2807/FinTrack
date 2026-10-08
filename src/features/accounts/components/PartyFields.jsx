@@ -1,4 +1,4 @@
-import { PARTY_TYPES } from "../model/accountingModel.js";
+import { PARTY_TYPE_CHANGE_WARNING, PARTY_TYPES } from "../model/accountingModel.js";
 import { Select } from "../../../components/Select.jsx";
 import { INDIA_STATES, gstStateFromGstin } from "../model/accountingGst.js";
 import { partyTypeLabel } from "../accountsFormat.js";
@@ -7,15 +7,19 @@ import { Field } from "./AccUi.jsx";
 export const PartyTypeBadge = ({ type }) => (
   <span className={`acc-type-badge ${type || "other"}`}>{partyTypeLabel(type)}</span>
 );
-export function PartyFormFields({ form, setForm, typeLocked = false }) {
+export function PartyFormFields({ form, setForm, originalType = "", hasTransactions = false, typeConfirmed = false, onConfirmType }) {
   const set = patch => setForm(current => ({ ...current, ...patch }));
+  const currentType = originalType || form.partyType;
+  const typeChanged = Boolean(form.id) && currentType !== form.partyType;
+  const needsConfirm = typeChanged && hasTransactions;
   return (
     <div className="form acc-party-form">
-      <Field required label="Type">
-        <Select value={form.partyType} disabled={typeLocked} onChange={event => set({ partyType: event.target.value })}>
+      <Field required label="Party type">
+        <Select value={form.partyType} onChange={event => { set({ partyType: event.target.value }); onConfirmType?.(false); }}>
           {PARTY_TYPES.map(type => <option key={type.id} value={type.id}>{type.label}</option>)}
         </Select>
       </Field>
+      {form.id ? <p className="small acc-party-current-type">Current type: {partyTypeLabel(currentType)}</p> : null}
       <Field required label="Name"><input value={form.name} placeholder="e.g. Sai Traders" onChange={event => set({ name: event.target.value })} /></Field>
       <Field label="Phone"><input value={form.phone} placeholder="10-digit mobile" onChange={event => set({ phone: event.target.value })} /></Field>
       <Field label="Email"><input value={form.email} placeholder="optional" onChange={event => set({ email: event.target.value })} /></Field>
@@ -42,7 +46,13 @@ export function PartyFormFields({ form, setForm, typeLocked = false }) {
         )}
         <Field label="Credit days"><input type="number" min="0" max="365" step="1" value={form.creditDays ?? ""} placeholder="Default due date" onChange={event => set({ creditDays: event.target.value })} /></Field>
       </>}
-      {typeLocked ? <p className="small acc-party-lock">Party type is locked because this party already has accounting transactions.</p> : null}
+      {needsConfirm ? <div className="acc-party-type-warn" role="status">
+        <p>{PARTY_TYPE_CHANGE_WARNING}</p>
+        <label>
+          <input type="checkbox" checked={typeConfirmed} onChange={event => onConfirmType?.(event.target.checked)} />
+          <span>Update the classification only. Leave historical vouchers unchanged.</span>
+        </label>
+      </div> : null}
     </div>
   );
 }

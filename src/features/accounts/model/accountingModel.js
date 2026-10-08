@@ -353,11 +353,58 @@ export function assertCanDeleteParty(party, vouchers = []) {
   }
 }
 
-export function assertCanChangePartyType(party, nextType, vouchers = []) {
-  if (!party?.id || party.partyType === nextType) return;
-  if (partyHasAccountingUse(party.id, vouchers)) {
-    throw new Error("Party type cannot be changed because accounting transactions already exist for this party.");
-  }
+export const PARTY_TYPE_CHANGE_WARNING = "This party has existing transactions. Changing the party type will update its classification for future reporting, but historical vouchers, balances, and ledger entries will remain unchanged.";
+
+export function partyTypeChangeError(nextType) {
+  const type = String(nextType || "").trim();
+  if (!type) return "Choose a party type.";
+  if (!PARTY_TYPES.some(item => item.id === type)) return "Choose a valid party type.";
+  return "";
+}
+
+export function assertCanChangePartyType(party, nextType) {
+  const message = partyTypeChangeError(nextType);
+  if (message) throw new Error(message);
+  if (!party?.id) throw new Error("Choose a party");
+}
+
+export function partyTypeChangeNeedsConfirm(party, nextType, vouchers = []) {
+  if (!party?.id || !nextType || party.partyType === nextType) return false;
+  return partyHasAccountingUse(party.id, vouchers);
+}
+
+export function applyPartyTypeChange(party, nextType) {
+  assertCanChangePartyType(party, nextType);
+  return { ...party, id: party.id, partyType: nextType };
+}
+
+export function partyTypeAfterFailedSave(party) {
+  return party?.partyType || "";
+}
+
+export function canEditPartyType(role) {
+  return role === "owner" || role === "admin" || role === "accountant";
+}
+
+export function partyInCompany(party, companyId) {
+  return Boolean(party?.companyId) && party.companyId === companyId;
+}
+
+export function partyTypeChangeAudit(party, nextType, { companyId = "", userId = "", userName = "", userEmail = "", at = "" } = {}) {
+  return {
+    entityType: "party",
+    entityId: party.id,
+    companyId,
+    action: "party_type",
+    actorId: userId,
+    actorName: userName,
+    actorEmail: userEmail,
+    previousType: party.partyType,
+    nextType,
+    createdAt: at,
+    reason: "Party classification updated. Historical vouchers, balances, and ledger entries were not changed.",
+    source: "accounts_party_edit",
+  };
 }
 
 export function validatePartyForm(form) {

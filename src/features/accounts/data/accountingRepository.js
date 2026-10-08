@@ -287,6 +287,9 @@ const wrapPartyMutation = promise => promise.catch(err => {
   if (isMissing(err)) {
     throw new Error("Run 058–060 in the Supabase SQL editor to enable party edit and GST.");
   }
+  if (/cannot be changed because accounting transactions/i.test(String(err?.message || ""))) {
+    throw new Error("Run 093 in the Supabase SQL editor to change a party type. Historical vouchers stay as they are.");
+  }
   throw err;
 });
 

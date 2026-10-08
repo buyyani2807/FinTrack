@@ -360,7 +360,8 @@ test("unused parties can be deleted and parties with voucher history cannot", ()
   assertCanDeleteParty(unused, [voucher]);
   assert.throws(() => assertCanDeleteParty(used, [voucher]), /accounting transactions already exist/);
   assertCanChangePartyType(unused, "supplier", [voucher]);
-  assert.throws(() => assertCanChangePartyType(used, "supplier", [voucher]), /Party type cannot be changed/);
+  assertCanChangePartyType(used, "supplier", [voucher]);
+  assert.throws(() => assertCanChangePartyType(used, ""), /Choose a party type/);
 });
 
 test("party search and type filter work together without resetting either", () => {

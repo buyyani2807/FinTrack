@@ -2114,10 +2114,31 @@
   font-variant-numeric: tabular-nums;
 }
 
-.accounts-dashboard .acc-party-lock {
+.accounts-dashboard .acc-party-lock,
+.accounts-dashboard .acc-party-current-type,
+.accounts-dashboard .acc-party-type-warn {
   grid-column: 1 / -1;
+}
+.accounts-dashboard .acc-party-lock,
+.accounts-dashboard .acc-party-current-type {
   color: var(--acc-gold);
 }
+.accounts-dashboard .acc-party-type-warn {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--ft-warning-soft, rgba(229, 163, 59, .14));
+  color: var(--acc-text);
+}
+.accounts-dashboard .acc-party-type-warn p { margin: 0; }
+.accounts-dashboard .acc-party-type-warn label {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.accounts-dashboard .acc-party-type-warn input { margin-top: 3px; }
 
 .accounts-dashboard .acc-party-form .span {
   grid-column: 1 / -1;
