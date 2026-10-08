@@ -390,7 +390,7 @@ html[data-theme="dark"] .mkt-tint { background: #0c1218; }
 .mkt-empty { width: min(1160px, calc(100% - 48px)); margin: 0 auto; padding: 64px 0; }
 .mkt-profile {
   display: grid;
-  grid-template-columns: 180px minmax(0, 1fr);
+  grid-template-columns: 252px minmax(0, 1fr);
   gap: 28px;
   align-items: start;
   margin-top: 40px;
@@ -399,12 +399,17 @@ html[data-theme="dark"] .mkt-tint { background: #0c1218; }
   border-radius: 20px;
   background: linear-gradient(180deg, color-mix(in srgb, var(--mkt-soft) 70%, var(--mkt-card)), var(--mkt-card));
 }
-.mkt-profile > img {
-  width: 180px;
-  height: 224px;
-  object-fit: cover;
-  object-position: center 8%;
-  border-radius: 14px;
+.mkt-profile-photo {
+  width: 252px;
+  height: 316px;
+  overflow: hidden;
+  border-radius: 16px;
+}
+.mkt-profile-photo img {
+  width: 500px;
+  max-width: none;
+  height: auto;
+  margin: -12px 0 0 -124px;
 }
 .mkt-profile h2 { font-size: clamp(26px, 3vw, 32px); }
 .mkt-profile .mkt-lead { margin-top: 8px; font-size: 16px; }

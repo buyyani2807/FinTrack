@@ -103,7 +103,9 @@ export function AboutPage() {
       <article className="mkt-card"><h2>For the customer</h2><p>A portal ID and PIN open that person’s finance account or chit ticket.</p></article>
     </div>
     <article className="mkt-profile">
-      <img src="/founder/sudheer-kumar-buyyani.jpg" alt="Sudheer Kumar Buyyani, CEO and Founder of FinTrack" width="180" height="224" />
+      <div className="mkt-profile-photo">
+        <img src="/founder/sudheer-kumar-buyyani.jpg" alt="Sudheer Kumar Buyyani, CEO and Founder of FinTrack" width="888" height="1024" />
+      </div>
       <div>
         <p className="mkt-kicker">CEO and Founder</p>
         <h2>Sudheer Kumar Buyyani</h2>
