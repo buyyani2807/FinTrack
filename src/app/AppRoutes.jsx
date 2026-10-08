@@ -5,7 +5,7 @@ import { FeatureDetailPage } from "../features/marketing/FeatureDetailPage.jsx";
 import { FeaturesPage } from "../features/marketing/FeaturesPage.jsx";
 import { HomePage } from "../features/marketing/HomePage.jsx";
 import { MarketingLayout } from "../features/marketing/MarketingLayout.jsx";
-import { AboutPage, ContactPage, HowItWorksPage, PricingPage, ResourcesPage, SecurityPage, SolutionsPage } from "../features/marketing/SitePages.jsx";
+import { AboutPage, ContactPage, FounderPage, HowItWorksPage, PricingPage, ResourcesPage, SecurityPage, SolutionsPage } from "../features/marketing/SitePages.jsx";
 import { WorkspaceLayout } from "../features/workspace/WorkspaceLayout.jsx";
 import { AccountsRoute } from "../features/workspace/routes/AccountsRoute.jsx";
 import { CashbookRoute } from "../features/workspace/routes/CashbookRoute.jsx";
@@ -39,7 +39,7 @@ export function AppRoutes() {
           <Route path="/security" element={<SecurityPage />} />
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="/about" element={<AboutPage />} />
-          <Route path="/founder" element={<Navigate to="/about" replace />} />
+          <Route path="/founder" element={<FounderPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/resources" element={<ResourcesPage />} />
         </Route>

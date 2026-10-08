@@ -34,8 +34,7 @@ html[data-theme="dark"] .mkt {
 .app .mkt h2,
 .app .mkt h3,
 .app .mkt .mkt-price,
-.app .mkt .mkt-brand,
-.app .mkt .mkt-panel strong {
+.app .mkt .mkt-brand {
   font-family: Poppins, sans-serif !important;
   letter-spacing: -0.03em !important;
 }
@@ -246,33 +245,23 @@ html[data-theme="dark"] .mkt-tint { background: #0c1218; }
 }
 .mkt-card .mkt-btn { align-self: flex-start; margin-top: auto; }
 
-.mkt-app {
+.mkt-shot {
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
   overflow: hidden;
   border: 1px solid #d7e3df;
   border-radius: 18px;
-  background: #fff;
-  color: #122033;
+  background: #f4f6f8;
   box-shadow: var(--mkt-shadow);
 }
-.mkt-app-chrome {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 42px;
-  padding: 0 14px;
-  background: #f3f6f5;
-  border-bottom: 1px solid #e3ebe8;
-  color: #3d5164;
-  font-size: 12px;
-  font-weight: 700;
+.mkt-shot img {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
 }
-.mkt-app-title { margin-left: auto; color: #122033; }
-.mkt-dots { display: flex; gap: 6px; }
-.mkt-dots i { width: 8px; height: 8px; border-radius: 99px; background: #c5d5d1; display: block; }
-.mkt-dots i:first-child { background: #e07a6a; }
-.mkt-dots i:nth-child(2) { background: #e2b656; }
-.mkt-dots i:nth-child(3) { background: #6db58a; }
-.mkt-sample { color: var(--mkt-accent); letter-spacing: 0.04em; text-transform: uppercase; }
+html[data-theme="dark"] .mkt-shot { border-color: #4a6274; background: #101820; }
 .mkt-plan {
   max-width: 760px;
   margin-top: 28px;
@@ -299,51 +288,6 @@ html[data-theme="dark"] .mkt-tint { background: #0c1218; }
 .mkt-price span { color: var(--mkt-muted); font-size: 16px; font-weight: 600; letter-spacing: 0; }
 .mkt-plan .mkt-ticks { margin-top: 18px; }
 .mkt-plan .mkt-note { margin: 14px 0 0; }
-.mkt-app-body { display: grid; grid-template-columns: 132px minmax(0, 1fr); min-height: 280px; }
-.mkt-app-side {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px;
-  background: #f7faf9;
-  border-right: 1px solid #e6eeeb;
-}
-.mkt-app-side span {
-  padding: 8px 10px;
-  border-radius: 8px;
-  color: #3d5164;
-  font-size: 13px;
-  font-weight: 600;
-}
-.mkt-app-side .is-on { background: #e7f4f1; color: #146158; }
-.mkt-app-main { display: grid; gap: 10px; padding: 12px; }
-.mkt-app-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.mkt-panel {
-  padding: 12px;
-  border-radius: 12px;
-  background: #fff;
-  border: 1px solid #e6eeeb;
-}
-.mkt-panel > span, .mkt-app-list > span { display: block; color: #5b6d7c; font-size: 12px; font-weight: 700; }
-.mkt-panel strong {
-  display: block;
-  margin-top: 6px;
-  color: #122033;
-  font-family: Poppins, sans-serif;
-  font-size: 22px;
-  letter-spacing: -0.03em;
-}
-.mkt-panel small { display: block; margin-top: 2px; color: #5b6d7c; font-size: 12px; }
-.mkt-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 9px 0;
-  border-top: 1px solid #e6eeeb;
-  color: #122033;
-  font-size: 13px;
-}
-.mkt-row b { color: #146158; font-weight: 700; }
 .mkt-cat { margin-bottom: 8px; align-items: start; }
 
 .mkt-band {
@@ -443,11 +387,12 @@ html[data-theme="dark"] .mkt-tint { background: #0c1218; }
   height: auto;
   margin: -12px 0 0 -124px;
 }
-.mkt-profile h2 { font-size: clamp(26px, 3vw, 32px); }
+.mkt-profile h2 { font-size: clamp(20px, 2vw, 24px); }
 .mkt-profile .mkt-lead { margin-top: 8px; font-size: 16px; }
 .mkt-profile .mkt-kicker { margin-bottom: 10px; }
 .mkt-profile .mkt-grid { margin-top: 18px; }
 .mkt-role-views { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 28px; align-items: start; }
+.mkt-role-views > *, .mkt-split > * { min-width: 0; }
 .mkt-role-views h2 { font-size: clamp(24px, 3vw, 32px); }
 .mkt-role-views .mkt-lead { margin-bottom: 16px; }
 
@@ -467,12 +412,11 @@ html[data-theme="dark"] .mkt-tint { background: #0c1218; }
 .mkt-faq-item p { margin: 0 0 16px; color: var(--mkt-muted); }
 
 @media (max-width: 980px) {
-  .mkt-hero-grid, .mkt-split, .mkt-split.flip, .mkt-detail, .mkt-footer-grid, .mkt-profile, .mkt-role-views, .mkt-grid.three, .mkt-grid.four, .mkt-grid.six, .mkt-faq-wrap, .mkt-app-body {
+  .mkt-hero-grid, .mkt-split, .mkt-split.flip, .mkt-detail, .mkt-footer-grid, .mkt-profile, .mkt-role-views, .mkt-grid.three, .mkt-grid.four, .mkt-grid.six, .mkt-faq-wrap {
     grid-template-columns: 1fr;
   }
   .mkt-split.flip > :first-child { order: 0; }
   .mkt-grid.two { grid-template-columns: 1fr; }
-  .mkt-app-side { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid #e6eeeb; }
   .mkt-links, .mkt-nav-end .mkt-login-link { display: none; }
   .mkt-burger { display: inline-flex; }
   .mkt-drawer {

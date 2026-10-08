@@ -125,6 +125,7 @@ export function AboutPage() {
     <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>About</p>
     <h1>Accounting, collections, and chit funds in one workspace.</h1>
     <p className="mkt-lead">FinTrack is for finance businesses that collect daily or monthly, for chit fund operators, and for small and medium businesses that keep company books. Shops and service firms use the same login.</p>
+    <p className="mkt-lead">Sudheer Kumar Buyyani is the CEO and Founder. <Link className="mkt-text-link" to={marketingPaths.founder}>Read his background</Link>.</p>
     <div className="mkt-role-views">
       <div>
         <h2>Financier</h2>
@@ -146,24 +147,31 @@ export function AboutPage() {
       </div>
       <ProductPreview scene="intelligence" />
     </div>
+  </section>
+  <PageClose />
+  </>;
+}
+
+export function FounderPage() {
+  return <>
+  <section className="mkt-section">
+    <PageTitle title="Sudheer Kumar Buyyani, CEO and Founder — FinTrack" />
+    <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>CEO and Founder</p>
+    <h1>Sudheer Kumar Buyyani</h1>
+    <p className="mkt-lead">Sudheer founded FinTrack so a business can keep accounting, collections, customers, and chit funds in one workspace.</p>
     <article className="mkt-profile">
       <div className="mkt-profile-photo">
         <img src="/founder/sudheer-kumar-buyyani.jpg" alt="Sudheer Kumar Buyyani, CEO and Founder of FinTrack" width="888" height="1024" />
       </div>
-      <div>
-        <p className="mkt-kicker">CEO and Founder</p>
-        <h2>Sudheer Kumar Buyyani</h2>
-        <p className="mkt-lead">Sudheer founded FinTrack so a business can keep accounting, collections, customers, and chit funds in one workspace.</p>
-        <div className="mkt-grid two">
-          <article className="mkt-card">
-            <h3>Experience</h3>
-            <p>More than 15 years in the IT industry, working in the United States, Ireland, and India. That includes time at Deloitte and Oracle Corporation.</p>
-          </article>
-          <article className="mkt-card">
-            <h3>Education</h3>
-            <p>Master’s degree in Management Information Systems from UCD Michael Smurfit Graduate Business School. The Financial Times ranks the school 23rd among European business schools for 2025, its tenth year in that top 30. The school holds the triple crown of AACSB, EQUIS, and AMBA accreditation.</p>
-          </article>
-        </div>
+      <div className="mkt-grid two">
+        <article className="mkt-card">
+          <h2>Experience</h2>
+          <p>More than 15 years in the IT industry, working in the United States, Ireland, and India. That includes time at Deloitte and Oracle Corporation.</p>
+        </article>
+        <article className="mkt-card">
+          <h2>Education</h2>
+          <p>Master’s degree in Management Information Systems from UCD Michael Smurfit Graduate Business School. The Financial Times ranks the school 23rd among European business schools for 2025, its tenth year in that top 30. The school holds the triple crown of AACSB, EQUIS, and AMBA accreditation.</p>
+        </article>
       </div>
     </article>
   </section>
@@ -204,6 +212,7 @@ export function ResourcesPage() {
     [marketingPaths.security, "Security", "Roles, companies, locks, and review."],
     [marketingPaths.pricing, "Pricing", "One plan for all modules: ₹499 a month, or ₹5,000 a year."],
     [marketingPaths.about, "About FinTrack", "Who the workspace is for."],
+    [marketingPaths.founder, "CEO and Founder", "Sudheer Kumar Buyyani, and the experience behind FinTrack."],
     [marketingPaths.contact, "Request a demo", "A local note until contact is connected."],
   ];
   return <>
