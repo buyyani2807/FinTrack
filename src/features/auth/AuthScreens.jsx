@@ -22,7 +22,7 @@ const MODE_GUIDE = {
   agent: "Your financier shares your agent ID (it starts with AG-) and a 6-digit PIN when they add you under Collection Staff.",
   customer: "Your financier shares your portal ID (it starts with FT-) and a 6-digit PIN when they open your customer portal.",
   chitCustomer: "Your chit manager shares your portal ID (it starts with CF-) and a 6-digit PIN when you join a scheme.",
-  signUp: "Set up your finance business.",
+  signUp: "The 14 days start when the workspace is created. Opening this page does not start the trial. After 14 days you can still sign in, your records stay, and recording waits until you choose a plan.",
 };
 
 // Plain-language versions of common sign-in errors; anything else is shown as it comes.
@@ -203,8 +203,10 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
   };
   const isFinanceCustomer = mode === "customer", isChitCustomer = mode === "chitCustomer", isCustomer = isFinanceCustomer || isChitCustomer, isAgent = mode === "agent", isPortalLogin = isCustomer || isAgent;
   const brandName = !isCustomer && !isAgent && accountsIntent ? "FinTrack Accounts" : "FinTrack";
-  const brandSub = isChitCustomer ? "View your chit schemes, payments, and live bids when they apply" : isFinanceCustomer ? "View your finance balance and payment history" : isAgent ? "Collection Agent workspace" : accountsIntent ? "Sign in to your small-business books. Daily Finance and Chit Fund stay optional." : "Secure workspace for finance businesses";
-  const submitLabel = busy ? "Please wait…" : isChitCustomer ? "Open chit dashboard" : isFinanceCustomer ? "Open my dashboard" : mode === "signUp" ? "Create business account" : "Sign in";
+  const brandSub = mode === "signUp"
+    ? "No payment required to start. Daily Finance, Monthly Finance, Chit Fund, and Accounts are included."
+    : isChitCustomer ? "View your chit schemes, payments, and live bids when they apply" : isFinanceCustomer ? "View your finance balance and payment history" : isAgent ? "Collection Agent workspace" : accountsIntent ? "Sign in to your small-business books. Daily Finance and Chit Fund stay optional." : "Secure workspace for finance businesses";
+  const submitLabel = busy ? "Please wait…" : isChitCustomer ? "Open chit dashboard" : isFinanceCustomer ? "Open my dashboard" : mode === "signUp" ? "Start free trial" : "Sign in";
   return <div className="ft-auth">
     <AuthShowcase />
     <main className="login ft-auth-panel">
@@ -214,7 +216,7 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
           {brandName !== "FinTrack" && <span className="ft-auth-product">{brandName.replace(/^FinTrack\s*/, "")}</span>}
         </div>
         <p className="small"><Link to="/">Back to the FinTrack website</Link></p>
-        <h1 className={`ft-auth-title${mode === "signUp" ? " is-one-line" : ""}`}>{mode === "signUp" ? "Create your business account" : "Welcome back"}</h1>
+        <h1 className={`ft-auth-title${mode === "signUp" ? " is-one-line" : ""}`}>{mode === "signUp" ? "Start your 14-day free trial" : "Welcome back"}</h1>
         <p className="sub ft-auth-sub">{brandSub}</p>
 
         {mode !== "signUp" && <div className="ft-auth-modes" role="group" aria-label="Sign in as">

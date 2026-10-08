@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { Outlet, useNavigate, useOutletContext } from "react-router";
+import { Link, Navigate, Outlet, useLocation, useNavigate, useOutletContext } from "react-router";
 import { loadActiveChitSchemes } from "../../lib/financeRepository";
 import { todayIso } from "../../lib/dates.js";
 import { isModuleEnabled } from "../commercial/entitlements.js";
+import { TrialBanner } from "../commercial/TrialBanner.jsx";
+import { subscriptionPathAllowed, workspaceAccessAllowed } from "../commercial/trial.js";
 import { FintrackAssistant } from "../intelligence/assistant/FintrackAssistant.jsx";
 import { visibleFinanceLoans } from "../intelligence/assistant/askFintrack.js";
 import { loadAccountsModule } from "./accountsModuleLoader.js";
@@ -26,15 +28,18 @@ export function WorkspaceLayout() {
   const [chitSchemes, setChitSchemes] = useState([]);
   const [askOpen, setAskOpen] = useState(false);
   const askEnabled = isModuleEnabled(orgSettings, "ai");
+  const location = useLocation();
+  const subscription = workspace?.subscription;
+  const subscriptionLocked = !workspaceAccessAllowed(subscription);
 
   useEffect(() => {
-    if (!showOwnerChrome || !token) return undefined;
+    if (subscriptionLocked || !showOwnerChrome || !token) return undefined;
     let cancelled = false;
     loadActiveChitSchemes(token)
       .then(schemes => { if (!cancelled) setChitSchemes(schemes || []); })
       .catch(() => { if (!cancelled) setChitSchemes([]); });
     return () => { cancelled = true; };
-  }, [showOwnerChrome, token]);
+  }, [subscriptionLocked, showOwnerChrome, token]);
 
   // Signing out from inside Accounts sets this flag so the next owner sign-in lands back in Accounts.
   useEffect(() => {
@@ -52,7 +57,7 @@ export function WorkspaceLayout() {
 
   // Warm the Accounts bundle and data while the owner is idle so opening Accounts is instant.
   useEffect(() => {
-    if (!showOwnerChrome || !access.accounts || !token) return undefined;
+    if (subscriptionLocked || !showOwnerChrome || !access.accounts || !token) return undefined;
     const preload = () => { loadAccountsModule().then(module => module.prefetchAccounts?.(token)).catch(() => {}); };
     if (typeof window.requestIdleCallback === "function") {
       const id = window.requestIdleCallback(preload, { timeout: 4000 });
@@ -60,7 +65,7 @@ export function WorkspaceLayout() {
     }
     const id = window.setTimeout(preload, 1500);
     return () => window.clearTimeout(id);
-  }, [showOwnerChrome, access.accounts, token]);
+  }, [subscriptionLocked, showOwnerChrome, access.accounts, token]);
 
   const routeContext = {
     access, token, loans, workspace: workspace || {}, orgSettings, logout,
@@ -69,15 +74,26 @@ export function WorkspaceLayout() {
     chitSchemes, setChitSchemes, session,
   };
 
+  if (subscriptionLocked && !subscriptionPathAllowed(location.pathname, subscription)) {
+    return <Navigate to="/subscribe" replace />;
+  }
+
   return <>
     {dataError && <div className="notice" style={{ position: "fixed", top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 20 }}>{dataError}</div>}
-    {showOwnerChrome
+    {subscriptionLocked ? <div className="ft-trial-lockbar">
+      <strong>Plan required</strong>
+      <div>
+        {showOwnerChrome ? <Link className="btn" to="/settings/company">Company settings</Link> : null}
+        <button type="button" className="btn" onClick={logout}>Log out</button>
+      </div>
+    </div> : <TrialBanner subscription={subscription} isOwner={showOwnerChrome} />}
+    {showOwnerChrome && !subscriptionLocked
       ? <div className="financier-tools"><FinancierNav access={access} orgSettings={orgSettings} businessName={workspace?.businessName} logout={logout} askEnabled={askEnabled} onAsk={() => setAskOpen(true)} /><Outlet context={routeContext} /></div>
       : <>
-        {askEnabled ? <div className="ft-ask-staff-bar"><button type="button" className="btn" onClick={() => setAskOpen(true)}>Ask FinTrack</button></div> : null}
+        {!subscriptionLocked && askEnabled ? <div className="ft-ask-staff-bar"><button type="button" className="btn" onClick={() => setAskOpen(true)}>Ask FinTrack</button></div> : null}
         <Outlet context={routeContext} />
       </>}
-    <FintrackAssistant
+    {!subscriptionLocked && <FintrackAssistant
       open={askOpen}
       onClose={() => setAskOpen(false)}
       onNavigate={path => navigate(path)}
@@ -100,7 +116,7 @@ export function WorkspaceLayout() {
         }),
         chitSchemes,
       }}
-    />
+    />}
   </>;
 }
 

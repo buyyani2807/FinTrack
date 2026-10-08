@@ -12,6 +12,7 @@ export const workspacePaths = {
   collectionStaff: "/collection-staff",
   routeCollections: "/route-collections",
   settings: "/settings",
+  subscribe: "/subscribe",
 };
 
 // Tabs of Daily / Monthly Finance; each is a child route, e.g. /daily-finance/customers (see src/app/AppRoutes.jsx).

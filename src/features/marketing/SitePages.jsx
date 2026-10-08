@@ -103,7 +103,7 @@ export function PricingPage() {
       </div>
       <ul className="mkt-ticks">{PLAN_INCLUDES.map(item => <li key={item}>{item}</li>)}</ul>
       <div className="mkt-cta-row"><ProductCta primary /><Link className="mkt-btn" to={marketingPaths.contact}>Request a demo</Link></div>
-      <p className="mkt-note">This page states the price. Signing up does not charge a card.</p>
+      <p className="mkt-note">A new workspace includes 14 days. This page states the price. Signing up does not charge a card. After the trial, recording waits until a plan is active. Your records stay.</p>
     </article>
   </section>;
 }
@@ -112,7 +112,7 @@ export function PageClose() {
   return <section className="mkt-band">
     <div className="mkt-wrap">
       <h2>Start with the full workspace.</h2>
-      <p>One plan includes every module. Start free opens sign-in. It does not charge a card.</p>
+      <p>One plan includes every module. Start free opens a 14-day trial and does not charge a card.</p>
       <div className="mkt-cta-row"><ProductCta primary /><Link className="mkt-btn light" to={marketingPaths.contact}>Talk to us</Link></div>
     </div>
   </section>;

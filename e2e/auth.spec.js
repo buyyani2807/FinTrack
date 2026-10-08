@@ -29,10 +29,20 @@ test.describe("Login hub tabs", () => {
   });
 
   test("create business account shows signup fields", async ({ page }) => {
+    await page.goto("/login");
     await page.getByRole("button", { name: "Create business account" }).click();
+    await expect(page.getByRole("heading", { name: "Start your 14-day free trial" })).toBeVisible();
+    await expect(page.getByText("No payment required to start")).toBeVisible();
     await expect(page.getByText("Business name")).toBeVisible();
     await expect(page.getByText("Your full name")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Create business account" }).last()).toBeVisible();
+    await expect(page.getByRole("button", { name: "Start free trial" })).toBeVisible();
+  });
+
+  test("start free opens the 14-day trial signup", async ({ page }) => {
+    await page.goto("/login?signup=1");
+    await expect(page.getByRole("heading", { name: "Start your 14-day free trial" })).toBeVisible();
+    await expect(page.getByText("After 14 days you can still sign in")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Start free trial" })).toBeVisible();
   });
 });
 

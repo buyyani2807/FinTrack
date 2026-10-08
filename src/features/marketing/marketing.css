@@ -59,6 +59,19 @@ html[data-theme="dark"] .mkt {
 }
 .mkt-skip:focus { top: 12px; }
 
+.mkt-trial-bar {
+  margin: 0;
+  padding: 8px 20px 12px;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--mkt-ink);
+}
+.mkt-trial-bar a {
+  color: var(--mkt-accent);
+  font-weight: 700;
+  margin-left: 6px;
+}
 .mkt-nav-bar {
   position: sticky;
   top: 0;

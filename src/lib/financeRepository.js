@@ -1,3 +1,4 @@
+import { grandfatheredSubscription, normalizeSubscription } from "../features/commercial/trial.js";
 import { supabase } from "./supabase";
 import { CHIT_TYPES } from "../features/chitFund/model/fixedChit.js";
 import { flattenSchemePaymentsForReminders } from "../features/receipts/model/upcomingPayments.js";
@@ -130,7 +131,18 @@ export async function loadWorkspace(token) {
     active: profile?.is_active !== false,
     id: profile?.id || "",
     organizationSettings: mapOrganizationSettings(organization),
+    subscription: await loadSubscription(token),
   };
+}
+
+async function loadSubscription(token) {
+  try {
+    const payload = await supabase.rpc("current_workspace_subscription", {}, token);
+    return normalizeSubscription(payload);
+  } catch (error) {
+    if (!isMissingSchemaError(error)) throw error;
+    return grandfatheredSubscription();
+  }
 }
 
 export async function loadOrganizationSettings(token) {

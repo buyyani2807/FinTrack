@@ -23,7 +23,7 @@ export function SessionLayout() {
   if (isMarketingPath(path)) {
     if (path === "/" && isLoading && !workspaceUser) return <LoadingScreen />;
     if (workspaceUser && path === "/") return <Navigate to="/dashboard" replace />;
-    return <Outlet context={{ signedIn: workspaceUser }} />;
+    return <Outlet context={{ signedIn: workspaceUser, subscription: session.workspace?.subscription || null, isOwner: session.workspace?.role === "owner" }} />;
   }
   if (isLoading) return <LoadingScreen />;
   if (!user) return <FinancierAuth onLogin={enterSession} onCustomerLogin={enterCustomerSession} onChitCustomerLogin={enterChitCustomerSession} />;

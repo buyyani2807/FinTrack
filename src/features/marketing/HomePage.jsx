@@ -181,7 +181,7 @@ export function HomePage() {
     <section className="mkt-band">
       <div className="mkt-wrap">
         <h2>Bring the books and the collections together.</h2>
-        <p>Start free opens the existing sign-in. Request a demo if you want a walkthrough first.</p>
+        <p>Start free opens signup for a 14-day trial. No payment is required to start. Request a demo if you want a walkthrough first.</p>
         <div className="mkt-cta-row">
           <ProductCta primary />
           <Link className="mkt-btn light" to={marketingPaths.contact}>Request a demo</Link>
