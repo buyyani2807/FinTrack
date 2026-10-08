@@ -29,7 +29,7 @@ export function SolutionsPage() {
 }
 
 const STEPS = [
-  { title: "Open one workspace", text: "Sign in as the business owner, or create the business account when signup is open. Collection agents, customers, and chit members use their own login." },
+  { title: "Open one workspace", text: "Financier sign in opens the owner workspace, or create the business account when signup is open. Collection agents, customers, and chit members use their own login on the same screen." },
   { title: "Record the work", text: "Add daily or monthly customers, enroll a chit scheme, or post a voucher on the company you have open." },
   { title: "Review what FinTrack highlights", text: "Insights, unusual days, bill drafts, and bank suggestions are there to read. You record the payment, accept the match, or save the voucher." },
   { title: "Share only when you mean to", text: "Download a receipt or statement, or open WhatsApp with a draft. The message is sent when you send it. Portals show a customer or member their own records." },
@@ -70,7 +70,7 @@ const PLAN_INCLUDES = [
   "Accounts, cashbook, and GST preparation",
   "Daily and monthly finance",
   "Chit schemes and live bidding",
-  "Collection staff and customer portals",
+  "Collection agents, customer portals, and member portals",
   "Receipts, and Ask FinTrack when you confirm",
 ];
 
@@ -103,7 +103,7 @@ export function AboutPage() {
     <h1>Built so the records sit together.</h1>
     <p className="mkt-lead">Accounting, payments, customers, collections, and the chit book are one login. Ask FinTrack and the other suggestions read those records. You decide what gets posted or sent.</p>
     <div className="mkt-grid three">
-      <article className="mkt-card"><h2>For the owner</h2><p>Dashboard, books, schemes, staff, and settings stay in the owner workspace.</p></article>
+      <article className="mkt-card"><h2>For the financier</h2><p>Financier sign in opens the dashboard, books, schemes, staff, and settings.</p></article>
       <article className="mkt-card"><h2>For the collector</h2><p>A collection agent signs in to assigned accounts and routes, not the full owner books.</p></article>
       <article className="mkt-card"><h2>For the customer</h2><p>A portal ID and PIN open that person’s finance account or chit ticket.</p></article>
     </div>

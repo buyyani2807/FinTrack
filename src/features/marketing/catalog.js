@@ -6,7 +6,7 @@ export const FEATURE_CATEGORIES = [
   { id: "intelligence", label: "AI", blurb: "Ask FinTrack, bill drafts, and suggestions you confirm." },
   { id: "finance", label: "Finance", blurb: "Daily and monthly collections." },
   { id: "chit", label: "Chit Fund", blurb: "Schemes, bidding, and dividends." },
-  { id: "portals", label: "Portals", blurb: "A private view for customers and members." },
+  { id: "portals", label: "Portals", blurb: "Financier sign in opens the owner workspace. Agents, customers, and members have their own login." },
 ];
 
 export const FEATURES = [
@@ -582,6 +582,19 @@ export const FEATURES = [
     advisory: true,
   },
   {
+    slug: "agent-portal",
+    category: "portals",
+    name: "Agent Portal",
+    summary: "A collection agent signs in with email and password to the accounts and routes you assign.",
+    problem: "Field staff should record collections without opening the owner’s books, chit schemes, or company accounts.",
+    how: ["Add the agent under Collection Staff.", "Assign the finance accounts or route they cover.", "They use Agent login. The owner books stay with you."],
+    capabilities: ["Email and password from Collection Staff", "Assigned finance accounts", "Route stops when the agent is set on a route", "No chit book, cashbook, or company accounts"],
+    benefits: ["Collectors work their own list", "A recorded collection stays on that account", "You still review the full book"],
+    related: ["collection-staff", "collections", "customer-portals"],
+    appPath: "/login",
+    icon: "Users",
+  },
+  {
     slug: "customer-portals",
     category: "portals",
     name: "Customer Portal",
@@ -674,7 +687,7 @@ export const SOLUTIONS = [
 export const SECURITY_POINTS = [
   {
     title: "Sign-in for each role",
-    text: "Owners, collection agents, finance customers, and chit members each sign in to their own view. A staff login does not open the owner books.",
+    text: "Financier sign in opens the owner workspace. Collection agents, finance customers, and chit members each use their own login, and a staff login does not open the owner books.",
   },
   {
     title: "Workspace isolation",
