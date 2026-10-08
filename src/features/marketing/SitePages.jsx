@@ -102,6 +102,25 @@ export function AboutPage() {
       <article className="mkt-card"><h2>For the collector</h2><p>A collection agent signs in to assigned accounts and routes, not the full owner books.</p></article>
       <article className="mkt-card"><h2>For the customer</h2><p>A portal ID and PIN open that person’s finance account or chit ticket.</p></article>
     </div>
+    <div className="mkt-founder" id="founder">
+      <img src="/founder/sudheer-kumar-buyyani.jpg" alt="Sudheer Kumar Buyyani, CEO and Founder of FinTrack" width="888" height="1024" />
+      <div>
+        <p className="mkt-kicker">Founder</p>
+        <h2>Sudheer Kumar Buyyani</h2>
+        <p className="mkt-role">CEO and Founder</p>
+        <p className="mkt-lead">Sudheer founded FinTrack so a business can keep accounting, collections, customers, and chit funds in one workspace.</p>
+        <div className="mkt-grid two">
+          <article className="mkt-card">
+            <h3>Experience</h3>
+            <p>More than 15 years in the IT industry, with work in the United States, Ireland, and India.</p>
+          </article>
+          <article className="mkt-card">
+            <h3>Education</h3>
+            <p>Master’s degree in Management Information Systems from UCD Michael Smurfit Graduate Business School, a top business school in Ireland.</p>
+          </article>
+        </div>
+      </div>
+    </div>
     <div className="mkt-cta-row"><Link className="mkt-btn" to={marketingPaths.contact}>Talk to us</Link></div>
   </section>;
 }

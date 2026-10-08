@@ -7,6 +7,7 @@ export const marketingPaths = {
   security: "/security",
   pricing: "/pricing",
   about: "/about",
+  founder: "/about#founder",
   contact: "/contact",
   resources: "/resources",
   login: "/login",
@@ -20,6 +21,7 @@ const MARKETING_ROOTS = [
   "/security",
   "/pricing",
   "/about",
+  "/founder",
   "/contact",
   "/resources",
 ];

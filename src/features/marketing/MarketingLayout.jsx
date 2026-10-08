@@ -106,6 +106,7 @@ export function MarketingLayout() {
         {LINKS.map(link => <Link key={link.to} to={link.to} onClick={close}>{link.label}</Link>)}
         <Link to={marketingPaths.how} onClick={close}>How it works</Link>
         <Link to={marketingPaths.about} onClick={close}>About</Link>
+        <Link to={marketingPaths.founder} onClick={close}>Founder</Link>
         <Link to={marketingPaths.contact} onClick={close}>Contact</Link>
       </div>
     </div>}
@@ -132,6 +133,7 @@ export function MarketingLayout() {
         <Link to={marketingPaths.how}>How it works</Link>
         <Link to={marketingPaths.security}>Security</Link>
         <Link to={marketingPaths.about}>About</Link>
+        <Link to={marketingPaths.founder}>Founder</Link>
         <Link to={marketingPaths.contact}>Contact</Link>
       </div>
       <div>

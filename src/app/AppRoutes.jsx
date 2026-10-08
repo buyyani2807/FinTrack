@@ -39,6 +39,7 @@ export function AppRoutes() {
           <Route path="/security" element={<SecurityPage />} />
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/founder" element={<Navigate to="/about#founder" replace />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/resources" element={<ResourcesPage />} />
         </Route>
