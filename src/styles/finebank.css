@@ -1781,7 +1781,14 @@ button.upcoming-payments-toggle:focus-visible { outline: 2px solid var(--ft-prim
   border-bottom: 1px solid var(--ft-border, #e3eae7);
 }
 .ft-trial-banner p,
-.ft-trial-lockbar strong { margin: 0; }
+.ft-trial-lockbar strong { margin: 0; min-width: 0; }
+.ft-trial-banner p { flex: 1; }
+@media (width >= 1051px) {
+  .ft-trial-banner,
+  .ft-trial-lockbar {
+    margin-left: calc(var(--ft-sidebar-w) + 8px);
+  }
+}
 .ft-trial-banner.is-warning { background: #fff6e8; }
 .ft-trial-banner.is-urgent { background: #fdecea; }
 html[data-theme="dark"] .ft-trial-banner.is-warning { background: #3a2e1c; color: #f4f7f8; }
