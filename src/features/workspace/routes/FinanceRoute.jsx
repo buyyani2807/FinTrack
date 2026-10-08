@@ -1,7 +1,7 @@
 import { Navigate, useNavigate, useOutletContext } from "react-router";
 import { Financier } from "../../finance/FinancierDashboard.jsx";
 import { ActiveChitSchemes } from "../ActiveChitSchemes.jsx";
-import { chitSchemePath, financeSectionPath, workspacePaths } from "../paths.js";
+import { chitSchemePath, collectionsPath, financeSectionPath, workspacePaths } from "../paths.js";
 
 // The finance dashboard: /dashboard (module "all"), and each tab of /daily-finance and /monthly-finance
 // (section: overview, collections, customers, users, reports). Every one of these routes renders this same component,
@@ -16,6 +16,13 @@ export function FinanceRoute({ module, section = "overview" }) {
   } = session;
   if (!showOwnerChrome && workspace?.collectionScope === "accounts" && (module === "daily" || module === "monthly")) {
     return <Navigate to={workspacePaths.routeCollections} replace />;
+  }
+  // Finance agents start on Today's collections, so that tab is present before a customer is opened.
+  if (!showOwnerChrome && workspace?.collectionScope !== "accounts" && module === "all") {
+    const hasDaily = (loans || []).some(loan => loan.kind === "daily");
+    const hasMonthly = (loans || []).some(loan => loan.kind === "monthly");
+    if (hasDaily && access.daily) return <Navigate to={collectionsPath("daily")} replace />;
+    if (hasMonthly && access.monthly) return <Navigate to={collectionsPath("monthly")} replace />;
   }
   // Reports are for owners; collection agents land on Overview.
   if (section === "reports" && !access.isOwner) return <Navigate to={financeSectionPath(module, "overview")} replace />;
