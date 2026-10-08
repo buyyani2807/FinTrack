@@ -65,24 +65,26 @@ const FAQ = [
   ["Does it support GST?", "It prepares GST summaries from posted vouchers. Filing stays outside FinTrack."],
   ["Can I send WhatsApp messages?", "FinTrack opens WhatsApp with a reminder, receipt, or statement. You send the message."],
   ["Does it have AI?", "Ask FinTrack answers from this workspace. Bill drafts, bookkeeping suggestions, an attention list, and unusual collection days are there to review. A forecast is only a sketch inside Ask FinTrack."],
+  ["Can I install it on my phone?", "Yes. FinTrack is the mobile app: add it to the home screen from Safari on iPhone or iPad, or from Chrome on Android. It opens from its own icon. Sign in the same way you do in the browser."],
+  ["How is this different from Tally?", "TallyPrime does not have a mobile app for recording the books. On a phone it is for viewing reports. FinTrack installs on the phone, and collections, vouchers, and chit work are done there."],
 ];
 
 export function HomePage() {
   const { signedIn = false } = useOutletContext() || {};
   const [openFaq, setOpenFaq] = useState(0);
-  useEffect(() => { document.title = "FinTrack — Accounting, finance, collections, and AI"; }, []);
+  useEffect(() => { document.title = "FinTrack — Accounting and collections on your phone"; }, []);
 
   return <>
     <section className="mkt-hero">
       <div className="mkt-wrap mkt-hero-grid">
         <div className="mkt-hero-copy">
-          <p className="mkt-kicker">Accounting, finance, collections, and AI</p>
-          <h1>Your business, in one place.</h1>
-          <p>From daily collections to the company books. FinTrack is for a finance business, a chit fund, a shop, a service company, or a growing firm that wants the numbers together.</p>
+          <p className="mkt-kicker">A mobile app for the books</p>
+          <h1>Your business, on the phone.</h1>
+          <p>FinTrack installs on iPhone and Android and opens from its own icon. Collections, company accounts, and chit funds are in that app. TallyPrime does not have a mobile app for recording the books. On a phone it is for viewing reports.</p>
           <div className="mkt-cta-row">
             <ProductCta primary />
-            <Link className="mkt-btn" to={marketingPaths.contact}>Request a demo</Link>
-            <Link className="mkt-btn ghost" to={marketingPaths.how}>See how it works</Link>
+            <Link className="mkt-btn" to={`${marketingPaths.how}#install`}>Install on iPhone or Android</Link>
+            <Link className="mkt-btn ghost" to={marketingPaths.contact}>Request a demo</Link>
           </div>
         </div>
         <ProductPreview scene="accounts" />
@@ -147,6 +149,16 @@ export function HomePage() {
             <h3>{item.title}</h3>
             <p>{item.text}</p>
           </Link>)}
+        </div>
+      </div>
+    </section>
+
+    <section className="mkt-section">
+      <div className="mkt-wrap">
+        <h2>The mobile app Tally does not have.</h2>
+        <p className="mkt-lead">Add FinTrack from the browser and record the day’s work on the phone. The owner and the collection agent sign in with email. A customer or chit member uses a portal ID and PIN.</p>
+        <div className="mkt-cta-row">
+          <Link className="mkt-btn" to={`${marketingPaths.how}#install`}>Install on iPhone or Android</Link>
         </div>
       </div>
     </section>
