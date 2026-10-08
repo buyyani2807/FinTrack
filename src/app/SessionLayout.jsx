@@ -1,22 +1,33 @@
-import { Outlet } from "react-router";
+import { Navigate, Outlet, useLocation } from "react-router";
 import { ChitCustomerPortal } from "../features/chitFund/ChitCustomerPortal.jsx";
 import { FinancierAuth, PasswordRecovery } from "../features/auth/AuthScreens.jsx";
 import { Customer } from "../features/finance/CustomerAccountView.jsx";
 import { CustomerReportDownload } from "../features/finance/PortfolioReport.jsx";
+import { isMarketingPath, normalizePath } from "../features/marketing/paths.js";
 import { LegalPage } from "../features/legal/LegalPage.jsx";
 import { LoadingScreen } from "./AppShell.jsx";
 import { useFinTrackSession } from "./useFinTrackSession.js";
 
-// Loads the session. Signed-in financiers and collection agents get the workspace routes (with the session as outlet
-// context); everyone else sees the legal page, password reset, sign-in or their customer portal, whatever the URL.
+// Loads the session. Public marketing pages render without a login. Signed-in financiers and collection agents get
+// the workspace (and skip the marketing home). Everyone else sees the legal page, password reset, sign-in, or their portal.
 export function SessionLayout() {
+  const location = useLocation();
   const session = useFinTrackSession();
   const { legalView, isLoading, isPasswordRecovery, user, customerLoan, enterSession, enterCustomerSession, enterChitCustomerSession, logout } = session;
-  if (legalView) return <LegalPage view={legalView} />;
-  if (isLoading) return <LoadingScreen />;
+  const path = normalizePath(location.pathname);
+  const workspaceUser = user?.role === "financier" || user?.role === "agent";
+  if (legalView) return <LegalPage view={legalView} backLabel={path === "/" ? "Back to FinTrack" : "Back to sign in"} />;
   if (isPasswordRecovery) return <PasswordRecovery />;
+  if (user?.role === "chitCustomer") return <ChitCustomerPortal session={user.session} logout={logout} />;
+  if (user && user.role !== "financier" && user.role !== "agent") return <><Customer loan={customerLoan} logout={logout} /><CustomerReportDownload loan={customerLoan} /></>;
+  if (isMarketingPath(path)) {
+    if (path === "/" && isLoading && !workspaceUser) return <LoadingScreen />;
+    if (workspaceUser && path === "/") return <Navigate to="/dashboard" replace />;
+    return <Outlet context={{ signedIn: workspaceUser }} />;
+  }
+  if (isLoading) return <LoadingScreen />;
   if (!user) return <FinancierAuth onLogin={enterSession} onCustomerLogin={enterCustomerSession} onChitCustomerLogin={enterChitCustomerSession} />;
-  if (user.role === "financier" || user.role === "agent") return <Outlet context={session} />;
-  if (user.role === "chitCustomer") return <ChitCustomerPortal session={user.session} logout={logout} />;
-  return <><Customer loan={customerLoan} logout={logout} /><CustomerReportDownload loan={customerLoan} /></>;
+  if (workspaceUser && path === "/login") return <Navigate to="/dashboard" replace />;
+  if (workspaceUser) return <Outlet context={session} />;
+  return <FinancierAuth onLogin={enterSession} onCustomerLogin={enterCustomerSession} onChitCustomerLogin={enterChitCustomerSession} />;
 }

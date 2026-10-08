@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router";
 import { AlertCircle, ArrowRight, Briefcase, Building2, CheckCircle2, Coins, IdCard, Info, KeyRound, LockKeyhole, Mail, Route, ShieldCheck, Ticket, UserRound } from "lucide-react";
 import { Button, Field, IconInput, PasswordInput } from "../../components/ui.jsx";
 import { AuthShowcase } from "./components/AuthShowcase.jsx";
@@ -93,7 +94,9 @@ export function PasswordRecovery() {
   </div>;
 }
 export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin }) {
-  const [mode, setMode] = useState("signIn");
+  const [params] = useSearchParams();
+  const allowSignup = isPublicSignupAllowed();
+  const [mode, setMode] = useState(() => (params.get("signup") === "1" && allowSignup ? "signUp" : "signIn"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [businessName, setBusinessName] = useState("");
@@ -105,7 +108,6 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
   const [invalid, setInvalid] = useState({});
   const formRef = useRef(null);
   const [busy, setBusy] = useState(false);
-  const allowSignup = isPublicSignupAllowed();
   const accountsIntent = typeof sessionStorage !== "undefined" && sessionStorage.getItem("fintrack-login-context") === "accounts";
   const chooseMode = next => { setMode(next); setNotice(null); setInvalid({}); };
   const clearInvalid = field => setInvalid(current => (current[field] ? { ...current, [field]: false } : current));
@@ -202,6 +204,7 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
           <Wordmark />
           {brandName !== "FinTrack" && <span className="ft-auth-product">{brandName.replace(/^FinTrack\s*/, "")}</span>}
         </div>
+        <p className="small"><Link to="/">Back to the FinTrack website</Link></p>
         <h1 className={`ft-auth-title${mode === "signUp" ? " is-one-line" : ""}`}>{mode === "signUp" ? "Create your business account" : "Welcome back"}</h1>
         <p className="sub ft-auth-sub">{brandSub}</p>
 
