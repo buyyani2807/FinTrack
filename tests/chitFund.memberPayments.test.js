@@ -23,7 +23,8 @@ test("distinguishes paid, pending, overdue, and partially paid installments", ()
   assert.equal(chitPaymentDisplayStatus({ amount_due: 5000, amount_paid: 5000, due_date: "2026-01-01" }, "2026-08-27"), "paid");
   assert.equal(chitPaymentDisplayStatus({ amount_due: 5000, amount_paid: 2000, due_date: "2026-01-01" }, "2026-08-27"), "partially paid");
   assert.equal(chitPaymentDisplayStatus({ amount_due: 5000, amount_paid: 0, due_date: "2026-01-01" }, "2026-08-27"), "overdue");
-  assert.equal(chitPaymentDisplayStatus({ amount_due: 5000, amount_paid: 0, due_date: "2026-09-01" }, "2026-08-27"), "pending");
+  assert.equal(chitPaymentDisplayStatus({ amount_due: 5000, amount_paid: 0, due_date: "2026-09-01" }, "2026-08-27"), "upcoming");
+  assert.equal(chitPaymentDisplayStatus({ amount_due: 5000, amount_paid: 0, due_date: "2026-08-27" }, "2026-08-27"), "pending");
   assert.equal(chitPaymentDisplayStatus({ amount_due: 5000, amount_paid: 0, status: "waived", due_date: "2026-01-01" }, "2026-08-27"), "waived");
 });
 
@@ -33,6 +34,17 @@ test("outstanding totals use stored due and paid amounts only", () => {
     { net_amount_due: 4500, amount_paid: 1000 },
     { amount_due: 6000, amount_paid: 0 },
   ]), 9500);
+});
+
+test("outstanding as of a date leaves out installments that are not due yet", () => {
+  const rows = [
+    { amount_due: 5000, amount_paid: 0, due_date: "2026-09-26" },
+    { amount_due: 5000, amount_paid: 0, due_date: "2026-10-09" },
+    { amount_due: 5000, amount_paid: 0, due_date: "2026-10-26" },
+    { amount_due: 5000, amount_paid: 0, due_date: "2026-11-26" },
+  ];
+  assert.equal(chitPaymentOutstanding(rows, "2026-10-09"), 10000);
+  assert.equal(chitPaymentOutstanding(rows), 20000);
 });
 
 test("normalizes auction cycle rows into the member history shape", () => {

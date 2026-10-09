@@ -8,7 +8,7 @@ import {
 import { liveAuctionLimits, liveBidPayout, validateLiveBid } from "./model/liveBidding";
 import { CHIT_TYPES } from "./model/fixedChit";
 import { chitPaymentOutstanding, portalPaymentRows } from "./model/memberPayments";
-import { money, formatChitDate, formatTime } from "./model/chitFormat.js";
+import { money, formatChitDate, formatTime, today } from "./model/chitFormat.js";
 import { Button, Field, Metric, Spinner } from "../../components/ui.jsx";
 import { TopActions } from "../../components/TopActions.jsx";
 import { ChitMemberPaymentHistory, ChitMembershipSwitcher } from "./components/ChitMemberParts.jsx";
@@ -17,14 +17,14 @@ function FixedChitCustomerPortal({ state, logout, loadError, switcher }) {
   const scheme = state.scheme || {};
   const lift = state.fixedLift;
   const payments = portalPaymentRows(state);
-  const outstanding = chitPaymentOutstanding(payments);
+  const outstanding = chitPaymentOutstanding(payments, today());
   return <main className="shell" style={{ maxWidth: 960 }}><header className="top"><div><div className="brand">FinTrack</div><div className="sub">Fixed Chit customer dashboard</div></div><TopActions logout={logout} /></header><h1 className="title">Hello, {state.memberName || "Member"}</h1><p className="copy">{scheme.name || "Fixed Chit"} · Ticket {state.ticketNumber} · Portal {state.portalId}</p>{switcher}{loadError && <p className="red small">{loadError}</p>}{!scheme.name && !loadError && <Spinner label="Loading your chit dashboard" />}<p className="notice">This is a Fixed Chit. Lift amounts follow the predetermined schedule; live bidding is not used.</p><div className="grid metrics"><Metric label="Chit value" value={money(scheme.chit_value)} color="gold" /><Metric label="Monthly contribution" value={money(scheme.installment_amount)} /><Metric label="Your lift month" value={lift ? `Month ${lift.month_number}` : "Not assigned"} color="blue" /><Metric label="Your lift amount" value={lift ? money(lift.lift_amount) : "—"} color="gold" /><Metric label="Monthly payment" value={lift ? money(lift.monthly_payment) : "—"} /><Metric label="Remaining payments" value={lift?.remaining_months ?? "—"} /><Metric label="Outstanding" value={money(outstanding)} color="red" /></div><ChitMemberPaymentHistory title="Your payment history" rows={payments} empty="Your month-wise payment schedule will appear after this scheme is activated." /></main>;
 }
 function PredefinedBidCustomerPortal({ state, logout, loadError, switcher }) {
   const scheme = state.scheme || {};
   const item = state.predefinedMonth;
   const payments = portalPaymentRows(state);
-  const outstanding = chitPaymentOutstanding(payments);
+  const outstanding = chitPaymentOutstanding(payments, today());
   return <main className="shell" style={{ maxWidth: 960 }}><header className="top"><div><div className="brand">FinTrack</div><div className="sub">Fixed Predefined Bid customer dashboard</div></div><TopActions logout={logout} /></header><h1 className="title">Hello, {state.memberName || "Member"}</h1><p className="copy">{scheme.name || "Fixed Predefined Bid"} · Ticket {state.ticketNumber} · Portal {state.portalId}</p>{switcher}{loadError && <p className="red small">{loadError}</p>}{!scheme.name && !loadError && <Spinner label="Loading your chit dashboard" />}<p className="notice">This Chit uses a predefined monthly schedule. Live bidding is not used.</p><div className="grid metrics"><Metric label="Lift month" value={item ? `Month ${item.month_number}` : "Not assigned"} color="blue" /><Metric label="EMI" value={item ? money(item.emi) : "—"} /><Metric label="COMM" value={item ? money(item.comm_amount) : "—"} /><Metric label="Auction amount" value={item ? money(item.auction_amount) : "—"} /><Metric label="Bid amount" value={item ? money(item.bid_amount) : "—"} color="gold" /><Metric label="Manager commission" value={item ? money(item.manager_commission) : "—"} /><Metric label="Lift amount" value={item ? money(item.net_receivable) : "—"} color="green" /><Metric label="Outstanding" value={money(outstanding)} color="red" /></div><ChitMemberPaymentHistory title="Your payment history" rows={payments} empty="Your month-wise payment schedule will appear after this scheme is activated." /></main>;
 }
 export function ChitCustomerPortal({ session, logout }) {
@@ -144,7 +144,7 @@ export function ChitCustomerPortal({ session, logout }) {
       <Metric label="Auction status" value={statusLabel} color={auction?.status === "open" ? "green" : ""} />
       <Metric label="Leading discount bid" value={leading ? money(leading.bid_amount) : "—"} color="gold" />
       <Metric label="Lift amount" value={leading ? money(liveBidPayout({ chitValue, bidAmount: leading.bid_amount })) : "—"} color="green" />
-      <Metric label="Outstanding" value={money(chitPaymentOutstanding(installments))} color="red" />
+      <Metric label="Outstanding" value={money(chitPaymentOutstanding(installments, today()))} color="red" />
       <Metric label="You can bid" value={eligible && auction?.status === "open" ? "Yes" : "No"} color={eligible && auction?.status === "open" ? "green" : "red"} />
     </div>
     <ChitMemberPaymentHistory title="Your payment history" rows={installments} empty="Month-wise installments appear after your financier records a monthly bid." />

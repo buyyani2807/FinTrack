@@ -3,7 +3,7 @@ import { CHIT_TYPES, normalizeFixedCommissionAmount } from "./fixedChit.js";
 import { chitTypeLabel } from "./memberPortal.js";
 import { currentSchemeMonth } from "./monthStatement.js";
 import { cycleNumberInRange } from "./liveBidding.js";
-import { chitPaymentAmounts } from "./memberPayments.js";
+import { chitPaymentAmounts, chitPaymentIsDue } from "./memberPayments.js";
 import { buildChitUpcomingRows } from "../../receipts/model/upcomingPayments.js";
 
 const money = value => formatInr(value);
@@ -32,11 +32,14 @@ export function buildChitFacts({
   const activeSchemes = schemes.filter(scheme => scheme.status === "active");
   const activeMembers = enrollments.filter(item => item.status === "active");
   const upcoming = buildChitUpcomingRows(upcomingRows, today);
-  const pendingAmount = upcoming.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const due = upcomingRows
+    .filter(row => chitPaymentIsDue(row, today) && String(row.due_date || row.dueDate || "").slice(0, 10))
+    .flatMap(row => buildChitUpcomingRows([row], today));
+  const pendingAmount = due.reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const approaching = upcoming.filter(item => item.daysRemaining != null && item.daysRemaining >= 0 && item.daysRemaining <= 3);
-  const overdue = upcoming.filter(item => String(item.dueDate || "") < today);
+  const overdue = new Set(due.filter(item => String(item.dueDate || "") < today).map(item => `${item.enrollmentId || item.customerName}:${item.schemeName}`));
   const bySchemeOutstanding = new Map();
-  upcoming.forEach(item => {
+  due.forEach(item => {
     const name = item.schemeName || "Scheme";
     bySchemeOutstanding.set(name, (bySchemeOutstanding.get(name) || 0) + Number(item.amount || 0));
   });
@@ -106,7 +109,7 @@ export function buildChitFacts({
 
   const missedMembers = [];
   const seen = new Set();
-  upcoming.forEach(item => {
+  due.forEach(item => {
     const key = item.enrollmentId || item.customerName;
     if (seen.has(key)) return;
     seen.add(key);
@@ -129,10 +132,10 @@ export function buildChitFacts({
     auctionCount: auctionSchemes.length,
     fixedCount: fixedSchemes.length,
     predefinedCount: predefinedSchemes.length,
-    pendingInstallmentCount: upcoming.length,
+    pendingInstallmentCount: due.length,
     pendingAmount,
     approachingCount: approaching.length,
-    overdueCount: overdue.length,
+    overdueCount: overdue.size,
     largestOutstanding: largestOutstanding ? { name: largestOutstanding[0], amount: largestOutstanding[1] } : null,
     auctionInsights,
     fixedInsights,

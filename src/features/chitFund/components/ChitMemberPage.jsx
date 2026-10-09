@@ -6,7 +6,7 @@ import { enrollmentPortalId } from "../model/liveBidding";
 import { chitPaymentAmounts, chitPaymentOutstanding } from "../model/memberPayments";
 import { chitTypeLabel } from "../model/memberPortal";
 import { MEMBER_STANDINGS, chitPaymentModeLabel, memberStanding, memberStandingAction, memberStandingError } from "../model/chitLabels.js";
-import { money, formatChitDate, enrollmentName } from "../model/chitFormat.js";
+import { money, formatChitDate, enrollmentName, today } from "../model/chitFormat.js";
 import { ChitDeletePaymentButton, ChitDeleteMemberControl } from "./ChitAdminControls.jsx";
 import { ChitPaymentStatus, ChitPortalAccess, ChitReceiptCell } from "./ChitMemberParts.jsx";
 
@@ -76,7 +76,7 @@ export function ChitMemberPage({
     <div className="grid metrics">
       {metrics.map(([label, value, color]) => <Metric key={label} label={label} value={value} color={color} />)}
       <Metric label="Total paid" value={money(paid)} color="green" />
-      <Metric label="Outstanding" value={money(chitPaymentOutstanding(rows))} color="red" />
+      <Metric label="Outstanding" value={money(chitPaymentOutstanding(rows, today()))} color="red" />
     </div>
     {isOwner && <CreditScoreCard chitPayments={rows} accountLabel="chit" />}
     {isOwner && portalId && <p className="notice">Share this User ID with the member. Use More → Reset PIN to set the PIN they will use on Chit customer login, then share both privately.</p>}

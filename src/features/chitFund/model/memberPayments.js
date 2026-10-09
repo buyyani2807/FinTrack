@@ -5,8 +5,15 @@ export const CHIT_PAYMENT_STATUSES = {
   PARTIAL: "partially paid",
   PENDING: "pending",
   OVERDUE: "overdue",
+  UPCOMING: "upcoming",
   WAIVED: "waived",
 };
+
+export function chitPaymentIsDue(row = {}, asOfDate = "") {
+  const dueDate = String(row.due_date || row.dueDate || "").slice(0, 10);
+  const today = String(asOfDate || "").slice(0, 10);
+  return !dueDate || !today || dueDate <= today;
+}
 
 export function chitPaymentAmounts(row = {}) {
   const expected = Number(row.net_amount_due ?? row.amount_due ?? row.expected ?? 0);
@@ -25,14 +32,15 @@ export function chitPaymentDisplayStatus(row = {}, asOfDate = "") {
   const { expected, paid } = chitPaymentAmounts(row);
   if (expected > 0 && paid + 0.001 >= expected) return CHIT_PAYMENT_STATUSES.PAID;
   if (paid > 0) return CHIT_PAYMENT_STATUSES.PARTIAL;
+  if (!chitPaymentIsDue(row, asOfDate)) return CHIT_PAYMENT_STATUSES.UPCOMING;
   const dueDate = String(row.due_date || row.dueDate || "").slice(0, 10);
   const today = String(asOfDate || "").slice(0, 10);
   if (dueDate && today && dueDate < today) return CHIT_PAYMENT_STATUSES.OVERDUE;
   return CHIT_PAYMENT_STATUSES.PENDING;
 }
 
-export function chitPaymentOutstanding(rows = []) {
-  return roundMoney(rows.reduce((sum, row) => sum + chitPaymentAmounts(row).balance, 0));
+export function chitPaymentOutstanding(rows = [], asOfDate = "") {
+  return roundMoney(rows.filter(row => chitPaymentIsDue(row, asOfDate)).reduce((sum, row) => sum + chitPaymentAmounts(row).balance, 0));
 }
 
 export function normalizeMemberPayment(row = {}) {

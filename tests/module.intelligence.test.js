@@ -129,6 +129,31 @@ test("chit insights keep auction bid trends off fixed schemes and do not invent 
   assert.equal(facts.pendingAmount, 0);
 });
 
+test("chit insights count only installments that are due, not the future months of the schedule", () => {
+  const scheme = { id: "s-50", name: "50Lakhs", chit_type: CHIT_TYPES.FIXED_PREDEFINED_BID, duration_months: 25 };
+  const row = (id, enrollmentId, name, dueDate, paid = 0) => ({
+    id, enrollment_id: enrollmentId, payment_month: 1, due_date: dueDate, amount_due: 156000, amount_paid: paid,
+    chit_enrollments: { chit_members: { full_name: name }, chit_schemes: scheme },
+  });
+  const facts = buildChitFacts({
+    asOf: "2026-10-09",
+    schemes: [{ ...scheme, status: "active", start_date: "2026-08-26" }],
+    enrollments: [{ id: "e1", status: "active" }, { id: "e2", status: "active" }],
+    upcomingRows: [
+      row("p1", "e1", "Kiran", "2026-09-26"),
+      row("p2", "e1", "Kiran", "2026-10-26"),
+      row("p3", "e1", "Kiran", "2026-11-26"),
+      row("p4", "e2", "Mohan", "2026-09-26", 156000),
+      row("p5", "e2", "Mohan", "2026-10-26"),
+      row("p6", "e2", "Mohan", "2026-11-26"),
+    ],
+  });
+  assert.equal(facts.pendingInstallmentCount, 1);
+  assert.equal(facts.overdueCount, 1);
+  assert.equal(facts.pendingAmount, 156000);
+  assert.deepEqual(facts.largestOutstanding, { name: "50Lakhs", amount: 156000 });
+});
+
 test("agent-scoped daily facts stay on assigned customers only", () => {
   const assigned = dailyLoan({ name: "Assigned", paidToday: false });
   assigned.collectionAgentId = "agent-1";
