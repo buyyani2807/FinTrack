@@ -78,10 +78,18 @@ const FINANCE_ACCOUNTS = [
   financeAccount(1, "Ravi Kumar", { collection_amount: 12000, disbursed_amount: 10000, daily_collection: 120 }, [financePayment(1, "2026-09-27", 120), financePayment(2, "2026-09-29", 240)]),
   financeAccount(2, "Lakshmi Devi", { collection_amount: 24000, disbursed_amount: 20000, daily_collection: 240 }, [financePayment(3, "2026-09-28", 240)]),
   financeAccount(3, "Suresh Babu", { collection_amount: 6000, disbursed_amount: 5000, daily_collection: 60 }, [financePayment(4, "2026-09-30", 60)]),
+  financeAccount(4, "Meena Traders", {
+    kind: "monthly",
+    principal: 50000,
+    monthly_interest_rate: 2,
+    start_date: "2026-08-30",
+    customers: { full_name: "Meena Traders", phone: "", address: "" },
+  }, []),
 ];
 
 const restRows = url => {
   if (url.includes("/finance_accounts?")) return FINANCE_ACCOUNTS;
+  if (url.includes("/chit_schemes?")) return [{ id: "s1", name: "Morning Auction", chit_type: "auction", chit_value: 30000, duration_months: 3, member_count: 3, status: "active", installment_amount: 10000, commission_percent: 4 }];
   if (url.includes("/profiles?")) return [{ id: "e2e-user", full_name: "E2E Owner", role: "owner", is_active: true, organizations: { name: "E2E Finance" } }];
   if (url.includes("/acc_settings?")) return [{ company_name: "E2E Traders", fy_start_month: 4, books_started_on: "2026-04-01", integration_enabled: false }];
   if (url.includes("/acc_coa?")) return COA;

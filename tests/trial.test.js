@@ -29,6 +29,8 @@ const EXPIRES_TODAY = "2026-10-22T03:30:00.000Z";
 const AFTER = "2026-10-22T04:30:00.000Z";
 const sql = fs.readFileSync(new URL("../supabase/092_signup_trial.sql", import.meta.url), "utf8");
 const signupScreen = fs.readFileSync(new URL("../src/features/auth/AuthScreens.jsx", import.meta.url), "utf8");
+const subscribePage = fs.readFileSync(new URL("../src/features/commercial/SubscribePage.jsx", import.meta.url), "utf8");
+const marketingLayout = fs.readFileSync(new URL("../src/features/marketing/MarketingLayout.jsx", import.meta.url), "utf8");
 
 function trialAt(serverNow, daysRemaining, extra = {}) {
   return normalizeSubscription({
@@ -149,6 +151,9 @@ test("existing workspaces stay entitled and a verified paid plan restores access
   assert.equal(moduleOpenDuringSubscription(paid, true), true);
   assert.equal(paidActivationFromButton().accepted, false);
   assert.equal(paidActivationFromButton().activatesWorkspace, false);
+  assert.match(paidActivationFromButton().reason, /stays on this page/);
+  assert.doesNotMatch(subscribePage, /\/contact/);
+  assert.doesNotMatch(marketingLayout, /TrialBanner/);
 });
 
 test("the database migration keeps trial authority on the server", () => {

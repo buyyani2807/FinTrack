@@ -4,8 +4,6 @@ import { Menu, X } from "lucide-react";
 import { ThemeToggle } from "../../components/ThemeToggle.jsx";
 import { FEATURE_CATEGORIES, featureBySlug } from "./catalog.js";
 import marketingStyles from "./marketing.css?inline";
-import { TrialBanner } from "../commercial/TrialBanner.jsx";
-import { subscriptionLockCopy } from "../commercial/trial.js";
 import { featurePath, marketingPaths } from "./paths.js";
 
 const LINKS = [
@@ -26,8 +24,7 @@ function Brand() {
 }
 
 export function MarketingLayout() {
-  const { signedIn = false, subscription = null, isOwner = false } = useOutletContext() || {};
-  const trialEnded = subscriptionLockCopy(subscription);
+  const { signedIn = false } = useOutletContext() || {};
   const [open, setOpen] = useState(false);
   const [productOpen, setProductOpen] = useState(false);
   const menuId = useId();
@@ -97,8 +94,6 @@ export function MarketingLayout() {
       </div>
     </header>
     {!signedIn && <p className="mkt-trial-bar"><strong>14-day free trial.</strong> No payment required to start. <Link to={marketingPaths.signup}>Start free</Link></p>}
-    {signedIn && trialEnded && <div className="ft-trial-banner is-urgent" role="status"><p><strong>{trialEnded.title}</strong> {trialEnded.preservation}</p><Link to="/subscribe">Choose a plan</Link></div>}
-    {signedIn && !trialEnded && <TrialBanner subscription={subscription} isOwner={isOwner} />}
     </div>
     {open && <div className="mkt-drawer" onClick={close}>
       <div id={menuId} className="mkt-drawer-panel" role="dialog" aria-modal="true" aria-label="Menu" onClick={event => event.stopPropagation()}>

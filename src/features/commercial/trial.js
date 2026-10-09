@@ -193,6 +193,6 @@ export function paidActivationFromButton() {
   return {
     accepted: false,
     activatesWorkspace: false,
-    reason: "A verified payment-provider event is required. A button click does not mark this workspace as paid.",
+    reason: "Payment is not connected yet. Subscribe stays on this page. It does not charge a card, and it does not mark this workspace as paid.",
   };
 }

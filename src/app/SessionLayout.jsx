@@ -8,8 +8,8 @@ import { LegalPage } from "../features/legal/LegalPage.jsx";
 import { LoadingScreen } from "./AppShell.jsx";
 import { useFinTrackSession } from "./useFinTrackSession.js";
 
-// Loads the session. Public marketing pages render without a login. Signed-in financiers and collection agents get
-// the workspace (and skip the marketing home). Everyone else sees the legal page, password reset, sign-in, or their portal.
+// Loads the session. Public marketing pages render without a login. A signed-in financier or collection agent
+// goes to the workspace, including from the public pages. Everyone else sees the legal page, password reset, sign-in, or their portal.
 export function SessionLayout() {
   const location = useLocation();
   const session = useFinTrackSession();
@@ -21,9 +21,9 @@ export function SessionLayout() {
   if (user?.role === "chitCustomer") return <ChitCustomerPortal session={user.session} logout={logout} />;
   if (user && user.role !== "financier" && user.role !== "agent") return <><Customer loan={customerLoan} logout={logout} /><CustomerReportDownload loan={customerLoan} /></>;
   if (isMarketingPath(path)) {
-    if (path === "/" && isLoading && !workspaceUser) return <LoadingScreen />;
-    if (workspaceUser && path === "/") return <Navigate to="/dashboard" replace />;
-    return <Outlet context={{ signedIn: workspaceUser, subscription: session.workspace?.subscription || null, isOwner: session.workspace?.role === "owner" }} />;
+    if (isLoading && !workspaceUser) return <LoadingScreen />;
+    if (workspaceUser) return <Navigate to="/dashboard" replace />;
+    return <Outlet context={{ signedIn: false }} />;
   }
   if (isLoading) return <LoadingScreen />;
   if (!user) return <FinancierAuth onLogin={enterSession} onCustomerLogin={enterCustomerSession} onChitCustomerLogin={enterChitCustomerSession} />;

@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Link, useOutletContext } from "react-router";
-import { marketingPaths } from "../marketing/paths.js";
 import {
   SUBSCRIPTION_PLANS,
   formatTrialDate,
   paidActivationFromButton,
   subscriptionLockCopy,
   trialBannerCopy,
+  workspaceAccessAllowed,
 } from "./trial.js";
 
 export function SubscribePage() {
@@ -58,7 +58,8 @@ export function SubscribePage() {
       <p>Will my records be removed? No. Customers, collections, chit records, and accounts stay in this workspace.</p>
       <p>Can I still sign in? Yes. Sign-in, this page, company settings, and log out stay available.</p>
       <p>When does the trial start? After the workspace is created, for 14 days. Opening the signup page does not start it.</p>
-      <p><Link to={marketingPaths.contact}>Contact FinTrack</Link></p>
+      <p>Questions stay on this page. Subscribe does not open the public website.</p>
+      {workspaceAccessAllowed(subscription) ? <p><Link to="/dashboard">Back to the workspace</Link></p> : null}
       <button type="button" className="btn" onClick={logout}>Log out</button>
     </section>
   </main>;
