@@ -662,6 +662,11 @@ export const updatePredefinedChitPayment = (token, payment) => supabase.rpc("chi
   input_payment_reference: payment.paymentReference || null, input_notes: payment.notes || null,
   input_cash_amount: Number(payment.cashAmount || 0), input_upi_amount: Number(payment.upiAmount || 0),
 }, token);
+export const setChitMemberStanding = (token, enrollmentId, standing, note) => supabase.rpc("chit_set_member_standing", {
+  input_enrollment_id: enrollmentId,
+  input_standing: standing,
+  input_note: String(note || "").trim() || null,
+}, token);
 export const deletePredefinedChitPayment = (token, paymentId, reason) => chitPaymentReversal("chit_delete_predefined_payment", "input_payment_id", token, paymentId, reason);
 export const loadChitDashboard = async (token, { force = false } = {}) => {
   if (!force) {

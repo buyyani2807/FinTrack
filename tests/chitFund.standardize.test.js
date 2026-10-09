@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { CHIT_PAYMENT_MODES, CHIT_LIFT_LABELS, paymentReversalPrompt, paymentReversalReasonError } from "../src/features/chitFund/model/chitLabels.js";
+import { CHIT_PAYMENT_MODES, CHIT_LIFT_LABELS, paymentReversalPrompt, paymentReversalReasonError, memberStanding, memberStandingAction, memberStandingError } from "../src/features/chitFund/model/chitLabels.js";
 import { buildChitProfitAndLoss, financialYearBounds } from "../src/features/chitFund/model/chitProfitAndLoss.js";
 import { calculateDividend } from "../src/features/chitFund/model/calculations.js";
 import { fixedChitMonth } from "../src/features/chitFund/model/fixedChit.js";
@@ -31,7 +31,7 @@ test("payment modes stay the modes the chit records already accept", () => {
 test("lift labels are the shared wording and legacy payout phrases are gone from the screens", () => {
   assert.equal(CHIT_LIFT_LABELS.amount, "Lift amount");
   assert.equal(CHIT_LIFT_LABELS.method, "Lift method");
-  assert.equal(CHIT_LIFT_LABELS.record, "Record Lift");
+  assert.equal(CHIT_LIFT_LABELS.record, "Lift Chit");
   const files = [
     "src/features/chitFund/auction/AuctionModals.jsx",
     "src/features/chitFund/auction/AuctionChitSchemeDetails.jsx",
@@ -45,12 +45,13 @@ test("lift labels are the shared wording and legacy payout phrases are gone from
     "src/features/statements/CustomerStatementPage.jsx",
   ];
   const combined = files.map(read).join("\n");
-  for (const phrase of ["Prize payout mode", "Winner receives", "Assign Member", "Net receivable", "Bid winner", "Bid Winner"]) {
-    assert.equal(combined.includes(phrase), false, phrase);
+  const lower = combined.toLowerCase();
+  for (const phrase of ["Prize payout mode", "Winner receives", "Assign Member", "Net receivable", "Bid winner", "Record monthly bid", "Finalize lift", "Record Lift"]) {
+    assert.equal(lower.includes(phrase.toLowerCase()), false, phrase);
   }
   assert.match(combined, /Lift method/);
   assert.match(combined, /Lift amount/);
-  assert.match(combined, /Record Lift/);
+  assert.match(combined, /Lift Chit/);
   assert.match(read("src/features/chitFund/ChitFundPage.jsx"), /Profit &amp; Loss|ChitLandingReports/);
   assert.match(read("src/features/chitFund/components/ChitSchemeDashboard.jsx"), /Profit &amp; Loss/);
 });
@@ -153,4 +154,43 @@ test("auction dividend and fixed lift math are unchanged", () => {
     chitValue: 100000, memberCount: 20, durationMonths: 20, monthlyContribution: 5000,
     commissionAmount: 5000, initialLiftAmount: 95000, monthlyLiftIncrement: 1000, month: 2,
   }).liftAmount, 96000);
+});
+
+test("every chit type uses the shared member page with payment reversal and standing actions", () => {
+  const page = read("src/features/chitFund/components/ChitMemberPage.jsx");
+  assert.match(page, /ChitDeletePaymentButton/);
+  assert.match(page, /allowed=\{isOwner\}/);
+  assert.match(page, /Mark defaulter/);
+  assert.match(page, /Mark bankrupt/);
+  assert.match(page, /Mark regular/);
+  assert.match(page, /account-actions-menu/);
+  for (const file of [
+    "src/features/chitFund/auction/AuctionChitSchemeDetails.jsx",
+    "src/features/chitFund/fixed/FixedChitSchemeDetails.jsx",
+    "src/features/chitFund/predefined/PredefinedBidSchemeDetails.jsx",
+  ]) {
+    const source = read(file);
+    assert.match(source, /<ChitMemberPage/, file);
+    assert.match(source, /deletePayment=\{/, file);
+    assert.match(source, /recordPayment=\{/, file);
+  }
+  assert.match(read("src/features/chitFund/auction/AuctionChitSchemeDetails.jsx"), /recordPayment=\{openAuctionPayment\} deletePayment=\{remove\}/);
+});
+
+test("member standing needs a reason for defaulter or bankrupt and leaves enrollment status alone", () => {
+  assert.equal(memberStanding({}), "regular");
+  assert.equal(memberStanding({ member_standing: "Bankrupt" }), "bankrupt");
+  assert.equal(memberStanding({ member_standing: "unknown" }), "regular");
+  assert.equal(memberStandingError("defaulter", " "), "A reason is required.");
+  assert.equal(memberStandingError("bankrupt", ""), "A reason is required.");
+  assert.equal(memberStandingError("regular", ""), "");
+  assert.equal(memberStandingError("closed", "x"), "Choose a valid standing.");
+  assert.equal(memberStandingAction("bankrupt").title, "Mark member bankrupt");
+  const sql = read("supabase/096_chit_member_standing.sql");
+  assert.match(sql, /chit_is_owner\(\)/);
+  assert.match(sql, /current_organization_id\(\)/);
+  assert.match(sql, /reason is required/i);
+  assert.match(sql, /chit_audit_log/);
+  assert.match(sql, /'member_standing'/);
+  assert.doesNotMatch(sql, /set\s+status\s*=/i);
 });

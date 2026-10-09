@@ -13,7 +13,7 @@ export const CHIT_LIFT_LABELS = {
   method: "Lift method",
   status: "Lift status",
   history: "Lift history",
-  record: "Record Lift",
+  record: "Lift Chit",
   details: "View Lift details",
   report: "Lift report",
 };
@@ -42,5 +42,40 @@ export function paymentReversalPrompt(payment = {}) {
 
 export function paymentReversalReasonError(reason) {
   if (!String(reason || "").trim()) return "Enter a reason for this reversal.";
+  return "";
+}
+
+export const MEMBER_STANDINGS = {
+  regular: { label: "Regular", tone: "active" },
+  defaulter: { label: "Defaulter", tone: "overdue" },
+  bankrupt: { label: "Bankrupt", tone: "bankrupt" },
+};
+
+export function memberStanding(enrollment = {}) {
+  const value = String(enrollment.member_standing || "regular").toLowerCase();
+  return MEMBER_STANDINGS[value] ? value : "regular";
+}
+
+export function memberStandingAction(standing) {
+  if (standing === "defaulter") return {
+    title: "Mark member defaulter",
+    description: "The member stays in the scheme. Installments, lifts, dividends, and commission do not change. Add a reason for your records.",
+    noteLabel: "Defaulter reason",
+  };
+  if (standing === "bankrupt") return {
+    title: "Mark member bankrupt",
+    description: "The member stays in the scheme and the outstanding dues stay on record. Installments, lifts, dividends, and commission do not change. Add a reason for your records.",
+    noteLabel: "Bankruptcy reason",
+  };
+  return {
+    title: "Mark member regular",
+    description: "The defaulter or bankrupt flag is removed. Payments and dues do not change.",
+    noteLabel: "",
+  };
+}
+
+export function memberStandingError(standing, note) {
+  if (!MEMBER_STANDINGS[standing]) return "Choose a valid standing.";
+  if (standing !== "regular" && !String(note || "").trim()) return "A reason is required.";
   return "";
 }
