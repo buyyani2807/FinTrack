@@ -100,12 +100,12 @@ function layoutStatement(statement) {
   commands.push(text("F1", 10, PAGE.left, y, `${moneyInr(statement.pending)} pending`));
   y -= 26;
 
-  heading("AUCTION / PRIZE", statement.prize ? "1 winner" : "No winner this month");
-  commands.push(text("F1", 8, PAGE.left, y, "Winner"));
-  commands.push(text("F1", 8, 180, y, "Prize"));
+  heading("LIFT", statement.prize ? "1 lift" : "No lift this month");
+  commands.push(text("F1", 8, PAGE.left, y, "Lift member"));
+  commands.push(text("F1", 8, 180, y, "Lift amount"));
   commands.push(text("F1", 8, 280, y, "Commission"));
-  commands.push(text("F1", 8, 390, y, "Net payout"));
-  commands.push(text("F1", 8, 500, y, "Payout"));
+  commands.push(text("F1", 8, 390, y, "Net lift"));
+  commands.push(text("F1", 8, 500, y, "Lift status"));
   y -= 14;
   if (statement.prize) {
     commands.push(text("F1", 10, PAGE.left, y, statement.prize.winner));

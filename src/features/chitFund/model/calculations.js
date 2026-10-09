@@ -21,7 +21,7 @@ export function calculateDividend({ chitValue, winningBidAmount, commissionPerce
   const members = Number(totalMembers);
   if (![value, winningBid, commissionRate, members].every(Number.isFinite) || value <= 0 || winningBid <= 0 || members <= 0) throw new Error("Invalid dividend inputs");
   if (commissionRate < 0 || commissionRate > 7) throw new Error("Commission cannot exceed 7%");
-  if (winningBid > value) throw new Error("Winning bid cannot exceed the chit value");
+  if (winningBid > value) throw new Error("Lift amount cannot exceed the chit value");
   const discount = roundMoney(value - winningBid);
   const commission = roundMoney(value * commissionRate / 100);
   const distributable = roundMoney(discount - commission);

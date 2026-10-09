@@ -203,11 +203,11 @@ function layoutCustomerStatement(bundle) {
       row("Status", String(account.summary.status || "").toUpperCase());
       if (account.bid?.isWinner) {
         y -= 4;
-        commands.push(text("F2", 10, PAGE.left, y, "Bid / Lift Information"));
+        commands.push(text("F2", 10, PAGE.left, y, "Lift"));
         y -= 14;
-        row("Bid Winner", "Yes");
-        row("Winning Month", account.bid.winningMonth ? `Month ${account.bid.winningMonth}` : "—");
-        row("Winning Bid / Lift", money(account.bid.winningBid));
+        row("Lift member", "Yes");
+        row("Lift month", account.bid.winningMonth ? `Month ${account.bid.winningMonth}` : "—");
+        row("Lift amount", money(account.bid.winningBid));
         if (account.bid.discount) row("Discount", money(account.bid.discount));
         if (account.bid.managerCommission) row("Commission", money(account.bid.managerCommission));
         if (account.bid.distributable) row("Distributable", money(account.bid.distributable));

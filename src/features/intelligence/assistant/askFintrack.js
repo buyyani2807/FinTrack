@@ -436,7 +436,7 @@ function auctionStatus(context) {
   return envelope({
     title: "Auction status",
     summary: auction.length
-      ? `${auction.length} active auction scheme${auction.length === 1 ? "" : "s"}. Winning bids are stored on each scheme and are not guessed here.`
+      ? `${auction.length} active auction scheme${auction.length === 1 ? "" : "s"}. Lift amounts are stored on each scheme and are not guessed here.`
       : schemes.length
         ? `${schemes.length} active scheme${schemes.length === 1 ? "" : "s"}, and none are marked as auction.`
         : "No active chit scheme is loaded.",

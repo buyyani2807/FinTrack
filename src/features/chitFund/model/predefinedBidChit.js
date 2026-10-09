@@ -58,6 +58,6 @@ export function validatePredefinedBidChit(config = {}) {
   if (!Number.isInteger(durationMonths) || durationMonths <= 0 || durationMonths > memberCount) throw new Error("Duration cannot exceed member count");
   if (!Number.isFinite(commissionPercent) || commissionPercent < 0 || commissionPercent > 100) throw new Error("Manager commission percentage is invalid");
   const schedule = predefinedBidSchedule(config);
-  if (schedule.some(row => row.netReceivable < 0)) throw new Error("Net receivable cannot be negative");
+  if (schedule.some(row => row.netReceivable < 0)) throw new Error("Lift amount cannot be negative");
   return { ...config, schedule };
 }

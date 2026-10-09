@@ -78,17 +78,17 @@ function ChitAccountSection({ account }) {
       <SummaryRow label="Outstanding" value={money(s.outstanding)} emphasize />
       <SummaryRow label="Status" value={String(s.status || "").toUpperCase()} />
     </div>
-    {account.bid?.isWinner && <div className="card spacer"><strong>Bid / Lift information</strong><div className="statement-summary spacer">
-      <SummaryRow label="Bid Winner" value="Yes" />
-      <SummaryRow label="Winning Month" value={account.bid.winningMonth ? `Month ${account.bid.winningMonth}` : "—"} />
-      <SummaryRow label="Winning Bid / Lift" value={money(account.bid.winningBid)} />
+    {account.bid?.isWinner && <div className="card spacer"><strong>Lift</strong><div className="statement-summary spacer">
+      <SummaryRow label="Lift member" value="Yes" />
+      <SummaryRow label="Lift month" value={account.bid.winningMonth ? `Month ${account.bid.winningMonth}` : "—"} />
+      <SummaryRow label="Lift amount" value={money(account.bid.winningBid)} />
       {!!account.bid.discount && <SummaryRow label="Discount" value={money(account.bid.discount)} />}
       {!!account.bid.managerCommission && <SummaryRow label="Commission" value={money(account.bid.managerCommission)} />}
       {!!account.bid.distributable && <SummaryRow label="Distributable Amount" value={money(account.bid.distributable)} />}
       {!!account.bid.dividendPerMember && <SummaryRow label="Dividend Per Member" value={money(account.bid.dividendPerMember)} />}
-      {!!account.bid.amountPaidToMember && <SummaryRow label="Amount Paid to Member" value={money(account.bid.amountPaidToMember)} />}
+      {!!account.bid.amountPaidToMember && <SummaryRow label="Lift amount paid" value={money(account.bid.amountPaidToMember)} />}
     </div></div>}
-    {!account.bid?.isWinner && <p className="notice">Bid Winner: No. This member has not won / lifted in this scheme.</p>}
+    {!account.bid?.isWinner && <p className="notice">Lift member: No. This member has not been assigned a lift in this scheme.</p>}
     <strong className="spacer">Payment history</strong>
     <div className="table spacer statement-payments"><table><thead><tr><th>Month</th><th>Due Date</th><th>Amount</th><th>Payment Mode</th><th>Status</th><th>Notes</th></tr></thead><tbody>
       {account.payments.map(payment => <tr key={payment.id || `${payment.month}-${payment.dueDate}`}>

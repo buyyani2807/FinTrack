@@ -33,7 +33,7 @@ export function buildChitFacts({
   const activeMembers = enrollments.filter(item => item.status === "active");
   const upcoming = buildChitUpcomingRows(upcomingRows, today);
   const pendingAmount = upcoming.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const approaching = upcoming.filter(item => item.daysRemaining != null && item.daysRemaining <= 3);
+  const approaching = upcoming.filter(item => item.daysRemaining != null && item.daysRemaining >= 0 && item.daysRemaining <= 3);
   const overdue = upcoming.filter(item => String(item.dueDate || "") < today);
   const bySchemeOutstanding = new Map();
   upcoming.forEach(item => {
@@ -160,8 +160,8 @@ export function interpretChitFacts(facts) {
   ].filter(Boolean);
   const auctionInsights = facts.auctionInsights.length
     ? [
-        auctionLatest ? `${auctionLatest.name}: latest recorded winning bid ${money(auctionLatest.latestBid)}${auctionLatest.latestWinner ? ` · ${auctionLatest.latestWinner}` : ""}.` : "No recorded auction bids yet.",
-        auctionTrend ? `Winning bids have ${auctionTrend.trend} over the last three recorded months in ${auctionTrend.name}.` : facts.auctionInsights.some(row => row.bidCount < 3)
+        auctionLatest ? `${auctionLatest.name}: latest recorded lift ${money(auctionLatest.latestBid)}${auctionLatest.latestWinner ? ` · ${auctionLatest.latestWinner}` : ""}.` : "No recorded auction bids yet.",
+        auctionTrend ? `Lift amounts have ${auctionTrend.trend} over the last three recorded months in ${auctionTrend.name}.` : facts.auctionInsights.some(row => row.bidCount < 3)
           ? "Not enough recorded bids to describe a bid trend."
           : null,
         auctionLatest?.averageBid != null ? `Average recorded winning bid in ${auctionLatest.name} is ${money(auctionLatest.averageBid)}.` : null,

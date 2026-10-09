@@ -14,10 +14,10 @@ const CHIT_SCHEME_LIST_COLUMNS = [
   "late_penalty_amount", "security_deposit_amount", "status",
 ].join(",");
 const CHIT_ACTIVE_SCHEME_COLUMNS = "id,name,chit_type,chit_value,member_count,duration_months,status,start_date";
-const CHIT_CYCLE_BOARD_COLUMNS = "id,scheme_id,cycle_number,cycle_date,winning_bid_amount,winning_enrollment_id,status";
+const CHIT_CYCLE_BOARD_COLUMNS = "id,scheme_id,cycle_number,cycle_date,winning_bid_amount,winning_enrollment_id,status,commission_amount,distributable_amount";
 const CHIT_ENROLLMENT_BOARD_COLUMNS = "id,scheme_id,ticket_number,status,chit_members(full_name)";
-const FIXED_LIFT_BOARD_COLUMNS = "id,scheme_id,month_number,status,enrollment_id,lift_amount";
-const PREDEFINED_SCHEDULE_BOARD_COLUMNS = "id,scheme_id,month_number,status,enrollment_id,bid_amount,net_receivable,emi";
+const FIXED_LIFT_BOARD_COLUMNS = "id,scheme_id,month_number,status,enrollment_id,lift_amount,manager_commission,lift_date";
+const PREDEFINED_SCHEDULE_BOARD_COLUMNS = "id,scheme_id,month_number,status,enrollment_id,bid_amount,net_receivable,emi,manager_commission,assigned_date";
 
 let chitDashboardCache = { token: "", at: 0, payload: null };
 const CHIT_DASHBOARD_CACHE_MS = 30_000;
@@ -626,7 +626,11 @@ export const updateChitInstallmentPayment = (token, payment) => supabase.rpc("ch
   input_cash_amount: Number(payment.cashAmount || 0), input_upi_amount: Number(payment.upiAmount || 0), input_notes: payment.notes || null,
 }, token);
 export const recordChitInstallmentPayment = updateChitInstallmentPayment;
-export const deleteChitInstallmentPayment = (token, paymentId) => supabase.rpc("chit_delete_installment_payment", { input_installment_id: paymentId }, token);
+const chitPaymentReversal = (name, idKey, token, paymentId, reason) => supabase.rpc(name, {
+  [idKey]: paymentId,
+  input_reason: String(reason || "").trim(),
+}, token);
+export const deleteChitInstallmentPayment = (token, paymentId, reason) => chitPaymentReversal("chit_delete_installment_payment", "input_installment_id", token, paymentId, reason);
 export const finalizeFixedChitLift = (token, lift) => supabase.rpc("chit_finalize_fixed_lift", {
   input_scheme_id: lift.schemeId, input_month_number: Number(lift.monthNumber),
   input_enrollment_id: lift.enrollmentId, input_lift_date: lift.liftDate,
@@ -640,9 +644,7 @@ export const updateFixedChitPayment = (token, payment) => supabase.rpc("chit_upd
   input_payment_reference: payment.paymentReference || null, input_notes: payment.notes || null,
   input_cash_amount: Number(payment.cashAmount || 0), input_upi_amount: Number(payment.upiAmount || 0),
 }, token);
-export const deleteFixedChitPayment = (token, paymentId) => supabase.rpc("chit_delete_fixed_payment", {
-  input_payment_id: paymentId,
-}, token);
+export const deleteFixedChitPayment = (token, paymentId, reason) => chitPaymentReversal("chit_delete_fixed_payment", "input_payment_id", token, paymentId, reason);
 export const updatePredefinedChitScheduleMonth = (token, item) => supabase.rpc("chit_update_predefined_schedule_month", {
   input_schedule_id: item.id, input_emi: Number(item.emi), input_comm_amount: Number(item.commAmount),
   input_auction_amount: Number(item.auctionAmount), input_bid_amount: Number(item.bidAmount),
@@ -660,9 +662,7 @@ export const updatePredefinedChitPayment = (token, payment) => supabase.rpc("chi
   input_payment_reference: payment.paymentReference || null, input_notes: payment.notes || null,
   input_cash_amount: Number(payment.cashAmount || 0), input_upi_amount: Number(payment.upiAmount || 0),
 }, token);
-export const deletePredefinedChitPayment = (token, paymentId) => supabase.rpc("chit_delete_predefined_payment", {
-  input_payment_id: paymentId,
-}, token);
+export const deletePredefinedChitPayment = (token, paymentId, reason) => chitPaymentReversal("chit_delete_predefined_payment", "input_payment_id", token, paymentId, reason);
 export const loadChitDashboard = async (token, { force = false } = {}) => {
   if (!force) {
     const cached = readChitDashboardCache(token);

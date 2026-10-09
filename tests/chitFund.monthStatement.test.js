@@ -169,7 +169,9 @@ test("renders a downloadable PDF with the sample statement sections", () => {
   assert.match(pdf, /^%PDF-1.4/);
   assert.match(pdf, /%%EOF/);
   assert.match(pdf, /MONTH STATEMENT/);
-  assert.match(pdf, /AUCTION \/ PRIZE/);
+  assert.match(pdf, /LIFT/);
+  assert.match(pdf, /Lift member/);
+  assert.match(pdf, /Lift amount/);
   assert.match(pdf, /COLLECTIONS/);
   assert.match(pdf, /Collected by/);
   assert.match(pdf, /Vaishu/);

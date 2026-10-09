@@ -3,7 +3,8 @@ import { deleteChitScheme, deleteEnrolledChitMember } from "../../../lib/finance
 import { chitTypeLabel } from "../model/memberPortal";
 import { memberRemovalCopy, schemeRemovalCopy } from "../model/schemeAdmin";
 import { schemeStatusLabel, enrollmentName } from "../model/chitFormat.js";
-import { Button } from "../../../components/ui.jsx";
+import { paymentReversalPrompt, paymentReversalReasonError } from "../model/chitLabels.js";
+import { Button, Field } from "../../../components/ui.jsx";
 import { Modal } from "./ChitUi.jsx";
 
 function ConfirmDangerModal({ title, children, confirmLabel, busy, error, onCancel, onConfirm }) {
@@ -17,20 +18,27 @@ function ConfirmDangerModal({ title, children, confirmLabel, busy, error, onCanc
     </div>
   </Modal>;
 }
-export function ChitDeletePaymentButton({ title, body, confirmLabel = "Delete payment", onConfirm }) {
+export function ChitDeletePaymentButton({ memberName, schemeName, amount, paidDate, mode, reference, allowed = true, onConfirm }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [reason, setReason] = useState("");
+  if (!allowed) return null;
+  const copy = paymentReversalPrompt({ memberName, schemeName, amount, paidDate, mode, reference });
   const confirm = async () => {
+    const reasonError = paymentReversalReasonError(reason);
+    if (reasonError) { setError(reasonError); return; }
     setBusy(true); setError("");
-    try { await onConfirm(); setOpen(false); }
-    catch (err) { setError(err?.message || "Could not delete payment."); }
+    try { await onConfirm(reason.trim()); setOpen(false); setReason(""); }
+    catch (err) { setError(err?.message || "Could not reverse payment."); }
     finally { setBusy(false); }
   };
   return <>
     <Button className="danger" onClick={() => { setError(""); setOpen(true); }}>Delete</Button>
-    {open && <ConfirmDangerModal title={title} confirmLabel={confirmLabel} busy={busy} error={error} onCancel={() => !busy && setOpen(false)} onConfirm={confirm}>
-      <p className="copy">{body}</p>
+    {open && <ConfirmDangerModal title={copy.title} confirmLabel="Reverse payment" busy={busy} error={error} onCancel={() => !busy && setOpen(false)} onConfirm={confirm}>
+      <p className="notice">{copy.lines.map(([label, value]) => `${label}: ${value}`).join(" · ")}</p>
+      <p className="copy">{copy.effect}</p>
+      <Field label="Reason"><input value={reason} onChange={event => setReason(event.target.value)} placeholder="Why this payment is being reversed" /></Field>
     </ConfirmDangerModal>}
   </>;
 }

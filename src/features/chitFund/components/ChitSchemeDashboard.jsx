@@ -7,6 +7,7 @@ import { downloadChitMonthStatementPdf } from "../io/monthStatementPdf";
 import { money, schemeStatusLabel, enrollmentName } from "../model/chitFormat.js";
 import { Button, Field, Metric, Spinner } from "../../../components/ui.jsx";
 import { Badge } from "./ChitUi.jsx";
+import { ChitProfitLossReport } from "./ChitProfitLossReport.jsx";
 import { AuctionChitSchemeDetails } from "../auction/AuctionChitSchemeDetails.jsx";
 import { FixedChitSchemeDetails } from "../fixed/FixedChitSchemeDetails.jsx";
 import { PredefinedBidSchemeDetails } from "../predefined/PredefinedBidSchemeDetails.jsx";
@@ -17,9 +18,9 @@ export function ChitSchemeDetails(props) {
   return <AuctionChitSchemeDetails {...props} />;
 }
 const CHIT_BOARD = {
-  auction: { title: "Auction Chits", bidType: "Auction", icon: "◎", currentLabel: "Current bid" },
+  auction: { title: "Auction Chits", bidType: "Auction", icon: "◎", currentLabel: "Current lift" },
   fixed: { title: "Fixed Chits", bidType: "Fixed lift", icon: "▣", currentLabel: "Current lift" },
-  predefined: { title: "Fixed Predefined Bid Chits", bidType: "Predefined bid", icon: "◈", currentLabel: "Current bid" },
+  predefined: { title: "Fixed Predefined Bid Chits", bidType: "Predefined bid", icon: "◈", currentLabel: "Current lift" },
 };
 function ChitSchemeCard({ kind, row, open, edit, activate }) {
   const { scheme, current, members, winner, fixedCurrent, fixedWinner, predefinedCurrent, predefinedWinner } = row;
@@ -49,7 +50,7 @@ function ChitSchemeCard({ kind, row, open, edit, activate }) {
     <div className="chit-scheme-current">
       <div><span>{meta.currentLabel}</span><strong>{currentAmount == null ? "—" : money(currentAmount)}</strong></div>
       <div><span>Current member</span><strong>{activeMember ? enrollmentName(activeMember) : "—"}</strong></div>
-      {predefined && <div className="chit-scheme-current-wide"><span>Net receivable</span><strong>{activeRow ? money(activeRow.net_receivable) : "—"}</strong></div>}
+      {predefined && <div className="chit-scheme-current-wide"><span>Lift amount</span><strong>{activeRow ? money(activeRow.net_receivable) : "—"}</strong></div>}
     </div>
     {scheme.status === "draft" && <div className="chit-scheme-actions" onClick={event => event.stopPropagation()}>
       {!predefined && <Button onClick={() => edit(scheme)}>Edit</Button>}
@@ -73,7 +74,8 @@ export function ChitSchemeDashboardSection({ kind, rows, busy, open, edit, activ
     {rows.length ? <div className="chit-board-grid">{rows.map(row => <ChitSchemeCard key={row.scheme.id} kind={kind} row={row} open={open} edit={edit} activate={activate} />)}</div> : !busy && <p className="small chit-board-empty">No {meta.title} yet.</p>}
   </section>;
 }
-export function ChitLandingReports({ token, schemes }) {
+export function ChitLandingReports({ token, schemes, cycles = [], fixedLifts = [], predefinedSchedule = [], enrollments = [] }) {
+  const [report, setReport] = useState("statement");
   const [schemeId, setSchemeId] = useState(schemes[0]?.id || "");
   const [monthNumber, setMonthNumber] = useState(1);
   const [details, setDetails] = useState(null);
@@ -100,7 +102,13 @@ export function ChitLandingReports({ token, schemes }) {
   }, [token, schemeId]);
   const statement = scheme && details ? buildChitMonthStatement({ scheme, details, monthNumber }) : null;
   const months = Array.from({ length: Number(scheme?.duration_months || 0) }, (_, index) => index + 1);
-  return <div className="card">
+  return <div>
+    <div className="tabs spacer">
+      <Button className={`tab ${report === "statement" ? "active" : ""}`} onClick={() => setReport("statement")}>Month statement</Button>
+      <Button className={`tab ${report === "profit" ? "active" : ""}`} onClick={() => setReport("profit")}>Profit &amp; Loss</Button>
+    </div>
+    {report === "profit" && <ChitProfitLossReport schemes={schemes} cycles={cycles} fixedLifts={fixedLifts} predefinedSchedule={predefinedSchedule} enrollments={enrollments} />}
+    {report === "statement" && <div className="card">
     <strong>Chit Fund reports</strong>
     <p className="copy">Scheme collection, member dues, bid history, and outstanding for the selected month. Open a scheme for dividends and live bid detail.</p>
     <div className="form spacer">
@@ -118,5 +126,6 @@ export function ChitLandingReports({ token, schemes }) {
       <div className="row spacer"><Button className="primary" onClick={() => downloadChitMonthStatementPdf({ scheme, details, monthNumber })}>Download month statement</Button></div>
     </>}
     {!schemes.length && <p className="small spacer">No Chit Fund schemes yet.</p>}
+  </div>}
   </div>;
 }
