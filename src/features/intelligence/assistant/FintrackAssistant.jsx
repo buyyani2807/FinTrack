@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useLocation } from "react-router";
 import { formatInr } from "../../../lib/formatMoney.js";
-import { askFintrack, assistantPromptsForPath, createAskLimiter } from "./askFintrack.js";
+import { askFintrack, assistantPromptsForPath, assistantQuestionGroups, createAskLimiter } from "./askFintrack.js";
 import "./assistant.css";
 
 const limiter = createAskLimiter();
@@ -15,6 +15,10 @@ export function FintrackAssistant({ open, onClose, context, onNavigate, loadBook
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const prompts = assistantPromptsForPath(location.pathname);
+  const featured = new Set(prompts);
+  const questionGroups = assistantQuestionGroups(context || {})
+    .map(group => ({ ...group, questions: group.questions.filter(question => !featured.has(question)) }))
+    .filter(group => group.questions.length);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -97,11 +101,26 @@ export function FintrackAssistant({ open, onClose, context, onNavigate, loadBook
           />
           <button type="submit" className="btn primary" disabled={loading || !query.trim()}>{loading ? "Looking up…" : "Ask"}</button>
         </form>
-        <div className="ft-ask-prompts" aria-label="Suggested questions">
-          {prompts.map(prompt => (
-            <button key={prompt} type="button" className="ft-ask-prompt" disabled={loading} onClick={() => ask(prompt)}>{prompt}</button>
+        <section className="ft-ask-catalog" aria-label="Questions you can ask">
+          <h3>Questions you can ask</h3>
+          <p className="ft-ask-note">Tap a question, or type your own in similar words. Ask answers only from this workspace.</p>
+          <p className="ft-ask-group">Suggested for this screen</p>
+          <div className="ft-ask-prompts">
+            {prompts.map(prompt => (
+              <button key={prompt} type="button" className="ft-ask-prompt" disabled={loading} onClick={() => ask(prompt)}>{prompt}</button>
+            ))}
+          </div>
+          {questionGroups.map(group => (
+            <div key={group.id}>
+              <p className="ft-ask-group">{group.label}</p>
+              <div className="ft-ask-prompts">
+                {group.questions.map(prompt => (
+                  <button key={prompt} type="button" className="ft-ask-prompt" disabled={loading} onClick={() => ask(prompt)}>{prompt}</button>
+                ))}
+              </div>
+            </div>
           ))}
-        </div>
+        </section>
         {error ? (
           <p className="ft-ask-error" role="alert">{error} <button type="button" className="btn" onClick={() => ask(query)}>Retry</button></p>
         ) : null}
@@ -131,7 +150,7 @@ export function FintrackAssistant({ open, onClose, context, onNavigate, loadBook
             </dl>
             {answer.warning ? <p className="ft-ask-warning">{answer.warning}</p> : null}
           </article>
-        ) : !loading && !error ? <p className="ft-ask-note">Choose a suggested question or type your own. If the records cannot answer it, Ask says so.</p> : null}
+        ) : null}
       </section>
     </div>
   );

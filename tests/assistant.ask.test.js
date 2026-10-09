@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 import { addDays } from "../src/features/finance/model/loanState.js";
 import {
   askFintrack,
+  assistantQuestionGroups,
   createAskLimiter,
+  recognizedAskIntent,
   visibleFinanceLoans,
 } from "../src/features/intelligence/assistant/askFintrack.js";
 import {
@@ -234,6 +236,20 @@ test("a cashbook balance question uses the finance cashbook, not the accounts ca
   const blocked = askFintrack("What is the cashbook cash balance?", owner({ allowCashbook: false }));
   assert.equal(blocked.matched, false);
   assert.match(blocked.summary, /cannot open the Finance cashbook/);
+});
+
+test("ask lists the questions this sign-in can use, and each one is recognised", () => {
+  const groups = assistantQuestionGroups({ allowAccounts: true, allowCashbook: true, allowChit: true });
+  const questions = groups.flatMap(group => group.questions);
+  assert.deepEqual(groups.map(group => group.label), ["Collections", "Accounts", "Cashbook", "Chit Fund"]);
+  for (const question of questions) {
+    const intent = recognizedAskIntent(question);
+    assert.equal(["unknown", "empty", "write", "injection"].includes(intent), false, question);
+  }
+  const accountsOnly = assistantQuestionGroups({ allowAccounts: true, collectionScope: "accounts" });
+  assert.deepEqual(accountsOnly.map(group => group.id), ["accounts"]);
+  const collectionsOnly = assistantQuestionGroups({});
+  assert.deepEqual(collectionsOnly.map(group => group.id), ["collections"]);
 });
 
 test("ask rate limit stops the 31st question in the same minute", () => {

@@ -27,9 +27,27 @@
 }
 
 .ft-ask-head h2,
-.ft-ask-answer h3 {
+.ft-ask-answer h3,
+.ft-ask-catalog h3 {
   margin: 0;
+  color: var(--ft-text, #1c1917);
+  font-weight: 650;
+}
+
+.ft-ask-head h2,
+.ft-ask-answer h3 {
   font-size: 1.15rem;
+}
+
+.ft-ask-catalog { margin-top: 16px; }
+.ft-ask-catalog h3 { font-size: 0.95rem; }
+.ft-ask-group {
+  margin: 14px 0 0;
+  color: var(--ft-text-2, #57534e);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .ft-ask-kicker {

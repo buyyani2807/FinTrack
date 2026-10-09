@@ -935,3 +935,65 @@ export function assistantPromptsForPath(pathname = "") {
   if (path.startsWith("/cashbook")) return ASSISTANT_PROMPTS.cashbook;
   return ASSISTANT_PROMPTS.dashboard;
 }
+
+const ASK_QUESTION_GROUPS = [
+  {
+    id: "collections",
+    label: "Collections",
+    questions: [
+      "Who has not paid today?",
+      "Which customers are overdue?",
+      "Prioritize today’s collection route.",
+      "Show outstanding customers above ₹10,000.",
+      "Compare this month’s collections with last month.",
+      "Which agent collected the most this week?",
+      "Which customers missed two installments?",
+      "Draft a payment reminder.",
+      "Forecast next month’s collections.",
+      "Explain a customer statement.",
+    ],
+  },
+  {
+    id: "accounts",
+    label: "Accounts",
+    questions: [
+      "Why did profit decrease?",
+      "Which expenses increased this month?",
+      "Show receivables due this week.",
+      "Open the GST report.",
+      "Suggest an expense ledger for rent.",
+      "Show unmatched bank lines.",
+      "Show possible duplicate receipts.",
+    ],
+  },
+  {
+    id: "cashbook",
+    label: "Cashbook",
+    questions: [
+      "What is the cashbook cash balance?",
+      "Why does Cashbook differ from Accounts?",
+    ],
+  },
+  {
+    id: "chit",
+    label: "Chit Fund",
+    questions: [
+      "What is the current auction status?",
+      "Which Chit Fund members missed two installments?",
+    ],
+  },
+];
+
+export function recognizedAskIntent(question) {
+  return classify(question);
+}
+
+export function assistantQuestionGroups(context = {}) {
+  return ASK_QUESTION_GROUPS.filter(group => {
+    if (group.id === "collections") return context.collectionScope !== "accounts";
+    if (group.id === "accounts") return Boolean(context.allowAccounts);
+    if (group.id === "cashbook") return Boolean(context.allowCashbook);
+    if (group.id === "chit") return Boolean(context.allowChit);
+    return false;
+  }).map(group => ({ id: group.id, label: group.label, questions: group.questions }));
+}
