@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import {
   fixedChitMonth,
   fixedChitPostLiftMonthlyPayment,
@@ -93,4 +94,13 @@ test("validates configuration without using Auction Chit calculations", () => {
   assert.throws(() => validateFixedChit({ ...example, monthlyContribution: 5001 }), /must equal chit value/);
   assert.throws(() => validateFixedChit({ ...example, monthlyLiftIncrement: -1 }), /increment/);
   assert.throws(() => validateFixedChit({ ...example, durationMonths: 21 }), /Duration/);
+});
+
+test("finalizing a lift updates the existing member-month schedule instead of inserting another row", () => {
+  const sql = fs.readFileSync(new URL("../supabase/094_fixed_chit_lift_payments.sql", import.meta.url), "utf8");
+  const fixed = sql.slice(0, sql.indexOf("chit_finalize_predefined_month"));
+  assert.match(fixed, /perform public\.chit_build_member_payment_schedules\(s\.id\)/);
+  assert.doesNotMatch(fixed, /insert into public\.fixed_chit_payments/i);
+  assert.match(sql, /perform public\.chit_build_member_payment_schedules\(s\.id\)/g);
+  assert.doesNotMatch(sql, /insert into public\.predefined_chit_payments/i);
 });

@@ -12,6 +12,14 @@ import { fireChitLiftWhatsApp } from "../io/chitNotifications.js";
 import { Button, Field, Metric } from "../../../components/ui.jsx";
 import { Modal } from "../components/ChitUi.jsx";
 
+function fixedLiftSaveError(err) {
+  const message = String(err?.message || "");
+  if (/scheme_member_month_key/i.test(message)) {
+    return "This member already has payment rows for later months. Paste 094 in the Supabase SQL editor, then finalize the lift again. Recorded payments stay as they are.";
+  }
+  return message || "Could not finalize this Fixed Chit lift.";
+}
+
 export function FixedChitLiftModal({ token, scheme, lift, enrollments, usedEnrollmentIds, close, done, orgSettings = {}, workspace = {} }) {
   const [enrollmentId, setEnrollmentId] = useState("");
   const [liftDate, setLiftDate] = useState(today());
@@ -49,7 +57,7 @@ export function FixedChitLiftModal({ token, scheme, lift, enrollments, usedEnrol
         payload: buildFixedLiftPayload({ scheme, lift, enrollment, liftDate, managerCommission }),
       });
       done(toast);
-    } catch (err) { setError(err.message || "Could not finalize this Fixed Chit lift."); }
+    } catch (err) { setError(fixedLiftSaveError(err)); }
     finally { setBusy(false); }
   };
   const postLiftMonthlyPayment = fixedChitPostLiftMonthlyPayment(scheme.installment_amount, scheme.fixed_monthly_increment);

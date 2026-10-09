@@ -16,6 +16,14 @@ import { fireChitLiftWhatsApp } from "../io/chitNotifications.js";
 import { Button, Field, Metric } from "../../../components/ui.jsx";
 import { Modal } from "../components/ChitUi.jsx";
 
+function predefinedLiftSaveError(err) {
+  const message = String(err?.message || "");
+  if (/scheme_member_month_key/i.test(message)) {
+    return "This member already has payment rows for later months. Paste 094 in the Supabase SQL editor, then finalize again. Recorded payments stay as they are.";
+  }
+  return message || "Could not finalize this predefined month.";
+}
+
 export function PredefinedAssignModal({ token, item, enrollments, usedEnrollmentIds, close, done, scheme, orgSettings = {}, workspace = {} }) {
   const [enrollmentId, setEnrollmentId] = useState("");
   const [assignedDate, setAssignedDate] = useState(today());
@@ -48,7 +56,7 @@ export function PredefinedAssignModal({ token, item, enrollments, usedEnrollment
       });
       done(toast);
     }
-    catch (err) { setError(err.message || "Could not finalize this predefined month."); }
+    catch (err) { setError(predefinedLiftSaveError(err)); }
     finally { setBusy(false); }
   };
   return <Modal close={close}><h2 className="title">Assign Member — Month {item.month_number}</h2><div className="grid metrics"><Metric label="EMI" value={money(item.emi)} /><Metric label="Bid amount" value={money(item.bid_amount)} color="gold" /><Metric label="Manager commission" value={money(item.manager_commission)} /><Metric label="Net receivable" value={money(item.net_receivable)} color="green" /></div><form onSubmit={submit}><div className="form spacer"><Field className="span" label="Member"><Select required value={enrollmentId} onChange={event => setEnrollmentId(event.target.value)}><option value="">Select member</option>{eligible.map(row => <option key={row.id} value={row.id}>Ticket {row.ticket_number} — {enrollmentName(row)}</option>)}</Select></Field><Field label="Finalized date"><input required type="date" value={assignedDate} onChange={event => setAssignedDate(event.target.value)} /></Field><Field label="Prize payout mode"><Select value={payoutMode} onChange={event => setPayoutMode(event.target.value)}><option value="cash">Cash</option><option value="upi">UPI</option><option value="cash_upi">Cash + UPI</option></Select></Field>{payoutMode === "cash_upi" && <><Field label="Cash amount (₹)"><input type="number" min="0" value={payoutCash} onChange={event => setPayoutCash(event.target.value)} /></Field><Field label="UPI amount (₹)"><input type="number" min="0" value={payoutUpi} onChange={event => setPayoutUpi(event.target.value)} /></Field></>}</div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button className="primary" disabled={busy || !eligible.length} type="submit">{busy ? "Finalizing…" : "Finalize assignment"}</Button></div></form></Modal>;
