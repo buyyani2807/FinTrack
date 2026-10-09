@@ -10,10 +10,12 @@ export function FintrackAssistant({ open, onClose, context, onNavigate, loadBook
   const location = useLocation();
   const titleId = useId();
   const inputRef = useRef(null);
+  const bodyRef = useRef(null);
   const [query, setQuery] = useState("");
   const [answer, setAnswer] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [catalogOpen, setCatalogOpen] = useState(true);
   const prompts = assistantPromptsForPath(location.pathname);
   const featured = new Set(prompts);
   const questionGroups = assistantQuestionGroups(context || {})
@@ -44,6 +46,8 @@ export function FintrackAssistant({ open, onClose, context, onNavigate, loadBook
     setQuery(text);
     setError("");
     setLoading(true);
+    setCatalogOpen(false);
+    bodyRef.current?.scrollTo({ top: 0 });
     try {
       let ctx = context;
       let next = askFintrack(text, ctx);
@@ -58,9 +62,11 @@ export function FintrackAssistant({ open, onClose, context, onNavigate, loadBook
         next = askFintrack(text, ctx);
       }
       setAnswer(next);
+      bodyRef.current?.scrollTo({ top: 0 });
     } catch (err) {
       setAnswer(null);
       setError(err?.message || "Ask could not read the books.");
+      bodyRef.current?.scrollTo({ top: 0 });
     } finally {
       setLoading(false);
     }
@@ -101,56 +107,58 @@ export function FintrackAssistant({ open, onClose, context, onNavigate, loadBook
           />
           <button type="submit" className="btn primary" disabled={loading || !query.trim()}>{loading ? "Looking up…" : "Ask"}</button>
         </form>
-        <section className="ft-ask-catalog" aria-label="Questions you can ask">
-          <h3>Questions you can ask</h3>
-          <p className="ft-ask-note">Tap a question, or type your own in similar words. Ask answers only from this workspace.</p>
-          <p className="ft-ask-group">Suggested for this screen</p>
-          <div className="ft-ask-prompts">
-            {prompts.map(prompt => (
-              <button key={prompt} type="button" className="ft-ask-prompt" disabled={loading} onClick={() => ask(prompt)}>{prompt}</button>
-            ))}
-          </div>
-          {questionGroups.map(group => (
-            <div key={group.id}>
-              <p className="ft-ask-group">{group.label}</p>
-              <div className="ft-ask-prompts">
-                {group.questions.map(prompt => (
-                  <button key={prompt} type="button" className="ft-ask-prompt" disabled={loading} onClick={() => ask(prompt)}>{prompt}</button>
-                ))}
-              </div>
+        <div className="ft-ask-body" ref={bodyRef}>
+          {error ? (
+            <p className="ft-ask-error" role="alert">{error} <button type="button" className="btn" onClick={() => ask(query)}>Retry</button></p>
+          ) : null}
+          {loading ? <p className="ft-ask-note" role="status">Reading the verified figures…</p> : null}
+          {answer ? (
+            <article className="ft-ask-answer" aria-live="polite">
+              <header className="ft-ask-answer-head">
+                <h3>{answer.title}</h3>
+                {answer.link ? <button type="button" className="btn" onClick={() => openLink(answer.link)}>{answer.link.label}</button> : null}
+              </header>
+              <p>{answer.summary}</p>
+              {answer.lines?.length ? (
+                <ul className="ft-ask-lines">
+                  {answer.lines.map(line => (
+                    <li key={`${line.label}-${line.detail}`}>
+                      <span><strong>{line.label}</strong>{line.detail ? <em>{line.detail}</em> : null}</span>
+                      {line.amount == null ? null : <span>{formatInr(line.amount)}</span>}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <dl className="ft-ask-meta">
+                <div><dt>Period</dt><dd>{answer.period?.label}</dd></div>
+                <div><dt>Financial year</dt><dd>{answer.period?.financialYear}</dd></div>
+                <div><dt>Source</dt><dd>{answer.source?.module} · {answer.source?.report}</dd></div>
+                {answer.filters?.length ? <div><dt>Filters</dt><dd>{answer.filters.join(" · ")}</dd></div> : null}
+              </dl>
+              {answer.warning ? <p className="ft-ask-warning">{answer.warning}</p> : null}
+            </article>
+          ) : null}
+          <details className="ft-ask-catalog" open={catalogOpen} onToggle={event => setCatalogOpen(event.currentTarget.open)}>
+            <summary>Questions you can ask</summary>
+            <p className="ft-ask-note">Tap a question, or type your own in similar words. Ask answers only from this workspace.</p>
+            <p className="ft-ask-group">Suggested for this screen</p>
+            <div className="ft-ask-prompts">
+              {prompts.map(prompt => (
+                <button key={prompt} type="button" className="ft-ask-prompt" disabled={loading} onClick={() => ask(prompt)}>{prompt}</button>
+              ))}
             </div>
-          ))}
-        </section>
-        {error ? (
-          <p className="ft-ask-error" role="alert">{error} <button type="button" className="btn" onClick={() => ask(query)}>Retry</button></p>
-        ) : null}
-        {loading ? <p className="ft-ask-note" role="status">Reading the verified figures…</p> : null}
-        {answer ? (
-          <article className="ft-ask-answer" aria-live="polite">
-            <header className="ft-ask-answer-head">
-              <h3>{answer.title}</h3>
-              {answer.link ? <button type="button" className="btn" onClick={() => openLink(answer.link)}>{answer.link.label}</button> : null}
-            </header>
-            <p>{answer.summary}</p>
-            {answer.lines?.length ? (
-              <ul className="ft-ask-lines">
-                {answer.lines.map(line => (
-                  <li key={`${line.label}-${line.detail}`}>
-                    <span><strong>{line.label}</strong>{line.detail ? <em>{line.detail}</em> : null}</span>
-                    {line.amount == null ? null : <span>{formatInr(line.amount)}</span>}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            <dl className="ft-ask-meta">
-              <div><dt>Period</dt><dd>{answer.period?.label}</dd></div>
-              <div><dt>Financial year</dt><dd>{answer.period?.financialYear}</dd></div>
-              <div><dt>Source</dt><dd>{answer.source?.module} · {answer.source?.report}</dd></div>
-              {answer.filters?.length ? <div><dt>Filters</dt><dd>{answer.filters.join(" · ")}</dd></div> : null}
-            </dl>
-            {answer.warning ? <p className="ft-ask-warning">{answer.warning}</p> : null}
-          </article>
-        ) : null}
+            {questionGroups.map(group => (
+              <div key={group.id}>
+                <p className="ft-ask-group">{group.label}</p>
+                <div className="ft-ask-prompts">
+                  {group.questions.map(prompt => (
+                    <button key={prompt} type="button" className="ft-ask-prompt" disabled={loading} onClick={() => ask(prompt)}>{prompt}</button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </details>
+        </div>
       </section>
     </div>
   );
