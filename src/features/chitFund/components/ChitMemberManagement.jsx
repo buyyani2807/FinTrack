@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createChitMember, enableChitMemberPortal, enrollChitMember, updateEnrolledChitMember } from "../../../lib/financeRepository";
 import { enrollmentName, canEnrollMoreMembers } from "../model/chitFormat.js";
 import { Button, Field } from "../../../components/ui.jsx";
@@ -8,6 +8,7 @@ import { ChitDeleteMemberControl } from "./ChitAdminControls.jsx";
 export function ChitAddMemberModal({ token, scheme, nextTicket, close, done }) {
   const [f, setF] = useState({ name: "", phone: "", address: "", ticket: String(nextTicket || ""), guarantorName: "", guarantorPhone: "", guarantorAddress: "", deposit: String(scheme.security_deposit_amount || 0) });
   const [error, setError] = useState("");
+  useEffect(() => { setF(current => ({ ...current, ticket: String(nextTicket || "") })); }, [nextTicket]);
   const [busy, setBusy] = useState(false);
   const set = (key, value) => setF(current => ({ ...current, [key]: value }));
   const submit = async event => {

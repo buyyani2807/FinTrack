@@ -24,12 +24,8 @@ export const enrollmentName = enrollment => enrollment?.chit_members?.full_name 
 export const canEnrollMoreMembers = (scheme, enrollments = []) =>
   ["draft", "active"].includes(scheme?.status) && enrollments.length < Number(scheme?.member_count || 0);
 export const nextAvailableTicket = (enrollments = [], memberCount = 0) => {
-  const used = new Set(enrollments.map(item => Number(item.ticket_number) || 0));
-  const limit = Math.max(Number(memberCount) || 0, enrollments.length + 1);
-  for (let ticket = 1; ticket <= limit; ticket += 1) {
-    if (!used.has(ticket)) return ticket;
-  }
-  return Math.max(0, ...used) + 1;
+  const numbers = enrollments.map(item => Number(item.ticket_number)).filter(Number.isFinite);
+  return Math.max(0, ...numbers) + 1;
 };
 export const byMemberName = (a, b) => enrollmentName(a).localeCompare(enrollmentName(b), undefined, { sensitivity: "base" });
 export const paymentsByMemberName = (payments, enrollments, cycles = []) => [...(payments || [])].sort((a, b) => {
