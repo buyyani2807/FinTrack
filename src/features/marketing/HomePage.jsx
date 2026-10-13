@@ -51,9 +51,18 @@ const AI = [
   { slug: "bank-matching", title: "Bank matching", text: "Party, invoice, and ledger suggested for each bank line, with a confidence score. You approve." },
   { slug: "stock-forecast", title: "Stock forecast", text: "Which items may run out, when, and how much to consider buying." },
   { slug: "chit-scheme-health", title: "Chit scheme health", text: "Collection rate, overdue members, and members paying later each month." },
-  { slug: "ask-the-books", title: "Ask the books", text: "Ask about receivables, profit, GST, collections, or why the cashbook differs from Accounts." },
+  { slug: "ai-review", title: "AI Review", text: "Eight reviews in one Accounts tab, each with its reason, confidence, and a link to the record." },
   { slug: "bill-scanning", title: "Bill draft", text: "A supplier photo becomes a draft. You review it, then save." },
   { slug: "credit-score", title: "Customer credit score", text: "A score from each customer’s own payment history, with the reasons." },
+];
+
+const ASK_EXAMPLES = [
+  "Who has not paid today?",
+  "Why did profit decrease?",
+  "Which expenses increased this month?",
+  "Show receivables due this week.",
+  "What is the cashbook cash balance?",
+  "Open the GST report.",
 ];
 
 const AUDIENCES = [
@@ -72,6 +81,7 @@ const FAQ = [
   ["Does it support GST?", "It prepares GST summaries from posted vouchers. Filing stays outside FinTrack."],
   ["Can I send WhatsApp messages?", "FinTrack opens WhatsApp with a reminder, receipt, or statement. You send the message."],
   ["Does it have AI?", "Yes, included in the plan. AI Review in Accounts gives a cash-flow forecast, expense and supplier price changes, collection priorities, unusual activity alerts, GST checks, month-end readiness, bank matching suggestions, and stock forecasts. Chit Fund has scheme health. Ask FinTrack answers questions from this workspace, and bill photos become drafts. Every suggestion shows its reason and waits for you to act."],
+  ["What is Ask FinTrack?", "A question box on every screen. Ask “Who has not paid today?”, “Why did profit decrease?”, or “Which expenses increased this month?” and the answer comes from this workspace’s records, with the period and the report it used. It is read-only and does not guess figures it cannot find."],
   ["Does the AI change my books?", "No. It does not post vouchers, file GST, lock a period, reverse an entry, create a purchase order, or send a message. A bank match is posted only when you approve it, and a locked period cannot be changed from a suggestion."],
   ["What reports are included?", "Daily and Monthly Finance have a collection report for any date and a Daily or Monthly P&L for the lending book. Chit Fund has a month statement PDF, a commission Profit & Loss by scheme, and scheme health. Accounts has the Day Book, Trial Balance, Profit & Loss, Balance Sheet, Cash Flow, GST, receivables, payables, and stock reports, with CSV, Excel, and PDF export."],
   ["Can I install it on my phone?", "Yes. FinTrack is the mobile app: add it to the home screen from Safari on iPhone or iPad, or from Chrome on Android. It opens from its own icon. Sign in the same way you do in the browser."],
@@ -129,6 +139,20 @@ export function HomePage() {
             <Link className="mkt-text-link" to={featurePath(pillar.to)}>{pillar.link}</Link>
           </article>)}
         </div>
+      </div>
+    </section>
+
+    <section className="mkt-section mkt-tint" id="ask-fintrack">
+      <div className="mkt-wrap mkt-split">
+        <div>
+          <p className="mkt-kicker"><FeatureIcon name="MessageCircle" size={16} /> Ask FinTrack</p>
+          <h2>Ask your books the way you ask your accountant.</h2>
+          <p className="mkt-lead">Type a question in plain English and FinTrack answers from your own records: the figures, the customers or ledgers behind them, the period, and the report they came from. One tap opens that screen.</p>
+          <ul className="mkt-ticks">{ASK_EXAMPLES.map(question => <li key={question}>{question}</li>)}</ul>
+          <p className="mkt-lead">Read-only. Asking never posts, sends, or changes anything, and a collection agent sees only their own customers.</p>
+          <Link className="mkt-text-link" to={featurePath("ask-fintrack")}>See everything you can ask</Link>
+        </div>
+        <ProductPreview scene="intelligence" />
       </div>
     </section>
 

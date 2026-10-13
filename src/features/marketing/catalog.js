@@ -519,6 +519,46 @@ export const FEATURES = [
     icon: "Lock",
   },
   {
+    slug: "ask-fintrack",
+    category: "intelligence",
+    name: "Ask FinTrack",
+    summary: "Ask your business a question the way you would ask your accountant, and get the answer from your own records.",
+    problem: "Simple questions such as who has not paid, why profit dropped, or how much GST is due mean opening several screens, or waiting for the accountant to call back.",
+    how: [
+      "Tap Ask FinTrack in the sidebar on any screen, or use Ask the books on the Accounts overview.",
+      "Type a question in plain English, or tap one of the suggested questions for the screen you are on.",
+      "Read the answer: the figures, the customers or ledgers behind them, the period, and the report they came from.",
+      "Tap the button on the answer to open that screen and act there.",
+    ],
+    capabilities: [
+      "Collections: who has not paid today, overdue customers, missed installments, and this month against last month",
+      "Accounts: why profit moved, which expenses rose, receivables due this week, what you owe, and GST for the period",
+      "Cashbook: cash, bank, and UPI balances, and why the cashbook differs from Accounts",
+      "Chit Fund: current auction status for active schemes",
+      "Collection route priorities, agent collections this week, and a reminder draft",
+      "Name a month, such as September 2026, or a customer, supplier, or ledger such as rent",
+    ],
+    benefits: [
+      "Answers in seconds without hunting through reports",
+      "Every figure comes from the same reports as the screens",
+      "Each answer names its period and source, so you can check it",
+      "Read-only: asking never posts, sends, or changes anything",
+    ],
+    examples: [
+      { group: "Collections", questions: ["Who has not paid today?", "Which customers are overdue?", "Prioritize today’s collection route.", "Show outstanding customers above ₹10,000.", "Compare this month’s collections with last month.", "Which agent collected the most this week?", "Which customers missed two installments?", "Draft a payment reminder."] },
+      { group: "Accounts", questions: ["Why did profit decrease?", "Which expenses increased this month?", "Show receivables due this week.", "Who owes me?", "What do I owe?", "Rent in September 2026", "Open the GST report.", "Show possible duplicate receipts."] },
+      { group: "Cashbook and Chit Fund", questions: ["What is the cashbook cash balance?", "Why does Cashbook differ from Accounts?", "What is the current auction status?"] },
+    ],
+    sections: [
+      { title: "Like asking your accountant", text: "Ask the way you would ask the person who keeps your books: “Why did profit decrease?”, “Who owes me?”, “Rent in September 2026”. FinTrack reads the posted vouchers, collections, and cashbook for this workspace and replies with the figures and the rows behind them." },
+      { title: "Answers you can check", text: "Every answer shows the period, the financial year, and the report it came from, with a button to open that screen. If a question is not understood or the records are not there, it says so instead of guessing a number." },
+      { title: "Safe by design", text: "Ask FinTrack is read-only. It does not post vouchers, record payments, send WhatsApp messages, or change an auction. It answers only from this workspace and refuses requests for other companies or hidden data. A collection agent sees only the customers assigned to them." },
+    ],
+    related: ["ai-review", "collection-priorities", "forecasting"],
+    appPath: "/dashboard",
+    icon: "MessageCircle",
+  },
+  {
     slug: "ai-review",
     category: "intelligence",
     name: "AI Review",
@@ -747,26 +787,9 @@ export const FEATURES = [
     how: ["Open Dashboard, Chit Fund, or Accounts.", "Read the insight card for that module. On the Accounts overview it shows the cash outlook, bank lines waiting, items that may run out, and who to collect first.", "Treat it as a prompt. It does not post, send, or change a balance."],
     capabilities: ["Module insights", "Cash outlook for 7, 30, and 60 days on the Accounts overview", "Bank lines waiting for review and items that may run out", "Top collection priorities", "Advisory only"],
     benefits: ["A long list gets a shorter reading", "You still open the underlying record", "Nothing is booked from the card"],
-    related: ["ai-review", "ask-the-books", "anomaly-detection"],
+    related: ["ai-review", "ask-fintrack", "anomaly-detection"],
     appPath: "/dashboard",
     icon: "Sparkles",
-  },
-  {
-    slug: "ask-the-books",
-    category: "intelligence",
-    name: "Ask the Books",
-    summary: "Ask about receivables, profit, GST, collections, or the cashbook. The answer stays in this workspace.",
-    problem: "Looking up a balance or a due list should not mean opening every screen.",
-    how: ["Open Ask FinTrack from the workspace.", "Ask about the company and records you can already see.", "Read the answer and open the screen if you want to act."],
-    capabilities: ["Receivables, profit, expenses, and GST", "Who has not paid, and how this month compares", "A simple outlook from recent records", "Nothing is posted by asking"],
-    benefits: ["Answers stay inside your data", "A draft is not a sent message", "You confirm anything that would change the books"],
-    sections: [
-      { title: "Questions it can take", text: "On Accounts you can ask why profit moved, which expenses rose, which receivables are due, or to open the GST report. On collections you can ask who has not paid today and how this month compares with the last. On the cashbook you can ask why it differs from Accounts." },
-      { title: "An outlook you can ask for", text: "A forward-looking question can return a simple outlook from recent records. That answer lives in Ask FinTrack. It is not written into the books, and it does not set a target." },
-    ],
-    related: ["business-insights", "forecasting", "collection-priorities"],
-    appPath: "/dashboard",
-    icon: "MessageCircle",
   },
   {
     slug: "attention-center",
@@ -894,8 +917,12 @@ export function featuresInCategory(categoryId) {
   return FEATURES.filter(feature => feature.category === categoryId);
 }
 
+// Older feature URLs that now live under a new slug.
+const SLUG_ALIASES = { "ask-the-books": "ask-fintrack" };
+
 export function featureBySlug(slug) {
-  return FEATURES.find(feature => feature.slug === slug) || null;
+  const target = SLUG_ALIASES[slug] || slug;
+  return FEATURES.find(feature => feature.slug === target) || null;
 }
 
 export function relatedFeatures(feature) {

@@ -144,7 +144,7 @@ export function AboutPage() {
       <div>
         <h2>Ask FinTrack shows a suggestion. You confirm it.</h2>
         <p className="mkt-lead">Ask “Who is unpaid today?” and the answer comes from this workspace. You still record the payment. A bill photo stays a draft until you save it. A bank line stays a suggestion until you approve the match. AI Review explains each suggestion and links to the record, and a cash-flow forecast is shown apart from actual figures. Nothing is posted into the books until you act.</p>
-        <Link className="mkt-text-link" to={featurePath("ask-the-books")}>Read Ask the books</Link>
+        <Link className="mkt-text-link" to={featurePath("ask-fintrack")}>Read about Ask FinTrack</Link>
       </div>
       <ProductPreview scene="intelligence" />
     </div>

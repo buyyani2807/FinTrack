@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Link, useParams } from "react-router";
+import { Link, Navigate, useParams } from "react-router";
 import { featureBySlug, featuresInCategory, relatedFeatures } from "./catalog.js";
 import { FeatureIcon } from "./icons.jsx";
 import { featurePath, marketingPaths } from "./paths.js";
@@ -17,6 +17,7 @@ export function FeatureDetailPage() {
       <Link className="mkt-btn" to={marketingPaths.features}>Back to features</Link>
     </div>;
   }
+  if (feature.slug !== slug) return <Navigate to={featurePath(feature.slug)} replace />;
   const related = relatedFeatures(feature);
   return <>
     <header className="mkt-page-hero">
@@ -26,6 +27,18 @@ export function FeatureDetailPage() {
         {feature.advisory && <p className="mkt-note">Advisory. A forecast is an estimate shown with its assumptions. It is not a guarantee, and it is never written into the books.</p>}
       </div>
     </header>
+    {feature.examples?.length > 0 && <section className="mkt-section">
+      <div className="mkt-wrap">
+        <h2>Questions you can ask</h2>
+        <p className="mkt-lead">Tap one of these in the app, or type your own in similar words.</p>
+        <div className="mkt-grid three">
+          {feature.examples.map(group => <article key={group.group} className="mkt-card">
+            <h3>{group.group}</h3>
+            <ul className="mkt-list">{group.questions.map(question => <li key={question}>{question}</li>)}</ul>
+          </article>)}
+        </div>
+      </div>
+    </section>}
     {feature.sections?.length > 0 && <section className="mkt-section mkt-tint">
       <div className="mkt-wrap">
         <div className="mkt-grid three">
