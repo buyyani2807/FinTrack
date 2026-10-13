@@ -13,6 +13,20 @@ export function buildExpenseHistoryWindows(rows = [], { asOf = new Date() } = {}
   return { current, previous: prior, average, historyMonths: averageKeys.filter(key => (rows || []).some(row => monthKey(row.date || row.postedOn || row.createdAt) === key)).length, advisory: true };
 }
 
+export function buildSupplierPriceInsights(rows = [], { minimumSamples = 2 } = {}) {
+  const groups = new Map();
+  for (const row of rows || []) { const key = row.supplierId || row.partyId || row.supplierName; if (!key) continue; const list = groups.get(key) || []; list.push(row); groups.set(key, list); }
+  return [...groups.entries()].flatMap(([supplierId, list]) => {
+    const sorted = [...list].sort((a, b) => new Date(a.date || a.postedOn || 0) - new Date(b.date || b.postedOn || 0));
+    if (sorted.length < minimumSamples) return [];
+    const recent = Number(sorted.at(-1).unitPrice ?? sorted.at(-1).price ?? 0); const prior = Number(sorted.at(-2).unitPrice ?? sorted.at(-2).price ?? 0);
+    if (!prior || !recent) return [];
+    const change = roundMoney(((recent - prior) / Math.abs(prior)) * 100);
+    if (Math.abs(change) < 10) return [];
+    return [{ id: `supplier-price-${supplierId}`, supplierId, supplierName: sorted.at(-1).supplierName || supplierId, currentPrice: roundMoney(recent), comparisonPrice: roundMoney(prior), changePercent: change, severity: Math.abs(change) >= 20 ? "high" : "medium", explanation: "Possible supplier price change; review source purchases before taking action.", sourceIds: sorted.slice(-2).map(row => row.id).filter(Boolean), advisory: true }];
+  });
+}
+
 export function buildExpenseChangeInsights({ current = [], previous = [], average = [], minimumHistory = 2 } = {}) {
   const sums = rows => rows.reduce((map, row) => { const key = row.category || row.accountName || row.ledgerName || "Uncategorised"; map[key] = (map[key] || 0) + n(row.amount || row.debit); return map; }, {});
   const now = sums(current); const prior = sums(previous); const avg = sums(average);

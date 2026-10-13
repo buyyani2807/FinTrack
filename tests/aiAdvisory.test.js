@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildAgentScopedReceivablesPriorities, buildAnomalyInsights, buildBankMatchSuggestions, buildCashFlowForecast, buildCashFlowForecastSeries, buildChitHealthInsights, buildExpenseChangeInsights, buildExpenseHistoryWindows, buildGstHealthInsights, buildInventoryForecast, buildMonthEndReadiness, buildReceivablesPriorities, createAdvisoryAuditEntry } from "../src/features/intelligence/aiAdvisory.js";
+import { buildAgentScopedReceivablesPriorities, buildAnomalyInsights, buildBankMatchSuggestions, buildCashFlowForecast, buildCashFlowForecastSeries, buildChitHealthInsights, buildExpenseChangeInsights, buildExpenseHistoryWindows, buildGstHealthInsights, buildInventoryForecast, buildMonthEndReadiness, buildReceivablesPriorities, buildSupplierPriceInsights, createAdvisoryAuditEntry } from "../src/features/intelligence/aiAdvisory.js";
 
 test("expense insight compares against available history and flags material changes", () => {
   const rows = buildExpenseChangeInsights({ current: [{ category: "Travel", amount: 138 }], previous: [{ category: "Travel", amount: 100 }] });
@@ -10,6 +10,7 @@ test("expense insight compares against available history and flags material chan
 
 test("expense insight does not invent a trend without a baseline", () => assert.deepEqual(buildExpenseChangeInsights({ current: [{ category: "Travel", amount: 138 }] }), []));
 test("expense history windows use current, previous and available three-month history", () => { const result = buildExpenseHistoryWindows([{ date: "2026-10-03", amount: 100 }, { date: "2026-09-03", amount: 90 }, { date: "2026-08-03", amount: 80 }], { asOf: "2026-10-13" }); assert.equal(result.current.length, 1); assert.equal(result.previous.length, 1); assert.equal(result.historyMonths, 2); });
+test("supplier price insight flags material changes with source ids", () => assert.equal(buildSupplierPriceInsights([{ id: "p1", supplierId: "s1", unitPrice: 100 }, { id: "p2", supplierId: "s1", unitPrice: 120 }])[0].changePercent, 20));
 
 test("cash forecast is explicit about assumptions and confidence", () => {
   const result = buildCashFlowForecast({ currentBalance: 820000, inflows: [{ amount: 100000 }], outflows: [{ amount: 30000 }], horizonDays: 7 });
