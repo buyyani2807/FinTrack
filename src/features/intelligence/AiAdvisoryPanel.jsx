@@ -1,4 +1,4 @@
-import { buildAgentScopedReceivablesPriorities, buildAnomalyInsights, buildBankMatchSuggestions, buildCashFlowForecastSeries, buildChitHealthInsights, buildExpenseChangeInsights, buildExpenseHistoryWindows, buildGstHealthInsights, buildInventoryForecast, buildMonthEndReadiness } from "./aiAdvisory.js";
+import { buildAgentScopedReceivablesPriorities, buildAnomalyInsights, buildBankMatchSuggestions, buildCashFlowForecastSeries, buildChitHealthInsights, buildExpenseChangeInsights, buildExpenseHistoryWindows, buildGstHealthInsights, buildInventoryForecast, buildMonthEndReadiness, buildSupplierPriceInsights } from "./aiAdvisory.js";
 
 const money = value => `₹${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 
@@ -21,6 +21,7 @@ export function AiAdvisoryPanel({ metrics = {}, receivables = [], payables = [],
   const chitHealth = chitScheme ? buildChitHealthInsights({ scheme: chitScheme, installments: chitInstallments, bids: chitBids }) : null;
   const expenseWindows = buildExpenseHistoryWindows(expenseRows, {});
   const expenseInsights = buildExpenseChangeInsights({ current: expenseRows.length ? expenseWindows.current : expenseCurrent, previous: expenseRows.length ? expenseWindows.previous : expensePrevious, average: expenseRows.length ? expenseWindows.average : expenseAverage });
+  const supplierInsights = buildSupplierPriceInsights(expenseRows);
 
   return <section className="acc-section ai-advisory-panel" aria-label="AI advisory summary">
     <div className="acc-section-heading"><div><span className="eyebrow">AI ADVISORY</span><h2 className="acc-section-title">What needs your attention</h2></div><span className="small muted">Advisory only · verify before acting</span></div>
@@ -37,5 +38,6 @@ export function AiAdvisoryPanel({ metrics = {}, receivables = [], payables = [],
       {bankSuggestions.filter(row => row.confidence !== "low").slice(0, 3).map(row => <div className="ai-advisory-row" key={`bank-${row.id}`}><span><strong>Bank match suggestion</strong><small>{row.explanation}</small></span><span className="badge">{row.confidence}</span></div>)}
       {chitHealth?.insights.slice(0, 3).map(row => <div className="ai-advisory-row" key={row.id}><span><strong>{row.title}</strong><small>{row.explanation}</small></span><span className="badge warning">Chit review</span></div>)}
     </div>}
+    {supplierInsights.length > 0 && <div className="ai-advisory-list"><h3>Supplier price changes</h3>{supplierInsights.slice(0, 3).map(row => <div className="ai-advisory-row" key={row.id}><span><strong>{row.supplierName} · {row.changePercent > 0 ? "increased" : "decreased"} {Math.abs(row.changePercent)}%</strong><small>{row.explanation}</small></span><span className="badge warning">Review</span></div>)}</div>}
   </section>;
 }
