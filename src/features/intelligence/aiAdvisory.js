@@ -37,6 +37,15 @@ export function buildReceivablesPriorities(rows = []) {
   }).sort((a, b) => ({ high: 3, medium: 2, low: 1 }[b.risk] - ({ high: 3, medium: 2, low: 1 }[a.risk]) || b.outstanding - a.outstanding));
 }
 
+export function buildAgentScopedReceivablesPriorities(rows = [], { role = "owner", assignedIds = [] } = {}) {
+  const scoped = role === "agent" ? rows.filter(row => assignedIds.includes(row.id || row.accountId || row.customerId)) : rows;
+  return buildReceivablesPriorities(scoped).map(row => ({ ...row, scope: role === "agent" ? "assigned-customers" : "company", advisory: true }));
+}
+
+export function createAdvisoryAuditEntry({ feature, sourceIds = [], companyId = null, generatedAt = new Date().toISOString(), confidence = "low" } = {}) {
+  return { feature, sourceIds: [...new Set(sourceIds.filter(Boolean))], companyId, generatedAt, confidence, advisory: true, writeAction: "none" };
+}
+
 export function buildAnomalyInsights({ transactions = [], expenses = [], inventory = [] } = {}) {
   const result = [];
   const amounts = posted(transactions).map(row => n(row.amount || row.total));

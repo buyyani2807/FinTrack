@@ -1,4 +1,4 @@
-import { buildAnomalyInsights, buildBankMatchSuggestions, buildCashFlowForecastSeries, buildChitHealthInsights, buildExpenseChangeInsights, buildGstHealthInsights, buildInventoryForecast, buildMonthEndReadiness, buildReceivablesPriorities } from "./aiAdvisory.js";
+import { buildAgentScopedReceivablesPriorities, buildAnomalyInsights, buildBankMatchSuggestions, buildCashFlowForecastSeries, buildChitHealthInsights, buildExpenseChangeInsights, buildGstHealthInsights, buildInventoryForecast, buildMonthEndReadiness } from "./aiAdvisory.js";
 
 const money = value => `₹${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 
@@ -6,11 +6,11 @@ const money = value => `₹${Number(value || 0).toLocaleString("en-IN", { maximu
  * Read-only, deterministic advisory summary. It deliberately accepts already
  * loaded Accounts data and never fetches or mutates records.
  */
-export function AiAdvisoryPanel({ metrics = {}, receivables = [], vouchers = [], items = [], stockMovements = [], gstInvoices = [], bankTransactions = [], parties = [], invoices = [], expenseCurrent = [], expensePrevious = [], expenseAverage = [], chitScheme = null, chitInstallments = [], chitBids = [] }) {
+export function AiAdvisoryPanel({ metrics = {}, receivables = [], vouchers = [], items = [], stockMovements = [], gstInvoices = [], bankTransactions = [], parties = [], invoices = [], expenseCurrent = [], expensePrevious = [], expenseAverage = [], role = "owner", assignedIds = [], chitScheme = null, chitInstallments = [], chitBids = [] }) {
   const receivableRows = Array.isArray(receivables) ? receivables : [];
   const currentBalance = Number(metrics.cash || 0) + Number(metrics.bank || 0) + Number(metrics.upi || 0);
   const forecastSeries = buildCashFlowForecastSeries({ currentBalance, horizons: { 7: { inflows: receivableRows.map(row => ({ amount: row.outstanding })) } } });
-  const priorities = buildReceivablesPriorities(receivableRows).slice(0, 3);
+  const priorities = buildAgentScopedReceivablesPriorities(receivableRows, { role, assignedIds }).slice(0, 3);
   const anomalies = buildAnomalyInsights({ transactions: vouchers, inventory: stockMovements }).slice(0, 3);
   const lowStock = (items || []).filter(item => Number(item.stock ?? item.quantity ?? 0) <= Number(item.reorderLevel ?? item.reorder_point ?? 0));
   const inventory = buildInventoryForecast({ stock: lowStock.reduce((sum, item) => sum + Number(item.stock ?? item.quantity ?? 0), 0), averageWeeklySales: 0, leadTimeDays: 0 });

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildAnomalyInsights, buildBankMatchSuggestions, buildCashFlowForecast, buildCashFlowForecastSeries, buildChitHealthInsights, buildExpenseChangeInsights, buildGstHealthInsights, buildInventoryForecast, buildMonthEndReadiness, buildReceivablesPriorities } from "../src/features/intelligence/aiAdvisory.js";
+import { buildAgentScopedReceivablesPriorities, buildAnomalyInsights, buildBankMatchSuggestions, buildCashFlowForecast, buildCashFlowForecastSeries, buildChitHealthInsights, buildExpenseChangeInsights, buildGstHealthInsights, buildInventoryForecast, buildMonthEndReadiness, buildReceivablesPriorities, createAdvisoryAuditEntry } from "../src/features/intelligence/aiAdvisory.js";
 
 test("expense insight compares against available history and flags material changes", () => {
   const rows = buildExpenseChangeInsights({ current: [{ category: "Travel", amount: 138 }], previous: [{ category: "Travel", amount: 100 }] });
@@ -24,6 +24,8 @@ test("receivables priorities rank overdue accounts without changing source data"
   assert.equal(result[0].risk, "high");
   assert.equal(source[0].outstanding, 180000);
 });
+test("agent receivables are limited to assigned customer ids", () => assert.equal(buildAgentScopedReceivablesPriorities([{ id: "a", outstanding: 10 }, { id: "b", outstanding: 20 }], { role: "agent", assignedIds: ["a"] }).length, 1));
+test("advisory audit metadata is non-writing and deduplicates source ids", () => { const entry = createAdvisoryAuditEntry({ feature: "gst", sourceIds: ["i1", "i1"] }); assert.deepEqual(entry.sourceIds, ["i1"]); assert.equal(entry.writeAction, "none"); });
 
 test("advisory anomaly detection only flags unusual records", () => assert.equal(buildAnomalyInsights({ transactions: [{ id: "x", status: "posted", amount: 1 }, { id: "y", status: "posted", amount: 1 }, { id: "z", status: "posted", amount: 1000 }] }).length, 1));
 
