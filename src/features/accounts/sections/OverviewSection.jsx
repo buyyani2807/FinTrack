@@ -180,6 +180,7 @@ export function OverviewSection({
       {settings && <AccAskBooks
         accounts={visibleAccounts}
         vouchers={vouchers}
+        gstInvoices={vouchers.filter(row => row.gstin || row.partyGstin || row.taxTotal != null || row.lineTaxTotal != null || row.isRegistered)}
         parties={parties}
         items={items}
         stockMovements={stockMovements}
