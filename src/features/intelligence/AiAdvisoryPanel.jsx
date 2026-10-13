@@ -14,7 +14,8 @@ export function AiAdvisoryPanel({ metrics = {}, receivables = [], payables = [],
   const priorities = buildAgentScopedReceivablesPriorities(receivableRows, { role, assignedIds }).slice(0, 3);
   const anomalies = buildAnomalyInsights({ transactions: vouchers, inventory: stockMovements }).slice(0, 3);
   const lowStock = (items || []).filter(item => Number(item.stock ?? item.quantity ?? 0) <= Number(item.reorderLevel ?? item.reorder_point ?? 0));
-  const inventory = buildInventoryForecast({ stock: lowStock.reduce((sum, item) => sum + Number(item.stock ?? item.quantity ?? 0), 0), averageWeeklySales: 0, leadTimeDays: 0 });
+  const usage = stockMovements.filter(row => Number(row.quantity) < 0).reduce((sum, row) => sum + Math.abs(Number(row.quantity || 0)), 0);
+  const inventory = buildInventoryForecast({ stock: lowStock.reduce((sum, item) => sum + Number(item.stock ?? item.quantity ?? 0), 0), averageWeeklySales: usage, leadTimeDays: Number(items?.[0]?.leadTimeDays ?? items?.[0]?.lead_time_days ?? 0) });
   const readiness = buildMonthEndReadiness({ unreconciled: 0, uncategorized: 0, duplicateCandidates: anomalies.length, negativeInventory: stockMovements.filter(row => Number(row.quantity) < 0).length });
   const gstIssues = buildGstHealthInsights({ invoices: gstInvoices });
   const bankSuggestions = buildBankMatchSuggestions({ transactions: bankTransactions, parties, invoices });
