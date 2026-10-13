@@ -119,7 +119,6 @@ export const MORE_LINKS = [
   ["cashbook", "Cashbook", "Operational cash"],
   ["crm", "Customer Pipeline", "Follow up customer opportunities"],
   ["gst", "GST", "Books preparation only"],
-  ["ai", "AI Review", "Expenses, cash flow, GST, month-end, bank and stock suggestions"],
   ["setup", "Setup", "Company, GST, locks, backup"],
 ];
 

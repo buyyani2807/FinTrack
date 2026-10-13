@@ -506,7 +506,6 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     [accounts, settings],
   );
   const aiEnabled = isModuleEnabled(orgSettings, "ai");
-  const moreLinks = useMemo(() => (aiEnabled ? MORE_LINKS : MORE_LINKS.filter(([id]) => id !== "ai")), [aiEnabled]);
   const reportId = section === "pnl" || section === "balance" || section === "trial" ? section : (section === "reports" ? reportTab : "");
   const wantOverview = section === "overview";
   const wantTrial = reportId === "trial";
@@ -1945,7 +1944,7 @@ const openVoucher = () => {
       <AccPageHeader
         title="Accounts"
         copy={`${activeCompany?.name || settings?.companyName || workspace.businessName || "Your business"} · ${fy.label} · ${range.from} to ${range.to}`}
-        tabs={<AccSectionTabs section={section} reportTab={reportTab} onNavigate={openSection} openReport={openReport} />}
+        tabs={<AccSectionTabs section={section} reportTab={reportTab} onNavigate={openSection} openReport={openReport} aiEnabled={aiEnabled} />}
         companyBar={<AccCompanyBar
           companies={companies}
           activeId={activeCompanyId}
@@ -2167,7 +2166,7 @@ const openVoucher = () => {
           costLines={costLines}
         />}
 
-        {section === "more" && <MoreSection manufacturingEnabled={manufacturingEnabled} openSection={openSection} moreLinks={moreLinks} />}
+        {section === "more" && <MoreSection manufacturingEnabled={manufacturingEnabled} openSection={openSection} moreLinks={MORE_LINKS} />}
 
         {section === "ai" && <AccAiReviewWorkspace
           token={token}

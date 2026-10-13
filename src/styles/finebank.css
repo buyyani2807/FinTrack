@@ -1837,6 +1837,7 @@ html[data-theme="dark"] .ft-trial-banner.is-urgent { background: #3a2222; color:
 .ai-source-link{border:0;background:none;color:var(--ft-primary);font-size:.72rem;padding:0;cursor:pointer;text-align:left}
 .ai-risk{display:inline-block;padding:1px 8px;border-radius:999px;font-size:.72rem;font-weight:600;text-transform:capitalize;background:var(--ft-success-soft);color:var(--ft-success)}.ai-risk-medium{background:var(--ft-warning-soft);color:var(--ft-warning)}.ai-risk-high,.ai-risk-critical{background:var(--ft-danger-soft);color:var(--ft-danger)}
 .collection-copilot-plan{display:block;margin-top:2px}
+.module-section-tab.acc-ai-tab{display:inline-flex;align-items:center;gap:6px}.acc-ai-tab svg{color:var(--ft-primary);flex:none}
 .ai-review-body{margin-top:1rem}.ai-review-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.ai-review-actions select{max-width:220px}
 .ai-split{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}.ai-split .card{padding:1rem}.ai-split h3{margin:.35rem 0}.ai-predicted{border-style:dashed}
 .ai-plain-list{margin:.35rem 0;padding-left:1.1rem}.ai-plain-list li{margin:.15rem 0}

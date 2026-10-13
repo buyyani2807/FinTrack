@@ -1,4 +1,4 @@
-import { Building2, ChevronDown, Plus } from "lucide-react";
+import { Building2, ChevronDown, Plus, Sparkles } from "lucide-react";
 import { Select } from "../../../components/Select.jsx";
 import { TabScroller } from "../../../components/TabScroller.jsx";
 import { useActiveTabInView } from "./useActiveTabInView.js";
@@ -8,13 +8,19 @@ import { NAV_TREE, REPORT_TABS, navItemIsActive } from "../accountsNavigation.js
 // A section with sub-pages (Parties, Reports) shows them as a second row once it is selected.
 // Cashbook is left out: it is its own item in the workspace sidebar. "More" holds the remaining pages.
 // Reports lists every report (Day Book, Trial Balance … Stock Movement), opened through `openReport`.
-const TAB_ITEMS = [...NAV_TREE.filter(item => item.id !== "cashbook"), { id: "more", label: "More" }];
+// AI Review follows Reports only when the AI plan is enabled.
+const BASE_TABS = NAV_TREE.filter(item => item.id !== "cashbook");
+const AI_TAB = { id: "ai", label: "AI Review", icon: Sparkles };
+const MORE_TAB = { id: "more", label: "More" };
+const TAB_ITEMS = [...BASE_TABS, MORE_TAB];
+const TAB_ITEMS_WITH_AI = BASE_TABS.flatMap(item => (item.id === "reports" ? [item, AI_TAB] : [item])).concat(MORE_TAB);
 const STATEMENT_SECTIONS = ["trial", "pnl", "balance"];
-const MORE_SECTIONS = ["more", "crm", "manufacturing", "ai"];
+const MORE_SECTIONS = ["more", "crm", "manufacturing"];
 const tabIsActive = (item, section) => (item.id === "more" ? MORE_SECTIONS.includes(section) : navItemIsActive(item, section));
 
-export function AccSectionTabs({ section, reportTab, onNavigate, openReport }) {
-  const current = TAB_ITEMS.find(item => tabIsActive(item, section));
+export function AccSectionTabs({ section, reportTab, onNavigate, openReport, aiEnabled = false }) {
+  const tabs = aiEnabled ? TAB_ITEMS_WITH_AI : TAB_ITEMS;
+  const current = tabs.find(item => tabIsActive(item, section));
   const isReports = current?.id === "reports";
   const children = isReports ? REPORT_TABS : current?.children;
   const childId = isReports ? (STATEMENT_SECTIONS.includes(section) ? section : section === "reports" ? reportTab : section) : section;
@@ -22,9 +28,10 @@ export function AccSectionTabs({ section, reportTab, onNavigate, openReport }) {
   const ref = useActiveTabInView([section, reportTab]);
   return <div className="acc-section-tabs" ref={ref}>
     <TabScroller><nav className="module-section-nav acc-section-nav" aria-label="Accounts sections">
-      {TAB_ITEMS.map(item => {
+      {tabs.map(item => {
         const active = item === current;
-        return <button key={item.id} type="button" className={`module-section-tab${active ? " active" : ""}`} aria-current={active ? (item.children ? "true" : "page") : undefined} onClick={() => onNavigate(item.id)}>{item.label}</button>;
+        const Icon = item.icon;
+        return <button key={item.id} type="button" className={`module-section-tab${Icon ? " acc-ai-tab" : ""}${active ? " active" : ""}`} aria-current={active ? (item.children ? "true" : "page") : undefined} onClick={() => onNavigate(item.id)}>{Icon && <Icon size={14} aria-hidden="true" />}{item.label}</button>;
       })}
     </nav></TabScroller>
     {children && <TabScroller className="is-sub"><nav className="acc-subsection-nav" aria-label={`${current.label} pages`}>
