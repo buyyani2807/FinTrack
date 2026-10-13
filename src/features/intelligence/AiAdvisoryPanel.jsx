@@ -1,4 +1,4 @@
-import { buildAnomalyInsights, buildBankMatchSuggestions, buildCashFlowForecastSeries, buildChitHealthInsights, buildGstHealthInsights, buildInventoryForecast, buildMonthEndReadiness, buildReceivablesPriorities } from "./aiAdvisory.js";
+import { buildAnomalyInsights, buildBankMatchSuggestions, buildCashFlowForecastSeries, buildChitHealthInsights, buildExpenseChangeInsights, buildGstHealthInsights, buildInventoryForecast, buildMonthEndReadiness, buildReceivablesPriorities } from "./aiAdvisory.js";
 
 const money = value => `₹${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 
@@ -6,7 +6,7 @@ const money = value => `₹${Number(value || 0).toLocaleString("en-IN", { maximu
  * Read-only, deterministic advisory summary. It deliberately accepts already
  * loaded Accounts data and never fetches or mutates records.
  */
-export function AiAdvisoryPanel({ metrics = {}, receivables = [], vouchers = [], items = [], stockMovements = [], gstInvoices = [], bankTransactions = [], parties = [], invoices = [], chitScheme = null, chitInstallments = [], chitBids = [] }) {
+export function AiAdvisoryPanel({ metrics = {}, receivables = [], vouchers = [], items = [], stockMovements = [], gstInvoices = [], bankTransactions = [], parties = [], invoices = [], expenseCurrent = [], expensePrevious = [], expenseAverage = [], chitScheme = null, chitInstallments = [], chitBids = [] }) {
   const receivableRows = Array.isArray(receivables) ? receivables : [];
   const currentBalance = Number(metrics.cash || 0) + Number(metrics.bank || 0) + Number(metrics.upi || 0);
   const forecastSeries = buildCashFlowForecastSeries({ currentBalance, horizons: { 7: { inflows: receivableRows.map(row => ({ amount: row.outstanding })) } } });
@@ -18,6 +18,7 @@ export function AiAdvisoryPanel({ metrics = {}, receivables = [], vouchers = [],
   const gstIssues = buildGstHealthInsights({ invoices: gstInvoices });
   const bankSuggestions = buildBankMatchSuggestions({ transactions: bankTransactions, parties, invoices });
   const chitHealth = chitScheme ? buildChitHealthInsights({ scheme: chitScheme, installments: chitInstallments, bids: chitBids }) : null;
+  const expenseInsights = buildExpenseChangeInsights({ current: expenseCurrent, previous: expensePrevious, average: expenseAverage });
 
   return <section className="acc-section ai-advisory-panel" aria-label="AI advisory summary">
     <div className="acc-section-heading"><div><span className="eyebrow">AI ADVISORY</span><h2 className="acc-section-title">What needs your attention</h2></div><span className="small muted">Advisory only · verify before acting</span></div>
@@ -25,6 +26,7 @@ export function AiAdvisoryPanel({ metrics = {}, receivables = [], vouchers = [],
       <article className="card ai-advisory-card"><span className="small muted">Cash-flow outlook</span><strong>{money(currentBalance)}</strong><div className="ai-forecast-horizons">{forecastSeries.map(row => <span key={row.horizonDays}><b>{money(row.projectedBalance)}</b><small>{row.horizonDays} days</small></span>)}</div><p className="small">Advisory projection from saved balances and currently loaded receivables.</p></article>
       <article className="card ai-advisory-card"><span className="small muted">Month-end readiness</span><strong>{readiness.readinessPercent}%</strong><p className="small">{readiness.totalIssues ? `${readiness.totalIssues} item(s) require review.` : "No issues detected from the loaded data."}</p></article>
       <article className="card ai-advisory-card"><span className="small muted">Inventory signal</span><strong>{inventory.reorderRecommended ? "Review reorder" : "No reorder signal"}</strong><p className="small">Based on current stock and saved movement history.</p></article>
+      <article className="card ai-advisory-card"><span className="small muted">Expense changes</span><strong>{expenseInsights.length ? `${expenseInsights.length} to review` : "Insufficient history"}</strong><p className="small">Trends are shown only when comparable expense history is available.</p></article>
     </div>
     {priorities.length > 0 && <div className="ai-advisory-list"><h3>Collection priorities</h3>{priorities.map(row => <div className="ai-advisory-row" key={row.id}><span><strong>{row.customer}</strong><small>{row.reason}</small></span><span><b>{money(row.outstanding)}</b><small>{row.recommendedAction}</small></span></div>)}</div>}
     {anomalies.length > 0 && <div className="ai-advisory-list"><h3>Possible anomalies</h3>{anomalies.map(row => <div className="ai-advisory-row" key={row.id}><span><strong>{row.title}</strong><small>{row.explanation}</small></span><span className="badge warning">Review</span></div>)}</div>}
