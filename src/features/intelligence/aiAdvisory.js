@@ -3,6 +3,15 @@ import { roundMoney } from "../accounts/model/accountingModel.js";
 const n = value => Number(value || 0);
 const pctChange = (current, baseline) => baseline ? roundMoney(((current - baseline) / Math.abs(baseline)) * 100) : null;
 const posted = rows => (rows || []).filter(row => row.status === "posted");
+const monthKey = value => { const date = new Date(value); return Number.isNaN(date.getTime()) ? null : `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`; };
+
+export function buildExpenseHistoryWindows(rows = [], { asOf = new Date() } = {}) {
+  const end = new Date(asOf); const currentKey = monthKey(end); const previous = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() - 1, 1)); const previousKey = monthKey(previous);
+  const averageKeys = Array.from({ length: 3 }, (_, index) => monthKey(new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() - (index + 1), 1))));
+  const current = []; const prior = []; const average = [];
+  for (const row of rows || []) { const key = monthKey(row.date || row.postedOn || row.createdAt); if (key === currentKey) current.push(row); else if (key === previousKey) prior.push(row); if (averageKeys.includes(key)) average.push(row); }
+  return { current, previous: prior, average, historyMonths: averageKeys.filter(key => (rows || []).some(row => monthKey(row.date || row.postedOn || row.createdAt) === key)).length, advisory: true };
+}
 
 export function buildExpenseChangeInsights({ current = [], previous = [], average = [], minimumHistory = 2 } = {}) {
   const sums = rows => rows.reduce((map, row) => { const key = row.category || row.accountName || row.ledgerName || "Uncategorised"; map[key] = (map[key] || 0) + n(row.amount || row.debit); return map; }, {});
