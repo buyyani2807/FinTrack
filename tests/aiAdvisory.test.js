@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildAnomalyInsights, buildBankMatchSuggestions, buildCashFlowForecast, buildChitHealthInsights, buildExpenseChangeInsights, buildGstHealthInsights, buildInventoryForecast, buildMonthEndReadiness, buildReceivablesPriorities } from "../src/features/intelligence/aiAdvisory.js";
+import { buildAnomalyInsights, buildBankMatchSuggestions, buildCashFlowForecast, buildCashFlowForecastSeries, buildChitHealthInsights, buildExpenseChangeInsights, buildGstHealthInsights, buildInventoryForecast, buildMonthEndReadiness, buildReceivablesPriorities } from "../src/features/intelligence/aiAdvisory.js";
 
 test("expense insight compares against available history and flags material changes", () => {
   const rows = buildExpenseChangeInsights({ current: [{ category: "Travel", amount: 138 }], previous: [{ category: "Travel", amount: 100 }] });
@@ -16,6 +16,7 @@ test("cash forecast is explicit about assumptions and confidence", () => {
   assert.equal(result.advisory, undefined);
   assert.equal(result.confidence, "low");
 });
+test("cash forecast series provides stable 7, 30 and 60 day horizons", () => assert.deepEqual(buildCashFlowForecastSeries({ currentBalance: 100, horizons: { 7: { inflows: [{ amount: 20 }] } } }).map(row => row.horizonDays), [7, 30, 60]));
 
 test("receivables priorities rank overdue accounts without changing source data", () => {
   const source = [{ id: "a", partyName: "ABC", outstanding: 180000, daysOverdue: 40 }];

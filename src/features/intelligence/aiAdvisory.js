@@ -22,6 +22,13 @@ export function buildCashFlowForecast({ currentBalance = 0, inflows = [], outflo
   return { currentBalance: roundMoney(currentBalance), expectedInflows: roundMoney(expectedInflows), expectedOutflows: roundMoney(expectedOutflows), projectedBalance, horizonDays, confidence: inflows.length + outflows.length >= 5 ? "medium" : "low", assumptions: ["Uses saved receivable, payable, cashbook and recurring entries only.", "Predictions are not guaranteed and exclude unknown future transactions."], insufficientHistory: inflows.length + outflows.length < 2 };
 }
 
+export function buildCashFlowForecastSeries({ currentBalance = 0, horizons = {} } = {}) {
+  return [7, 30, 60].map(days => {
+    const data = horizons[days] || {};
+    return { horizonDays: days, ...buildCashFlowForecast({ currentBalance, inflows: data.inflows || [], outflows: data.outflows || [], horizonDays: days }) };
+  });
+}
+
 export function buildReceivablesPriorities(rows = []) {
   return rows.filter(row => n(row.outstanding) > 0).map(row => {
     const overdue = n(row.daysOverdue); const score = overdue * 2 + Math.min(100, n(row.outstanding) / 1000);
