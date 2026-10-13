@@ -82,6 +82,8 @@ const PLAN_INCLUDES = [
   "Daily and monthly finance",
   "Chit schemes and live bidding",
   "Collection agents, customer portals, and member portals",
+  "Collection reports, Daily and Monthly P&L, chit statements, and company reports",
+  "AI Review: cash-flow forecast, expense, GST, and month-end checks, bank matching, and stock forecasts",
   "Receipts, and Ask FinTrack when you confirm",
 ];
 
@@ -141,7 +143,7 @@ export function AboutPage() {
     <div className="mkt-split" style={{ marginTop: 36 }}>
       <div>
         <h2>Ask FinTrack shows a suggestion. You confirm it.</h2>
-        <p className="mkt-lead">Ask “Who is unpaid today?” and the answer comes from this workspace. You still record the payment. A bill photo stays a draft until you save it. A bank line stays a suggestion until you accept the match. A forecast inside Ask FinTrack is a sketch, and it is not posted into the books.</p>
+        <p className="mkt-lead">Ask “Who is unpaid today?” and the answer comes from this workspace. You still record the payment. A bill photo stays a draft until you save it. A bank line stays a suggestion until you approve the match. AI Review explains each suggestion and links to the record, and a cash-flow forecast is shown apart from actual figures. Nothing is posted into the books until you act.</p>
         <Link className="mkt-text-link" to={featurePath("ask-the-books")}>Read Ask the books</Link>
       </div>
       <ProductPreview scene="intelligence" />

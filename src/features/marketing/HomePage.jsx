@@ -11,7 +11,7 @@ const VALUES = [
   { icon: "CalendarDays", title: "Finance", text: "Daily collections and monthly repayments on the customer account." },
   { icon: "Gavel", title: "Chit Funds", text: "Schemes, members, auctions, and dividends." },
   { icon: "Receipt", title: "Payments", text: "Receipts, a cash and UPI split, and a WhatsApp draft you send." },
-  { icon: "Sparkles", title: "AI insights", text: "Questions, bill drafts, and highlights from your own records." },
+  { icon: "Sparkles", title: "AI review", text: "Cash-flow outlook, expense and GST checks, month-end readiness, bank matching, and stock forecasts from your own records." },
 ];
 
 const PILLARS = [
@@ -27,7 +27,7 @@ const PILLARS = [
     id: "finance",
     title: "Daily and monthly finance",
     text: "Customer finance and the collections that follow it.",
-    items: ["Customer accounts", "Daily collections and monthly repayments", "Interest and overdue follow-up", "Statements and payment history", "Collection staff and their assignments"],
+    items: ["Customer accounts", "Daily collections and monthly repayments", "Interest and overdue follow-up", "Collection report and Daily and Monthly P&L", "Statements and payment history", "Collection staff and their assignments"],
     to: "daily-finance",
     link: "Explore Finance",
   },
@@ -35,18 +35,25 @@ const PILLARS = [
     id: "chit",
     title: "Chit funds",
     text: "Schemes, members, and the auction you open and close.",
-    items: ["Schemes and members", "Installments and payments", "Live bidding and winning bids", "Dividends and statements", "Scheme reports"],
+    items: ["Schemes and members", "Installments and payments", "Live bidding and winning bids", "Dividends and statements", "Month statement PDF and commission Profit & Loss", "Scheme health: collection rate and members falling behind"],
     to: "auction-chit",
     link: "Explore Chit Funds",
   },
 ];
 
 const AI = [
+  { slug: "forecasting", title: "Cash-flow forecast", text: "Where cash may stand today, in 7, 30, and 60 days, with the invoices and bills that drive it." },
+  { slug: "expense-insights", title: "Expense and supplier prices", text: "Which costs rose against last month, the 3-month average, and last year, and which supplier raised a price." },
+  { slug: "collection-priorities", title: "Who to collect first", text: "Ranked customers with the risk, the reason, and a reminder draft in five languages that you confirm." },
+  { slug: "anomaly-detection", title: "Unusual activity", text: "Possible duplicates, bills above a supplier’s average, backdated entries, and odd collection days." },
+  { slug: "gst-review", title: "GST review", text: "GSTIN errors, missing HSN codes, and tax that does not match the rate, before you prepare the return." },
+  { slug: "month-end-readiness", title: "Month-end readiness", text: "A readiness score and a checklist of what is left before you lock the month." },
+  { slug: "bank-matching", title: "Bank matching", text: "Party, invoice, and ledger suggested for each bank line, with a confidence score. You approve." },
+  { slug: "stock-forecast", title: "Stock forecast", text: "Which items may run out, when, and how much to consider buying." },
+  { slug: "chit-scheme-health", title: "Chit scheme health", text: "Collection rate, overdue members, and members paying later each month." },
   { slug: "ask-the-books", title: "Ask the books", text: "Ask about receivables, profit, GST, collections, or why the cashbook differs from Accounts." },
   { slug: "bill-scanning", title: "Bill draft", text: "A supplier photo becomes a draft. You review it, then save." },
-  { slug: "bookkeeping-suggestions", title: "Bookkeeping suggestions", text: "Suggests an expense ledger or a bank match you accepted before." },
-  { slug: "attention-center", title: "Attention list", text: "Names collections and dues that need a person." },
-  { slug: "anomaly-detection", title: "Unusual days", text: "Flags a daily collection day that looks unlike recent receipts." },
+  { slug: "credit-score", title: "Customer credit score", text: "A score from each customer’s own payment history, with the reasons." },
 ];
 
 const AUDIENCES = [
@@ -64,7 +71,9 @@ const FAQ = [
   ["Does it support chit funds?", "Yes. Schemes, members, live bidding, payments, dividends, and reports."],
   ["Does it support GST?", "It prepares GST summaries from posted vouchers. Filing stays outside FinTrack."],
   ["Can I send WhatsApp messages?", "FinTrack opens WhatsApp with a reminder, receipt, or statement. You send the message."],
-  ["Does it have AI?", "Ask FinTrack answers from this workspace. Bill drafts, bookkeeping suggestions, an attention list, and unusual collection days are there to review. A forecast is only a sketch inside Ask FinTrack."],
+  ["Does it have AI?", "Yes, included in the plan. AI Review in Accounts gives a cash-flow forecast, expense and supplier price changes, collection priorities, unusual activity alerts, GST checks, month-end readiness, bank matching suggestions, and stock forecasts. Chit Fund has scheme health. Ask FinTrack answers questions from this workspace, and bill photos become drafts. Every suggestion shows its reason and waits for you to act."],
+  ["Does the AI change my books?", "No. It does not post vouchers, file GST, lock a period, reverse an entry, create a purchase order, or send a message. A bank match is posted only when you approve it, and a locked period cannot be changed from a suggestion."],
+  ["What reports are included?", "Daily and Monthly Finance have a collection report for any date and a Daily or Monthly P&L for the lending book. Chit Fund has a month statement PDF, a commission Profit & Loss by scheme, and scheme health. Accounts has the Day Book, Trial Balance, Profit & Loss, Balance Sheet, Cash Flow, GST, receivables, payables, and stock reports, with CSV, Excel, and PDF export."],
   ["Can I install it on my phone?", "Yes. FinTrack is the mobile app: add it to the home screen from Safari on iPhone or iPad, or from Chrome on Android. It opens from its own icon. Sign in the same way you do in the browser."],
   ["How is this different from Tally?", "TallyPrime does not have a mobile app for recording the books. On a phone it is for viewing reports. FinTrack installs on the phone, and collections, vouchers, and chit work are done there."],
 ];
@@ -126,8 +135,8 @@ export function HomePage() {
     <section className="mkt-section" id="intelligence">
       <div className="mkt-wrap">
         <div className="mkt-section-head">
-          <h2>AI that reads your records.</h2>
-          <p className="mkt-lead">Ask a question, review a bill draft, or look at who still needs a follow-up. You post the voucher, accept the bank match, and send the message.</p>
+          <h2>AI that reviews the books with you.</h2>
+          <p className="mkt-lead">FinTrack reads your own records and points out what needs a look: cash that may run short, costs that rose, GST details to fix, bank lines to match, and stock to reorder. Every suggestion shows its reason, its confidence, and a link to the record. You post the voucher, approve the match, and send the message.</p>
         </div>
         <div className="mkt-grid three">
           {AI.map(item => <Link key={item.slug} to={featurePath(item.slug)} className="mkt-card mkt-card-link">
@@ -135,7 +144,7 @@ export function HomePage() {
             <p>{item.text}</p>
           </Link>)}
         </div>
-        <p className="mkt-lead">A forward-looking question can sketch an outlook inside Ask FinTrack. That sketch is not posted into the books.</p>
+        <p className="mkt-lead">AI Review is a tab in Accounts, included in the plan. A forecast is shown apart from actual figures and is never posted into the books. Nothing is filed, locked, reversed, or sent by itself. <Link className="mkt-text-link" to={featurePath("ai-review")}>Read about AI Review</Link></p>
       </div>
     </section>
 

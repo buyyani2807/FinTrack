@@ -16,7 +16,7 @@ const LINKS = [
 
 const MENU_MODULES = {
   accounts: ["accounts-overview", "vouchers", "receivables", "inventory", "gst-preparation", "bank-reconciliation"],
-  intelligence: ["ask-the-books", "bill-scanning", "bookkeeping-suggestions", "attention-center", "anomaly-detection"],
+  intelligence: ["ai-review", "forecasting", "month-end-readiness", "bank-matching", "gst-review", "ask-the-books"],
 };
 
 function Brand() {
@@ -126,7 +126,7 @@ export function MarketingLayout() {
         <Link to="/features/daily-finance">Finance</Link>
         <Link to="/features/auction-chit">Chit Funds</Link>
         <Link to="/features/cashbook">Cashbook</Link>
-        <Link to="/features/ask-the-books">AI insights</Link>
+        <Link to="/features/ai-review">AI Review</Link>
       </div>
       <div>
         <h2>Company</h2>

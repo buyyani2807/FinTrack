@@ -23,7 +23,7 @@ export function FeatureDetailPage() {
       <div className="mkt-wrap">
         <p className="mkt-kicker"><FeatureIcon name={feature.icon} size={16} /> {feature.name}</p>
         <h1>{feature.summary}</h1>
-        {feature.advisory && <p className="mkt-note">Advisory. This answer lives in Ask FinTrack. It does not write a forecast into the books.</p>}
+        {feature.advisory && <p className="mkt-note">Advisory. A forecast is an estimate shown with its assumptions. It is not a guarantee, and it is never written into the books.</p>}
       </div>
     </header>
     {feature.sections?.length > 0 && <section className="mkt-section mkt-tint">
