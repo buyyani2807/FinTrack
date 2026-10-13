@@ -1979,6 +1979,7 @@ const openVoucher = () => {
           intelligencePreviousRange={intelligencePreviousRange}
           voucherItemLines={voucherItemLines}
           recentVouchers={recentVouchers}
+          statements={statements}
           ownerBrief={ownerBrief}
           parties={parties}
           activeCompany={activeCompany}

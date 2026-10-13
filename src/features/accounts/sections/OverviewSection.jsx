@@ -52,6 +52,7 @@ export function OverviewSection({
   intelligencePreviousRange,
   voucherItemLines,
   recentVouchers,
+  statements = [],
   ownerBrief,
   orgSettings,
   workspace,
@@ -180,6 +181,7 @@ export function OverviewSection({
       {settings && <AccAskBooks
         accounts={visibleAccounts}
         vouchers={vouchers}
+        bankTransactions={statements.flatMap(statement => (statement.lines || []).filter(line => line.matchStatus !== "matched" && line.matchStatus !== "ignored"))}
         gstInvoices={vouchers.filter(row => row.gstin || row.partyGstin || row.taxTotal != null || row.lineTaxTotal != null || row.isRegistered)}
         parties={parties}
         items={items}
