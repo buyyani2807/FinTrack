@@ -69,6 +69,12 @@ export function createAdvisoryAuditEntry({ feature, sourceIds = [], companyId = 
   return { feature, sourceIds: [...new Set(sourceIds.filter(Boolean))], companyId, generatedAt, confidence, advisory: true, writeAction: "none" };
 }
 
+export function buildAiReviewSummary(groups = {}) {
+  const insights = Object.entries(groups).flatMap(([feature, rows]) => (rows || []).map(row => ({ ...row, feature, advisory: true })));
+  const severity = insights.reduce((result, row) => { const key = row.severity || "info"; result[key] = (result[key] || 0) + 1; return result; }, {});
+  return { total: insights.length, severity, features: Object.fromEntries(Object.entries(groups).map(([feature, rows]) => [feature, (rows || []).length])), insights, writeAction: "none", advisory: true };
+}
+
 export function buildAnomalyInsights({ transactions = [], expenses = [], inventory = [] } = {}) {
   const result = [];
   const amounts = posted(transactions).map(row => n(row.amount || row.total));

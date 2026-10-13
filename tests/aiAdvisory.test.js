@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildAgentScopedReceivablesPriorities, buildAnomalyInsights, buildBankMatchSuggestions, buildCashFlowForecast, buildCashFlowForecastSeries, buildChitHealthInsights, buildExpenseChangeInsights, buildExpenseHistoryWindows, buildGstHealthInsights, buildInventoryForecast, buildMonthEndReadiness, buildReceivablesPriorities, buildSupplierPriceInsights, createAdvisoryAuditEntry } from "../src/features/intelligence/aiAdvisory.js";
+import { buildAgentScopedReceivablesPriorities, buildAiReviewSummary, buildAnomalyInsights, buildBankMatchSuggestions, buildCashFlowForecast, buildCashFlowForecastSeries, buildChitHealthInsights, buildExpenseChangeInsights, buildExpenseHistoryWindows, buildGstHealthInsights, buildInventoryForecast, buildMonthEndReadiness, buildReceivablesPriorities, buildSupplierPriceInsights, createAdvisoryAuditEntry } from "../src/features/intelligence/aiAdvisory.js";
 
 test("expense insight compares against available history and flags material changes", () => {
   const rows = buildExpenseChangeInsights({ current: [{ category: "Travel", amount: 138 }], previous: [{ category: "Travel", amount: 100 }] });
@@ -28,6 +28,7 @@ test("receivables priorities rank overdue accounts without changing source data"
 });
 test("agent receivables are limited to assigned customer ids", () => assert.equal(buildAgentScopedReceivablesPriorities([{ id: "a", outstanding: 10 }, { id: "b", outstanding: 20 }], { role: "agent", assignedIds: ["a"] }).length, 1));
 test("advisory audit metadata is non-writing and deduplicates source ids", () => { const entry = createAdvisoryAuditEntry({ feature: "gst", sourceIds: ["i1", "i1"] }); assert.deepEqual(entry.sourceIds, ["i1"]); assert.equal(entry.writeAction, "none"); });
+test("AI review summary groups advisory signals without writes", () => { const result = buildAiReviewSummary({ gst: [{ severity: "high" }], bank: [{ severity: "low" }] }); assert.equal(result.total, 2); assert.equal(result.severity.high, 1); assert.equal(result.writeAction, "none"); });
 
 test("advisory anomaly detection only flags unusual records", () => assert.equal(buildAnomalyInsights({ transactions: [{ id: "x", status: "posted", amount: 1 }, { id: "y", status: "posted", amount: 1 }, { id: "z", status: "posted", amount: 1000 }] }).length, 1));
 
