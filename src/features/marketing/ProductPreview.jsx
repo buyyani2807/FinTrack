@@ -1,54 +1,126 @@
 const SHOTS = {
-  dashboard: {
-    src: "/product/dashboard.png",
-    alt: "FinTrack dashboard showing today’s collections, cashbook, and daily finance",
-  },
-  finance: {
-    src: "/product/finance.png",
-    alt: "Daily Finance screen with today’s collections",
-  },
-  monthly: {
-    src: "/product/monthly.png",
-    alt: "Monthly Finance screen with an interest account",
-  },
-  chit: {
-    src: "/product/chit.png",
-    alt: "Chit Fund screen with an auction scheme",
-  },
-  accounts: {
-    src: "/product/accounts.png",
-    alt: "Accounts transactions for a sample company, with posted sale, receipt, purchase, and payment vouchers",
-  },
-  intelligence: {
-    src: "/product/intelligence.png",
-    alt: "Ask FinTrack open on the dashboard, with suggested questions and a read-only answer",
-  },
-  portals: {
-    src: "/product/portals.png",
-    alt: "Sign-in screen with Financier sign in, Collection agent, Customer login, and Chit customer",
-  },
-  credit: {
-    src: "/product/credit.png",
-    alt: "FinTrack credit score for a daily account, with the gauge, band, and reasons from recorded payments",
-  },
+  dashboard: "FinTrack dashboard with today’s actions for unpaid daily collections and collection patterns to review",
+  finance: "Daily Finance today’s collections with collected and expected totals and a ranked who-to-collect-first list",
+  "finance-overview": "Daily Finance overview with amount financed, received, outstanding, profit, and AI daily finance insights",
+  "finance-customers": "Daily Finance customer accounts with route order, plan, amount financed, paid, balance, and status",
+  "finance-reports": "Daily P&L report with paid to customers, collected, outstanding, realized profit, and loss",
+  "collect-first": "Who to collect first, ranking customers by risk with the reason, channel, and a Draft reminder button",
+  statement: "Customer statement with finance amount, total paid, and outstanding, ready to download as a PDF or share on WhatsApp",
+  receipt: "Digital payment receipt with receipt number, customer, account, amount paid, remaining balance, and collector",
+  "collection-staff": "Collection Staff list with agent IDs, mobile numbers, what each agent collects for, and assigned customers",
+  whatsapp: "WhatsApp message settings with template variables for payment receipts and reminders",
+  credit: "FinTrack credit score for a daily account, with the gauge, band, and reasons from recorded payments",
+  monthly: "Monthly Finance today’s collections for interest accounts, with who to collect first and a Draft reminder button",
+  "chit-scheme": "Auction chit scheme overview with chit value, latest lift, discount, commission, dividend per member, and scheme health",
+  chit: "Chit Fund schemes page with active schemes, enrolled members, monthly commitments, and AI chit fund insights",
+  "chit-members": "Chit scheme members with ticket number, phone, lift month, and portal status",
+  "chit-payments": "Chit installments for a month with due date, payment date, expected, paid, balance, and paid or overdue status",
+  "chit-live": "Live bidding setup for a chit auction with commission, bid limits, eligible members, and bid history",
+  "chit-dividends": "Chit dividends by month with discount, commission, distributable amount, and dividend per member",
+  "chit-member": "Chit member detail with lift status, total paid, outstanding, FinTrack credit score, and payment history",
+  "chit-reports": "Chit Fund month statement with expected, collected, and pending amounts for a scheme",
+  "chit-health": "Chit scheme health with collection rate, overdue amount, members with increasing delays, and next-month estimate",
+  "accounts-overview": "Accounts overview with a daily brief of who to collect from, bills to pay, stock to reorder, and returns to file",
+  accounts: "Accounts transactions with posted sale, receipt, purchase, and payment vouchers",
+  "accounts-setup": "Accounts setup with company, financial year, books start date, and GST registration",
+  "accounts-ledger": "Ledger for the HDFC Bank account with opening balance, debits, credits, and running balance",
+  "accounts-receivables": "Receivables with outstanding, current, and overdue totals, ageing buckets, and overdue invoices with Remind",
+  "accounts-payables": "Payables with outstanding supplier bills, due dates, and payment advice",
+  cashbook: "Cashbook with cash, bank, and UPI balances, money in and out this month, and the month’s transactions",
+  "accounts-banking": "Bank reconciliation for an HDFC statement with reconciled lines and a suggested match waiting for approval",
+  "accounts-trial": "Trial balance with equal debit and credit totals and each ledger’s balance",
+  "accounts-pnl": "Accounting Profit & Loss with income and expenses by ledger for the financial year",
+  "accounts-balance": "Balance sheet with assets, liabilities, capital, and retained earnings in balance",
+  "accounts-cashflow": "Cash flow report with inflow, outflow, and net cash for the financial year",
+  "accounts-inventory": "Inventory stock summary with quantity, weighted-average cost, value, and a low-stock item",
+  "accounts-gst": "Monthly GST pack for the CA with output tax, eligible ITC, net payable, and an invalid GSTIN flagged",
+  "accounts-audit": "Audit trail listing owner actions with before and after values and the reason",
+  "accounts-locks": "Period locking with locked months and a Reopen action for each",
+  intelligence: "Ask FinTrack open on the dashboard, answering who has not paid today from workspace records",
+  "ai-overview": "What needs your attention on the Accounts overview: cash-flow outlook, bank reconciliation, inventory signal, and collection priorities",
+  "ai-expenses": "AI Review expenses comparing spend with earlier periods and flagging supplier price increases",
+  "ai-cashflow": "AI Review cash flow with verified cash and bank, and a 7, 30, and 60 day forecast labelled as not guaranteed",
+  "ai-collections": "AI Review collections ranking company customers by outstanding, days overdue, risk, and reason",
+  "ai-anomalies": "AI Review anomalies flagging a possible duplicate payment and an unusual supplier bill, with expected and actual figures",
+  "ai-gst": "AI Review GST health flagging an invalid GSTIN and a GST amount that does not match the rate",
+  "ai-month-end": "AI Review month-end readiness score with critical and high checks to resolve before closing",
+  "ai-bank": "AI Review bank reconciliation with open bank lines and the likely party and ledger for each",
+  "ai-inventory": "AI Review inventory forecast with weekly sales, 30-day forecast, and expected stockout dates",
+  "bill-scan": "Bill scanning: a supplier bill photo turned into a draft purchase for review before saving",
+  portals: "Sign-in screen with Financier sign in, Collection agent, Customer login, and Chit customer",
+};
+
+const FEATURE_SCENE = {
+  dashboard: "dashboard",
+  "daily-finance": "finance-overview",
+  "monthly-finance": "monthly",
+  "finance-reports": "finance-reports",
+  customers: "finance-customers",
+  collections: "finance",
+  "collection-staff": "collection-staff",
+  "customer-statements": "statement",
+  "digital-receipts": "receipt",
+  "whatsapp-reminders": "whatsapp",
+  "credit-score": "credit",
+  "auction-chit": "chit-scheme",
+  "fixed-chit": "chit",
+  "chit-members": "chit-members",
+  "chit-payments": "chit-payments",
+  "live-bidding": "chit-live",
+  dividends: "chit-dividends",
+  "chit-statements": "chit-member",
+  "chit-reports": "chit-reports",
+  "accounts-overview": "accounts-overview",
+  "chart-of-accounts": "accounts-setup",
+  ledger: "accounts-ledger",
+  vouchers: "accounts",
+  receivables: "accounts-receivables",
+  payables: "accounts-payables",
+  cashbook: "cashbook",
+  "bank-reconciliation": "accounts-banking",
+  "trial-balance": "accounts-trial",
+  "profit-and-loss": "accounts-pnl",
+  "balance-sheet": "accounts-balance",
+  "cash-flow": "accounts-cashflow",
+  inventory: "accounts-inventory",
+  "gst-preparation": "accounts-gst",
+  "audit-trail": "accounts-audit",
+  "period-locking": "accounts-locks",
+  "ask-fintrack": "intelligence",
+  "ai-review": "ai-collections",
+  forecasting: "ai-cashflow",
+  "expense-insights": "ai-expenses",
+  "gst-review": "ai-gst",
+  "month-end-readiness": "ai-month-end",
+  "bank-matching": "ai-bank",
+  "stock-forecast": "ai-inventory",
+  "chit-scheme-health": "chit-health",
+  "business-insights": "ai-overview",
+  "attention-center": "dashboard",
+  "collection-priorities": "collect-first",
+  "anomaly-detection": "ai-anomalies",
+  "bill-scanning": "bill-scan",
+  "bookkeeping-suggestions": "accounts-banking",
+};
+
+const CATEGORY_FALLBACK = {
+  finance: "finance",
+  chit: "chit-scheme",
+  accounts: "accounts-overview",
+  intelligence: "intelligence",
+  portals: "portals",
 };
 
 export function sceneForFeature(feature) {
   if (!feature) return "dashboard";
-  if (feature.slug === "monthly-finance") return "monthly";
-  if (feature.slug === "credit-score") return "credit";
-  if (feature.category === "chit") return "chit";
-  if (feature.category === "accounts") return "accounts";
-  if (feature.category === "intelligence") return "intelligence";
-  if (feature.category === "portals") return "portals";
-  return "finance";
+  return FEATURE_SCENE[feature.slug] || CATEGORY_FALLBACK[feature.category] || "dashboard";
 }
 
 export function ProductPreview({ scene = "dashboard" }) {
-  const shot = SHOTS[scene] || SHOTS.dashboard;
+  const name = SHOTS[scene] ? scene : "dashboard";
   return (
     <figure className="mkt-shot">
-      <img src={shot.src} alt={shot.alt} />
+      <img src={`/product/${name}.webp`} alt={SHOTS[name]} width="2720" height="1720" loading="lazy" decoding="async" />
     </figure>
   );
 }

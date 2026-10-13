@@ -106,7 +106,7 @@ export function HomePage() {
             <Link className="mkt-btn ghost" to={marketingPaths.contact}>Request a demo</Link>
           </div>
         </div>
-        <ProductPreview scene="accounts" />
+        <ProductPreview scene="accounts-overview" />
       </div>
     </section>
 

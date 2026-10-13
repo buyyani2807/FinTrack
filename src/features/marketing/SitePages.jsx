@@ -131,7 +131,7 @@ export function AboutPage() {
       <div>
         <h2>Financier</h2>
         <p className="mkt-lead">Financier sign in opens the owner workspace: the dashboard, company books, schemes, staff, and settings.</p>
-        <ProductPreview scene="accounts" />
+        <ProductPreview scene="dashboard" />
       </div>
       <div>
         <h2>Collection agent</h2>

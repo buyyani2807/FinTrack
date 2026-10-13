@@ -8,8 +8,8 @@ import { PageClose } from "./SitePages.jsx";
 
 const CATEGORY_SCENE = {
   finance: "finance",
-  chit: "chit",
-  accounts: "accounts",
+  chit: "chit-scheme",
+  accounts: "accounts-overview",
   intelligence: "intelligence",
   portals: "portals",
 };
