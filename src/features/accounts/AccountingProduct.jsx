@@ -162,6 +162,8 @@ import { CoaModal } from "./components/dialogs/CoaModal.jsx";
 import { LogoutConfirmModal } from "./components/dialogs/LogoutConfirmModal.jsx";
 import { AccDocumentsWorkspace } from "./components/AccDocumentsWorkspace.jsx";
 import { AccRoutesWorkspace } from "./components/AccRoutesWorkspace.jsx";
+import { AccAiReviewWorkspace } from "./components/AccAiReviewWorkspace.jsx";
+import { isModuleEnabled } from "../commercial/featurePacks.js";
 import { creditCheck, documentFulfilment, documentLabel, pendingOrderRows } from "./model/tradeDocumentModel.js";
 import { receivablePositions } from "./model/routeCollectionsModel.js";
 import { buildOwnerDailyBrief, reorderPurchaseOrderLines } from "./model/ownerDailyBrief.js";
@@ -330,7 +332,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
         const nextLocks = await loadPeriodLocks(token);
         if (gen !== refreshGen.current) return;
         setLocks(nextLocks);
-      } else if (sectionRef.current === "bank") {
+      } else if (sectionRef.current === "bank" || sectionRef.current === "ai") {
         const nextStatements = await loadBankStatements(token);
         if (gen !== refreshGen.current) return;
         setStatements(nextStatements || []);
@@ -458,7 +460,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
 
   useEffect(() => {
     if (!token || migrationRequired) return undefined;
-    if (section !== "setup" && section !== "bank" && section !== "overview") return undefined;
+    if (section !== "setup" && section !== "bank" && section !== "overview" && section !== "ai") return undefined;
     let cancelled = false;
     const loadExtras = async () => {
       try {
@@ -481,13 +483,13 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
         }
         const [nextStatements, nextLocks, nextCashbook] = await Promise.all([
           loadBankStatements(token).catch(() => []),
-          section === "overview" ? loadPeriodLocks(token).catch(() => null) : Promise.resolve(null),
-          section === "overview" ? loadCashbookEntries(token).catch(() => null) : Promise.resolve(undefined),
+          section === "overview" || section === "ai" ? loadPeriodLocks(token).catch(() => null) : Promise.resolve(null),
+          section === "overview" || section === "ai" ? loadCashbookEntries(token).catch(() => null) : Promise.resolve(undefined),
         ]);
         if (!cancelled) {
           setStatements(nextStatements || []);
           if (nextLocks) setLocks(nextLocks);
-          if (section === "overview") setCashbookEntries(nextCashbook);
+          if (section === "overview" || section === "ai") setCashbookEntries(nextCashbook);
         }
       } catch (err) {
         if (!cancelled) setError(err.message || "Could not load this screen.");
@@ -503,7 +505,8 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     () => standaloneVisibleAccounts(accounts, { integrationEnabled: settings?.integrationEnabled }),
     [accounts, settings],
   );
-  const moreLinks = MORE_LINKS;
+  const aiEnabled = isModuleEnabled(orgSettings, "ai");
+  const moreLinks = useMemo(() => (aiEnabled ? MORE_LINKS : MORE_LINKS.filter(([id]) => id !== "ai")), [aiEnabled]);
   const reportId = section === "pnl" || section === "balance" || section === "trial" ? section : (section === "reports" ? reportTab : "");
   const wantOverview = section === "overview";
   const wantTrial = reportId === "trial";
@@ -795,6 +798,24 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     else go({ section: "reports", reportTab: id });
   };
   const setReportTab = openReport;
+
+  const openAiSource = link => {
+    if (!link?.section) return;
+    if (link.ledgerId) {
+      setLedgerId(link.ledgerId);
+      openSection("ledger");
+      return;
+    }
+    if (link.reportTab) {
+      openReport(link.reportTab);
+      return;
+    }
+    if (link.section === "vouchers" && link.voucherId) {
+      const voucher = vouchers.find(row => row.id === link.voucherId);
+      if (voucher?.voucherNumber) setSearch(voucher.voucherNumber);
+    }
+    openSection(link.section);
+  };
 
   const switchCompany = id => {
     setAccounts([]);
@@ -2147,6 +2168,30 @@ const openVoucher = () => {
         />}
 
         {section === "more" && <MoreSection manufacturingEnabled={manufacturingEnabled} openSection={openSection} moreLinks={moreLinks} />}
+
+        {section === "ai" && <AccAiReviewWorkspace
+          token={token}
+          aiEnabled={aiEnabled}
+          loading={loading}
+          accounts={visibleAccounts}
+          vouchers={vouchers}
+          parties={parties}
+          items={items}
+          stockMovements={stockMovements}
+          voucherItemLines={voucherItemLines}
+          tradeDocuments={tradeDocuments}
+          statements={statements}
+          locks={locks}
+          cashbookEntries={cashbookEntries}
+          collectionRoutes={collectionRoutes}
+          company={activeCompany}
+          role={accountsAccessRole}
+          canWrite={canWrite}
+          matchedLineIds={matchedLineIds}
+          run={run}
+          openSimpleFromBankLine={openSimpleFromBankLine}
+          openSource={openAiSource}
+        />}
 
         {(section === "reports" || section === "pnl" || section === "balance" || section === "trial") && <ReportsSection
           fy={fy}

@@ -8,6 +8,7 @@ import { money, schemeStatusLabel, enrollmentName } from "../model/chitFormat.js
 import { Button, Field, Metric, Spinner } from "../../../components/ui.jsx";
 import { Badge } from "./ChitUi.jsx";
 import { ChitProfitLossReport } from "./ChitProfitLossReport.jsx";
+import { ChitSchemeHealthPanel } from "./ChitSchemeHealthPanel.jsx";
 import { AuctionChitSchemeDetails } from "../auction/AuctionChitSchemeDetails.jsx";
 import { FixedChitSchemeDetails } from "../fixed/FixedChitSchemeDetails.jsx";
 import { PredefinedBidSchemeDetails } from "../predefined/PredefinedBidSchemeDetails.jsx";
@@ -74,7 +75,7 @@ export function ChitSchemeDashboardSection({ kind, rows, busy, open, edit, activ
     {rows.length ? <div className="chit-board-grid">{rows.map(row => <ChitSchemeCard key={row.scheme.id} kind={kind} row={row} open={open} edit={edit} activate={activate} />)}</div> : !busy && <p className="small chit-board-empty">No {meta.title} yet.</p>}
   </section>;
 }
-export function ChitLandingReports({ token, schemes, cycles = [], fixedLifts = [], predefinedSchedule = [], enrollments = [] }) {
+export function ChitLandingReports({ token, schemes, cycles = [], fixedLifts = [], predefinedSchedule = [], enrollments = [], aiEnabled = false, openScheme = null }) {
   const [report, setReport] = useState("statement");
   const [schemeId, setSchemeId] = useState(schemes[0]?.id || "");
   const [monthNumber, setMonthNumber] = useState(1);
@@ -106,7 +107,17 @@ export function ChitLandingReports({ token, schemes, cycles = [], fixedLifts = [
     <div className="tabs spacer">
       <Button className={`tab ${report === "statement" ? "active" : ""}`} onClick={() => setReport("statement")}>Month statement</Button>
       <Button className={`tab ${report === "profit" ? "active" : ""}`} onClick={() => setReport("profit")}>Profit &amp; Loss</Button>
+      {aiEnabled && <Button className={`tab ${report === "health" ? "active" : ""}`} onClick={() => setReport("health")}>Scheme health</Button>}
     </div>
+    {report === "health" && aiEnabled && <div className="card">
+      <strong>Scheme health</strong>
+      <div className="form spacer">
+        <Field label="Scheme"><Select value={schemeId} onChange={event => setSchemeId(event.target.value)}>{schemes.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</Select></Field>
+      </div>
+      {error && <p className="red small">{error}</p>}
+      {busy ? <Spinner label="Loading scheme" /> : <ChitSchemeHealthPanel token={token} scheme={scheme} details={details} openScheme={openScheme} />}
+      {!schemes.length && <p className="small spacer">No Chit Fund schemes yet.</p>}
+    </div>}
     {report === "profit" && <ChitProfitLossReport schemes={schemes} cycles={cycles} fixedLifts={fixedLifts} predefinedSchedule={predefinedSchedule} enrollments={enrollments} />}
     {report === "statement" && <div className="card">
     <strong>Chit Fund reports</strong>

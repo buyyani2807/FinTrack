@@ -18,7 +18,8 @@ import { ChitMemberPage, ChitStandingTag } from "../components/ChitMemberPage.js
 import { ChitAddMemberModal, ChitMembersToolbar } from "../components/ChitMemberManagement.jsx";
 import { ChitBidModal, ChitPaymentModal } from "./AuctionModals.jsx";
 import { ChitLiveBidding } from "./ChitLiveBidding.jsx";
-import { buildChitHealthInsights } from "../../intelligence/aiAdvisory.js";
+import { buildChitSchemeHealth } from "../model/chitSchemeHealth.js";
+import { todayIso } from "../../../lib/dates.js";
 
 function ChitMemberDetails({ token, scheme, enrollment, cycles, bids, installments = [], back, recordPayment, deletePayment, onPortalChange, onDeleted, orgSettings = {}, workspace = {}, onLogReceipt }) {
   const wins = winsForEnrollment(cycles, bids, enrollment.id, scheme.chit_value);
@@ -88,7 +89,8 @@ export function AuctionChitSchemeDetails({ token, scheme, back, tab: routeTab = 
     distributable: current.distributable_amount,
     dividend: current.dividend_per_member,
   } : null;
-  const health = buildChitHealthInsights({ scheme, installments: data.installments.map(row => ({ expected: row.net_amount_due, paid: row.amount_paid, daysOverdue: row.due_date && new Date(row.due_date) < new Date() && Number(row.amount_paid || 0) < Number(row.net_amount_due || 0) ? Math.max(1, Math.floor((Date.now() - new Date(row.due_date).getTime()) / 86400000)) : 0 })), bids: data.cycles.map(row => ({ amount: row.winning_bid_amount })) });
+  const schemeHealth = buildChitSchemeHealth({ scheme, details: data, asOf: todayIso() });
+  const health = { collectionRate: schemeHealth.collectionRate ?? null, delayedMembers: schemeHealth.overdueMembers || 0, insights: schemeHealth.insights || [] };
   const remove = async (id, reason) => {
     try { await deleteChitInstallmentPayment(token, id, reason); await refresh(); }
     catch (err) { setError(err.message || "Could not delete payment."); throw err; }

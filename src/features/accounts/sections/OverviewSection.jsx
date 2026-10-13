@@ -15,6 +15,7 @@ import { AccountsBusinessPulse, AccCompareChart, AccOverviewRecent } from "../co
 import { IndustryTemplateCard } from "../components/AccSetupWidgets.jsx";
 import { AccOwnerDailyBrief } from "../components/AccOwnerDailyBrief.jsx";
 import { AiAdvisoryPanel } from "../../intelligence/AiAdvisoryPanel.jsx";
+import { isModuleEnabled } from "../../commercial/featurePacks.js";
 
 export function OverviewSection({
   settings,
@@ -181,9 +182,6 @@ export function OverviewSection({
       {settings && <AccAskBooks
         accounts={visibleAccounts}
         vouchers={vouchers}
-        bankTransactions={statements.flatMap(statement => (statement.lines || []).filter(line => line.matchStatus !== "matched" && line.matchStatus !== "ignored"))}
-        unreconciled={statements.reduce((sum, statement) => sum + (statement.lines || []).filter(line => line.matchStatus !== "matched" && line.matchStatus !== "ignored").length, 0)}
-        gstInvoices={vouchers.filter(row => row.gstin || row.partyGstin || row.taxTotal != null || row.lineTaxTotal != null || row.isRegistered)}
         parties={parties}
         items={items}
         stockMovements={stockMovements}
@@ -208,15 +206,16 @@ export function OverviewSection({
         onNavigate={openSection}
       />
 
-      <AiAdvisoryPanel
-        metrics={metrics}
-        receivables={overviewArAging}
+      {settings && isModuleEnabled(orgSettings, "ai") && <AiAdvisoryPanel
+        accounts={visibleAccounts}
         vouchers={vouchers}
-        expenseRows={vouchers.filter(row => row.voucherType === "expense" || row.type === "expense")}
+        parties={parties}
         items={items}
         stockMovements={stockMovements}
+        statements={statements}
+        asOf={todayIso()}
         onNavigate={openSection}
-      />
+      />}
 
       <section className="acc-section">
         <h2 className="acc-section-title">Metrics</h2>

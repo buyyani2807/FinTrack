@@ -62,6 +62,13 @@ export function CollectionCopilotCard({ copilot }) {
               <div>
                 <strong>{index + 1}. {row.name}</strong>
                 <span className="small">{row.why.join(" · ")}</span>
+                {row.risk ? (
+                  <span className="small collection-copilot-plan">
+                    <span className={`ai-risk ai-risk-${row.risk}`}>{row.risk} risk</span>
+                    {` ${row.recommendedAction} · ${row.channel} · ${row.assignedAgent}`}
+                    {row.paymentPattern ? ` · ${row.paymentPattern}` : ""}
+                  </span>
+                ) : null}
               </div>
               <span>{money(row.outstanding)}</span>
               <button type="button" className="btn" onClick={() => openDraft(row)}>Draft reminder</button>

@@ -1835,3 +1835,14 @@ html[data-theme="dark"] .ft-trial-banner.is-urgent { background: #3a2222; color:
 .chit-health-card{margin:18px 0;padding:18px 20px;border:1px solid var(--ft-border);border-radius:16px;background:var(--ft-surface);box-shadow:var(--ft-shadow)}.chit-health-card h3{margin:4px 0}.chit-health-card p{margin:5px 0;color:var(--ft-muted)}.chit-health-stats{display:flex;gap:24px;margin:12px 0}.chit-health-stats span{display:flex;flex-direction:column;gap:2px}.chit-health-stats b{font-size:20px;color:var(--ft-text)}.chit-health-stats small{color:var(--ft-muted)}
 .ai-forecast-horizons{display:flex;gap:12px;margin:.5rem 0}.ai-forecast-horizons span{display:flex;flex-direction:column;gap:2px}.ai-forecast-horizons b{font-size:.95rem}.ai-forecast-horizons small{color:var(--ft-muted)}
 .ai-source-link{border:0;background:none;color:var(--ft-primary);font-size:.72rem;padding:0;cursor:pointer;text-align:left}
+.ai-risk{display:inline-block;padding:1px 8px;border-radius:999px;font-size:.72rem;font-weight:600;text-transform:capitalize;background:var(--ft-success-soft);color:var(--ft-success)}.ai-risk-medium{background:var(--ft-warning-soft);color:var(--ft-warning)}.ai-risk-high,.ai-risk-critical{background:var(--ft-danger-soft);color:var(--ft-danger)}
+.collection-copilot-plan{display:block;margin-top:2px}
+.ai-review-body{margin-top:1rem}.ai-review-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.ai-review-actions select{max-width:220px}
+.ai-split{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}.ai-split .card{padding:1rem}.ai-split h3{margin:.35rem 0}.ai-predicted{border-style:dashed}
+.ai-plain-list{margin:.35rem 0;padding-left:1.1rem}.ai-plain-list li{margin:.15rem 0}
+.ai-toolbar{display:flex;flex-wrap:wrap;gap:1rem;align-items:center;margin-bottom:.75rem}
+.ai-alert-list{display:grid;gap:.75rem;margin-top:.75rem}.ai-alert{padding:.9rem 1rem;border-left:3px solid var(--ft-border)}.ai-alert-medium{border-left-color:var(--ft-warning)}.ai-alert-high,.ai-alert-critical{border-left-color:var(--ft-danger)}.ai-alert p{margin:.35rem 0}
+.ai-alert-head{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start}.ai-alert-facts{display:grid;grid-template-columns:max-content 1fr;gap:2px 12px;margin:.5rem 0;font-size:.82rem}.ai-alert-facts dt{color:var(--ft-muted)}.ai-alert-facts dd{margin:0}
+.ai-alert-foot{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:.4rem}
+.chit-scheme-health .ai-alert{margin-top:.75rem}
+@media (max-width:720px){.ai-split{grid-template-columns:1fr}.ai-alert-head{display:block}}

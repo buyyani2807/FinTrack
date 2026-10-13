@@ -71,6 +71,7 @@ export const SECTIONS = [
   { id: "pnl", label: "Profit & Loss", group: "Reports" },
   { id: "balance", label: "Balance Sheet", group: "Reports" },
   { id: "trial", label: "Trial Balance", group: "Reports" },
+  { id: "ai", label: "AI Review", group: "Reports" },
   { id: "setup", label: "Setup", group: "Company" },
   { id: "more", label: "More", group: "Company" },
 ];
@@ -118,13 +119,14 @@ export const MORE_LINKS = [
   ["cashbook", "Cashbook", "Operational cash"],
   ["crm", "Customer Pipeline", "Follow up customer opportunities"],
   ["gst", "GST", "Books preparation only"],
+  ["ai", "AI Review", "Expenses, cash flow, GST, month-end, bank and stock suggestions"],
   ["setup", "Setup", "Company, GST, locks, backup"],
 ];
 
 // ---- URLs (see app/AppRoutes.jsx) ----
 // A view is { section, reportTab, sub }: `sub` is the document type (documents), the inventory tab (inventory) or the
 // collection-routes tab (routes). Trial Balance, P&L and Balance Sheet are their own sections but live under Reports.
-const SECTION_SLUGS = { vouchers: "transactions", bank: "banking", crm: "pipeline" };
+const SECTION_SLUGS = { vouchers: "transactions", bank: "banking", crm: "pipeline", ai: "ai-review" };
 const PARTY_SLUGS = { parties: "ledger", receivables: "receivables", payables: "payables", routes: "routes" };
 const STATEMENTS = ["trial", "pnl", "balance"];
 const fromSlug = (map, slug) => Object.keys(map).find(key => map[key] === slug);

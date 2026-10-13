@@ -1,45 +1,28 @@
-import { buildAgentScopedReceivablesPriorities, buildAnomalyInsights, buildBankMatchSuggestions, buildCashFlowForecastSeries, buildChitHealthInsights, buildExpenseChangeInsights, buildExpenseHistoryWindows, buildGstHealthInsights, buildInventoryForecast, buildMonthEndReadiness, buildSupplierPriceInsights } from "./aiAdvisory.js";
-
-const money = value => `₹${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+import { useMemo } from "react";
+import { buildCashFlowForecast } from "./ai/cashFlowForecast.js";
+import { buildReceivablesCollectionPlan } from "./ai/receivablesAgent.js";
+import { buildBankReconciliationSuggestions } from "./ai/bankReconciliationAgent.js";
+import { buildInventoryForecast } from "./ai/inventoryForecast.js";
+import { formatInr as money } from "./ai/aiCommon.js";
 
 /**
- * Read-only, deterministic advisory summary. It deliberately accepts already
- * loaded Accounts data and never fetches or mutates records.
+ * Read-only summary of the AI Review workspace for the Accounts overview. It uses the same verified engines
+ * as AI Review and never fetches or changes records.
  */
-export function AiAdvisoryPanel({ metrics = {}, receivables = [], payables = [], vouchers = [], items = [], stockMovements = [], gstInvoices = [], bankTransactions = [], parties = [], invoices = [], expenseRows = [], expenseCurrent = [], expensePrevious = [], expenseAverage = [], unreconciled = 0, role = "owner", assignedIds = [], onNavigate, chitScheme = null, chitInstallments = [], chitBids = [] }) {
-  const receivableRows = Array.isArray(receivables) ? receivables : (receivables?.total ? [{ outstanding: receivables.total }] : []);
-  const payableRows = Array.isArray(payables) ? payables : (payables?.total ? [{ outstanding: payables.total }] : []);
-  const currentBalance = Number(metrics.cash || 0) + Number(metrics.bank || 0) + Number(metrics.upi || 0);
-  const forecastSeries = buildCashFlowForecastSeries({ currentBalance, horizons: { 7: { inflows: receivableRows.map(row => ({ amount: row.outstanding })), outflows: payableRows.map(row => ({ amount: row.outstanding })) } } });
-  const priorities = buildAgentScopedReceivablesPriorities(receivableRows, { role, assignedIds }).slice(0, 3);
-  const anomalies = buildAnomalyInsights({ transactions: vouchers, inventory: stockMovements }).slice(0, 3);
-  const lowStock = (items || []).filter(item => Number(item.stock ?? item.quantity ?? 0) <= Number(item.reorderLevel ?? item.reorder_point ?? 0));
-  const usage = stockMovements.filter(row => Number(row.quantity) < 0).reduce((sum, row) => sum + Math.abs(Number(row.quantity || 0)), 0);
-  const inventory = buildInventoryForecast({ stock: lowStock.reduce((sum, item) => sum + Number(item.stock ?? item.quantity ?? 0), 0), averageWeeklySales: usage, leadTimeDays: Number(items?.[0]?.leadTimeDays ?? items?.[0]?.lead_time_days ?? 0) });
-  const readiness = buildMonthEndReadiness({ unreconciled, uncategorized: 0, duplicateCandidates: anomalies.length, negativeInventory: stockMovements.filter(row => Number(row.quantity) < 0).length });
-  const gstIssues = buildGstHealthInsights({ invoices: gstInvoices });
-  const bankSuggestions = buildBankMatchSuggestions({ transactions: bankTransactions, parties, invoices });
-  const chitHealth = chitScheme ? buildChitHealthInsights({ scheme: chitScheme, installments: chitInstallments, bids: chitBids }) : null;
-  const expenseWindows = buildExpenseHistoryWindows(expenseRows, {});
-  const expenseInsights = buildExpenseChangeInsights({ current: expenseRows.length ? expenseWindows.current : expenseCurrent, previous: expenseRows.length ? expenseWindows.previous : expensePrevious, average: expenseRows.length ? expenseWindows.average : expenseAverage });
-  const supplierInsights = buildSupplierPriceInsights(expenseRows);
+export function AiAdvisoryPanel({ accounts = [], vouchers = [], parties = [], items = [], stockMovements = [], statements = [], asOf, onNavigate }) {
+  const forecast = useMemo(() => buildCashFlowForecast({ accounts, vouchers, parties, asOf }), [accounts, vouchers, parties, asOf]);
+  const priorities = useMemo(() => buildReceivablesCollectionPlan({ accounts, vouchers, parties, asOf }).slice(0, 3), [accounts, vouchers, parties, asOf]);
+  const bank = useMemo(() => buildBankReconciliationSuggestions({ statements, accounts, vouchers, parties }), [statements, accounts, vouchers, parties]);
+  const stockouts = useMemo(() => buildInventoryForecast({ items, stockMovements, asOf }).filter(row => row.status === "Likely stockout"), [items, stockMovements, asOf]);
+  const open = id => onNavigate && onNavigate(id);
 
   return <section className="acc-section ai-advisory-panel" aria-label="AI advisory summary">
-    <div className="acc-section-heading"><div><span className="eyebrow">AI ADVISORY</span><h2 className="acc-section-title">What needs your attention</h2></div><span className="small muted">Advisory only · verify before acting</span></div>
+    <div className="acc-section-heading"><div><span className="eyebrow">AI ADVISORY</span><h2 className="acc-section-title">What needs your attention</h2></div><span className="small muted">Advisory only · verify before acting{onNavigate ? <> · <button type="button" className="ai-source-link" onClick={() => open("ai")}>Open AI Review</button></> : null}</span></div>
     <div className="ai-advisory-grid">
-      <article className="card ai-advisory-card"><span className="small muted">Cash-flow outlook</span><strong>{money(currentBalance)}</strong><div className="ai-forecast-horizons">{forecastSeries.map(row => <span key={row.horizonDays}><b>{row.insufficientHistory ? "—" : money(row.projectedBalance)}</b><small>{row.horizonDays} days{row.insufficientHistory ? " · insufficient history" : ""}</small></span>)}</div><p className="small">Advisory projection from saved balances, receivables, and payables only.</p></article>
-      <article className="card ai-advisory-card"><span className="small muted">Month-end readiness</span><strong>{readiness.readinessPercent}%</strong><p className="small">{readiness.totalIssues ? `${readiness.totalIssues} item(s) require review · ${readiness.criticalCount} critical · ${readiness.highCount} high.` : "No signals detected from the loaded data."}</p>{readiness.issues.unreconciled > 0 && onNavigate && <button type="button" className="ai-source-link" onClick={() => onNavigate("banking")}>Open reconciliation</button>}</article>
-      <article className="card ai-advisory-card"><span className="small muted">Inventory signal</span><strong>{inventory.reorderRecommended ? "Review reorder" : "No reorder signal"}</strong><p className="small">Based on current stock and saved movement history.</p>{inventory.reorderRecommended && onNavigate && <button type="button" className="ai-source-link" onClick={() => onNavigate("inventory")}>Open inventory</button>}</article>
-      <article className="card ai-advisory-card"><span className="small muted">Expense changes</span><strong>{expenseInsights.length ? `${expenseInsights.length} to review` : "Insufficient history"}</strong><p className="small">Trends are shown only when comparable expense history is available.</p></article>
-      <article className="card ai-advisory-card"><span className="small muted">GST health</span><strong>{gstIssues.length ? `${gstIssues.length} to review` : "No signals"}</strong><p className="small">Calculated from GST fields present in loaded invoice records. No filing action is performed.</p></article>
+      <article className="card ai-advisory-card"><span className="small muted">Cash-flow outlook · predicted</span><strong>{money(forecast.currentBalance)}</strong><div className="ai-forecast-horizons">{forecast.horizons.filter(row => row.days > 0).map(row => <span key={row.days}><b>{money(row.projectedBalance)}</b><small>{row.label}</small></span>)}</div><p className="small">{forecast.explanation} Not guaranteed.</p></article>
+      <article className="card ai-advisory-card"><span className="small muted">Bank reconciliation</span><strong>{bank.reconciledPct == null ? "No statements" : `${bank.reconciledPct}% reconciled`}</strong><p className="small">{bank.totalLines ? `${bank.suggestions.length} open line(s); ${bank.suggestions.filter(row => row.actionKind === "match" || row.actionKind === "create_entry").length} with a suggestion.` : "Import a bank statement to get suggestions."}</p>{bank.suggestions.length > 0 && onNavigate && <button type="button" className="ai-source-link" onClick={() => open("ai")}>Review suggestions</button>}</article>
+      <article className="card ai-advisory-card"><span className="small muted">Inventory signal</span><strong>{stockouts.length ? `${stockouts.length} likely stockout(s)` : "No stockout expected"}</strong><p className="small">{stockouts.length ? stockouts.slice(0, 2).map(row => `${row.itemName}: ${row.stockoutDate || "soon"}`).join(" · ") : "Based on weekly sales and current stock."}</p>{stockouts.length > 0 && onNavigate && <button type="button" className="ai-source-link" onClick={() => open("inventory")}>Open inventory</button>}</article>
     </div>
-    {priorities.length > 0 && <div className="ai-advisory-list"><h3>Collection priorities</h3>{priorities.map(row => <div className="ai-advisory-row" key={row.id}><span><strong>{row.customer}</strong><small>{row.reason}</small></span><span><b>{money(row.outstanding)}</b><small>{row.recommendedAction}</small>{onNavigate && <button type="button" className="ai-source-link" onClick={() => onNavigate("receivables")}>Open receivables</button>}</span></div>)}</div>}
-    {anomalies.length > 0 && <div className="ai-advisory-list"><h3>Possible anomalies</h3>{anomalies.map(row => <div className="ai-advisory-row" key={row.id}><span><strong>{row.title}</strong><small>{row.explanation}</small></span><span className="badge warning">Review</span></div>)}</div>}
-    {(gstIssues.length > 0 || bankSuggestions.length > 0 || chitHealth) && <div className="ai-advisory-list"><h3>Additional review signals</h3>
-      {gstIssues.slice(0, 3).map(row => <div className="ai-advisory-row" key={row.id}><span><strong>{row.title}</strong><small>{row.explanation}</small>{onNavigate && <button type="button" className="ai-source-link" onClick={() => onNavigate("gst")}>Open GST review</button>}</span><span className="badge warning">GST review</span></div>)}
-      {bankSuggestions.filter(row => row.confidence !== "low").slice(0, 3).map(row => <div className="ai-advisory-row" key={`bank-${row.id}`}><span><strong>Bank match suggestion</strong><small>{row.explanation}</small>{onNavigate && <button type="button" className="ai-source-link" onClick={() => onNavigate("banking")}>Open banking</button>}</span><span className="badge">{row.confidence}</span></div>)}
-      {chitHealth?.insights.slice(0, 3).map(row => <div className="ai-advisory-row" key={row.id}><span><strong>{row.title}</strong><small>{row.explanation}</small></span><span className="badge warning">Chit review</span></div>)}
-    </div>}
-    {supplierInsights.length > 0 && <div className="ai-advisory-list"><h3>Supplier price changes</h3>{supplierInsights.slice(0, 3).map(row => <div className="ai-advisory-row" key={row.id}><span><strong>{row.supplierName} · {row.changePercent > 0 ? "increased" : "decreased"} {Math.abs(row.changePercent)}%</strong><small>{row.explanation}</small></span><span className="badge warning">Review</span></div>)}</div>}
+    {priorities.length > 0 && <div className="ai-advisory-list"><h3>Collection priorities</h3>{priorities.map(row => <div className="ai-advisory-row" key={row.id}><span><strong>{row.customer}</strong><small>{row.reason}</small></span><span><b>{money(row.outstanding)}</b><small>{row.recommendedAction}</small>{onNavigate && <button type="button" className="ai-source-link" onClick={() => open("receivables")}>Open receivables</button>}</span></div>)}</div>}
   </section>;
 }

@@ -1,0 +1,276 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { TabScroller } from "../../../components/TabScroller.jsx";
+import { todayIso } from "../../../lib/dates.js";
+import { dateIsLocked } from "../model/accountingModel.js";
+import { matchBankLine as saveBankMatch } from "../data/accountingRepository.js";
+import { buildExpenseComparisons, buildSupplierPriceInsights, buildSupplierSpendInsights } from "../../intelligence/ai/expenseIntelligence.js";
+import { buildCashFlowForecast } from "../../intelligence/ai/cashFlowForecast.js";
+import { buildReceivablesCollectionPlan } from "../../intelligence/ai/receivablesAgent.js";
+import { buildAnomalyAlerts } from "../../intelligence/ai/anomalyDetection.js";
+import { GST_DISCLAIMER, buildGstWarnings } from "../../intelligence/ai/gstAssistant.js";
+import { buildMonthEndReadiness, defaultCloseMonth, monthRange } from "../../intelligence/ai/monthEndReadiness.js";
+import { buildBankReconciliationSuggestions } from "../../intelligence/ai/bankReconciliationAgent.js";
+import { buildInventoryForecast } from "../../intelligence/ai/inventoryForecast.js";
+import { daysBetween, shiftMonthKey } from "../../intelligence/ai/aiCommon.js";
+import { latestDecisions } from "../../intelligence/ai/aiReviewAudit.js";
+import { AI_AUDIT_MIGRATION_MESSAGE, loadAiReviewActions, recordAiInsightRun, recordAiReviewAction } from "../../intelligence/ai/aiReviewRepository.js";
+import { AccEmpty } from "./AccUi.jsx";
+import { AlertsPanel, BankPanel, CashFlowPanel, CollectionsPanel, ExpensesPanel, InventoryPanel, MonthEndPanel } from "./AccAiReviewPanels.jsx";
+
+const TABS = [
+  { id: "expenses", label: "Expenses", feature: "expenses" },
+  { id: "cashflow", label: "Cash flow", feature: "cashflow" },
+  { id: "collections", label: "Collections", feature: "receivables" },
+  { id: "anomalies", label: "Anomalies", feature: "anomalies" },
+  { id: "gst", label: "GST health", feature: "gst" },
+  { id: "month_end", label: "Month-end", feature: "month_end" },
+  { id: "bank", label: "Bank reconciliation", feature: "bank_reconciliation" },
+  { id: "inventory", label: "Inventory", feature: "inventory" },
+];
+
+/**
+ * AI Review: advisory insights computed from this company's verified books. Nothing here posts, matches,
+ * settles, or changes records; approvals hand off to the existing, permission-checked Accounts flows.
+ */
+export function AccAiReviewWorkspace({
+  token,
+  aiEnabled,
+  loading,
+  accounts,
+  vouchers,
+  parties,
+  items,
+  stockMovements,
+  voucherItemLines,
+  tradeDocuments,
+  statements,
+  locks,
+  cashbookEntries,
+  collectionRoutes,
+  company,
+  role,
+  canWrite,
+  matchedLineIds,
+  run,
+  openSimpleFromBankLine,
+  openSource,
+}) {
+  const [tab, setTab] = useState("expenses");
+  const [decisionRows, setDecisionRows] = useState([]);
+  const [auditAvailable, setAuditAvailable] = useState(true);
+  const [auditError, setAuditError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [month, setMonth] = useState(() => defaultCloseMonth(todayIso()));
+  const logged = useRef(new Set());
+  const asOf = todayIso();
+  const companyId = company?.id || "";
+
+  useEffect(() => {
+    if (!token || !aiEnabled) return undefined;
+    let cancelled = false;
+    loadAiReviewActions(token, { module: "accounts" })
+      .then(rows => {
+        if (cancelled) return;
+        setAuditAvailable(rows !== null);
+        setDecisionRows(rows || []);
+      })
+      .catch(err => { if (!cancelled) setAuditError(err.message || "Could not load review decisions."); });
+    return () => { cancelled = true; };
+  }, [token, aiEnabled, companyId]);
+
+  const decisions = useMemo(() => latestDecisions(decisionRows), [decisionRows]);
+  const needs = id => tab === id;
+  const needsAnomalies = needs("anomalies");
+  const needsGst = needs("gst");
+
+  const expenses = useMemo(() => (needs("expenses") ? {
+    comparisons: buildExpenseComparisons({ accounts, vouchers, asOf }),
+    supplierPrices: buildSupplierPriceInsights({ vouchers, voucherItemLines, parties, asOf }),
+    supplierSpend: buildSupplierSpendInsights({ vouchers, parties, asOf }),
+  } : null), [tab, accounts, vouchers, voucherItemLines, parties, asOf]); // eslint-disable-line react-hooks/exhaustive-deps
+  const forecast = useMemo(() => (needs("cashflow") ? buildCashFlowForecast({ accounts, vouchers, parties, asOf }) : null), [tab, accounts, vouchers, parties, asOf]); // eslint-disable-line react-hooks/exhaustive-deps
+  const collections = useMemo(() => (needs("collections") ? buildReceivablesCollectionPlan({ accounts, vouchers, parties, asOf, collectionRoutes, role }) : null), [tab, accounts, vouchers, parties, asOf, collectionRoutes, role]); // eslint-disable-line react-hooks/exhaustive-deps
+  const anomalies = useMemo(() => (needsAnomalies ? buildAnomalyAlerts({ accounts, vouchers, parties, stockMovements, items, statements, cashbookEntries: cashbookEntries || [], asOf }) : null), [needsAnomalies, accounts, vouchers, parties, stockMovements, items, statements, cashbookEntries, asOf]);
+  const gstReview = useMemo(() => (needsGst ? buildGstWarnings({ vouchers, parties, company: company || {}, voucherItemLines, asOf }) : null), [needsGst, vouchers, parties, company, voucherItemLines, asOf]);
+  const gstWarnings = gstReview?.warnings || null;
+  const resolvedKeys = useMemo(() => new Set(decisionRows.filter(row => row.feature === "month_end").map(row => row.insightKey)), [decisionRows]);
+  const readiness = useMemo(() => {
+    if (!needs("month_end")) return null;
+    const range = monthRange(month);
+    const monthEnd = range.to < asOf ? range.to : asOf;
+    return buildMonthEndReadiness({
+      month, asOf, accounts, vouchers, parties, items, stockMovements, locks, statements, resolvedKeys,
+      anomalies: buildAnomalyAlerts({ accounts, vouchers, parties, stockMovements, items, asOf: monthEnd, lookbackDays: Math.max(1, daysBetween(range.from, monthEnd) || 0) }),
+      gstWarnings: buildGstWarnings({ vouchers, parties, company: company || {}, voucherItemLines, from: range.from, to: range.to }).warnings,
+    });
+  }, [tab, month, asOf, accounts, vouchers, parties, items, stockMovements, locks, statements, resolvedKeys, company, voucherItemLines]); // eslint-disable-line react-hooks/exhaustive-deps
+  const bank = useMemo(() => (needs("bank") ? buildBankReconciliationSuggestions({ statements, accounts, vouchers, parties, matchedLineIds }) : null), [tab, statements, accounts, vouchers, parties, matchedLineIds]); // eslint-disable-line react-hooks/exhaustive-deps
+  const inventory = useMemo(() => (needs("inventory") ? buildInventoryForecast({ items, stockMovements, tradeDocuments: tradeDocuments || [], asOf }) : null), [tab, items, stockMovements, tradeDocuments, asOf]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const current = TABS.find(item => item.id === tab);
+  const tabInsights = {
+    expenses: expenses ? [...expenses.comparisons.insights, ...expenses.supplierPrices.insights, ...expenses.supplierSpend] : null,
+    cashflow: forecast ? [forecast] : null,
+    collections,
+    anomalies,
+    gst: gstWarnings,
+    month_end: readiness ? readiness.checks.filter(check => check.count > 0) : null,
+    bank: bank?.suggestions || null,
+    inventory,
+  }[tab];
+
+  useEffect(() => {
+    if (!token || !aiEnabled || loading || !tabInsights) return;
+    const key = `${companyId}:${current.feature}:${asOf}`;
+    if (logged.current.has(key)) return;
+    logged.current.add(key);
+    recordAiInsightRun(token, { module: "accounts", feature: current.feature, insights: tabInsights });
+  }, [token, aiEnabled, loading, tabInsights, companyId, current, asOf]);
+
+  const months = useMemo(() => Array.from({ length: 12 }, (_, index) => shiftMonthKey(asOf.slice(0, 7), -index)), [asOf]);
+
+  const saveDecision = async (input) => {
+    try {
+      const result = await recordAiReviewAction(token, { module: "accounts", ...input });
+      setDecisionRows(rows => [...rows, { id: result?.id || `${input.feature}:${input.insightKey}`, feature: input.feature, insightKey: input.insightKey, action: input.action, createdAt: new Date().toISOString() }]);
+      setAuditError("");
+      return true;
+    } catch (err) {
+      if (err.message === AI_AUDIT_MIGRATION_MESSAGE) setAuditAvailable(false);
+      setAuditError(err.message || "Could not save the review decision.");
+      return false;
+    }
+  };
+
+  const decideAlert = async (feature, alert, action) => {
+    if (!canWrite || busy) return;
+    setBusy(true);
+    try {
+      await saveDecision({
+        feature,
+        insightKey: alert.id,
+        action,
+        sourceType: alert.source?.section || null,
+        sourceId: alert.source?.voucherId || alert.source?.partyId || alert.source?.itemId || alert.source?.lineId || null,
+        suggestion: { pattern: alert.pattern || alert.check || null },
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resolveCheck = async check => {
+    if (!canWrite || busy) return;
+    setBusy(true);
+    try {
+      await saveDecision({ feature: "month_end", insightKey: `${month}:${check.key}`, action: "reviewed", sourceType: "month_end", sourceId: month, suggestion: { check: check.key } });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const bankLocked = row => dateIsLocked(row.date, locks || []);
+
+  const approveBank = async (row, voucherLineId, edited) => {
+    if (!canWrite || busy) return;
+    if (bankLocked(row)) {
+      setAuditError(`${row.date} is in a locked period. Unlock it in Setup before reconciling this line.`);
+      return;
+    }
+    const decision = {
+      feature: "bank_reconciliation",
+      insightKey: row.id,
+      sourceType: "bank_statement_line",
+      sourceId: row.lineId,
+      recordDate: row.date,
+      suggestion: { actionKind: row.actionKind, voucherLineId: voucherLineId || row.voucherLineId || null, expenseCode: row.entrySuggestion?.expenseCode || null, kind: row.entrySuggestion?.kind || null, confidencePct: row.confidencePct },
+    };
+    if (voucherLineId) {
+      setBusy(true);
+      try {
+        await run(async () => {
+          await saveBankMatch(token, row.lineId, voucherLineId, edited ? "Matched after editing AI suggestion" : "Approved AI suggestion");
+          await saveDecision({ ...decision, action: edited ? "edited" : "approved" });
+        }, "Bank line matched.");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    // Opening the prefilled form is a review step; the entry is only posted (and the line matched) when the form is saved.
+    await saveDecision({ ...decision, action: edited ? "edited" : "reviewed", note: "Prefilled entry opened from AI suggestion." });
+    openSimpleFromBankLine({ ...row.rawLine, entrySuggestion: row.entrySuggestion }, row.statement);
+  };
+
+  const rejectBank = async row => {
+    if (!canWrite || busy) return;
+    setBusy(true);
+    try {
+      await saveDecision({ feature: "bank_reconciliation", insightKey: row.id, action: "rejected", sourceType: "bank_statement_line", sourceId: row.lineId, suggestion: { actionKind: row.actionKind, confidencePct: row.confidencePct } });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const reminderOpened = row => {
+    saveDecision({ feature: "receivables", insightKey: row.id, action: "reviewed", sourceType: "party", sourceId: row.partyId, suggestion: { status: "reminder_opened" } });
+  };
+
+  const openLink = link => {
+    if (link?.section === "ai") {
+      if (link.tab) setTab(link.tab);
+      return;
+    }
+    openSource(link);
+  };
+
+  if (!aiEnabled) {
+    return <div className="acc-panel"><AccEmpty title="AI Review is unavailable" copy="AI insights are turned off for this organisation. Your books, reports, and reconciliation work as usual." /></div>;
+  }
+
+  const panelLoading = loading && !accounts?.length;
+  return (
+    <div className="acc-panel ai-review">
+      <p className="copy">Advisory insights from this company's saved books. Verified figures come from posted records; predictions are labelled and are not guaranteed. Nothing on this page posts, matches, or changes records unless you approve it.</p>
+      {!auditAvailable && <div className="notice">{AI_AUDIT_MIGRATION_MESSAGE} Insights still work; decisions are not saved until then.</div>}
+      {auditError && auditAvailable && <div className="notice">{auditError}</div>}
+      <TabScroller className="is-sub"><nav className="accounts-section-nav" aria-label="AI Review pages">
+        {TABS.map(item => (
+          <button key={item.id} type="button" className={`accounts-section-tab ${tab === item.id ? "active" : ""}`} onClick={() => setTab(item.id)}>{item.label}</button>
+        ))}
+      </nav></TabScroller>
+      {panelLoading ? <AccEmpty title="Loading" copy="Reading this company's books…" /> : <section className="ai-review-body" aria-live="polite">
+        {tab === "expenses" && expenses && <ExpensesPanel data={expenses} openSource={openLink} />}
+        {tab === "cashflow" && forecast && <CashFlowPanel forecast={forecast} openSource={openLink} />}
+        {tab === "collections" && collections && <CollectionsPanel rows={collections} openSource={openLink} businessName={company?.name} asOf={asOf} canWrite={canWrite} onReminderOpened={reminderOpened} />}
+        {tab === "anomalies" && anomalies && <AlertsPanel
+          alerts={anomalies}
+          decisions={decisions}
+          feature="anomalies"
+          canWrite={canWrite && auditAvailable}
+          busy={busy}
+          onDecide={decideAlert}
+          openSource={openLink}
+          emptyTitle="No unusual activity"
+          emptyCopy="Nothing in the last 90 days stands out from this company's own history."
+          header={<p className="small muted">Possible issues found by comparing each record with similar records in this company. These are prompts to review, not conclusions. Nothing is reversed, deleted, or blocked automatically.</p>}
+        />}
+        {tab === "gst" && gstWarnings && <AlertsPanel
+          alerts={gstWarnings}
+          decisions={decisions}
+          feature="gst"
+          canWrite={canWrite && auditAvailable}
+          busy={busy}
+          onDecide={decideAlert}
+          openSource={openLink}
+          emptyTitle="No GST warnings"
+          emptyCopy={`${gstReview.documentsChecked} GST document(s) from ${gstReview.period.from} to ${gstReview.period.to} passed these checks.`}
+          header={<p className="small muted">{GST_DISCLAIMER} Checked {gstReview.documentsChecked} document(s) from {gstReview.period.from} to {gstReview.period.to}.</p>}
+        />}
+        {tab === "month_end" && readiness && <MonthEndPanel readiness={readiness} months={months} month={month} setMonth={setMonth} canWrite={canWrite && auditAvailable} busy={busy} onResolve={resolveCheck} openSource={openLink} />}
+        {tab === "bank" && bank && <BankPanel result={bank} decisions={decisions} canWrite={canWrite} busy={busy} isLocked={bankLocked} onApprove={approveBank} onReject={rejectBank} openSource={openLink} />}
+        {tab === "inventory" && inventory && <InventoryPanel rows={inventory} openSource={openLink} />}
+      </section>}
+    </div>
+  );
+}

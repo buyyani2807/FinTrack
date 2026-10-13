@@ -10,7 +10,7 @@ import { NAV_TREE, REPORT_TABS, navItemIsActive } from "../accountsNavigation.js
 // Reports lists every report (Day Book, Trial Balance … Stock Movement), opened through `openReport`.
 const TAB_ITEMS = [...NAV_TREE.filter(item => item.id !== "cashbook"), { id: "more", label: "More" }];
 const STATEMENT_SECTIONS = ["trial", "pnl", "balance"];
-const MORE_SECTIONS = ["more", "crm", "manufacturing"];
+const MORE_SECTIONS = ["more", "crm", "manufacturing", "ai"];
 const tabIsActive = (item, section) => (item.id === "more" ? MORE_SECTIONS.includes(section) : navItemIsActive(item, section));
 
 export function AccSectionTabs({ section, reportTab, onNavigate, openReport }) {

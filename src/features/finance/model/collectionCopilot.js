@@ -1,5 +1,6 @@
 import { formatInr } from "../../../lib/formatMoney.js";
 import { hasWhatsAppPhone } from "../../receipts/model/phoneNormalize.js";
+import { enrichCollectionPriority } from "./collectionPriority.js";
 import { buildDailyFinanceFacts, buildMonthlyFinanceFacts } from "./financeIntelligence.js";
 
 const money = formatInr;
@@ -42,13 +43,13 @@ export function reminderSendAllowed({ confirmed = false, phone = "", message = "
   return Boolean(confirmed && String(message || "").trim() && hasWhatsAppPhone(phone));
 }
 
-function withPhone(rows, loans) {
+function withPhone(rows, loans, options) {
   const byId = new Map((loans || []).map(loan => [loan.id, loan]));
-  return (rows || []).map(row => ({
+  return (rows || []).map(row => enrichCollectionPriority({
     ...row,
     phone: byId.get(row.id)?.phone || "",
     why: row.why || [],
-  }));
+  }, byId.get(row.id), options));
 }
 
 export function buildCollectionCopilot(loans = [], { kind = "daily", asOf, isOwner = true, businessName = "" } = {}) {
@@ -56,7 +57,7 @@ export function buildCollectionCopilot(loans = [], { kind = "daily", asOf, isOwn
   const facts = monthly
     ? buildMonthlyFinanceFacts(loans, { asOf, isOwner })
     : buildDailyFinanceFacts(loans, { asOf, isOwner });
-  const ranked = withPhone(facts.priorities, loans);
+  const ranked = withPhone(facts.priorities, loans, { asOf, kind, isOwner });
   const actions = [
     ranked.length ? `Visit ${ranked[0].name} first.` : null,
     monthly && facts.missedRepeatCount ? `${facts.missedRepeatCount} customer${facts.missedRepeatCount === 1 ? " has" : "s have"} missed more than one month.` : null,
