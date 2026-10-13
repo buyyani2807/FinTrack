@@ -6,7 +6,7 @@ const money = value => `₹${Number(value || 0).toLocaleString("en-IN", { maximu
  * Read-only, deterministic advisory summary. It deliberately accepts already
  * loaded Accounts data and never fetches or mutates records.
  */
-export function AiAdvisoryPanel({ metrics = {}, receivables = [], payables = [], vouchers = [], items = [], stockMovements = [], gstInvoices = [], bankTransactions = [], parties = [], invoices = [], expenseRows = [], expenseCurrent = [], expensePrevious = [], expenseAverage = [], role = "owner", assignedIds = [], onNavigate, chitScheme = null, chitInstallments = [], chitBids = [] }) {
+export function AiAdvisoryPanel({ metrics = {}, receivables = [], payables = [], vouchers = [], items = [], stockMovements = [], gstInvoices = [], bankTransactions = [], parties = [], invoices = [], expenseRows = [], expenseCurrent = [], expensePrevious = [], expenseAverage = [], unreconciled = 0, role = "owner", assignedIds = [], onNavigate, chitScheme = null, chitInstallments = [], chitBids = [] }) {
   const receivableRows = Array.isArray(receivables) ? receivables : (receivables?.total ? [{ outstanding: receivables.total }] : []);
   const payableRows = Array.isArray(payables) ? payables : (payables?.total ? [{ outstanding: payables.total }] : []);
   const currentBalance = Number(metrics.cash || 0) + Number(metrics.bank || 0) + Number(metrics.upi || 0);
@@ -16,7 +16,7 @@ export function AiAdvisoryPanel({ metrics = {}, receivables = [], payables = [],
   const lowStock = (items || []).filter(item => Number(item.stock ?? item.quantity ?? 0) <= Number(item.reorderLevel ?? item.reorder_point ?? 0));
   const usage = stockMovements.filter(row => Number(row.quantity) < 0).reduce((sum, row) => sum + Math.abs(Number(row.quantity || 0)), 0);
   const inventory = buildInventoryForecast({ stock: lowStock.reduce((sum, item) => sum + Number(item.stock ?? item.quantity ?? 0), 0), averageWeeklySales: usage, leadTimeDays: Number(items?.[0]?.leadTimeDays ?? items?.[0]?.lead_time_days ?? 0) });
-  const readiness = buildMonthEndReadiness({ unreconciled: 0, uncategorized: 0, duplicateCandidates: anomalies.length, negativeInventory: stockMovements.filter(row => Number(row.quantity) < 0).length });
+  const readiness = buildMonthEndReadiness({ unreconciled, uncategorized: 0, duplicateCandidates: anomalies.length, negativeInventory: stockMovements.filter(row => Number(row.quantity) < 0).length });
   const gstIssues = buildGstHealthInsights({ invoices: gstInvoices });
   const bankSuggestions = buildBankMatchSuggestions({ transactions: bankTransactions, parties, invoices });
   const chitHealth = chitScheme ? buildChitHealthInsights({ scheme: chitScheme, installments: chitInstallments, bids: chitBids }) : null;
