@@ -35,6 +35,7 @@ import { Button, Spinner } from "../../components/ui.jsx";
 import { ChitActivateSchemeModal } from "./components/ChitAdminControls.jsx";
 import { ChitSchemeForm, ChitTypeChooser, FixedChitSchemeForm, PredefinedBidSchemeForm } from "./components/ChitSchemeForms.jsx";
 import { ChitSchemeDetails, ChitSchemeDashboardSection, ChitLandingReports } from "./components/ChitSchemeDashboard.jsx";
+import { buildChitHealthInsights } from "../intelligence/aiAdvisory.js";
 
 // Every view is a URL (see app/AppRoutes.jsx): the landing tab, an open scheme with its tab, and a member's page.
 const LANDING_TABS = [["schemes", "Schemes"], ["members", "Members"], ["bids", "Bids"], ["payments", "Payments"], ["reports", "Reports"]];
@@ -61,6 +62,7 @@ export function ChitFundPage({ token, tab: routeTab = "schemes", schemeId = null
   const landing = LANDING_TABS.some(([id]) => id === routeTab) ? routeTab : "schemes";
   const setLanding = next => onNavigate?.({ tab: next });
   const selected = schemeId ? schemes.find(scheme => scheme.id === schemeId) || null : null;
+  const selectedHealth = selected ? buildChitHealthInsights({ scheme: selected, bids: cycles.filter(cycle => cycle.scheme_id === selected.id || cycle.schemeId === selected.id) }) : null;
   const setSelected = scheme => onNavigate?.(scheme ? { schemeId: scheme.id } : { tab: landing });
   const applyDashboard = payload => {
     setSchemes(payload.schemes);
@@ -238,7 +240,7 @@ export function ChitFundPage({ token, tab: routeTab = "schemes", schemeId = null
   };
   // An open scheme waits for the scheme list; an unknown id falls back to the landing page.
   if (schemeId && !selected && busy) return <main className="shell chit-fund-page"><Spinner label="Loading scheme" /></main>;
-  if (selected) return <><ChitSchemeDetails key={selected.id} token={token} scheme={selected} tab={schemeTab} onTabChange={next => onNavigate?.({ schemeId: selected.id, schemeTab: next })} memberId={memberId} onMemberChange={id => onNavigate?.({ schemeId: selected.id, schemeTab: "members", memberId: id })} back={() => { onNavigate?.({ tab: "schemes" }); setReminderRefresh(current => current + 1); }} onSchemeDeleted={schemeDeleted} orgSettings={orgSettings} workspace={workspace} onReceipt={setReceiptSuccess} onLogReceipt={onLogReceipt} />{receiptSuccess && <ReceiptSuccessModal receipt={receiptSuccess} settings={orgSettings} token={token} onLogAction={onLogReceipt} close={() => setReceiptSuccess(null)} />}</>;
+  if (selected) return <><ChitSchemeDetails key={selected.id} token={token} scheme={selected} tab={schemeTab} onTabChange={next => onNavigate?.({ schemeId: selected.id, schemeTab: next })} memberId={memberId} onMemberChange={id => onNavigate?.({ schemeId: selected.id, schemeTab: "members", memberId: id })} back={() => { onNavigate?.({ tab: "schemes" }); setReminderRefresh(current => current + 1); }} onSchemeDeleted={schemeDeleted} orgSettings={orgSettings} workspace={workspace} onReceipt={setReceiptSuccess} onLogReceipt={onLogReceipt} /><section className="chit-health-card" aria-label="AI scheme health"><div><span className="eyebrow">AI ADVISORY</span><h3>Scheme health</h3><p className="small">Verified scheme signals only. Review before acting.</p></div><div className="chit-health-stats"><span><b>{selectedHealth.collectionRate == null ? "—" : `${selectedHealth.collectionRate}%`}</b><small>Collection rate</small></span><span><b>{selectedHealth.delayedMembers}</b><small>Delayed members</small></span><span><b>{selectedHealth.insights.length}</b><small>Review signals</small></span></div>{selectedHealth.insights.map(row => <p className="small" key={row.id}><strong>{row.title}:</strong> {row.explanation}</p>)}</section>{receiptSuccess && <ReceiptSuccessModal receipt={receiptSuccess} settings={orgSettings} token={token} onLogAction={onLogReceipt} close={() => setReceiptSuccess(null)} />}</>;
   return <main className="shell chit-fund-page">
     <div className="toolbar"><div><p className="page-company-name">{workspace?.businessName || "My Finance Business"}</p><h1 className="title">Chit Fund</h1><p className="copy chit-fund-intro">Auction Chits use live bidding, Fixed Chits use scheduled lifts, and Fixed Predefined Bid Chits use an editable generated schedule.</p></div><Button className="primary" onClick={() => setModal("choose-type")}>+ New scheme</Button></div>
     <TabScroller><nav className="module-section-nav" aria-label="Chit Fund sections">
