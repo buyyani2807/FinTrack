@@ -6,10 +6,11 @@ const money = value => `₹${Number(value || 0).toLocaleString("en-IN", { maximu
  * Read-only, deterministic advisory summary. It deliberately accepts already
  * loaded Accounts data and never fetches or mutates records.
  */
-export function AiAdvisoryPanel({ metrics = {}, receivables = [], vouchers = [], items = [], stockMovements = [], gstInvoices = [], bankTransactions = [], parties = [], invoices = [], expenseRows = [], expenseCurrent = [], expensePrevious = [], expenseAverage = [], role = "owner", assignedIds = [], chitScheme = null, chitInstallments = [], chitBids = [] }) {
-  const receivableRows = Array.isArray(receivables) ? receivables : [];
+export function AiAdvisoryPanel({ metrics = {}, receivables = [], payables = [], vouchers = [], items = [], stockMovements = [], gstInvoices = [], bankTransactions = [], parties = [], invoices = [], expenseRows = [], expenseCurrent = [], expensePrevious = [], expenseAverage = [], role = "owner", assignedIds = [], chitScheme = null, chitInstallments = [], chitBids = [] }) {
+  const receivableRows = Array.isArray(receivables) ? receivables : (receivables?.total ? [{ outstanding: receivables.total }] : []);
+  const payableRows = Array.isArray(payables) ? payables : (payables?.total ? [{ outstanding: payables.total }] : []);
   const currentBalance = Number(metrics.cash || 0) + Number(metrics.bank || 0) + Number(metrics.upi || 0);
-  const forecastSeries = buildCashFlowForecastSeries({ currentBalance, horizons: { 7: { inflows: receivableRows.map(row => ({ amount: row.outstanding })) } } });
+  const forecastSeries = buildCashFlowForecastSeries({ currentBalance, horizons: { 7: { inflows: receivableRows.map(row => ({ amount: row.outstanding })), outflows: payableRows.map(row => ({ amount: row.outstanding })) } } });
   const priorities = buildAgentScopedReceivablesPriorities(receivableRows, { role, assignedIds }).slice(0, 3);
   const anomalies = buildAnomalyInsights({ transactions: vouchers, inventory: stockMovements }).slice(0, 3);
   const lowStock = (items || []).filter(item => Number(item.stock ?? item.quantity ?? 0) <= Number(item.reorderLevel ?? item.reorder_point ?? 0));

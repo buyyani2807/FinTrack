@@ -147,6 +147,7 @@ export function OverviewSection({
         metrics={metrics}
         receivables={overviewArAging}
         payables={overviewApAging}
+        payables={overviewApAging}
         items={items}
         stockMovements={stockMovements}
         attention={accountsAttention}
