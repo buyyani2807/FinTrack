@@ -207,6 +207,7 @@ export function OverviewSection({
         metrics={metrics}
         receivables={overviewArAging}
         vouchers={vouchers}
+        expenseRows={vouchers.filter(row => row.voucherType === "expense" || row.type === "expense")}
         items={items}
         stockMovements={stockMovements}
       />

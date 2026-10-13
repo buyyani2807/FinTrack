@@ -1,4 +1,4 @@
-import { buildAgentScopedReceivablesPriorities, buildAnomalyInsights, buildBankMatchSuggestions, buildCashFlowForecastSeries, buildChitHealthInsights, buildExpenseChangeInsights, buildGstHealthInsights, buildInventoryForecast, buildMonthEndReadiness } from "./aiAdvisory.js";
+import { buildAgentScopedReceivablesPriorities, buildAnomalyInsights, buildBankMatchSuggestions, buildCashFlowForecastSeries, buildChitHealthInsights, buildExpenseChangeInsights, buildExpenseHistoryWindows, buildGstHealthInsights, buildInventoryForecast, buildMonthEndReadiness } from "./aiAdvisory.js";
 
 const money = value => `₹${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 
@@ -6,7 +6,7 @@ const money = value => `₹${Number(value || 0).toLocaleString("en-IN", { maximu
  * Read-only, deterministic advisory summary. It deliberately accepts already
  * loaded Accounts data and never fetches or mutates records.
  */
-export function AiAdvisoryPanel({ metrics = {}, receivables = [], vouchers = [], items = [], stockMovements = [], gstInvoices = [], bankTransactions = [], parties = [], invoices = [], expenseCurrent = [], expensePrevious = [], expenseAverage = [], role = "owner", assignedIds = [], chitScheme = null, chitInstallments = [], chitBids = [] }) {
+export function AiAdvisoryPanel({ metrics = {}, receivables = [], vouchers = [], items = [], stockMovements = [], gstInvoices = [], bankTransactions = [], parties = [], invoices = [], expenseRows = [], expenseCurrent = [], expensePrevious = [], expenseAverage = [], role = "owner", assignedIds = [], chitScheme = null, chitInstallments = [], chitBids = [] }) {
   const receivableRows = Array.isArray(receivables) ? receivables : [];
   const currentBalance = Number(metrics.cash || 0) + Number(metrics.bank || 0) + Number(metrics.upi || 0);
   const forecastSeries = buildCashFlowForecastSeries({ currentBalance, horizons: { 7: { inflows: receivableRows.map(row => ({ amount: row.outstanding })) } } });
@@ -18,7 +18,8 @@ export function AiAdvisoryPanel({ metrics = {}, receivables = [], vouchers = [],
   const gstIssues = buildGstHealthInsights({ invoices: gstInvoices });
   const bankSuggestions = buildBankMatchSuggestions({ transactions: bankTransactions, parties, invoices });
   const chitHealth = chitScheme ? buildChitHealthInsights({ scheme: chitScheme, installments: chitInstallments, bids: chitBids }) : null;
-  const expenseInsights = buildExpenseChangeInsights({ current: expenseCurrent, previous: expensePrevious, average: expenseAverage });
+  const expenseWindows = buildExpenseHistoryWindows(expenseRows, {});
+  const expenseInsights = buildExpenseChangeInsights({ current: expenseRows.length ? expenseWindows.current : expenseCurrent, previous: expenseRows.length ? expenseWindows.previous : expensePrevious, average: expenseRows.length ? expenseWindows.average : expenseAverage });
 
   return <section className="acc-section ai-advisory-panel" aria-label="AI advisory summary">
     <div className="acc-section-heading"><div><span className="eyebrow">AI ADVISORY</span><h2 className="acc-section-title">What needs your attention</h2></div><span className="small muted">Advisory only · verify before acting</span></div>
