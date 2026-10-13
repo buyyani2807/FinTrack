@@ -30,7 +30,7 @@ test("advisory audit metadata is non-writing and deduplicates source ids", () =>
 
 test("advisory anomaly detection only flags unusual records", () => assert.equal(buildAnomalyInsights({ transactions: [{ id: "x", status: "posted", amount: 1 }, { id: "y", status: "posted", amount: 1 }, { id: "z", status: "posted", amount: 1000 }] }).length, 1));
 
-test("month end readiness is a summary and not a write operation", () => assert.deepEqual(buildMonthEndReadiness({ unreconciled: 2, gstIssues: 1 }).issues, { unreconciled: 2, uncategorized: 0, duplicateCandidates: 0, missingInvoices: 0, gstIssues: 1, negativeInventory: 0 }));
+test("month end readiness is a summary and not a write operation", () => { const result = buildMonthEndReadiness({ unreconciled: 2, gstIssues: 1 }); assert.deepEqual(result.issues, { unreconciled: 2, uncategorized: 0, duplicateCandidates: 0, missingInvoices: 0, gstIssues: 1, negativeInventory: 0 }); assert.equal(result.criticalCount, 1); });
 
 test("inventory forecast recommends only when stockout reaches lead time", () => assert.equal(buildInventoryForecast({ stock: 12, averageWeeklySales: 14, leadTimeDays: 7 }).reorderRecommended, true));
 

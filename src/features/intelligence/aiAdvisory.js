@@ -69,7 +69,9 @@ export function buildAnomalyInsights({ transactions = [], expenses = [], invento
 
 export function buildMonthEndReadiness({ unreconciled = 0, uncategorized = 0, duplicateCandidates = 0, missingInvoices = 0, gstIssues = 0, negativeInventory = 0 } = {}) {
   const total = unreconciled + uncategorized + duplicateCandidates + missingInvoices + gstIssues + negativeInventory;
-  return { readinessPercent: total ? Math.max(0, 100 - Math.min(100, total * 5)) : 100, totalIssues: total, issues: { unreconciled, uncategorized, duplicateCandidates, missingInvoices, gstIssues, negativeInventory }, advisory: true };
+  const criticalCount = negativeInventory + gstIssues;
+  const highCount = duplicateCandidates + missingInvoices;
+  return { readinessPercent: total ? Math.max(0, 100 - Math.min(100, total * 5)) : 100, totalIssues: total, criticalCount, highCount, issues: { unreconciled, uncategorized, duplicateCandidates, missingInvoices, gstIssues, negativeInventory }, advisory: true };
 }
 
 export function buildInventoryForecast({ stock = 0, averageWeeklySales = 0, leadTimeDays = 0 } = {}) {
