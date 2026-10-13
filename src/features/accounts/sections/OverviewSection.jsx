@@ -14,6 +14,7 @@ import { AccOverviewContextBar } from "../components/AccPeriodBars.jsx";
 import { AccountsBusinessPulse, AccCompareChart, AccOverviewRecent } from "../components/AccOverviewWidgets.jsx";
 import { IndustryTemplateCard } from "../components/AccSetupWidgets.jsx";
 import { AccOwnerDailyBrief } from "../components/AccOwnerDailyBrief.jsx";
+import { AiAdvisoryPanel } from "../../intelligence/AiAdvisoryPanel.jsx";
 
 export function OverviewSection({
   settings,
@@ -200,6 +201,14 @@ export function OverviewSection({
         stockMovements={stockMovements}
         voucherItemLines={voucherItemLines}
         onNavigate={openSection}
+      />
+
+      <AiAdvisoryPanel
+        metrics={metrics}
+        receivables={overviewArAging}
+        vouchers={vouchers}
+        items={items}
+        stockMovements={stockMovements}
       />
 
       <section className="acc-section">
