@@ -211,6 +211,7 @@ export function OverviewSection({
         expenseRows={vouchers.filter(row => row.voucherType === "expense" || row.type === "expense")}
         items={items}
         stockMovements={stockMovements}
+        onNavigate={openSection}
       />
 
       <section className="acc-section">
