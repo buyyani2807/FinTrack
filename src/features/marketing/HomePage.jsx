@@ -19,7 +19,7 @@ const PILLARS = [
     id: "accounts",
     title: "Accounting",
     text: "The company book for a shop, a trader, a service business, or a finance company.",
-    items: ["Chart of accounts and ledgers", "Sales, purchases, receipts, and payments", "Contra, journal, and credit and debit notes", "Inventory and GST preparation", "Receivables, payables, and bank reconciliation", "Day book, trial balance, profit and loss, balance sheet, and cash flow", "Monthly income and expense chart and spending analysis"],
+    items: ["Chart of accounts and ledgers", "Sales, purchases, receipts, and payments", "Contra, journal, and credit and debit notes", "Inventory and GST preparation", "Receivables, payables, and bank reconciliation", "Customer profiles with a FinTrack credit score", "Day book, trial balance, profit and loss, balance sheet, and cash flow", "Monthly income and expense chart and spending analysis"],
     to: "accounts-overview",
     link: "Explore Accounting",
   },

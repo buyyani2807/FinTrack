@@ -15,6 +15,7 @@ const initialsOf = name => String(name || "").trim().split(/\s+/).slice(0, 2).ma
 export function PartiesSection({
   canWrite,
   openParty,
+  onOpenProfile,
   focusedParty,
   setPartyFocusId,
   parties,
@@ -90,6 +91,7 @@ export function PartiesSection({
               {focusedParty.email ? <li><Mail size={14} aria-hidden="true" />{focusedParty.email}</li> : null}
             </ul> : null}
             <div className="acc-party-ledger-actions">
+              {onOpenProfile ? <button type="button" className="btn primary" onClick={() => onOpenProfile(focusedParty.id)}>{`${partyTypeLabel(focusedParty.partyType)} profile`}</button> : null}
               {canWrite ? <button type="button" className="btn" onClick={() => openParty(focusedParty)}>Edit</button> : null}
               <PartyStatementButton
                 party={focusedParty}

@@ -478,9 +478,11 @@ function lineHitsType(accounts, line, accountType) {
   return account?.accountType === accountType;
 }
 
-export function partyLedger(accounts, vouchers, party, { from, to, voucherType } = {}) {
+// `kind` reads one side of a party that both buys and sells; by default the side follows the party type.
+export function partyLedger(accounts, vouchers, party, { from, to, voucherType, kind } = {}) {
   if (!party) return { party: null, rows: [], opening: 0, closing: 0, outstanding: 0 };
-  const ledgerType = party.partyType === "supplier" ? "payable" : "receivable";
+  const ledgerType = kind || (party.partyType === "supplier" ? "payable" : "receivable");
+  const positionType = ledgerType === "payable" ? "supplier" : "customer";
   const rows = [];
   let running = 0;
   const posted = (vouchers || [])
@@ -511,8 +513,8 @@ export function partyLedger(accounts, vouchers, party, { from, to, voucherType }
     });
   }
   const openingRunning = rows.length ? roundMoney(rows[0].balance - rows[0].debit + rows[0].credit) : running;
-  const position = partyPosition(party.partyType, running);
-  const openingPosition = partyPosition(party.partyType, openingRunning);
+  const position = partyPosition(kind ? positionType : party.partyType, running);
+  const openingPosition = partyPosition(kind ? positionType : party.partyType, openingRunning);
   return {
     party,
     opening: openingPosition.closing,
@@ -579,10 +581,13 @@ export function invoiceRegister(accounts, vouchers, parties = [], { kind = "rece
     .filter(affectsLedgers)
     .sort((a, b) => `${a.date}${a.voucherNumber}`.localeCompare(`${b.date}${b.voucherNumber}`));
 
-  const enqueue = (id, amount) => {
+  const enqueue = (id, amount, date) => {
     if (!id || roundMoney(amount) <= 0) return;
     if (!pool.has(id)) pool.set(id, []);
-    pool.get(id).push({ amount: roundMoney(amount) });
+    pool.get(id).push({ amount: roundMoney(amount), date });
+  };
+  const notePaid = (invoice, date) => {
+    if (date && (!invoice.lastPaidOn || date > invoice.lastPaidOn)) invoice.lastPaidOn = date;
   };
 
   for (const voucher of posted) {
@@ -604,6 +609,8 @@ export function invoiceRegister(accounts, vouchers, parties = [], { kind = "rece
         dueDate: voucher.dueDate || addDaysIso(voucher.date, 7),
         amount,
         paid: hitsLedger ? 0 : amount,
+        onCredit: hitsLedger,
+        lastPaidOn: hitsLedger ? "" : voucher.date,
         voucherType: voucher.voucherType,
         allocation: "open",
       });
@@ -617,11 +624,11 @@ export function invoiceRegister(accounts, vouchers, parties = [], { kind = "rece
         const linkAmount = roundMoney(Number(link.amount || 0));
         const invoiceVoucherId = link.invoiceVoucherId || link.invoice_voucher_id;
         if (!invoiceVoucherId || !(linkAmount > 0)) continue;
-        billLinks.push({ invoiceVoucherId, amount: linkAmount });
+        billLinks.push({ invoiceVoucherId, amount: linkAmount, date: voucher.date });
         linked = roundMoney(linked + linkAmount);
       }
       const leftover = roundMoney(amount - linked);
-      if (leftover > 0) enqueue(voucherPartyId, leftover);
+      if (leftover > 0) enqueue(voucherPartyId, leftover, voucher.date);
       continue;
     }
     if (isReversalVoucher(voucher)) continue;
@@ -653,10 +660,12 @@ export function invoiceRegister(accounts, vouchers, parties = [], { kind = "rece
           dueDate: voucher.dueDate || addDaysIso(voucher.date, 7),
           amount: increase,
           paid: 0,
+          onCredit: true,
+          lastPaidOn: "",
           voucherType: voucher.voucherType,
         });
       } else if (increase < 0 && (!to || voucher.date <= to)) {
-        enqueue(linePartyId, -increase);
+        enqueue(linePartyId, -increase, voucher.date);
       }
     }
   }
@@ -670,6 +679,7 @@ export function invoiceRegister(accounts, vouchers, parties = [], { kind = "rece
     const apply = Math.min(room, link.amount);
     invoice.paid = roundMoney(invoice.paid + apply);
     invoice.allocation = "bill_wise";
+    notePaid(invoice, link.date);
   }
 
   for (const invoice of invoices) {
@@ -684,10 +694,12 @@ export function invoiceRegister(accounts, vouchers, parties = [], { kind = "rece
         remaining = roundMoney(remaining - apply);
         item.amount = roundMoney(item.amount - apply);
         invoice.paid = roundMoney(invoice.paid + apply);
+        if (apply > 0) notePaid(invoice, item.date);
         if (!invoice.allocation || invoice.allocation === "open") invoice.allocation = "fifo";
       }
       invoice.outstanding = remaining;
     }
+    invoice.settledOn = invoice.outstanding > 0 ? "" : invoice.lastPaidOn || invoice.invoiceDate;
     const asOf = today || invoice.invoiceDate;
     invoice.daysOutstanding = invoice.outstanding > 0 ? Math.max(0, daysBetween(invoice.invoiceDate, asOf)) : 0;
     invoice.daysOverdue = invoice.outstanding > 0 ? Math.max(0, daysBetween(invoice.dueDate, asOf)) : 0;

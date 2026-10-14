@@ -24,6 +24,7 @@ export function InvoicesSection({
   voucherItemLines,
   stockMovements,
   items,
+  onOpenParty,
 }) {
   return (
     <div className="acc-panel acc-invoice-page">
@@ -72,7 +73,7 @@ export function InvoicesSection({
           />
         </div>
       </div>
-      <InvoiceTable rows={pagedInvoiceRows.items} kind={isInvoicePayables ? "payable" : "receivable"} orgSettings={orgSettings} activeCompany={activeCompany} workspace={workspace} voucherItemLines={voucherItemLines} stockMovements={stockMovements} items={items} />
+      <InvoiceTable rows={pagedInvoiceRows.items} kind={isInvoicePayables ? "payable" : "receivable"} orgSettings={orgSettings} activeCompany={activeCompany} workspace={workspace} voucherItemLines={voucherItemLines} stockMovements={stockMovements} items={items} onOpenParty={onOpenParty} />
       <AccPager
         page={pagedInvoiceRows.page}
         pages={pagedInvoiceRows.pages}
@@ -83,8 +84,9 @@ export function InvoicesSection({
       <div className="acc-invoice-parties">
         <span className="acc-invoice-parties-label">Party totals</span>
         {invoicePartyRows.length
-          ? invoicePartyRows.map(row => (
-            <span key={row.id || row.name} className="acc-chip">{row.name} <strong>{money(row.balance)}</strong></span>
+          ? invoicePartyRows.map(row => (onOpenParty && row.id && row.id !== row.name
+            ? <button key={row.id} type="button" className="acc-chip acc-chip-link" onClick={() => onOpenParty(row.id)}>{row.name} <strong>{money(row.balance)}</strong></button>
+            : <span key={row.id || row.name} className="acc-chip">{row.name} <strong>{money(row.balance)}</strong></span>
           ))
           : <span className="small">none</span>}
       </div>

@@ -11,10 +11,10 @@ const AccountsModule = lazy(() => loadAccountsModule().then(module => ({ default
 // parts become the open section, report and sub-tab; see accountsViewFromPath.
 export function AccountsRoute() {
   const { token, logout, workspace, orgSettings } = useOutletContext();
-  const { section, docType, inventoryTab, partyView, routesTab, report } = useParams();
+  const { section, docType, inventoryTab, partyView, routesTab, partyId, report } = useParams();
   const navigate = useNavigate();
-  const area = section || (docType && "documents") || (inventoryTab && "inventory") || ((partyView || routesTab) && "parties") || (report && "reports") || "overview";
-  const view = accountsViewFromPath(area, docType || inventoryTab || partyView || (routesTab && "routes") || report, routesTab);
+  const area = section || (docType && "documents") || (inventoryTab && "inventory") || ((partyView || routesTab || partyId) && "parties") || (report && "reports") || "overview";
+  const view = accountsViewFromPath(area, docType || inventoryTab || partyView || (routesTab && "routes") || (partyId && "profile") || report, routesTab || partyId);
   // An unknown section goes to Overview.
   if (view.section === "overview" && area !== "overview") return <Navigate to={accountsPath(view)} replace />;
   return <div className="accounts-dashboard">

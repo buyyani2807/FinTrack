@@ -32,13 +32,15 @@ export const NAV_TREE = [
   { id: "cashbook", label: "Cashbook", glyph: "◇" },
   { id: "setup", label: "Setup", glyph: "⚙" },
 ];
-export const navItemIsActive = (item, section) => item.children?.some(child => child.id === section) || item.id === section;
+const SECTION_PARENT = { party: "parties" };
+export const navItemIsActive = (item, section) => item.children?.some(child => child.id === section) || item.id === section || item.id === SECTION_PARENT[section];
 export function sectionTrail(section, reportTab) {
   if (section === "overview") return ["Overview"];
   if (section === "vouchers") return ["Transactions"];
   if (section === "inventory") return ["Inventory"];
   if (section === "documents") return ["Documents"];
   if (section === "parties") return ["Parties", "Party Ledger"];
+  if (section === "party") return ["Parties", "Party profile"];
   if (section === "receivables") return ["Parties", "Receivables"];
   if (section === "payables") return ["Parties", "Payables"];
   if (section === "routes") return ["Parties", "Collection routes"];
@@ -123,15 +125,18 @@ export const MORE_LINKS = [
 ];
 
 // ---- URLs (see app/AppRoutes.jsx) ----
-// A view is { section, reportTab, sub }: `sub` is the document type (documents), the inventory tab (inventory) or the
-// collection-routes tab (routes). Trial Balance, P&L and Balance Sheet are their own sections but live under Reports.
+// A view is { section, reportTab, sub }: `sub` is the document type (documents), the inventory tab (inventory), the
+// collection-routes tab (routes) or the party id (party profile). Trial Balance, P&L and Balance Sheet are their own
+// sections but live under Reports.
 const SECTION_SLUGS = { vouchers: "transactions", bank: "banking", crm: "pipeline", ai: "ai-review" };
-const PARTY_SLUGS = { parties: "ledger", receivables: "receivables", payables: "payables", routes: "routes" };
+const PARTY_SLUGS = { parties: "ledger", receivables: "receivables", payables: "payables", routes: "routes", party: "profile" };
+const PARTY_SUB_SECTIONS = ["routes", "party"];
 const STATEMENTS = ["trial", "pnl", "balance"];
 const fromSlug = (map, slug) => Object.keys(map).find(key => map[key] === slug);
 
 export function accountsPath({ section = "overview", reportTab = "daybook", sub = null } = {}) {
-  if (PARTY_SLUGS[section]) return `/accounting/parties/${PARTY_SLUGS[section]}${section === "routes" && sub ? `/${sub}` : ""}`;
+  if (section === "party" && !sub) return "/accounting/parties/ledger";
+  if (PARTY_SLUGS[section]) return `/accounting/parties/${PARTY_SLUGS[section]}${PARTY_SUB_SECTIONS.includes(section) && sub ? `/${encodeURIComponent(sub)}` : ""}`;
   if (section === "reports" || section === "gst" || STATEMENTS.includes(section)) {
     const report = STATEMENTS.includes(section) || section === "gst" ? section : reportTab || "daybook";
     return `/accounting/reports/${report}`;
@@ -144,7 +149,8 @@ export function accountsPath({ section = "overview", reportTab = "daybook", sub 
 export function accountsViewFromPath(area, sub, subsub) {
   if (area === "parties") {
     const section = fromSlug(PARTY_SLUGS, sub) || "parties";
-    return { section, reportTab: "daybook", sub: section === "routes" ? subsub || null : null };
+    if (section === "party" && !subsub) return { section: "parties", reportTab: "daybook", sub: null };
+    return { section, reportTab: "daybook", sub: PARTY_SUB_SECTIONS.includes(section) ? subsub || null : null };
   }
   if (area === "reports") {
     const report = REPORT_TABS.some(item => item.id === sub) ? sub : "daybook";

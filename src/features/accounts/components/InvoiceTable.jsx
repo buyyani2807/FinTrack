@@ -100,8 +100,11 @@ export function SettledGoods({ voucher, vouchers, voucherItemLines, stockMovemen
   );
 }
 
-export function InvoiceTable({ rows, kind, orgSettings, activeCompany, workspace, voucherItemLines = [], stockMovements = [], items = [] }) {
+export function InvoiceTable({ rows, kind, orgSettings, activeCompany, workspace, voucherItemLines = [], stockMovements = [], items = [], onOpenParty }) {
   const [openId, setOpenId] = useState(null);
+  const partyName = row => (onOpenParty && row.partyId && row.partyName !== row.partyId
+    ? <button type="button" className="acc-invoice-party acc-invoice-party-link" title={`Open ${row.partyName}'s profile`} onClick={() => onOpenParty(row.partyId)}>{row.partyName}</button>
+    : <strong className="acc-invoice-party">{row.partyName}</strong>);
   const emptyTitle = kind === "payable" ? "No outstanding payables" : "No outstanding receivables";
   const emptyCopy = kind === "payable"
     ? "Supplier invoices will appear here after you record a purchase."
@@ -147,7 +150,7 @@ export function InvoiceTable({ rows, kind, orgSettings, activeCompany, workspace
                 <Fragment key={row.id}>
                   <tr className={row.status === "Overdue" ? "acc-invoice-overdue" : ""}>
                     <td>
-                      <strong className="acc-invoice-party">{row.partyName}</strong>
+                      {partyName(row)}
                     </td>
                     <td>
                       <button type="button" className="acc-invoice-ref-btn" aria-expanded={open} onClick={() => setOpenId(current => current === row.id ? null : row.id)}>
@@ -180,7 +183,7 @@ export function InvoiceTable({ rows, kind, orgSettings, activeCompany, workspace
           <article key={row.id} className={`card acc-invoice-card${row.status === "Overdue" ? " is-overdue" : ""}`}>
             <div className="acc-invoice-card-top">
               <div>
-                <strong>{row.partyName}</strong>
+                {partyName(row)}
                 <p className="small">
                   <button type="button" className="acc-invoice-ref-btn" aria-expanded={openId === row.id} onClick={() => setOpenId(current => current === row.id ? null : row.id)}>
                     {row.reference}

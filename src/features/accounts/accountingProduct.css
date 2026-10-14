@@ -1054,6 +1054,251 @@
   .accounts-dashboard .acc-ov-axis-label { font-size: 20px; }
 }
 
+.accounts-dashboard .acc-party-profile {
+  display: grid;
+  gap: 16px;
+}
+
+.accounts-dashboard .acc-party-profile-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: start;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--acc-muted);
+  font: 600 13px/1.2 inherit;
+  cursor: pointer;
+}
+
+.accounts-dashboard .acc-party-profile-back:hover { color: var(--ft-primary); }
+
+.accounts-dashboard .acc-party-profile-who {
+  display: flex;
+  flex: 1 1 320px;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.accounts-dashboard .acc-party-profile-who h2 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accounts-dashboard .acc-party-profile .acc-party-ledger-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.accounts-dashboard .acc-party-profile .acc-party-ledger-stats > .is-due dd { color: var(--acc-red); }
+
+.accounts-dashboard .acc-party-profile-sub { margin: 4px 0 0; }
+
+.accounts-dashboard .acc-party-side {
+  display: grid;
+  gap: 16px;
+}
+
+.accounts-dashboard .acc-party-side + .acc-party-side {
+  margin-top: 8px;
+  padding-top: 20px;
+  border-top: 1px solid var(--acc-line);
+}
+
+.accounts-dashboard .acc-party-side-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px 16px;
+}
+
+.accounts-dashboard .acc-party-profile .acc-party-side-head h3 { font-size: 17px; }
+
+.accounts-dashboard .acc-party-side-total {
+  color: var(--acc-muted);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.accounts-dashboard .acc-party-side-total.is-due { color: var(--acc-red); }
+
+.accounts-dashboard .acc-party-profile-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.accounts-dashboard .acc-party-profile-grid.is-single { grid-template-columns: minmax(0, 1fr); }
+
+.accounts-dashboard .acc-party-profile-grid .credit-score-card { margin: 0; }
+
+.accounts-dashboard .acc-party-profile-card {
+  display: grid;
+  gap: 18px 36px;
+  padding: 18px 20px;
+}
+
+.accounts-dashboard .acc-party-profile-grid.is-single .acc-party-profile-card { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.accounts-dashboard .acc-party-profile-part {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.accounts-dashboard .acc-party-profile h3 {
+  margin: 0;
+  color: var(--acc-text);
+  font: 700 15px/1.3 inherit;
+}
+
+.accounts-dashboard .acc-party-habits { margin: 0; }
+
+.accounts-dashboard .acc-party-habit {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--acc-line);
+}
+
+.accounts-dashboard .acc-party-habit dt { color: var(--acc-muted); font-size: 13px; }
+
+.accounts-dashboard .acc-party-habit dd {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  margin: 0;
+  text-align: right;
+}
+
+.accounts-dashboard .acc-party-habit dd strong {
+  color: var(--acc-text);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.accounts-dashboard .acc-party-aging {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.accounts-dashboard .acc-party-aging-row {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  color: var(--acc-muted);
+  font-size: 13px;
+}
+
+.accounts-dashboard .acc-party-aging-row strong {
+  min-width: 84px;
+  color: var(--acc-text);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.accounts-dashboard .acc-party-aging-bar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--ft-surface-subtle, var(--acc-line));
+}
+
+.accounts-dashboard .acc-party-aging-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--acc-green);
+}
+
+.accounts-dashboard .acc-party-aging-row.is-d1_30 i { background: #f4c95d; }
+.accounts-dashboard .acc-party-aging-row.is-d31_60 i { background: #f6a35b; }
+.accounts-dashboard .acc-party-aging-row.is-d61_90 i { background: #f08a4b; }
+.accounts-dashboard .acc-party-aging-row.is-d90 i { background: var(--acc-red); }
+
+.accounts-dashboard .acc-party-profile-block {
+  display: grid;
+  gap: 10px;
+}
+
+.accounts-dashboard .acc-party-payments {
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--acc-line);
+  border-radius: 12px;
+  background: var(--acc-card);
+  list-style: none;
+}
+
+.accounts-dashboard .acc-party-payments li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--acc-line);
+  color: var(--acc-muted);
+}
+
+.accounts-dashboard .acc-party-payments li:last-child { border-bottom: 0; }
+
+.accounts-dashboard .acc-party-payments-what {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+  color: var(--acc-text);
+}
+
+.accounts-dashboard .acc-party-payments li > strong { color: var(--acc-green); }
+
+.accounts-dashboard .acc-invoice-party-link,
+.accounts-dashboard .acc-chip-link {
+  font: inherit;
+  cursor: pointer;
+}
+
+.accounts-dashboard .acc-invoice-party-link,
+.accounts-dashboard .accounts-invoice-table .acc-invoice-party-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--acc-text);
+  font-weight: 700;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--acc-text) 35%, transparent);
+  text-underline-offset: 3px;
+}
+
+.accounts-dashboard .acc-invoice-party-link:hover,
+.accounts-dashboard .accounts-invoice-table .acc-invoice-party-link:hover {
+  color: var(--ft-primary);
+  text-decoration-color: currentColor;
+}
+
+.accounts-dashboard .acc-chip-link:hover { text-decoration: underline; }
+
+.accounts-dashboard .acc-chip-link:hover { border-color: var(--ft-primary); }
+
+@media (max-width: 900px) {
+  .accounts-dashboard .acc-party-profile-grid,
+  .accounts-dashboard .acc-party-profile-grid.is-single .acc-party-profile-card { grid-template-columns: minmax(0, 1fr); }
+}
+
 .accounts-dashboard .acc-ov-context {
   padding: 14px 16px;
   border: 1px solid var(--acc-line);

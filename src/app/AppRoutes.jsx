@@ -86,6 +86,7 @@ export function AppRoutes() {
           {/* :partyView = ledger | receivables | payables | routes */}
           <Route path="/accounting/parties/:partyView" element={<RequireModule module="accounts"><AccountsRoute /></RequireModule>} />
           <Route path="/accounting/parties/routes/:routesTab" element={<RequireModule module="accounts"><AccountsRoute /></RequireModule>} />
+          <Route path="/accounting/parties/profile/:partyId" element={<RequireModule module="accounts"><AccountsRoute /></RequireModule>} />
           {/* :report = daybook | trial | pnl | balance | cashflow | receivables | payables | sales | purchases | gst | ledger | item_sales | … */}
           <Route path="/accounting/reports/:report" element={<RequireModule module="accounts"><AccountsRoute /></RequireModule>} />
           <Route path="/accounting/*" element={<Navigate to="/accounting/overview" replace />} />

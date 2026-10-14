@@ -285,6 +285,26 @@ export function chitInstallments(rows = [], asOf) {
   }).filter(Boolean);
 }
 
+/**
+ * Accounts credit invoices: each invoice is one due. A part-paid invoice that is not yet due is still pending,
+ * so an early part payment does not count against the customer.
+ */
+export function invoiceInstallments(invoices = [], asOf) {
+  const today = iso(asOf);
+  return (invoices || []).map(invoice => {
+    const expected = Number(invoice.amount || 0);
+    const dueDate = iso(invoice.dueDate || invoice.invoiceDate);
+    if (!dueDate || expected <= 0) return null;
+    const settled = iso(invoice.settledOn);
+    const lastPaid = iso(invoice.lastPaidOn);
+    const settledBy = settled && settled <= today;
+    const paidBy = settledBy ? expected : lastPaid && lastPaid <= today ? Number(invoice.paid || 0) : 0;
+    const paid = dueDate > today && paidBy + 0.009 < expected ? 0 : paidBy;
+    const row = classifyInstallment(dueDate, expected, paid, settledBy ? settled : lastPaid, asOf);
+    return row && { ...row, source: "invoice", accountId: invoice.id };
+  }).filter(Boolean);
+}
+
 export function financeInstallments(loan, asOf) {
   if (loan.kind === "monthly") return monthlyInstallments(loan, asOf);
   return dailyInstallments(loan, asOf);
@@ -494,20 +514,22 @@ function buildResult(rows, loans, asOf) {
   return { ...result, ...explained };
 }
 
-function collectRows(loans, chitPayments, asOf) {
+function collectRows(loans, chitPayments, asOf, invoices = []) {
   const financeRows = (loans || []).flatMap(loan => financeInstallments(loan, asOf));
   const chitRows = chitInstallments(chitPayments, asOf);
-  return [...financeRows, ...chitRows];
+  const invoiceRows = invoiceInstallments(invoices.filter(invoice => iso(invoice.invoiceDate) <= iso(asOf)), asOf);
+  return [...financeRows, ...chitRows, ...invoiceRows];
 }
 
 export function calculateFintrackCreditScore({
   loans = [],
   chitPayments = [],
+  invoices = [],
   asOf: asOfInput,
   focusLoanId,
 } = {}) {
   const asOf = iso(asOfInput) || todayIso();
-  const rows = collectRows(loans, chitPayments, asOf);
+  const rows = collectRows(loans, chitPayments, asOf, invoices);
   const current = buildResult(rows, loans, asOf);
   if (!current.available) return current;
 
@@ -516,7 +538,7 @@ export function calculateFintrackCreditScore({
     const cursor = addMonths(`${asOf.slice(0, 8)}01`, -offset);
     const end = monthEnd(cursor);
     if (end >= asOf) continue;
-    const pastRows = collectRows(loans, chitPayments, end);
+    const pastRows = collectRows(loans, chitPayments, end, invoices);
     const past = buildResult(pastRows, loans, end);
     if (past.available) history.push({ month: end, label: monthLabel(end), score: past.score, rating: past.rating });
   }

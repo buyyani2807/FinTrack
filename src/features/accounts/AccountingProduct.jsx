@@ -113,6 +113,7 @@ import { buildSalesInvoice } from "./model/salesInvoiceModel.js";
 import { SalesInvoiceSuccessModal, SalesInvoiceViewerModal } from "./components/SalesInvoiceActions.jsx";
 import { periodStockValues } from "./model/inventoryValuation.js";
 import { expenseBreakdown, monthlyIncomeExpense } from "./model/accountsCharts.js";
+import { partyProfile } from "./model/partyProfile.js";
 import {
   currentStockForItem,
   itemPurchasesReport,
@@ -149,6 +150,7 @@ import { LedgerSection } from "./sections/LedgerSection.jsx";
 import { VouchersSection } from "./sections/VouchersSection.jsx";
 import { InvoicesSection } from "./sections/InvoicesSection.jsx";
 import { PartiesSection } from "./sections/PartiesSection.jsx";
+import { PartyProfileSection } from "./sections/PartyProfileSection.jsx";
 import { InventorySection } from "./sections/InventorySection.jsx";
 import { MoreSection } from "./sections/MoreSection.jsx";
 import { ReportsSection } from "./sections/ReportsSection.jsx";
@@ -739,6 +741,11 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const itemPurchaseRows = useMemo(() => itemPurchasesReport(voucherItemLines, vouchers, range), [voucherItemLines, vouchers, range]);
   const stockMoveRows = useMemo(() => stockMovementReport(stockMovements, items, range).slice(0, 200), [stockMovements, items, range]);
   const focusedParty = useMemo(() => parties.find(party => party.id === partyFocusId) || parties[0] || null, [parties, partyFocusId]);
+  const profileParty = useMemo(() => (section === "party" ? parties.find(party => party.id === view.sub) || null : null), [section, parties, view.sub]);
+  const profile = useMemo(
+    () => (profileParty ? partyProfile({ accounts, vouchers, parties, party: profileParty, today: todayIso() }) : null),
+    [profileParty, accounts, vouchers, parties],
+  );
   const setupParties = useMemo(
     () => filterParties(parties, { type: partyTypeFilter, search: deferredPartySearch }),
     [parties, partyTypeFilter, deferredPartySearch],
@@ -813,6 +820,15 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     else go({ section: "reports", reportTab: id });
   };
   const setReportTab = openReport;
+  const openPartyProfile = id => {
+    if (!id) return;
+    go({ section: "party", sub: id });
+    window.scrollTo(0, 0);
+  };
+  const openPartyLedger = id => {
+    if (id) setPartyFocusId(id);
+    openSection("parties");
+  };
 
   const openAiSource = link => {
     if (!link?.section) return;
@@ -2096,11 +2112,31 @@ const openVoucher = () => {
           voucherItemLines={voucherItemLines}
           stockMovements={stockMovements}
           items={items}
+          onOpenParty={openPartyProfile}
+        />}
+
+        {section === "party" && <PartyProfileSection
+          party={profileParty}
+          profile={profile}
+          loading={loading}
+          canWrite={canWrite}
+          canAdmin={canAdmin}
+          today={todayIso()}
+          openParty={openParty}
+          onOpenLedger={() => openPartyLedger(profileParty?.id)}
+          onBack={() => openPartyLedger(profileParty?.id)}
+          orgSettings={orgSettings}
+          activeCompany={activeCompany}
+          workspace={workspace}
+          voucherItemLines={voucherItemLines}
+          stockMovements={stockMovements}
+          items={items}
         />}
 
         {section === "parties" && <PartiesSection
           canWrite={canWrite}
           openParty={openParty}
+          onOpenProfile={openPartyProfile}
           openSection={openSection}
           focusedParty={focusedParty}
           setPartyFocusId={setPartyFocusId}

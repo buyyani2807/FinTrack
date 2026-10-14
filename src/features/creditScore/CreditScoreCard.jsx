@@ -123,14 +123,15 @@ export function CreditScoreDetails({ result, close, accountLabel }) {
 export function CreditScoreCard({
   loans = [],
   chitPayments = [],
+  invoices = [],
   focusLoanId,
   accountLabel,
   asOf,
 }) {
   const [open, setOpen] = useState(false);
   const result = useMemo(
-    () => calculateFintrackCreditScore({ loans, chitPayments, focusLoanId, asOf }),
-    [loans, chitPayments, focusLoanId, asOf],
+    () => calculateFintrackCreditScore({ loans, chitPayments, invoices, focusLoanId, asOf }),
+    [loans, chitPayments, invoices, focusLoanId, asOf],
   );
   const color = result.available ? BAND_COLORS[result.band] : "#9ba9bd";
 
