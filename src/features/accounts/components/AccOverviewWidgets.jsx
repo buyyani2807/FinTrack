@@ -1,7 +1,48 @@
 import { useId, useMemo, useState } from "react";
+import { SegmentedControl } from "../../../components/ui.jsx";
 import { VOUCHER_TYPES, voucherTotals } from "../model/accountingModel.js";
 import { money } from "../accountsFormat.js";
 import { AccMetric } from "./AccUi.jsx";
+
+const MoneyRow = ({ label, value, tone, onClick }) => {
+  const content = <><span className="acc-money-label">{label}</span><strong className={`acc-money-value ${tone}`}>{money(value)}</strong></>;
+  return onClick
+    ? <button type="button" className="acc-money-row clickable" onClick={onClick}>{content}</button>
+    : <div className="acc-money-row">{content}</div>;
+};
+
+export function AccMoneyTiles({ metrics, periodLabel, onNavigate }) {
+  const [span, setSpan] = useState("month");
+  const sales = { today: metrics?.todaySales, month: metrics?.monthSales, period: metrics?.periodSales }[span];
+  const purchases = { today: metrics?.todayPurchases, month: metrics?.monthPurchases, period: metrics?.periodPurchases }[span];
+  return <section className="acc-money-tiles" aria-label="Money at a glance">
+    <article className="card acc-money-tile">
+      <header className="acc-money-head">
+        <h2>Sales and purchase</h2>
+        <SegmentedControl
+          label="Sales and purchase window"
+          className="acc-money-window"
+          options={[{ id: "today", label: "Today" }, { id: "month", label: "Month" }, { id: "period", label: periodLabel }]}
+          value={span}
+          onChange={setSpan}
+        />
+      </header>
+      <MoneyRow label="Sales" value={sales} tone="green" onClick={() => onNavigate({ reportTab: "sales" })} />
+      <MoneyRow label="Purchases" value={purchases} tone="red" onClick={() => onNavigate({ reportTab: "purchases" })} />
+    </article>
+    <article className="card acc-money-tile">
+      <header className="acc-money-head"><h2>Receivables and payables</h2></header>
+      <MoneyRow label="Receivables" value={metrics?.receivables} tone="green" onClick={() => onNavigate("receivables")} />
+      <MoneyRow label="Payables" value={metrics?.payables} tone="red" onClick={() => onNavigate("payables")} />
+    </article>
+    <article className="card acc-money-tile">
+      <header className="acc-money-head"><h2>Cash and bank</h2></header>
+      <MoneyRow label="Cash" value={metrics?.cash} />
+      <MoneyRow label="Bank" value={metrics?.bank} />
+      <MoneyRow label="UPI" value={metrics?.upi} />
+    </article>
+  </section>;
+}
 
 export function AccountsBusinessPulse({ metrics, receivables, payables, items, stockMovements, onNavigate, onOpenCollections }) {
   const lowStockCount = useMemo(() => (items || []).filter(item => {

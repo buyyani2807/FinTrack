@@ -842,6 +842,92 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.accounts-dashboard .acc-money-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.accounts-dashboard .acc-money-tile {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 14px 16px;
+}
+
+.accounts-dashboard .acc-money-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 32px;
+}
+
+.accounts-dashboard .acc-money-window {
+  flex: none;
+  margin-left: auto;
+}
+
+.accounts-dashboard .acc-money-head h2 {
+  margin: 0;
+  color: var(--acc-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.accounts-dashboard .acc-money-window button {
+  min-height: 28px;
+  padding: 0 9px;
+  font-size: 12px;
+}
+
+.accounts-dashboard .acc-money-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--ft-surface-subtle, var(--acc-card));
+  color: var(--acc-text);
+  font: inherit;
+  text-align: left;
+}
+
+.accounts-dashboard .acc-money-row.clickable {
+  cursor: pointer;
+}
+
+.accounts-dashboard .acc-money-row.clickable:hover,
+.accounts-dashboard .acc-money-row.clickable:focus-visible {
+  background: var(--ft-surface-hover, var(--acc-card));
+}
+
+.accounts-dashboard .acc-money-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.accounts-dashboard .acc-money-value {
+  font-size: 18px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.accounts-dashboard .acc-money-value.green { color: var(--acc-green); }
+.accounts-dashboard .acc-money-value.red { color: var(--acc-red); }
+
+@media (max-width: 900px) {
+  .accounts-dashboard .acc-money-tiles {
+    grid-template-columns: 1fr;
+  }
+}
+
 .accounts-dashboard .acc-ov-context {
   padding: 14px 16px;
   border: 1px solid var(--acc-line);

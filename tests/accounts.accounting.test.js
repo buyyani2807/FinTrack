@@ -755,6 +755,27 @@ test("GST books report nets output tax against eligible ITC and signs notes", ()
   assert.equal(metrics.todaySales, 10000);
 });
 
+test("dashboard sales and purchase totals cover today, this month, and the report period", () => {
+  const entry = (kind, date, amount, n, partyId) => {
+    const draft = simpleEntryDraft({ kind, accounts, date, amount, partyId, settlement: "credit", gst: gst18Intra });
+    return posted(kind === "sale" ? "sales" : "purchase", date, draft.lines, { n, partyId });
+  };
+  const vouchers = [
+    entry("sale", "2026-04-20", 4000, 1, "ravi"),
+    entry("sale", "2026-05-03", 6000, 2, "ravi"),
+    entry("sale", "2026-05-10", 2500, 3, "ravi"),
+    entry("purchase", "2026-05-10", 3000, 1, "xyz"),
+    entry("sale", "2026-05-12", 9000, 4, "ravi"),
+  ];
+  const metrics = dashboardMetrics(accounts, vouchers, [], { today: "2026-05-10", from: "2026-04-01", to: "2027-03-31" });
+  assert.equal(metrics.todaySales, 2500);
+  assert.equal(metrics.monthSales, 8500);
+  assert.equal(metrics.periodSales, 21500);
+  assert.equal(metrics.todayPurchases, 3000);
+  assert.equal(metrics.monthPurchases, 3000);
+  assert.equal(metrics.periodPurchases, 3000);
+});
+
 test("rate 0 or missing GST keeps the old two-line sale", () => {
   const none = saleLines({ accounts, amount: 10000, settlement: "credit", partyId: "ravi" });
   const zero = saleLines({ accounts, amount: 10000, settlement: "credit", partyId: "ravi", gst: { enabled: true, rate: 0, intra: true } });

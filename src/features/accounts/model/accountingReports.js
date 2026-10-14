@@ -423,7 +423,11 @@ export function dashboardMetrics(accounts, vouchers, parties, { today, from, to,
   ), 0) + pnl.openingStock);
   const tbRows = balances.filter(row => row.debit || row.credit);
   const accountByKey = new Map((accounts || []).flatMap(item => [[item.id, item], [item.code, item]]));
-  const todayRows = (vouchers || []).filter(voucher => affectsLedgers(voucher) && voucher.date === today);
+  const postedRows = (vouchers || []).filter(affectsLedgers);
+  const todayRows = postedRows.filter(voucher => voucher.date === today);
+  const monthStart = today ? `${String(today).slice(0, 7)}-01` : "";
+  const monthRows = postedRows.filter(voucher => monthStart && voucher.date >= monthStart && voucher.date <= today);
+  const periodRows = postedRows.filter(voucher => (!from || voucher.date >= from) && (!to || voucher.date <= to));
   const netCode = (voucher, code) => roundMoney(
     (voucher.lines || []).reduce((sum, line) => {
       const account = accountByKey.get(line.coaId) || accountByKey.get(line.code);
@@ -431,8 +435,8 @@ export function dashboardMetrics(accounts, vouchers, parties, { today, from, to,
       return sum + Number(line.credit || 0) - Number(line.debit || 0);
     }, 0),
   );
-  const sumType = type => roundMoney(
-    todayRows.filter(voucher => voucher.voucherType === type).reduce((sum, voucher) => {
+  const sumType = (type, rows = todayRows) => roundMoney(
+    rows.filter(voucher => voucher.voucherType === type).reduce((sum, voucher) => {
       const amount = type === "sales"
         ? netCode(voucher, SYSTEM_CODES.sales)
         : type === "purchase"
@@ -460,6 +464,10 @@ export function dashboardMetrics(accounts, vouchers, parties, { today, from, to,
     todayPurchases: sumType("purchase"),
     todayReceipts: sumType("receipt"),
     todayPayments: sumType("payment"),
+    monthSales: sumType("sales", monthRows),
+    monthPurchases: sumType("purchase", monthRows),
+    periodSales: sumType("sales", periodRows),
+    periodPurchases: sumType("purchase", periodRows),
     income: pnl.totalIncome,
     expenses: pnl.totalExpense,
   };

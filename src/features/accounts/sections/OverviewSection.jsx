@@ -11,7 +11,7 @@ import { AccAskBooks } from "../components/AccAskBooks.jsx";
 import { emptyPartyForm } from "../accountsFormDefaults.js";
 import { money } from "../accountsFormat.js";
 import { AccOverviewContextBar } from "../components/AccPeriodBars.jsx";
-import { AccountsBusinessPulse, AccCompareChart, AccOverviewRecent } from "../components/AccOverviewWidgets.jsx";
+import { AccountsBusinessPulse, AccCompareChart, AccMoneyTiles, AccOverviewRecent } from "../components/AccOverviewWidgets.jsx";
 import { IndustryTemplateCard } from "../components/AccSetupWidgets.jsx";
 import { AccOwnerDailyBrief } from "../components/AccOwnerDailyBrief.jsx";
 import { AiAdvisoryPanel } from "../../intelligence/AiAdvisoryPanel.jsx";
@@ -117,6 +117,15 @@ export function OverviewSection({
         />
       )}
 
+      {settings && metrics && <AccMoneyTiles
+        metrics={metrics}
+        periodLabel={rangeFrom === fy.from && rangeTo === fy.to ? "This FY" : rangeFrom === lastFy.from && rangeTo === lastFy.to ? "Last FY" : "Period"}
+        onNavigate={target => {
+          if (typeof target === "string") openSection(target);
+          else if (target?.reportTab) setReportTab(target.reportTab);
+        }}
+      />}
+
       {ownerBrief && settings && <AccOwnerDailyBrief
         brief={ownerBrief}
         parties={parties}
@@ -148,7 +157,6 @@ export function OverviewSection({
       <AccountsBusinessPulse
         metrics={metrics}
         receivables={overviewArAging}
-        payables={overviewApAging}
         payables={overviewApAging}
         items={items}
         stockMovements={stockMovements}
@@ -220,11 +228,6 @@ export function OverviewSection({
       <section className="acc-section">
         <h2 className="acc-section-title">Metrics</h2>
         <div className="acc-metric-grid acc-ov-metrics acc-metric-compact">
-          <AccMetric label="Cash" value={money(metrics?.cash)} tone="gold" />
-          <AccMetric label="Bank" value={money(metrics?.bank)} tone="gold" />
-          <AccMetric label="UPI" value={money(metrics?.upi)} tone="gold" />
-          <AccMetric label="Receivables" value={money(metrics?.receivables)} tone="blue" onClick={() => openSection("receivables")} />
-          <AccMetric label="Payables" value={money(metrics?.payables)} tone="gold" onClick={() => openSection("payables")} />
           <AccMetric label="Income" value={money(metrics?.income)} tone="green" onClick={() => openSection("pnl")} />
           <AccMetric label="Expenses" value={money(metrics?.expenses)} tone="red" onClick={() => openSection("pnl")} />
           <AccMetric label="Net profit" value={money(metrics?.netProfit)} tone={metrics?.netProfit < 0 ? "red" : "green"} onClick={() => openSection("pnl")} />
