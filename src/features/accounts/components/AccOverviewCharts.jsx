@@ -75,6 +75,91 @@ export function AccMonthlyChart({ rows = [], onOpenPnl }) {
   </section>;
 }
 
+const AGE_BUCKETS = [
+  { id: "current", label: "Not yet due", short: "Not due" },
+  { id: "d1_30", label: "1–30 days", short: "1–30" },
+  { id: "d31_60", label: "31–60 days", short: "31–60" },
+  { id: "d61_90", label: "61–90 days", short: "61–90" },
+  { id: "d90", label: "90+ days", short: "90+" },
+];
+// Wide for desktop; the narrow one is taller with short labels so a phone can read it.
+const AGE_LAYOUTS = [
+  { id: "wide", w: 900, h: 230, pad: { top: 22, right: 12, bottom: 30, left: 58 }, barMax: 44, short: false, values: true },
+  { id: "narrow", w: 420, h: 300, pad: { top: 14, right: 6, bottom: 34, left: 64 }, barMax: 26, short: true, values: false },
+];
+const ageAmount = (aging, id) => Math.max(0, Number(aging?.[id] || 0));
+
+function AgingBars({ layout, ar, ap, onReceivables, onPayables, summary }) {
+  const { w, h, pad } = layout;
+  const peak = Math.max(0, ...AGE_BUCKETS.flatMap(bucket => [ageAmount(ar, bucket.id), ageAmount(ap, bucket.id)]));
+  const step = niceStep(peak / 4);
+  const top = Math.max(step, Math.ceil(peak / step) * step);
+  const plotH = h - pad.top - pad.bottom;
+  const y = value => pad.top + ((top - value) / top) * plotH;
+  const ticks = [];
+  for (let tick = 0; tick <= top + step / 2; tick += step) ticks.push(tick);
+  const group = (w - pad.left - pad.right) / AGE_BUCKETS.length;
+  const barW = Math.min(layout.barMax, group * 0.3);
+  const center = index => pad.left + group * index + group / 2;
+  const bar = (kind, bucket, index) => {
+    const value = ageAmount(kind === "ar" ? ar : ap, bucket.id);
+    const x = kind === "ar" ? center(index) - barW - 2 : center(index) + 2;
+    const who = kind === "ar" ? "Customers owe you" : "You owe suppliers";
+    return <g key={kind}>
+      <rect className={`acc-ov-bar ${kind}`} x={x} y={y(value)} width={barW} height={Math.max(0, y(0) - y(value))} rx="3" onClick={value > 0 ? (kind === "ar" ? onReceivables : onPayables) : undefined}>
+        <title>{`${bucket.label} · ${who} ${money(value)}`}</title>
+      </rect>
+      {layout.values && value > 0 && <text className="acc-ov-bar-value" x={x + barW / 2} y={y(value) - 6} textAnchor="middle">{axisMoney(value)}</text>}
+    </g>;
+  };
+  return <svg className={`acc-ov-trend-svg acc-ov-arap-svg is-${layout.id}`} viewBox={`0 0 ${w} ${h}`} role="img" aria-label={`Receivables and payables by age. ${summary}`}>
+    {ticks.map(tick => <g key={tick} className="acc-ov-grid">
+      <line x1={pad.left} x2={w - pad.right} y1={y(tick)} y2={y(tick)} className={tick === 0 ? "zero" : ""} />
+      <text x={pad.left - 8} y={y(tick)} dy="0.35em" textAnchor="end">{axisMoney(tick)}</text>
+    </g>)}
+    {AGE_BUCKETS.map((bucket, index) => {
+      const overdue = bucket.id !== "current" && ageAmount(ar, bucket.id) + ageAmount(ap, bucket.id) > 0;
+      return <g key={bucket.id}>
+        {bar("ar", bucket, index)}
+        {bar("ap", bucket, index)}
+        <text className={`acc-ov-axis-label${overdue ? " is-overdue" : ""}`} x={center(index)} y={h - 10} textAnchor="middle">{layout.short ? bucket.short : bucket.label}</text>
+      </g>;
+    })}
+  </svg>;
+}
+
+// What customers owe and what is owed to suppliers, side by side for each age of the unpaid amount.
+export function AccArApAgingChart({ ar, ap, onReceivables, onPayables }) {
+  const arTotal = Number(ar?.total || 0);
+  const apTotal = Number(ap?.total || 0);
+  const hasData = arTotal > 0 || apTotal > 0;
+  const summary = AGE_BUCKETS.map(bucket => `${bucket.label}: receivables ${money(ageAmount(ar, bucket.id))}, payables ${money(ageAmount(ap, bucket.id))}`).join("; ");
+
+  return <section className="card acc-ov-chart acc-ov-arap" aria-label="Receivables and payables by age">
+    <header className="acc-ov-chart-head">
+      <div>
+        <strong>Receivables & payables</strong>
+        <p className="small">What customers owe you and what you owe suppliers, by how long it is unpaid</p>
+      </div>
+    </header>
+    <div className="acc-ov-arap-totals">
+      <button type="button" className="acc-ov-arap-total ar" onClick={onReceivables}>
+        <span><i aria-hidden="true" /> Customers owe you</span>
+        <strong>{money(arTotal)}</strong>
+        <em className={Number(ar?.overdue) > 0 ? "is-due" : ""}>{Number(ar?.overdue) > 0 ? `${money(ar.overdue)} overdue` : "Nothing overdue"}</em>
+      </button>
+      <button type="button" className="acc-ov-arap-total ap" onClick={onPayables}>
+        <span><i aria-hidden="true" /> You owe suppliers</span>
+        <strong>{money(apTotal)}</strong>
+        <em className={Number(ap?.overdue) > 0 ? "is-due" : ""}>{Number(ap?.overdue) > 0 ? `${money(ap.overdue)} overdue` : "Nothing overdue"}</em>
+      </button>
+    </div>
+    {hasData
+      ? AGE_LAYOUTS.map(layout => <AgingBars key={layout.id} layout={layout} ar={ar} ap={ap} onReceivables={onReceivables} onPayables={onPayables} summary={summary} />)
+      : <p className="acc-ov-chart-empty">No unpaid invoices or bills in this period.</p>}
+  </section>;
+}
+
 const percent = share => (share > 0 && share < 0.005 ? "<1%" : `${Math.round(share * 100)}%`);
 
 const R = 58;

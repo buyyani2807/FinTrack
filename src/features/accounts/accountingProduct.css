@@ -1546,95 +1546,86 @@
   margin: 4px 0 0;
 }
 
-.accounts-dashboard .acc-ov-chart-body {
+.accounts-dashboard .acc-ov-arap-totals {
   display: grid;
-  grid-template-columns: 148px minmax(0, 1fr);
-  gap: 18px;
-  align-items: center;
-}
-
-.accounts-dashboard .acc-ov-pie {
-  width: 148px;
-  height: 148px;
-}
-
-.accounts-dashboard .acc-ov-pie-bg { fill: var(--ft-text); }
-.accounts-dashboard .acc-ov-pie-hole { fill: var(--ft-text); }
-.accounts-dashboard .acc-ov-pie-ar { fill: var(--acc-blue); cursor: pointer; }
-.accounts-dashboard .acc-ov-pie-ap { fill: var(--acc-gold); cursor: pointer; }
-
-.accounts-dashboard .acc-ov-chart-bars {
-  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  min-width: 0;
-  width: 100%;
+  margin-bottom: 8px;
 }
 
-.accounts-dashboard .acc-ov-chart-row {
+.accounts-dashboard .acc-ov-arap-total {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 4px 12px;
-  padding: 0;
-  border: 0;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--acc-line);
+  border-radius: 12px;
   background: transparent;
   color: inherit;
   text-align: left;
   cursor: pointer;
 }
 
-.accounts-dashboard .acc-ov-chart-row:focus-visible {
+.accounts-dashboard .acc-ov-arap-total:hover { border-color: var(--ft-primary); }
+
+.accounts-dashboard .acc-ov-arap-total:focus-visible {
   outline: 2px solid var(--acc-gold);
-  outline-offset: 4px;
-  border-radius: 8px;
+  outline-offset: 2px;
 }
 
-.accounts-dashboard .acc-ov-chart-row strong {
-  font: 700 18px/1.1 Syne, sans-serif;
-  font-variant-numeric: tabular-nums;
-  color: var(--acc-text);
-}
-
-.accounts-dashboard .acc-ov-chart-label {
+.accounts-dashboard .acc-ov-arap-total span {
   color: var(--acc-muted);
   font-size: 12px;
   font-weight: 700;
 }
 
-.accounts-dashboard .acc-ov-chart-label i,
-.accounts-dashboard .acc-ov-aging-foot i {
+.accounts-dashboard .acc-ov-arap-total i {
   display: inline-block;
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   margin-right: 6px;
   border-radius: 2px;
   vertical-align: middle;
 }
 
-.accounts-dashboard .acc-ov-chart-label i.ar { background: var(--acc-blue); }
-.accounts-dashboard .acc-ov-chart-label i.ap { background: var(--acc-gold); }
-.accounts-dashboard .acc-ov-chart-row .acc-ov-aging-bar { grid-column: 1 / -1; }
+.accounts-dashboard .acc-ov-arap-total.ar i { background: var(--acc-blue); }
+.accounts-dashboard .acc-ov-arap-total.ap i { background: #f0883e; }
 
-.accounts-dashboard .acc-ov-aging-bar {
-  display: flex;
-  height: 10px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: var(--ft-bg);
+.accounts-dashboard .acc-ov-arap-total strong {
+  color: var(--acc-text);
+  font: 700 20px/1.1 Syne, sans-serif;
+  font-variant-numeric: tabular-nums;
 }
 
-.accounts-dashboard .acc-ov-chart-row.kind-ap .acc-ov-aging-bar .current { background: var(--acc-gold); }
-
-.accounts-dashboard .acc-ov-aging-foot {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 18px;
-  margin: 2px 0 0;
+.accounts-dashboard .acc-ov-arap-total em {
   color: var(--acc-muted);
   font-size: 12px;
+  font-style: normal;
 }
 
-.accounts-dashboard .acc-ov-aging-foot i.current { background: var(--acc-blue); }
-.accounts-dashboard .acc-ov-aging-foot i.overdue { background: var(--ft-warning); }
+.accounts-dashboard .acc-ov-arap-total em.is-due { color: var(--acc-red); font-weight: 600; }
+
+.accounts-dashboard .acc-ov-bar.ar { fill: var(--acc-blue); }
+.accounts-dashboard .acc-ov-bar.ap { fill: #f0883e; }
+.accounts-dashboard .acc-ov-arap-svg .acc-ov-bar { cursor: pointer; }
+.accounts-dashboard .acc-ov-arap-svg .acc-ov-bar:hover { opacity: 0.85; }
+
+.accounts-dashboard .acc-ov-bar-value {
+  fill: var(--acc-muted);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.accounts-dashboard .acc-ov-axis-label.is-overdue { fill: var(--acc-red); }
+
+.accounts-dashboard .acc-ov-arap-svg.is-narrow { display: none; }
+
+@media (max-width: 620px) {
+  .accounts-dashboard .acc-ov-arap-totals { grid-template-columns: 1fr; }
+  .accounts-dashboard .acc-ov-arap-svg.is-wide { display: none; }
+  .accounts-dashboard .acc-ov-arap-svg.is-narrow { display: block; }
+  .accounts-dashboard .acc-ov-arap-svg.is-narrow text { font-size: 16px; }
+}
 
 .accounts-dashboard .acc-ask {
   padding: 16px 18px;
@@ -3498,10 +3489,6 @@
   .accounts-dashboard .acc-ov-metrics {
     grid-template-columns: 1fr 1fr;
   }
-  .accounts-dashboard .acc-ov-chart-body {
-    grid-template-columns: 1fr;
-    justify-items: center;
-  }
   .accounts-dashboard .acc-ov-recent-row {
     align-items: center;
   }
@@ -3628,12 +3615,6 @@
   .accounts-dashboard .acc-shell,
   .accounts-dashboard .acc-shell.nav-expanded {
     grid-template-columns: 1fr !important;
-  }
-}
-
-@media (max-width: 720px) {
-  .accounts-dashboard .acc-ov-chart-body {
-    grid-template-columns: 1fr;
   }
 }
 

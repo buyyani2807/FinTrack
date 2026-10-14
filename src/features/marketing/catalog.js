@@ -303,6 +303,7 @@ export const FEATURES = [
       "Sales and purchase for today, this month, or the financial year, with receivables, payables, cash, bank, and UPI at the top",
       "Monthly income and expenses chart with net profit for the last six months",
       "Spending analysis of the largest expense ledgers",
+      "Receivables and payables side by side in bars by age, from not yet due to 90+ days",
       "Chart of accounts, vouchers, and ledgers",
       "Receivables, payables, and inventory",
       "GST preparation, bank reconciliation, and statements",
@@ -311,7 +312,7 @@ export const FEATURES = [
     sections: [
       {
         title: "Your numbers on the first screen",
-        text: "The overview opens with sales and purchase for today, this month, or the financial year, what customers owe and what you owe suppliers, and the cash, bank, and UPI balances. Below that, a monthly chart shows income against expenses for the last six months with the net profit line, and a spending chart shows where the money went by expense ledger. Expenses in the monthly chart allow for the change in stock, so they agree with the profit and loss report. Tap a figure to open the report behind it.",
+        text: "The overview opens with sales and purchase for today, this month, or the financial year, what customers owe and what you owe suppliers, and the cash, bank, and UPI balances. Below that, a monthly chart shows income against expenses for the last six months with the net profit line, and a spending chart shows where the money went by expense ledger. A receivables and payables chart puts what customers owe next to what you owe suppliers, grouped by how long each amount has been unpaid. Expenses in the monthly chart allow for the change in stock, so they agree with the profit and loss report. Tap a figure to open the report behind it.",
       },
       {
         title: "Who Accounts is for",

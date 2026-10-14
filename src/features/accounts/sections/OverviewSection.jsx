@@ -11,10 +11,10 @@ import { AccAskBooks } from "../components/AccAskBooks.jsx";
 import { emptyPartyForm } from "../accountsFormDefaults.js";
 import { money } from "../accountsFormat.js";
 import { AccOverviewContextBar } from "../components/AccPeriodBars.jsx";
-import { AccountsBusinessPulse, AccCompareChart, AccMoneyTiles, AccOverviewRecent } from "../components/AccOverviewWidgets.jsx";
+import { AccountsBusinessPulse, AccMoneyTiles, AccOverviewRecent } from "../components/AccOverviewWidgets.jsx";
 import { IndustryTemplateCard } from "../components/AccSetupWidgets.jsx";
 import { AccOwnerDailyBrief } from "../components/AccOwnerDailyBrief.jsx";
-import { AccMonthlyChart, AccSpendingDonut } from "../components/AccOverviewCharts.jsx";
+import { AccArApAgingChart, AccMonthlyChart, AccSpendingDonut } from "../components/AccOverviewCharts.jsx";
 import { AiAdvisoryPanel } from "../../intelligence/AiAdvisoryPanel.jsx";
 import { isModuleEnabled } from "../../commercial/featurePacks.js";
 
@@ -187,7 +187,7 @@ export function OverviewSection({
         if (href?.section) openSection(href.section);
       }} />}
 
-      <AccCompareChart
+      <AccArApAgingChart
         ar={overviewArAging}
         ap={overviewApAging}
         onReceivables={() => openSection("receivables")}

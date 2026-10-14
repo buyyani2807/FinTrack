@@ -999,10 +999,6 @@ html[data-ft-role="owner"] .top-actions .top-theme { display: none; }
 .accounts-dashboard .accounts-industry-badge { background: var(--ft-icon-tile) !important; color: var(--ft-text-2) !important; }
 .accounts-dashboard .acc-user-menu, .accounts-dashboard .acc-gst-setup-hint, .accounts-dashboard .acc-gst-preview, .accounts-dashboard .acc-form-section { background: var(--ft-surface) !important; border-color: var(--ft-border) !important; }
 .accounts-dashboard .acc-ov-context { background: var(--ft-surface) !important; border-color: transparent !important; box-shadow: var(--ft-shadow) !important; }
-.accounts-dashboard .acc-ov-aging-bar { background: var(--ft-surface-muted) !important; }
-/* ageing bars: current vs overdue, matching the legend (previously only payables-current was coloured) */
-.accounts-dashboard .acc-ov-aging-bar .current, .accounts-dashboard .acc-ov-chart-row.kind-ap .acc-ov-aging-bar .current, .accounts-dashboard .acc-ov-aging-foot i.current { background: var(--ft-chart-1) !important; }
-.accounts-dashboard .acc-ov-aging-bar .overdue, .accounts-dashboard .acc-ov-aging-foot i.overdue { background: var(--ft-warning) !important; }
 .accounts-dashboard .acc-ov-more-menu button:hover, .accounts-dashboard .acc-ov-more-menu button:focus-visible, .accounts-dashboard .acc-table-wrap tbody tr:hover { background: var(--ft-surface-hover) !important; }
 .accounts-dashboard .acc-switch { background: var(--ft-border-strong) !important; }
 .accounts-dashboard .acc-bottom-nav { background: var(--ft-surface) !important; border-color: var(--ft-border) !important; }
@@ -1021,8 +1017,6 @@ html[data-ft-role="owner"] .top-actions .top-theme { display: none; }
 .accounts-dashboard .accounts-business-action { background: var(--ft-surface) !important; color: var(--ft-text-2) !important; }
 .accounts-dashboard .accounts-business-alert { background: var(--ft-warning-soft) !important; }
 .accounts-dashboard .attention-center-item { background: var(--ft-surface-subtle) !important; border-color: var(--ft-border) !important; }
-.accounts-dashboard .acc-ov-pie-bg { fill: var(--ft-surface-muted) !important; }
-.accounts-dashboard .acc-ov-pie-hole { fill: var(--ft-surface) !important; }
 .accounts-dashboard .acc-skeleton, .accounts-dashboard .acc-skel { background: linear-gradient(90deg, var(--ft-surface-muted) 0%, var(--ft-surface-subtle) 50%, var(--ft-surface-muted) 100%) !important; }
 .accounts-dashboard .table, .accounts-dashboard .acc-table-wrap { background: var(--ft-surface) !important; border-color: var(--ft-border) !important; }
 
@@ -1140,7 +1134,7 @@ html[data-ft-role="owner"] .top-actions .top-theme { display: none; }
   .modal, .acc-modal { width: 100% !important; max-height: 92svh !important; border-radius: 20px 20px 0 0 !important; padding: 20px !important; }
   .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
   .btn { min-height: 44px !important; }
-  .accounts-dashboard .accounts-business-action, .accounts-dashboard .acc-ov-chart-row, .accounts-dashboard .acc-ov-link-btn, .link-button { min-height: 44px !important; }
+  .accounts-dashboard .accounts-business-action, .accounts-dashboard .acc-ov-link-btn, .link-button { min-height: 44px !important; }
   .link-button { display: inline-flex; align-items: center; }
   .dashboard-finance-section, .dashboard-chit-panel { padding: 16px !important; }
 }
