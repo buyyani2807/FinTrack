@@ -2,6 +2,23 @@ import { PARTY_TYPES } from "./model/accountingModel.js";
 import { formatInr } from "../../lib/formatMoney.js";
 
 export const money = formatInr;
+// Short rupee amounts for chart axes and bar labels: ₹950, ₹4.5K, ₹1.2L, ₹3Cr.
+export const axisMoney = value => {
+  const n = Number(value || 0);
+  const abs = Math.abs(n);
+  const trim = text => text.replace(/\.0+$|(\.\d*[1-9])0+$/, "$1");
+  if (abs >= 10000000) return `₹${trim((n / 10000000).toFixed(1))}Cr`;
+  if (abs >= 100000) return `₹${trim((n / 100000).toFixed(1))}L`;
+  if (abs >= 1000) return `₹${trim((n / 1000).toFixed(1))}K`;
+  return `₹${Math.round(n)}`;
+};
+// A round gridline step (1, 2, 2.5 or 5 × a power of ten) at least `raw` wide.
+export const niceStep = raw => {
+  if (raw <= 0) return 1;
+  const power = 10 ** Math.floor(Math.log10(raw));
+  return [1, 2, 2.5, 5, 10].map(factor => factor * power).find(step => step >= raw);
+};
+export const sharePercent = share => (share > 0 && share < 0.005 ? "<1%" : `${Math.round(share * 100)}%`);
 export const qty = (value, unit) => `${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 3 })}${unit ? ` ${unit}` : ""}`;
 export const formatOverviewDate = iso => {
   if (!iso) return "—";

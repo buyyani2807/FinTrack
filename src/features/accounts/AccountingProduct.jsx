@@ -152,6 +152,7 @@ import { InvoicesSection } from "./sections/InvoicesSection.jsx";
 import { PartiesSection } from "./sections/PartiesSection.jsx";
 import { PartyProfileSection } from "./sections/PartyProfileSection.jsx";
 import { InventorySection } from "./sections/InventorySection.jsx";
+import { ExpensesSection } from "./sections/ExpensesSection.jsx";
 import { MoreSection } from "./sections/MoreSection.jsx";
 import { ReportsSection } from "./sections/ReportsSection.jsx";
 import { BankSection } from "./sections/BankSection.jsx";
@@ -2198,6 +2199,24 @@ const openVoucher = () => {
             onSetStops={saveRouteStops}
           />
         </div>}
+        {section === "expenses" && <ExpensesSection
+          key={activeCompanyId || "company"}
+          accounts={visibleAccounts}
+          vouchers={vouchers}
+          parties={parties}
+          booksStartedOn={activeCompany?.booksStartedOn || settings?.booksStartedOn || ""}
+          companyName={activeCompany?.name || settings?.companyName || ""}
+          canWrite={canWrite}
+          aiEnabled={aiEnabled}
+          onAddExpense={() => openSimple("expense")}
+          onOpenVoucher={voucherNumber => {
+            if (voucherNumber) setSearch(voucherNumber);
+            openSection("vouchers");
+          }}
+          onOpenPnl={() => openSection("pnl")}
+          onOpenAiReview={aiEnabled ? () => openSection("ai") : null}
+        />}
+
         {section === "inventory" && <InventorySection
           tab={view.sub}
           onTabChange={next => go({ section: "inventory", sub: next })}

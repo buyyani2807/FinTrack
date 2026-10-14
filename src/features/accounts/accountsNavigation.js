@@ -15,6 +15,7 @@ export const NAV_TREE = [
       { id: "routes", label: "Collection routes" },
     ],
   },
+  { id: "expenses", label: "Expenses", glyph: "◔" },
   {
     id: "reports",
     label: "Reports",
@@ -39,6 +40,7 @@ export function sectionTrail(section, reportTab) {
   if (section === "vouchers") return ["Transactions"];
   if (section === "inventory") return ["Inventory"];
   if (section === "documents") return ["Documents"];
+  if (section === "expenses") return ["Expenses"];
   if (section === "parties") return ["Parties", "Party Ledger"];
   if (section === "party") return ["Parties", "Party profile"];
   if (section === "receivables") return ["Parties", "Receivables"];
@@ -62,6 +64,7 @@ export const SECTIONS = [
   { id: "vouchers", label: "Transactions", group: "Books" },
   { id: "documents", label: "Documents", group: "Books" },
   { id: "inventory", label: "Inventory", group: "Books" },
+  { id: "expenses", label: "Expenses", group: "Books" },
   { id: "cashbook", label: "Cashbook", group: "Books" },
   { id: "receivables", label: "Receivables", group: "Parties" },
   { id: "payables", label: "Payables", group: "Parties" },
@@ -117,6 +120,7 @@ export const MORE_LINKS = [
   ["bank", "Bank Reconciliation", "Match statement lines"],
   ["trial", "Trial Balance", "Debit vs credit check"],
   ["pnl", "Profit & Loss", "Income and expenses"],
+  ["expenses", "Expenses", "Spending by month and category"],
   ["balance", "Balance Sheet", "Assets and liabilities"],
   ["cashbook", "Cashbook", "Operational cash"],
   ["crm", "Customer Pipeline", "Follow up customer opportunities"],
