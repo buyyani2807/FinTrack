@@ -112,6 +112,7 @@ import { loadOrganizationSettings } from "../../lib/financeRepository.js";
 import { buildSalesInvoice } from "./model/salesInvoiceModel.js";
 import { SalesInvoiceSuccessModal, SalesInvoiceViewerModal } from "./components/SalesInvoiceActions.jsx";
 import { periodStockValues } from "./model/inventoryValuation.js";
+import { expenseBreakdown, monthlyIncomeExpense } from "./model/accountsCharts.js";
 import {
   currentStockForItem,
   itemPurchasesReport,
@@ -544,6 +545,21 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     () => (wantOverview ? dashboardMetrics(visibleAccounts, vouchers, parties, { today: todayIso(), ...range, stock: periodStock }) : null),
     [wantOverview, visibleAccounts, vouchers, parties, range, periodStock],
   );
+  const overviewCharts = useMemo(() => {
+    if (!wantOverview) return null;
+    const today = todayIso();
+    return {
+      trend: monthlyIncomeExpense({
+        accounts: visibleAccounts,
+        vouchers,
+        items,
+        movements: stockMovements,
+        voucherItemLines: costLines,
+        endDate: range.to && range.to < today ? range.to : today,
+      }),
+      spending: expenseBreakdown(profitAndLoss(visibleAccounts, vouchers, range, { stock: periodStock }).expenses),
+    };
+  }, [wantOverview, visibleAccounts, vouchers, items, stockMovements, costLines, range, periodStock]);
   const tb = useMemo(
     () => (wantTrial ? trialBalance(visibleAccounts, vouchers, range) : { rows: [], totalDebit: 0, totalCredit: 0, balanced: true }),
     [wantTrial, visibleAccounts, vouchers, range],
@@ -1983,6 +1999,7 @@ const openVoucher = () => {
           rangeTo={rangeTo}
           setReportRange={setReportRange}
           metrics={metrics}
+          overviewCharts={overviewCharts}
           overviewArAging={overviewArAging}
           overviewApAging={overviewApAging}
           items={items}

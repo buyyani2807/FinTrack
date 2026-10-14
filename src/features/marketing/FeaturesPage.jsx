@@ -9,7 +9,7 @@ import { PageClose } from "./SitePages.jsx";
 const CATEGORY_SCENE = {
   finance: "finance",
   chit: "chit-scheme",
-  accounts: "accounts-overview",
+  accounts: "accounts-charts",
   intelligence: "intelligence",
   portals: "portals",
 };

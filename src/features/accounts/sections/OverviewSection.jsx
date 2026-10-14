@@ -14,6 +14,7 @@ import { AccOverviewContextBar } from "../components/AccPeriodBars.jsx";
 import { AccountsBusinessPulse, AccCompareChart, AccMoneyTiles, AccOverviewRecent } from "../components/AccOverviewWidgets.jsx";
 import { IndustryTemplateCard } from "../components/AccSetupWidgets.jsx";
 import { AccOwnerDailyBrief } from "../components/AccOwnerDailyBrief.jsx";
+import { AccMonthlyChart, AccSpendingDonut } from "../components/AccOverviewCharts.jsx";
 import { AiAdvisoryPanel } from "../../intelligence/AiAdvisoryPanel.jsx";
 import { isModuleEnabled } from "../../commercial/featurePacks.js";
 
@@ -37,6 +38,7 @@ export function OverviewSection({
   rangeTo,
   setReportRange,
   metrics,
+  overviewCharts,
   overviewArAging,
   overviewApAging,
   items,
@@ -151,6 +153,11 @@ export function OverviewSection({
         equationHolds={Boolean(metrics?.equationHolds)}
         integrationEnabled={Boolean(settings?.integrationEnabled)}
       />
+
+      {settings && overviewCharts && <div className="acc-ov-charts">
+        <AccMonthlyChart rows={overviewCharts.trend} onOpenPnl={() => openSection("pnl")} />
+        <AccSpendingDonut breakdown={overviewCharts.spending} onOpenPnl={() => openSection("pnl")} onOpenReview={() => openSection("ai")} />
+      </div>}
 
       <IndustryTemplateCard companyId={activeCompanyId} />
 

@@ -298,9 +298,21 @@ export const FEATURES = [
       "Follow receivables, payables, stock, GST preparation, and the statements for that company.",
       "Lock a closed period. Sync the cashbook only after integration is on and you choose Sync.",
     ],
-    capabilities: ["Company switcher", "Chart of accounts, vouchers, and ledgers", "Receivables, payables, and inventory", "GST preparation, bank reconciliation, and statements"],
-    benefits: ["One company book for a small or medium business", "You always see the company you opened", "A voucher, a bank match, and a period lock wait for you"],
+    capabilities: [
+      "Company switcher",
+      "Sales and purchase for today, this month, or the financial year, with receivables, payables, cash, bank, and UPI at the top",
+      "Monthly income and expenses chart with net profit for the last six months",
+      "Spending analysis of the largest expense ledgers",
+      "Chart of accounts, vouchers, and ledgers",
+      "Receivables, payables, and inventory",
+      "GST preparation, bank reconciliation, and statements",
+    ],
+    benefits: ["One company book for a small or medium business", "The numbers that matter are on the first screen", "You always see the company you opened", "A voucher, a bank match, and a period lock wait for you"],
     sections: [
+      {
+        title: "Your numbers on the first screen",
+        text: "The overview opens with sales and purchase for today, this month, or the financial year, what customers owe and what you owe suppliers, and the cash, bank, and UPI balances. Below that, a monthly chart shows income against expenses for the last six months with the net profit line, and a spending chart shows where the money went by expense ledger. Expenses in the monthly chart allow for the change in stock, so they agree with the profit and loss report. Tap a figure to open the report behind it.",
+      },
       {
         title: "Who Accounts is for",
         text: "Accounts is for a small or medium business: a shop, a trading firm, a service business, or a finance company that also keeps formal books. The owner opens a company, posts the day’s vouchers, and reads the statements. A second company stays separate until you switch to it.",
