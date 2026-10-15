@@ -143,7 +143,6 @@ export function AboutPage() {
       <p className="mkt-kicker">About FinTrack</p>
       <h1>One login for the books, the collections, and the chit.</h1>
       <p>Many finance businesses, chit fund operators, and traders keep the accounts in one place, collections in a notebook, and customers in a spreadsheet or on WhatsApp. FinTrack puts that work in one workspace that opens on a laptop and installs on iPhone and Android.</p>
-      <p>Sudheer Kumar Buyyani founded FinTrack so a business can keep accounting, collections, customers, and chit funds in one workspace.</p>
     </div>
   </section>
 
@@ -199,22 +198,6 @@ export function AboutPage() {
     </div>
   </section>
 
-  <section className="mkt-section mkt-tint">
-    <div className="mkt-wrap">
-      <div className="mkt-section-head"><h2>Who builds FinTrack</h2></div>
-      <article className="mkt-team">
-        <div className="mkt-team-photo">
-          <img src="/founder/sudheer-kumar-buyyani.jpg" alt="Sudheer Kumar Buyyani, CEO and Founder of FinTrack" width="888" height="1024" loading="lazy" decoding="async" />
-        </div>
-        <div>
-          <h3>Sudheer Kumar Buyyani</h3>
-          <p className="mkt-muted">CEO and Founder</p>
-          <p>More than 15 years in the IT industry across the United States, Ireland, and India, including roles at Deloitte and Oracle Corporation. Master’s degree in Management Information Systems from UCD Michael Smurfit Graduate Business School.</p>
-          <Link className="mkt-text-link" to={marketingPaths.founder}>Read Sudheer’s profile</Link>
-        </div>
-      </article>
-    </div>
-  </section>
   <PageClose />
   </>;
 }
@@ -278,7 +261,7 @@ export function ResourcesPage() {
     [marketingPaths.features, "Feature directory", "Every module currently in the product."],
     [marketingPaths.security, "Security", "Roles, companies, locks, and review."],
     [marketingPaths.pricing, "Pricing", "One plan for all modules: ₹499 a month, or ₹5,000 a year."],
-    [marketingPaths.about, "About FinTrack", "What FinTrack stands for, who uses it, and who builds it."],
+    [marketingPaths.about, "About FinTrack", "What FinTrack stands for and who uses it."],
     [marketingPaths.founder, "CEO and Founder", "Sudheer Kumar Buyyani, and the experience behind FinTrack."],
     [marketingPaths.contact, "Request a demo", "A local note until contact is connected."],
   ];
