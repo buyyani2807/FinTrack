@@ -157,8 +157,7 @@ html[data-theme="dark"] .mkt {
 html[data-theme="dark"] .mkt-btn.primary { background: #1c9a84; border-color: #1c9a84; color: #fff; }
 html[data-theme="dark"] .mkt-btn:not(.primary):not(.light) { background: #1c2833; border-color: #8aa0b0; color: #f4f7f8; }
 html[data-theme="dark"] .mkt-card { border-color: #4a6274; }
-html[data-theme="dark"] .mkt-section h2,
-html[data-theme="dark"] .mkt-role-views h2 { color: #fff; }
+html[data-theme="dark"] .mkt-section h2 { color: #fff; }
 .mkt-btn.ghost { background: transparent; }
 .mkt-btn.light { background: transparent; border-color: rgba(255, 255, 255, 0.45); color: #fff; }
 .mkt-btn:focus-visible, .mkt a:focus-visible, .mkt button:focus-visible {
@@ -405,13 +404,13 @@ html[data-theme="dark"] .mkt-shot { border-color: #4a6274; background: #101820; 
 .mkt-profile .mkt-lead { margin-top: 8px; font-size: 16px; }
 .mkt-profile .mkt-kicker { margin-bottom: 10px; }
 .mkt-profile .mkt-grid { margin-top: 18px; }
-.mkt-role-views { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 28px; align-items: start; }
-.mkt-role-views > *, .mkt-split > * { min-width: 0; }
-.mkt-role-views h2 { font-size: clamp(24px, 3vw, 32px); }
-.mkt-role-views .mkt-lead { margin-bottom: 16px; }
+.mkt-split > * { min-width: 0; }
+.mkt-about-signins { grid-template-columns: minmax(0, 1.3fr) minmax(240px, 0.7fr); }
+.mkt-about-signins .mkt-shot { justify-self: center; width: 100%; max-width: 380px; margin-inline: auto; }
+.mkt-about-signins .mkt-card .mkt-icon { width: 36px; height: 36px; border-radius: 10px; }
 
 @media (max-width: 980px) {
-  .mkt-hero-grid, .mkt-split, .mkt-split.flip, .mkt-detail, .mkt-footer-grid, .mkt-profile, .mkt-role-views, .mkt-grid.three, .mkt-grid.four, .mkt-grid.six {
+  .mkt-hero-grid, .mkt-split, .mkt-split.flip, .mkt-detail, .mkt-footer-grid, .mkt-profile, .mkt-about-signins, .mkt-grid.three, .mkt-grid.four, .mkt-grid.six {
     grid-template-columns: 1fr;
   }
   .mkt-split.flip > :first-child { order: 0; }

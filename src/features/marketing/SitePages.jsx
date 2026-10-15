@@ -6,6 +6,7 @@ import { featurePath, marketingPaths } from "./paths.js";
 import { InstallGuide } from "./InstallGuide.jsx";
 import { ProductCta } from "./ProductCta.jsx";
 import { ProductPreview } from "./ProductPreview.jsx";
+import { FeatureIcon } from "./icons.jsx";
 
 function PageTitle({ title }) {
   useEffect(() => { document.title = title; }, [title]);
@@ -127,37 +128,83 @@ export function PageClose() {
   </section>;
 }
 
+const ABOUT_PRINCIPLES = [
+  { icon: "Sparkles", title: "You confirm every record", text: "Ask FinTrack, Tell FinTrack, bill scanning, and AI Review draft and suggest. Nothing is posted, sent, or imported until you save it." },
+  { icon: "Lock", title: "Each person sees only their part", text: "The owner, a collection agent, a finance customer, and a chit member each sign in separately and see only what is theirs." },
+  { icon: "Landmark", title: "Built for how Indian businesses work", text: "An April to March financial year, GST preparation for your CA, rupee amounts, daily and monthly collections, and chit funds." },
+  { icon: "WalletCards", title: "One price, every module", text: "₹499 a month or ₹5,000 a year. Accounts, finance, chit funds, collections, portals, and AI are all included." },
+];
+
+const ABOUT_SIGN_INS = [
+  { icon: "LayoutDashboard", title: "Financier", text: "The owner workspace: dashboard, company books, schemes, staff, and settings.", to: "dashboard" },
+  { icon: "Users", title: "Collection agent", text: "An agent ID and PIN open only the accounts and routes you assign.", to: "agent-portal" },
+  { icon: "UserRound", title: "Customer", text: "A portal ID and PIN show one finance customer their own loan and history.", to: "customer-portals" },
+  { icon: "Ticket", title: "Chit member", text: "A member sees their own ticket and payments, and bids when the auction is open.", to: "member-portals" },
+];
+
 export function AboutPage() {
-  return <RevealProvider intent="content">
-  <section className="mkt-section">
-    <PageTitle title="About FinTrack" />
-    <Reveal>
-      <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>About</p>
-      <h1>Accounting, collections, and chit funds in one workspace.</h1>
-      <p className="mkt-lead">FinTrack is for finance businesses that collect daily or monthly, for chit fund operators, and for small and medium businesses that keep company books. Shops and service firms use the same login.</p>
-    </Reveal>
-    <Reveal className="mkt-role-views">
-      <div>
-        <h2>Financier</h2>
-        <p className="mkt-lead">Financier sign in opens the owner workspace: the dashboard, company books, schemes, staff, and settings.</p>
-        <ProductPreview scene="dashboard" />
-      </div>
-      <div>
-        <h2>Collection agent</h2>
-        <p className="mkt-lead">Agent login uses an agent ID and PIN and opens the accounts and routes you assign. The owner books, chit book, and company accounts stay closed.</p>
-        <ProductPreview scene="finance" />
-      </div>
-    </Reveal>
-    <Reveal as="p" className="mkt-lead">A finance customer or chit member uses a portal ID and PIN and sees only their own account or ticket. Each sign-in is separate, so sharing access with a collector does not open the owner workspace. <Link className="mkt-text-link" to={marketingPaths.security}>Read the access controls</Link>.</Reveal>
-    <Reveal className="mkt-split" style={{ marginTop: 36 }}>
-      <div>
-        <h2>Ask FinTrack shows a suggestion. You confirm it.</h2>
-        <p className="mkt-lead">Ask “Who is unpaid today?” and the answer comes from this workspace. You still record the payment. A bill photo stays a draft until you save it. A bank line stays a suggestion until you approve the match. AI Review explains each suggestion and links to the record, and a cash-flow forecast is shown apart from actual figures. Nothing is posted into the books until you act.</p>
-        <Link className="mkt-text-link" to={featurePath("ask-fintrack")}>Read about Ask FinTrack</Link>
-      </div>
-      <ProductPreview scene="intelligence" />
-    </Reveal>
+  return <RevealProvider intent="landing">
+  <PageTitle title="About FinTrack" />
+  <section className="mkt-hero">
+    <div className="mkt-wrap mkt-hero-copy">
+      <Reveal as="p" className="mkt-kicker">About FinTrack</Reveal>
+      <Reveal as="h1" index={1}>One login for the books, the collections, and the chit.</Reveal>
+      <Reveal as="p" index={2}>Many finance businesses, chit fund operators, and traders keep the accounts in one place, collections in a notebook, and customers in a spreadsheet or on WhatsApp. FinTrack puts that work in one workspace that opens on a laptop and installs on iPhone and Android.</Reveal>
+    </div>
   </section>
+
+  <section className="mkt-section">
+    <div className="mkt-wrap">
+      <div className="mkt-section-head"><Reveal as="h2">What FinTrack stands for</Reveal></div>
+      <div className="mkt-grid four">
+        {ABOUT_PRINCIPLES.map((item, index) => <Reveal as="article" key={item.title} className="mkt-card" index={index % 4}>
+          <div className="mkt-icon"><FeatureIcon name={item.icon} /></div>
+          <h3>{item.title}</h3>
+          <p>{item.text}</p>
+        </Reveal>)}
+      </div>
+    </div>
+  </section>
+
+  <section className="mkt-section mkt-tint">
+    <div className="mkt-wrap">
+      <div className="mkt-section-head">
+        <Reveal as="h2">Who uses FinTrack</Reveal>
+        <Reveal as="p" className="mkt-lead" index={1}>Each business opens the modules it needs. The rest stay in the same login for later.</Reveal>
+      </div>
+      <div className="mkt-grid three">
+        {SOLUTIONS.map((item, index) => <Reveal as="article" key={item.title} className="mkt-card" index={index % 3}>
+          <h3>{item.title}</h3>
+          <p>{item.text}</p>
+        </Reveal>)}
+        <Reveal as="article" className="mkt-card" index={SOLUTIONS.length % 3}>
+          <h3>Moving from Tally, Zoho Books, or Excel</h3>
+          <p>Upload your old books. FinTrack maps the ledgers and parties and shows you what needs a decision before anything is imported.</p>
+          <Link className="mkt-text-link" to={featurePath("ai-migration")}>How migration works</Link>
+        </Reveal>
+      </div>
+      <Reveal className="mkt-cta-row"><Link className="mkt-btn" to={marketingPaths.solutions}>See solutions</Link></Reveal>
+    </div>
+  </section>
+
+  <section className="mkt-section">
+    <div className="mkt-wrap mkt-split mkt-about-signins">
+      <div>
+        <Reveal as="h2">Four sign-ins, each to its own part</Reveal>
+        <Reveal as="p" className="mkt-lead" index={1}>Everyone uses the same sign-in screen, but each role opens a separate view. Giving a collector access does not open the owner workspace.</Reveal>
+        <div className="mkt-grid two">
+          {ABOUT_SIGN_INS.map((item, index) => <Reveal as={Link} key={item.title} className="mkt-card" to={featurePath(item.to)} index={index % 2}>
+            <div className="mkt-icon"><FeatureIcon name={item.icon} /></div>
+            <h3>{item.title}</h3>
+            <p>{item.text}</p>
+          </Reveal>)}
+        </div>
+        <Reveal className="mkt-cta-row"><Link className="mkt-text-link" to={marketingPaths.security}>Read the access controls</Link></Reveal>
+      </div>
+      <Reveal index={1} duration={1.1} style={{ minWidth: 0 }}><ProductPreview scene="portals" /></Reveal>
+    </div>
+  </section>
+
   <PageClose />
   </RevealProvider>;
 }
@@ -225,7 +272,7 @@ export function ResourcesPage() {
     [marketingPaths.features, "Feature directory", "Every module currently in the product."],
     [marketingPaths.security, "Security", "Roles, companies, locks, and review."],
     [marketingPaths.pricing, "Pricing", "One plan for all modules: ₹499 a month, or ₹5,000 a year."],
-    [marketingPaths.about, "About FinTrack", "Who the workspace is for."],
+    [marketingPaths.about, "About FinTrack", "What FinTrack stands for and who uses it."],
     [marketingPaths.founder, "CEO and Founder", "Sudheer Kumar Buyyani, and the experience behind FinTrack."],
     [marketingPaths.contact, "Request a demo", "A local note until contact is connected."],
   ];
