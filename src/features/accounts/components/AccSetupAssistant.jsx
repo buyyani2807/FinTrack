@@ -4,6 +4,7 @@ import {
   SETUP_QUESTIONS,
   buildSetupPlan,
   financialYearStart,
+  keptBooksStart,
   nextQuestion,
   normalizeBusinessProfile,
   profileBusiness,
@@ -85,10 +86,11 @@ export function AccSetupAssistant({
 }) {
   const companyId = company?.id || "";
   const saved = useMemo(() => readSaved(companyId), [companyId]);
+  const keepStart = Boolean(keptBooksStart(company, vouchers));
   const [answers, setAnswers] = useState(() => saved?.answers || {});
   const [order, setOrder] = useState(() => saved?.order || []);
   const [profile, setProfile] = useState(() => saved?.profile || null);
-  const [input, setInput] = useState(() => (nextQuestion(saved?.answers || {})?.id === "name" ? company?.name || "" : ""));
+  const [input, setInput] = useState(() => (nextQuestion(saved?.answers || {}, { keepStart })?.id === "name" ? company?.name || "" : ""));
   const [error, setError] = useState("");
   const [thinking, setThinking] = useState(false);
   const [progress, setProgress] = useState([]);
@@ -98,7 +100,7 @@ export function AccSetupAssistant({
     writeSaved(companyId, order.length ? { answers, order, profile } : null);
   }, [companyId, answers, order, profile]);
 
-  const question = nextQuestion(answers);
+  const question = nextQuestion(answers, { keepStart });
   const defaultStart = company?.booksStartedOn || financialYearStart(today);
 
   const plan = useMemo(

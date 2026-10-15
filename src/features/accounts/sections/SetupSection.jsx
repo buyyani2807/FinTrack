@@ -81,6 +81,7 @@ export function SetupSection({
   audit,
   pagedAudit,
   openMigration = null,
+  openSetupAssistant = null,
 }) {
   return (
     <div className="acc-panel acc-setup">
@@ -125,6 +126,15 @@ export function SetupSection({
         saving={saving}
         removeCoa={removeCoa}
       />
+      {openSetupAssistant && (
+        <AccSetupSection
+          icon="AI"
+          title="Set up with AI"
+          copy="Tell FinTrack what kind of business you run and answer a few questions. It adds the bank ledgers, GST settings, stock categories and ledgers your business needs, and leaves anything already in your books as it is."
+        >
+          <button type="button" className="btn primary acc-setup-link-btn" onClick={openSetupAssistant}>Start setup<ArrowRight size={15} aria-hidden="true" /></button>
+        </AccSetupSection>
+      )}
       {openMigration && (
         <AccSetupSection
           icon="↥"

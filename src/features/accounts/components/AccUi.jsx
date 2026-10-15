@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { Activity, ArrowLeftRight, CalendarRange, ChevronDown, CreditCard, History, Landmark, ListTree, Lock, Package, Percent, Repeat, ShieldCheck, UserCog, Users } from "lucide-react";
+import { Activity, ArrowLeftRight, CalendarRange, ChevronDown, CreditCard, FileUp, History, Landmark, ListTree, Lock, Package, Percent, Repeat, ShieldCheck, Sparkles, UserCog, Users } from "lucide-react";
 import { LIST_PAGE_SIZE } from "../model/accountsList.js";
 import { CloseButton, LabeledField } from "../../../components/ui.jsx";
 
@@ -166,6 +166,7 @@ export function AccPager({ page, pages, total, onPage, noun = "rows" }) {
 const SETUP_ICONS = {
   FY: CalendarRange, GST: Percent, "#": ListTree, P: Users, "✓": ShieldCheck, $: CreditCard, "♥": Activity,
   "↔": ArrowLeftRight, I: Package, L: Lock, R: UserCog, "↻": Repeat, A: History, B: Landmark,
+  AI: Sparkles, "↥": FileUp,
 };
 export function AccSetupSection({ icon, title, copy, actions, children, collapsible = false, summary = "" }) {
   const [open, setOpen] = useState(!collapsible);

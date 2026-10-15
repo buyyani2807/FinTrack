@@ -269,6 +269,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [recurringDraft, setRecurringDraft] = useState(() => emptyRecurringDraft());
   const [pendingRecurringId, setPendingRecurringId] = useState(null);
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
+  const [setupAssistantRequested, setSetupAssistantRequested] = useState(false);
   const [restoreDraft, setRestoreDraft] = useState(null);
   const [restoreBusy, setRestoreBusy] = useState(false);
   const [showSimple, setShowSimple] = useState(false);
@@ -410,7 +411,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     && activeCompanyId
     && !migrationRequired
     && !onboardingDismissed
-    && !isAccountsOnboardingDone(activeCompanyId),
+    && (setupAssistantRequested || !isAccountsOnboardingDone(activeCompanyId)),
   );
 
   useEffect(() => {
@@ -872,6 +873,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     setCollectionRoutes(null);
     setDocumentPrefill(null);
     setOnboardingDismissed(false);
+    setSetupAssistantRequested(false);
     refresh(id);
   };
 
@@ -2408,6 +2410,11 @@ const openVoucher = () => {
 
         {section === "setup" && <SetupSection
           openMigration={canAdmin && settings ? () => setShowMigration(true) : null}
+          openSetupAssistant={canAdmin && settings && activeCompanyId && !migrationRequired ? () => {
+            setOnboardingDismissed(false);
+            setSetupAssistantRequested(true);
+            openSection("overview");
+          } : null}
           activeCompany={activeCompany}
           setupForm={setupForm}
           setSetupForm={setSetupForm}

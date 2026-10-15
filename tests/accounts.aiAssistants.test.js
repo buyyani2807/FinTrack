@@ -200,6 +200,32 @@ test("an unused generic Bank ledger is renamed instead of adding another", () =>
   assert.equal(plan.ledgers.filter(item => item.accountType === "bank").length, 0);
 });
 
+test("running setup again on books with entries keeps the books start date", async () => {
+  const posted = [{ id: "v1", lines: [] }];
+  const started = { ...company, booksStartedOn: "2025-04-01" };
+  const withoutStart = { ...setupAnswers };
+  delete withoutStart.start;
+  assert.equal(nextQuestion(withoutStart).id, "start");
+  assert.equal(nextQuestion(withoutStart, { keepStart: true }), null);
+
+  const plan = buildSetupPlan(setupAnswers, { accounts, vouchers: posted, company: started });
+  assert.equal(plan.company.booksStartedOn, "2025-04-01");
+  assert.match(plan.summary[0].detail, /as before/);
+  assert.equal(buildSetupPlan(setupAnswers, { accounts, company: started }).company.booksStartedOn, "2026-04-01");
+
+  let saved = null;
+  await applySetupPlan(setupAnswers, { profile: profileBusiness("Electrical wholesale"), company: started, vouchers: posted }, {
+    saveCompany: async payload => { saved = payload; },
+    saveGst: async () => {},
+    loadAccounts: async () => accounts,
+    loadCategories: async () => [],
+    createLedger: async () => {},
+    renameLedger: async () => {},
+    createCategory: async () => {},
+  });
+  assert.equal(saved.booksStartedOn, "2025-04-01");
+});
+
 test("applying the setup reloads the books and keeps going past a failed step", async () => {
   const calls = [];
   const result = await applySetupPlan(setupAnswers, { profile: profileBusiness("Electrical wholesale"), company }, {

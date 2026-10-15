@@ -1005,7 +1005,7 @@ export const FEATURES = [
     summary: "Answer a few questions about your business. FinTrack sets up the books.",
     problem: "Setting up accounting software means creating a company, a chart of accounts, tax settings, bank ledgers, stock groups, and opening balances before the first entry. Most owners do not know where to start.",
     how: [
-      "Open Accounts for a new company. FinTrack asks “What kind of business do you run?”",
+      "Open Accounts for a new company, or choose Set up with AI in Setup. FinTrack asks “What kind of business do you run?”",
       "Answer in your own words, such as “Electrical wholesale”, then say whether you sell products, keep stock, are GST registered, and sell on credit.",
       "Read the setup FinTrack will create, then choose Set up my books.",
     ],
@@ -1014,7 +1014,7 @@ export const FEATURES = [
       "Stock categories suited to the business, such as Wires & Cables or Switches & Sockets for an electrical trader",
       "Bank ledgers for each bank you name, and extra ledgers such as Freight Inward or Discount Allowed",
       "Suggested answers for common businesses, and a GSTIN check before it is saved",
-      "Change your last answer at any time before setting up",
+      "Change your last answer at any time before setting up, and run it again later from Setup",
       "The step-by-step form is still there if you prefer it",
     ],
     benefits: ["Ready to record the first entry in a few minutes", "Ledgers and categories fit the business", "You see the whole setup before anything is saved", "Ledgers already in the books are left as they are"],

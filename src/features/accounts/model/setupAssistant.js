@@ -245,8 +245,15 @@ export const SETUP_QUESTIONS = [
   { id: "start", kind: "date" },
 ];
 
-export function nextQuestion(answers = {}) {
-  return SETUP_QUESTIONS.find(question => !(question.id in answers) && (!question.when || question.when(answers))) || null;
+/** Books that already have entries keep their start date; moving it would shift opening balances. */
+export function keptBooksStart(company, vouchers = []) {
+  return vouchers.length && company?.booksStartedOn ? company.booksStartedOn : "";
+}
+
+export function nextQuestion(answers = {}, { keepStart = false } = {}) {
+  return SETUP_QUESTIONS.find(question => !(question.id in answers)
+    && !(keepStart && question.id === "start")
+    && (!question.when || question.when(answers))) || null;
 }
 
 export function questionText(question, answers = {}, profile = null) {
@@ -316,6 +323,8 @@ export function buildSetupPlan(answers = {}, { profile = null, accounts = [], ca
   const stateCode = gstStateFromGstin(gstin) || (gstRegistration === "unregistered" ? "" : company?.stateCode || "");
   const stateName = INDIA_STATES.find(state => state.code === stateCode)?.name || "";
   const companyName = String(answers.name || company?.name || "").trim();
+  const keptStart = keptBooksStart(company, vouchers);
+  const booksStartedOn = keptStart || answers.start || company?.booksStartedOn || "";
 
   const planned = [...accounts];
   const ledgers = [];
@@ -369,7 +378,13 @@ export function buildSetupPlan(answers = {}, { profile = null, accounts = [], ca
   const gst = gstChanged ? { gstRegistration, gstin, legalName: companyName, stateCode, stateName } : null;
 
   const summary = [];
-  summary.push({ id: "company", title: companyName || "Your company", detail: `Books start on ${shortDate(answers.start || company?.booksStartedOn) || "the first day of this financial year"}.` });
+  summary.push({
+    id: "company",
+    title: companyName || "Your company",
+    detail: keptStart
+      ? `Books start on ${shortDate(keptStart)}, as before, because entries are already posted.`
+      : `Books start on ${shortDate(booksStartedOn) || "the first day of this financial year"}.`,
+  });
   summary.push({
     id: "gst",
     title: gstRegistration === "regular" ? "GST: regular" : gstRegistration === "composition" ? "GST: composition" : "No GST",
@@ -401,7 +416,7 @@ export function buildSetupPlan(answers = {}, { profile = null, accounts = [], ca
 
   return {
     profile: activeProfile,
-    company: { companyName, booksStartedOn: answers.start || company?.booksStartedOn || "", industry: activeProfile.industry },
+    company: { companyName, booksStartedOn, industry: activeProfile.industry },
     gst,
     ledgers,
     renames,
@@ -431,7 +446,7 @@ export async function applySetupPlan(answers, { profile, company, vouchers = [],
     }
   };
   const companyName = String(answers.name || company?.name || "").trim();
-  const booksStartedOn = answers.start || company?.booksStartedOn || "";
+  const booksStartedOn = keptBooksStart(company, vouchers) || answers.start || company?.booksStartedOn || "";
   if (!booksOpen) {
     await step("Open the books", () => api.initialize({ companyName, booksStartedOn }));
     if (failed.length) return { done, failed };
