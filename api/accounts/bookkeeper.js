@@ -2,6 +2,7 @@
 import { normalizeEntryIntent } from "../../src/features/accounts/model/bookkeeper.js";
 import { SETUP_INDUSTRIES, normalizeBusinessProfile } from "../../src/features/accounts/model/setupAssistant.js";
 import { modelCandidates } from "./bill-scan.js";
+import { refuseOverQuota, takeAiQuota } from "../_lib/aiQuota.js";
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const anonKey = process.env.VITE_SUPABASE_ANON_KEY;
@@ -110,6 +111,7 @@ export default async function handler(req, res) {
   if (kind === "ledgers" && (!ledgers.length || !targets.length)) return json(res, 400, { error: "Nothing to map." });
   if (kind !== "ledgers" && !text) return json(res, 400, { error: kind === "business" ? "Describe the business." : "Describe what happened." });
   if (text.length > 500) return json(res, 413, { error: "Keep it to a sentence or two." });
+  if (refuseOverQuota(res, await takeAiQuota(token, "bookkeeper"))) return undefined;
 
   const prompt = kind === "ledgers" ? ledgerMappingPrompt(ledgers, targets)
     : kind === "business" ? businessPrompt(text)

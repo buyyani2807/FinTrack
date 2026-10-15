@@ -1,5 +1,6 @@
 /* global process */
 import { normalizeBillScan } from "../../src/features/accounts/model/billScan.js";
+import { refuseOverQuota, takeAiQuota } from "../_lib/aiQuota.js";
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const anonKey = process.env.VITE_SUPABASE_ANON_KEY;
@@ -76,6 +77,7 @@ export default async function handler(req, res) {
   const data = String(req.body?.data || "").replace(/^data:image\/[a-z0-9.+-]+;base64,/i, "");
   if (!mimeType || !data) return json(res, 400, { error: "Choose a photo of the bill." });
   if (data.length > 2_000_000) return json(res, 413, { error: "That photo is too large. Take it again, closer to the bill." });
+  if (refuseOverQuota(res, await takeAiQuota(token, "bill_scan"))) return undefined;
 
   try {
     let payload = {};
