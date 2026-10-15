@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Link, useOutletContext } from "react-router";
 import { FrequentlyAskedQuestions } from "../../components/ui/FrequentlyAskedQuestions.jsx";
@@ -231,10 +231,11 @@ function AskAnswer({ id, index, answer, delay, expanded, rowHeight, controls, on
   </>;
 }
 
-// Each row expands on its own. Other open rows stay open. Scroll is locked to the clicked tile so the page does not jump.
+// Each row expands on its own. Other open rows stay open. After layout, the clicked tile is pinned so the question stays in view.
 function AskGrid() {
   const baseId = useId();
   const gridRef = useRef(null);
+  const anchorRef = useRef(null);
   const [expandedRows, setExpandedRows] = useState(() => new Set());
   const [heights, setHeights] = useState({});
   const [columns, setColumns] = useState(1);
@@ -270,21 +271,33 @@ function AskGrid() {
     return () => observer.disconnect();
   }, []);
 
+  useLayoutEffect(() => {
+    const anchor = anchorRef.current;
+    if (!anchor?.tile?.isConnected) return;
+    anchorRef.current = null;
+    const pin = () => {
+      const delta = anchor.tile.getBoundingClientRect().top - anchor.top;
+      if (Math.abs(delta) > 1) window.scrollBy(0, delta);
+      const headerBottom = document.querySelector(".mkt-nav-bar")?.getBoundingClientRect().bottom ?? 0;
+      const top = anchor.tile.getBoundingClientRect().top;
+      if (top < headerBottom + 12) window.scrollBy(0, top - headerBottom - 12);
+    };
+    pin();
+    // Browser scroll anchoring can still nudge after paint; pin once more on the next frames.
+    requestAnimationFrame(() => {
+      pin();
+      requestAnimationFrame(pin);
+    });
+  }, [expandedRows]);
+
   const onToggle = (index, tile) => {
     const row = rowOf(index);
-    const anchorTop = tile?.getBoundingClientRect().top ?? null;
+    if (tile) anchorRef.current = { tile, top: tile.getBoundingClientRect().top };
     setExpandedRows(current => {
       const next = new Set(current);
       if (next.has(row)) next.delete(row);
       else next.add(row);
       return next;
-    });
-    if (anchorTop == null || !tile) return;
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const delta = tile.getBoundingClientRect().top - anchorTop;
-        if (Math.abs(delta) > 1) window.scrollBy(0, delta);
-      });
     });
   };
 

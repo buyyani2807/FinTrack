@@ -424,6 +424,7 @@ html[data-theme="dark"] .mkt-tint { background: #0c1218; }
   border-radius: 20px;
   background:
     linear-gradient(165deg, color-mix(in srgb, var(--mkt-soft) 72%, var(--mkt-card)) 0%, var(--mkt-card) 42%, var(--mkt-card) 100%);
+  overflow-anchor: none;
   transition: border-color 0.2s ease, transform 0.2s ease;
 }
 .mkt-ask-tile:hover {
@@ -490,7 +491,7 @@ html[data-theme="dark"] .mkt-ask-prompt-icon { color: var(--mkt-navy); backgroun
   border-radius: 14px;
   background: var(--ask-bg);
   box-shadow: none;
-  transition: height 0.35s ease, max-height 0.35s ease;
+  overflow-anchor: none;
   color: var(--mkt-ink);
   font-family: var(--ft-font, Inter, system-ui, sans-serif);
   font-size: 14.5px;
