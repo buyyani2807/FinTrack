@@ -1,5 +1,6 @@
 import { cloneElement, isValidElement, useId, useState } from "react";
 import { Select } from "./Select.jsx";
+import { Reveal } from "./ui/Reveal.jsx";
 import { ArrowLeft, ChevronRight, Download, Eye, EyeOff, Inbox, Search, X } from "lucide-react";
 
 // Shared presentational building blocks used across the finance app.
@@ -19,12 +20,13 @@ export const Metric = ({
   label,
   value,
   color = "",
-  onClick
+  onClick,
+  index = 0
 }) => {
   const inner = <><div className="metric-label">{label}</div><div className={`metric-value ${color}`}>{value}</div></>;
   return onClick
-    ? <button type="button" className="card metric-link" onClick={onClick}>{inner}</button>
-    : <div className="card">{inner}</div>;
+    ? <Reveal as="button" type="button" index={index} className="card metric-link" onClick={onClick}>{inner}</Reveal>
+    : <Reveal index={index} className="card">{inner}</Reveal>;
 };
 // Form field whose <label> wraps the control; `required` adds a marker after the label text.
 export const LabeledField = ({ label, children, required, className }) => (

@@ -1,0 +1,21 @@
+.ui-reveal:not(.is-visible) { opacity: 0; }
+.ui-reveal.is-visible {
+  animation:
+    ui-reveal-fade var(--reveal-duration) var(--reveal-ease) var(--reveal-delay) backwards,
+    ui-reveal-rise var(--reveal-duration) var(--reveal-ease) var(--reveal-delay) backwards;
+}
+
+/* Only `from` frames, so once finished the element falls back to its own styles (hover transforms keep working). */
+/* Opacity is mostly done by 70% so the last stretch of the rise is fully visible and reads as settling, not fading. */
+@keyframes ui-reveal-fade {
+  from { opacity: 0; }
+  70% { opacity: 1; }
+}
+@keyframes ui-reveal-rise {
+  from { transform: translate3d(0, var(--reveal-y), 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-reveal:not(.is-visible) { opacity: 1; }
+  .ui-reveal.is-visible { animation: none; }
+}

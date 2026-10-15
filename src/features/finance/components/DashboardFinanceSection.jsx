@@ -54,10 +54,10 @@ export function DashboardFinanceSection({
       </div>
     </div>
     <div className="grid metrics dashboard-finance-metrics">
-      <Metric label="Amount financed" value={money(financed)} color="gold" />
-      <Metric label="Amounts received" value={money(received)} color="green" />
-      <Metric label="Outstanding" value={money(outstanding)} color="red" />
-      {showPnl && <Metric label="Profit / loss" value={`${money(profit)} / ${money(loss)}`} color={loss ? "red" : "green"} />}
+      <Metric index={0} label="Amount financed" value={money(financed)} color="gold" />
+      <Metric index={1} label="Amounts received" value={money(received)} color="green" />
+      <Metric index={2} label="Outstanding" value={money(outstanding)} color="red" />
+      {showPnl && <Metric index={3} label="Profit / loss" value={`${money(profit)} / ${money(loss)}`} color={loss ? "red" : "green"} />}
     </div>
     <div className="dashboard-section-summary"><span className="dashboard-section-summary-dot" />{loans.length ? `${loans.length} active ${kind} account${loans.length === 1 ? "" : "s"} ready for collection` : `No active ${kind} accounts yet`}</div>
     <FinanceInsightsBrief kind={kind} loans={loans} isOwner={canReorder || showPnl} onViewCustomers={onToggleCustomers} />

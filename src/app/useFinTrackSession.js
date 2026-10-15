@@ -14,6 +14,7 @@ export function useFinTrackSession() {
   const [user, setUser] = useState(null);
   const [authReady, setAuthReady] = useState(false);
   const [loans, setLoans] = useState([]);
+  const [financeLoaded, setFinanceLoaded] = useState(false);
   const [workspace, setWorkspace] = useState(null);
   const navigate = useNavigate();
   const [dataError, setDataError] = useState("");
@@ -27,6 +28,7 @@ export function useFinTrackSession() {
   };
   const clearFinanceState = () => {
     setLoans([]);
+    setFinanceLoaded(false);
     setDataError("");
     setWorkspace(null);
     setUser(null);
@@ -94,6 +96,9 @@ export function useFinTrackSession() {
       .catch(error => {
         if (cancelled || !isCurrentSession(gen)) return;
         setDataError(error.message || "Could not load finance records.");
+      })
+      .finally(() => {
+        if (!cancelled && isCurrentSession(gen)) setFinanceLoaded(true);
       });
     return () => { cancelled = true; };
   }, [user?.authToken]);
@@ -101,6 +106,7 @@ export function useFinTrackSession() {
     const { workspace: nextWorkspace, ...session } = payload;
     beginSession();
     setLoans([]);
+    setFinanceLoaded(false);
     setDataError("");
     userRoleRef.current = session.role;
     flushSync(() => {
@@ -155,14 +161,16 @@ export function useFinTrackSession() {
     beginSession();
     userRoleRef.current = null;
     clearFinanceState();
+    navigate("/login", { replace: true });
     if (role === "financier" || role === "agent") await supabase.auth.signOut();
-    navigate({ pathname: "/", search: window.location.search }, { replace: true });
   };
   const actions = useFinanceActions({ user, setLoans, refreshLoans });
   const financeSession = user?.role === "financier" || user?.role === "agent";
   const showOwnerChrome = ownerChromeAllowed(user?.role, workspace?.role);
   const waitingForWorkspaceRole = financeSession && !financeRolesAligned(user?.role, workspace?.role);
-  const isLoading = (!authReady || waitingForWorkspaceRole) && !isPasswordRecovery;
+  // Hold the loading screen until the first finance load settles, so pages open (and reveal) with their data.
+  const waitingForFinanceData = financeSession && Boolean(user?.authToken) && !financeLoaded;
+  const isLoading = (!authReady || waitingForWorkspaceRole || waitingForFinanceData) && !isPasswordRecovery;
   const enterCustomerSession = loan => setUser({ role: "customer", loan });
   const enterChitCustomerSession = session => setUser({ role: "chitCustomer", session });
   return {

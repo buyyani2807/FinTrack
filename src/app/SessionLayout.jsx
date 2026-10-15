@@ -1,4 +1,6 @@
 import { Navigate, Outlet, useLocation } from "react-router";
+import { PageReveal } from "../components/ui/PageReveal.jsx";
+import { RevealProvider } from "../components/ui/Reveal.jsx";
 import { ChitCustomerPortal } from "../features/chitFund/ChitCustomerPortal.jsx";
 import { FinancierAuth, PasswordRecovery } from "../features/auth/AuthScreens.jsx";
 import { Customer } from "../features/finance/CustomerAccountView.jsx";
@@ -16,18 +18,20 @@ export function SessionLayout() {
   const { legalView, isLoading, isPasswordRecovery, user, customerLoan, enterSession, enterCustomerSession, enterChitCustomerSession, logout } = session;
   const path = normalizePath(location.pathname);
   const workspaceUser = user?.role === "financier" || user?.role === "agent";
-  if (legalView) return <LegalPage view={legalView} backLabel={path === "/" ? "Back to FinTrack" : "Back to sign in"} />;
-  if (isPasswordRecovery) return <PasswordRecovery />;
-  if (user?.role === "chitCustomer") return <ChitCustomerPortal session={user.session} logout={logout} />;
-  if (user && user.role !== "financier" && user.role !== "agent") return <><Customer loan={customerLoan} logout={logout} /><CustomerReportDownload loan={customerLoan} /></>;
+  const screen = node => <RevealProvider intent="functional"><PageReveal routeKey={`${path}${location.search}`}>{node}</PageReveal></RevealProvider>;
+  const signIn = screen(<FinancierAuth onLogin={enterSession} onCustomerLogin={enterCustomerSession} onChitCustomerLogin={enterChitCustomerSession} />);
+  if (legalView) return screen(<LegalPage view={legalView} backLabel={path === "/" ? "Back to FinTrack" : "Back to sign in"} />);
+  if (isPasswordRecovery) return screen(<PasswordRecovery />);
+  if (user?.role === "chitCustomer") return screen(<ChitCustomerPortal session={user.session} logout={logout} />);
+  if (user && user.role !== "financier" && user.role !== "agent") return screen(<><Customer loan={customerLoan} logout={logout} /><CustomerReportDownload loan={customerLoan} /></>);
   if (isMarketingPath(path)) {
     if (isLoading && !workspaceUser) return <LoadingScreen />;
     if (workspaceUser) return <Navigate to="/dashboard" replace />;
     return <Outlet context={{ signedIn: false }} />;
   }
   if (isLoading) return <LoadingScreen />;
-  if (!user) return <FinancierAuth onLogin={enterSession} onCustomerLogin={enterCustomerSession} onChitCustomerLogin={enterChitCustomerSession} />;
+  if (!user) return signIn;
   if (workspaceUser && path === "/login") return <Navigate to="/dashboard" replace />;
   if (workspaceUser) return <Outlet context={session} />;
-  return <FinancierAuth onLogin={enterSession} onCustomerLogin={enterCustomerSession} onChitCustomerLogin={enterChitCustomerSession} />;
+  return signIn;
 }

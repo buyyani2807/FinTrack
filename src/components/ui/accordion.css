@@ -1,0 +1,37 @@
+.ui-accordion-item { border-bottom: 1px solid var(--ui-accordion-line, #e4e4e7); }
+.ui-accordion-header { margin: 0; display: flex; font: inherit; }
+.ui-accordion-trigger {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.45;
+  text-align: left;
+  cursor: pointer;
+}
+.ui-accordion-trigger:hover > span { text-decoration: underline; text-underline-offset: 3px; }
+.ui-accordion-trigger:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 4px; }
+.ui-accordion-chevron { flex-shrink: 0; transition: transform 200ms ease; }
+.ui-accordion-trigger[data-state="open"] .ui-accordion-chevron { transform: rotate(180deg); }
+
+.ui-accordion-content {
+  display: grid;
+  grid-template-rows: 0fr;
+  font-size: 14px;
+  transition: grid-template-rows 200ms ease-out;
+}
+.ui-accordion-content[data-state="open"] { grid-template-rows: 1fr; }
+.ui-accordion-content-inner { min-height: 0; overflow: hidden; }
+.ui-accordion-content-body { padding-bottom: 16px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-accordion-chevron, .ui-accordion-content { transition: none; }
+}

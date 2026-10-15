@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { Link, NavLink, Outlet, useOutletContext } from "react-router";
+import { Link, NavLink, Outlet, useLocation, useNavigate, useOutletContext } from "react-router";
 import { Menu, X } from "lucide-react";
 import { ThemeToggle } from "../../components/ThemeToggle.jsx";
 import { FEATURE_CATEGORIES, featureBySlug } from "./catalog.js";
@@ -30,6 +30,9 @@ export function MarketingLayout() {
   const menuId = useId();
   const productId = useId();
   const productRef = useRef(null);
+  const productPanelRef = useRef(null);
+  const location = useLocation();
+  const navigate = useNavigate();
   const close = () => setOpen(false);
   const openModule = (event, id) => {
     setProductOpen(false);
@@ -38,7 +41,11 @@ export function MarketingLayout() {
     if (!node) return;
     event.preventDefault();
     node.scrollIntoView({ behavior: "smooth", block: "start" });
-    window.history.pushState(null, "", `#${id}`);
+    navigate({ pathname: marketingPaths.features, hash: id });
+  };
+  const isCurrentCategory = id => location.pathname === marketingPaths.features && location.hash === `#${id}`;
+  const onProductBlur = event => {
+    if (!productRef.current?.contains(event.relatedTarget)) setProductOpen(false);
   };
   useEffect(() => {
     if (!open && !productOpen) return undefined;
@@ -58,6 +65,11 @@ export function MarketingLayout() {
       window.removeEventListener("pointerdown", onPointer);
     };
   }, [open, productOpen]);
+  useEffect(() => {
+    const panel = productPanelRef.current;
+    const current = panel?.querySelector("[aria-current]");
+    if (current) panel.scrollTop = current.offsetTop - (panel.clientHeight - current.offsetHeight) / 2;
+  }, [productOpen]);
 
   const login = signedIn
     ? <Link className="mkt-btn" to="/dashboard">Open FinTrack</Link>
@@ -73,16 +85,24 @@ export function MarketingLayout() {
     <header className="mkt-nav">
       <Brand />
       <nav className="mkt-links" aria-label="Primary">
-        <div className="mkt-product" ref={productRef}>
-          <button type="button" aria-expanded={productOpen} aria-controls={productId} onClick={() => setProductOpen(value => !value)}>Product</button>
-          {productOpen && <div id={productId} className="mkt-product-panel" role="menu">
+        <NavLink to={marketingPaths.home} end>Home</NavLink>
+        <div
+          className="mkt-product"
+          ref={productRef}
+          onMouseEnter={() => setProductOpen(true)}
+          onMouseLeave={() => setProductOpen(false)}
+          onFocus={() => setProductOpen(true)}
+          onBlur={onProductBlur}
+        >
+          <NavLink to={marketingPaths.features} aria-expanded={productOpen} aria-controls={productId}>Features</NavLink>
+          {productOpen && <div id={productId} ref={productPanelRef} className="mkt-product-panel">
             {FEATURE_CATEGORIES.map(category => <div key={category.id} className="mkt-product-group">
-              <Link to={`${marketingPaths.features}#${category.id}`} onClick={event => openModule(event, category.id)}><strong>{category.label}</strong><span>{category.blurb}</span></Link>
-              {(MENU_MODULES[category.id] || []).map(featureBySlug).filter(Boolean).map(feature => <Link key={feature.slug} to={featurePath(feature.slug)} role="menuitem" onClick={() => setProductOpen(false)}>{feature.name}</Link>)}
+              <Link to={`${marketingPaths.features}#${category.id}`} aria-current={isCurrentCategory(category.id) ? "location" : undefined} onClick={event => openModule(event, category.id)}><strong>{category.label}</strong></Link>
+              {(MENU_MODULES[category.id] || []).map(featureBySlug).filter(Boolean).map(feature => <NavLink key={feature.slug} to={featurePath(feature.slug)} onClick={() => setProductOpen(false)}>{feature.name}</NavLink>)}
             </div>)}
           </div>}
         </div>
-        {LINKS.map(link => <NavLink key={link.to} to={link.to}>{link.label}</NavLink>)}
+        {LINKS.filter(link => link.to !== marketingPaths.features).map(link => <NavLink key={link.to} to={link.to}>{link.label}</NavLink>)}
       </nav>
       <div className="mkt-nav-end">
         <ThemeToggle compact />

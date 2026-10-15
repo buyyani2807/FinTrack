@@ -1,12 +1,14 @@
+import { Reveal } from "../../components/ui/Reveal.jsx";
+
 export function InstallGuide({ id = "install" }) {
   return <section className="mkt-section mkt-tint" id={id}>
     <div className="mkt-wrap">
-      <div className="mkt-section-head">
+      <Reveal className="mkt-section-head">
         <p className="mkt-kicker">On your phone</p>
         <h2>Install FinTrack on the home screen.</h2>
         <p className="mkt-lead">FinTrack is a web app. Add it once from the browser and it opens from its own icon, with the same sign-in as the site. Owners, collection agents, customers, and chit members can each install it. A collection, voucher, or bid is saved when the phone is online.</p>
-      </div>
-      <div className="mkt-grid two">
+      </Reveal>
+      <Reveal className="mkt-grid two" index={1}>
         <article className="mkt-card">
           <h3>iPhone and iPad</h3>
           <p>Use Safari. The home-screen icon is added from Safari’s share menu.</p>
@@ -29,8 +31,8 @@ export function InstallGuide({ id = "install" }) {
             <li>Open FinTrack from the home screen or the app list and sign in.</li>
           </ol>
         </article>
-      </div>
-      <p className="mkt-lead">On a computer, Chrome or Edge can install it from the install icon in the address bar. The installed app is the same workspace.</p>
+      </Reveal>
+      <Reveal as="p" className="mkt-lead">On a computer, Chrome or Edge can install it from the install icon in the address bar. The installed app is the same workspace.</Reveal>
     </div>
   </section>;
 }

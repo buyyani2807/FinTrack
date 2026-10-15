@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
+import { Reveal, RevealProvider } from "../../components/ui/Reveal.jsx";
 import { SECURITY_POINTS, SOLUTIONS, featureBySlug } from "./catalog.js";
 import { featurePath, marketingPaths } from "./paths.js";
 import { InstallGuide } from "./InstallGuide.jsx";
@@ -12,13 +13,15 @@ function PageTitle({ title }) {
 }
 
 export function SolutionsPage() {
-  return <>
+  return <RevealProvider intent="content">
   <section className="mkt-section">
     <PageTitle title="FinTrack solutions" />
-    <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Solutions</p>
-    <h1>One platform, for the work you already do.</h1>
-    <p className="mkt-lead">Finance businesses, chit operators, shops, traders, service companies, and small and medium businesses. Each link opens a module that is in FinTrack today.</p>
-    <div className="mkt-grid two">
+    <Reveal>
+      <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Solutions</p>
+      <h1>One platform, for the work you already do.</h1>
+      <p className="mkt-lead">Finance businesses, chit operators, shops, traders, service companies, and small and medium businesses. Each link opens a module that is in FinTrack today.</p>
+    </Reveal>
+    <Reveal className="mkt-grid two">
       {SOLUTIONS.map(item => <article key={item.title} className="mkt-card">
         <h2>{item.title}</h2>
         <p>{item.text}</p>
@@ -27,10 +30,10 @@ export function SolutionsPage() {
           return feature ? <Link key={slug} className="mkt-chip" to={featurePath(slug)}>{feature.name}</Link> : null;
         })}</div>
       </article>)}
-    </div>
+    </Reveal>
   </section>
   <PageClose />
-  </>;
+  </RevealProvider>;
 }
 
 const STEPS = [
@@ -41,40 +44,44 @@ const STEPS = [
 ];
 
 export function HowItWorksPage() {
-  return <>
+  return <RevealProvider intent="content">
     <section className="mkt-section">
       <PageTitle title="How FinTrack works" />
-      <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>How it works</p>
-      <h1>You stay in control of every record.</h1>
-      <p className="mkt-lead">FinTrack organises the workspace and suggests a next look. Posting, bidding results, and messages wait for a person.</p>
-      <div className="mkt-grid two mkt-steps">
+      <Reveal>
+        <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>How it works</p>
+        <h1>You stay in control of every record.</h1>
+        <p className="mkt-lead">FinTrack organises the workspace and suggests a next look. Posting, bidding results, and messages wait for a person.</p>
+      </Reveal>
+      <Reveal className="mkt-grid two mkt-steps">
         {STEPS.map(step => <article key={step.title} className="mkt-card mkt-step">
           <h2>{step.title}</h2>
           <p>{step.text}</p>
         </article>)}
-      </div>
-      <div className="mkt-cta-row"><ProductCta primary /><Link className="mkt-btn" to={marketingPaths.features}>Explore features</Link></div>
+      </Reveal>
+      <Reveal className="mkt-cta-row"><ProductCta primary /><Link className="mkt-btn" to={marketingPaths.features}>Explore features</Link></Reveal>
     </section>
     <InstallGuide />
-  </>;
+  </RevealProvider>;
 }
 
 export function SecurityPage() {
-  return <>
+  return <RevealProvider intent="content">
   <section className="mkt-section">
     <PageTitle title="FinTrack security" />
-    <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Security</p>
-    <h1>Access, isolation, and review.</h1>
-    <p className="mkt-lead">This page describes controls that exist in the product. It is not a certification, a government approval, or a promise that data can never be mishandled.</p>
-    <div className="mkt-grid two">
+    <Reveal>
+      <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Security</p>
+      <h1>Access, isolation, and review.</h1>
+      <p className="mkt-lead">This page describes controls that exist in the product. It is not a certification, a government approval, or a promise that data can never be mishandled.</p>
+    </Reveal>
+    <Reveal className="mkt-grid two">
       {SECURITY_POINTS.map(point => <article key={point.title} className="mkt-card">
         <h2>{point.title}</h2>
         <p>{point.text}</p>
       </article>)}
-    </div>
+    </Reveal>
   </section>
   <PageClose />
-  </>;
+  </RevealProvider>;
 }
 
 const PLAN_INCLUDES = [
@@ -88,12 +95,12 @@ const PLAN_INCLUDES = [
 ];
 
 export function PricingPage() {
-  return <section className="mkt-section">
+  return <RevealProvider intent="landing"><section className="mkt-section">
     <PageTitle title="FinTrack pricing" />
-    <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Pricing</p>
-    <h1>One plan for all modules.</h1>
-    <p className="mkt-lead">₹499 a month, or ₹5,000 a year, is the whole workspace. Accounts, finance, chit funds, collections, portals, and AI are included. There is no second plan and no module add-on.</p>
-    <article className="mkt-plan">
+    <Reveal as="p" className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Pricing</Reveal>
+    <Reveal as="h1" index={1}>One plan for all modules.</Reveal>
+    <Reveal as="p" className="mkt-lead" index={2}>₹499 a month, or ₹5,000 a year, is the whole workspace. Accounts, finance, chit funds, collections, portals, and AI are included. There is no second plan and no module add-on.</Reveal>
+    <Reveal as="article" className="mkt-plan" index={3}>
       <h2>FinTrack</h2>
       <p className="mkt-muted">All modules included</p>
       <div className="mkt-plan-prices">
@@ -103,31 +110,33 @@ export function PricingPage() {
           <p className="mkt-muted">₹988 less than twelve monthly payments.</p>
         </div>
       </div>
-      <ul className="mkt-ticks">{PLAN_INCLUDES.map(item => <li key={item}>{item}</li>)}</ul>
+      <ul className="mkt-ticks">{PLAN_INCLUDES.map((item, index) => <Reveal as="li" key={item} index={index} y={8}>{item}</Reveal>)}</ul>
       <div className="mkt-cta-row"><ProductCta primary /><Link className="mkt-btn" to={marketingPaths.contact}>Request a demo</Link></div>
       <p className="mkt-note">A new workspace includes 14 days. This page states the price. Signing up does not charge a card. After the trial, recording waits until a plan is active. Your records stay.</p>
-    </article>
-  </section>;
+    </Reveal>
+  </section></RevealProvider>;
 }
 
 export function PageClose() {
   return <section className="mkt-band">
-    <div className="mkt-wrap">
+    <Reveal className="mkt-wrap">
       <h2>Start with the full workspace.</h2>
       <p>One plan includes every module. Start free opens a 14-day trial and does not charge a card.</p>
       <div className="mkt-cta-row"><ProductCta primary /><Link className="mkt-btn light" to={marketingPaths.contact}>Talk to us</Link></div>
-    </div>
+    </Reveal>
   </section>;
 }
 
 export function AboutPage() {
-  return <>
+  return <RevealProvider intent="content">
   <section className="mkt-section">
     <PageTitle title="About FinTrack" />
-    <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>About</p>
-    <h1>Accounting, collections, and chit funds in one workspace.</h1>
-    <p className="mkt-lead">FinTrack is for finance businesses that collect daily or monthly, for chit fund operators, and for small and medium businesses that keep company books. Shops and service firms use the same login.</p>
-    <div className="mkt-role-views">
+    <Reveal>
+      <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>About</p>
+      <h1>Accounting, collections, and chit funds in one workspace.</h1>
+      <p className="mkt-lead">FinTrack is for finance businesses that collect daily or monthly, for chit fund operators, and for small and medium businesses that keep company books. Shops and service firms use the same login.</p>
+    </Reveal>
+    <Reveal className="mkt-role-views">
       <div>
         <h2>Financier</h2>
         <p className="mkt-lead">Financier sign in opens the owner workspace: the dashboard, company books, schemes, staff, and settings.</p>
@@ -138,29 +147,31 @@ export function AboutPage() {
         <p className="mkt-lead">Agent login uses an agent ID and PIN and opens the accounts and routes you assign. The owner books, chit book, and company accounts stay closed.</p>
         <ProductPreview scene="finance" />
       </div>
-    </div>
-    <p className="mkt-lead">A finance customer or chit member uses a portal ID and PIN and sees only their own account or ticket. Each sign-in is separate, so sharing access with a collector does not open the owner workspace. <Link className="mkt-text-link" to={marketingPaths.security}>Read the access controls</Link>.</p>
-    <div className="mkt-split" style={{ marginTop: 36 }}>
+    </Reveal>
+    <Reveal as="p" className="mkt-lead">A finance customer or chit member uses a portal ID and PIN and sees only their own account or ticket. Each sign-in is separate, so sharing access with a collector does not open the owner workspace. <Link className="mkt-text-link" to={marketingPaths.security}>Read the access controls</Link>.</Reveal>
+    <Reveal className="mkt-split" style={{ marginTop: 36 }}>
       <div>
         <h2>Ask FinTrack shows a suggestion. You confirm it.</h2>
         <p className="mkt-lead">Ask “Who is unpaid today?” and the answer comes from this workspace. You still record the payment. A bill photo stays a draft until you save it. A bank line stays a suggestion until you approve the match. AI Review explains each suggestion and links to the record, and a cash-flow forecast is shown apart from actual figures. Nothing is posted into the books until you act.</p>
         <Link className="mkt-text-link" to={featurePath("ask-fintrack")}>Read about Ask FinTrack</Link>
       </div>
       <ProductPreview scene="intelligence" />
-    </div>
+    </Reveal>
   </section>
   <PageClose />
-  </>;
+  </RevealProvider>;
 }
 
 export function FounderPage() {
-  return <>
+  return <RevealProvider intent="content">
   <section className="mkt-section">
     <PageTitle title="Sudheer Kumar Buyyani, CEO and Founder — FinTrack" />
-    <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>CEO and Founder</p>
-    <h1>Sudheer Kumar Buyyani</h1>
-    <p className="mkt-lead">Sudheer founded FinTrack so a business can keep accounting, collections, customers, and chit funds in one workspace.</p>
-    <article className="mkt-profile">
+    <Reveal>
+      <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>CEO and Founder</p>
+      <h1>Sudheer Kumar Buyyani</h1>
+      <p className="mkt-lead">Sudheer founded FinTrack so a business can keep accounting, collections, customers, and chit funds in one workspace.</p>
+    </Reveal>
+    <Reveal as="article" className="mkt-profile">
       <div className="mkt-profile-photo">
         <img src="/founder/sudheer-kumar-buyyani.jpg" alt="Sudheer Kumar Buyyani, CEO and Founder of FinTrack" width="888" height="1024" />
       </div>
@@ -174,20 +185,22 @@ export function FounderPage() {
           <p>Master’s degree in Management Information Systems from UCD Michael Smurfit Graduate Business School. The Financial Times ranks the school 23rd among European business schools for 2025, its tenth year in that top 30. The school holds the triple crown of AACSB, EQUIS, and AMBA accreditation.</p>
         </article>
       </div>
-    </article>
+    </Reveal>
   </section>
   <PageClose />
-  </>;
+  </RevealProvider>;
 }
 
 export function ContactPage() {
   const [sent, setSent] = useState(false);
-  return <section className="mkt-section">
+  return <RevealProvider intent="content"><section className="mkt-section">
     <PageTitle title="Contact FinTrack" />
-    <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Contact</p>
-    <h1>Request a demo.</h1>
-    <p className="mkt-lead">Tell us the business and what you want to see. This local preview keeps the note on the page only. It does not email anyone and it does not create an account.</p>
-    <div className="mkt-detail">
+    <Reveal>
+      <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Contact</p>
+      <h1>Request a demo.</h1>
+      <p className="mkt-lead">Tell us the business and what you want to see. This local preview keeps the note on the page only. It does not email anyone and it does not create an account.</p>
+    </Reveal>
+    <Reveal className="mkt-detail">
       <form className="mkt-card mkt-form" onSubmit={event => { event.preventDefault(); setSent(true); }}>
         <label>Your name<input name="name" required autoComplete="name" /></label>
         <label>Business<input name="business" required autoComplete="organization" /></label>
@@ -201,8 +214,8 @@ export function ContactPage() {
         <p>Login opens the existing FinTrack authentication screen, including financier, collection agent, customer, and chit member.</p>
         <div className="mkt-cta-row"><Link className="mkt-btn primary" to={marketingPaths.login}>Login</Link></div>
       </article>
-    </div>
-  </section>;
+    </Reveal>
+  </section></RevealProvider>;
 }
 
 export function ResourcesPage() {
@@ -216,15 +229,17 @@ export function ResourcesPage() {
     [marketingPaths.founder, "CEO and Founder", "Sudheer Kumar Buyyani, and the experience behind FinTrack."],
     [marketingPaths.contact, "Request a demo", "A local note until contact is connected."],
   ];
-  return <>
+  return <RevealProvider intent="content">
   <section className="mkt-section">
     <PageTitle title="FinTrack resources" />
-    <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Resources</p>
-    <h1>Read the product before you sign in.</h1>
-    <div className="mkt-grid three">
+    <Reveal>
+      <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Resources</p>
+      <h1>Read the product before you sign in.</h1>
+    </Reveal>
+    <Reveal className="mkt-grid three">
       {links.map(([to, title, text]) => <Link key={to} to={to} className="mkt-card"><h2>{title}</h2><p>{text}</p></Link>)}
-    </div>
+    </Reveal>
   </section>
   <PageClose />
-  </>;
+  </RevealProvider>;
 }

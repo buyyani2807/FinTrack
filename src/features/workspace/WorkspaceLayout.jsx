@@ -5,6 +5,8 @@ import { todayIso } from "../../lib/dates.js";
 import { isModuleEnabled } from "../commercial/entitlements.js";
 import { TrialBanner } from "../commercial/TrialBanner.jsx";
 import { subscriptionPathAllowed, workspaceAccessAllowed } from "../commercial/trial.js";
+import { PageReveal } from "../../components/ui/PageReveal.jsx";
+import { RevealProvider } from "../../components/ui/Reveal.jsx";
 import { FintrackAssistant } from "../intelligence/assistant/FintrackAssistant.jsx";
 import { visibleFinanceLoans } from "../intelligence/assistant/askFintrack.js";
 import { loadAccountsModule } from "./accountsModuleLoader.js";
@@ -78,7 +80,7 @@ export function WorkspaceLayout() {
     return <Navigate to="/subscribe" replace />;
   }
 
-  return <>
+  return <RevealProvider intent="functional">
     {dataError && <div className="notice" style={{ position: "fixed", top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 20 }}>{dataError}</div>}
     {subscriptionLocked ? <div className="ft-trial-lockbar">
       <strong>Plan required</strong>
@@ -88,10 +90,10 @@ export function WorkspaceLayout() {
       </div>
     </div> : <TrialBanner subscription={subscription} isOwner={showOwnerChrome} />}
     {showOwnerChrome && !subscriptionLocked
-      ? <div className="financier-tools"><FinancierNav access={access} orgSettings={orgSettings} businessName={workspace?.businessName} logout={logout} askEnabled={askEnabled} onAsk={() => setAskOpen(true)} /><Outlet context={routeContext} /></div>
+      ? <div className="financier-tools"><FinancierNav access={access} orgSettings={orgSettings} businessName={workspace?.businessName} logout={logout} askEnabled={askEnabled} onAsk={() => setAskOpen(true)} /><PageReveal routeKey={location.pathname}><Outlet context={routeContext} /></PageReveal></div>
       : <>
         {!subscriptionLocked && askEnabled ? <div className="ft-ask-staff-bar"><button type="button" className="btn" onClick={() => setAskOpen(true)}>Ask FinTrack</button></div> : null}
-        <Outlet context={routeContext} />
+        <PageReveal routeKey={location.pathname}><Outlet context={routeContext} /></PageReveal>
       </>}
     {!subscriptionLocked && <FintrackAssistant
       open={askOpen}
@@ -117,7 +119,7 @@ export function WorkspaceLayout() {
         chitSchemes,
       }}
     />}
-  </>;
+  </RevealProvider>;
 }
 
 async function loadAssistantCashbook(token) {
