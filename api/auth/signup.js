@@ -1,6 +1,6 @@
 /* global process */
-import { setRefreshCookie } from "../lib/authCookies.js";
-import { deleteAuthUser, signupGrant } from "../lib/supabaseAuth.js";
+import { setRefreshCookie } from "../_lib/authCookies.js";
+import { deleteAuthUser, signupGrant } from "../_lib/supabaseAuth.js";
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const anonKey = process.env.VITE_SUPABASE_ANON_KEY;

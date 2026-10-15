@@ -1,5 +1,5 @@
-import { clearRefreshCookie, readRefreshCookie } from "../lib/authCookies.js";
-import { refreshGrant, revokeSession } from "../lib/supabaseAuth.js";
+import { clearRefreshCookie, readRefreshCookie } from "../_lib/authCookies.js";
+import { refreshGrant, revokeSession } from "../_lib/supabaseAuth.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });

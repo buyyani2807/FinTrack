@@ -1,8 +1,8 @@
 /* global process */
 import { randomBytes } from "node:crypto";
-import { setRefreshCookie } from "../lib/authCookies.js";
-import { serviceRpc } from "../lib/agentPortal.js";
-import { passwordGrant } from "../lib/supabaseAuth.js";
+import { setRefreshCookie } from "../_lib/authCookies.js";
+import { serviceRpc } from "../_lib/agentPortal.js";
+import { passwordGrant } from "../_lib/supabaseAuth.js";
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

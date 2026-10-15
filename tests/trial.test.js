@@ -18,7 +18,7 @@ import {
   shouldStartTrial,
   workspaceAccessAllowed,
 } from "../src/features/commercial/trial.js";
-import { SUBSCRIPTION_WEBHOOK_READY, subscriptionWebhookResult } from "../api/lib/subscriptionBoundary.js";
+import { SUBSCRIPTION_WEBHOOK_READY, subscriptionWebhookResult } from "../api/_lib/subscriptionBoundary.js";
 
 const START = "2026-10-08T04:30:00.000Z";
 const END = "2026-10-22T04:30:00.000Z";

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { agentCredentialError, createAgentPin, internalAgentEmail, temporaryAuthPassword } from "../api/lib/agentPortal.js";
+import { agentCredentialError, createAgentPin, internalAgentEmail, temporaryAuthPassword } from "../api/_lib/agentPortal.js";
 
 test("agent PIN is 6 digits", () => {
   const pin = createAgentPin();

@@ -1,6 +1,6 @@
 /* global process */
 // Secure Vercel endpoint. Add SUPABASE_SERVICE_ROLE_KEY to Vercel only; never put it in the browser.
-import { agentCredentialError, internalAgentEmail, issueAgentPortal, temporaryAuthPassword } from "./lib/agentPortal.js";
+import { agentCredentialError, internalAgentEmail, issueAgentPortal, temporaryAuthPassword } from "./_lib/agentPortal.js";
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
