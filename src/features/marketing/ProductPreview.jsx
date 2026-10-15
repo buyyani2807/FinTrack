@@ -51,6 +51,9 @@ const SHOTS = {
   "ai-bank": "AI Review bank reconciliation with open bank lines and the likely party and ledger for each",
   "ai-inventory": "AI Review inventory forecast with weekly sales, 30-day forecast, and expected stockout dates",
   "bill-scan": "Bill scanning: a supplier bill photo turned into a draft purchase for review before saving",
+  "ai-bookkeeper": "Tell FinTrack with “I bought a laptop for ₹85,000 using HDFC” turned into a draft: Fixed Assets up, HDFC Bank down, explained in plain words with the debit and credit view",
+  "ai-setup": "AI setup for an electrical wholesaler: the questions answered and the setup FinTrack will create, with GST, banks, stock categories, credit sales, and extra ledgers",
+  "ai-migration": "Migration summary for files from Tally, Zoho Books, and Book Keeper: customers, suppliers, ledgers, transactions, duplicate parties, accounts to map, and 85% mapped automatically",
   portals: "Sign-in screen with Financier sign in, Collection agent, Customer login, and Chit customer",
 };
 
@@ -107,6 +110,9 @@ const FEATURE_SCENE = {
   "anomaly-detection": "ai-anomalies",
   "bill-scanning": "bill-scan",
   "bookkeeping-suggestions": "accounts-banking",
+  "ai-bookkeeper": "ai-bookkeeper",
+  "ai-setup": "ai-setup",
+  "ai-migration": "ai-migration",
 };
 
 const CATEGORY_FALLBACK = {

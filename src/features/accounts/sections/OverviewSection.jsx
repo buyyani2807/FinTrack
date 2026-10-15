@@ -1,5 +1,19 @@
-import { createParty, initializeAccounting, saveAccountingSettings, saveGstSettings, inviteTeamMember } from "../data/accountingRepository.js";
-import { AccOnboardingWizard, markAccountsOnboardingDone } from "../components/AccOnboardingWizard.jsx";
+import { useState } from "react";
+import {
+  createChartAccount,
+  createParty,
+  initializeAccounting,
+  inviteTeamMember,
+  loadChartOfAccounts,
+  loadItemCategories,
+  saveAccountingSettings,
+  saveGstSettings,
+  updateChartAccount,
+  upsertItemCategory,
+} from "../data/accountingRepository.js";
+import { AccOnboardingWizard, markAccountsOnboardingDone, saveIndustry } from "../components/AccOnboardingWizard.jsx";
+import { AccSetupAssistant } from "../components/AccSetupAssistant.jsx";
+import { applySetupPlan } from "../model/setupAssistant.js";
 import { Field, AccMetric } from "../components/AccUi.jsx";
 import { AttentionCenterCard } from "../../intelligence/AttentionCenterCard.jsx";
 import { AnomalyReviewCard } from "../../intelligence/AnomalyReviewCard.jsx";
@@ -63,7 +77,17 @@ export function OverviewSection({
   createPurchaseOrderFromReorder,
   markGstFiled,
   lockMonth,
+  bookkeeper = null,
+  itemCategories = [],
+  aiEnabled = false,
+  setError,
+  openMigration = null,
 }) {
+  const [classicSetup, setClassicSetup] = useState(false);
+  const finishOnboarding = () => {
+    markAccountsOnboardingDone(activeCompanyId);
+    setOnboardingDismissed(true);
+  };
   return (
     <div className="acc-panel acc-overview">
       {!settings && <div className="card accounts-form-card">
@@ -76,7 +100,43 @@ export function OverviewSection({
         <button type="button" className="btn primary" disabled={saving} onClick={() => run(() => initializeAccounting(token, setupForm), "Accounts opened.")}>{saving ? "Saving…" : "Create chart of accounts"}</button>
       </div>}
 
-      {showOnboarding && (
+      {showOnboarding && !classicSetup && (
+        <AccSetupAssistant
+          key={activeCompanyId || "setup-assistant"}
+          company={activeCompany}
+          accounts={visibleAccounts}
+          categories={itemCategories}
+          vouchers={vouchers}
+          token={token}
+          today={todayIso()}
+          aiEnabled={aiEnabled}
+          canAdmin={canAdmin}
+          saving={saving}
+          onApply={async (answers, profile, onProgress) => {
+            let outcome = null;
+            await run(async () => {
+              outcome = await applySetupPlan(answers, { profile, company: activeCompany, vouchers }, {
+                saveCompany: payload => saveAccountingSettings(token, payload),
+                saveGst: payload => saveGstSettings(token, payload),
+                loadAccounts: () => loadChartOfAccounts(token),
+                loadCategories: () => loadItemCategories(token),
+                createLedger: ledger => createChartAccount(token, { ...ledger, openingBalance: 0 }),
+                renameLedger: (account, name) => updateChartAccount(token, { ...account, name }),
+                createCategory: name => upsertItemCategory(token, { name }),
+                saveIndustry: industry => saveIndustry(activeCompanyId, industry),
+              }, onProgress);
+            }, () => (outcome?.failed?.length ? "" : "Your books are set up."));
+            if (outcome?.failed?.length) setError(`${outcome.failed[0].label}: ${outcome.failed[0].message}`);
+            return outcome;
+          }}
+          onDone={finishOnboarding}
+          onSkip={finishOnboarding}
+          onClassic={() => setClassicSetup(true)}
+          onOpenMigration={openMigration ? () => { finishOnboarding(); openMigration(); } : null}
+        />
+      )}
+
+      {showOnboarding && classicSetup && (
         <AccOnboardingWizard
           key={activeCompanyId || "onboarding"}
           company={activeCompany}
@@ -127,6 +187,8 @@ export function OverviewSection({
           else if (target?.reportTab) setReportTab(target.reportTab);
         }}
       />}
+
+      {settings && bookkeeper}
 
       {ownerBrief && settings && <AccOwnerDailyBrief
         brief={ownerBrief}

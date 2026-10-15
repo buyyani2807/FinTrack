@@ -80,6 +80,7 @@ export function SetupSection({
   openSimpleFromRecurring,
   audit,
   pagedAudit,
+  openMigration = null,
 }) {
   return (
     <div className="acc-panel acc-setup">
@@ -124,6 +125,15 @@ export function SetupSection({
         saving={saving}
         removeCoa={removeCoa}
       />
+      {openMigration && (
+        <AccSetupSection
+          icon="↥"
+          title="Move from Tally, Zoho or Excel"
+          copy="Upload your Tally XML, Zoho Books or Book Keeper export, or an Excel sheet. FinTrack maps ledgers and parties, finds duplicates, and shows you what it is unsure about before importing."
+        >
+          <button type="button" className="btn primary acc-setup-link-btn" onClick={openMigration}>Start migration<ArrowRight size={15} aria-hidden="true" /></button>
+        </AccSetupSection>
+      )}
       <PartiesSetupPanel
         importParties={importParties}
         openParty={openParty}

@@ -19,7 +19,7 @@ const PILLARS = [
     id: "accounts",
     title: "Accounting",
     text: "The company book for a shop, a trader, a service business, or a finance company.",
-    items: ["Chart of accounts and ledgers", "Sales, purchases, receipts, and payments", "Contra, journal, and credit and debit notes", "Inventory and GST preparation", "Receivables, payables, and bank reconciliation", "Customer profiles with a FinTrack credit score", "Day book, trial balance, profit and loss, balance sheet, and cash flow", "Monthly income and expense chart and spending analysis", "Expenses by month and category, with every entry"],
+    items: ["Chart of accounts and ledgers", "Sales, purchases, receipts, and payments", "Contra, journal, and credit and debit notes", "Inventory and GST preparation", "Receivables, payables, and bank reconciliation", "Customer profiles with a FinTrack credit score", "Day book, trial balance, profit and loss, balance sheet, and cash flow", "Monthly income and expense chart and spending analysis", "Expenses by month and category, with every entry", "Move in from Tally, Zoho Books, Book Keeper, or Excel"],
     to: "accounts-overview",
     link: "Explore Accounting",
   },
@@ -42,6 +42,9 @@ const PILLARS = [
 ];
 
 const AI = [
+  { slug: "ai-bookkeeper", title: "Tell FinTrack", text: "“I bought a laptop for ₹85,000 using HDFC” becomes a balanced draft, explained in plain words. You post it." },
+  { slug: "ai-setup", title: "AI setup", text: "Say what kind of business you run and answer a few questions. FinTrack sets up ledgers, banks, GST, and stock categories." },
+  { slug: "ai-migration", title: "Move from Tally or Excel", text: "Upload your old books. FinTrack maps the accounts, finds duplicate parties, and asks only about the exceptions." },
   { slug: "forecasting", title: "Cash-flow forecast", text: "Where cash may stand today, in 7, 30, and 60 days, with the invoices and bills that drive it." },
   { slug: "expense-insights", title: "Expense and supplier prices", text: "Which costs rose against last month, the 3-month average, and last year, and which supplier raised a price." },
   { slug: "collection-priorities", title: "Who to collect first", text: "Ranked customers with the risk, the reason, and a reminder draft in five languages that you confirm." },
@@ -80,9 +83,10 @@ const FAQ = [
   ["Does it support chit funds?", "Yes. Schemes, members, live bidding, payments, dividends, and reports."],
   ["Does it support GST?", "It prepares GST summaries from posted vouchers. Filing stays outside FinTrack."],
   ["Can I send WhatsApp messages?", "FinTrack opens WhatsApp with a reminder, receipt, or statement. You send the message."],
-  ["Does it have AI?", "Yes, included in the plan. AI Review in Accounts gives a cash-flow forecast, expense and supplier price changes, collection priorities, unusual activity alerts, GST checks, month-end readiness, bank matching suggestions, and stock forecasts. Chit Fund has scheme health. Ask FinTrack answers questions from this workspace, and bill photos become drafts. Every suggestion shows its reason and waits for you to act."],
+  ["Does it have AI?", "Yes, included in the plan. AI Review in Accounts gives a cash-flow forecast, expense and supplier price changes, collection priorities, unusual activity alerts, GST checks, month-end readiness, bank matching suggestions, and stock forecasts. Chit Fund has scheme health. Ask FinTrack answers questions from this workspace, bill photos become drafts, and Tell FinTrack turns a plain sentence into an entry. AI also sets up new books from a few questions and maps data brought in from Tally, Zoho Books, or Excel. Every suggestion shows its reason and waits for you to act."],
   ["What is Ask FinTrack?", "A question box on every screen. Ask “Who has not paid today?”, “Why did profit decrease?”, or “Which expenses increased this month?” and the answer comes from this workspace’s records, with the period and the report it used. It is read-only and does not guess figures it cannot find."],
-  ["Does the AI change my books?", "No. It does not post vouchers, file GST, lock a period, reverse an entry, create a purchase order, or send a message. A bank match is posted only when you approve it, and a locked period cannot be changed from a suggestion."],
+  ["Does the AI change my books?", "No. It does not post vouchers, file GST, lock a period, reverse an entry, create a purchase order, or send a message. A bank match is posted only when you approve it, a Tell FinTrack draft only when you choose Post, and imported data only when you choose Import. A locked period cannot be changed from a suggestion."],
+  ["Can I move my books from Tally or Excel?", "Yes. Upload a Tally XML export, or Excel and CSV files from Zoho Books, Book Keeper, or your own sheets. FinTrack shows how many customers, suppliers, ledgers, and transactions it found, how many accounts it mapped automatically, and the exceptions for you to review before anything is imported."],
   ["What reports are included?", "Daily and Monthly Finance have a collection report for any date and a Daily or Monthly P&L for the lending book. Chit Fund has a month statement PDF, a commission Profit & Loss by scheme, and scheme health. Accounts has the Day Book, Trial Balance, Profit & Loss, Balance Sheet, Cash Flow, GST, receivables, payables, and stock reports, with CSV, Excel, and PDF export."],
   ["Can I install it on my phone?", "Yes. FinTrack is the mobile app: add it to the home screen from Safari on iPhone or iPad, or from Chrome on Android. It opens from its own icon. Sign in the same way you do in the browser."],
   ["How is this different from Tally?", "TallyPrime does not have a mobile app for recording the books. On a phone it is for viewing reports. FinTrack installs on the phone, and collections, vouchers, and chit work are done there."],

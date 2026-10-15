@@ -158,6 +158,10 @@ import { ReportsSection } from "./sections/ReportsSection.jsx";
 import { BankSection } from "./sections/BankSection.jsx";
 import { SetupSection } from "./sections/SetupSection.jsx";
 import { NewEntryActions } from "./components/NewEntryActions.jsx";
+import { AccBookkeeper } from "./components/AccBookkeeper.jsx";
+import { AccMigrationAssistant } from "./components/AccMigrationAssistant.jsx";
+import { runMigrationPlan } from "./model/migrationAssistant.js";
+import { withNewLedger, withNewParty } from "./model/bookkeeper.js";
 import { CreateCompanyModal } from "./components/dialogs/CreateCompanyModal.jsx";
 import { PartyModal } from "./components/dialogs/PartyModal.jsx";
 import { DeletePartyModal } from "./components/dialogs/DeletePartyModal.jsx";
@@ -228,6 +232,8 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const submitLock = useMemo(() => createSubmitLock(), []);
   const [saving, setSaving] = useState(false);
   const [showVoucher, setShowVoucher] = useState(false);
+  const [showBookkeeper, setShowBookkeeper] = useState(false);
+  const [showMigration, setShowMigration] = useState(false);
   const [showParty, setShowParty] = useState(false);
   const [showCoa, setShowCoa] = useState(false);
   const [voucherType, setVoucherType] = useState("receipt");
@@ -1118,6 +1124,56 @@ const openVoucher = () => {
     setLines([emptyLine(), emptyLine()]);
   };
 
+  const postBookkeeperEntry = ({ draft, requestId, createdRecords }) => run(async () => {
+    let payload = draft.payload;
+    if (draft.newParty) {
+      const key = `${draft.newParty.partyType}|${draft.newParty.name.toLowerCase()}`;
+      let partyId = createdRecords.get(key);
+      if (!partyId) {
+        partyId = await createParty(token, { ...emptyPartyForm(), partyType: draft.newParty.partyType, name: draft.newParty.name });
+        createdRecords.set(key, partyId);
+      }
+      payload = withNewParty(payload, partyId);
+    }
+    if (draft.newLedger) {
+      const key = `ledger|${draft.newLedger.name.toLowerCase()}`;
+      let coaId = createdRecords.get(key);
+      if (!coaId) {
+        coaId = await createChartAccount(token, { ...draft.newLedger, openingBalance: 0 });
+        createdRecords.set(key, coaId);
+      }
+      payload = withNewLedger(payload, coaId);
+    }
+    assertBalancedVoucher(payload.lines);
+    await postVoucher(token, { ...payload, clientRequestId: requestId });
+  }, "Entry posted.");
+
+  const runMigration = async (plan, options) => {
+    let outcome = null;
+    await run(async () => {
+      outcome = await runMigrationPlan(plan, {
+        createLedger: ledger => createChartAccount(token, { ...ledger, openingBalance: 0 }),
+        createParty: party => createParty(token, { ...emptyPartyForm(), ...party }),
+        postVoucher: payload => postVoucher(token, payload),
+      }, options);
+    }, () => (outcome?.failed?.length ? "" : "Import finished."));
+    return outcome;
+  };
+
+  const bookkeeperProps = {
+    accounts: visibleAccounts,
+    parties,
+    company: activeCompany,
+    openInvoices: settlementOpenInvoices,
+    token,
+    today: todayIso(),
+    aiEnabled,
+    canWrite,
+    saving,
+    onPost: postBookkeeperEntry,
+    onOpenTransactions: () => { setShowBookkeeper(false); openSection("vouchers"); },
+  };
+
   const openSimple = kind => {
     if (!canWrite) {
       setError("Your Accounts role is view-only. Ask the owner for accountant access to post entries.");
@@ -1990,7 +2046,7 @@ const openVoucher = () => {
           rangeTo={range.to}
           fallbackName={settings?.companyName || workspace.businessName || ""}
         />}
-        extras={canWrite ? <NewEntryActions openSimple={openSimple} openVoucher={openVoucher} openParty={openParty} /> : <span className="small">View-only · {accountsAccessRole || "viewer"}</span>}
+        extras={canWrite ? <NewEntryActions openSimple={openSimple} openVoucher={openVoucher} openParty={openParty} openBookkeeper={settings ? () => setShowBookkeeper(true) : null} /> : <span className="small">View-only · {accountsAccessRole || "viewer"}</span>}
       />
       <Toasts items={[{ id: "error", tone: "error", message: error, onClose: () => setError("") }, { id: "notice", message: notice, onClose: () => setNotice("") }]} />
       {readOnly && <div className="notice">Accounts access: <strong>viewer</strong>. You can review books and reports, but posting and setup changes are blocked.</div>}
@@ -2004,6 +2060,11 @@ const openVoucher = () => {
           run={run}
           token={token}
           showOnboarding={showOnboarding}
+          bookkeeper={canWrite && !showOnboarding ? <AccBookkeeper {...bookkeeperProps} /> : null}
+          itemCategories={itemCategories}
+          aiEnabled={aiEnabled}
+          setError={setError}
+          openMigration={canAdmin ? () => setShowMigration(true) : null}
           activeCompanyId={activeCompanyId}
           activeCompany={activeCompany}
           canAdmin={canAdmin}
@@ -2346,6 +2407,7 @@ const openVoucher = () => {
         }, "Pipeline stage saved.")} />}
 
         {section === "setup" && <SetupSection
+          openMigration={canAdmin && settings ? () => setShowMigration(true) : null}
           activeCompany={activeCompany}
           setupForm={setupForm}
           setSetupForm={setSetupForm}
@@ -2420,6 +2482,21 @@ const openVoucher = () => {
         <p className="copy">Total debits must equal total credits. Unbalanced vouchers cannot be posted.</p>
         <VoucherForm accounts={visibleAccounts} parties={parties} voucherType={voucherType} setVoucherType={setVoucherType} form={voucherForm} setForm={setVoucherForm} lines={lines} setLines={setLines} onSubmit={submitVoucher} saving={saving} maxDate={todayIso()} />
       </Modal>}
+      {showBookkeeper && <Modal title="Describe it in words" close={() => !saving && setShowBookkeeper(false)}>
+        <AccBookkeeper {...bookkeeperProps} compact />
+      </Modal>}
+      {showMigration && <AccMigrationAssistant
+        accounts={visibleAccounts}
+        parties={parties}
+        company={activeCompany}
+        existingEntries={vouchers.length}
+        token={token}
+        today={todayIso()}
+        aiEnabled={aiEnabled}
+        canAdmin={canAdmin}
+        onRun={runMigration}
+        onClose={() => setShowMigration(false)}
+      />}
       {showCreateCompany && <CreateCompanyModal
         saving={saving}
         setShowCreateCompany={setShowCreateCompany}
