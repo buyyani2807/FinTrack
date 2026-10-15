@@ -41,3 +41,15 @@
 .faq-list { margin-top: 56px; }
 .faq .ui-accordion-trigger { color: var(--faq-ink); font-family: Inter, var(--ft-font, system-ui, sans-serif); letter-spacing: normal; }
 .faq .ui-accordion-content { color: var(--faq-muted); font-size: 15px; line-height: 1.6; }
+
+@media (max-width: 980px) {
+  .faq { padding: 64px 0; }
+  .faq-list { margin-top: 40px; }
+}
+@media (max-width: 560px) {
+  .faq { padding: 40px 0 44px; }
+  .faq .faq-title { font-size: 24px; line-height: 1.2; }
+  .faq .faq-description { font-size: 16px; }
+  .faq .faq-description { margin-top: 14px; }
+  .faq-list { margin-top: 28px; }
+}

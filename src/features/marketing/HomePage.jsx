@@ -1,7 +1,10 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { Link, useOutletContext } from "react-router";
 import { FrequentlyAskedQuestions } from "../../components/ui/FrequentlyAskedQuestions.jsx";
 import { Reveal, RevealProvider } from "../../components/ui/Reveal.jsx";
+import { TypewriterText } from "../../components/ui/TypewriterText.jsx";
+import "../intelligence/assistant/assistant.css";
 import { FeatureIcon } from "./icons.jsx";
 import { featurePath, marketingPaths } from "./paths.js";
 import { ProductCta } from "./ProductCta.jsx";
@@ -61,14 +64,217 @@ const AI = [
   { slug: "credit-score", title: "Customer credit score", text: "A score from each customer’s own payment history, with the reasons." },
 ];
 
+const FY = "FY 2026–27";
+
+// Answers as Ask FinTrack returned them in the workspace on 2026-10-16.
 const ASK_EXAMPLES = [
-  "Who has not paid today?",
-  "Why did profit decrease?",
-  "Which expenses increased this month?",
-  "Show receivables due this week.",
-  "What is the cashbook cash balance?",
-  "Open the GST report.",
+  {
+    icon: "HandCoins",
+    question: "Who has not paid today?",
+    answer: {
+      title: "Not paid today",
+      summary: "3 daily customers have not paid on 2026-10-16. Pending ₹1,500 of ₹1,500 expected.",
+      lines: [
+        { label: "Sai Buyyani", detail: "2 recent misses", amount: "₹41,000" },
+        { label: "Shashi Buyyani", detail: "2 recent misses", amount: "₹40,500" },
+        { label: "Nikhil Buyyani", detail: "2 recent misses", amount: "₹40,500" },
+      ],
+      period: "2026-10-16",
+      source: "Daily Finance · Today’s collection",
+    },
+  },
+  {
+    icon: "LineChart",
+    question: "Why did profit decrease?",
+    answer: {
+      title: "Profit compared with last month",
+      summary: "Net profit is ₹-64,500 so far in 2026-10 and was ₹0 in 2026-09. Income is ₹0 higher. Expenses are ₹64,500 higher.",
+      lines: [
+        { label: "This month", detail: "Net profit", amount: "₹-64,500" },
+        { label: "Last month", detail: "Net profit", amount: "₹0" },
+        { label: "Income change", amount: "₹0" },
+        { label: "Expense change", amount: "₹64,500" },
+      ],
+      period: "2026-09 to 2026-10",
+      source: "Accounts · Profit and loss",
+      filters: "Company 1 · 2026-10 · 2026-09",
+      warning: "The change is the difference in posted profit and loss. It is not a cause beyond income and expense totals.",
+    },
+  },
+  {
+    icon: "PieChart",
+    question: "Which expenses increased this month?",
+    answer: {
+      title: "Expenses that increased",
+      summary: "4 expense ledgers are higher than 2026-09. Rent is up ₹25,000.",
+      lines: [
+        { label: "Rent", detail: "Increase", amount: "₹25,000" },
+        { label: "Salary", detail: "Increase", amount: "₹25,000" },
+        { label: "Office Expenses", detail: "Increase", amount: "₹12,000" },
+        { label: "Electricity", detail: "Increase", amount: "₹2,500" },
+      ],
+      period: "2026-09 to 2026-10",
+      source: "Accounts · Profit and loss",
+      filters: "Company 1 · 2026-10 · 2026-09",
+    },
+  },
+  {
+    icon: "ArrowDownLeft",
+    question: "Show receivables due this week.",
+    answer: {
+      title: "Receivables due this week",
+      summary: "No receivable is due between 2026-10-16 and 2026-10-23.",
+      lines: [],
+      period: "2026-10-16 to 2026-10-23",
+      source: "Accounts · Receivables register",
+      filters: "Company 1 · Due 2026-10-16 to 2026-10-23",
+    },
+  },
+  {
+    icon: "Wallet",
+    question: "What is the cashbook cash balance?",
+    answer: {
+      title: "Cashbook",
+      summary: "Cashbook cash is ₹-27,49,000, bank is ₹24,00,500 and UPI is ₹15,58,000. These are running balances of every recorded cashbook entry. Company 1 cash ledger is ₹8,14,000. That figure is the Accounts book, not the cashbook.",
+      lines: [
+        { label: "Cash", detail: "Running balance", amount: "₹-27,49,000" },
+        { label: "Bank", detail: "Running balance", amount: "₹24,00,500" },
+        { label: "UPI", detail: "Running balance", amount: "₹15,58,000" },
+        { label: "Total", detail: "Running balance", amount: "₹12,09,500" },
+        { label: "Today's in", detail: "2026-10-16", amount: "₹0" },
+        { label: "Today's out", detail: "2026-10-16", amount: "₹0" },
+        { label: "Company 1 cash ledger", detail: "Accounts, separate from the cashbook", amount: "₹8,14,000" },
+      ],
+      period: "Running balances",
+      source: "Cashbook · Cashbook balances",
+      filters: "Finance cashbook",
+      warning: "Cash, bank, and UPI here are running cashbook balances. They are not today's movement, and they are not the Accounts cash ledger.",
+    },
+  },
+  {
+    icon: "FileBarChart",
+    question: "Open the GST report.",
+    answer: {
+      title: "GST this period",
+      summary: "Output GST is ₹0, input GST is ₹0 and net GST is ₹0 for 2026-04-01 to 2026-10-16.",
+      lines: [
+        { label: "Output GST", amount: "₹0" },
+        { label: "Input GST", amount: "₹0" },
+        { label: "Net GST", amount: "₹0" },
+      ],
+      period: "2026-04-01 to 2026-10-16",
+      source: "Accounts · GST books · 2026-04-01 to 2026-10-16",
+      filters: "Company 1",
+    },
+  },
 ];
+
+// Same markup as the workspace Ask FinTrack answer; only the summary types, the rest fades in after it.
+function AskAnswer({ id, index, answer, delay, expanded, rowHeight, controls, onToggle, onMeasure }) {
+  const boxRef = useRef(null);
+  const bodyRef = useRef(null);
+  const [typed, setTyped] = useState(false);
+  const [fullHeight, setFullHeight] = useState(0);
+  const [overflows, setOverflows] = useState(false);
+  const onDone = useCallback(() => setTyped(true), []);
+
+  useEffect(() => {
+    const box = boxRef.current;
+    const body = bodyRef.current;
+    if (!box || !body || typeof ResizeObserver === "undefined") return undefined;
+    const measure = () => {
+      const style = getComputedStyle(box);
+      const chrome = ["paddingTop", "paddingBottom", "borderTopWidth", "borderBottomWidth"].reduce((sum, key) => sum + parseFloat(style[key]), 0);
+      const full = Math.ceil(body.offsetHeight + chrome);
+      setFullHeight(full);
+      setOverflows(full > parseFloat(style.getPropertyValue("--ask-collapsed")) + 1);
+      onMeasure(index, full);
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(body);
+    return () => observer.disconnect();
+  }, [index, onMeasure]);
+
+  return <>
+    <article ref={boxRef} id={id} className="ft-ask-answer mkt-ask-answer" data-overflow={overflows} style={fullHeight ? { "--ask-full": `${Math.max(fullHeight, rowHeight)}px` } : undefined}>
+      <div ref={bodyRef} className="mkt-ask-body">
+        <p className="mkt-ask-kicker">Answer</p>
+        <header className="ft-ask-answer-head"><h4>{answer.title}</h4></header>
+        <TypewriterText text={answer.summary} delay={delay} onDone={onDone} />
+        <div className="mkt-ask-rest" data-shown={typed}>
+          {answer.lines.length ? <ul className="ft-ask-lines mkt-ask-lines">
+            {answer.lines.map(line => <li key={`${line.label}-${line.detail || ""}`}>
+              <span><strong>{line.label}</strong>{line.detail ? <em>{line.detail}</em> : null}</span>
+              <span className="mkt-ask-amount">{line.amount}</span>
+            </li>)}
+          </ul> : null}
+          <dl className="ft-ask-meta mkt-ask-meta">
+            <div><dt>Period</dt><dd>{answer.period}</dd></div>
+            <div><dt>Financial year</dt><dd>{FY}</dd></div>
+            <div><dt>Source</dt><dd>{answer.source}</dd></div>
+            {answer.filters ? <div><dt>Filters</dt><dd>{answer.filters}</dd></div> : null}
+          </dl>
+          {answer.warning ? <p className="ft-ask-warning mkt-ask-warning">{answer.warning}</p> : null}
+        </div>
+      </div>
+    </article>
+    {overflows ? <button type="button" className="mkt-ask-more" aria-expanded={expanded} aria-controls={controls} onClick={onToggle}>
+      {expanded ? "Show less" : "Show full answer"} <ChevronDown size={16} aria-hidden="true" />
+    </button> : <span className="mkt-ask-more" aria-hidden="true" />}
+  </>;
+}
+
+// One toggle opens every answer, and each grows to the tallest answer in its row so the rows stay even.
+function AskGrid() {
+  const baseId = useId();
+  const gridRef = useRef(null);
+  const [expanded, setExpanded] = useState(false);
+  const [heights, setHeights] = useState({});
+  const [columns, setColumns] = useState(1);
+  const onMeasure = useCallback((index, full) => setHeights(prev => (prev[index] === full ? prev : { ...prev, [index]: full })), []);
+  const ids = ASK_EXAMPLES.map((_, index) => `${baseId}-answer-${index}`);
+  const rowHeight = index => {
+    const start = index - (index % columns);
+    let max = 0;
+    for (let i = start; i < start + columns; i += 1) max = Math.max(max, heights[i] || 0);
+    return max;
+  };
+
+  useEffect(() => {
+    const grid = gridRef.current;
+    if (!grid || typeof ResizeObserver === "undefined") return undefined;
+    const observer = new ResizeObserver(() => setColumns(getComputedStyle(grid).gridTemplateColumns.split(" ").filter(Boolean).length || 1));
+    observer.observe(grid);
+    return () => observer.disconnect();
+  }, []);
+  const onToggle = () => {
+    if (expanded && gridRef.current?.getBoundingClientRect().top < 0) gridRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    setExpanded(value => !value);
+  };
+
+  return <div ref={gridRef} className="mkt-grid three mkt-ask-grid" data-expanded={expanded}>
+    {ASK_EXAMPLES.map((item, index) => <Reveal as="article" key={item.question} className="mkt-ask-tile" index={index % 3}>
+      <div className="mkt-ask-prompt">
+        <span className="mkt-ask-prompt-icon" aria-hidden="true"><FeatureIcon name={item.icon} size={18} /></span>
+        <div className="mkt-ask-prompt-copy">
+          <p className="mkt-ask-kicker">You asked</p>
+          <h3>{item.question}</h3>
+        </div>
+      </div>
+      <AskAnswer
+        id={ids[index]}
+        index={index}
+        answer={item.answer}
+        delay={(index % 3) * 120}
+        expanded={expanded}
+        rowHeight={rowHeight(index)}
+        controls={ids.join(" ")}
+        onToggle={onToggle}
+        onMeasure={onMeasure}
+      />
+    </Reveal>)}
+  </div>;
+}
 
 const AUDIENCES = [
   { title: "Finance businesses", text: "Customers, financing, collections, and agents.", to: "daily-finance" },
@@ -148,16 +354,14 @@ export function HomePage() {
     </section>
 
     <section className="mkt-section mkt-tint" id="ask-fintrack">
-      <div className="mkt-wrap mkt-split">
-        <div>
+      <div className="mkt-wrap">
+        <div className="mkt-section-head">
           <Reveal as="p" className="mkt-kicker"><FeatureIcon name="MessageCircle" size={16} /> Ask FinTrack</Reveal>
           <Reveal as="h2" index={1}>Ask your books the way you ask your accountant.</Reveal>
           <Reveal as="p" className="mkt-lead" index={2}>Type a question in plain English and FinTrack answers from your own records: the figures, the customers or ledgers behind them, the period, and the report they came from. One tap opens that screen.</Reveal>
-          <ul className="mkt-ticks">{ASK_EXAMPLES.map((question, index) => <Reveal as="li" key={question} index={index} y={8}>{question}</Reveal>)}</ul>
-          <Reveal as="p" className="mkt-lead">Read-only. Asking never posts, sends, or changes anything, and a collection agent sees only their own customers.</Reveal>
-          <Reveal as={Link} className="mkt-text-link" to={featurePath("ask-fintrack")}>See everything you can ask</Reveal>
         </div>
-        <Reveal index={1} duration={1.1} style={{ minWidth: 0 }}><ProductPreview scene="intelligence" /></Reveal>
+        <AskGrid />
+        <Reveal as="p" className="mkt-lead">Read-only. Asking never posts, sends, or changes anything, and a collection agent sees only their own customers. <Link className="mkt-text-link" to={featurePath("ask-fintrack")}>See everything you can ask</Link></Reveal>
       </div>
     </section>
 

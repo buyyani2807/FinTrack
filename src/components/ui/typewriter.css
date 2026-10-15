@@ -1,0 +1,30 @@
+/* The hidden full text reserves the final size, so wrapping never shifts the layout while typing. */
+.ui-typewriter { position: relative; display: grid; }
+.ui-typewriter-ghost, .ui-typewriter-typed { grid-area: 1 / 1; }
+.ui-typewriter-ghost { visibility: hidden; }
+
+.ui-typewriter-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.ui-typewriter-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  margin: 0 -3px 0 1px;
+  vertical-align: text-bottom;
+  border-radius: 1px;
+  background: var(--mkt-accent-ink, currentColor);
+  animation: ui-typewriter-blink 1s steps(1) infinite;
+}
+
+@keyframes ui-typewriter-blink { 50% { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-typewriter-caret { display: none; }
+}

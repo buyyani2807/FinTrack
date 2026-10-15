@@ -201,7 +201,7 @@ export function AboutPage() {
         </div>
         <Reveal className="mkt-cta-row"><Link className="mkt-text-link" to={marketingPaths.security}>Read the access controls</Link></Reveal>
       </div>
-      <Reveal index={1} duration={1.1} style={{ minWidth: 0 }}><ProductPreview scene="portals" /></Reveal>
+      <ProductPreview scene="portals" />
     </div>
   </section>
 
