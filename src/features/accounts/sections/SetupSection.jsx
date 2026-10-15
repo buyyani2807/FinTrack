@@ -82,6 +82,7 @@ export function SetupSection({
   pagedAudit,
   openMigration = null,
   openSetupAssistant = null,
+  setUpNewCompany = null,
 }) {
   return (
     <div className="acc-panel acc-setup">
@@ -126,13 +127,16 @@ export function SetupSection({
         saving={saving}
         removeCoa={removeCoa}
       />
-      {openSetupAssistant && (
+      {(openSetupAssistant || setUpNewCompany) && (
         <AccSetupSection
           icon="AI"
           title="Set up with AI"
-          copy="Tell FinTrack what kind of business you run and answer a few questions. It adds the bank ledgers, GST settings, stock categories and ledgers your business needs, and leaves anything already in your books as it is."
+          copy={`For a different business, set up a new company: it gets its own books, and FinTrack asks what kind of business it is. To add missing bank ledgers, stock categories and ledgers to ${activeCompany?.name || "this company"}, fill its gaps; its name, GST and books start date are not changed.`}
         >
-          <button type="button" className="btn primary acc-setup-link-btn" onClick={openSetupAssistant}>Start setup<ArrowRight size={15} aria-hidden="true" /></button>
+          <div className="acc-form-actions">
+            {setUpNewCompany && <button type="button" className="btn primary acc-setup-link-btn" onClick={setUpNewCompany}>Set up a new company<ArrowRight size={15} aria-hidden="true" /></button>}
+            {openSetupAssistant && <button type="button" className="btn acc-setup-link-btn" onClick={openSetupAssistant}>Fill gaps in {activeCompany?.name || "this company"}</button>}
+          </div>
         </AccSetupSection>
       )}
       {openMigration && (

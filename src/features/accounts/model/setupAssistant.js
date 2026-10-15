@@ -250,9 +250,13 @@ export function keptBooksStart(company, vouchers = []) {
   return vouchers.length && company?.booksStartedOn ? company.booksStartedOn : "";
 }
 
-export function nextQuestion(answers = {}, { keepStart = false } = {}) {
+/** Asked only when setting up a new company; an existing company keeps its name, GST and start date. */
+export const COMPANY_QUESTIONS = new Set(["name", "gst", "gstin", "start"]);
+
+export function nextQuestion(answers = {}, { keepStart = false, keepCompany = false } = {}) {
   return SETUP_QUESTIONS.find(question => !(question.id in answers)
     && !(keepStart && question.id === "start")
+    && !(keepCompany && COMPANY_QUESTIONS.has(question.id))
     && (!question.when || question.when(answers))) || null;
 }
 
@@ -314,17 +318,20 @@ const EXPENSE_LEDGER_INCOME = new Set(["fee income"]);
  * Turns the answers into concrete setup steps, skipping anything the books already have.
  * Nothing here talks to the server; `applySetupPlan` runs the steps.
  */
-export function buildSetupPlan(answers = {}, { profile = null, accounts = [], categories = [], vouchers = [], company = null } = {}) {
+export function buildSetupPlan(answers = {}, { profile = null, accounts = [], categories = [], vouchers = [], company = null, keepCompany = false } = {}) {
   const activeProfile = profile || profileBusiness(answers.business) || profileBusiness("business");
   const sellsProducts = answers.products !== false;
   const keepsStock = sellsProducts && (answers.inventory === undefined ? activeProfile.keepsStock : answers.inventory === true);
-  const gstRegistration = answers.gst || company?.gstRegistration || "unregistered";
-  const gstin = gstRegistration === "unregistered" ? "" : normalizeGstin(answers.gstin || company?.gstin || "");
+  const asked = keepCompany ? {} : answers;
+  const gstRegistration = asked.gst || company?.gstRegistration || "unregistered";
+  const gstin = gstRegistration === "unregistered" ? "" : normalizeGstin(asked.gstin || company?.gstin || "");
   const stateCode = gstStateFromGstin(gstin) || (gstRegistration === "unregistered" ? "" : company?.stateCode || "");
   const stateName = INDIA_STATES.find(state => state.code === stateCode)?.name || "";
-  const companyName = String(answers.name || company?.name || "").trim();
-  const keptStart = keptBooksStart(company, vouchers);
-  const booksStartedOn = keptStart || answers.start || company?.booksStartedOn || "";
+  const currentName = String(company?.name || "").trim();
+  const companyName = String(asked.name || currentName).trim();
+  const renamedFrom = currentName && companyName !== currentName ? currentName : "";
+  const keptStart = keepCompany ? company?.booksStartedOn || "" : keptBooksStart(company, vouchers);
+  const booksStartedOn = keptStart || asked.start || company?.booksStartedOn || "";
 
   const planned = [...accounts];
   const ledgers = [];
@@ -375,17 +382,26 @@ export function buildSetupPlan(answers = {}, { profile = null, accounts = [], ca
   const gstChanged = gstRegistration !== (company?.gstRegistration || "unregistered")
     || gstin !== normalizeGstin(company?.gstin || "")
     || stateCode !== (company?.stateCode || "");
-  const gst = gstChanged ? { gstRegistration, gstin, legalName: companyName, stateCode, stateName } : null;
+  const gst = gstChanged && !keepCompany ? { gstRegistration, gstin, legalName: companyName, stateCode, stateName } : null;
 
   const summary = [];
-  summary.push({
-    id: "company",
-    title: companyName || "Your company",
-    detail: keptStart
+  if (keepCompany) {
+    summary.push({
+      id: "company",
+      title: companyName || "This company",
+      detail: "Company name, GST and books start date stay as they are. Change them in Setup if you need to.",
+    });
+  } else {
+    const start = keptStart
       ? `Books start on ${shortDate(keptStart)}, as before, because entries are already posted.`
-      : `Books start on ${shortDate(booksStartedOn) || "the first day of this financial year"}.`,
-  });
-  summary.push({
+      : `Books start on ${shortDate(booksStartedOn) || "the first day of this financial year"}.`;
+    summary.push({
+      id: "company",
+      title: companyName || "Your company",
+      detail: renamedFrom ? `Renamed from ${renamedFrom}. ${start}` : start,
+    });
+  }
+  if (!keepCompany) summary.push({
     id: "gst",
     title: gstRegistration === "regular" ? "GST: regular" : gstRegistration === "composition" ? "GST: composition" : "No GST",
     detail: gstRegistration === "unregistered"
@@ -417,6 +433,8 @@ export function buildSetupPlan(answers = {}, { profile = null, accounts = [], ca
   return {
     profile: activeProfile,
     company: { companyName, booksStartedOn, industry: activeProfile.industry },
+    companyChanged: !keepCompany && (companyName !== currentName || booksStartedOn !== (company?.booksStartedOn || "")),
+    renamedFrom,
     gst,
     ledgers,
     renames,
@@ -431,7 +449,7 @@ export function buildSetupPlan(answers = {}, { profile = null, accounts = [], ca
  * { initialize?, saveCompany, saveGst, loadAccounts, loadCategories, createLedger, renameLedger, createCategory, saveIndustry }.
  * Accounts and categories are reloaded after the books open so nothing is created twice.
  */
-export async function applySetupPlan(answers, { profile, company, vouchers = [], booksOpen = true }, api, onProgress = () => {}) {
+export async function applySetupPlan(answers, { profile, company, vouchers = [], booksOpen = true, keepCompany = false }, api, onProgress = () => {}) {
   const done = [];
   const failed = [];
   const step = async (label, work) => {
@@ -445,19 +463,19 @@ export async function applySetupPlan(answers, { profile, company, vouchers = [],
       onProgress({ label, status: "failed", message: error?.message || "Failed" });
     }
   };
-  const companyName = String(answers.name || company?.name || "").trim();
-  const booksStartedOn = keptBooksStart(company, vouchers) || answers.start || company?.booksStartedOn || "";
+  const intended = buildSetupPlan(answers, { profile, vouchers, company, keepCompany });
+  const { companyName, booksStartedOn } = intended.company;
   if (!booksOpen) {
     await step("Open the books", () => api.initialize({ companyName, booksStartedOn }));
     if (failed.length) return { done, failed };
-  } else {
+  } else if (intended.companyChanged) {
     await step("Save company details", () => api.saveCompany({ companyName, booksStartedOn }));
   }
   if (profile?.industry) api.saveIndustry?.(profile.industry);
 
   const accounts = await api.loadAccounts();
   const categories = await api.loadCategories().catch(() => []);
-  const plan = buildSetupPlan(answers, { profile, accounts, categories, vouchers, company });
+  const plan = buildSetupPlan(answers, { profile, accounts, categories, vouchers, company, keepCompany });
   if (plan.gst) await step("Save GST settings", () => api.saveGst(plan.gst));
   for (const rename of plan.renames) await step(`Rename ${rename.account.name} to ${rename.name}`, () => api.renameLedger(rename.account, rename.name));
   for (const ledger of plan.ledgers) await step(`Add ${ledger.name} ledger`, () => api.createLedger(ledger));

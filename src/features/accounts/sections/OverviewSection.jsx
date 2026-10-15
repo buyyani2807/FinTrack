@@ -82,6 +82,7 @@ export function OverviewSection({
   aiEnabled = false,
   setError,
   openMigration = null,
+  setupKeepsCompany = false,
 }) {
   const [classicSetup, setClassicSetup] = useState(false);
   const finishOnboarding = () => {
@@ -112,10 +113,11 @@ export function OverviewSection({
           aiEnabled={aiEnabled}
           canAdmin={canAdmin}
           saving={saving}
+          keepCompany={setupKeepsCompany}
           onApply={async (answers, profile, onProgress) => {
             let outcome = null;
             await run(async () => {
-              outcome = await applySetupPlan(answers, { profile, company: activeCompany, vouchers }, {
+              outcome = await applySetupPlan(answers, { profile, company: activeCompany, vouchers, keepCompany: setupKeepsCompany }, {
                 saveCompany: payload => saveAccountingSettings(token, payload),
                 saveGst: payload => saveGstSettings(token, payload),
                 loadAccounts: () => loadChartOfAccounts(token),
@@ -131,7 +133,7 @@ export function OverviewSection({
           }}
           onDone={finishOnboarding}
           onSkip={finishOnboarding}
-          onClassic={() => setClassicSetup(true)}
+          onClassic={setupKeepsCompany ? null : () => setClassicSetup(true)}
           onOpenMigration={openMigration ? () => { finishOnboarding(); openMigration(); } : null}
         />
       )}

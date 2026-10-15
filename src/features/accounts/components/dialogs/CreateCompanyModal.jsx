@@ -3,12 +3,13 @@ import { Select } from "../../../../components/Select.jsx";
 import { INDUSTRY_TEMPLATES, saveIndustry } from "../AccOnboardingWizard.jsx";
 import { Field, Modal } from "../AccUi.jsx";
 
-export function CreateCompanyModal({ saving, setShowCreateCompany, companyDraft, run, token, setCompanyDraft }) {
+export function CreateCompanyModal({ saving, setShowCreateCompany, companyDraft, run, token, setCompanyDraft, onCreated }) {
   return (
     <Modal title="Create company" close={() => !saving && setShowCreateCompany(false)} actions={<div className="tabs spacer"><button type="button" className="btn primary" disabled={saving || !String(companyDraft.name || "").trim()} onClick={() => run(async () => {
       const created = await createAccountsCompany(token, companyDraft);
       const id = Array.isArray(created) ? created[0] : created;
       if (typeof id === "string") saveIndustry(id, companyDraft.industry || "retail");
+      if (typeof id === "string") onCreated?.(id);
       setShowCreateCompany(false);
       return typeof id === "string" ? id : undefined;
     }, "Company created. This company’s books start empty.")}>{saving ? "Saving…" : "Create company"}</button></div>}>

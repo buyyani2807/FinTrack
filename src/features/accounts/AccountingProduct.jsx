@@ -290,6 +290,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [companies, setCompanies] = useState(cached?.companies ?? []);
   const [activeCompanyId, setActiveCompanyId] = useState(cached?.activeCompanyId ?? "");
   const [showCreateCompany, setShowCreateCompany] = useState(false);
+  const [setupAfterCreate, setSetupAfterCreate] = useState(false);
   const [companyDraft, setCompanyDraft] = useState({ name: "", booksStartedOn: todayIso(), industry: "retail" });
   const [gstForm, setGstForm] = useState(cached?.gstForm ?? { gstRegistration: "unregistered", gstin: "", legalName: "", stateCode: "" });
   const [listPage, setListPage] = useState(1);
@@ -413,6 +414,8 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     && !onboardingDismissed
     && (setupAssistantRequested || !isAccountsOnboardingDone(activeCompanyId)),
   );
+  // An established company never has its name, GST or start date rewritten by the setup assistant.
+  const setupKeepsCompany = setupAssistantRequested || vouchers.length > 0;
 
   useEffect(() => {
     if (orgSettingsProp && Object.keys(orgSettingsProp).length) setOrgSettings(orgSettingsProp);
@@ -2067,6 +2070,7 @@ const openVoucher = () => {
           aiEnabled={aiEnabled}
           setError={setError}
           openMigration={canAdmin ? () => setShowMigration(true) : null}
+          setupKeepsCompany={setupKeepsCompany}
           activeCompanyId={activeCompanyId}
           activeCompany={activeCompany}
           canAdmin={canAdmin}
@@ -2415,6 +2419,11 @@ const openVoucher = () => {
             setSetupAssistantRequested(true);
             openSection("overview");
           } : null}
+          setUpNewCompany={canAdmin && !migrationRequired ? () => {
+            setCompanyDraft({ name: "", booksStartedOn: todayIso(), industry: "retail" });
+            setSetupAfterCreate(true);
+            setShowCreateCompany(true);
+          } : null}
           activeCompany={activeCompany}
           setupForm={setupForm}
           setSetupForm={setSetupForm}
@@ -2506,11 +2515,19 @@ const openVoucher = () => {
       />}
       {showCreateCompany && <CreateCompanyModal
         saving={saving}
-        setShowCreateCompany={setShowCreateCompany}
+        setShowCreateCompany={open => {
+          setShowCreateCompany(open);
+          if (!open) setSetupAfterCreate(false);
+        }}
         companyDraft={companyDraft}
         run={run}
         token={token}
         setCompanyDraft={setCompanyDraft}
+        onCreated={() => {
+          setOnboardingDismissed(false);
+          setSetupAssistantRequested(false);
+          if (setupAfterCreate) openSection("overview");
+        }}
       />}
       {showSimple && <Modal title={SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry"} close={closeSimple}>
         <SimpleEntryForm kind={simpleKind} accounts={visibleAccounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} maxDate={todayIso()} gstCompany={activeCompany} onGstSetup={() => { setShowSimple(false); openSection("setup"); }} items={items} stockByItem={stockByItem} openInvoices={settlementOpenInvoices} creditInfo={saleCreditInfo} token={token} vouchers={vouchers} />

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, CircleAlert, LoaderCircle, Send, Sparkles, Undo2 } from "lucide-react";
 import {
+  COMPANY_QUESTIONS,
   SETUP_QUESTIONS,
   buildSetupPlan,
   financialYearStart,
@@ -78,6 +79,7 @@ export function AccSetupAssistant({
   aiEnabled = false,
   canAdmin = false,
   saving = false,
+  keepCompany = false,
   onApply,
   onDone,
   onSkip,
@@ -87,10 +89,11 @@ export function AccSetupAssistant({
   const companyId = company?.id || "";
   const saved = useMemo(() => readSaved(companyId), [companyId]);
   const keepStart = Boolean(keptBooksStart(company, vouchers));
+  const asking = { keepStart, keepCompany };
   const [answers, setAnswers] = useState(() => saved?.answers || {});
-  const [order, setOrder] = useState(() => saved?.order || []);
+  const [order, setOrder] = useState(() => (saved?.order || []).filter(id => !keepCompany || !COMPANY_QUESTIONS.has(id)));
   const [profile, setProfile] = useState(() => saved?.profile || null);
-  const [input, setInput] = useState(() => (nextQuestion(saved?.answers || {}, { keepStart })?.id === "name" ? company?.name || "" : ""));
+  const [input, setInput] = useState(() => (nextQuestion(saved?.answers || {}, asking)?.id === "name" ? company?.name || "" : ""));
   const [error, setError] = useState("");
   const [thinking, setThinking] = useState(false);
   const [progress, setProgress] = useState([]);
@@ -100,12 +103,13 @@ export function AccSetupAssistant({
     writeSaved(companyId, order.length ? { answers, order, profile } : null);
   }, [companyId, answers, order, profile]);
 
-  const question = nextQuestion(answers, { keepStart });
+  const question = nextQuestion(answers, asking);
   const defaultStart = company?.booksStartedOn || financialYearStart(today);
+  const spoken = keepCompany ? { ...answers, name: company?.name || "" } : answers;
 
   const plan = useMemo(
-    () => (question ? null : buildSetupPlan(answers, { profile, accounts, categories, vouchers, company })),
-    [question, answers, profile, accounts, categories, vouchers, company],
+    () => (question ? null : buildSetupPlan(answers, { profile, accounts, categories, vouchers, company, keepCompany })),
+    [question, answers, profile, accounts, categories, vouchers, company, keepCompany],
   );
 
   const answer = async value => {
@@ -171,8 +175,10 @@ export function AccSetupAssistant({
       <header className="acc-bk-head">
         <span className="acc-bk-icon" aria-hidden="true"><Sparkles size={18} /></span>
         <div>
-          <h2 className="acc-bk-title">Set up your books</h2>
-          <p className="acc-bk-sub">Answer a few questions in your own words. FinTrack sets up the ledgers, banks, GST and stock categories for you. Nothing is saved until you confirm.</p>
+          <h2 className="acc-bk-title">{keepCompany ? `Fill gaps in ${company?.name || "this company"}` : "Set up your books"}</h2>
+          <p className="acc-bk-sub">{keepCompany
+            ? "Answer a few questions about how this business works. FinTrack adds the bank ledgers, stock categories and ledgers it is missing. The company name, GST and books start date are not changed. Nothing is saved until you confirm."
+            : "Answer a few questions in your own words. FinTrack sets up the ledgers, banks, GST and stock categories for you. Nothing is saved until you confirm."}</p>
         </div>
         <div className="acc-setup-head-actions">
           {onClassic && <button type="button" className="acc-ov-link-btn" disabled={saving} onClick={onClassic}>Use the step-by-step form</button>}
@@ -183,7 +189,7 @@ export function AccSetupAssistant({
       <div className="acc-bk-thread">
         {answered.map(item => (
           <div key={item.id} className="acc-setup-turn">
-            <p className="acc-setup-ask">{questionText(item, answers, profile)}</p>
+            <p className="acc-setup-ask">{questionText(item, spoken, profile)}</p>
             <p className="acc-bk-said">{answerLabel(item, answers[item.id])}</p>
             {item.id === "business" && profile && (
               <p className="acc-setup-ask">
@@ -196,7 +202,7 @@ export function AccSetupAssistant({
 
         {question && (
           <div className="acc-setup-turn">
-            <p className="acc-setup-ask is-current">{questionText(question, answers, profile)}</p>
+            <p className="acc-setup-ask is-current">{questionText(question, spoken, profile)}</p>
             <div className="acc-setup-answer">
               {question.kind === "choice" && (
                 <div className="acc-bk-choices">

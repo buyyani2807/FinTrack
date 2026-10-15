@@ -214,7 +214,7 @@ test("running setup again on books with entries keeps the books start date", asy
   assert.equal(buildSetupPlan(setupAnswers, { accounts, company: started }).company.booksStartedOn, "2026-04-01");
 
   let saved = null;
-  await applySetupPlan(setupAnswers, { profile: profileBusiness("Electrical wholesale"), company: started, vouchers: posted }, {
+  await applySetupPlan({ ...setupAnswers, name: "Lakshmi Electricals Pvt Ltd" }, { profile: profileBusiness("Electrical wholesale"), company: started, vouchers: posted }, {
     saveCompany: async payload => { saved = payload; },
     saveGst: async () => {},
     loadAccounts: async () => accounts,
@@ -224,6 +224,40 @@ test("running setup again on books with entries keeps the books start date", asy
     createCategory: async () => {},
   });
   assert.equal(saved.booksStartedOn, "2025-04-01");
+});
+
+test("filling gaps in an existing company never renames it or changes GST or the start date", async () => {
+  const existingCompany = { ...company, name: "Mahaveer Paper", booksStartedOn: "2025-04-01", gstRegistration: "regular", gstin: "29AAACR5055K1Z3", stateCode: "29" };
+  assert.equal(nextQuestion({}, { keepCompany: true }).id, "business");
+  assert.equal(nextQuestion({ business: "x", products: false, credit: true, banks: "" }, { keepCompany: true }), null);
+
+  const answers = { ...setupAnswers, name: "Buyyani's Enterprises", gst: "unregistered", start: "2026-10-01" };
+  const plan = buildSetupPlan(answers, { accounts, company: existingCompany, keepCompany: true });
+  assert.equal(plan.company.companyName, "Mahaveer Paper");
+  assert.equal(plan.company.booksStartedOn, "2025-04-01");
+  assert.equal(plan.gst, null);
+  assert.equal(plan.companyChanged, false);
+  assert.match(plan.summary[0].detail, /stay as they are/);
+
+  const calls = [];
+  await applySetupPlan(answers, { profile: profileBusiness("Electrical wholesale"), company: existingCompany, keepCompany: true }, {
+    saveCompany: async payload => calls.push(["company", payload]),
+    saveGst: async payload => calls.push(["gst", payload]),
+    loadAccounts: async () => accounts,
+    loadCategories: async () => [],
+    createLedger: async () => {},
+    renameLedger: async () => {},
+    createCategory: async () => {},
+  });
+  assert.deepEqual(calls, []);
+});
+
+test("a first-time setup says when it renames the company", () => {
+  const plan = buildSetupPlan({ ...setupAnswers, name: "Buyyani's Enterprises" }, { accounts, company: { ...company, name: "Mahaveer Paper" } });
+  assert.equal(plan.renamedFrom, "Mahaveer Paper");
+  assert.match(plan.summary[0].detail, /Renamed from Mahaveer Paper/);
+  const same = buildSetupPlan({ ...setupAnswers, name: "Mahaveer Paper" }, { accounts, company: { ...company, name: "Mahaveer Paper", booksStartedOn: "2026-04-01" } });
+  assert.equal(same.companyChanged, false);
 });
 
 test("applying the setup reloads the books and keeps going past a failed step", async () => {
