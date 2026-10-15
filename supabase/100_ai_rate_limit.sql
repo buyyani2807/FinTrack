@@ -33,11 +33,11 @@ begin
     return jsonb_build_object('allowed', false, 'scope', 'auth', 'retryAfter', 0);
   end if;
   if input_kind = 'bill_scan' then
-    per_minute := 10;
-    per_day := 200;
-  elsif input_kind = 'bookkeeper' then
     per_minute := 20;
-    per_day := 300;
+    per_day := 1000;
+  elsif input_kind = 'bookkeeper' then
+    per_minute := 30;
+    per_day := 1000;
   else
     raise exception 'Unknown AI call';
   end if;
