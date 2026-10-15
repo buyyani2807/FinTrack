@@ -4,9 +4,9 @@ import "./typewriter.css";
 
 const prefersReducedMotion = () => typeof window !== "undefined" && Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
 
-// Types `text` once it scrolls into view. delay is ms before the first character, speed is ms per character.
+// Types `text` once it scrolls into view. delay is ms before the first characters, speed is ms between ticks.
 // onDone runs once the full text is shown.
-export function TypewriterText({ text, as: Tag = "p", className, delay = 0, speed = 12, onDone }) {
+export function TypewriterText({ text, as: Tag = "p", className, delay = 0, speed = 8, step = 1, onDone }) {
   const ref = useRef(null);
   const [reduced] = useState(prefersReducedMotion);
   const inView = useInView(ref, { enabled: !reduced, rootMargin: "0px 0px -10% 0px" });
@@ -15,9 +15,9 @@ export function TypewriterText({ text, as: Tag = "p", className, delay = 0, spee
 
   useEffect(() => {
     if (!inView || done) return undefined;
-    const timer = setTimeout(() => setChars(count => count + 1), chars === 0 ? delay : speed);
+    const timer = setTimeout(() => setChars(count => Math.min(text.length, count + step)), chars === 0 ? delay : speed);
     return () => clearTimeout(timer);
-  }, [inView, done, chars, delay, speed]);
+  }, [inView, done, chars, delay, speed, step, text.length]);
 
   useEffect(() => {
     if (done) onDone?.();

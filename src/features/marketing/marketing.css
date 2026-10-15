@@ -414,7 +414,7 @@ html[data-theme="dark"] .mkt-tint { background: #0c1218; }
 .mkt-card p, .mkt-muted { color: var(--mkt-muted); font-size: 14.5px; line-height: 1.55; }
 .mkt-card-link { color: var(--mkt-ink); }
 
-.mkt-ask-grid { align-items: start; margin-top: 28px; scroll-margin-top: 140px; }
+.mkt-ask-grid { align-items: start; margin-top: 28px; scroll-margin-top: 140px; overflow-anchor: none; }
 .mkt-ask-tile {
   display: flex;
   flex-direction: column;
@@ -549,11 +549,7 @@ html[data-theme="dark"] .mkt .mkt-ask-answer {
 }
 html[data-theme="dark"] .mkt .mkt-ask-answer h4 { color: #fff; }
 
-.mkt-ask-grid[data-expanded="true"] .mkt-ask-answer {
-  height: var(--ask-full, auto);
-  max-height: var(--ask-full, none);
-}
-.mkt-ask-grid:not([data-expanded="true"]) .mkt-ask-answer[data-overflow="true"]::after {
+.mkt .mkt-ask-tile:not([data-expanded="true"]) .mkt-ask-answer[data-overflow="true"]::after {
   content: "";
   position: absolute;
   inset: auto 0 0;

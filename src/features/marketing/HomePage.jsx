@@ -75,9 +75,9 @@ const ASK_EXAMPLES = [
       title: "Not paid today",
       summary: "3 daily customers have not paid on 2026-10-16. Pending ₹1,500 of ₹1,500 expected.",
       lines: [
-        { label: "Sai Buyyani", detail: "2 recent misses", amount: "₹41,000" },
-        { label: "Shashi Buyyani", detail: "2 recent misses", amount: "₹40,500" },
-        { label: "Nikhil Buyyani", detail: "2 recent misses", amount: "₹40,500" },
+        { label: "Customer 1", detail: "2 recent misses", amount: "₹41,000" },
+        { label: "Customer 2", detail: "2 recent misses", amount: "₹40,500" },
+        { label: "Customer 3", detail: "2 recent misses", amount: "₹40,500" },
       ],
       period: "2026-10-16",
       source: "Daily Finance · Today’s collection",
@@ -195,8 +195,15 @@ function AskAnswer({ id, index, answer, delay, expanded, rowHeight, controls, on
     return () => observer.disconnect();
   }, [index, onMeasure]);
 
+  const openHeight = Math.max(fullHeight, rowHeight);
   return <>
-    <article ref={boxRef} id={id} className="ft-ask-answer mkt-ask-answer" data-overflow={overflows} style={fullHeight ? { "--ask-full": `${Math.max(fullHeight, rowHeight)}px` } : undefined}>
+    <article
+      ref={boxRef}
+      id={id}
+      className="ft-ask-answer mkt-ask-answer"
+      data-overflow={overflows}
+      style={expanded && openHeight ? { height: openHeight, maxHeight: openHeight } : undefined}
+    >
       <div ref={bodyRef} className="mkt-ask-body">
         <p className="mkt-ask-kicker">Answer</p>
         <header className="ft-ask-answer-head"><h4>{answer.title}</h4></header>
@@ -218,61 +225,93 @@ function AskAnswer({ id, index, answer, delay, expanded, rowHeight, controls, on
         </div>
       </div>
     </article>
-    {overflows ? <button type="button" className="mkt-ask-more" aria-expanded={expanded} aria-controls={controls} onClick={onToggle}>
+    {overflows ? <button type="button" className="mkt-ask-more" aria-expanded={expanded} aria-controls={controls} onClick={event => onToggle(index, event.currentTarget.closest(".mkt-ask-tile"))}>
       {expanded ? "Show less" : "Show full answer"} <ChevronDown size={16} aria-hidden="true" />
     </button> : <span className="mkt-ask-more" aria-hidden="true" />}
   </>;
 }
 
-// One toggle opens every answer, and each grows to the tallest answer in its row so the rows stay even.
+// Each row expands on its own. Other open rows stay open. Scroll is locked to the clicked tile so the page does not jump.
 function AskGrid() {
   const baseId = useId();
   const gridRef = useRef(null);
-  const [expanded, setExpanded] = useState(false);
+  const [expandedRows, setExpandedRows] = useState(() => new Set());
   const [heights, setHeights] = useState({});
   const [columns, setColumns] = useState(1);
   const onMeasure = useCallback((index, full) => setHeights(prev => (prev[index] === full ? prev : { ...prev, [index]: full })), []);
   const ids = ASK_EXAMPLES.map((_, index) => `${baseId}-answer-${index}`);
+  const rowOf = index => Math.floor(index / Math.max(columns, 1));
   const rowHeight = index => {
-    const start = index - (index % columns);
+    const start = index - (index % Math.max(columns, 1));
     let max = 0;
     for (let i = start; i < start + columns; i += 1) max = Math.max(max, heights[i] || 0);
     return max;
   };
+  const rowControls = index => {
+    const start = index - (index % Math.max(columns, 1));
+    return ids.slice(start, start + columns).join(" ");
+  };
 
   useEffect(() => {
     const grid = gridRef.current;
-    if (!grid || typeof ResizeObserver === "undefined") return undefined;
-    const observer = new ResizeObserver(() => setColumns(getComputedStyle(grid).gridTemplateColumns.split(" ").filter(Boolean).length || 1));
+    if (!grid) return undefined;
+    const readColumns = () => getComputedStyle(grid).gridTemplateColumns.split(" ").filter(Boolean).length || 1;
+    setColumns(readColumns());
+    if (typeof ResizeObserver === "undefined") return undefined;
+    let last = readColumns();
+    const observer = new ResizeObserver(() => {
+      const next = readColumns();
+      if (next === last) return;
+      last = next;
+      setColumns(next);
+      setExpandedRows(new Set());
+    });
     observer.observe(grid);
     return () => observer.disconnect();
   }, []);
-  const onToggle = () => {
-    if (expanded && gridRef.current?.getBoundingClientRect().top < 0) gridRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-    setExpanded(value => !value);
+
+  const onToggle = (index, tile) => {
+    const row = rowOf(index);
+    const anchorTop = tile?.getBoundingClientRect().top ?? null;
+    setExpandedRows(current => {
+      const next = new Set(current);
+      if (next.has(row)) next.delete(row);
+      else next.add(row);
+      return next;
+    });
+    if (anchorTop == null || !tile) return;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const delta = tile.getBoundingClientRect().top - anchorTop;
+        if (Math.abs(delta) > 1) window.scrollBy(0, delta);
+      });
+    });
   };
 
-  return <div ref={gridRef} className="mkt-grid three mkt-ask-grid" data-expanded={expanded}>
-    {ASK_EXAMPLES.map((item, index) => <Reveal as="article" key={item.question} className="mkt-ask-tile" index={index % 3}>
-      <div className="mkt-ask-prompt">
-        <span className="mkt-ask-prompt-icon" aria-hidden="true"><FeatureIcon name={item.icon} size={18} /></span>
-        <div className="mkt-ask-prompt-copy">
-          <p className="mkt-ask-kicker">You asked</p>
-          <h3>{item.question}</h3>
+  return <div ref={gridRef} className="mkt-grid three mkt-ask-grid">
+    {ASK_EXAMPLES.map((item, index) => {
+      const expanded = expandedRows.has(rowOf(index));
+      return <Reveal as="article" key={item.question} className="mkt-ask-tile" data-expanded={expanded} index={index % 3}>
+        <div className="mkt-ask-prompt">
+          <span className="mkt-ask-prompt-icon" aria-hidden="true"><FeatureIcon name={item.icon} size={18} /></span>
+          <div className="mkt-ask-prompt-copy">
+            <p className="mkt-ask-kicker">You asked</p>
+            <h3>{item.question}</h3>
+          </div>
         </div>
-      </div>
-      <AskAnswer
-        id={ids[index]}
-        index={index}
-        answer={item.answer}
-        delay={(index % 3) * 120}
-        expanded={expanded}
-        rowHeight={rowHeight(index)}
-        controls={ids.join(" ")}
-        onToggle={onToggle}
-        onMeasure={onMeasure}
-      />
-    </Reveal>)}
+        <AskAnswer
+          id={ids[index]}
+          index={index}
+          answer={item.answer}
+          delay={(index % 3) * 40}
+          expanded={expanded}
+          rowHeight={rowHeight(index)}
+          controls={rowControls(index)}
+          onToggle={onToggle}
+          onMeasure={onMeasure}
+        />
+      </Reveal>;
+    })}
   </div>;
 }
 
