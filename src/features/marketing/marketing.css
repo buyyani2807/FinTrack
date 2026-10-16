@@ -299,7 +299,11 @@ html[data-theme="dark"] .mkt-section h2 { color: #fff; }
 }
 .mkt-drawer-link:hover { background: var(--mkt-soft); }
 .mkt-drawer-link[aria-current="page"] { background: var(--mkt-soft); color: var(--mkt-accent-ink); }
-.mkt-drawer-link.is-current { color: var(--mkt-accent-ink); }
+.mkt-drawer-toggle:hover,
+.mkt-drawer-toggle:active { background: transparent; }
+.mkt-drawer-link.is-current,
+.mkt-drawer-toggle.is-current:hover,
+.mkt-drawer-toggle.is-current:active { background: var(--mkt-soft); color: var(--mkt-accent-ink); }
 .mkt-drawer-link.minor { min-height: 44px; color: var(--mkt-muted); font-size: 15px; font-weight: 500; }
 .mkt-drawer-link.minor[aria-current="page"] { color: var(--mkt-accent-ink); }
 .mkt-drawer-toggle > svg { flex: none; color: var(--mkt-muted); transition: transform 0.25s ease; }
