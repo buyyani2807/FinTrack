@@ -45,21 +45,21 @@
 
 .ft-ask-head h2,
 .ft-ask-answer h3 {
-  font-size: 1.15rem;
+  font-size: var(--ft-type-card);
 }
 
 .ft-ask-catalog { margin-top: 16px; }
 .ft-ask-catalog summary {
   color: var(--ft-text, #1c1917);
-  font-size: 0.95rem;
+  font-size: var(--ft-type-ui);
   font-weight: 650;
   cursor: pointer;
 }
-.ft-ask-catalog h3 { font-size: 0.95rem; }
+.ft-ask-catalog h3 { font-size: var(--ft-type-ui); }
 .ft-ask-group {
   margin: 14px 0 0;
   color: var(--ft-text-2, #57534e);
-  font-size: 12px;
+  font-size: var(--ft-type-caption);
   font-weight: 650;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -67,7 +67,7 @@
 
 .ft-ask-kicker {
   margin: 0 0 4px;
-  font-size: 12px;
+  font-size: var(--ft-type-caption);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--ft-primary, #0f6b4c);
@@ -77,7 +77,7 @@
 .ft-ask-warning,
 .ft-ask-error {
   margin: 8px 0 0;
-  font-size: 13px;
+  font-size: var(--ft-type-label);
   line-height: 1.45;
 }
 
@@ -112,7 +112,7 @@
   border-radius: 999px;
   padding: 6px 10px;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--ft-type-label);
   text-align: left;
   cursor: pointer;
 }
@@ -146,7 +146,7 @@
   display: block;
   font-style: normal;
   color: var(--ft-text-2, #57534e);
-  font-size: 12px;
+  font-size: var(--ft-type-caption);
 }
 
 .ft-ask-meta {
@@ -155,7 +155,7 @@
   margin: 12px 0 0;
 }
 
-.ft-ask-meta div { display: flex; gap: 8px; font-size: 12px; }
+.ft-ask-meta div { display: flex; gap: 8px; font-size: var(--ft-type-caption); }
 .ft-ask-meta dt { min-width: 7.5rem; color: var(--ft-text-2, #57534e); }
 .ft-ask-meta dd { margin: 0; }
 

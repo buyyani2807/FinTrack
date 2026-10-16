@@ -23,7 +23,7 @@
   --acc-radius-sm: 10px;
   --acc-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
   --acc-shadow-soft: 0 4px 14px rgba(0, 0, 0, 0.14);
-  --acc-font: 14px;
+  --acc-font: var(--ft-type-secondary);
   --acc-space-1: 4px;
   --acc-space-2: 8px;
   --acc-space-3: 12px;
@@ -443,8 +443,8 @@
 
 .accounts-dashboard .acc-page-title .title {
   margin: 0 0 4px;
-  font-size: 26px;
-  letter-spacing: -0.04em;
+  font-size: var(--ft-type-title);
+  letter-spacing: var(--ft-tracking-tight);
 }
 
 .accounts-dashboard .acc-kicker {
@@ -643,7 +643,7 @@
 .accounts-dashboard .acc-section-title {
   margin: 0 0 10px;
   color: var(--acc-muted);
-  font-size: 11px;
+  font-size: var(--ft-type-micro);
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -711,7 +711,7 @@
 /* Owner daily brief */
 .accounts-dashboard .acc-brief { display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px; }
 .accounts-dashboard .acc-brief-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.accounts-dashboard .acc-brief-head h3 { margin: 2px 0 0; font-size: 18px; }
+.accounts-dashboard .acc-brief-head h3 { margin: 2px 0 0; font-size: var(--ft-type-card); }
 .accounts-dashboard .acc-brief-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .accounts-dashboard .acc-brief-col {
   display: flex; flex-direction: column; gap: 8px; min-width: 0;
@@ -2503,7 +2503,7 @@
 }
 
 .accounts-dashboard .acc-sale-summary-grid dt {
-  font-size: 0.75rem;
+  font-size: var(--ft-type-caption);
   color: var(--acc-muted);
   margin: 0 0 4px;
 }
@@ -3632,7 +3632,7 @@
 
 .accounts-dashboard .acc-subsection-title {
   margin: 12px 0 8px;
-  font-size: 0.95rem;
+  font-size: var(--ft-type-ui);
 }
 
 .accounts-dashboard .acc-bank-statement-stats {
