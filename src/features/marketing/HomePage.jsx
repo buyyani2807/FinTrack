@@ -273,21 +273,23 @@ function AskGrid() {
 
   useLayoutEffect(() => {
     const anchor = anchorRef.current;
-    if (!anchor?.tile?.isConnected) return;
-    anchorRef.current = null;
+    if (!anchor?.tile?.isConnected) return undefined;
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const duration = reduced ? 0 : 420;
+    const started = performance.now();
+    let frame = 0;
     const pin = () => {
+      if (!anchor.tile.isConnected) return;
       const delta = anchor.tile.getBoundingClientRect().top - anchor.top;
-      if (Math.abs(delta) > 1) window.scrollBy(0, delta);
+      if (Math.abs(delta) > 0.5) window.scrollBy(0, delta);
       const headerBottom = document.querySelector(".mkt-nav-bar")?.getBoundingClientRect().bottom ?? 0;
       const top = anchor.tile.getBoundingClientRect().top;
       if (top < headerBottom + 12) window.scrollBy(0, top - headerBottom - 12);
+      if (performance.now() - started < duration) frame = requestAnimationFrame(pin);
+      else anchorRef.current = null;
     };
     pin();
-    // Browser scroll anchoring can still nudge after paint; pin once more on the next frames.
-    requestAnimationFrame(() => {
-      pin();
-      requestAnimationFrame(pin);
-    });
+    return () => cancelAnimationFrame(frame);
   }, [expandedRows]);
 
   const onToggle = (index, tile) => {
