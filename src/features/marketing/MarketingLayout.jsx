@@ -1,18 +1,24 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate, useOutletContext } from "react-router";
-import { ArrowRight, ChevronDown, Gift, Menu, X } from "lucide-react";
+import { ArrowRight, BookOpen, Building2, ChevronDown, Gift, House, LayoutGrid, Menu, ShieldCheck, Tag, X } from "lucide-react";
 import { ThemeToggle } from "../../components/ThemeToggle.jsx";
 import { FEATURE_CATEGORIES, featureBySlug } from "./catalog.js";
 import marketingStyles from "./marketing.css?inline";
 import { featurePath, marketingPaths } from "./paths.js";
 
 const LINKS = [
-  { to: marketingPaths.features, label: "Features" },
-  { to: marketingPaths.solutions, label: "Solutions" },
-  { to: marketingPaths.security, label: "Security" },
-  { to: marketingPaths.pricing, label: "Pricing" },
-  { to: marketingPaths.resources, label: "Resources" },
+  { to: marketingPaths.home, label: "Home", icon: House, end: true },
+  { to: marketingPaths.features, label: "Features", icon: LayoutGrid },
+  { to: marketingPaths.solutions, label: "Solutions", icon: Building2 },
+  { to: marketingPaths.security, label: "Security", icon: ShieldCheck },
+  { to: marketingPaths.pricing, label: "Pricing", icon: Tag },
+  { to: marketingPaths.resources, label: "Resources", icon: BookOpen },
 ];
+
+function NavIcon({ item, size = 15 }) {
+  const Icon = item.icon;
+  return <Icon size={size} aria-hidden="true" />;
+}
 
 const MENU_MODULES = {
   accounts: ["accounts-overview", "vouchers", "receivables", "inventory", "gst-preparation", "bank-reconciliation"],
@@ -148,7 +154,7 @@ export function MarketingLayout() {
     <header className="mkt-nav">
       <Brand />
       <nav className="mkt-links" aria-label="Primary">
-        <NavLink to={marketingPaths.home} end>Home</NavLink>
+        <NavLink className="mkt-nav-item" to={marketingPaths.home} end><NavIcon item={LINKS[0]} />Home</NavLink>
         <div
           className="mkt-product"
           ref={productRef}
@@ -157,7 +163,7 @@ export function MarketingLayout() {
           onFocus={() => setProductOpen(true)}
           onBlur={onProductBlur}
         >
-          <NavLink to={marketingPaths.features} aria-expanded={productOpen} aria-controls={productId} onPointerDown={onFeaturesPointerDown} onClick={onFeaturesClick}>Features</NavLink>
+          <NavLink className="mkt-nav-item" to={marketingPaths.features} aria-expanded={productOpen} aria-controls={productId} onPointerDown={onFeaturesPointerDown} onClick={onFeaturesClick}><NavIcon item={LINKS[1]} />Features</NavLink>
           {productOpen && <div id={productId} ref={productPanelRef} className="mkt-product-panel">
             {FEATURE_CATEGORIES.map(category => <div key={category.id} className="mkt-product-group">
               <Link to={`${marketingPaths.features}#${category.id}`} aria-current={isCurrentCategory(category.id) ? "location" : undefined} onClick={event => openModule(event, category.id)}><strong>{category.label}</strong></Link>
@@ -165,7 +171,7 @@ export function MarketingLayout() {
             </div>)}
           </div>}
         </div>
-        {LINKS.filter(link => link.to !== marketingPaths.features).map(link => <NavLink key={link.to} to={link.to}>{link.label}</NavLink>)}
+        {LINKS.filter(link => link.to !== marketingPaths.home && link.to !== marketingPaths.features).map(link => <NavLink className="mkt-nav-item" key={link.to} to={link.to}><NavIcon item={link} />{link.label}</NavLink>)}
       </nav>
       <div className="mkt-nav-end">
         <ThemeToggle compact />
@@ -185,7 +191,7 @@ export function MarketingLayout() {
           <button type="button" className="mkt-drawer-close" aria-label="Close menu" onClick={close} autoFocus><X size={20} aria-hidden="true" /></button>
         </div>
         <nav className="mkt-drawer-body" aria-label="Menu">
-          <NavLink className="mkt-drawer-link" to={marketingPaths.home} end onClick={close}>Home</NavLink>
+          <NavLink className="mkt-drawer-link" to={marketingPaths.home} end onClick={close}><span className="mkt-nav-label"><NavIcon item={LINKS[0]} size={18} />Home</span></NavLink>
           <button
             type="button"
             className={`mkt-drawer-link mkt-drawer-toggle${onFeaturesPage ? " is-current" : ""}`}
@@ -193,7 +199,7 @@ export function MarketingLayout() {
             aria-controls={drawerFeaturesId}
             onClick={() => setDrawerFeaturesOpen(value => !value)}
           >
-            Features <ChevronDown size={18} aria-hidden="true" />
+            <span className="mkt-nav-label"><NavIcon item={LINKS[1]} size={18} />Features</span> <ChevronDown size={18} aria-hidden="true" />
           </button>
           <div id={drawerFeaturesId} className="mkt-drawer-sub" data-state={drawerFeaturesOpen ? "open" : "closed"} inert={!drawerFeaturesOpen}>
             <div>
@@ -204,7 +210,7 @@ export function MarketingLayout() {
               </div>)}
             </div>
           </div>
-          {LINKS.filter(link => link.to !== marketingPaths.features).map(link => <NavLink key={link.to} className="mkt-drawer-link" to={link.to} onClick={close}>{link.label}</NavLink>)}
+          {LINKS.filter(link => link.to !== marketingPaths.home && link.to !== marketingPaths.features).map(link => <NavLink key={link.to} className="mkt-drawer-link" to={link.to} onClick={close}><span className="mkt-nav-label"><NavIcon item={link} size={18} />{link.label}</span></NavLink>)}
           <p className="mkt-drawer-label">Company</p>
           {COMPANY_LINKS.map(link => <NavLink key={link.to} className="mkt-drawer-link minor" to={link.to} onClick={close}>{link.label}</NavLink>)}
         </nav>
