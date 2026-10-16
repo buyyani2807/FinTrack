@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
-import { AlertCircle, ArrowRight, Briefcase, Building2, CheckCircle2, Coins, IdCard, Info, KeyRound, LockKeyhole, Mail, Route, ShieldCheck, Ticket, UserRound } from "lucide-react";
+import { AlertCircle, ArrowLeft, ArrowRight, Briefcase, Building2, CheckCircle2, Coins, IdCard, Info, KeyRound, LockKeyhole, Mail, Route, ShieldCheck, Ticket, UserRound } from "lucide-react";
 import { Button, Field, IconInput, PasswordInput } from "../../components/ui.jsx";
 import { AuthShowcase } from "./components/AuthShowcase.jsx";
 import { chitCustomerPortalLogin, customerPortalLogin, loadWorkspace } from "../../lib/financeRepository";
@@ -215,7 +215,10 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
           <Wordmark />
           {brandName !== "FinTrack" && <span className="ft-auth-product">{brandName.replace(/^FinTrack\s*/, "")}</span>}
         </div>
-        <p className="small"><Link to="/">Back to the FinTrack website</Link></p>
+        <Link className="ft-auth-home" to="/" aria-label="FinTrack website">
+          <ArrowLeft size={16} aria-hidden="true" />
+          <Wordmark />
+        </Link>
         <h1 className={`ft-auth-title${mode === "signUp" ? " is-one-line" : ""}`}>{mode === "signUp" ? "Start your 14-day free trial" : "Welcome back"}</h1>
         <p className="sub ft-auth-sub">{brandSub}</p>
 

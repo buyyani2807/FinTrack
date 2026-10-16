@@ -170,7 +170,7 @@ export function MarketingLayout() {
       <div className="mkt-nav-end">
         <ThemeToggle compact />
         {login}
-        {start}
+        {signedIn ? start : null}
         <button type="button" className="mkt-burger" aria-label="Open menu" aria-expanded={open} aria-controls={menuId} onClick={openDrawer}>
           <Menu size={22} aria-hidden="true" />
         </button>
