@@ -10,6 +10,7 @@ import { buildReceivablesCollectionPlan, scopeCustomersForViewer } from "../src/
 import { buildAnomalyAlerts } from "../src/features/intelligence/ai/anomalyDetection.js";
 import { GST_DISCLAIMER, buildGstWarnings } from "../src/features/intelligence/ai/gstAssistant.js";
 import { buildMonthEndReadiness, defaultCloseMonth } from "../src/features/intelligence/ai/monthEndReadiness.js";
+import { CA_BRIEF_DISCLAIMER, buildCaBrief } from "../src/features/intelligence/ai/caBrief.js";
 import { buildBankReconciliationSuggestions } from "../src/features/intelligence/ai/bankReconciliationAgent.js";
 import { buildInventoryForecast } from "../src/features/intelligence/ai/inventoryForecast.js";
 import { insightRunPayload, latestDecisions, reviewActionPayload } from "../src/features/intelligence/ai/aiReviewAudit.js";
@@ -254,6 +255,50 @@ test("month-end readiness: counts, readiness %, resolve links, never closes the 
   assert.equal(resolved.remaining, result.remaining - 1);
   assert.equal(defaultCloseMonth("2026-10-09"), "2026-09");
   assert.equal(defaultCloseMonth("2026-10-20"), "2026-10");
+});
+
+test("CA brief: month figures, open checks, and questions, with nothing filed or changed", () => {
+  const company = { name: "Mahaveer Paper", gstin: "29AABCU9603R1ZM" };
+  const sale = posted("sales", "2026-09-05", saleLines({ accounts, amount: 1000, settlement: "credit", partyId: "ravi" }), { partyId: "ravi" });
+  const statements = [{ id: "st", lines: [{ id: "l1", lineDate: "2026-09-10", amount: 500, direction: "out", matchStatus: "matched" }] }];
+  const input = { month: "2026-09", asOf: AS_OF, company, accounts, vouchers: [sale], parties, statements, locks: [] };
+  const before = JSON.stringify(input.vouchers);
+  const brief = buildCaBrief(input);
+  assert.equal(JSON.stringify(input.vouchers), before);
+  assert.equal(brief.companyName, "Mahaveer Paper");
+  assert.equal(brief.monthTitle, "September 2026");
+  assert.equal(brief.preparedOn, "9 Oct 2026");
+  assert.equal(brief.writeAction, "none");
+  assert.equal(brief.disclaimer, CA_BRIEF_DISCLAIMER);
+  assert.equal(brief.changed.find(row => row.label === "Sales").value, "1");
+  assert.equal(brief.changed.find(row => row.label === "Income").value, "₹1,000");
+  assert.equal(brief.changed.find(row => row.label === "Trial balance").value, "Agrees");
+  assert.deepEqual(brief.questions, ["Nothing in these checks needs a question."]);
+  assert.equal(brief.mismatches.length, 0);
+  assert.match(brief.text, /Brief for the CA/);
+  assert.match(brief.text, /Nothing has been filed/);
+  assert.doesNotMatch(brief.text, /\b(fraud|theft|scam|cheat|embezzl|criminal)\b/i);
+
+  const openStatements = [{ id: "st", lines: [{ id: "l2", lineDate: "2026-09-11", amount: 590, direction: "out", matchStatus: "unmatched" }] }];
+  const items = [{ id: "it", name: "Widget", itemType: "goods" }];
+  const stockMovements = [{ itemId: "it", movementDate: "2026-09-02", quantityDelta: -3, reason: "sale" }];
+  const open = buildCaBrief({ ...input, statements: openStatements, items, stockMovements });
+  assert.match(open.questions.find(question => /unmatched bank line/.test(question)) || "", /September 2026/);
+  assert.match(open.questions.find(question => /below zero/.test(question)) || "", /Widget/);
+  const reviewed = buildCaBrief({ ...input, statements: openStatements, items, stockMovements, resolvedKeys: new Set(["2026-09:negative_inventory"]) });
+  assert.equal(reviewed.questions.some(question => /below zero/.test(question)), false);
+  assert.equal(reviewed.questions.some(question => /unmatched bank line/.test(question)), true);
+
+  const missing = buildCaBrief({ month: "2026-09", asOf: AS_OF, company, accounts, vouchers: [], parties });
+  assert.match(missing.questions[0], /bank statement/);
+
+  const uneven = posted("journal", "2026-09-02", [
+    { code: SYSTEM_CODES.cash, debit: 100, credit: 0 },
+    { code: SYSTEM_CODES.capital, debit: 0, credit: 40 },
+  ]);
+  const unbalanced = buildCaBrief({ month: "2026-09", asOf: AS_OF, company, accounts, vouchers: [uneven], parties, statements });
+  assert.match(unbalanced.questions[0], /differ by ₹60/);
+  assert.equal(unbalanced.changed.find(row => row.label === "Trial balance").value, "Differs by ₹60");
 });
 
 test("bank reconciliation agent: ₹590 bank charges → Bank Charges, exact match suggestion, nothing posted", () => {

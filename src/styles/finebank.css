@@ -1840,6 +1840,17 @@ html[data-theme="dark"] .ft-trial-banner.is-urgent { background: #3a2222; color:
 .ai-split{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}.ai-split .card{padding:1rem}.ai-split h3{margin:.35rem 0}.ai-predicted{border-style:dashed}
 .ai-plain-list{margin:.35rem 0;padding-left:1.1rem}.ai-plain-list li{margin:.15rem 0}
 .ai-toolbar{display:flex;flex-wrap:wrap;gap:1rem;align-items:center;margin-bottom:.75rem}
+.ca-brief-sheet h3{margin:0;font-size:1.25rem}.ca-brief-sheet h4{margin:1rem 0 .35rem;font-size:.95rem}.ca-brief-kicker{margin:0 0 .2rem;font-size:.75rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ft-primary)}
+.ca-brief-actions{margin:0 0 .75rem}
+.ca-brief-note{margin:.75rem 0 0;padding:.6rem .75rem;border-radius:10px;background:var(--ft-surface-2, var(--ft-bg));font-size:.82rem}
+.ca-brief-sheet dl{display:grid;grid-template-columns:9rem 1fr;gap:.2rem .75rem;margin:.25rem 0 0}.ca-brief-sheet dt{color:var(--ft-muted);font-size:.82rem}.ca-brief-sheet dd{margin:0;font-size:.9rem}
+.ca-brief-sheet ul,.ca-brief-sheet ol{margin:.25rem 0 0;padding-left:1.2rem}.ca-brief-sheet li{margin:.25rem 0;font-size:.9rem}
+@media print {
+  body.ca-brief-print * { visibility: hidden; }
+  body.ca-brief-print .ca-brief-sheet, body.ca-brief-print .ca-brief-sheet * { visibility: visible; }
+  body.ca-brief-print .ca-brief-sheet { position: absolute; left: 0; top: 0; width: 100%; background: #fff; color: #122033; }
+  body.ca-brief-print .ca-brief-actions { display: none !important; }
+}
 .ai-alert-list{display:grid;gap:.75rem;margin-top:.75rem}.ai-alert{padding:.9rem 1rem;border-left:3px solid var(--ft-border)}.ai-alert-medium{border-left-color:var(--ft-warning)}.ai-alert-high,.ai-alert-critical{border-left-color:var(--ft-danger)}.ai-alert p{margin:.35rem 0}
 .ai-alert-head{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start}.ai-alert-facts{display:grid;grid-template-columns:max-content 1fr;gap:2px 12px;margin:.5rem 0;font-size:.82rem}.ai-alert-facts dt{color:var(--ft-muted)}.ai-alert-facts dd{margin:0}
 .ai-alert-foot{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:.4rem}

@@ -774,6 +774,7 @@ export const FEATURES = [
       "FinTrack runs each check and shows a readiness percentage.",
       "Use Resolve issues to open the screen where each item can be fixed.",
       "When you are satisfied, lock the period yourself in Setup.",
+      "Choose Brief for the CA to read what changed, what does not match, and what to ask the owner. Print or copy it. Nothing is sent.",
     ],
     capabilities: [
       "Readiness percentage with total, critical, high, resolved, and remaining counts",
@@ -782,6 +783,7 @@ export const FEATURES = [
       "Outstanding expenses and GST issues for the month",
       "Negative stock",
       "Shows when the month is already locked",
+      "A one-page brief for the CA, with the month's figures, the open checks, and the questions to ask",
     ],
     benefits: ["You know what is left before you close", "Each check links to where it can be fixed", "Closing stays your decision"],
     sections: [

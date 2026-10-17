@@ -9,6 +9,7 @@ import { buildReceivablesCollectionPlan } from "../../intelligence/ai/receivable
 import { buildAnomalyAlerts } from "../../intelligence/ai/anomalyDetection.js";
 import { GST_DISCLAIMER, buildGstWarnings } from "../../intelligence/ai/gstAssistant.js";
 import { buildMonthEndReadiness, defaultCloseMonth, monthRange } from "../../intelligence/ai/monthEndReadiness.js";
+import { buildCaBrief } from "../../intelligence/ai/caBrief.js";
 import { buildBankReconciliationSuggestions } from "../../intelligence/ai/bankReconciliationAgent.js";
 import { buildInventoryForecast } from "../../intelligence/ai/inventoryForecast.js";
 import { daysBetween, shiftMonthKey } from "../../intelligence/ai/aiCommon.js";
@@ -104,6 +105,9 @@ export function AccAiReviewWorkspace({
       gstWarnings: buildGstWarnings({ vouchers, parties, company: company || {}, voucherItemLines, from: range.from, to: range.to }).warnings,
     });
   }, [tab, month, asOf, accounts, vouchers, parties, items, stockMovements, locks, statements, resolvedKeys, company, voucherItemLines]); // eslint-disable-line react-hooks/exhaustive-deps
+  const brief = useMemo(() => (needs("month_end") ? buildCaBrief({
+    company, month, asOf, accounts, vouchers, parties, items, stockMovements, locks, statements, voucherItemLines, resolvedKeys,
+  }) : null), [tab, company, month, asOf, accounts, vouchers, parties, items, stockMovements, locks, statements, voucherItemLines, resolvedKeys]); // eslint-disable-line react-hooks/exhaustive-deps
   const bank = useMemo(() => (needs("bank") ? buildBankReconciliationSuggestions({ statements, accounts, vouchers, parties, matchedLineIds }) : null), [tab, statements, accounts, vouchers, parties, matchedLineIds]); // eslint-disable-line react-hooks/exhaustive-deps
   const inventory = useMemo(() => (needs("inventory") ? buildInventoryForecast({ items, stockMovements, tradeDocuments: tradeDocuments || [], asOf }) : null), [tab, items, stockMovements, tradeDocuments, asOf]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -267,7 +271,7 @@ export function AccAiReviewWorkspace({
           emptyCopy={`${gstReview.documentsChecked} GST document(s) from ${gstReview.period.from} to ${gstReview.period.to} passed these checks.`}
           header={<p className="small muted">{GST_DISCLAIMER} Checked {gstReview.documentsChecked} document(s) from {gstReview.period.from} to {gstReview.period.to}.</p>}
         />}
-        {tab === "month_end" && readiness && <MonthEndPanel readiness={readiness} months={months} month={month} setMonth={setMonth} canWrite={canWrite && auditAvailable} busy={busy} onResolve={resolveCheck} openSource={openLink} />}
+        {tab === "month_end" && readiness && <MonthEndPanel readiness={readiness} brief={brief} months={months} month={month} setMonth={setMonth} canWrite={canWrite && auditAvailable} busy={busy} onResolve={resolveCheck} openSource={openLink} />}
         {tab === "bank" && bank && <BankPanel result={bank} decisions={decisions} canWrite={canWrite} busy={busy} isLocked={bankLocked} onApprove={approveBank} onReject={rejectBank} openSource={openLink} />}
         {tab === "inventory" && inventory && <InventoryPanel rows={inventory} openSource={openLink} />}
       </section>}

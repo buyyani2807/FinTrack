@@ -3,6 +3,7 @@ import { openManualWhatsAppShare } from "../../receipts/io/receiptWhatsApp.js";
 import { REMINDER_LANGUAGES, draftCollectionReminder, reminderSendAllowed } from "../../finance/model/collectionCopilot.js";
 import { money } from "../accountsFormat.js";
 import { AccEmpty, AccTable, SimpleMetric } from "./AccUi.jsx";
+import { CaBriefSheet } from "./CaBriefSheet.jsx";
 
 const pct = value => (value == null ? "—" : `${value > 0 ? "+" : ""}${value}%`);
 const differenceText = alert => alert.pattern === "possible_backdated_entry" ? `${alert.difference} day(s)`
@@ -195,12 +196,15 @@ export function AlertsPanel({ alerts, decisions, feature, canWrite, busy, onDeci
   </>;
 }
 
-export function MonthEndPanel({ readiness, months, month, setMonth, canWrite, busy, onResolve, openSource }) {
+export function MonthEndPanel({ readiness, months, month, setMonth, canWrite, busy, onResolve, openSource, brief }) {
+  const [briefOpen, setBriefOpen] = useState(false);
   return <>
     <div className="ai-toolbar">
       <label className="small">Month <select value={month} onChange={event => setMonth(event.target.value)}>{months.map(key => <option key={key} value={key}>{key}</option>)}</select></label>
       <span className="small muted">{readiness.locked ? "This period is locked." : "This period is open."} {readiness.note}</span>
+      {brief ? <button type="button" className="btn" onClick={() => setBriefOpen(true)}>Brief for the CA</button> : null}
     </div>
+    {briefOpen && brief ? <CaBriefSheet brief={brief} onClose={() => setBriefOpen(false)} /> : null}
     <div className="acc-metric-grid acc-metric-compact">
       <SimpleMetric label="Readiness" value={`${readiness.readinessPct}%`} tone={readiness.readinessPct >= 90 ? "green" : readiness.readinessPct >= 60 ? "gold" : "red"} />
       <SimpleMetric label="Total issues" value={String(readiness.totalIssues)} />
