@@ -17,6 +17,7 @@ import { latestDecisions } from "../../intelligence/ai/aiReviewAudit.js";
 import { AI_AUDIT_MIGRATION_MESSAGE, loadAiReviewActions, recordAiInsightRun, recordAiReviewAction } from "../../intelligence/ai/aiReviewRepository.js";
 import { AccEmpty } from "./AccUi.jsx";
 import { AlertsPanel, BankPanel, CashFlowPanel, CollectionsPanel, ExpensesPanel, InventoryPanel, MonthEndPanel } from "./AccAiReviewPanels.jsx";
+import { ItcCheckPanel } from "./ItcCheckPanel.jsx";
 
 const TABS = [
   { id: "expenses", label: "Expenses", feature: "expenses" },
@@ -24,6 +25,7 @@ const TABS = [
   { id: "collections", label: "Collections", feature: "receivables" },
   { id: "anomalies", label: "Anomalies", feature: "anomalies" },
   { id: "gst", label: "GST health", feature: "gst" },
+  { id: "itc", label: "GSTR-2B", feature: "gst" },
   { id: "month_end", label: "Month-end", feature: "month_end" },
   { id: "bank", label: "Bank reconciliation", feature: "bank_reconciliation" },
   { id: "inventory", label: "Inventory", feature: "inventory" },
@@ -259,6 +261,7 @@ export function AccAiReviewWorkspace({
           emptyCopy="Nothing in the last 90 days stands out from this company's own history."
           header={<p className="small muted">Possible issues found by comparing each record with similar records in this company. These are prompts to review, not conclusions. Nothing is reversed, deleted, or blocked automatically.</p>}
         />}
+        {tab === "itc" && <ItcCheckPanel vouchers={vouchers} parties={parties} />}
         {tab === "gst" && gstWarnings && <AlertsPanel
           alerts={gstWarnings}
           decisions={decisions}

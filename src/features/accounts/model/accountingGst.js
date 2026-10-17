@@ -1,4 +1,4 @@
-export const GST_RATES = [0, 5, 12, 18, 28];
+export const GST_RATES = [0, 5, 12, 18, 28, 40];
 
 export const INDIA_STATES = [
   { code: "01", name: "Jammu and Kashmir" },

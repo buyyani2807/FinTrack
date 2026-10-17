@@ -564,8 +564,8 @@ export const FEATURES = [
     name: "Inventory",
     summary: "Keep items, stock movement, and item sales with the company books.",
     problem: "Stock and the sales voucher drift apart when they are tracked in two places.",
-    how: ["Add items for the company.", "Use them on sales and purchases.", "Review stock and a physical count when you do one."],
-    capabilities: ["Items and categories", "Stock movement", "Item sales", "Physical count"],
+    how: [      "Add items for the company.", "Use them on sales and purchases.", "Review stock and a physical count when you do one.", "When the item name is recognised, FinTrack suggests an HSN and GST rate. It is filled in only when you choose Use this, and saved only when you save the item."],
+    capabilities: ["Items and categories", "Stock movement", "Item sales", "Physical count", "A suggested HSN and GST rate from the item name, applied only when you confirm"],
     benefits: ["A sale can carry the item", "Stock stays with the company", "You confirm a count rather than trusting a guess"],
     related: ["vouchers", "gst-preparation", "stock-forecast"],
     appPath: "/accounting/inventory",
@@ -746,6 +746,7 @@ export const FEATURES = [
       "FinTrack checks the sales and purchase invoices for the period.",
       "Each warning links to the invoice or the GST report and shows how confident the check is.",
       "Correct the invoice yourself, then mark the warning reviewed.",
+      "Open GSTR-2B, upload the portal JSON or a CSV, and read Accept, Reject or Pending against posted purchases. The action stays on the GST portal.",
     ],
     capabilities: [
       "Invalid or mismatched GSTINs, including checksum errors",
@@ -754,6 +755,7 @@ export const FEATURES = [
       "Invoice lines that do not match the tax ledgers or the total",
       "Possible duplicate invoices and party GST mismatches",
       "Input tax credit that needs review",
+      "GSTR-2B compared with posted purchases, with an Accept, Reject or Pending suggestion for IMS",
     ],
     benefits: ["Errors are fixed before the return is prepared", "Each warning points at the exact invoice", "Calculated GST stays authoritative"],
     sections: [

@@ -651,8 +651,8 @@ test("accounts excel is a real xlsx zip and pdf is generated", () => {
 const gst18Intra = { enabled: true, rate: 18, intra: true, taxInclusive: false, hsnSac: "9983" };
 const gst18Inter = { enabled: true, rate: 18, intra: false, taxInclusive: false, hsnSac: "9983" };
 
-test("GST split covers 0, 5, 12, 18 and 28 for intra and inter supply", () => {
-  assert.deepEqual(GST_RATES, [0, 5, 12, 18, 28]);
+test("GST split covers 0, 5, 12, 18, 28 and 40 for intra and inter supply", () => {
+  assert.deepEqual(GST_RATES, [0, 5, 12, 18, 28, 40]);
   for (const rate of GST_RATES) {
     const intra = gstSplit({ taxable: 10000, rate, intra: true });
     const inter = gstSplit({ taxable: 10000, rate, intra: false });

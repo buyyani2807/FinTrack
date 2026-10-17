@@ -3,6 +3,20 @@ import { Select } from "../../../../components/Select.jsx";
 import { emptyItemLine, normalizeItemLine } from "../../model/inventoryModel.js";
 import { money, gstStatusLabel } from "../../accountsFormat.js";
 import { Field, AccTable } from "../AccUi.jsx";
+import { suggestHsn } from "../../../intelligence/ai/hsnSuggest.js";
+
+function hsnForLine(line, items) {
+  const name = items.find(item => item.id === line.itemId)?.name || line.itemName;
+  const suggestion = suggestHsn(name);
+  if (!suggestion) return null;
+  if (String(line.hsnSac || "") === suggestion.hsn && Number(line.gstRate) === suggestion.rate) return null;
+  if (line.hsnSac) return null;
+  return suggestion;
+}
+
+function HsnSuggestion({ suggestion, onUse }) {
+  return <p className="small">Suggested HSN {suggestion.hsn}, GST {suggestion.rate}%. {suggestion.note} <button type="button" className="btn" onClick={onUse}>Use this</button></p>;
+}
 
 export function ItemLinesSection({
   form,
@@ -31,6 +45,7 @@ export function ItemLinesSection({
         {(form.itemLines || [emptyItemLine()]).map((line, index) => {
           const lineTotals = normalizeItemLine(line);
           const stock = line.itemId ? stockByItem[line.itemId] : null;
+          const suggestion = hsnForLine(line, activeItems);
           return (
             <tr key={index}>
               <td>
@@ -44,6 +59,7 @@ export function ItemLinesSection({
                 </Select>
                 {stock != null && <div className="small">Stock {stock} {line.unit || ""}</div>}
                 {!line.itemId && line.itemName ? <div className="small">From the bill: {line.itemName}</div> : null}
+                {suggestion ? <HsnSuggestion suggestion={suggestion} onUse={() => patchItemLine(index, { hsnSac: suggestion.hsn, gstRate: String(suggestion.rate) })} /> : null}
               </td>
               <td><input type="number" min="0" step="0.001" value={line.quantity} onChange={event => patchItemLine(index, { quantity: event.target.value })} /></td>
               <td><input type="number" min="0" step="0.01" value={line.rate} onChange={event => patchItemLine(index, { rate: event.target.value, rateTouched: true })} /></td>
@@ -60,6 +76,7 @@ export function ItemLinesSection({
           const lineTotals = normalizeItemLine(line);
           const stock = line.itemId ? stockByItem[line.itemId] : null;
           const lineName = activeItems.find(item => item.id === line.itemId)?.name || line.itemName || "Select item";
+          const suggestion = hsnForLine(line, activeItems);
           return (
             <article key={index} className="acc-item-line-card">
               <div className="acc-item-line-card-top">
@@ -78,6 +95,7 @@ export function ItemLinesSection({
                 </Select>
               </label>
               {stock != null && <p className="small">Stock {stock} {line.unit || ""}</p>}
+              {suggestion ? <HsnSuggestion suggestion={suggestion} onUse={() => patchItemLine(index, { hsnSac: suggestion.hsn, gstRate: String(suggestion.rate) })} /> : null}
               <div className="acc-item-line-card-grid">
                 <label className="accounts-filter-field"><span className="small">Qty</span>
                   <input type="number" min="0" step="0.001" value={line.quantity} onChange={event => patchItemLine(index, { quantity: event.target.value })} />

@@ -2,14 +2,18 @@ import { FilterField as Field } from "../AccUi.jsx";
 import { Select } from "../../../../components/Select.jsx";
 import { ITEM_TYPES, ITEM_UNITS } from "../../model/inventoryModel.js";
 import { DialogModal } from "../../../../components/ui.jsx";
+import { suggestHsn } from "../../../intelligence/ai/hsnSuggest.js";
 
 export function ItemFormDialog({ form, setShowForm, error, setForm, categories, saving, saveItem }) {
+  const suggestion = suggestHsn(form.name);
+  const suggestionDiffers = suggestion && (String(form.hsnSac || "") !== suggestion.hsn || Number(form.gstRate) !== suggestion.rate);
   return (
     <DialogModal className="acc-modal" title={form.id ? "Edit item" : "Create item"} close={() => setShowForm(false)}>
       {error && <p className="red small">{error}</p>}
       <div className="form">
         <Field label="Type"><Select value={form.itemType} onChange={event => setForm(current => ({ ...current, itemType: event.target.value }))}>{ITEM_TYPES.map(type => <option key={type.id} value={type.id}>{type.label}</option>)}</Select></Field>
         <Field label="Name"><input value={form.name} onChange={event => setForm(current => ({ ...current, name: event.target.value }))} /></Field>
+        {suggestionDiffers ? <p className="small span">Suggested for {suggestion.label}: HSN {suggestion.hsn}, GST {suggestion.rate}%. {suggestion.note} <button type="button" className="btn" onClick={() => setForm(current => ({ ...current, hsnSac: suggestion.hsn, gstRate: String(suggestion.rate) }))}>Use this</button></p> : null}
         <Field label="SKU / Code"><input value={form.sku} onChange={event => setForm(current => ({ ...current, sku: event.target.value }))} /></Field>
         <Field label="Category">
           <Select value={form.categoryId} onChange={event => setForm(current => ({ ...current, categoryId: event.target.value }))}>
