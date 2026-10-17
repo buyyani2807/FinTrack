@@ -48,7 +48,7 @@ button {
 
 .sub, .small {
   color: var(--ft-muted);
-  font-size: 12px;
+  font-size: var(--ft-type-caption);
 }
 
 .tabs {
@@ -108,12 +108,12 @@ button {
   color: var(--ft-muted);
   text-transform: uppercase;
   letter-spacing: .08em;
-  font-size: 10px;
+  font-size: var(--ft-type-caption);
 }
 
 .metric-value {
   margin-top: 8px;
-  font: 700 22px Syne;
+  font: 700 var(--ft-type-section) Syne;
 }
 
 .gold {
@@ -134,13 +134,13 @@ button {
 
 .title {
   margin: 0 0 4px;
-  font: 700 22px Syne;
+  font: 700 var(--ft-type-title) Syne;
 }
 
 .copy {
   color: var(--ft-muted);
   margin: 0;
-  font-size: 13px;
+  font-size: var(--ft-type-secondary);
 }
 
 .field {
@@ -364,7 +364,7 @@ button {
 }
 
 .dashboard-home .toolbar .title {
-  font-size: 32px;
+  font-size: var(--ft-type-title);
 }
 
 .dashboard-quick-actions {
@@ -542,20 +542,20 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
   letter-spacing: -.8px;
   color: var(--ft-primary);
   font-family: Syne, DM Sans, sans-serif;
-  font-size: 27px;
+  font-size: var(--ft-type-section);
 }
 
 .sub {
   color: var(--ft-muted);
   letter-spacing: .02em;
   margin-top: 6px;
-  font-size: 12px;
+  font-size: var(--ft-type-caption);
 }
 
 .title {
   letter-spacing: -.7px;
   font-family: Syne, DM Sans, sans-serif;
-  font-size: 28px;
+  font-size: var(--ft-type-title);
   color: var(--ft-text) !important;
 }
 
@@ -565,7 +565,7 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
 
 .copy {
   color: var(--ft-muted);
-  font-size: 13px;
+  font-size: var(--ft-type-secondary);
 }
 
 .toolbar {
@@ -2871,7 +2871,7 @@ button.accounts-summary-card:hover {
 .accounts-dashboard h1.title {
   text-align: left !important;
   margin: 10px 0 6px !important;
-  font-size: 28px !important;
+  font-size: var(--ft-type-title) !important;
 }
 
 /* accountsUxStyles */

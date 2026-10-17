@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
-import { AlertCircle, ArrowLeft, ArrowRight, Briefcase, Building2, CheckCircle2, Coins, IdCard, Info, KeyRound, LockKeyhole, Mail, Route, ShieldCheck, Ticket, UserRound } from "lucide-react";
+import { AlertCircle, ArrowRight, ArrowUpRight, Briefcase, Building2, CheckCircle2, Coins, IdCard, Info, KeyRound, LockKeyhole, Mail, Route, ShieldCheck, Ticket, UserRound } from "lucide-react";
 import { Button, Field, IconInput, PasswordInput } from "../../components/ui.jsx";
 import { AuthShowcase } from "./components/AuthShowcase.jsx";
 import { chitCustomerPortalLogin, customerPortalLogin, loadWorkspace } from "../../lib/financeRepository";
@@ -215,10 +215,6 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
           <Wordmark />
           {brandName !== "FinTrack" && <span className="ft-auth-product">{brandName.replace(/^FinTrack\s*/, "")}</span>}
         </div>
-        <Link className="ft-auth-home" to="/" aria-label="FinTrack website">
-          <ArrowLeft size={16} aria-hidden="true" />
-          <Wordmark />
-        </Link>
         <h1 className={`ft-auth-title${mode === "signUp" ? " is-one-line" : ""}`}>{mode === "signUp" ? "Start your 14-day free trial" : "Welcome back"}</h1>
         <p className="sub ft-auth-sub">{brandSub}</p>
 
@@ -265,6 +261,7 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
             : <>New to FinTrack? <button type="button" className="link-button" onClick={() => chooseMode("signUp")}>Create business account</button></>}
         </p>}
         <p className="ft-auth-legal small"><ShieldCheck size={14} aria-hidden="true" /> Encrypted sign-in · <button type="button" className="link-button" onClick={() => openLegalView("privacy")}>Privacy</button> · <button type="button" className="link-button" onClick={() => openLegalView("terms")}>Terms</button></p>
+        <p className="ft-auth-site"><Link to="/">Visit the FinTrack website <ArrowUpRight size={14} aria-hidden="true" /></Link></p>
       </div>
     </main>
   </div>;

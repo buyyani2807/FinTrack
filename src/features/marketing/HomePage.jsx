@@ -366,7 +366,7 @@ export function HomePage() {
           <Reveal as="h1" index={1}>Your business, on the phone.</Reveal>
           <Reveal as="p" index={2}>FinTrack installs on iPhone and Android and opens from its own icon. Collections, company accounts, and chit funds are in that app. TallyPrime does not have a mobile app for recording the books. On a phone it is for viewing reports.</Reveal>
           <Reveal className="mkt-cta-row" index={3}>
-            <ProductCta primary />
+            {signedIn ? <ProductCta primary /> : null}
             <Link className="mkt-btn" to={`${marketingPaths.how}#install`}>Install on iPhone or Android</Link>
             <Link className="mkt-btn ghost" to={marketingPaths.contact}>Request a demo</Link>
           </Reveal>

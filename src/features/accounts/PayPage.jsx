@@ -7,7 +7,7 @@ const PAY_PAGE_CSS = `
 .pay-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
 .pay-card { width: 100%; max-width: 380px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
 .pay-card .title { margin: 0; }
-.pay-amount { font-size: 28px; font-weight: 700; margin: 0; }
+.pay-amount { font-size: var(--ft-type-page); font-weight: 700; line-height: var(--ft-leading-tight); letter-spacing: var(--ft-tracking-tight); margin: 0; overflow-wrap: anywhere; }
 .pay-card .acc-qr { border-radius: 8px; border: 1px solid rgba(0, 0, 0, 0.08); max-width: 100%; height: auto; }
 .pay-open { width: 100%; text-align: center; text-decoration: none; }
 .pay-upi-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
