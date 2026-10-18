@@ -57,6 +57,7 @@ const snapshotLine = (row, profile) => ({
   deductionTotal: row.deductionTotal,
   net: row.net,
   voucherId: row.voucherId || null,
+  sourceId: row.sourceId || null,
 });
 
 function AmountFields({ values, onChange, fields }) {
@@ -237,11 +238,14 @@ export function PayrollSection({
         books = [...books, { id, code: SYSTEM_CODES.salaryDeductions, name: "Salary deductions payable", groupType: "liability", accountType: "other", isActive: true }];
       }
       let lines = draftLines().map(line => {
+        const sourceId = line.sourceId || (line.earned > 0 ? newClientRequestId() : null);
         const existing = (vouchers || []).find(voucher => voucher.sourceType === "salary"
-          && voucher.sourceTransactionId === `${start}:${line.partyId}`
+          && sourceId
+          && voucher.sourceTransactionId === sourceId
           && voucher.status === "posted");
-        return { ...line, voucherId: line.voucherId || existing?.id || null };
+        return { ...line, sourceId, voucherId: line.voucherId || existing?.id || null };
       });
+      await savePayrollRun(token, runPayload("draft", lines));
       for (let index = 0; index < lines.length; index += 1) {
         const line = lines[index];
         if (line.earned <= 0 || line.voucherId) continue;
@@ -253,8 +257,8 @@ export function PayrollSection({
           partyId: line.partyId,
           sourceModule: "payroll",
           sourceType: "salary",
-          sourceTransactionId: `${start}:${line.partyId}`,
-          clientRequestId: newClientRequestId(),
+          sourceTransactionId: line.sourceId,
+          clientRequestId: line.sourceId,
           lines: payrollVoucherLines({
             accounts: books,
             payAccountId,

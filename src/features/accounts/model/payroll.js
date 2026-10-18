@@ -164,15 +164,21 @@ export function payrollRows({ employees, month, profiles, days, leaves, override
   }
   return (employees || []).map(person => {
     const profile = (profiles || []).find(row => row.partyId === person.id) || emptyProfile(person.id);
+    const saved = (run?.lines || []).find(line => line.partyId === person.id);
     const line = buildPayLine({
       partyId: person.id,
       month,
       profile,
       days,
       leaves,
-      deductions: overrides[person.id] || profile,
+      deductions: overrides[person.id] || saved?.deductions || profile,
     });
-    return { ...line, name: person.name, voucherId: null };
+    return {
+      ...line,
+      name: person.name,
+      voucherId: saved?.voucherId || null,
+      sourceId: saved?.sourceId || null,
+    };
   });
 }
 

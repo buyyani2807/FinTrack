@@ -100,6 +100,19 @@ test("leave overlap and attendance exceptions skip the default and leave days", 
   assert.deepEqual(exceptions, []);
 });
 
+test("a draft keeps the salary voucher id already stored on the line", () => {
+  const rows = payrollRows({
+    employees: [{ id: "anita", name: "Anita Rao" }],
+    month,
+    profiles: [profile],
+    days: [],
+    leaves: [],
+    run: { status: "draft", lines: [{ partyId: "anita", sourceId: "11111111-1111-4111-8111-111111111111", voucherId: "22222222-2222-4222-8222-222222222222" }] },
+  });
+  assert.equal(rows[0].sourceId, "11111111-1111-4111-8111-111111111111");
+  assert.equal(rows[0].voucherId, "22222222-2222-4222-8222-222222222222");
+});
+
 test("a posted month shows the stored lines", () => {
   const rows = payrollRows({
     employees: [{ id: "anita", name: "Anita Rao" }],
