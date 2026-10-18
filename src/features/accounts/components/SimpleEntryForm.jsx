@@ -24,7 +24,7 @@ import { BillwiseSettlement } from "./simpleEntry/BillwiseSettlement.jsx";
 import { BillPhotoDraft } from "./simpleEntry/BillPhotoDraft.jsx";
 import { billNumberFromNarration, findPostedPurchaseDuplicates } from "../model/billScan.js";
 
-export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, saving, maxDate, gstCompany, onGstSetup, items = [], stockByItem = {}, openInvoices = [], creditInfo = null, token, vouchers = [] }) {
+export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, saving, maxDate, gstCompany, onGstSetup, items = [], stockByItem = {}, openInvoices = [], creditInfo = null, token, vouchers = [], voucherItemLines = [] }) {
   const [allowedDuplicateKey, setAllowedDuplicateKey] = useState("");
   const customers = parties.filter(party => party.partyType === "customer" && (party.isActive !== false || party.id === form.partyId));
   const suppliers = parties.filter(party => party.partyType === "supplier" && (party.isActive !== false || party.id === form.partyId));
@@ -267,6 +267,9 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
         gstCompany={gstCompany}
         kind={kind}
         onGstSetup={onGstSetup}
+        voucherItemLines={voucherItemLines}
+        vouchers={vouchers}
+        parties={parties}
       />
     )}
 

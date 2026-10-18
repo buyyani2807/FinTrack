@@ -1,7 +1,7 @@
 import { roundMoney } from "../../model/accountingModel.js";
 import { Select } from "../../../../components/Select.jsx";
-import { emptyItemLine, normalizeItemLine } from "../../model/inventoryModel.js";
-import { money, gstStatusLabel } from "../../accountsFormat.js";
+import { emptyItemLine, lastSoldRate, normalizeItemLine } from "../../model/inventoryModel.js";
+import { formatOverviewDate, money, gstStatusLabel } from "../../accountsFormat.js";
 import { Field, AccTable } from "../AccUi.jsx";
 import { suggestHsn } from "../../../intelligence/ai/hsnSuggest.js";
 
@@ -16,6 +16,19 @@ function hsnForLine(line, items) {
 
 function HsnSuggestion({ suggestion, onUse }) {
   return <p className="small">Suggested HSN {suggestion.hsn}, GST {suggestion.rate}%. {suggestion.note} <button type="button" className="btn" onClick={onUse}>Use this</button></p>;
+}
+
+function LastSoldHint({ last, onUse }) {
+  if (!last) return null;
+  const unit = last.unit ? ` / ${last.unit}` : "";
+  const when = last.date ? ` on ${formatOverviewDate(last.date)}` : "";
+  const who = last.forParty ? "this customer" : (last.partyName || "another customer");
+  return (
+    <p className="small">
+      Last sold to {who}: {money(last.rate)}{unit}{when}.{" "}
+      <button type="button" className="btn" onClick={onUse}>Use this</button>
+    </p>
+  );
 }
 
 export function ItemLinesSection({
@@ -37,7 +50,16 @@ export function ItemLinesSection({
   gstCompany,
   kind,
   onGstSetup,
+  voucherItemLines = [],
+  vouchers = [],
+  parties = [],
 }) {
+  const lastSoldFor = line => {
+    if (kind !== "sale" || !line.itemId) return null;
+    const last = lastSoldRate({ itemId: line.itemId, partyId: form.partyId, voucherItemLines, vouchers });
+    if (!last) return null;
+    return { ...last, partyName: parties.find(party => party.id === last.partyId)?.name || "" };
+  };
   return (
     <section className="acc-form-section acc-item-lines">
       <h3 className="acc-form-section-title">Line items</h3>
@@ -46,6 +68,7 @@ export function ItemLinesSection({
           const lineTotals = normalizeItemLine(line);
           const stock = line.itemId ? stockByItem[line.itemId] : null;
           const suggestion = hsnForLine(line, activeItems);
+          const lastSold = lastSoldFor(line);
           return (
             <tr key={index}>
               <td>
@@ -60,6 +83,7 @@ export function ItemLinesSection({
                 {stock != null && <div className="small">Stock {stock} {line.unit || ""}</div>}
                 {!line.itemId && line.itemName ? <div className="small">From the bill: {line.itemName}</div> : null}
                 {suggestion ? <HsnSuggestion suggestion={suggestion} onUse={() => patchItemLine(index, { hsnSac: suggestion.hsn, gstRate: String(suggestion.rate) })} /> : null}
+                {lastSold ? <LastSoldHint last={lastSold} onUse={() => patchItemLine(index, { rate: String(lastSold.rate), rateTouched: true })} /> : null}
               </td>
               <td><input type="number" min="0" step="0.001" value={line.quantity} onChange={event => patchItemLine(index, { quantity: event.target.value })} /></td>
               <td><input type="number" min="0" step="0.01" value={line.rate} onChange={event => patchItemLine(index, { rate: event.target.value, rateTouched: true })} /></td>
@@ -77,6 +101,7 @@ export function ItemLinesSection({
           const stock = line.itemId ? stockByItem[line.itemId] : null;
           const lineName = activeItems.find(item => item.id === line.itemId)?.name || line.itemName || "Select item";
           const suggestion = hsnForLine(line, activeItems);
+          const lastSold = lastSoldFor(line);
           return (
             <article key={index} className="acc-item-line-card">
               <div className="acc-item-line-card-top">
@@ -96,6 +121,7 @@ export function ItemLinesSection({
               </label>
               {stock != null && <p className="small">Stock {stock} {line.unit || ""}</p>}
               {suggestion ? <HsnSuggestion suggestion={suggestion} onUse={() => patchItemLine(index, { hsnSac: suggestion.hsn, gstRate: String(suggestion.rate) })} /> : null}
+              {lastSold ? <LastSoldHint last={lastSold} onUse={() => patchItemLine(index, { rate: String(lastSold.rate), rateTouched: true })} /> : null}
               <div className="acc-item-line-card-grid">
                 <label className="accounts-filter-field"><span className="small">Qty</span>
                   <input type="number" min="0" step="0.001" value={line.quantity} onChange={event => patchItemLine(index, { quantity: event.target.value })} />

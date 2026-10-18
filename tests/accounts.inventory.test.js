@@ -6,6 +6,7 @@ import {
   itemizedEntryDraft,
   itemPurchasesReport,
   itemSalesReport,
+  lastSoldRate,
   mapVoucherItemLinesForRpc,
   normalizeItemLine,
   parseLineDiscount,
@@ -240,6 +241,35 @@ test("aggregate GST supports mixed lines", () => {
   assert.ok(agg.cgst > 0);
   assert.ok(agg.sgst > 0);
   assert.equal(agg.igst, 0);
+});
+
+test("last sold rate prefers this customer's latest posted sale", () => {
+  const lines = [
+    { voucherId: "old", itemId: "paper", rate: 900, unit: "kg", lineNo: 1 },
+    { voucherId: "new", itemId: "paper", rate: 1050, unit: "kg", lineNo: 1 },
+    { voucherId: "later", itemId: "paper", rate: 1100, unit: "kg", lineNo: 1 },
+    { voucherId: "draft", itemId: "paper", rate: 990, unit: "kg", lineNo: 1 },
+    { voucherId: "return", itemId: "paper", rate: 800, unit: "kg", lineNo: 1 },
+  ];
+  const vouchers = [
+    { id: "old", voucherType: "sales", status: "posted", date: "2026-08-01", partyId: "coat", voucherNumber: "S-1" },
+    { id: "new", voucherType: "sales", status: "posted", date: "2026-10-01", partyId: "coat", voucherNumber: "S-2" },
+    { id: "later", voucherType: "sales", status: "posted", date: "2026-10-10", partyId: "else", voucherNumber: "S-3" },
+    { id: "draft", voucherType: "sales", status: "draft", date: "2026-10-12", partyId: "coat", voucherNumber: "S-4" },
+    { id: "return", voucherType: "credit_note", status: "posted", date: "2026-10-11", partyId: "coat", voucherNumber: "CN-1" },
+  ];
+  const forCustomer = lastSoldRate({ itemId: "paper", partyId: "coat", voucherItemLines: lines, vouchers });
+  assert.equal(forCustomer.rate, 1050);
+  assert.equal(forCustomer.unit, "kg");
+  assert.equal(forCustomer.date, "2026-10-01");
+  assert.equal(forCustomer.forParty, true);
+  const anyone = lastSoldRate({ itemId: "paper", voucherItemLines: lines, vouchers });
+  assert.equal(anyone.rate, 1100);
+  assert.equal(anyone.forParty, false);
+  const firstTime = lastSoldRate({ itemId: "paper", partyId: "new", voucherItemLines: lines, vouchers });
+  assert.equal(firstTime.rate, 1100);
+  assert.equal(firstTime.partyId, "else");
+  assert.equal(lastSoldRate({ itemId: "missing", voucherItemLines: lines, vouchers }), null);
 });
 
 test("RPC item-line mapper accepts camelCase and snake_case", () => {

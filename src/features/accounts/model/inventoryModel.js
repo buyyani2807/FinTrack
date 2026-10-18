@@ -316,6 +316,43 @@ function itemMovementValueReport(voucherItemLines, vouchers, { from, to }, forwa
   return [...map.values()].sort((a, b) => b.amount - a.amount);
 }
 
+/**
+ * Latest posted sale rate for an item. Prefers the selected customer.
+ * A sale to someone else is used only when this customer has never bought the item.
+ */
+export function lastSoldRate({ itemId, partyId = "", voucherItemLines = [], vouchers = [] } = {}) {
+  if (!itemId) return null;
+  const byId = new Map((vouchers || []).map(voucher => [voucher.id, voucher]));
+  const sales = [];
+  for (const line of voucherItemLines || []) {
+    if (line.itemId !== itemId) continue;
+    const voucher = byId.get(line.voucherId);
+    if (!voucher || voucher.status !== "posted" || voucher.voucherType !== "sales") continue;
+    const rate = Number(line.rate || 0);
+    if (!(rate > 0)) continue;
+    sales.push({
+      rate,
+      unit: line.unit || "",
+      date: voucher.date || "",
+      partyId: voucher.partyId || "",
+      voucherNumber: voucher.voucherNumber || "",
+      lineNo: Number(line.lineNo || 0),
+    });
+  }
+  const forCustomer = partyId ? sales.filter(row => row.partyId === partyId) : [];
+  const pool = forCustomer.length ? forCustomer : sales;
+  if (!pool.length) return null;
+  pool.sort((a, b) => `${b.date}|${b.voucherNumber}|${String(b.lineNo).padStart(6, "0")}`.localeCompare(`${a.date}|${a.voucherNumber}|${String(a.lineNo).padStart(6, "0")}`));
+  const latest = pool[0];
+  return {
+    rate: latest.rate,
+    unit: latest.unit,
+    date: latest.date,
+    partyId: latest.partyId,
+    forParty: Boolean(partyId) && latest.partyId === partyId,
+  };
+}
+
 /** Net of sales returns (credit notes with item lines). */
 export function itemSalesReport(voucherItemLines = [], vouchers = [], { from, to } = {}) {
   return itemMovementValueReport(voucherItemLines, vouchers, { from, to }, "sales", "credit_note");
