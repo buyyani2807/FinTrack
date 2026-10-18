@@ -969,3 +969,104 @@ export const setComplianceFiling = (token, { returnCode, period, filedOn = null,
     input_reference: reference || null,
     input_clear: Boolean(clear),
   }, token).catch(err => { throw migration082Error(err); });
+
+const payrollMigration = err => {
+  if (!isMissing(err)) return err;
+  const error = new Error("Run migration 101_accounts_payroll.sql in the Supabase SQL editor to use Payroll.");
+  error.code = "MIGRATION_REQUIRED";
+  return error;
+};
+
+const payrollCall = promise => promise.catch(err => { throw payrollMigration(err); });
+
+const mapPayrollProfile = row => ({
+  partyId: row.party_id,
+  basic: Number(row.basic || 0),
+  hra: Number(row.hra || 0),
+  allowance: Number(row.allowance || 0),
+  dayBasis: Number(row.day_basis || 0),
+  pf: Number(row.pf || 0),
+  esi: Number(row.esi || 0),
+  professionalTax: Number(row.professional_tax || 0),
+  tds: Number(row.tds || 0),
+  otherDeduction: Number(row.other_deduction || 0),
+});
+
+const mapPayrollBundle = data => {
+  let body = data;
+  if (typeof body === "string") {
+    try { body = JSON.parse(body); } catch { body = null; }
+  }
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return { profiles: [], days: [], leave: [], run: null };
+  }
+  const run = body.run && typeof body.run === "object" ? body.run : null;
+  return {
+    profiles: (body.profiles || []).map(mapPayrollProfile),
+    days: (body.days || []).map(row => ({ partyId: row.party_id, workDate: row.work_date, status: row.status })),
+    leave: (body.leave || []).map(row => ({
+      id: row.id,
+      partyId: row.party_id,
+      leaveType: row.leave_type,
+      fromDate: row.from_date,
+      toDate: row.to_date,
+      note: row.note || "",
+    })),
+    run: run ? {
+      id: run.id,
+      periodMonth: run.period_month,
+      status: run.status,
+      payDate: run.pay_date || "",
+      payMode: run.pay_mode || "bank",
+      payAccountId: run.pay_account_id || "",
+      lines: Array.isArray(run.lines) ? run.lines : [],
+      postedAt: run.posted_at || "",
+    } : null,
+  };
+};
+
+export const loadPayroll = (token, month) =>
+  payrollCall(accRpc("acc_payroll_bundle", { input_month: month }, token)).then(mapPayrollBundle);
+
+export const savePayrollProfile = (token, profile) =>
+  payrollCall(accRpc("acc_save_payroll_profile", {
+    input_party_id: profile.partyId,
+    input_basic: Number(profile.basic || 0),
+    input_hra: Number(profile.hra || 0),
+    input_allowance: Number(profile.allowance || 0),
+    input_day_basis: Number(profile.dayBasis || 0),
+    input_pf: Number(profile.pf || 0),
+    input_esi: Number(profile.esi || 0),
+    input_professional_tax: Number(profile.professionalTax || 0),
+    input_tds: Number(profile.tds || 0),
+    input_other_deduction: Number(profile.otherDeduction || 0),
+  }, token));
+
+export const savePayrollDays = (token, { partyId, month, days }) =>
+  payrollCall(accRpc("acc_set_payroll_days", {
+    input_party_id: partyId,
+    input_month: month,
+    input_days: days || [],
+  }, token));
+
+export const savePayrollLeave = (token, leave) =>
+  payrollCall(accRpc("acc_save_payroll_leave", {
+    input_party_id: leave.partyId,
+    input_leave_type: leave.leaveType,
+    input_from: leave.fromDate,
+    input_to: leave.toDate,
+    input_note: leave.note || null,
+  }, token));
+
+export const deletePayrollLeave = (token, id) =>
+  payrollCall(accRpc("acc_delete_payroll_leave", { input_id: id }, token));
+
+export const savePayrollRun = (token, run) =>
+  payrollCall(accRpc("acc_save_payroll_run", {
+    input_month: run.month,
+    input_pay_date: run.payDate || null,
+    input_pay_mode: run.payMode || "bank",
+    input_pay_account_id: run.payAccountId || null,
+    input_lines: run.lines || [],
+    input_status: run.status || "draft",
+  }, token));

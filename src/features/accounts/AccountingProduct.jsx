@@ -153,6 +153,7 @@ import { PartiesSection } from "./sections/PartiesSection.jsx";
 import { PartyProfileSection } from "./sections/PartyProfileSection.jsx";
 import { InventorySection } from "./sections/InventorySection.jsx";
 import { ExpensesSection } from "./sections/ExpensesSection.jsx";
+import { PayrollSection } from "./sections/PayrollSection.jsx";
 import { MoreSection } from "./sections/MoreSection.jsx";
 import { ReportsSection } from "./sections/ReportsSection.jsx";
 import { BankSection } from "./sections/BankSection.jsx";
@@ -2282,6 +2283,18 @@ const openVoucher = () => {
           }}
           onOpenPnl={() => openSection("pnl")}
           onOpenAiReview={aiEnabled ? () => openSection("ai") : null}
+        />}
+        {(section === "payroll" || section === "attendance" || section === "leave") && <PayrollSection
+          key={activeCompanyId || "company"}
+          tab={section}
+          token={token}
+          parties={parties}
+          accounts={visibleAccounts}
+          vouchers={vouchers}
+          companyName={activeCompany?.name || settings?.companyName || ""}
+          canWrite={canWrite}
+          onRefresh={() => refresh()}
+          onOpenParties={() => openSection("parties")}
         />}
 
         {section === "inventory" && <InventorySection

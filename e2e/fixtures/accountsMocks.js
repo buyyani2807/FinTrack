@@ -27,6 +27,7 @@ const coaRef = id => ({ code: COA.find(a => a.id === id).code, name: COA.find(a 
 const PARTIES = [
   { id: "p1", party_type: "customer", name: "Ravi Stores", phone: "9876543210", email: "", address: "MG Road", gstin: "", state_code: "29", gst_registration: "unregistered", notes: "", is_active: true },
   { id: "p2", party_type: "supplier", name: "Sri Wholesale", phone: "9876500000", email: "", address: "", gstin: "", state_code: "29", gst_registration: "unregistered", notes: "", is_active: true },
+  { id: "p3", party_type: "employee", name: "Anita Rao", phone: "9845011122", email: "", address: "", gstin: "", state_code: "29", gst_registration: "unregistered", notes: "", is_active: true },
 ];
 
 const voucher = (id, voucher_type, voucher_number, voucher_date, party_id, narration, due_date = null) => ({
@@ -110,6 +111,12 @@ const restRows = url => {
 const rpcResult = name => {
   if (name === "acc_list_companies") return [{ id: "co1", name: "E2E Traders", is_primary: true, books_started_on: "2026-04-01", fy_start_month: 4, status: "active" }];
   if (name === "accounts_access_role") return "owner";
+  if (name === "acc_payroll_bundle") return {
+    profiles: [{ party_id: "p3", basic: 18000, hra: 6000, allowance: 0, day_basis: 30, pf: 1800, esi: 0, professional_tax: 200, tds: 0, other_deduction: 0 }],
+    days: [{ party_id: "p3", work_date: "2026-09-02", status: "absent" }],
+    leave: [{ id: "lv1", party_id: "p3", leave_type: "paid", from_date: "2026-09-10", to_date: "2026-09-11", note: "Family function" }],
+    run: null,
+  };
   return [];
 };
 

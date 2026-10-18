@@ -17,6 +17,16 @@ export const NAV_TREE = [
   },
   { id: "expenses", label: "Expenses", glyph: "◔" },
   {
+    id: "payroll",
+    label: "Payroll",
+    glyph: "◈",
+    children: [
+      { id: "payroll", label: "Pay" },
+      { id: "attendance", label: "Attendance" },
+      { id: "leave", label: "Leave" },
+    ],
+  },
+  {
     id: "reports",
     label: "Reports",
     glyph: "▦",
@@ -33,7 +43,7 @@ export const NAV_TREE = [
   { id: "cashbook", label: "Cashbook", glyph: "◇" },
   { id: "setup", label: "Setup", glyph: "⚙" },
 ];
-const SECTION_PARENT = { party: "parties" };
+const SECTION_PARENT = { party: "parties", attendance: "payroll", leave: "payroll" };
 export const navItemIsActive = (item, section) => item.children?.some(child => child.id === section) || item.id === section || item.id === SECTION_PARENT[section];
 export function sectionTrail(section, reportTab) {
   if (section === "overview") return ["Overview"];
@@ -41,6 +51,9 @@ export function sectionTrail(section, reportTab) {
   if (section === "inventory") return ["Inventory"];
   if (section === "documents") return ["Documents"];
   if (section === "expenses") return ["Expenses"];
+  if (section === "payroll") return ["Payroll", "Pay"];
+  if (section === "attendance") return ["Payroll", "Attendance"];
+  if (section === "leave") return ["Payroll", "Leave"];
   if (section === "parties") return ["Parties", "Party Ledger"];
   if (section === "party") return ["Parties", "Party profile"];
   if (section === "receivables") return ["Parties", "Receivables"];
@@ -65,6 +78,9 @@ export const SECTIONS = [
   { id: "documents", label: "Documents", group: "Books" },
   { id: "inventory", label: "Inventory", group: "Books" },
   { id: "expenses", label: "Expenses", group: "Books" },
+  { id: "payroll", label: "Pay", group: "Books" },
+  { id: "attendance", label: "Attendance", group: "Books" },
+  { id: "leave", label: "Leave", group: "Books" },
   { id: "cashbook", label: "Cashbook", group: "Books" },
   { id: "receivables", label: "Receivables", group: "Parties" },
   { id: "payables", label: "Payables", group: "Parties" },
@@ -121,6 +137,7 @@ export const MORE_LINKS = [
   ["trial", "Trial Balance", "Debit vs credit check"],
   ["pnl", "Profit & Loss", "Income and expenses"],
   ["expenses", "Expenses", "Spending by month and category"],
+  ["payroll", "Payroll", "Salary, attendance, and leave"],
   ["balance", "Balance Sheet", "Assets and liabilities"],
   ["cashbook", "Cashbook", "Operational cash"],
   ["crm", "Customer Pipeline", "Follow up customer opportunities"],
