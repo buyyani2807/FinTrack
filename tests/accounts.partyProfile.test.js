@@ -9,7 +9,7 @@ import {
   saleLines,
 } from "../src/features/accounts/model/accountingModel.js";
 import { invoiceRegister } from "../src/features/accounts/model/accountingReports.js";
-import { partyProfile } from "../src/features/accounts/model/partyProfile.js";
+import { partyHasTradeProfile, partyProfile } from "../src/features/accounts/model/partyProfile.js";
 import { accountsPath, accountsViewFromPath } from "../src/features/accounts/accountsNavigation.js";
 import { calculateFintrackCreditScore, invoiceInstallments } from "../src/features/creditScore/creditScoreModel.js";
 
@@ -153,6 +153,12 @@ test("a part-paid invoice that is not yet due does not count against the custome
     { id: "b", amount: 10000, paid: 10000, invoiceDate: "2026-04-01", dueDate: "2026-04-15", settledOn: "2026-05-20", lastPaidOn: "2026-05-20" },
   ], "2026-04-30");
   assert.equal(before[0].status, "missed", "a month-end before the payment sees the invoice unpaid");
+});
+
+test("an employee has no customer or supplier profile", () => {
+  assert.equal(partyHasTradeProfile({ id: "amogha", partyType: "employee" }), false);
+  assert.equal(partyHasTradeProfile({ id: "ravi", partyType: "customer" }), true);
+  assert.equal(partyHasTradeProfile({ id: "mill", partyType: "supplier" }), true);
 });
 
 test("party profile has its own address", () => {

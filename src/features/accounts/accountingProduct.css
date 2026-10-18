@@ -2621,6 +2621,20 @@
   gap: 8px;
 }
 
+.accounts-dashboard .acc-party-staff {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  padding: 16px;
+}
+
+.accounts-dashboard .acc-party-staff .copy {
+  margin: 0;
+  max-width: 62ch;
+}
+
 .accounts-dashboard .acc-party-ledger-filters {
   display: grid;
   grid-template-columns: minmax(220px, 1.7fr) repeat(3, minmax(132px, 1fr));

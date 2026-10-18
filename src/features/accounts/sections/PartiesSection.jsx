@@ -9,6 +9,7 @@ import { VOUCHER_TYPES } from "../model/accountingModel.js";
 import { OutstandingWhatsAppButton, PartyStatementButton } from "../components/SalesInvoiceActions.jsx";
 import { money, partyTypeLabel } from "../accountsFormat.js";
 import { PartyTypeBadge } from "../components/PartyFields.jsx";
+import { partyHasTradeProfile } from "../model/partyProfile.js";
 
 const initialsOf = name => String(name || "").trim().split(/\s+/).slice(0, 2).map(word => word[0]?.toUpperCase() || "").join("") || "?";
 
@@ -35,6 +36,7 @@ export function PartiesSection({
   voucherItemLines = [],
   stockMovements = [],
   items = [],
+  openSection,
 }) {
   const [openKey, setOpenKey] = useState(null);
   const goodsFor = row => {
@@ -91,29 +93,32 @@ export function PartiesSection({
               {focusedParty.email ? <li><Mail size={14} aria-hidden="true" />{focusedParty.email}</li> : null}
             </ul> : null}
             <div className="acc-party-ledger-actions">
-              {onOpenProfile ? <button type="button" className="btn primary" onClick={() => onOpenProfile(focusedParty.id)}>{`${partyTypeLabel(focusedParty.partyType)} profile`}</button> : null}
+              {onOpenProfile && partyHasTradeProfile(focusedParty) ? <button type="button" className="btn primary" onClick={() => onOpenProfile(focusedParty.id)}>{`${partyTypeLabel(focusedParty.partyType)} profile`}</button> : null}
               {canWrite ? <button type="button" className="btn" onClick={() => openParty(focusedParty)}>Edit</button> : null}
-              <PartyStatementButton
-                party={focusedParty}
-                partyBook={partyBook}
-                periodFrom={partyFrom}
-                periodTo={partyTo}
-                settings={orgSettings}
-                company={activeCompany}
-                workspace={workspace}
-                money={money}
-              />
-              <OutstandingWhatsAppButton
-                party={focusedParty}
-                outstanding={partyBook.advance > 0 ? 0 : partyBook.outstanding}
-                kind={focusedParty.partyType === "supplier" ? "payable" : "receivable"}
-                settings={orgSettings}
-                company={activeCompany}
-                workspace={workspace}
-              />
+              {partyHasTradeProfile(focusedParty) ? <>
+                <PartyStatementButton
+                  party={focusedParty}
+                  partyBook={partyBook}
+                  periodFrom={partyFrom}
+                  periodTo={partyTo}
+                  settings={orgSettings}
+                  company={activeCompany}
+                  workspace={workspace}
+                  money={money}
+                />
+                <OutstandingWhatsAppButton
+                  party={focusedParty}
+                  outstanding={partyBook.advance > 0 ? 0 : partyBook.outstanding}
+                  kind={focusedParty.partyType === "supplier" ? "payable" : "receivable"}
+                  settings={orgSettings}
+                  company={activeCompany}
+                  workspace={workspace}
+                />
+              </> : null}
             </div>
           </div>
         </section>
+        {partyHasTradeProfile(focusedParty) ? <>
         <section className="card acc-party-ledger-filters" aria-label="Ledger period and type">
           <div className="acc-party-ledger-range">
             <label className="accounts-filter-field"><span className="small">From</span>
@@ -185,6 +190,10 @@ export function PartiesSection({
           })}
           {!partyBook.rows.length && <p className="copy">No transactions for this party in the selected dates.</p>}
         </div>
+        </> : <section className="card acc-party-staff">
+          <p className="copy">Pay, attendance, and leave for {focusedParty.name} are in Payroll.</p>
+          {openSection ? <button type="button" className="btn primary" onClick={() => openSection("payroll")}>Open payroll</button> : null}
+        </section>}
       </> : <AccEmpty title="No customers or suppliers yet" copy="Accounts parties are independent of Daily Finance customers and Chit Fund members." actionLabel={canWrite ? "+ Add party" : ""} onAction={canWrite ? openParty : undefined} />}
     </div>
   );

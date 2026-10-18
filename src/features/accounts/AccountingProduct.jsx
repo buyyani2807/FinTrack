@@ -113,7 +113,7 @@ import { buildSalesInvoice } from "./model/salesInvoiceModel.js";
 import { SalesInvoiceSuccessModal, SalesInvoiceViewerModal } from "./components/SalesInvoiceActions.jsx";
 import { periodStockValues } from "./model/inventoryValuation.js";
 import { expenseBreakdown, monthlyIncomeExpense } from "./model/accountsCharts.js";
-import { partyProfile } from "./model/partyProfile.js";
+import { partyHasTradeProfile, partyProfile } from "./model/partyProfile.js";
 import {
   currentStockForItem,
   itemPurchasesReport,
@@ -755,7 +755,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const focusedParty = useMemo(() => parties.find(party => party.id === partyFocusId) || parties[0] || null, [parties, partyFocusId]);
   const profileParty = useMemo(() => (section === "party" ? parties.find(party => party.id === view.sub) || null : null), [section, parties, view.sub]);
   const profile = useMemo(
-    () => (profileParty ? partyProfile({ accounts, vouchers, parties, party: profileParty, today: todayIso() }) : null),
+    () => (profileParty && partyHasTradeProfile(profileParty) ? partyProfile({ accounts, vouchers, parties, party: profileParty, today: todayIso() }) : null),
     [profileParty, accounts, vouchers, parties],
   );
   const setupParties = useMemo(
@@ -834,6 +834,12 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const setReportTab = openReport;
   const openPartyProfile = id => {
     if (!id) return;
+    const party = parties.find(row => row.id === id);
+    if (party && !partyHasTradeProfile(party)) {
+      setPartyFocusId(id);
+      openSection("parties");
+      return;
+    }
     go({ section: "party", sub: id });
     window.scrollTo(0, 0);
   };
@@ -2184,7 +2190,17 @@ const openVoucher = () => {
           onOpenParty={openPartyProfile}
         />}
 
-        {section === "party" && <PartyProfileSection
+        {section === "party" && profileParty && !partyHasTradeProfile(profileParty) && <div className="acc-panel">
+          <section className="card acc-party-staff">
+            <p className="copy">Pay, attendance, and leave for {profileParty.name} are in Payroll.</p>
+            <div className="acc-party-ledger-actions">
+              <button type="button" className="btn" onClick={() => openPartyLedger(profileParty.id)}>Party ledger</button>
+              <button type="button" className="btn primary" onClick={() => openSection("payroll")}>Open payroll</button>
+            </div>
+          </section>
+        </div>}
+
+        {section === "party" && partyHasTradeProfile(profileParty) && <PartyProfileSection
           party={profileParty}
           profile={profile}
           loading={loading}

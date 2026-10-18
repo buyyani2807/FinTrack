@@ -7,6 +7,9 @@ const daysBetween = (from, to) => Math.round(
 
 export const partyKind = party => (party?.partyType === "supplier" ? "payable" : "receivable");
 
+// Customers and suppliers buy and sell on credit. An employee is paid in Payroll.
+export const partyHasTradeProfile = party => party?.partyType !== "employee";
+
 // One side of the party: sales to them (receivable) or purchases from them (payable).
 function partySide({ accounts, vouchers, parties, party, today, kind }) {
   const invoices = invoiceRegister(accounts, vouchers, parties, { kind, today, partyId: party.id });
