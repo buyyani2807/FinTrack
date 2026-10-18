@@ -113,6 +113,43 @@ export function deductionParts(source) {
   };
 }
 
+const RUPEE_SMALL = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+const RUPEE_TENS = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+
+const twoDigitWords = value => {
+  const number = Number(value) || 0;
+  if (number < 20) return RUPEE_SMALL[number];
+  const ten = RUPEE_TENS[Math.floor(number / 10)];
+  const one = number % 10;
+  return one ? `${ten} ${RUPEE_SMALL[one]}` : ten;
+};
+
+const threeDigitWords = value => {
+  const number = Number(value) || 0;
+  const hundred = Math.floor(number / 100);
+  const rest = number % 100;
+  return [hundred ? `${RUPEE_SMALL[hundred]} Hundred` : "", rest ? twoDigitWords(rest) : ""].filter(Boolean).join(" ");
+};
+
+export function rupeesInWords(amount) {
+  const value = Math.abs(Number(amount) || 0);
+  const rupees = Math.floor(value + 1e-6);
+  const paise = Math.round((value - rupees) * 100);
+  if (!rupees && !paise) return "Rupees Zero Only";
+  const crore = Math.floor(rupees / 10000000);
+  const lakh = Math.floor((rupees % 10000000) / 100000);
+  const thousand = Math.floor((rupees % 100000) / 1000);
+  const rest = rupees % 1000;
+  const parts = [];
+  if (crore) parts.push(`${threeDigitWords(crore)} Crore`);
+  if (lakh) parts.push(`${twoDigitWords(lakh)} Lakh`);
+  if (thousand) parts.push(`${twoDigitWords(thousand)} Thousand`);
+  if (rest) parts.push(threeDigitWords(rest));
+  const words = parts.join(" ");
+  const body = paise ? `${words ? `${words} and ` : ""}${twoDigitWords(paise)} Paise` : words;
+  return `Rupees ${body} Only`;
+}
+
 export function deductionTotal(parts) {
   const row = deductionParts(parts);
   return roundMoney(row.pf + row.esi + row.professionalTax + row.tds + row.otherDeduction);

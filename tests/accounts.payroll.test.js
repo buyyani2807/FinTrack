@@ -10,6 +10,7 @@ import {
   monthDates,
   payrollRows,
   payrollVoucherLines,
+  rupeesInWords,
 } from "../src/features/accounts/model/payroll.js";
 
 const profile = {
@@ -25,6 +26,14 @@ const profile = {
   otherDeduction: 0,
 };
 const month = "2026-09-01";
+
+test("net pay is written in rupees the way a payslip states it", () => {
+  assert.equal(rupeesInWords(0), "Rupees Zero Only");
+  assert.equal(rupeesInWords(25000), "Rupees Twenty Five Thousand Only");
+  assert.equal(rupeesInWords(21200), "Rupees Twenty One Thousand Two Hundred Only");
+  assert.equal(rupeesInWords(100000), "Rupees One Lakh Only");
+  assert.equal(rupeesInWords(10000000), "Rupees One Crore Only");
+});
 
 test("a full month with only Sunday off pays the full salary", () => {
   const line = buildPayLine({ partyId: "anita", month, profile: { ...profile, pf: 0, professionalTax: 0 }, days: [], leaves: [] });

@@ -11,19 +11,53 @@
 .pay-day.is-half { border-color: var(--ft-warning); }
 .pay-day.is-leave, .pay-day.is-holiday { background: var(--ft-surface-2, var(--ft-bg)); }
 .pay-day small { color: var(--ft-muted); font-size: var(--ft-type-micro); }
-.pay-slip h3 { margin: 0; }
-.pay-slip dl { display: grid; grid-template-columns: 11rem 1fr; gap: .25rem .75rem; margin: .75rem 0 0; }
-.pay-slip dt { color: var(--ft-muted); }
-.pay-slip dd { margin: 0; }
-.pay-slip-actions { display: flex; justify-content: flex-end; margin: 0 0 .75rem; }
+.pay-slip-actions { display: flex; justify-content: flex-end; margin: 0 0 12px; }
+.pay-slip {
+  background: #fff;
+  color: #1c2834;
+  border: 1px solid #d7dee6;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.pay-slip-head {
+  padding: 22px 20px 16px;
+  text-align: center;
+  background: #12352a;
+  color: #fff;
+}
+.pay-slip-company { margin: 0; font-size: 1.45rem; font-weight: 750; letter-spacing: 0.01em; line-height: 1.2; }
+.pay-slip-doc { margin: 8px 0 0; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #b7e4cf; }
+.pay-slip-period { margin: 4px 0 0; color: #d7ebe2; }
+.pay-slip-meta { display: grid; grid-template-columns: 1fr 1fr; margin: 0; }
+.pay-slip-meta div { display: grid; grid-template-columns: 7.25rem 1fr; gap: 8px; padding: 10px 16px; border-bottom: 1px solid #e6edf2; }
+.pay-slip-meta div:nth-child(odd) { border-right: 1px solid #e6edf2; }
+.pay-slip-meta dt { margin: 0; color: #66788a; font-weight: 550; }
+.pay-slip-meta dd { margin: 0; font-weight: 680; }
+.pay-slip-cols { display: grid; grid-template-columns: 1fr 1fr; }
+.pay-slip-cols table { width: 100%; border-collapse: collapse; }
+.pay-slip-cols table + table { border-left: 1px solid #d7dee6; }
+.pay-slip-cols th, .pay-slip-cols td { padding: 8px 16px; text-align: left; }
+.pay-slip-cols th { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #526273; background: #f6f8fa; border-bottom: 1px solid #d7dee6; }
+.pay-slip-cols td:last-child, .pay-slip-cols th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.pay-slip-cols tbody tr + tr td { border-top: 1px solid #eef2f5; }
+.pay-slip-cols tfoot td { font-weight: 720; background: #f6f8fa; border-top: 1px solid #d7dee6; }
+.pay-slip-net { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 16px; background: #f3faf6; color: #12352a; border-top: 1px solid #d7dee6; }
+.pay-slip-net span { display: block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #3d6b56; }
+.pay-slip-net strong { display: block; margin-top: 2px; font-size: 1.45rem; }
+.pay-slip-net p { margin: 0; max-width: 28rem; text-align: right; color: #3d5c4c; }
+.pay-slip-foot { margin: 0; padding: 12px 16px 14px; color: #6b7c8d; font-size: 0.78rem; line-height: 1.45; }
 @media (max-width: 720px) {
   .pay-day-grid { gap: 4px; }
   .pay-day { padding: 4px; }
-  .pay-slip dl { grid-template-columns: 1fr; }
+  .pay-slip-meta, .pay-slip-cols { grid-template-columns: 1fr; }
+  .pay-slip-meta div:nth-child(odd) { border-right: 0; }
+  .pay-slip-cols table + table { border-left: 0; border-top: 1px solid #d7dee6; }
+  .pay-slip-net { flex-direction: column; align-items: flex-start; }
+  .pay-slip-net p { text-align: left; }
 }
 @media print {
   body.pay-slip-print * { visibility: hidden; }
   body.pay-slip-print .pay-slip, body.pay-slip-print .pay-slip * { visibility: visible; }
-  body.pay-slip-print .pay-slip { position: absolute; left: 0; top: 0; width: 100%; background: #fff; color: #122033; }
+  body.pay-slip-print .pay-slip { position: absolute; left: 0; top: 0; width: 100%; border: 0; border-radius: 0; background: #fff; color: #1c2834; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body.pay-slip-print .pay-slip-actions { display: none !important; }
 }

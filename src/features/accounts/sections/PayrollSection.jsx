@@ -34,6 +34,7 @@ import {
   monthLabel,
   monthStart,
   payrollRows,
+  rupeesInWords,
   payrollVoucherLines,
   resolveDay,
 } from "../model/payroll.js";
@@ -511,30 +512,51 @@ export function PayrollSection({
     </Modal>}
 
     {slip && <Modal title={`Payslip · ${slip.name}`} close={() => setSlip(null)}>
-      <div className="pay-slip">
-        <div className="pay-slip-actions"><button type="button" className="btn" onClick={printSlip}>Print</button></div>
-        <p className="ca-brief-kicker">Payslip</p>
-        <h3>{companyName || "Company"}</h3>
-        <dl>
-          <dt>Employee</dt><dd>{slip.name}</dd>
-          <dt>Month</dt><dd>{monthLabel(monthIso)}</dd>
-          <dt>Pay date</dt><dd>{payDate ? formatOverviewDate(payDate) : "—"}</dd>
-          <dt>Basic</dt><dd>{money(slip.basic || 0)}</dd>
-          <dt>House rent allowance</dt><dd>{money(slip.hra || 0)}</dd>
-          <dt>Other allowance</dt><dd>{money(slip.allowance || 0)}</dd>
-          <dt>Gross</dt><dd>{money(slip.gross)}</dd>
-          <dt>Paid days</dt><dd>{amount(slip.paidDays)} of {amount(slip.basis)}</dd>
-          <dt>Loss of pay</dt><dd>{amount(slip.lopDays)} days</dd>
-          <dt>Earned</dt><dd>{money(slip.earned)}</dd>
-          <dt>Provident fund</dt><dd>{money(slip.deductions?.pf || 0)}</dd>
-          <dt>ESI</dt><dd>{money(slip.deductions?.esi || 0)}</dd>
-          <dt>Professional tax</dt><dd>{money(slip.deductions?.professionalTax || 0)}</dd>
-          <dt>Tax deducted</dt><dd>{money(slip.deductions?.tds || 0)}</dd>
-          <dt>Other deduction</dt><dd>{money(slip.deductions?.otherDeduction || 0)}</dd>
-          <dt>Net pay</dt><dd>{money(slip.net)}</dd>
+      <div className="pay-slip-actions"><button type="button" className="btn" onClick={printSlip}>Print</button></div>
+      <article className="pay-slip">
+        <header className="pay-slip-head">
+          <p className="pay-slip-company">{companyName || "Company"}</p>
+          <p className="pay-slip-doc">Payslip</p>
+          <p className="pay-slip-period">{monthLabel(monthIso)}</p>
+        </header>
+        <dl className="pay-slip-meta">
+          <div><dt>Employee</dt><dd>{slip.name}</dd></div>
+          <div><dt>Pay date</dt><dd>{payDate ? formatOverviewDate(payDate) : "—"}</dd></div>
+          <div><dt>Paid days</dt><dd>{amount(slip.paidDays)} of {amount(slip.basis)}</dd></div>
+          <div><dt>Loss of pay</dt><dd>{amount(slip.lopDays)} {Number(slip.lopDays) === 1 ? "day" : "days"}</dd></div>
         </dl>
-        <p className="copy">{PAYROLL_DISCLAIMER}</p>
-      </div>
+        <div className="pay-slip-cols">
+          <table>
+            <thead><tr><th>Earnings</th><th>Amount</th></tr></thead>
+            <tbody>
+              <tr><td>Basic</td><td>{money(slip.basic || 0)}</td></tr>
+              <tr><td>House rent allowance</td><td>{money(slip.hra || 0)}</td></tr>
+              <tr><td>Other allowance</td><td>{money(slip.allowance || 0)}</td></tr>
+            </tbody>
+            <tfoot><tr><td>Gross earnings</td><td>{money(slip.gross)}</td></tr></tfoot>
+          </table>
+          <table>
+            <thead><tr><th>Deductions</th><th>Amount</th></tr></thead>
+            <tbody>
+              <tr><td>Loss of pay</td><td>{money(Math.max(0, Number(slip.gross || 0) - Number(slip.earned || 0)))}</td></tr>
+              <tr><td>Provident fund</td><td>{money(slip.deductions?.pf || 0)}</td></tr>
+              <tr><td>ESI</td><td>{money(slip.deductions?.esi || 0)}</td></tr>
+              <tr><td>Professional tax</td><td>{money(slip.deductions?.professionalTax || 0)}</td></tr>
+              <tr><td>Tax deducted</td><td>{money(slip.deductions?.tds || 0)}</td></tr>
+              <tr><td>Other deduction</td><td>{money(slip.deductions?.otherDeduction || 0)}</td></tr>
+            </tbody>
+            <tfoot><tr><td>Total deductions</td><td>{money(Math.max(0, Number(slip.gross || 0) - Number(slip.earned || 0)) + Number(slip.deductionTotal || 0))}</td></tr></tfoot>
+          </table>
+        </div>
+        <div className="pay-slip-net">
+          <div>
+            <span>Net pay</span>
+            <strong>{money(slip.net)}</strong>
+          </div>
+          <p>{rupeesInWords(slip.net)}</p>
+        </div>
+        <p className="pay-slip-foot">{PAYROLL_DISCLAIMER}</p>
+      </article>
     </Modal>}
 
     {confirmPost && <Modal title={`Post salary for ${monthLabel(monthIso)}`} close={() => !busy && setConfirmPost(false)} actions={<button type="button" className="btn primary" disabled={busy} onClick={postPay}>{busy ? "Posting…" : "Post salary"}</button>}>
