@@ -3919,6 +3919,25 @@
   gap: 8px;
 }
 
+.accounts-dashboard .acc-item-line-card-grid input {
+  width: 100%;
+  min-width: 0;
+}
+
+/* The sale modal is too narrow for the seven-column line table, so quantity
+   and rate were off to the right. The stacked line shows them in place. */
+.accounts-dashboard .acc-modal .acc-item-lines .acc-table-wrap {
+  display: none;
+}
+
+.accounts-dashboard .acc-modal .acc-item-line-cards {
+  display: grid;
+}
+
+.accounts-dashboard .acc-modal .acc-item-line-card-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .accounts-dashboard .acc-item-line-card-top {
   display: flex;
   justify-content: space-between;
@@ -4075,6 +4094,9 @@
   }
   .accounts-dashboard .acc-item-line-cards {
     display: grid;
+  }
+  .accounts-dashboard .acc-modal .acc-item-line-card-grid {
+    grid-template-columns: 1fr 1fr;
   }
   .accounts-dashboard .acc-ledger-table {
     display: none;
