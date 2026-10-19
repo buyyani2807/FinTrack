@@ -1,4 +1,5 @@
 .pay-board-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 16px; }
+.accounts-dashboard .field.pay-month { flex: 0 0 13.5rem; width: 13.5rem; max-width: 13.5rem; min-width: 0; }
 .pay-board-head h2 { margin: 0; font-size: 1.45rem; letter-spacing: -0.02em; }
 .pay-board-head p { margin: 4px 0 0; max-width: 40rem; color: var(--ft-text-2); }
 .pay-metrics { margin-bottom: 16px; }

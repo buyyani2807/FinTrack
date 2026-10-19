@@ -2308,6 +2308,7 @@ const openVoucher = () => {
           accounts={visibleAccounts}
           vouchers={vouchers}
           companyName={activeCompany?.name || settings?.companyName || ""}
+          booksStartedOn={activeCompany?.booksStartedOn || settings?.booksStartedOn || ""}
           canWrite={canWrite}
           onRefresh={() => refresh()}
           onOpenParties={() => openSection("parties")}

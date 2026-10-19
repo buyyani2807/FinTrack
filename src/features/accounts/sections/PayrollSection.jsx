@@ -33,6 +33,7 @@ import {
   monthEnd,
   monthLabel,
   monthStart,
+  payrollMonthChoices,
   payState,
   payrollRows,
   payrollSummary,
@@ -99,6 +100,7 @@ export function PayrollSection({
   accounts,
   vouchers,
   companyName,
+  booksStartedOn = "",
   canWrite,
   onRefresh,
   onOpenParties,
@@ -379,6 +381,22 @@ export function PayrollSection({
     window.print();
   };
 
+  const monthChoices = useMemo(
+    () => payrollMonthChoices({ today: todayIso(), booksStartedOn, selected: month }),
+    [booksStartedOn, month],
+  );
+  const chooseMonth = event => {
+    setMonth(event.target.value);
+    setBundle(null);
+    setLoading(true);
+  };
+  const monthMenu = (
+    <LabeledField label="Month" className="pay-month">
+      <select value={month} onChange={chooseMonth}>
+        {monthChoices.map(choice => <option key={choice.value} value={choice.value}>{choice.label}</option>)}
+      </select>
+    </LabeledField>
+  );
   const blocked = posted || !canWrite || busy;
   const postable = rows.some(row => row.inRun !== false && row.earned > 0) && rows.every(row => row.inRun === false || !row.error) && payDate && payAccountId;
   const payAccountName = paidFrom.find(account => account.id === payAccountId)?.name || "the chosen account";
@@ -398,9 +416,7 @@ export function PayrollSection({
               ? "This month is posted. The amounts below are the salaries that went out."
               : "Every employee is listed here. Record each salary once, then post the month when you pay."}</p>
           </div>
-          <LabeledField label="Month">
-            <input type="month" value={month} onChange={event => { setMonth(event.target.value); setBundle(null); setLoading(true); }} />
-          </LabeledField>
+          {monthMenu}
         </header>
         <div className="acc-metric-grid pay-metrics">
           <AccMetric label="Employees" value={String(summary.employees)} hint={summary.unset ? `${summary.unset} still need a salary` : "Salary recorded for each"} />
@@ -454,11 +470,7 @@ export function PayrollSection({
       </>}
 
       {tab === "attendance" && <>
-        <div className="pay-toolbar">
-          <LabeledField label="Month">
-            <input type="month" value={month} onChange={event => { setMonth(event.target.value); setBundle(null); setLoading(true); }} />
-          </LabeledField>
-        </div>
+        <div className="pay-toolbar">{monthMenu}</div>
         {posted ? <p className="copy pay-note">{monthLabel(monthIso)} is posted. Attendance for this month stays as it was posted.</p> : null}
         <p className="copy pay-note">A working day with no mark counts as present. Sunday counts as a weekly off until you change it. Days on leave are changed from Leave.</p>
         <div className="pay-toolbar">
@@ -488,11 +500,7 @@ export function PayrollSection({
       </>}
 
       {tab === "leave" && <>
-        <div className="pay-toolbar">
-          <LabeledField label="Month">
-            <input type="month" value={month} onChange={event => { setMonth(event.target.value); setBundle(null); setLoading(true); }} />
-          </LabeledField>
-        </div>
+        <div className="pay-toolbar">{monthMenu}</div>
         {posted ? <p className="copy pay-note">{monthLabel(monthIso)} is posted. Leave for this month stays as it was posted.</p> : null}
         <p className="copy pay-note">Paid leave and sick leave stay in the salary. Unpaid leave reduces it. The owner records leave here.</p>
         {canWrite && !posted && <div className="form pay-toolbar">

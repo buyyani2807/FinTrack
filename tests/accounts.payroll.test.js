@@ -9,6 +9,7 @@ import {
   leavesOverlap,
   monthDates,
   payState,
+  payrollMonthChoices,
   payrollRows,
   payrollSummary,
   payrollVoucherLines,
@@ -122,6 +123,16 @@ test("a draft keeps the salary voucher id already stored on the line", () => {
   });
   assert.equal(rows[0].sourceId, "11111111-1111-4111-8111-111111111111");
   assert.equal(rows[0].voucherId, "22222222-2222-4222-8222-222222222222");
+});
+
+test("the month menu lists history from when the books opened, newest first", () => {
+  const choices = payrollMonthChoices({ today: "2026-10-19", booksStartedOn: "2026-09-08" });
+  assert.deepEqual(choices.map(row => row.label), ["November 2026", "October 2026", "September 2026"]);
+  const year = payrollMonthChoices({ today: "2026-10-19" });
+  assert.equal(year[0].value, "2026-11");
+  assert.equal(year.at(-1).value, "2024-11");
+  const older = payrollMonthChoices({ today: "2026-10-19", booksStartedOn: "2026-09-08", selected: "2020-01" });
+  assert.equal(older.at(-1).value, "2020-01");
 });
 
 test("a posted month shows the stored lines", () => {

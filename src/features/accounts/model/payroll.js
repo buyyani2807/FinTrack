@@ -49,6 +49,31 @@ export function monthDates(iso) {
   });
 }
 
+export function payrollMonthChoices({ today, booksStartedOn = "", selected = "" } = {}) {
+  const anchor = monthStart(String(today || "").slice(0, 10));
+  if (!anchor) return [];
+  const [year, month] = anchor.split("-").map(Number);
+  const latest = new Date(Date.UTC(year, month, 1));
+  let earliest = new Date(Date.UTC(year, month - 24, 1));
+  const books = monthStart(booksStartedOn);
+  if (books) {
+    const [bookYear, bookMonth] = books.split("-").map(Number);
+    const opened = new Date(Date.UTC(bookYear, bookMonth - 1, 1));
+    if (opened > earliest && opened <= latest) earliest = opened;
+  }
+  const choices = [];
+  for (let cursor = latest; cursor >= earliest; cursor = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() - 1, 1))) {
+    const value = `${cursor.getUTCFullYear()}-${String(cursor.getUTCMonth() + 1).padStart(2, "0")}`;
+    choices.push({ value, label: monthLabel(`${value}-01`) });
+  }
+  const picked = String(selected || "").slice(0, 7);
+  if (picked && !choices.some(row => row.value === picked)) {
+    choices.push({ value: picked, label: monthLabel(`${picked}-01`) || picked });
+    choices.sort((a, b) => (a.value < b.value ? 1 : -1));
+  }
+  return choices;
+}
+
 export function monthLabel(iso) {
   const start = monthStart(iso);
   const [year, month] = start.split("-").map(Number);
