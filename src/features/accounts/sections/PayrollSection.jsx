@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Field, LabeledField } from "../../../components/ui.jsx";
 import { todayIso } from "../../../lib/dates.js";
 import { money, formatOverviewDate } from "../accountsFormat.js";
-import { AccEmpty, AccSkeleton, AccTable, Modal } from "../components/AccUi.jsx";
+import { AccEmpty, AccMetric, AccSkeleton, AccTable, Modal } from "../components/AccUi.jsx";
 import {
   createChartAccount,
   deletePayrollLeave,
@@ -33,7 +33,9 @@ import {
   monthEnd,
   monthLabel,
   monthStart,
+  payState,
   payrollRows,
+  payrollSummary,
   rupeesInWords,
   payrollVoucherLines,
   resolveDay,
@@ -68,6 +70,14 @@ function AmountFields({ values, onChange, fields }) {
     </LabeledField>
   ));
 }
+
+const PAY_STATE = {
+  posted: { label: "Posted", tone: "inv-paid" },
+  ready: { label: "Ready", tone: "active" },
+  later: { label: "Next month", tone: "inactive" },
+  unset: { label: "Salary not set", tone: "inv-due" },
+  check: { label: "Check pay", tone: "inv-overdue" },
+};
 
 const PAY_FIELDS = [
   { id: "basic", label: "Basic" },
@@ -184,6 +194,7 @@ export function PayrollSection({
     overrides,
     run: bundle.run,
   }) : []), [bundle, employees, monthIso, overrides]);
+  const summary = useMemo(() => payrollSummary(rows), [rows]);
 
   const leaveRows = useMemo(() => {
     if (!bundle) return [];
@@ -369,26 +380,35 @@ export function PayrollSection({
   };
 
   const blocked = posted || !canWrite || busy;
-  const postable = rows.some(row => row.earned > 0) && rows.every(row => !row.error) && payDate && payAccountId;
+  const postable = rows.some(row => row.inRun !== false && row.earned > 0) && rows.every(row => row.inRun === false || !row.error) && payDate && payAccountId;
+  const payAccountName = paidFrom.find(account => account.id === payAccountId)?.name || "the chosen account";
 
   return <div className="acc-panel">
-    <p className="copy pay-note">Monthly salary for employees in this company. Attendance and leave change the days paid. Collection agents stay in Collection Staff.</p>
-    <div className="pay-toolbar">
-      <LabeledField label="Month">
-        <input type="month" value={month} onChange={event => { setMonth(event.target.value); setBundle(null); setLoading(true); }} />
-      </LabeledField>
-    </div>
     {loadError ? <p className="copy" role="alert">{loadError}</p> : null}
     {actionError ? <p className="copy" role="alert">{actionError}</p> : null}
     {loading && !bundle ? <AccSkeleton /> : null}
-    {!loadError && bundle && !employees.length ? <AccEmpty title="No employees yet" copy="Add a person under Parties and set the type to Employee. Payroll uses those people." actionLabel="Open parties" onAction={onOpenParties} /> : null}
+    {!loadError && bundle && !employees.length && !rows.length ? <AccEmpty title="No employees yet" copy="Add a person under Parties and set the type to Employee. Payroll uses those people." actionLabel="Open parties" onAction={onOpenParties} /> : null}
 
-    {!loadError && bundle && employees.length > 0 && <>
-      {posted ? <p className="copy pay-note">{monthLabel(monthIso)} is posted. Pay, attendance, and leave for this month stay as they were posted.</p> : null}
-
+    {!loadError && bundle && (employees.length > 0 || rows.length > 0) && <>
       {tab === "payroll" && <>
-        <p className="copy pay-note">Salary is reduced only for absent days, half days, and unpaid leave. Weekly offs, holidays, and paid leave stay in the month’s salary. {PAYROLL_DISCLAIMER}</p>
-        <div className="pay-toolbar">
+        <header className="pay-board-head">
+          <div>
+            <h2>{monthLabel(monthIso)}</h2>
+            <p>{posted
+              ? "This month is posted. The amounts below are the salaries that went out."
+              : "Every employee is listed here. Record each salary once, then post the month when you pay."}</p>
+          </div>
+          <LabeledField label="Month">
+            <input type="month" value={month} onChange={event => { setMonth(event.target.value); setBundle(null); setLoading(true); }} />
+          </LabeledField>
+        </header>
+        <div className="acc-metric-grid pay-metrics">
+          <AccMetric label="Employees" value={String(summary.employees)} hint={summary.unset ? `${summary.unset} still need a salary` : "Salary recorded for each"} />
+          <AccMetric label="Monthly salaries" value={money(summary.monthly)} hint="Recorded pay, before this month’s attendance" />
+          <AccMetric label={posted ? "Paid this month" : "To pay this month"} value={money(summary.monthNet)} tone="green" hint={summary.later ? `${summary.later} start next month` : (posted ? "Already posted" : "Post when you pay")} />
+          <AccMetric label="Deductions" value={money(summary.monthDeductions)} hint="Loss of pay and amounts you enter" />
+        </div>
+        <div className="pay-toolbar pay-run">
           <LabeledField label="Pay date">
             <input type="date" value={payDate} disabled={blocked} onChange={event => changePay({ payDate: event.target.value })} />
           </LabeledField>
@@ -398,34 +418,48 @@ export function PayrollSection({
               {paidFrom.map(account => <option key={account.id} value={account.id}>{account.name}</option>)}
             </select>
           </LabeledField>
-          {canWrite && !posted && <>
+          {canWrite && !posted && <div className="pay-run-actions">
             <button type="button" className="btn" disabled={busy} onClick={saveDraft}>Save draft</button>
             <button type="button" className="btn primary" disabled={busy || !postable} onClick={() => setConfirmPost(true)}>Post salary</button>
-          </>}
+          </div>}
         </div>
-        <AccTable columns={["Employee", { label: "Paid days", num: true }, { label: "Loss of pay", num: true }, { label: "Earned", num: true }, { label: "Deductions", num: true }, { label: "Net", num: true }, ""]}>
-          {rows.map(row => <tr key={row.partyId}>
-            <td>{row.name}{row.error ? <div className="small">{row.error}</div> : null}</td>
-            <td className="acc-num">{amount(row.paidDays)}</td>
-            <td className="acc-num">{amount(row.lopDays)}</td>
-            <td className="acc-num">{money(row.earned)}</td>
-            <td className="acc-num">{money(row.deductionTotal)}</td>
-            <td className="acc-num">{money(row.net)}</td>
-            <td>
-              <div className="acc-btn-group">
-                {canWrite && !posted && <button type="button" className="btn" onClick={() => openProfile(employees.find(person => person.id === row.partyId) || { id: row.partyId, name: row.name })}>Set pay</button>}
-                {canWrite && !posted && <button type="button" className="btn" onClick={() => openDeductions(row)}>This month</button>}
-                <button type="button" className="btn" onClick={() => {
+        <ul className="pay-register">
+          {rows.map(row => {
+            const state = PAY_STATE[payState({ posted, inRun: row.inRun !== false, monthly: row.monthly, error: row.error })];
+            const person = employees.find(item => item.id === row.partyId) || { id: row.partyId, name: row.name };
+            return <li key={row.partyId} className="pay-person">
+              <div className="pay-person-id">
+                <strong>{row.name}</strong>
+                <span className={`acc-status-pill ${state.tone}`}>{state.label}</span>
+                {row.error ? <span className="small">{row.error}</span> : null}
+              </div>
+              <dl className="pay-facts">
+                <div><dt>Monthly salary</dt><dd>{Number(row.monthly) > 0 ? money(row.monthly) : "Not set"}</dd></div>
+                <div><dt>This month</dt><dd>{row.inRun === false ? "Next month" : money(row.net)}</dd></div>
+                <div><dt>Days</dt><dd>{row.inRun === false ? "—" : `${amount(row.paidDays)} paid · ${amount(row.lopDays)} loss`}</dd></div>
+                <div><dt>Deductions</dt><dd>{row.inRun === false ? "—" : money(row.deductionTotal)}</dd></div>
+              </dl>
+              <div className="acc-btn-group pay-person-actions">
+                {canWrite && <button type="button" className={`btn${Number(row.monthly) > 0 ? "" : " primary"}`} onClick={() => openProfile(person)}>Set salary</button>}
+                {canWrite && !posted && row.inRun !== false && <button type="button" className="btn" onClick={() => openDeductions(row)}>This month</button>}
+                {row.inRun !== false && <button type="button" className="btn" onClick={() => {
                   const profile = (bundle.profiles || []).find(item => item.partyId === row.partyId);
                   setSlip({ ...row, basic: row.basic ?? profile?.basic ?? 0, hra: row.hra ?? profile?.hra ?? 0, allowance: row.allowance ?? profile?.allowance ?? 0 });
-                }}>Payslip</button>
+                }}>Payslip</button>}
               </div>
-            </td>
-          </tr>)}
-        </AccTable>
+            </li>;
+          })}
+        </ul>
+        <p className="copy pay-note">Salary is reduced only for absent days, half days, and unpaid leave. Weekly offs, holidays, and paid leave stay in the month’s salary. {PAYROLL_DISCLAIMER} Collection agents stay in Collection Staff.</p>
       </>}
 
       {tab === "attendance" && <>
+        <div className="pay-toolbar">
+          <LabeledField label="Month">
+            <input type="month" value={month} onChange={event => { setMonth(event.target.value); setBundle(null); setLoading(true); }} />
+          </LabeledField>
+        </div>
+        {posted ? <p className="copy pay-note">{monthLabel(monthIso)} is posted. Attendance for this month stays as it was posted.</p> : null}
         <p className="copy pay-note">A working day with no mark counts as present. Sunday counts as a weekly off until you change it. Days on leave are changed from Leave.</p>
         <div className="pay-toolbar">
           <LabeledField label="Employee">
@@ -454,6 +488,12 @@ export function PayrollSection({
       </>}
 
       {tab === "leave" && <>
+        <div className="pay-toolbar">
+          <LabeledField label="Month">
+            <input type="month" value={month} onChange={event => { setMonth(event.target.value); setBundle(null); setLoading(true); }} />
+          </LabeledField>
+        </div>
+        {posted ? <p className="copy pay-note">{monthLabel(monthIso)} is posted. Leave for this month stays as it was posted.</p> : null}
         <p className="copy pay-note">Paid leave and sick leave stay in the salary. Unpaid leave reduces it. The owner records leave here.</p>
         {canWrite && !posted && <div className="form pay-toolbar">
           <LabeledField label="Employee">
@@ -486,8 +526,8 @@ export function PayrollSection({
       </>}
     </>}
 
-    {profileParty && profileForm && <Modal title={`Pay for ${profileParty.name}`} close={() => !busy && setProfileParty(null)} actions={<button type="button" className="btn primary" disabled={busy} onClick={saveProfile}>Save pay</button>}>
-      <p className="copy">These amounts are the usual monthly pay. A posted month keeps the figures it was posted with.</p>
+    {profileParty && profileForm && <Modal title={`Salary for ${profileParty.name}`} close={() => !busy && setProfileParty(null)} actions={<button type="button" className="btn primary" disabled={busy} onClick={saveProfile}>Save salary</button>}>
+      <p className="copy">This is the monthly salary on record. A month that is already posted keeps the figures it was posted with.</p>
       <div className="form">
         <AmountFields values={profileForm} onChange={(id, value) => setProfileForm(current => ({ ...current, [id]: value }))} fields={PAY_FIELDS} />
         <LabeledField label="Divide the month by">
@@ -560,7 +600,7 @@ export function PayrollSection({
     </Modal>}
 
     {confirmPost && <Modal title={`Post salary for ${monthLabel(monthIso)}`} close={() => !busy && setConfirmPost(false)} actions={<button type="button" className="btn primary" disabled={busy} onClick={postPay}>{busy ? "Posting…" : "Post salary"}</button>}>
-      <p className="copy">This adds one payment for each employee who has salary this month. A posted month cannot be edited.</p>
+      <p className="copy">This pays {summary.inMonth} {summary.inMonth === 1 ? "employee" : "employees"}, {money(summary.monthNet)}, from {payAccountName}. A posted month stays as it was paid.</p>
     </Modal>}
   </div>;
 }

@@ -190,33 +190,90 @@ export function buildPayLine({ partyId, month, profile, days, leaves, deductions
   };
 }
 
+const recordedMonthly = (profile, saved) => {
+  if (profile) return monthlyGross(profile);
+  return roundMoney(Number(saved?.basic || 0) + Number(saved?.hra || 0) + Number(saved?.allowance || 0));
+};
+
 export function payrollRows({ employees, month, profiles, days, leaves, overrides = {}, run = null }) {
-  if (run?.status === "posted") {
-    return (run.lines || []).map(line => ({
-      ...line,
-      deductions: deductionParts(line.deductions),
-      name: employees.find(person => person.id === line.partyId)?.name || line.name || "Employee",
-      error: "",
-    }));
+  const posted = run?.status === "posted";
+  const stored = run?.lines || [];
+  const people = [...(employees || [])];
+  if (posted) {
+    const ids = new Set(people.map(person => person.id));
+    for (const line of stored) {
+      if (line.partyId && !ids.has(line.partyId)) people.push({ id: line.partyId, name: line.name || "Employee" });
+    }
   }
-  return (employees || []).map(person => {
-    const profile = (profiles || []).find(row => row.partyId === person.id) || emptyProfile(person.id);
-    const saved = (run?.lines || []).find(line => line.partyId === person.id);
+  return people.map(person => {
+    const profile = (profiles || []).find(row => row.partyId === person.id) || null;
+    const saved = stored.find(line => line.partyId === person.id) || null;
+    const monthly = recordedMonthly(profile, saved);
+    if (posted && saved) {
+      return {
+        ...saved,
+        deductions: deductionParts(saved.deductions),
+        name: person.name || saved.name || "Employee",
+        error: "",
+        monthly,
+        inRun: true,
+      };
+    }
+    const source = profile || emptyProfile(person.id);
     const line = buildPayLine({
       partyId: person.id,
       month,
-      profile,
+      profile: source,
       days,
       leaves,
-      deductions: overrides[person.id] || saved?.deductions || profile,
+      deductions: posted ? source : (overrides[person.id] || saved?.deductions || source),
     });
     return {
       ...line,
       name: person.name,
-      voucherId: saved?.voucherId || null,
-      sourceId: saved?.sourceId || null,
+      monthly,
+      inRun: !posted,
+      voucherId: posted ? null : (saved?.voucherId || null),
+      sourceId: posted ? null : (saved?.sourceId || null),
     };
   });
+}
+
+export function payrollSummary(rows) {
+  const list = rows || [];
+  let monthly = 0;
+  let monthNet = 0;
+  let monthDeductions = 0;
+  let recorded = 0;
+  let inMonth = 0;
+  for (const row of list) {
+    const gross = Number(row.monthly || 0);
+    monthly = roundMoney(monthly + gross);
+    if (gross > 0) recorded += 1;
+    if (row.inRun === false) continue;
+    inMonth += 1;
+    monthNet = roundMoney(monthNet + Number(row.net || 0));
+    const loss = Math.max(0, Number(row.gross || 0) - Number(row.earned || 0));
+    monthDeductions = roundMoney(monthDeductions + Number(row.deductionTotal || 0) + loss);
+  }
+  return {
+    employees: list.length,
+    recorded,
+    unset: list.length - recorded,
+    monthly,
+    monthNet,
+    monthDeductions,
+    inMonth,
+    later: list.length - inMonth,
+  };
+}
+
+export function payState({ posted, inRun, monthly, error }) {
+  if (error) return "check";
+  if (posted && inRun) return "posted";
+  if (posted && !inRun) return "later";
+  if (!(Number(monthly) > 0)) return "unset";
+  return "ready";
 }
 
 export function payrollVoucherLines({ accounts, payAccountId, earned, deductionTotal: held, partyId, description }) {

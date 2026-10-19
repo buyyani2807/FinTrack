@@ -8,7 +8,9 @@ import {
   defaultStatus,
   leavesOverlap,
   monthDates,
+  payState,
   payrollRows,
+  payrollSummary,
   payrollVoucherLines,
   rupeesInWords,
 } from "../src/features/accounts/model/payroll.js";
@@ -129,10 +131,55 @@ test("a posted month shows the stored lines", () => {
     profiles: [],
     days: [],
     leaves: [],
-    run: { status: "posted", lines: [{ partyId: "anita", earned: 100, net: 100, deductions: { pf: 0, esi: 0, professionalTax: 0, tds: 0, otherDeduction: 0 }, deductionTotal: 0, paidDays: 1, lopDays: 0 }] },
+    run: { status: "posted", lines: [{ partyId: "anita", earned: 100, net: 100, basic: 100, hra: 0, allowance: 0, deductions: { pf: 0, esi: 0, professionalTax: 0, tds: 0, otherDeduction: 0 }, deductionTotal: 0, paidDays: 1, lopDays: 0 }] },
   });
   assert.equal(rows[0].name, "Anita Rao");
   assert.equal(rows[0].earned, 100);
+  assert.equal(rows[0].inRun, true);
+  assert.equal(rows[0].monthly, 100);
+});
+
+test("a posted month still lists employees added after it was posted", () => {
+  const rows = payrollRows({
+    employees: [
+      { id: "anita", name: "Anita Rao" },
+      { id: "new", name: "New Hire" },
+    ],
+    month,
+    profiles: [{ partyId: "new", basic: 20000, hra: 0, allowance: 0 }],
+    days: [],
+    leaves: [],
+    run: {
+      status: "posted",
+      lines: [{ partyId: "anita", name: "Anita Rao", earned: 100, net: 100, basic: 100, hra: 0, allowance: 0, deductions: {}, deductionTotal: 0, paidDays: 1, lopDays: 0, gross: 100 }],
+    },
+  });
+  assert.equal(rows.map(row => row.name).join(","), "Anita Rao,New Hire");
+  const hire = rows[1];
+  assert.equal(hire.inRun, false);
+  assert.equal(hire.monthly, 20000);
+  assert.equal(payState({ posted: true, inRun: hire.inRun, monthly: hire.monthly, error: hire.error }), "later");
+  const summary = payrollSummary(rows);
+  assert.equal(summary.employees, 2);
+  assert.equal(summary.recorded, 2);
+  assert.equal(summary.monthly, 20100);
+  assert.equal(summary.monthNet, 100);
+  assert.equal(summary.later, 1);
+  assert.equal(payState({ posted: false, inRun: true, monthly: 0, error: "" }), "unset");
+});
+
+test("a posted month keeps a person who is no longer an active employee", () => {
+  const rows = payrollRows({
+    employees: [],
+    month,
+    profiles: [],
+    days: [],
+    leaves: [],
+    run: { status: "posted", lines: [{ partyId: "gone", name: "Former", earned: 50, net: 50, deductions: {}, deductionTotal: 0 }] },
+  });
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].name, "Former");
+  assert.equal(rows[0].inRun, true);
 });
 
 test("salary voucher debits salary and credits net pay plus deductions", () => {

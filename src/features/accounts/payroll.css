@@ -1,3 +1,27 @@
+.pay-board-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 16px; }
+.pay-board-head h2 { margin: 0; font-size: 1.45rem; letter-spacing: -0.02em; }
+.pay-board-head p { margin: 4px 0 0; max-width: 40rem; color: var(--ft-text-2); }
+.pay-metrics { margin-bottom: 16px; }
+.pay-run { align-items: flex-end; }
+.pay-run-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+.pay-register { list-style: none; margin: 4px 0 16px; padding: 0; display: grid; gap: 10px; }
+.pay-person {
+  display: grid;
+  grid-template-columns: minmax(11rem, 0.9fr) minmax(0, 2.2fr) auto;
+  gap: 12px 18px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid var(--ft-border);
+  border-radius: 14px;
+  background: var(--ft-surface);
+}
+.pay-person-id { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.pay-person-id strong { font-size: 1rem; }
+.pay-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 14px; margin: 0; }
+.pay-facts div { min-width: 0; }
+.pay-facts dt { margin: 0; color: var(--ft-text-3); font-size: var(--ft-type-micro); font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; }
+.pay-facts dd { margin: 2px 0 0; font-weight: 680; font-variant-numeric: tabular-nums; }
+.pay-person-actions { justify-content: flex-end; }
 .pay-toolbar { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: end; margin-bottom: 12px; }
 .pay-toolbar .field { min-width: 11rem; }
 .pay-note { margin: 0 0 12px; }
@@ -46,7 +70,14 @@
 .pay-slip-net strong { display: block; margin-top: 2px; font-size: 1.45rem; }
 .pay-slip-net p { margin: 0; max-width: 28rem; text-align: right; color: #3d5c4c; }
 .pay-slip-foot { margin: 0; padding: 12px 16px 14px; color: #6b7c8d; font-size: 0.78rem; line-height: 1.45; }
+@media (max-width: 900px) {
+  .pay-person { grid-template-columns: 1fr; }
+  .pay-facts { grid-template-columns: 1fr 1fr; }
+  .pay-person-actions { justify-content: flex-start; }
+  .pay-run-actions { margin-left: 0; }
+}
 @media (max-width: 720px) {
+  .pay-board-head { flex-direction: column; align-items: stretch; }
   .pay-day-grid { gap: 4px; }
   .pay-day { padding: 4px; }
   .pay-slip-meta, .pay-slip-cols { grid-template-columns: 1fr; }
