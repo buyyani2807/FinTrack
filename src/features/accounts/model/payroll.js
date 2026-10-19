@@ -293,6 +293,21 @@ export function payrollSummary(rows) {
   };
 }
 
+export function payrollRegisterExport(rows) {
+  return [
+    ["Employee", "Monthly salary", "Paid days", "Loss of pay days", "This month", "Deductions", "In this pay"],
+    ...(rows || []).map(row => [
+      row.name || "Employee",
+      Number(row.monthly || 0),
+      row.inRun === false ? "" : Number(row.paidDays || 0),
+      row.inRun === false ? "" : Number(row.lopDays || 0),
+      row.inRun === false ? "" : Number(row.net || 0),
+      row.inRun === false ? "" : Number(row.deductionTotal || 0),
+      row.inRun === false ? "Next month" : "Yes",
+    ]),
+  ];
+}
+
 export function payState({ posted, inRun, monthly, error }) {
   if (error) return "check";
   if (posted && inRun) return "posted";

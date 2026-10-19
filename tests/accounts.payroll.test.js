@@ -10,6 +10,7 @@ import {
   monthDates,
   payState,
   payrollMonthChoices,
+  payrollRegisterExport,
   payrollRows,
   payrollSummary,
   payrollVoucherLines,
@@ -133,6 +134,18 @@ test("the month menu lists history from when the books opened, newest first", ()
   assert.equal(year.at(-1).value, "2024-11");
   const older = payrollMonthChoices({ today: "2026-10-19", booksStartedOn: "2026-09-08", selected: "2020-01" });
   assert.equal(older.at(-1).value, "2020-01");
+});
+
+test("the payroll register export lists who is in this month's pay", () => {
+  const rows = payrollRegisterExport([
+    { name: "Anita Rao", monthly: 24000, paidDays: 29, lopDays: 1, net: 21200, deductionTotal: 2000, inRun: true },
+    { name: "New Hire", monthly: 15000, inRun: false },
+  ]);
+  assert.equal(rows[0][0], "Employee");
+  assert.equal(rows[1][6], "Yes");
+  assert.equal(rows[1][4], 21200);
+  assert.equal(rows[2][6], "Next month");
+  assert.equal(rows[2][4], "");
 });
 
 test("a posted month shows the stored lines", () => {

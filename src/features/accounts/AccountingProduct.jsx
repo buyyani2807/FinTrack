@@ -2312,6 +2312,7 @@ const openVoucher = () => {
           canWrite={canWrite}
           onRefresh={() => refresh()}
           onOpenParties={() => openSection("parties")}
+          onOpenSection={openSection}
         />}
 
         {section === "inventory" && <InventorySection

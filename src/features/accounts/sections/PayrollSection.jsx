@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Field, LabeledField } from "../../../components/ui.jsx";
 import { todayIso } from "../../../lib/dates.js";
 import { money, formatOverviewDate } from "../accountsFormat.js";
+import { downloadAccountsCsv } from "../io/accountingExport.js";
 import { AccEmpty, AccMetric, AccSkeleton, AccTable, Modal } from "../components/AccUi.jsx";
 import {
   createChartAccount,
@@ -34,6 +35,7 @@ import {
   monthLabel,
   monthStart,
   payrollMonthChoices,
+  payrollRegisterExport,
   payState,
   payrollRows,
   payrollSummary,
@@ -104,6 +106,7 @@ export function PayrollSection({
   canWrite,
   onRefresh,
   onOpenParties,
+  onOpenSection,
 }) {
   const [month, setMonth] = useState(() => todayIso().slice(0, 7));
   const [bundle, setBundle] = useState(null);
@@ -118,6 +121,7 @@ export function PayrollSection({
   const [deductionForm, setDeductionForm] = useState(null);
   const [slip, setSlip] = useState(null);
   const [confirmPost, setConfirmPost] = useState(false);
+  const [query, setQuery] = useState("");
   const [pickedEmployee, setPickedEmployee] = useState("");
   const [markEdit, setMarkEdit] = useState(null);
   const [leaveForm, setLeaveForm] = useState(blankLeave);
@@ -400,6 +404,12 @@ export function PayrollSection({
   const blocked = posted || !canWrite || busy;
   const postable = rows.some(row => row.inRun !== false && row.earned > 0) && rows.every(row => row.inRun === false || !row.error) && payDate && payAccountId;
   const payAccountName = paidFrom.find(account => account.id === payAccountId)?.name || "the chosen account";
+  const needle = query.trim().toLowerCase();
+  const visibleRows = needle ? rows.filter(row => String(row.name || "").toLowerCase().includes(needle)) : rows;
+  const lopDays = rows.reduce((sum, row) => sum + (row.inRun === false ? 0 : Number(row.lopDays || 0)), 0);
+  const runLabel = posted ? "Posted" : bundle?.run?.status === "draft" ? "Draft" : "Open";
+  const runTone = posted ? "inv-paid" : bundle?.run?.status === "draft" ? "suggested" : "active";
+  const exportRegister = () => downloadAccountsCsv(`payroll-${month}.csv`, payrollRegisterExport(visibleRows));
 
   return <div className="acc-panel">
     {loadError ? <p className="copy" role="alert">{loadError}</p> : null}
@@ -409,21 +419,39 @@ export function PayrollSection({
 
     {!loadError && bundle && (employees.length > 0 || rows.length > 0) && <>
       {tab === "payroll" && <>
-        <header className="pay-board-head">
-          <div>
-            <h2>{monthLabel(monthIso)}</h2>
+        <header className="pay-hero">
+          <div className="pay-hero-copy">
+            <p className="pay-kicker">Payroll</p>
+            <div className="pay-hero-title">
+              <h2>{monthLabel(monthIso)}</h2>
+              <span className={`acc-status-pill ${runTone}`}>{runLabel}</span>
+            </div>
             <p>{posted
-              ? "This month is posted. The amounts below are the salaries that went out."
-              : "Every employee is listed here. Record each salary once, then post the month when you pay."}</p>
+              ? "This month is posted. Everyone in that pay stays as they were paid."
+              : "Record each salary, then post this month once. That pays every employee together."}</p>
           </div>
-          {monthMenu}
+          <div className="pay-hero-tools">
+            {monthMenu}
+            <div className="pay-quick">
+              {onOpenParties ? <button type="button" className="btn" onClick={onOpenParties}>Add employee</button> : null}
+              {onOpenSection ? <button type="button" className="btn" onClick={() => onOpenSection("attendance")}>Attendance</button> : null}
+              {onOpenSection ? <button type="button" className="btn" onClick={() => onOpenSection("leave")}>Leave</button> : null}
+              <button type="button" className="btn" disabled={!visibleRows.length} onClick={exportRegister}>Export</button>
+            </div>
+          </div>
         </header>
         <div className="acc-metric-grid pay-metrics">
           <AccMetric label="Employees" value={String(summary.employees)} hint={summary.unset ? `${summary.unset} still need a salary` : "Salary recorded for each"} />
-          <AccMetric label="Monthly salaries" value={money(summary.monthly)} hint="Recorded pay, before this month’s attendance" />
-          <AccMetric label={posted ? "Paid this month" : "To pay this month"} value={money(summary.monthNet)} tone="green" hint={summary.later ? `${summary.later} start next month` : (posted ? "Already posted" : "Post when you pay")} />
+          <AccMetric label="Gross payroll" value={money(summary.monthly)} hint="Recorded pay, before this month’s attendance" />
+          <AccMetric label={posted ? "Net paid" : "Net payable"} value={money(summary.monthNet)} tone="green" hint={summary.later ? `${summary.later} start next month` : (posted ? "Already posted" : "Posted together")} />
           <AccMetric label="Deductions" value={money(summary.monthDeductions)} hint="Loss of pay and amounts you enter" />
         </div>
+        <ul className="pay-insights">
+          <li><strong>{summary.unset}</strong><span>Salary not set</span></li>
+          <li><strong>{amount(lopDays)}</strong><span>Loss-of-pay days</span></li>
+          <li><strong>{leaveRows.length}</strong><span>Leave records</span></li>
+          <li><strong>{summary.later}</strong><span>Start next month</span></li>
+        </ul>
         <div className="pay-toolbar pay-run">
           <LabeledField label="Pay date">
             <input type="date" value={payDate} disabled={blocked} onChange={event => changePay({ payDate: event.target.value })} />
@@ -439,8 +467,13 @@ export function PayrollSection({
             <button type="button" className="btn primary" disabled={busy || !postable} onClick={() => setConfirmPost(true)}>Post salary</button>
           </div>}
         </div>
+        <div className="pay-register-head">
+          <h3>Employees</h3>
+          <input type="search" value={query} placeholder="Search employees" aria-label="Search employees" onChange={event => setQuery(event.target.value)} />
+        </div>
+        {!visibleRows.length ? <p className="copy pay-note">No employee matches this search.</p> : null}
         <ul className="pay-register">
-          {rows.map(row => {
+          {visibleRows.map(row => {
             const state = PAY_STATE[payState({ posted, inRun: row.inRun !== false, monthly: row.monthly, error: row.error })];
             const person = employees.find(item => item.id === row.partyId) || { id: row.partyId, name: row.name };
             return <li key={row.partyId} className="pay-person">
@@ -466,7 +499,7 @@ export function PayrollSection({
             </li>;
           })}
         </ul>
-        <p className="copy pay-note">Salary is reduced only for absent days, half days, and unpaid leave. Weekly offs, holidays, and paid leave stay in the month’s salary. {PAYROLL_DISCLAIMER} Collection agents stay in Collection Staff.</p>
+        <p className="copy pay-note">Salary is reduced only for absent days, half days, and unpaid leave. Weekly offs, holidays, and paid leave stay in the month’s salary. {PAYROLL_DISCLAIMER} Payroll figures should be reviewed before the month is posted. Collection agents stay in Collection Staff.</p>
       </>}
 
       {tab === "attendance" && <>
