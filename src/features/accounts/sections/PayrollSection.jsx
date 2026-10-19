@@ -420,16 +420,13 @@ export function PayrollSection({
     {!loadError && bundle && (employees.length > 0 || rows.length > 0) && <>
       {tab === "payroll" && <>
         <header className="pay-hero">
-          <div className="pay-hero-copy">
-            <p className="pay-kicker">Payroll</p>
-            <div className="pay-hero-title">
-              <h2>{monthLabel(monthIso)}</h2>
-              <span className={`acc-status-pill ${runTone}`}>{runLabel}</span>
-            </div>
-            <p>{posted
-              ? "This month is posted. Everyone in that pay stays as they were paid."
-              : "Record each salary, then post this month once. That pays every employee together."}</p>
+          <div className="pay-hero-title">
+            <h2>{monthLabel(monthIso)}</h2>
+            <span className={`acc-status-pill ${runTone}`}>{runLabel}</span>
           </div>
+          <p className="pay-hero-copy">{posted
+            ? "This month is posted. Everyone in that pay stays as they were paid."
+            : "Record each salary, then post this month once. That pays every employee together."}</p>
           <div className="pay-hero-tools">
             {monthMenu}
             <div className="pay-quick">
@@ -441,17 +438,11 @@ export function PayrollSection({
           </div>
         </header>
         <div className="acc-metric-grid pay-metrics">
-          <AccMetric label="Employees" value={String(summary.employees)} hint={summary.unset ? `${summary.unset} still need a salary` : "Salary recorded for each"} />
+          <AccMetric label="Employees" value={String(summary.employees)} hint={summary.unset ? `${summary.unset} still need a salary` : summary.later ? `${summary.later} start next month` : "Salary recorded for each"} />
           <AccMetric label="Gross payroll" value={money(summary.monthly)} hint="Recorded pay, before this month’s attendance" />
-          <AccMetric label={posted ? "Net paid" : "Net payable"} value={money(summary.monthNet)} tone="green" hint={summary.later ? `${summary.later} start next month` : (posted ? "Already posted" : "Posted together")} />
-          <AccMetric label="Deductions" value={money(summary.monthDeductions)} hint="Loss of pay and amounts you enter" />
+          <AccMetric label={posted ? "Net paid" : "Net payable"} value={money(summary.monthNet)} tone="green" hint={posted ? "Already posted" : "Posted together"} />
+          <AccMetric label="Deductions" value={money(summary.monthDeductions)} hint={`${amount(lopDays)} loss-of-pay days · ${leaveRows.length} leave`} />
         </div>
-        <ul className="pay-insights">
-          <li><strong>{summary.unset}</strong><span>Salary not set</span></li>
-          <li><strong>{amount(lopDays)}</strong><span>Loss-of-pay days</span></li>
-          <li><strong>{leaveRows.length}</strong><span>Leave records</span></li>
-          <li><strong>{summary.later}</strong><span>Start next month</span></li>
-        </ul>
         <div className="pay-toolbar pay-run">
           <LabeledField label="Pay date">
             <input type="date" value={payDate} disabled={blocked} onChange={event => changePay({ payDate: event.target.value })} />
@@ -462,16 +453,38 @@ export function PayrollSection({
               {paidFrom.map(account => <option key={account.id} value={account.id}>{account.name}</option>)}
             </select>
           </LabeledField>
+          <label className="field pay-search">
+            <span>Employees</span>
+            <input type="search" value={query} placeholder="Search" aria-label="Search employees" onChange={event => setQuery(event.target.value)} />
+          </label>
           {canWrite && !posted && <div className="pay-run-actions">
             <button type="button" className="btn" disabled={busy} onClick={saveDraft}>Save draft</button>
             <button type="button" className="btn primary" disabled={busy || !postable} onClick={() => setConfirmPost(true)}>Post salary</button>
           </div>}
         </div>
-        <div className="pay-register-head">
-          <h3>Employees</h3>
-          <input type="search" value={query} placeholder="Search employees" aria-label="Search employees" onChange={event => setQuery(event.target.value)} />
+        <div className="pay-register-table">
+          <AccTable spaced={false} columns={["Employee", { label: "Monthly salary", num: true }, { label: "This month", num: true }, { label: "Days", num: true }, { label: "Deductions", num: true }, ""]} empty={!visibleRows.length && "No employee matches this search."}>
+            {visibleRows.map(row => {
+              const state = PAY_STATE[payState({ posted, inRun: row.inRun !== false, monthly: row.monthly, error: row.error })];
+              const person = employees.find(item => item.id === row.partyId) || { id: row.partyId, name: row.name };
+              return <tr key={row.partyId}>
+                <td><strong>{row.name}</strong> <span className={`acc-status-pill ${state.tone}`}>{state.label}</span>{row.error ? <div className="small">{row.error}</div> : null}</td>
+                <td className="acc-num">{Number(row.monthly) > 0 ? money(row.monthly) : "Not set"}</td>
+                <td className="acc-num">{row.inRun === false ? "Next month" : money(row.net)}</td>
+                <td className="acc-num">{row.inRun === false ? "—" : `${amount(row.paidDays)} paid · ${amount(row.lopDays)} loss`}</td>
+                <td className="acc-num">{row.inRun === false ? "—" : money(row.deductionTotal)}</td>
+                <td><div className="acc-btn-group">
+                  {canWrite && <button type="button" className={`btn${Number(row.monthly) > 0 ? "" : " primary"}`} onClick={() => openProfile(person)}>Set salary</button>}
+                  {canWrite && !posted && row.inRun !== false && <button type="button" className="btn" onClick={() => openDeductions(row)}>This month</button>}
+                  {row.inRun !== false && <button type="button" className="btn" onClick={() => {
+                    const profile = (bundle.profiles || []).find(item => item.partyId === row.partyId);
+                    setSlip({ ...row, basic: row.basic ?? profile?.basic ?? 0, hra: row.hra ?? profile?.hra ?? 0, allowance: row.allowance ?? profile?.allowance ?? 0 });
+                  }}>Payslip</button>}
+                </div></td>
+              </tr>;
+            })}
+          </AccTable>
         </div>
-        {!visibleRows.length ? <p className="copy pay-note">No employee matches this search.</p> : null}
         <ul className="pay-register">
           {visibleRows.map(row => {
             const state = PAY_STATE[payState({ posted, inRun: row.inRun !== false, monthly: row.monthly, error: row.error })];
