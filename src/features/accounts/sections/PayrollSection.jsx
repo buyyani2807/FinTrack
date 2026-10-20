@@ -31,9 +31,11 @@ import {
   leavesOverlap,
   moneyAccounts,
   monthDates,
+  defaultPayDate,
   monthEnd,
   monthLabel,
   monthStart,
+  salaryRecorded,
   payrollMonthChoices,
   payrollRegisterExport,
   payState,
@@ -181,7 +183,9 @@ export function PayrollSection({
   const payAccountId = editingPay
     ? payEdit.payAccountId
     : (bundle?.run?.payAccountId || paidFrom.find(account => account.accountType === "bank")?.id || paidFrom[0]?.id || "");
-  const payDate = editingPay ? payEdit.payDate : (bundle?.run?.payDate || monthEnd(monthIso));
+  const today = todayIso();
+  const storedPayDate = bundle?.run?.payDate || "";
+  const payDate = editingPay ? payEdit.payDate : (storedPayDate && storedPayDate <= today ? storedPayDate : defaultPayDate(monthIso, today));
   const changePay = patch => setPayEdit({ key: runKey, overrides, payAccountId, payDate, ...patch });
   const attendancePartyId = employees.some(person => person.id === pickedEmployee) ? pickedEmployee : (employees[0]?.id || "");
   const baseMarks = useMemo(() => (
@@ -263,7 +267,8 @@ export function PayrollSection({
           && voucher.sourceTransactionId === sourceId
           && voucher.status === "posted");
         return { ...line, sourceId, voucherId: line.voucherId || existing?.id || null };
-      });
+      }).filter(salaryRecorded);
+      if (!lines.some(line => Number(line.earned) > 0)) throw new Error("Set a salary before posting this month.");
       await savePayrollRun(token, runPayload("draft", lines));
       for (let index = 0; index < lines.length; index += 1) {
         const line = lines[index];
@@ -507,7 +512,7 @@ export function PayrollSection({
         </div>
         <div className="pay-toolbar pay-run">
           <LabeledField label="Pay date">
-            <input type="date" value={payDate} disabled={blocked} onChange={event => changePay({ payDate: event.target.value })} />
+            <input type="date" max={today} value={payDate} disabled={blocked} onChange={event => changePay({ payDate: event.target.value })} />
           </LabeledField>
           <LabeledField label="Paid from">
             <select value={payAccountId} disabled={blocked} onChange={event => changePay({ payAccountId: event.target.value })}>

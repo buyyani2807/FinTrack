@@ -7,8 +7,10 @@ import {
   buildPayLine,
   defaultStatus,
   leavesOverlap,
+  defaultPayDate,
   monthDates,
   payState,
+  salaryRecorded,
   payrollMonthChoices,
   payrollRegisterExport,
   payrollRows,
@@ -190,6 +192,38 @@ test("a posted month still lists employees added after it was posted", () => {
   assert.equal(summary.monthNet, 100);
   assert.equal(summary.later, 1);
   assert.equal(payState({ posted: false, inRun: true, monthly: 0, error: "" }), "unset");
+});
+
+test("pay date uses today when the month has not ended", () => {
+  assert.equal(defaultPayDate("2026-10-01", "2026-10-20"), "2026-10-20");
+  assert.equal(defaultPayDate("2026-09-01", "2026-10-20"), "2026-09-30");
+  assert.equal(defaultPayDate("2026-10-01", "2026-10-31"), "2026-10-31");
+});
+
+test("a posted month does not lock an employee who had no salary", () => {
+  const rows = payrollRows({
+    employees: [{ id: "open", name: "Unset" }, { id: "lop", name: "Full loss" }],
+    month,
+    profiles: [{ partyId: "open", basic: 10000, hra: 0, allowance: 0 }],
+    days: [],
+    leaves: [],
+    run: {
+      status: "posted",
+      lines: [
+        { partyId: "open", name: "Unset", earned: 0, net: 0, basic: 0, hra: 0, allowance: 0, gross: 0, deductions: {}, deductionTotal: 0, voucherId: null },
+        { partyId: "lop", name: "Full loss", earned: 0, net: 0, basic: 10000, hra: 0, allowance: 0, gross: 10000, deductions: {}, deductionTotal: 0, paidDays: 0, lopDays: 30, voucherId: null },
+      ],
+    },
+  });
+  const open = rows.find(row => row.partyId === "open");
+  const lop = rows.find(row => row.partyId === "lop");
+  assert.equal(salaryRecorded({ earned: 0, net: 0, basic: 0, hra: 0, allowance: 0, gross: 0 }), false);
+  assert.equal(salaryRecorded(lop), true);
+  assert.equal(open.inRun, false);
+  assert.ok(open.earned > 0);
+  assert.equal(payState({ posted: true, inRun: open.inRun, monthly: open.monthly, error: open.error }), "later");
+  assert.equal(lop.inRun, true);
+  assert.equal(lop.earned, 0);
 });
 
 test("a late salary saved without its voucher can still be posted", () => {

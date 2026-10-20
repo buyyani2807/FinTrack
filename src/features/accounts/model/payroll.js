@@ -86,6 +86,25 @@ export function monthEnd(iso) {
   return dates[dates.length - 1]?.date || "";
 }
 
+// Pay cannot be dated after today. Use the month end once that day has arrived.
+export function defaultPayDate(monthIso, today) {
+  const end = monthEnd(monthIso);
+  const day = String(today || "").slice(0, 10);
+  if (!end) return day;
+  if (!day) return end;
+  return end > day ? day : end;
+}
+
+// A stored line was actually part of the pay run: a salary, an earned amount, or a voucher.
+// Someone with no salary and no voucher was not paid, even if the line was saved.
+export function salaryRecorded(line) {
+  if (!line) return false;
+  if (line.voucherId) return true;
+  if (Number(line.earned) > 0) return true;
+  if (Number(line.gross) > 0) return true;
+  return Number(line.basic || 0) + Number(line.hra || 0) + Number(line.allowance || 0) > 0;
+}
+
 export function defaultStatus(weekday) {
   return weekday === 0 ? "week_off" : "present";
 }
@@ -234,7 +253,7 @@ export function payrollRows({ employees, month, profiles, days, leaves, override
     const profile = (profiles || []).find(row => row.partyId === person.id) || null;
     const saved = stored.find(line => line.partyId === person.id) || null;
     const monthly = recordedMonthly(profile, saved);
-    if (posted && saved) {
+    if (posted && saved && salaryRecorded(saved)) {
       const unfinished = Number(saved.earned) > 0 && saved.sourceId && !saved.voucherId;
       if (!unfinished) {
         return {
