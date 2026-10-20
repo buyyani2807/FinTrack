@@ -185,7 +185,8 @@ export function PayrollSection({
     : (bundle?.run?.payAccountId || paidFrom.find(account => account.accountType === "bank")?.id || paidFrom[0]?.id || "");
   const today = todayIso();
   const storedPayDate = bundle?.run?.payDate || "";
-  const payDate = editingPay ? payEdit.payDate : (storedPayDate && storedPayDate <= today ? storedPayDate : defaultPayDate(monthIso, today));
+  const requestedPayDate = editingPay ? payEdit.payDate : storedPayDate;
+  const payDate = requestedPayDate && requestedPayDate <= today ? requestedPayDate : defaultPayDate(monthIso, today);
   const changePay = patch => setPayEdit({ key: runKey, overrides, payAccountId, payDate, ...patch });
   const attendancePartyId = employees.some(person => person.id === pickedEmployee) ? pickedEmployee : (employees[0]?.id || "");
   const baseMarks = useMemo(() => (

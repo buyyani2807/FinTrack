@@ -27,6 +27,7 @@ export const dateRangeForFilter = (filter, customFrom, customTo, now = new Date(
     return { from: addCalendarDays(today, -weekday), to: today };
   }
   if (filter === "month") return { from: `${today.slice(0, 8)}01`, to: today };
+  if (filter === "all") return { from: "1970-01-01", to: "2099-12-31" };
   return { from: customFrom || today, to: customTo || today };
 };
 
@@ -60,16 +61,33 @@ export const aggregateOverview = (ledgers, entries, range) => {
 export const runningBalancesForLedger = (entries, ledgerId) =>
   withRunningBalances(entries.filter(entry => entry.ledgerAccountId === ledgerId));
 
-export const withRunningBalances = (entries) => {
+export const entryNet = entry => Number(entry.moneyIn || 0) - Number(entry.moneyOut || 0);
+
+export const netMovement = entries => (entries || []).reduce((sum, entry) => sum + entryNet(entry), 0);
+
+export const withRunningBalances = (entries, opening = 0) => {
   const sorted = [...entries].sort((a, b) =>
     `${a.entryDate}${a.entryTime}${a.createdAt || ""}${a.id || ""}`.localeCompare(
       `${b.entryDate}${b.entryTime}${b.createdAt || ""}${b.id || ""}`,
     ));
-  let balance = 0;
+  let balance = Number(opening) || 0;
   return sorted.map(entry => {
-    balance += Number(entry.moneyIn || 0) - Number(entry.moneyOut || 0);
+    balance += entryNet(entry);
     return { ...entry, balance };
   }).reverse();
+};
+
+/** Rows inside the period, with a running balance that starts from everything earlier. */
+export function cashbookPeriodRows(entries, range, filters = {}) {
+  const matched = filterCashbookEntries(entries, filters);
+  const prior = matched.filter(entry => entry.entryDate < range.from);
+  const current = matched.filter(entry => entry.entryDate >= range.from && entry.entryDate <= range.to);
+  const broughtForward = netMovement(prior);
+  return {
+    broughtForward,
+    priorCount: prior.length,
+    rows: withRunningBalances(current, broughtForward),
+  };
 };
 
 export const CASHBOOK_SOURCE_FILTERS = [

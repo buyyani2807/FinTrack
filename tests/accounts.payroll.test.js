@@ -196,6 +196,7 @@ test("a posted month still lists employees added after it was posted", () => {
 
 test("pay date uses today when the month has not ended", () => {
   assert.equal(defaultPayDate("2026-10-01", "2026-10-20"), "2026-10-20");
+  assert.equal(defaultPayDate("2026-11-01", "2026-10-20"), "2026-10-20");
   assert.equal(defaultPayDate("2026-09-01", "2026-10-20"), "2026-09-30");
   assert.equal(defaultPayDate("2026-10-01", "2026-10-31"), "2026-10-31");
 });

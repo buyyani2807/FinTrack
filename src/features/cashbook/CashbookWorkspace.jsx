@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Toasts } from "../../components/Toasts.jsx";
 import { TabScroller } from "../../components/TabScroller.jsx";
 import {
@@ -17,11 +17,9 @@ import {
 import {
   EXPENSE_CATEGORIES,
   aggregateOverview,
+  cashbookPeriodRows,
   dateRangeForFilter,
-  filterCashbookEntries,
-  runningBalancesForLedger,
   todayIso,
-  withRunningBalances,
 } from "./cashbookModel.js";
 import { SECTIONS, emptyManualForm, emptyExpenseForm, emptyTransferForm, emptyClosingForm } from "./cashbookConfig.js";
 import { CashbookLedgerSection } from "./sections/CashbookLedgerSection.jsx";
@@ -65,8 +63,11 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
   const [transferForm, setTransferForm] = useState(emptyTransferForm);
   const [closingForm, setClosingForm] = useState(emptyClosingForm);
   const [bankForm, setBankForm] = useState({ name: "", bankAccountLast4: "" });
+  const [ready, setReady] = useState(false);
+  const loadSeq = useRef(0);
 
   const refresh = useCallback(async () => {
+    const seq = ++loadSeq.current;
     setLoading(true);
     setError("");
     try {
@@ -75,15 +76,18 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
         loadCashbookEntries(token),
         loadDayClosings(token),
       ]);
+      if (seq !== loadSeq.current) return;
       setLedgers(ledgerRows);
       setEntries(entryRows);
       setClosings(closingRows);
+      setReady(true);
       const initialized = entryRows.some(entry => entry.sourceType === "opening_balance");
       if (!initialized) setShowSetup(true);
     } catch (err) {
+      if (seq !== loadSeq.current) return;
       setError(err.message || "Could not load accounts.");
     } finally {
-      setLoading(false);
+      if (seq === loadSeq.current) setLoading(false);
     }
   }, [token]);
 
@@ -103,18 +107,15 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
     () => Object.fromEntries(loans.map(loan => [loan.id, loan])),
     [loans],
   );
-  const cashbookRows = useMemo(() => {
-    const filtered = filterCashbookEntries(rangedEntries, {
-      search,
-      accountId: accountFilter,
-      direction: directionFilter,
-      category: "all",
-      source: sourceFilter,
-      loanById,
-    });
-    if (accountFilter === "all") return withRunningBalances(filtered);
-    return runningBalancesForLedger(filtered, accountFilter);
-  }, [rangedEntries, search, accountFilter, directionFilter, sourceFilter, loanById]);
+  const periodView = useMemo(() => cashbookPeriodRows(entries, range, {
+    search,
+    accountId: accountFilter,
+    direction: directionFilter,
+    category: "all",
+    source: sourceFilter,
+    loanById,
+  }), [entries, range, search, accountFilter, directionFilter, sourceFilter, loanById]);
+  const cashbookRows = periodView.rows;
 
   const expenseRows = useMemo(
     () => rangedEntries.filter(entry => entry.sourceType === "expense" || entry.category === "Expense" || EXPENSE_CATEGORIES.includes(entry.category)),
@@ -280,7 +281,7 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
     <TabScroller><nav className="accounts-section-nav spacer" aria-label="Cashbook sections">
       {SECTIONS.map(item => <button key={item.id} type="button" className={`accounts-section-tab ${section === item.id ? "active" : ""}`} onClick={() => setSection(item.id)}>{item.label}</button>)}
     </nav></TabScroller>
-    {loading ? <Spinner label="Loading cashbook" /> : <>
+    {!ready && loading ? <Spinner label="Loading cashbook" /> : !ready ? <div className="notice">{error || "Cashbook could not be loaded."}</div> : <>
       {section === "cashbook" && <CashbookLedgerSection
         allTimeOverview={allTimeOverview}
         periodOverview={periodOverview}
@@ -298,6 +299,10 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
         openManual={openManual}
         exportCsv={exportCsv}
         cashbookRows={cashbookRows}
+        broughtForward={periodView.broughtForward}
+        priorCount={periodView.priorCount}
+        periodStart={range.from}
+        onShowEarlier={() => setPeriod("all")}
         token={token}
         refresh={refresh}
         loanById={loanById}

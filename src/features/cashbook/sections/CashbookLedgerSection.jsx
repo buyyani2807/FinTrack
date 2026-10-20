@@ -31,6 +31,10 @@ export function CashbookLedgerSection({
   openManual,
   exportCsv,
   cashbookRows,
+  broughtForward = 0,
+  priorCount = 0,
+  periodStart = "",
+  onShowEarlier,
   token,
   refresh,
   loanById,
@@ -69,6 +73,18 @@ export function CashbookLedgerSection({
         <button type="button" className="btn" onClick={() => backfillCashbook(token).then(refresh)}>Sync from FinTrack</button>
       </div>
       <div className="accounts-entry-list">
+        {priorCount > 0 && <article className="card accounts-entry-row">
+          <div className="accounts-entry-main">
+            <div className="accounts-entry-copy">
+              <strong>Brought forward</strong>
+              <p className="small">Balance before {periodStart}. Cash, bank, and UPI above include these earlier entries.</p>
+            </div>
+            <div className="accounts-entry-amounts">
+              <span className="small accounts-entry-balance">Bal {money(broughtForward)}</span>
+            </div>
+          </div>
+          {period !== "all" && onShowEarlier && <button type="button" className="btn" onClick={onShowEarlier}>Show earlier transactions</button>}
+        </article>}
         {cashbookRows.map(entry => <article key={entry.id} className="card accounts-entry-row">
           <div className="accounts-entry-main">
             <div className="accounts-entry-copy">
@@ -89,7 +105,7 @@ export function CashbookLedgerSection({
           {sourceOriginLabel(entry, loanById) && <p className="small accounts-origin-note">Synced from {sourceOriginLabel(entry, loanById)} — edit the original record to change the amount.</p>}
           {entry.isEditable && <button type="button" className="btn danger accounts-entry-delete" onClick={() => removeManual(entry)}>Delete</button>}
         </article>)}
-        {!cashbookRows.length && <EmptyState>No cashbook entries match these filters.</EmptyState>}
+        {!cashbookRows.length && <EmptyState>{priorCount ? `No transactions from ${periodStart} to the end of this filter.` : "No cashbook entries match these filters."}</EmptyState>}
       </div>
     </div>
   );

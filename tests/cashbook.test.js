@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   aggregateOverview,
+  cashbookPeriodRows,
   cashbookSourceKind,
   dateRangeForFilter,
   filterCashbookEntries,
@@ -119,6 +120,18 @@ test("filterCashbookEntries combines money in/out with daily, monthly, and chit 
   assert.deepEqual(chitAll.map(row => row.id), ["c-in", "c-out"]);
   assert.equal(sourceOriginLabel(mixed[0], loanById), "Daily Finance collection");
   assert.equal(sourceOriginLabel(mixed[3], loanById), "Monthly Finance disbursement");
+});
+
+test("a period with no rows still carries the earlier balance", () => {
+  const view = cashbookPeriodRows(entries, { from: "2026-08-29", to: "2026-08-29" }, { accountId: "all" });
+  assert.equal(view.rows.length, 0);
+  assert.equal(view.priorCount, entries.length);
+  assert.equal(view.broughtForward, 95000);
+  const today = cashbookPeriodRows([
+    ...entries,
+    { id: "later", ledgerAccountId: "cash", entryDate: "2026-08-29", entryTime: "09:00", moneyIn: 100, moneyOut: 0 },
+  ], { from: "2026-08-29", to: "2026-08-29" }, { accountId: "all" });
+  assert.equal(today.rows[0].balance, 95100);
 });
 
 test("dateRangeForFilter returns today range", () => {

@@ -131,9 +131,9 @@ export function gstSplit({ taxable, rate, intra }) {
   if (!intra) {
     return { taxable: value, cgst: 0, sgst: 0, igst: tax, total: roundMoney(value + tax), supplyType: "inter" };
   }
-  const cgst = roundMoney(tax / 2);
-  const sgst = roundMoney(tax - cgst);
-  return { taxable: value, cgst, sgst, igst: 0, total: roundMoney(value + cgst + sgst), supplyType: "intra" };
+  // An odd paisa cannot be shared. Both halves take the lower paisa so CGST and SGST stay equal.
+  const half = Math.floor(Math.round(tax * 100) / 2) / 100;
+  return { taxable: value, cgst: half, sgst: half, igst: 0, total: roundMoney(value + half + half), supplyType: "intra" };
 }
 
 export function taxableFromInclusive(inclusive, rate) {

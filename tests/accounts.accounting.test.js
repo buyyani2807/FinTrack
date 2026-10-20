@@ -666,6 +666,7 @@ test("GST split covers 0, 5, 12, 18, 28 and 40 for intra and inter supply", () =
     }
     assert.equal(intra.supplyType, "intra");
     assert.equal(inter.supplyType, "inter");
+    assert.equal(intra.cgst, intra.sgst);
     assert.equal(roundMoney(intra.cgst + intra.sgst), tax);
     assert.equal(intra.igst, 0);
     assert.equal(inter.igst, tax);
@@ -673,6 +674,13 @@ test("GST split covers 0, 5, 12, 18, 28 and 40 for intra and inter supply", () =
     assert.equal(intra.total, roundMoney(10000 + tax));
     assert.equal(inter.total, roundMoney(10000 + tax));
   }
+});
+
+test("intra GST drops an odd paisa so CGST and SGST stay equal", () => {
+  const split = gstSplit({ taxable: 10.1, rate: 5, intra: true });
+  assert.equal(split.cgst, 0.25);
+  assert.equal(split.sgst, 0.25);
+  assert.equal(split.total, roundMoney(10.1 + 0.5));
 });
 
 test("tax-inclusive GST backs out taxable value", () => {

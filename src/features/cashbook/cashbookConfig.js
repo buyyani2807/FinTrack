@@ -14,12 +14,14 @@ export const PERIOD_OPTIONS = [
   { id: "today", label: "Today" },
   { id: "week", label: "This week" },
   { id: "month", label: "This month" },
+  { id: "all", label: "All" },
   { id: "custom", label: "Custom" },
 ];
 export const PERIOD_IN_OUT_LABEL = {
   today: "Today",
   week: "This week",
   month: "This month",
+  all: "All dates",
   custom: "Selected dates",
 };
 export const emptyManualForm = () => ({
