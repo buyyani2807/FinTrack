@@ -144,8 +144,8 @@ test("the payroll register export lists who is in this month's pay", () => {
   assert.equal(rows[0][0], "Employee");
   assert.equal(rows[1][6], "Yes");
   assert.equal(rows[1][4], 21200);
-  assert.equal(rows[2][6], "Next month");
-  assert.equal(rows[2][4], "");
+  assert.equal(rows[2][6], "Not posted");
+  assert.equal(rows[2][4], 0);
 });
 
 test("a posted month shows the stored lines", () => {
@@ -190,6 +190,24 @@ test("a posted month still lists employees added after it was posted", () => {
   assert.equal(summary.monthNet, 100);
   assert.equal(summary.later, 1);
   assert.equal(payState({ posted: false, inRun: true, monthly: 0, error: "" }), "unset");
+});
+
+test("a late salary saved without its voucher can still be posted", () => {
+  const rows = payrollRows({
+    employees: [{ id: "new", name: "New Hire" }],
+    month,
+    profiles: [],
+    days: [],
+    leaves: [],
+    run: {
+      status: "posted",
+      lines: [{ partyId: "new", name: "New Hire", earned: 15000, net: 15000, deductions: {}, deductionTotal: 0, sourceId: "abc", voucherId: null }],
+    },
+  });
+  assert.equal(rows[0].inRun, false);
+  assert.equal(rows[0].sourceId, "abc");
+  assert.equal(rows[0].net, 15000);
+  assert.equal(payState({ posted: true, inRun: rows[0].inRun, monthly: rows[0].monthly, error: rows[0].error }), "later");
 });
 
 test("a posted month keeps a person who is no longer an active employee", () => {

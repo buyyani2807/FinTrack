@@ -11,7 +11,7 @@ test.describe("Theme", () => {
   });
 
   test("sign-in has no theme toggle", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/login");
     await expect(page.getByRole("button", { name: "Financier sign in" })).toBeVisible();
     await expect(page.getByRole("switch")).toHaveCount(0);
   });

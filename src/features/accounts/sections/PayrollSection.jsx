@@ -77,7 +77,7 @@ function AmountFields({ values, onChange, fields }) {
 const PAY_STATE = {
   posted: { label: "Posted", tone: "inv-paid" },
   ready: { label: "Ready", tone: "active" },
-  later: { label: "Next month", tone: "inactive" },
+  later: { label: "Not posted", tone: "inactive" },
   unset: { label: "Salary not set", tone: "inv-due" },
   check: { label: "Check pay", tone: "inv-overdue" },
 };
@@ -121,6 +121,7 @@ export function PayrollSection({
   const [deductionForm, setDeductionForm] = useState(null);
   const [slip, setSlip] = useState(null);
   const [confirmPost, setConfirmPost] = useState(false);
+  const [confirmLate, setConfirmLate] = useState(null);
   const [query, setQuery] = useState("");
   const [pickedEmployee, setPickedEmployee] = useState("");
   const [markEdit, setMarkEdit] = useState(null);
@@ -302,6 +303,65 @@ export function PayrollSection({
     }
   };
 
+  const postLate = async () => {
+    const row = confirmLate;
+    if (!row || row.earned <= 0) return;
+    setBusy(true);
+    setActionError("");
+    try {
+      const start = monthStart(monthIso);
+      let books = accounts;
+      if (row.deductionTotal > 0 && !findAccount(books, { code: SYSTEM_CODES.salaryDeductions })) {
+        const id = await createChartAccount(token, {
+          code: SYSTEM_CODES.salaryDeductions,
+          name: "Salary deductions payable",
+          groupType: "liability",
+          accountType: "other",
+          openingSide: "credit",
+        });
+        books = [...books, { id, code: SYSTEM_CODES.salaryDeductions, name: "Salary deductions payable", groupType: "liability", accountType: "other", isActive: true }];
+      }
+      const profile = (bundle?.profiles || []).find(item => item.partyId === row.partyId);
+      const sourceId = row.sourceId || newClientRequestId();
+      const description = `Salary for ${monthLabel(start)} · ${row.name}`;
+      const kept = (bundle?.run?.lines || []).filter(item => item.partyId !== row.partyId);
+      let line = { ...snapshotLine(row, profile), sourceId, voucherId: null };
+      await savePayrollRun(token, runPayload("posted", [...kept, line]));
+      const existing = (vouchers || []).find(voucher => voucher.sourceType === "salary"
+        && voucher.sourceTransactionId === sourceId
+        && voucher.status === "posted");
+      const voucherId = existing?.id || await postVoucher(token, {
+        voucherType: "payment",
+        date: payDate,
+        narration: description,
+        partyId: line.partyId,
+        sourceModule: "payroll",
+        sourceType: "salary",
+        sourceTransactionId: sourceId,
+        clientRequestId: sourceId,
+        lines: payrollVoucherLines({
+          accounts: books,
+          payAccountId,
+          earned: line.earned,
+          deductionTotal: line.deductionTotal,
+          partyId: line.partyId,
+          description,
+        }),
+      });
+      line = { ...line, voucherId };
+      await savePayrollRun(token, runPayload("posted", [...kept, line]));
+      await onRefresh?.();
+      await reload();
+    } catch (err) {
+      setActionError(err.message || "Could not post salary.");
+      await onRefresh?.();
+      await reload();
+    } finally {
+      setBusy(false);
+      setConfirmLate(null);
+    }
+  };
+
   const saveProfile = async () => {
     setBusy(true);
     setActionError("");
@@ -425,7 +485,9 @@ export function PayrollSection({
             <span className={`acc-status-pill ${runTone}`}>{runLabel}</span>
           </div>
           <p className="pay-hero-copy">{posted
-            ? "This month is posted. Everyone in that pay stays as they were paid."
+            ? (summary.later
+              ? "This month is posted. Pay already recorded stays as it is. Anyone added after that can be posted on their own."
+              : "This month is posted. Everyone in that pay stays as they were paid.")
             : "Record each salary, then post this month once. That pays every employee together."}</p>
           <div className="pay-hero-tools">
             {monthMenu}
@@ -438,7 +500,7 @@ export function PayrollSection({
           </div>
         </header>
         <div className="acc-metric-grid pay-metrics">
-          <AccMetric label="Employees" value={String(summary.employees)} hint={summary.unset ? `${summary.unset} still need a salary` : summary.later ? `${summary.later} start next month` : "Salary recorded for each"} />
+          <AccMetric label="Employees" value={String(summary.employees)} hint={summary.unset ? `${summary.unset} still need a salary` : summary.later ? `${summary.later} not posted yet` : "Salary recorded for each"} />
           <AccMetric label="Gross payroll" value={money(summary.monthly)} hint="Recorded pay, before this month’s attendance" />
           <AccMetric label={posted ? "Net paid" : "Net payable"} value={money(summary.monthNet)} tone="green" hint={posted ? "Already posted" : "Posted together"} />
           <AccMetric label="Deductions" value={money(summary.monthDeductions)} hint={`${amount(lopDays)} loss-of-pay days · ${leaveRows.length} leave`} />
@@ -470,11 +532,12 @@ export function PayrollSection({
               return <tr key={row.partyId}>
                 <td><strong>{row.name}</strong> <span className={`acc-status-pill ${state.tone}`}>{state.label}</span>{row.error ? <div className="small">{row.error}</div> : null}</td>
                 <td className="acc-num">{Number(row.monthly) > 0 ? money(row.monthly) : "Not set"}</td>
-                <td className="acc-num">{row.inRun === false ? "Next month" : money(row.net)}</td>
-                <td className="acc-num">{row.inRun === false ? "—" : `${amount(row.paidDays)} paid · ${amount(row.lopDays)} loss`}</td>
-                <td className="acc-num">{row.inRun === false ? "—" : money(row.deductionTotal)}</td>
+                <td className="acc-num">{money(row.net)}</td>
+                <td className="acc-num">{`${amount(row.paidDays)} paid · ${amount(row.lopDays)} loss`}</td>
+                <td className="acc-num">{money(row.deductionTotal)}</td>
                 <td><div className="acc-btn-group">
                   {canWrite && <button type="button" className={`btn${Number(row.monthly) > 0 ? "" : " primary"}`} onClick={() => openProfile(person)}>Set salary</button>}
+                  {canWrite && posted && row.inRun === false && row.earned > 0 && !row.error && <button type="button" className="btn primary" disabled={busy} onClick={() => setConfirmLate(row)}>Post salary</button>}
                   {canWrite && !posted && row.inRun !== false && <button type="button" className="btn" onClick={() => openDeductions(row)}>This month</button>}
                   {row.inRun !== false && <button type="button" className="btn" onClick={() => {
                     const profile = (bundle.profiles || []).find(item => item.partyId === row.partyId);
@@ -497,12 +560,13 @@ export function PayrollSection({
               </div>
               <dl className="pay-facts">
                 <div><dt>Monthly salary</dt><dd>{Number(row.monthly) > 0 ? money(row.monthly) : "Not set"}</dd></div>
-                <div><dt>This month</dt><dd>{row.inRun === false ? "Next month" : money(row.net)}</dd></div>
-                <div><dt>Days</dt><dd>{row.inRun === false ? "—" : `${amount(row.paidDays)} paid · ${amount(row.lopDays)} loss`}</dd></div>
-                <div><dt>Deductions</dt><dd>{row.inRun === false ? "—" : money(row.deductionTotal)}</dd></div>
+                <div><dt>This month</dt><dd>{money(row.net)}</dd></div>
+                <div><dt>Days</dt><dd>{`${amount(row.paidDays)} paid · ${amount(row.lopDays)} loss`}</dd></div>
+                <div><dt>Deductions</dt><dd>{money(row.deductionTotal)}</dd></div>
               </dl>
               <div className="acc-btn-group pay-person-actions">
                 {canWrite && <button type="button" className={`btn${Number(row.monthly) > 0 ? "" : " primary"}`} onClick={() => openProfile(person)}>Set salary</button>}
+                {canWrite && posted && row.inRun === false && row.earned > 0 && !row.error && <button type="button" className="btn primary" disabled={busy} onClick={() => setConfirmLate(row)}>Post salary</button>}
                 {canWrite && !posted && row.inRun !== false && <button type="button" className="btn" onClick={() => openDeductions(row)}>This month</button>}
                 {row.inRun !== false && <button type="button" className="btn" onClick={() => {
                   const profile = (bundle.profiles || []).find(item => item.partyId === row.partyId);
@@ -655,6 +719,9 @@ export function PayrollSection({
 
     {confirmPost && <Modal title={`Post salary for ${monthLabel(monthIso)}`} close={() => !busy && setConfirmPost(false)} actions={<button type="button" className="btn primary" disabled={busy} onClick={postPay}>{busy ? "Posting…" : "Post salary"}</button>}>
       <p className="copy">This pays {summary.inMonth} {summary.inMonth === 1 ? "employee" : "employees"}, {money(summary.monthNet)}, from {payAccountName}. A posted month stays as it was paid.</p>
+    </Modal>}
+    {confirmLate && <Modal title={`Post salary for ${confirmLate.name}`} close={() => !busy && setConfirmLate(null)} actions={<button type="button" className="btn primary" disabled={busy} onClick={postLate}>{busy ? "Posting…" : "Post salary"}</button>}>
+      <p className="copy">This adds {money(confirmLate.net)} for {confirmLate.name} to {monthLabel(monthIso)}, from {payAccountName}. Salaries already posted this month stay as they are.</p>
     </Modal>}
   </div>;
 }

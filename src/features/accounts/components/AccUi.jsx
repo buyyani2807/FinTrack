@@ -54,30 +54,43 @@ export function AccMoreMenu({
       : { top: "auto", bottom: window.innerHeight - rect.top + 6 };
     if (align === "start") Object.assign(style, { left: Math.max(8, rect.left), right: "auto" });
     else Object.assign(style, { left: "auto", right: Math.max(8, window.innerWidth - rect.right) });
-    setMenuStyle({ position: "fixed", ...style });
+    setMenuStyle({ position: "fixed", zIndex: 80, ...style });
     setOpen(true);
   };
 
   useEffect(() => {
     if (!open) return undefined;
+    const trigger = root.current?.querySelector("button");
+    const origin = trigger?.getBoundingClientRect();
+    let armScroll = false;
     const onDoc = event => {
       if (!root.current?.contains(event.target)) setOpen(false);
     };
     const onKey = event => {
       if (event.key === "Escape") setOpen(false);
     };
-    const onMove = event => {
-      if (!root.current?.contains(event.target)) setOpen(false);
+    // Tab rows scroll themselves into place after the page opens. That scroll used to
+    // dismiss this menu before a choice could be made. Close only once the trigger
+    // itself has moved, and not while a tab row is the thing scrolling.
+    const onScroll = event => {
+      if (!armScroll) return;
+      const target = event.target;
+      if (target instanceof Element && (root.current?.contains(target) || target.closest(".tab-scroller"))) return;
+      const next = trigger?.getBoundingClientRect();
+      if (!origin || !next) return;
+      if (Math.abs(next.top - origin.top) > 2 || Math.abs(next.left - origin.left) > 2) setOpen(false);
     };
     const onResize = () => setOpen(false);
+    const arm = window.setTimeout(() => { armScroll = true; }, 350);
     document.addEventListener("mousedown", onDoc);
     document.addEventListener("keydown", onKey);
-    document.addEventListener("scroll", onMove, true);
+    document.addEventListener("scroll", onScroll, true);
     window.addEventListener("resize", onResize);
     return () => {
+      window.clearTimeout(arm);
       document.removeEventListener("mousedown", onDoc);
       document.removeEventListener("keydown", onKey);
-      document.removeEventListener("scroll", onMove, true);
+      document.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", onResize);
     };
   }, [open]);

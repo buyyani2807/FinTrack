@@ -235,13 +235,26 @@ export function payrollRows({ employees, month, profiles, days, leaves, override
     const saved = stored.find(line => line.partyId === person.id) || null;
     const monthly = recordedMonthly(profile, saved);
     if (posted && saved) {
+      const unfinished = Number(saved.earned) > 0 && saved.sourceId && !saved.voucherId;
+      if (!unfinished) {
+        return {
+          ...saved,
+          deductions: deductionParts(saved.deductions),
+          name: person.name || saved.name || "Employee",
+          error: "",
+          monthly,
+          inRun: true,
+        };
+      }
       return {
         ...saved,
         deductions: deductionParts(saved.deductions),
         name: person.name || saved.name || "Employee",
         error: "",
         monthly,
-        inRun: true,
+        inRun: false,
+        voucherId: null,
+        sourceId: saved.sourceId || null,
       };
     }
     const source = profile || emptyProfile(person.id);
@@ -299,11 +312,11 @@ export function payrollRegisterExport(rows) {
     ...(rows || []).map(row => [
       row.name || "Employee",
       Number(row.monthly || 0),
-      row.inRun === false ? "" : Number(row.paidDays || 0),
-      row.inRun === false ? "" : Number(row.lopDays || 0),
-      row.inRun === false ? "" : Number(row.net || 0),
-      row.inRun === false ? "" : Number(row.deductionTotal || 0),
-      row.inRun === false ? "Next month" : "Yes",
+      Number(row.paidDays || 0),
+      Number(row.lopDays || 0),
+      Number(row.net || 0),
+      Number(row.deductionTotal || 0),
+      row.inRun === false ? "Not posted" : "Yes",
     ]),
   ];
 }

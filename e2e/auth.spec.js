@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Login hub tabs", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/login");
   });
 
   test("financier sign in shows business email and password", async ({ page }) => {
@@ -15,7 +15,7 @@ test.describe("Login hub tabs", () => {
 
   test("agent login shows agent ID and PIN", async ({ page }) => {
     await page.getByRole("button", { name: "Agent login" }).click();
-    await expect(page.getByText("Agent ID")).toBeVisible();
+    await expect(page.getByLabel("Agent ID")).toBeVisible();
     await expect(page.getByLabel("6-digit PIN")).toBeVisible();
     await expect(page.getByText("Collection Agent workspace")).toBeVisible();
     await expect(page.getByText(/starts with AG-/)).toBeVisible();
@@ -48,20 +48,20 @@ test.describe("Login hub tabs", () => {
 
 test.describe("Login validation (client-side)", () => {
   test("empty financier sign in shows an error", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/login");
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(page.getByText(/enter|required|unable/i)).toBeVisible();
   });
 
   test("empty customer login shows portal ID error", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/login");
     await page.getByRole("button", { name: "Customer login" }).click();
     await page.getByRole("button", { name: "Open my dashboard" }).click();
     await expect(page.getByText(/portal ID and PIN/i)).toBeVisible();
   });
 
   test("forgot password without email prompts for email first", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/login");
     await page.getByRole("button", { name: "Forgot password?" }).click();
     await expect(page.getByText(/enter your business email first/i)).toBeVisible();
   });
@@ -79,7 +79,7 @@ test.describe("Password recovery view", () => {
 test.describe("Login messages", () => {
   test("empty fields are outlined and wrong credentials get a plain explanation", async ({ page }) => {
     await page.route("**/api/auth/**", route => route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ error: "Invalid login credentials" }) }));
-    await page.goto("/");
+    await page.goto("/login");
     await page.getByRole("button", { name: /^Sign in/ }).click();
     const alert = page.getByRole("alert");
     await expect(alert).toContainText("A few details are missing");

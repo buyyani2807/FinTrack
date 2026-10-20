@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test.describe("FinTrack login hub", () => {
   test("renders financier and customer login tabs", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/login");
     await expect(page.getByText("FinTrack").first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Financier sign in" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Agent login" })).toBeVisible();
@@ -12,13 +12,13 @@ test.describe("FinTrack login hub", () => {
   });
 
   test("shows privacy and terms links", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/login");
     await expect(page.getByRole("button", { name: "Privacy" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Terms" })).toBeVisible();
   });
 
   test("opens customer login fields", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/login");
     await page.getByRole("button", { name: "Customer login" }).click();
     await expect(page.getByText("Customer portal ID")).toBeVisible();
     await expect(page.getByLabel("6-digit PIN")).toBeVisible();
@@ -41,7 +41,7 @@ test.describe("Legal pages", () => {
 
 test.describe("Accessibility", () => {
   test("sign-in fields are labelled for screen readers", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/login");
     await expect(page.getByLabel("Business email")).toBeVisible();
     await expect(page.getByLabel("Password")).toBeVisible();
     await page.getByRole("button", { name: "Customer login" }).click();
@@ -52,7 +52,7 @@ test.describe("Accessibility", () => {
 
 test.describe("Sign-in form", () => {
   test("password can be shown and hidden", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/login");
     const password = page.getByLabel("Password", { exact: true });
     await password.fill("secret-pass");
     await expect(password).toHaveAttribute("type", "password");
