@@ -1467,9 +1467,10 @@ button.upcoming-payments-toggle:focus-visible { outline: 2px solid var(--ft-prim
 .accounts-dashboard .acc-side-card { display: flex !important; flex-direction: column; gap: 16px; margin: 0 !important; padding: 20px !important; }
 .accounts-dashboard .acc-side-card > * { margin: 0 !important; }
 .accounts-dashboard .acc-side-card-count { flex: none; display: grid; place-items: center; min-width: 28px; height: 24px; padding: 0 8px; border-radius: 999px; background: var(--ft-surface-muted); color: var(--ft-text-2); font: 700 12px/1 var(--ft-font); }
-.accounts-dashboard .acc-category-create { display: flex !important; gap: 8px; }
-.accounts-dashboard .acc-category-create > input { flex: 1; min-width: 0; height: 40px; min-height: 40px; }
-.accounts-dashboard .acc-category-create > .btn { flex: none; min-height: 40px; gap: 6px; }
+.accounts-dashboard .acc-category-create { display: grid !important; gap: 8px; }
+.accounts-dashboard .acc-category-create-row { display: flex; gap: 8px; align-items: center; }
+.accounts-dashboard .acc-category-create-row > input { flex: 1; min-width: 0; height: 40px; min-height: 40px; }
+.accounts-dashboard .acc-category-create-row > .btn { flex: none; min-height: 40px; gap: 6px; }
 .accounts-dashboard .acc-item-cat-list { display: flex !important; flex-wrap: wrap; gap: 8px; padding: 0 !important; list-style: none; }
 .accounts-dashboard .acc-item-cat-list > li { display: inline-flex !important; align-items: center; gap: 8px; margin: 0 !important; padding: 3px 3px 3px 12px !important; border: 1px solid var(--ft-border) !important; border-radius: 999px; background: var(--ft-surface-subtle); }
 .accounts-dashboard .acc-item-cat-name { color: var(--ft-text); font: 600 13px/1.2 var(--ft-font); }

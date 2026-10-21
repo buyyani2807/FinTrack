@@ -8,7 +8,7 @@ import {
   buildSalesInvoiceMessage,
   salesSettlementLabel,
 } from "../src/features/accounts/model/salesInvoiceModel.js";
-import { renderSalesInvoicePdf } from "../src/features/accounts/io/salesInvoicePdf.js";
+import { renderSalesInvoicePdf, salesInvoiceDocumentText } from "../src/features/accounts/io/salesInvoicePdf.js";
 
 const accounts = [
   { id: "ar", code: "1100", name: "Accounts Receivable", accountType: "receivable", groupType: "asset" },
@@ -149,4 +149,36 @@ test("sales invoice PDF renders and defaults templates resolve", () => {
     company_name: "Co",
     company_phone: "",
   }), /Invoice No: 1/);
+});
+
+test("WhatsApp sale share uses the invoice content, not the greeting template", () => {
+  const invoice = buildSalesInvoice({
+    voucher: {
+      id: "v4",
+      voucherNumber: "SALE-000017",
+      date: "2026-10-21",
+      dueDate: "2026-10-28",
+      narration: "",
+      voucherType: "sales",
+      status: "posted",
+      partyId: "p4",
+      lines: [
+        { coaId: "ar", debit: 1168, credit: 0, code: "1100", name: "Accounts Receivable" },
+        { coaId: "sales", debit: 0, credit: 1168, code: "4100", name: "Sales" },
+      ],
+      gstLines: [],
+    },
+    party: { id: "p4", name: "Mahaveer Traders", phone: "9000000001" },
+    accounts,
+    company: { name: "Buyyani's Enterprises" },
+    itemLines: [{ itemName: "Cement", quantity: 2, unit: "Bag", rate: 584, amount: 1168 }],
+  });
+  const text = salesInvoiceDocumentText(invoice);
+  assert.match(text, /SALES INVOICE/);
+  assert.match(text, /Invoice No: SALE-000017/);
+  assert.match(text, /Mahaveer Traders/);
+  assert.match(text, /Cement/);
+  assert.match(text, /Invoice total/);
+  assert.doesNotMatch(text, /^Hi /);
+  assert.doesNotMatch(text, /Thank you for your purchase/);
 });

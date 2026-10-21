@@ -16,9 +16,34 @@ export function usesItemLines(kind, form = {}) {
   return config.returnKind ? form.noteEntryMode === "items" : form.entryMode !== "amount";
 }
 
-export const ITEM_UNITS = [
-  "Nos", "Kg", "Gram", "Litre", "Meter", "Box", "Pack", "Bag", "Piece", "Set", "Hour", "Day",
+export const PRODUCT_UNITS = [
+  "Nos", "Kg", "Gram", "Litre", "Meter", "Box", "Pack", "Bag", "Piece", "Set", "Carton", "Quintal", "Hour", "Day",
 ];
+
+export const SERVICE_UNITS = ["Nos", "Hour", "Day"];
+
+export const ITEM_UNITS = [...PRODUCT_UNITS, ...SERVICE_UNITS.filter(unit => !PRODUCT_UNITS.includes(unit))];
+
+export function unitsForItemType(itemType) {
+  return itemType === "service" ? SERVICE_UNITS : PRODUCT_UNITS;
+}
+
+/** Top-level categories, then each subcategory labelled "Parent / Child". */
+export function itemCategoryChoices(categories = []) {
+  const parents = categories.filter(category => !category.parentId);
+  const rows = [];
+  for (const parent of parents) {
+    rows.push({ ...parent, label: parent.name, depth: 0 });
+    for (const child of categories.filter(category => category.parentId === parent.id)) {
+      rows.push({ ...child, label: `${parent.name} / ${child.name}`, depth: 1 });
+    }
+  }
+  const seen = new Set(rows.map(row => row.id));
+  for (const category of categories) {
+    if (!seen.has(category.id)) rows.push({ ...category, label: category.name, depth: category.parentId ? 1 : 0 });
+  }
+  return rows;
+}
 
 export const ITEM_TYPES = [
   { id: "product", label: "Product" },

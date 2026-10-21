@@ -495,6 +495,7 @@ export const matchBankLine = (token, lineId, voucherLineId, note) =>
 const mapItemCategory = row => ({
   id: row.id,
   name: row.name,
+  parentId: row.parent_id || null,
   isActive: row.is_active !== false,
 });
 
@@ -554,8 +555,14 @@ const mapStockMovement = row => ({
   createdAt: row.created_at,
 });
 
+const itemCategoriesPath = columns => `/rest/v1/acc_item_categories?select=${columns}&order=name.asc${companyEq()}`;
+
 export const loadItemCategories = token => wrap(
-  accQuery(`/rest/v1/acc_item_categories?select=id,name,is_active&order=name.asc${companyEq()}`, token)
+  accQuery(itemCategoriesPath("id,name,parent_id,is_active"), token)
+    .catch(err => {
+      if (!/parent_id/i.test(String(err?.message || ""))) throw err;
+      return accQuery(itemCategoriesPath("id,name,is_active"), token);
+    })
     .then(rows => (rows || []).map(mapItemCategory)),
 );
 
@@ -754,8 +761,11 @@ export const saveDocumentSettings = (token, settings) => {
     .catch(err => { throw migration081Error(err); });
 };
 
-export const upsertItemCategory = (token, { id = null, name }) =>
-  wrap(accRpc("acc_upsert_item_category", { input_id: id, input_name: name }, token));
+export const upsertItemCategory = (token, { id = null, name, parentId = null }) => {
+  const args = { input_id: id, input_name: name };
+  if (parentId) args.input_parent_id = parentId;
+  return wrap(accRpc("acc_upsert_item_category", args, token));
+};
 
 export const deleteItemCategory = (token, id) =>
   wrap(accRpc("acc_delete_item_category", { input_id: id }, token));

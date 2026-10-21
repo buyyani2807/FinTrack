@@ -12,6 +12,8 @@ import {
   parseLineDiscount,
   stockStatus,
   supportsItemLines,
+  itemCategoryChoices,
+  unitsForItemType,
   validateItemForm,
   validateItemLines,
 } from "../src/features/accounts/model/inventoryModel.js";
@@ -44,6 +46,34 @@ test("item form validation requires name and sku", () => {
     gstRate: 28,
     openingStock: 100,
   }), "");
+});
+
+test("product units include carton and quintal, and a service keeps only service units", () => {
+  const productUnits = unitsForItemType("product");
+  const serviceUnits = unitsForItemType("service");
+  assert.ok(productUnits.includes("Carton"));
+  assert.ok(productUnits.includes("Quintal"));
+  assert.deepEqual(serviceUnits, ["Nos", "Hour", "Day"]);
+  assert.equal(serviceUnits.includes("Carton"), false);
+  assert.equal(serviceUnits.includes("Kg"), false);
+  assert.equal(validateItemForm({
+    name: "Cement",
+    sku: "CEM",
+    itemType: "product",
+    unit: "Quintal",
+    sellingPrice: 1,
+    purchasePrice: 1,
+    gstRate: 5,
+    openingStock: 0,
+  }), "");
+});
+
+test("subcategories are listed under their category", () => {
+  const choices = itemCategoryChoices([
+    { id: "c", name: "OPC", parentId: "p" },
+    { id: "p", name: "Cement", parentId: null },
+  ]);
+  assert.deepEqual(choices.map(row => row.label), ["Cement", "Cement / OPC"]);
 });
 
 test("stock is opening plus movements and flags low stock", () => {

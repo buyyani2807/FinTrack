@@ -4,6 +4,7 @@ import { PackageMinus, PackagePlus, Plus, Tags, X } from "lucide-react";
 import { todayIso } from "../../../../lib/dates.js";
 import { SegmentedControl } from "../../../../components/ui.jsx";
 import { FilterField as Field } from "../AccUi.jsx";
+import { itemCategoryChoices } from "../../model/inventoryModel.js";
 
 const REASONS = ["Damaged stock", "Expired", "Found in physical count", "Free sample", "Opening correction"];
 const CATEGORY_ERROR = "Could not create category. Apply migration 067 if Items RPCs are missing.";
@@ -26,16 +27,31 @@ export function ItemsSidePanels({
   onAdjustStock,
 }) {
   const [direction, setDirection] = useState(() => (Number(adjust.quantityDelta) < 0 ? "out" : "in"));
+  const [parentId, setParentId] = useState("");
+  const [addingCategory, setAddingCategory] = useState(false);
+  const categoryRows = itemCategoryChoices(categories);
+  const parentCategories = categoryRows.filter(category => !category.parentId);
   const createCategory = async event => {
     event.preventDefault();
     const name = categoryName.trim();
-    if (!name || saving) return;
+    if (!name) {
+      setCategoryError("Enter a category name.");
+      return;
+    }
+    if (addingCategory) return;
     setCategoryError("");
+    setAddingCategory(true);
     try {
-      await onSaveCategory({ name });
+      await onSaveCategory({ name, parentId: parentId || null });
       setCategoryName("");
+      setParentId("");
     } catch (err) {
-      setCategoryError(err?.message || CATEGORY_ERROR);
+      const message = err?.message || CATEGORY_ERROR;
+      setCategoryError(parentId && /067|parent_id|schema cache|acc_upsert_item_category/i.test(message)
+        ? "Could not create the subcategory. Run migration 105, then try again."
+        : message);
+    } finally {
+      setAddingCategory(false);
     }
   };
   const itemsInCategory = id => items.filter(item => item.categoryId === id).length;
@@ -64,20 +80,28 @@ export function ItemsSidePanels({
           <span className="acc-side-card-count" aria-label={`${categories.length} categories`}>{categories.length}</span>
         </header>
         <form className="acc-category-create" onSubmit={createCategory}>
-          <input
-            aria-label="New category name"
-            value={categoryName}
-            placeholder="New category, e.g. Construction materials"
-            onChange={event => { setCategoryName(event.target.value); setCategoryError(""); }}
-          />
-          <button type="submit" className="btn primary" disabled={saving || !categoryName.trim()}><Plus size={16} aria-hidden="true" />Add</button>
+          <Field label="Subcategory of">
+            <Select value={parentId} onChange={event => { setParentId(event.target.value); setCategoryError(""); }}>
+              <option value="">None</option>
+              {parentCategories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
+            </Select>
+          </Field>
+          <div className="acc-category-create-row">
+            <input
+              aria-label="New category name"
+              value={categoryName}
+              placeholder={parentId ? "New subcategory" : "New category, e.g. Construction materials"}
+              onChange={event => { setCategoryName(event.target.value); setCategoryError(""); }}
+            />
+            <button type="submit" className="btn primary"><Plus size={16} aria-hidden="true" />{parentId ? "Add subcategory" : "Add"}</button>
+          </div>
         </form>
         {categoryError && <p className="red small" role="alert">{categoryError}</p>}
-        {categories.length ? (
+        {categoryRows.length ? (
           <ul className="acc-item-cat-list">
-            {categories.map(category => (
-              <li key={category.id}>
-                <span className="acc-item-cat-name">{category.name}</span>
+            {categoryRows.map(category => (
+              <li key={category.id} className={category.depth ? "acc-item-cat-child" : undefined}>
+                <span className="acc-item-cat-name">{category.label}</span>
                 <span className="acc-item-cat-count">{itemsInCategory(category.id)} item{itemsInCategory(category.id) === 1 ? "" : "s"}</span>
                 <button type="button" className="acc-item-cat-delete" aria-label={`Delete category ${category.name}`} title="Delete" disabled={saving} onClick={() => onDeleteCategory(category.id)}><X size={15} aria-hidden="true" /></button>
               </li>

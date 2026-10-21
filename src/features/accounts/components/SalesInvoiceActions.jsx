@@ -1,10 +1,28 @@
 import { useState } from "react";
 import { formatReceiptDate } from "../../receipts/model/receiptModel.js";
 import { canWhatsAppShare, openManualWhatsAppShare } from "../../receipts/io/receiptWhatsApp.js";
-import { buildArReminderMessage, buildOutstandingSummaryMessage, buildPartyStatementMessage, buildPaymentAdviceMessage, buildPurchaseDocumentMessage, buildSalesInvoiceMessage } from "../model/salesInvoiceModel.js";
-import { downloadSalesInvoicePdf } from "../io/salesInvoicePdf.js";
+import { buildArReminderMessage, buildOutstandingSummaryMessage, buildPartyStatementMessage, buildPaymentAdviceMessage, buildPurchaseDocumentMessage } from "../model/salesInvoiceModel.js";
+import { downloadSalesInvoicePdf, salesInvoiceDocumentText, salesInvoicePdfFile } from "../io/salesInvoicePdf.js";
 import { downloadPartyStatementPdf } from "../io/partyStatementPdf.js";
 import { CloseButton } from "../../../components/ui.jsx";
+
+function sendSalesInvoiceOnWhatsApp(invoice) {
+  const file = salesInvoicePdfFile(invoice);
+  const canShareFile = Boolean(
+    file
+    && typeof navigator !== "undefined"
+    && typeof navigator.canShare === "function"
+    && navigator.canShare({ files: [file] }),
+  );
+  if (canShareFile) {
+    navigator.share({ files: [file], title: file.name }).catch(error => {
+      if (error?.name === "AbortError") return;
+      openManualWhatsAppShare({ phone: invoice.customerPhone, message: salesInvoiceDocumentText(invoice) });
+    });
+    return;
+  }
+  openManualWhatsAppShare({ phone: invoice.customerPhone, message: salesInvoiceDocumentText(invoice) });
+}
 
 export function SalesInvoiceViewerModal({ invoice, settings = {}, close }) {
   const whatsAppAvailable = canWhatsAppShare(invoice?.customerPhone);
@@ -73,10 +91,7 @@ export function SalesInvoiceViewerModal({ invoice, settings = {}, close }) {
             <button
               type="button"
               className="btn whatsapp"
-              onClick={() => openManualWhatsAppShare({
-                phone: invoice.customerPhone,
-                message: buildSalesInvoiceMessage(invoice, settings),
-              })}
+              onClick={() => sendSalesInvoiceOnWhatsApp(invoice)}
             >
               WhatsApp
             </button>
@@ -102,10 +117,7 @@ export function SalesInvoiceActions({ invoice, settings = {}, compact = false })
             <button
               type="button"
               className="btn whatsapp"
-              onClick={() => openManualWhatsAppShare({
-                phone: invoice.customerPhone,
-                message: buildSalesInvoiceMessage(invoice, settings),
-              })}
+              onClick={() => sendSalesInvoiceOnWhatsApp(invoice)}
             >
               WhatsApp
             </button>
@@ -139,10 +151,7 @@ export function SalesInvoiceSuccessModal({ invoice, settings = {}, close }) {
                 <button
                   type="button"
                   className="btn whatsapp"
-                  onClick={() => openManualWhatsAppShare({
-                    phone: invoice.customerPhone,
-                    message: buildSalesInvoiceMessage(invoice, settings),
-                  })}
+                  onClick={() => sendSalesInvoiceOnWhatsApp(invoice)}
                 >
                   Send via WhatsApp
                 </button>

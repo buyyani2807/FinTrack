@@ -1,5 +1,5 @@
 import { formatReceiptDate } from "../../receipts/model/receiptModel.js";
-import { downloadPdf, renderDocumentPdf } from "./documentPdf.js";
+import { downloadPdf, pdfBinaryToBytes, renderDocumentPdf } from "./documentPdf.js";
 
 const quantityText = (quantity, unit) => `${Number(quantity || 0).toLocaleString("en-IN", { maximumFractionDigits: 3 })}${unit ? ` ${unit}` : ""}`;
 
@@ -75,4 +75,54 @@ export function renderSalesInvoicePdf(invoice, { template } = {}) {
 
 export function downloadSalesInvoicePdf(invoice, options = {}) {
   downloadPdf(renderSalesInvoicePdf(invoice, options), `${invoice.invoiceNumber || "sales-invoice"}.pdf`);
+}
+
+/** The invoice as plain text, matching the PDF, for WhatsApp when a file cannot be attached. */
+export function salesInvoiceDocumentText(invoice) {
+  const model = salesInvoicePdfModel(invoice);
+  const lines = [model.seller?.name, ...(model.seller?.lines || [])].filter(Boolean);
+  lines.push("", model.title || "SALES INVOICE");
+  for (const [label, value] of model.meta || []) {
+    if (value) lines.push(`${label}: ${value}`);
+  }
+  lines.push("", model.partyHeading || "BILL TO");
+  if (model.party?.name) lines.push(model.party.name);
+  for (const line of model.party?.lines || []) if (line) lines.push(line);
+  if (model.items?.length) {
+    lines.push("", "ITEMS");
+    for (const item of model.items) {
+      const bits = [
+        item.name,
+        item.quantity,
+        item.rate ? `@ ${item.rate}` : "",
+        item.discount ? `disc ${item.discount}` : "",
+        item.gst ? `GST ${item.gst}` : "",
+        item.amount,
+      ].filter(Boolean);
+      lines.push(bits.join("  "));
+      if (item.detail) lines.push(item.detail);
+    }
+  }
+  if (model.description) lines.push("", model.description);
+  if (model.totals?.length) {
+    lines.push("");
+    for (const total of model.totals) lines.push(`${total.label}: ${total.value}`);
+  }
+  for (const block of model.notes || []) {
+    lines.push("", block.heading);
+    for (const line of block.lines || []) if (line) lines.push(line);
+  }
+  if (model.bankLines?.length) lines.push("", ...model.bankLines);
+  if (invoice?.upiId && Number(invoice.payableAmount || 0) > 0) {
+    lines.push("", ...upiCaption(invoice, invoice.payableAmount, invoice.money));
+  }
+  if (model.footer) lines.push("", model.footer);
+  return lines.filter(line => line != null).join("\n");
+}
+
+export function salesInvoicePdfFile(invoice, options = {}) {
+  if (typeof File !== "function") return null;
+  const bytes = pdfBinaryToBytes(renderSalesInvoicePdf(invoice, options));
+  const name = `${invoice.invoiceNumber || "sales-invoice"}.pdf`;
+  return new File([bytes], name, { type: "application/pdf" });
 }
