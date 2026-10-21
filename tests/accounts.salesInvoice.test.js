@@ -8,7 +8,7 @@ import {
   buildSalesInvoiceMessage,
   salesSettlementLabel,
 } from "../src/features/accounts/model/salesInvoiceModel.js";
-import { renderSalesInvoicePdf, salesInvoiceDocumentText } from "../src/features/accounts/io/salesInvoicePdf.js";
+import { invoicePdfShareOnThisDevice, renderSalesInvoicePdf, salesInvoiceDocumentText } from "../src/features/accounts/io/salesInvoicePdf.js";
 
 const accounts = [
   { id: "ar", code: "1100", name: "Accounts Receivable", accountType: "receivable", groupType: "asset" },
@@ -149,6 +149,13 @@ test("sales invoice PDF renders and defaults templates resolve", () => {
     company_name: "Co",
     company_phone: "",
   }), /Invoice No: 1/);
+});
+
+test("a phone can hand the invoice PDF to WhatsApp, and a computer cannot", () => {
+  assert.equal(invoicePdfShareOnThisDevice("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)"), true);
+  assert.equal(invoicePdfShareOnThisDevice("Mozilla/5.0 (Linux; Android 14)"), true);
+  assert.equal(invoicePdfShareOnThisDevice("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"), false);
+  assert.equal(invoicePdfShareOnThisDevice("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", 5), true);
 });
 
 test("WhatsApp sale share uses the invoice content, not the greeting template", () => {

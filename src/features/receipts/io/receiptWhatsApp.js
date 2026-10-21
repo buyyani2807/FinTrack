@@ -63,7 +63,7 @@ function ensureHandoffStyles() {
   document.head.appendChild(style);
 }
 
-function showWhatsAppHandoff({ opened, message = "", url = "" }) {
+function showWhatsAppHandoff({ opened, message = "", url = "", note = "" }) {
   if (typeof document === "undefined") return;
   ensureHandoffStyles();
   let root = document.getElementById(HANDOFF_ID);
@@ -78,7 +78,7 @@ function showWhatsAppHandoff({ opened, message = "", url = "" }) {
 
   const text = document.createElement("p");
   text.className = "whatsapp-handoff-text";
-  text.textContent = opened ? "WhatsApp opened" : "WhatsApp could not be opened.";
+  text.textContent = opened ? (note || "WhatsApp opened") : "WhatsApp could not be opened.";
   root.appendChild(text);
 
   if (!opened) {
@@ -153,15 +153,15 @@ export function openWhatsAppShare({ phone, message }) {
 }
 
 /** Manual wa.me handoff. Does not require saved WhatsApp settings. */
-export function openManualWhatsAppShare({ phone, message }) {
+export function openManualWhatsAppShare({ phone, message, note = "" }) {
   const url = whatsAppShareUrl(phone, message);
   if (!url) return { opened: false, reason: "no_phone" };
   const launched = launchWhatsAppUrl(url);
   if (launched.opened) {
-    showWhatsAppHandoff({ opened: true });
+    showWhatsAppHandoff({ opened: true, note });
     return { opened: true, reason: "opened" };
   }
-  showWhatsAppHandoff({ opened: false, message, url });
+  showWhatsAppHandoff({ opened: false, message, url, note });
   return { opened: false, reason: "open_failed" };
 }
 

@@ -2,14 +2,35 @@ import { useState } from "react";
 import { formatReceiptDate } from "../../receipts/model/receiptModel.js";
 import { canWhatsAppShare, openManualWhatsAppShare } from "../../receipts/io/receiptWhatsApp.js";
 import { buildArReminderMessage, buildOutstandingSummaryMessage, buildPartyStatementMessage, buildPaymentAdviceMessage, buildPurchaseDocumentMessage } from "../model/salesInvoiceModel.js";
-import { downloadSalesInvoicePdf, salesInvoiceDocumentText } from "../io/salesInvoicePdf.js";
+import { downloadSalesInvoicePdf, invoicePdfShareOnThisDevice, salesInvoicePdfFile } from "../io/salesInvoicePdf.js";
 import { downloadPartyStatementPdf } from "../io/partyStatementPdf.js";
 import { CloseButton } from "../../../components/ui.jsx";
 
 function sendSalesInvoiceOnWhatsApp(invoice) {
+  const file = salesInvoicePdfFile(invoice);
+  const canGivePdfToWhatsApp = Boolean(
+    file
+    && invoicePdfShareOnThisDevice(navigator.userAgent, navigator.maxTouchPoints)
+    && typeof navigator.canShare === "function"
+    && navigator.canShare({ files: [file] }),
+  );
+  if (canGivePdfToWhatsApp) {
+    navigator.share({ files: [file], title: file.name }).catch(error => {
+      if (error?.name === "AbortError") return;
+      downloadSalesInvoicePdf(invoice);
+      openManualWhatsAppShare({
+        phone: invoice.customerPhone,
+        message: "",
+        note: "The invoice PDF downloaded. Attach that file in the WhatsApp chat.",
+      });
+    });
+    return;
+  }
+  downloadSalesInvoicePdf(invoice);
   openManualWhatsAppShare({
     phone: invoice.customerPhone,
-    message: salesInvoiceDocumentText(invoice),
+    message: "",
+    note: "The invoice PDF downloaded. Attach that file in the WhatsApp chat.",
   });
 }
 
