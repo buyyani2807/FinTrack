@@ -27,6 +27,18 @@ Status values: pass, fail, blocked, not run.
 | TC-UI-01 | 390px dashboard does not overflow the page | Pass. Trial table scrolls inside the page |
 | TC-THEME-01 | Light, dark, light | Pass |
 
+## Follow-up the same afternoon
+
+| ID | Case | Result |
+| --- | --- | --- |
+| TC-LOAN-01 | Save a ₹100 daily account | Pass. `E2E-TEST-20261021`, paid out ₹100, daily ₹1 × 100 days, received ₹0. Collect disabled until the next day. |
+| TC-CHIT-01 | Create, activate, and open live bidding on a new auction | Pass. ₹1,000, 2 members, ₹500 installment, 5% commission. Status opened, then paused. No bid. End bidding disabled. |
+| TC-EXP-01 | Open trial balance CSV, Excel, and PDF | Pass. CSV totals ₹18,18,250.08 both sides. Excel is a workbook. PDF is a PDF. |
+| TC-WA-01 | Open WhatsApp settings and send a message | Settings pass. Send blocked. Nothing was sent. |
+| TC-AG-01 | Agent records a collection | Blocked. Owner page lists agents and routes. The test loan is not assigned. No collection was recorded. Agent login was not used. |
+| TC-ROLE-01 | Accountant, viewer, customer, and chit member | Blocked. Only the financier session is available. |
+| TC-OUT-01 | Logout and return | Blocked. Logout is visible. Clicking it would end the only session. |
+
 ## Not run — do not mark as passed
 
-Logout, invalid login, accountant, viewer, agent, customer portal, chit member portal, password reset, session expiry, new daily or monthly customer save, a real collection, chit scheme create, auction, WhatsApp, Buyyani bank import, Buyyani period lock, backup restore, bill scan, export file open, subscription block, and Playwright.
+Logout completion, invalid login, accountant, viewer, agent login, customer portal, chit member portal, password reset, a member bid, a recorded collection, a WhatsApp send, Buyyani bank import, Buyyani period lock, backup restore, bill scan, subscription block, and Playwright.

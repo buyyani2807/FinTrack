@@ -27,7 +27,7 @@ Financier / owner, accountant, viewer, collection agent, customer portal, chit m
 
 ## Accounts reports present in the UI
 
-Day book, trial balance, accounting P&L, balance sheet, cash flow, receivables, payables, sales, purchases, GST, ledger, item sales, item purchases, stock movement. Export buttons CSV, Excel, and PDF are on the trial balance. File contents were not opened this pass.
+Day book, trial balance, accounting P&L, balance sheet, cash flow, receivables, payables, sales, purchases, GST, ledger, item sales, item purchases, stock movement. Trial balance CSV, Excel, and PDF were opened the same afternoon. The CSV totals match the on-screen trial balance at ₹18,18,250.08 both sides.
 
 ## Integrations
 
@@ -37,7 +37,7 @@ Day book, trial balance, accounting P&L, balance sheet, cash flow, receivables, 
 | Chit to Accounts | Not run. |
 | Bank statement import | Ran earlier on company E2E-TEST-20261020, not on Buyyani. Matching was not completed. |
 | Bill scan | Draft only, on the test company. Not on Buyyani. |
-| WhatsApp | Not sent. |
+| WhatsApp | Settings and templates opened. Nothing sent. Share buttons open a chat link. |
 | GST portal filing | Not implemented. Reports are in-app. |
 | Payroll statutory engine | Not implemented. Deductions are amounts the owner enters. |
 

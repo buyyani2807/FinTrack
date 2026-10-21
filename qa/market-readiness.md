@@ -4,12 +4,12 @@ Scores use only checks that were actually run. Unverified areas pull the score d
 
 | Dimension | Weight | Score | Why |
 | --- | --- | --- | --- |
-| Functional workflows | 25% | 58 | Dashboard, finance, chit, cashbook, accounts, staff, settings, and subscribe all opened. Creating a customer, running an auction, and posting a salary were not completed. Payroll's default path fails. |
+| Functional workflows | 25% | 58 | Morning score. That afternoon a ₹100 daily loan and a paused live auction were completed. Salary post, other roles, and an agent collection were not. Payroll's default path still fails. Score not raised. |
 | Accounting accuracy | 20% | 72 | Buyyani trial balance difference is ₹0. Receivables matched the open bills on 20 Oct. One paisa of GST and the unposted payroll date remain. |
 | Security and access | 15% | 35 | One financier session only. Logout, other roles, and API checks were not run. |
 | Reliability | 10% | 62 | Navigation and trial balance loaded. Cashbook still lacks the brought-forward line. Unit tests passed. |
 | UI and mobile | 10% | 64 | 390px page did not overflow. Payroll date and empty cashbook today view are confusing. Tablet and real devices were not used. |
-| Reporting and exports | 10% | 60 | Trial balance, and on 20 Oct the statements, agreed with each other. Export files were not opened. |
+| Reporting and exports | 10% | 60 | Morning score. That afternoon the Buyyani trial balance CSV, Excel, and PDF opened and the CSV matched the on-screen totals. Score not raised. |
 | AI | 5% | 55 | One question matched the receivables. Other AI surfaces were not rechecked. |
 | Operations | 5% | 40 | The fix commit is local. Staging does not show it. Monitoring and backup restore were not run on Buyyani. |
 
@@ -27,4 +27,4 @@ BY-01 is open on staging. The product stays **no-go** until November payroll on 
 
 ## Residual risk after that deploy
 
-Other roles, chit auction math on a live scheme, agent collections, WhatsApp, and export files are still untested on staging.
+Still open: other roles, logout completion, a member bid and a finalized auction, an agent recording a collection, and a WhatsApp send. Export files were opened the same afternoon. The published score stays 58. BY-01 was not rechecked.

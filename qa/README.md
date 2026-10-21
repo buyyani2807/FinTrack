@@ -14,6 +14,8 @@ Audit-only. No application code was changed in this pass.
 
 No salaries were posted. No customer collections were recorded. No WhatsApp, email, or payment gateway was used. No records were deleted. Company 1 was not used as evidence.
 
+The same afternoon, a ₹100 daily loan and a ₹1,000 auction chit named `E2E-TEST-20261021` were created on staging. Live bidding was opened and then paused. No bid was posted. Logout was not clicked.
+
 ## How to rerun the deterministic suite
 
 ```bash

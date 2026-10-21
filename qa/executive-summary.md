@@ -25,9 +25,21 @@ Weighted score from evidence in `market-readiness.md`: **58 / 100**. Band: below
 
 No P0 was observed: trial balance difference stayed ₹0, and this pass did not lose or duplicate a voucher.
 
+## Follow-up the same afternoon
+
+These checks used the same financier session. No application code was changed.
+
+- New daily loan `E2E-TEST-20261021`: ₹100 financed, ₹100 paid to the customer, daily collection ₹1 for 100 days, status active, nothing received. Collect stays disabled until the next day. This posts a ₹100 cash disbursement.
+- Auction chit `E2E-TEST-20261021`: value ₹1,000, 2 members, installment ₹500, commission 5%. Activated. Live bidding opened for month 1 (commission ₹50, bids above ₹50 and at most ₹300, payout band 70–95%). No member bid was posted. Bidding was paused. End bidding stayed disabled with no leading bid.
+- Trial balance export for FY 2026–27 was opened. CSV totals are ₹18,18,250.08 debit and the same credit. Excel is a real workbook. PDF starts as a PDF. Output CGST and output SGST net to the same credit.
+- WhatsApp settings opened. Templates are editable. Nothing was sent.
+- Collection Staff lists existing agents. The new loan is not assigned. Assignments were not saved. Route collections were not recorded. Agent login was not used.
+- Logout is on screen. It was not clicked, because this is the only session and there is no password to sign back in.
+- Accountant, viewer, agent, customer, and chit-member sign-in were not run.
+
 ## Not verified
 
-Other roles, logout, signup, password reset, live chit auction, new finance customers, agent collections, WhatsApp, bank-file matching on Buyyani, period lock, and backup restore. Playwright was not re-run.
+Other roles, logout completion, signup, password reset, a member bid on the live auction, an agent recording a collection, a WhatsApp send, bank-file matching on Buyyani, period lock, and backup restore. Playwright was not re-run.
 
 ## Highest competitive gaps
 
@@ -38,4 +50,4 @@ Official Zoho Books and Vyapar pages, and a Tally partner description of TallyPr
 1. Deploy `fe24657` to staging and re-open November payroll on Buyyani's Enterprises. Confirm the pay date is today.
 2. On that deploy, confirm Cashbook shows Brought forward when Today is empty, and does not flash ₹0 as the real balance.
 3. Leave existing Buyyani GST vouchers as they are. New invoices pick up the equal split only after deploy.
-4. Then run accountant, viewer, agent, and one chit auction on synthetic data before calling the rest of the product ready.
+4. Then sign in as accountant, viewer, and agent, and post one member bid on the synthetic auction, before calling the rest of the product ready.
