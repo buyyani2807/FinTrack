@@ -15,6 +15,7 @@ import {
   validateItemForm,
   validateItemLines,
 } from "../src/features/accounts/model/inventoryModel.js";
+import { CASH_PARTY_ID } from "../src/features/accounts/model/accountingModel.js";
 
 const accounts = [
   { id: "cash", code: "1000", name: "Cash", accountType: "cash", groupType: "asset" },
@@ -198,6 +199,20 @@ test("itemized returns require the party", () => {
     date: "2026-09-06",
     itemLines: [{ itemId: "i1", itemName: "Cement", quantity: 1, rate: 100 }],
   }), /supplier/i);
+});
+
+test("a cash item sale is posted without a party", () => {
+  const draft = itemizedEntryDraft({
+    kind: "sale",
+    accounts,
+    date: "2026-09-06",
+    partyId: CASH_PARTY_ID,
+    settlement: "paid",
+    moneyMode: "cash",
+    itemLines: [{ itemId: "i1", itemName: "Cement", quantity: 1, rate: 100 }],
+  });
+  assert.equal(draft.partyId, null);
+  assert.equal(draft.lines.some(line => line.partyId), false);
 });
 
 test("item sales and purchase reports are net of returns", () => {

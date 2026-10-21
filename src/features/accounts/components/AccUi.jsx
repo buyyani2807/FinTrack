@@ -226,9 +226,9 @@ export const AccSkeleton = () => (
     {Array.from({ length: 8 }, (_, index) => <div key={index} className="acc-skel" />)}
   </div>
 );
-export function Modal({ title, close, children, actions }) {
+export function Modal({ title, close, children, actions, className = "" }) {
   return (
-    <div className="modal-bg" role="presentation" onClick={event => { if (event.target === event.currentTarget) close(); }}>
+    <div className={`modal-bg${className ? ` ${className}` : ""}`} role="presentation" onClick={event => { if (event.target === event.currentTarget) close(); }}>
       <div className="modal acc-modal" role="dialog" aria-modal="true" aria-label={title}>
         <div className="row">
           <h2 className="title">{title}</h2>

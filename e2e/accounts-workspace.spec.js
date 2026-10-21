@@ -59,6 +59,14 @@ test.describe("Accounts workspace", () => {
       await openNew();
       await page.getByRole("menuitem", { name: kind, exact: true }).click();
       await expect(dialog).toBeVisible();
+      if (kind === "Sale" || kind === "Purchase") {
+        const partyLabel = kind === "Sale" ? "Customer" : "Supplier";
+        const createLabel = kind === "Sale" ? "New customer" : "New supplier";
+        await dialog.getByRole("combobox", { name: partyLabel }).click();
+        await expect(page.getByRole("option", { name: "Cash", exact: true })).toBeVisible();
+        await expect(page.getByRole("option", { name: createLabel, exact: true })).toBeVisible();
+        await page.keyboard.press("Escape");
+      }
       await closeDialog();
     }
     await openNew();
@@ -68,6 +76,9 @@ test.describe("Accounts workspace", () => {
     await openNew();
     await page.getByRole("menuitem", { name: "Party", exact: true }).click();
     await expect(dialog.getByRole("heading", { name: "Add party" })).toBeVisible();
+    await expect(dialog.getByText("GST registration")).toHaveCount(0);
+    await expect(dialog.getByRole("spinbutton", { name: "Credit limit (₹)" })).toHaveCount(0);
+    await expect(dialog.getByRole("textbox", { name: "Credit limit (₹)" })).toBeVisible();
     await closeDialog();
 
     await tabs.getByRole("button", { name: "Transactions", exact: true }).click();

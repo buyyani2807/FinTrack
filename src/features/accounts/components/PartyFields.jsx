@@ -7,7 +7,7 @@ import { Field } from "./AccUi.jsx";
 export const PartyTypeBadge = ({ type }) => (
   <span className={`acc-type-badge ${type || "other"}`}>{partyTypeLabel(type)}</span>
 );
-export function PartyFormFields({ form, setForm, originalType = "", hasTransactions = false, typeConfirmed = false, onConfirmType }) {
+export function PartyFormFields({ form, setForm, originalType = "", hasTransactions = false, typeConfirmed = false, onConfirmType, lockPartyType = false }) {
   const set = patch => setForm(current => ({ ...current, ...patch }));
   const currentType = originalType || form.partyType;
   const typeChanged = Boolean(form.id) && currentType !== form.partyType;
@@ -16,7 +16,7 @@ export function PartyFormFields({ form, setForm, originalType = "", hasTransacti
   return (
     <div className="form acc-party-form">
       <Field required label="Party type">
-        <Select value={form.partyType} onChange={event => {
+        <Select value={form.partyType} disabled={lockPartyType} onChange={event => {
           const partyType = event.target.value;
           set({
             partyType,
@@ -34,14 +34,6 @@ export function PartyFormFields({ form, setForm, originalType = "", hasTransacti
       <Field className="span" label="Address"><input value={form.address} placeholder="optional" onChange={event => set({ address: event.target.value })} /></Field>
       {needsGst && <>
         <Field label="GSTIN"><input value={form.gstin} placeholder="optional" onChange={event => set({ gstin: event.target.value, stateCode: event.target.value ? (gstStateFromGstin(event.target.value) || form.stateCode) : form.stateCode })} /></Field>
-        <Field label="GST registration">
-          <Select value={form.gstRegistration || ""} onChange={event => set({ gstRegistration: event.target.value })}>
-            <option value="">Not set</option>
-            <option value="regular">Regular</option>
-            <option value="composition">Composition</option>
-            <option value="unregistered">Unregistered</option>
-          </Select>
-        </Field>
         <Field label="State">
           <Select value={form.stateCode || ""} onChange={event => set({ stateCode: event.target.value })}>
             <option value="">Select state</option>
@@ -52,7 +44,7 @@ export function PartyFormFields({ form, setForm, originalType = "", hasTransacti
       <Field label="Notes"><input value={form.notes} placeholder="optional" onChange={event => set({ notes: event.target.value })} /></Field>
       {(form.partyType === "customer" || form.partyType === "supplier") && <>
         {form.partyType === "customer" && (
-          <Field label="Credit limit (₹)"><input type="number" min="0" step="0.01" value={form.creditLimit ?? ""} placeholder="0 = no limit" onChange={event => set({ creditLimit: event.target.value })} /></Field>
+          <Field label="Credit limit (₹)"><input className="acc-plain-number" type="text" inputMode="decimal" value={form.creditLimit ?? ""} placeholder="0 = no limit" onChange={event => set({ creditLimit: event.target.value.replace(/[^\d.]/g, "") })} /></Field>
         )}
         <Field label="Credit days"><input type="number" min="0" max="365" step="1" value={form.creditDays ?? ""} placeholder="Default due date" onChange={event => set({ creditDays: event.target.value })} /></Field>
       </>}

@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Select } from "../../../components/Select.jsx";
 import {
+  CASH_PARTY_ID,
   MONEY_MODES,
   SIMPLE_EXPENSE_CODES,
   addDaysIso,
+  entryPartyId,
   moneyAccounts,
   prepareGstAmount,
   roundMoney,
@@ -24,7 +26,7 @@ import { BillwiseSettlement } from "./simpleEntry/BillwiseSettlement.jsx";
 import { BillPhotoDraft } from "./simpleEntry/BillPhotoDraft.jsx";
 import { billNumberFromNarration, findPostedPurchaseDuplicates } from "../model/billScan.js";
 
-export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, saving, maxDate, gstCompany, onGstSetup, items = [], stockByItem = {}, openInvoices = [], creditInfo = null, token, vouchers = [], voucherItemLines = [] }) {
+export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, saving, maxDate, gstCompany, onGstSetup, onCreateParty, items = [], stockByItem = {}, openInvoices = [], creditInfo = null, token, vouchers = [], voucherItemLines = [] }) {
   const [allowedDuplicateKey, setAllowedDuplicateKey] = useState("");
   const customers = parties.filter(party => party.partyType === "customer" && (party.isActive !== false || party.id === form.partyId));
   const suppliers = parties.filter(party => party.partyType === "supplier" && (party.isActive !== false || party.id === form.partyId));
@@ -35,10 +37,14 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
     : kind === "purchase" || kind === "payment" || kind === "debit_note" ? "supplier"
     : null;
   const partyList = needsParty === "supplier" ? suppliers : customers;
+  const allowCashParty = kind === "sale" || kind === "purchase";
+  const cashParty = allowCashParty && form.partyId === CASH_PARTY_ID;
   const gstKinds = kind === "sale" || kind === "purchase" || kind === "credit_note" || kind === "debit_note";
   const gstOn = gstCompany?.gstRegistration === "regular" && gstKinds;
-  const selectedParty = parties.find(party => party.id === form.partyId);
-  const partyState = selectedParty?.stateCode || gstStateFromGstin(selectedParty?.gstin);
+  const selectedParty = cashParty ? null : parties.find(party => party.id === form.partyId);
+  const partyState = cashParty
+    ? (gstCompany?.stateCode || "")
+    : (selectedParty?.stateCode || gstStateFromGstin(selectedParty?.gstin));
   const intra = isIntraGst(gstCompany?.stateCode, partyState);
   const returnKind = kind === "credit_note" || kind === "debit_note";
   const itemMode = usesItemLines(kind, form);
@@ -107,7 +113,7 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
     : [];
   const purchaseDuplicates = kind === "purchase"
     ? findPostedPurchaseDuplicates({
-      partyId: form.partyId,
+      partyId: entryPartyId(form.partyId),
       date: form.date,
       amounts: purchaseAmounts,
       billNumber: billNumberFromNarration(form.narration),
@@ -173,6 +179,7 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
             <Select value={form.settlement} onChange={event => set({
               settlement: event.target.value,
               amountReceived: event.target.value === "paid" ? "" : form.amountReceived,
+              ...(event.target.value === "credit" && form.partyId === CASH_PARTY_ID ? { partyId: "" } : {}),
             })}>
               <option value="credit">Credit / invoice</option>
               <option value="paid">Paid in full now</option>
@@ -194,13 +201,28 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
         </>}
         {needsParty && <Field label={needsParty === "supplier" ? "Supplier" : "Customer"}><Select value={form.partyId} onChange={event => {
           const partyId = event.target.value;
+          if (partyId === "__new") {
+            onCreateParty?.(needsParty);
+            return;
+          }
+          if (partyId === CASH_PARTY_ID) {
+            set({ partyId, settlement: "paid", amountReceived: "", settlements: [] });
+            return;
+          }
           const creditDays = parties.find(party => party.id === partyId)?.creditDays;
           set({
             partyId,
             settlements: settlementKinds ? syncSettlements(partyId, settlementAmount) : form.settlements,
             ...((kind === "sale" || kind === "purchase") && creditDays != null ? { dueDate: addDaysIso(form.date, creditDays) } : {}),
           });
-        }}><option value="">Select</option>{partyList.map(party => <option key={party.id} value={party.id}>{party.name}</option>)}</Select></Field>}
+        }}>
+          <option value="">Select</option>
+          {allowCashParty && <option value={CASH_PARTY_ID}>Cash</option>}
+          {partyList.map(party => <option key={party.id} value={party.id}>{party.name}</option>)}
+          {allowCashParty && onCreateParty && <option value="__new">{needsParty === "supplier" ? "New supplier" : "New customer"}</option>}
+        </Select>
+        {allowCashParty && onCreateParty && <button type="button" className="btn acc-party-create" onClick={event => { event.preventDefault(); event.stopPropagation(); onCreateParty(needsParty); }}>{needsParty === "supplier" ? "New supplier" : "New customer"}</button>}
+        </Field>}
         {(kind === "sale" || kind === "purchase") && (
           <Field label="Entry">
             <Select value={itemMode ? "items" : "amount"} onChange={event => set({ entryMode: event.target.value })}>

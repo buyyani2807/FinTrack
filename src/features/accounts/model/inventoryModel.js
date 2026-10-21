@@ -1,4 +1,4 @@
-import { prepareGstAmount, roundMoney, gstDocumentLine, saleLines, purchaseLines, creditNoteLines, debitNoteLines, assertVoucherDateNotFuture, addDaysIso, assertMoneyModeSplit } from "./accountingModel.js";
+import { prepareGstAmount, roundMoney, gstDocumentLine, saleLines, purchaseLines, creditNoteLines, debitNoteLines, assertVoucherDateNotFuture, addDaysIso, assertMoneyModeSplit, entryPartyId } from "./accountingModel.js";
 
 export const ITEMIZED_KINDS = {
   sale: { voucherType: "sales", partyLabel: "customer", returnKind: false },
@@ -216,6 +216,7 @@ export function itemizedEntryDraft({
   taxInclusive = false,
   gstEnabled = false,
 } = {}) {
+  partyId = entryPartyId(partyId);
   assertVoucherDateNotFuture(date, today);
   const config = ITEMIZED_KINDS[kind];
   if (!config) throw new Error("Itemized entry supports sale, purchase, credit note and debit note only");

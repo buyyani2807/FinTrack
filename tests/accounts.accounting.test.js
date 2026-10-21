@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  CASH_PARTY_ID,
   DEFAULT_CHART_OF_ACCOUNTS,
   GST_RATES,
   SYSTEM_CODES,
@@ -346,6 +347,18 @@ test("guided debit note reduces purchase and payable for a supplier", () => {
   assert.equal(draft.lines.find(line => line.code === SYSTEM_CODES.payable).debit, 2000);
   assert.equal(draft.lines.find(line => line.code === SYSTEM_CODES.purchase).credit, 2000);
   assert.throws(() => simpleEntryDraft({ kind: "debit_note", accounts, date: "2026-04-10", amount: 2000 }), /supplier/);
+});
+
+test("cash sale and cash purchase post without a party", () => {
+  const sale = simpleEntryDraft({ kind: "sale", accounts, date: "2026-04-10", amount: 250, partyId: CASH_PARTY_ID, settlement: "paid", moneyMode: "cash" });
+  assert.equal(sale.partyId, null);
+  assert.equal(sale.lines.find(line => line.code === SYSTEM_CODES.cash).debit, 250);
+  assert.equal(sale.lines.some(line => line.partyId), false);
+  const purchase = simpleEntryDraft({ kind: "purchase", accounts, date: "2026-04-10", amount: 80, partyId: CASH_PARTY_ID, settlement: "paid", moneyMode: "cash" });
+  assert.equal(purchase.partyId, null);
+  assert.equal(purchase.lines.find(line => line.code === SYSTEM_CODES.cash).credit, 80);
+  assert.throws(() => simpleEntryDraft({ kind: "sale", accounts, date: "2026-04-10", amount: 250, partyId: CASH_PARTY_ID, settlement: "credit" }), /customer/);
+  assert.throws(() => simpleEntryDraft({ kind: "purchase", accounts, date: "2026-04-10", amount: 80, partyId: CASH_PARTY_ID, settlement: "credit" }), /supplier/);
 });
 
 test("unused parties can be deleted and parties with voucher history cannot", () => {

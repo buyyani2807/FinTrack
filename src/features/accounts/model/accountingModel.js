@@ -879,6 +879,14 @@ export function resolveAccountCode(accounts, code, fallbackCode) {
   return findAccount(accounts, { code })?.code || findAccount(accounts, { code: fallbackCode })?.code || fallbackCode;
 }
 
+/** Walk-in sale or purchase. Stored as no party, never as a party id. */
+export const CASH_PARTY_ID = "cash";
+
+export function entryPartyId(partyId) {
+  if (!partyId || partyId === CASH_PARTY_ID) return null;
+  return partyId;
+}
+
 export function saleLines({ accounts, amount, settlement = "credit", moneyMode = "cash", moneyParts = null, partyId = null, description = "", gst } = {}) {
   const prepared = gst?.preparedOverride || prepareGstAmount(amount, gst);
   const sales = findAccount(accounts, { code: SYSTEM_CODES.sales });
@@ -976,6 +984,7 @@ export function simpleEntryDraft({
   today,
   gst,
 } = {}) {
+  partyId = entryPartyId(partyId);
   assertVoucherDateNotFuture(date, today);
   const value = roundMoney(amount);
   if (value <= 0) throw new Error("Enter an amount greater than zero");

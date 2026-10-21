@@ -58,10 +58,12 @@ import { loadCashbookEntries } from "../cashbook/cashbookRepository.js";
 import { trackProductEvent } from "../commercial/productAnalytics.js";
 import { assertVoucherAttachmentMeta, normalizeAttachmentContentType, readFileAsBase64 } from "./data/voucherAttachments.js";
 import {
+  CASH_PARTY_ID,
   PARTY_TYPES,
   SIMPLE_ENTRY_KINDS,
   accountNormalSide,
   addDaysIso,
+  entryPartyId,
   assertBalancedVoucher,
   assertCanChangePartyType,
   partyTypeAfterFailedSave,
@@ -245,6 +247,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [partyForm, setPartyForm] = useState(emptyPartyForm);
   const [partyTypeBaseline, setPartyTypeBaseline] = useState("");
   const [partyTypeConfirmed, setPartyTypeConfirmed] = useState(false);
+  const [partyCreateTarget, setPartyCreateTarget] = useState("");
   const [partyImportStatus, setPartyImportStatus] = useState("");
   const [coaForm, setCoaForm] = useState(emptyCoaForm);
   const [setupForm, setSetupForm] = useState({ companyName: "", booksStartedOn: todayIso() });
@@ -1436,6 +1439,19 @@ const openVoucher = () => {
       setPartyTypeBaseline("");
       setPartyForm(emptyPartyForm());
     }
+    setPartyCreateTarget("");
+    setShowParty(true);
+  };
+
+  const openPartyForEntry = partyType => {
+    if (!canWrite) {
+      setError("Your Accounts role is view-only.");
+      return;
+    }
+    setPartyTypeConfirmed(false);
+    setPartyTypeBaseline("");
+    setPartyForm({ ...emptyPartyForm(), partyType: partyType === "supplier" ? "supplier" : "customer" });
+    setPartyCreateTarget(partyType === "supplier" ? "supplier" : "customer");
     setShowParty(true);
   };
 
@@ -1444,6 +1460,7 @@ const openVoucher = () => {
     setShowParty(false);
     setPartyTypeBaseline("");
     setPartyTypeConfirmed(false);
+    setPartyCreateTarget("");
     setPartyForm(emptyPartyForm());
   };
 
@@ -1490,9 +1507,17 @@ const openVoucher = () => {
         partyId = Array.isArray(created) ? created[0] : created;
       }
       if (creditChanged && typeof partyId === "string") await setPartyCredit(token, partyId, { creditLimit, creditDays });
+      if (!partyForm.id && partyCreateTarget && partyForm.partyType === partyCreateTarget && typeof partyId === "string") {
+        setSimpleForm(current => ({
+          ...current,
+          partyId,
+          ...(creditDays != null ? { dueDate: addDaysIso(current.date, creditDays) } : {}),
+        }));
+      }
       setShowParty(false);
       setPartyTypeBaseline("");
       setPartyTypeConfirmed(false);
+      setPartyCreateTarget("");
       setPartyForm(emptyPartyForm());
     }, partyForm.id ? (typeChanged ? "Party type updated. Historical vouchers are unchanged." : "Party updated successfully") : createdLabel);
   };
@@ -1574,9 +1599,13 @@ const openVoucher = () => {
 
   const submitSimple = () => run(async () => {
     const activeCompany = companies.find(item => item.id === activeCompanyId);
-    const selectedParty = parties.find(party => party.id === simpleForm.partyId);
+    const cashCounterparty = simpleForm.partyId === CASH_PARTY_ID;
+    const partyId = entryPartyId(simpleForm.partyId);
+    const selectedParty = cashCounterparty ? null : parties.find(party => party.id === simpleForm.partyId);
     const gstOn = activeCompany?.gstRegistration === "regular" && ["sale", "purchase", "credit_note", "debit_note"].includes(simpleKind);
-    const partyState = selectedParty?.stateCode || gstStateFromGstin(selectedParty?.gstin);
+    const partyState = cashCounterparty
+      ? (activeCompany?.stateCode || "")
+      : (selectedParty?.stateCode || gstStateFromGstin(selectedParty?.gstin));
     const intra = isIntraGst(activeCompany?.stateCode, partyState);
     const useItems = usesItemLines(simpleKind, simpleForm);
     const moneyParts = simpleForm.moneyMode === "cash_upi"
@@ -1600,7 +1629,7 @@ const openVoucher = () => {
         kind: simpleKind,
         accounts,
         date: simpleForm.date,
-        partyId: simpleForm.partyId || null,
+        partyId,
         moneyMode: simpleForm.moneyMode,
         moneyParts,
         settlement: simpleForm.settlement,
@@ -1616,7 +1645,7 @@ const openVoucher = () => {
         accounts,
         date: simpleForm.date,
         amount: simpleForm.amount,
-        partyId: simpleForm.partyId || null,
+        partyId,
         moneyMode: simpleForm.moneyMode,
         moneyParts,
         settlement: simpleForm.settlement,
@@ -1684,7 +1713,7 @@ const openVoucher = () => {
         accounts,
         date: simpleForm.date,
         amount: amountReceivedNow,
-        partyId: simpleForm.partyId,
+        partyId,
         moneyMode: simpleForm.moneyMode,
         moneyParts,
         narration: simpleForm.narration
@@ -2561,7 +2590,7 @@ const openVoucher = () => {
         }}
       />}
       {showSimple && <Modal title={SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry"} close={closeSimple}>
-        <SimpleEntryForm kind={simpleKind} accounts={visibleAccounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} maxDate={todayIso()} gstCompany={activeCompany} onGstSetup={() => { setShowSimple(false); openSection("setup"); }} items={items} stockByItem={stockByItem} openInvoices={settlementOpenInvoices} creditInfo={saleCreditInfo} token={token} vouchers={vouchers} voucherItemLines={voucherItemLines} />
+        <SimpleEntryForm kind={simpleKind} accounts={visibleAccounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} maxDate={todayIso()} gstCompany={activeCompany} onGstSetup={() => { setShowSimple(false); openSection("setup"); }} onCreateParty={openPartyForEntry} items={items} stockByItem={stockByItem} openInvoices={settlementOpenInvoices} creditInfo={saleCreditInfo} token={token} vouchers={vouchers} voucherItemLines={voucherItemLines} />
       </Modal>}
       {showParty && <PartyModal
         partyForm={partyForm}
@@ -2573,6 +2602,7 @@ const openVoucher = () => {
         originalType={partyTypeBaseline}
         typeConfirmed={partyTypeConfirmed}
         onConfirmType={setPartyTypeConfirmed}
+        lockPartyType={Boolean(partyCreateTarget)}
       />}
       {partyDeleteDialog?.mode === "confirm" && <DeletePartyModal
         saving={saving}

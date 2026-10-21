@@ -3320,6 +3320,14 @@
   margin: 0;
 }
 
+.accounts-dashboard .acc-party-create {
+  margin-top: 8px;
+}
+
+.modal-bg.acc-modal-front {
+  z-index: 40 !important;
+}
+
 @media (max-width: 900px) {
   .accounts-dashboard .acc-items-side-grid {
     grid-template-columns: 1fr;
