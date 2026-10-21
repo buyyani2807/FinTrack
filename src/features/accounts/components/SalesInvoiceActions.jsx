@@ -2,26 +2,15 @@ import { useState } from "react";
 import { formatReceiptDate } from "../../receipts/model/receiptModel.js";
 import { canWhatsAppShare, openManualWhatsAppShare } from "../../receipts/io/receiptWhatsApp.js";
 import { buildArReminderMessage, buildOutstandingSummaryMessage, buildPartyStatementMessage, buildPaymentAdviceMessage, buildPurchaseDocumentMessage } from "../model/salesInvoiceModel.js";
-import { downloadSalesInvoicePdf, salesInvoiceDocumentText, salesInvoicePdfFile } from "../io/salesInvoicePdf.js";
+import { downloadSalesInvoicePdf, salesInvoiceDocumentText } from "../io/salesInvoicePdf.js";
 import { downloadPartyStatementPdf } from "../io/partyStatementPdf.js";
 import { CloseButton } from "../../../components/ui.jsx";
 
 function sendSalesInvoiceOnWhatsApp(invoice) {
-  const file = salesInvoicePdfFile(invoice);
-  const canShareFile = Boolean(
-    file
-    && typeof navigator !== "undefined"
-    && typeof navigator.canShare === "function"
-    && navigator.canShare({ files: [file] }),
-  );
-  if (canShareFile) {
-    navigator.share({ files: [file], title: file.name }).catch(error => {
-      if (error?.name === "AbortError") return;
-      openManualWhatsAppShare({ phone: invoice.customerPhone, message: salesInvoiceDocumentText(invoice) });
-    });
-    return;
-  }
-  openManualWhatsAppShare({ phone: invoice.customerPhone, message: salesInvoiceDocumentText(invoice) });
+  openManualWhatsAppShare({
+    phone: invoice.customerPhone,
+    message: salesInvoiceDocumentText(invoice),
+  });
 }
 
 export function SalesInvoiceViewerModal({ invoice, settings = {}, close }) {

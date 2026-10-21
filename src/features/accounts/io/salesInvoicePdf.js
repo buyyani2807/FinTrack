@@ -1,5 +1,5 @@
 import { formatReceiptDate } from "../../receipts/model/receiptModel.js";
-import { downloadPdf, pdfBinaryToBytes, renderDocumentPdf } from "./documentPdf.js";
+import { downloadPdf, renderDocumentPdf } from "./documentPdf.js";
 
 const quantityText = (quantity, unit) => `${Number(quantity || 0).toLocaleString("en-IN", { maximumFractionDigits: 3 })}${unit ? ` ${unit}` : ""}`;
 
@@ -118,11 +118,4 @@ export function salesInvoiceDocumentText(invoice) {
   }
   if (model.footer) lines.push("", model.footer);
   return lines.filter(line => line != null).join("\n");
-}
-
-export function salesInvoicePdfFile(invoice, options = {}) {
-  if (typeof File !== "function") return null;
-  const bytes = pdfBinaryToBytes(renderSalesInvoicePdf(invoice, options));
-  const name = `${invoice.invoiceNumber || "sales-invoice"}.pdf`;
-  return new File([bytes], name, { type: "application/pdf" });
 }
