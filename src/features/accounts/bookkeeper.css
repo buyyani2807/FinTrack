@@ -6,10 +6,100 @@
 }
 
 .accounts-dashboard .acc-bk.is-compact {
+  display: grid;
+  gap: 14px;
+  width: 100%;
   padding: 0;
   border: 0;
   background: none;
   box-shadow: none;
+}
+
+/* Describe it in words: the conversation scrolls, the composer stays at the bottom. */
+.accounts-dashboard .acc-modal .modal-scroll-body:has(.acc-bk.is-compact) {
+  display: flex;
+  flex-direction: column;
+  padding-top: 16px;
+}
+
+.accounts-dashboard .acc-modal .modal-scroll-body:has(.acc-bk.is-compact:not(:has(.acc-bk-thread))) {
+  justify-content: flex-end;
+}
+
+.accounts-dashboard .acc-modal .acc-bk.is-compact .acc-bk-sub {
+  max-width: 46ch;
+  margin: 0 0 16px;
+  color: var(--ft-text-2);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.accounts-dashboard .acc-modal .acc-bk-said {
+  background: var(--ft-primary);
+  color: var(--ft-on-primary);
+}
+
+.accounts-dashboard .acc-modal .acc-bk-reply {
+  padding: 16px;
+  border: 1px solid var(--ft-border);
+  border-radius: 12px;
+  background: var(--ft-surface-subtle);
+}
+
+.accounts-dashboard .acc-modal .acc-bk-posted li {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--ft-success-soft);
+}
+
+.accounts-dashboard .acc-modal-actions:has(.acc-bk-dock) {
+  display: block;
+  padding-top: 12px;
+}
+
+.accounts-dashboard .acc-bk-dock {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+}
+
+.accounts-dashboard .acc-bk-dock .acc-bk-chip {
+  height: auto;
+  min-height: 32px;
+  padding: 7px 12px;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.accounts-dashboard .acc-bk-dock .acc-bk-form {
+  align-items: center;
+  margin: 0;
+  padding: 4px 4px 4px 12px;
+  border: 1px solid var(--ft-border);
+  border-radius: 12px;
+  background: var(--ft-surface);
+}
+
+.accounts-dashboard .acc-bk-dock .acc-bk-form:focus-within {
+  border-color: var(--ft-primary);
+  box-shadow: 0 0 0 3px var(--ft-primary-soft);
+}
+
+.accounts-dashboard .acc-modal .acc-bk-dock .acc-bk-form input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]) {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  min-height: 40px !important;
+  padding-left: 0 !important;
+}
+
+.accounts-dashboard .acc-modal .acc-bk-dock .acc-bk-form input:focus {
+  border-color: transparent !important;
+  outline: none !important;
+}
+
+.accounts-dashboard .acc-bk-dock .acc-bk-actions {
+  margin: 0;
 }
 
 .accounts-dashboard .acc-bk-head {
@@ -40,6 +130,11 @@
   color: var(--acc-muted);
   font-size: 13px;
   line-height: 1.45;
+}
+
+.accounts-dashboard .acc-bk-composer {
+  display: grid;
+  gap: 14px;
 }
 
 .accounts-dashboard .acc-bk-form {

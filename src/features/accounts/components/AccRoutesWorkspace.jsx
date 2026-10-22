@@ -19,28 +19,12 @@ import {
   routeOverview,
   weekdaysLabel,
 } from "../model/routeCollectionsModel.js";
-import { AccMoreMenu } from "./AccUi.jsx";
-import { CloseButton } from "../../../components/ui.jsx";
+import { AccMoreMenu, Modal } from "./AccUi.jsx";
 
 const money = formatInr;
 
 function Field({ label, children, className = "" }) {
   return <label className={`accounts-filter-field ${className}`.trim()}><span className="small">{label}</span>{children}</label>;
-}
-
-function Modal({ title, close, children, actions }) {
-  return (
-    <div className="modal-bg" role="presentation" onClick={event => { if (event.target === event.currentTarget) close(); }}>
-      <div className="modal acc-modal" role="dialog" aria-modal="true" aria-label={title}>
-        <div className="row">
-          <h2 className="title">{title}</h2>
-          <CloseButton onClick={close} />
-        </div>
-        {children}
-        {actions ? <div className="acc-modal-actions">{actions}</div> : null}
-      </div>
-    </div>
-  );
 }
 
 const emptyRouteForm = () => ({ id: null, name: "", agentId: "", weekdays: [], notes: "", isActive: true });

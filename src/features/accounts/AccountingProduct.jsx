@@ -2554,13 +2554,11 @@ const openVoucher = () => {
         />}
       </>}
 
-      {showVoucher && <Modal title="Post voucher" close={closeVoucher}>
+      {showVoucher && <Modal panelClassName="acc-entry-dialog" title="Post voucher" close={closeVoucher}>
         <p className="copy">Total debits must equal total credits. Unbalanced vouchers cannot be posted.</p>
         <VoucherForm accounts={visibleAccounts} parties={parties} voucherType={voucherType} setVoucherType={setVoucherType} form={voucherForm} setForm={setVoucherForm} lines={lines} setLines={setLines} onSubmit={submitVoucher} saving={saving} maxDate={todayIso()} />
       </Modal>}
-      {showBookkeeper && <Modal title="Describe it in words" close={() => !saving && setShowBookkeeper(false)}>
-        <AccBookkeeper {...bookkeeperProps} compact />
-      </Modal>}
+      {showBookkeeper && <AccBookkeeper {...bookkeeperProps} compact close={() => !saving && setShowBookkeeper(false)} />}
       {showMigration && <AccMigrationAssistant
         accounts={visibleAccounts}
         parties={parties}
@@ -2589,7 +2587,7 @@ const openVoucher = () => {
           if (setupAfterCreate) openSection("overview");
         }}
       />}
-      {showSimple && <Modal title={SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry"} close={closeSimple}>
+      {showSimple && <Modal panelClassName="acc-entry-dialog" title={SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry"} close={closeSimple}>
         <SimpleEntryForm kind={simpleKind} accounts={visibleAccounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} maxDate={todayIso()} gstCompany={activeCompany} onGstSetup={() => { setShowSimple(false); openSection("setup"); }} onCreateParty={openPartyForEntry} items={items} stockByItem={stockByItem} openInvoices={settlementOpenInvoices} creditInfo={saleCreditInfo} token={token} vouchers={vouchers} voucherItemLines={voucherItemLines} />
       </Modal>}
       {showParty && <PartyModal

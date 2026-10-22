@@ -248,9 +248,9 @@ button {
   border: 1px solid var(--ft-border);
   border-radius: 16px;
   width: min(720px, 100%);
-  max-height: 92vh;
+  max-height: min(90svh, 900px);
   padding: 22px;
-  overflow: auto;
+  overflow: hidden;
 }
 
 .login {
@@ -3268,9 +3268,13 @@ button.accounts-summary-card:hover {
 
 /* accountActionsStyles */
 .account-actions-menu {
-  gap: 8px;
-  margin: 14px 0 4px;
   display: grid;
+  gap: 4px;
+  margin: 12px 0 0;
+  padding: 6px;
+  border: 1px solid var(--ft-border);
+  border-radius: 12px;
+  background: var(--ft-surface-subtle);
 }
 
 .account-actions-menu .btn {

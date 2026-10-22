@@ -1,7 +1,8 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { Activity, ArrowLeftRight, CalendarRange, ChevronDown, CreditCard, FileUp, History, Landmark, ListTree, Lock, Package, Percent, Repeat, ShieldCheck, Sparkles, UserCog, Users } from "lucide-react";
 import { LIST_PAGE_SIZE } from "../model/accountsList.js";
-import { CloseButton, LabeledField } from "../../../components/ui.jsx";
+import { CloseButton, LabeledField, ModalScroll } from "../../../components/ui.jsx";
+import { useDialogDismiss } from "../../../components/useDialogDismiss.js";
 
 /**
  * Shared Accounts UI primitives (presentation only).
@@ -29,6 +30,45 @@ export function AccToolbar({ start = null, end = null, className = "" }) {
  * items: [{ id?, label, onClick, danger?, disabled? }]
  * Renders nothing when items is empty.
  */
+function placeMoreMenu(rect, align, menuWidth, menuHeight) {
+  const view = window.visualViewport;
+  const viewLeft = view?.offsetLeft || 0;
+  const viewTop = view?.offsetTop || 0;
+  const viewWidth = view?.width || window.innerWidth;
+  const viewHeight = view?.height || window.innerHeight;
+  const margin = 8;
+  const nav = document.querySelector(".accounts-dashboard .acc-bottom-nav");
+  let limitBottom = viewTop + viewHeight - margin;
+  if (nav && getComputedStyle(nav).display !== "none") {
+    const navTop = nav.getBoundingClientRect().top;
+    if (navTop > viewTop + 80) limitBottom = Math.min(limitBottom, navTop - margin);
+  }
+  const width = Math.min(Math.max(menuWidth, 1), viewWidth - margin * 2);
+  const minLeft = viewLeft + margin;
+  const maxLeft = Math.max(minLeft, viewLeft + viewWidth - width - margin);
+  const preferredLeft = align === "start" ? rect.left : rect.right - width;
+  const left = Math.min(Math.max(minLeft, preferredLeft), maxLeft);
+  const spaceBelow = Math.max(0, limitBottom - (rect.bottom + 6));
+  const spaceAbove = Math.max(0, rect.top - 6 - (viewTop + margin));
+  const openDown = spaceBelow >= menuHeight || spaceBelow >= spaceAbove;
+  const room = openDown ? spaceBelow : spaceAbove;
+  const maxHeight = Math.min(menuHeight, room > 0 ? room : viewHeight - margin * 2);
+  let top = openDown ? rect.bottom + 6 : rect.top - 6 - maxHeight;
+  const minTop = viewTop + margin;
+  const maxTop = Math.max(minTop, limitBottom - maxHeight);
+  top = Math.min(Math.max(minTop, top), maxTop);
+  return {
+    position: "fixed",
+    zIndex: 80,
+    left: Math.round(left),
+    right: "auto",
+    top: Math.round(top),
+    bottom: "auto",
+    maxWidth: Math.round(viewWidth - margin * 2),
+    maxHeight: Math.max(1, Math.round(maxHeight)),
+  };
+}
+
 export function AccMoreMenu({
   label = "More",
   items = [],
@@ -38,25 +78,48 @@ export function AccMoreMenu({
 }) {
   const [open, setOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState(null);
+  const [hasMoreBelow, setHasMoreBelow] = useState(false);
   const root = useRef(null);
+  const menuRef = useRef(null);
+  const listRef = useRef(null);
   const menuId = useId();
   const visible = (items || []).filter(item => item && (item.separator || item.label));
 
   // Tables scroll inside an overflow box that would clip an absolute menu, so the menu is fixed to the
-  // viewport next to its button (and opens upwards when there is no room below).
-  const toggle = event => {
-    if (open) { setOpen(false); return; }
-    const rect = event.currentTarget.getBoundingClientRect();
-    const height = visible.length * 42 + 14;
-    const below = window.innerHeight - rect.bottom - 6;
-    const style = below >= height || rect.top < height
-      ? { top: rect.bottom + 6, bottom: "auto" }
-      : { top: "auto", bottom: window.innerHeight - rect.top + 6 };
-    if (align === "start") Object.assign(style, { left: Math.max(8, rect.left), right: "auto" });
-    else Object.assign(style, { left: "auto", right: Math.max(8, window.innerWidth - rect.right) });
-    setMenuStyle({ position: "fixed", zIndex: 80, ...style });
-    setOpen(true);
-  };
+  // viewport next to its button. On a phone the trigger often sits on the left, so the menu is clamped
+  // inside the visible viewport instead of extending off the left edge.
+  const toggle = () => setOpen(current => !current);
+
+  useLayoutEffect(() => {
+    if (!open) return undefined;
+    const trigger = root.current?.querySelector("button");
+    const menu = menuRef.current;
+    const list = listRef.current;
+    if (!trigger || !menu || !list) return undefined;
+    const apply = style => {
+      menu.style.position = style.position;
+      menu.style.zIndex = String(style.zIndex);
+      menu.style.left = `${style.left}px`;
+      menu.style.right = "auto";
+      menu.style.top = `${style.top}px`;
+      menu.style.bottom = "auto";
+      menu.style.maxWidth = `${style.maxWidth}px`;
+      list.style.maxHeight = `${style.maxHeight}px`;
+    };
+    const measure = () => placeMoreMenu(
+      trigger.getBoundingClientRect(),
+      align,
+      Math.ceil(menu.getBoundingClientRect().width),
+      Math.ceil(list.scrollHeight),
+    );
+    apply(measure());
+    const placed = measure();
+    apply(placed);
+    setMenuStyle(placed);
+    const moreBelow = list.scrollHeight - list.clientHeight > 2;
+    setHasMoreBelow(current => current === moreBelow ? current : moreBelow);
+    return undefined;
+  }, [open, align, visible.length]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -110,7 +173,17 @@ export function AccMoreMenu({
         {label}
       </button>
       {open ? (
-        <div className="acc-more-menu" id={menuId} role="menu" style={menuStyle || undefined}>
+        <div ref={menuRef} className={`acc-more-menu${hasMoreBelow ? " has-more-below" : ""}`} id={menuId} role="menu" style={menuStyle ? { position: menuStyle.position, zIndex: menuStyle.zIndex, left: menuStyle.left, right: menuStyle.right, top: menuStyle.top, bottom: menuStyle.bottom, maxWidth: menuStyle.maxWidth } : undefined}>
+          <div
+            ref={listRef}
+            className="acc-more-menu-list"
+            style={menuStyle ? { maxHeight: menuStyle.maxHeight } : undefined}
+            onScroll={event => {
+              const list = event.currentTarget;
+              const moreBelow = list.scrollHeight - list.clientHeight - list.scrollTop > 2;
+              setHasMoreBelow(current => current === moreBelow ? current : moreBelow);
+            }}
+          >
           {visible.map(item => item.separator ? (
             <div key={item.id || "separator"} className="acc-more-sep" role="separator" />
           ) : (
@@ -128,6 +201,29 @@ export function AccMoreMenu({
               {item.label}
             </button>
           ))}
+          </div>
+          {hasMoreBelow ? (
+            <button
+              type="button"
+              className="acc-more-more"
+              aria-label="Show more options"
+              onClick={event => {
+                const list = event.currentTarget.closest(".acc-more-menu")?.querySelector(".acc-more-menu-list");
+                if (!list) return;
+                const next = Math.min(
+                  list.scrollHeight - list.clientHeight,
+                  list.scrollTop + Math.max(96, Math.round(list.clientHeight * 0.72)),
+                );
+                const before = list.scrollTop;
+                list.scrollTo({ top: next, behavior: "smooth" });
+                window.requestAnimationFrame(() => {
+                  if (list.scrollTop <= before) list.scrollTop = next;
+                });
+              }}
+            >
+              <ChevronDown size={16} aria-hidden="true" />
+            </button>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -226,15 +322,16 @@ export const AccSkeleton = () => (
     {Array.from({ length: 8 }, (_, index) => <div key={index} className="acc-skel" />)}
   </div>
 );
-export function Modal({ title, close, children, actions, className = "" }) {
+export function Modal({ title, close, children, actions, className = "", wide = false, panelClassName = "" }) {
+  const layerRef = useDialogDismiss(close);
   return (
-    <div className={`modal-bg${className ? ` ${className}` : ""}`} role="presentation" onClick={event => { if (event.target === event.currentTarget) close(); }}>
-      <div className="modal acc-modal" role="dialog" aria-modal="true" aria-label={title}>
-        <div className="row">
+    <div ref={layerRef} className={`modal-bg${className ? ` ${className}` : ""}`} role="presentation" onClick={event => { if (event.target === event.currentTarget) close(); }}>
+      <div className={`modal acc-modal${wide ? " acc-modal-wide" : ""}${panelClassName ? ` ${panelClassName}` : ""}`} role="dialog" aria-modal="true" aria-label={title}>
+        <div className="row modal-head">
           <h2 className="title">{title}</h2>
           <CloseButton onClick={close} />
         </div>
-        {children}
+        <ModalScroll>{children}</ModalScroll>
         {actions ? <div className="acc-modal-actions">{actions}</div> : null}
       </div>
     </div>

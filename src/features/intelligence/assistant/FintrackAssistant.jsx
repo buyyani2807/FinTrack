@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useLocation } from "react-router";
 import { formatInr } from "../../../lib/formatMoney.js";
+import { CloseButton } from "../../../components/ui.jsx";
 import { askFintrack, assistantPromptsForPath, assistantQuestionGroups, createAskLimiter } from "./askFintrack.js";
 import "./assistant.css";
 
@@ -11,6 +12,7 @@ export function FintrackAssistant({ open, onClose, context, onNavigate, loadBook
   const titleId = useId();
   const inputRef = useRef(null);
   const bodyRef = useRef(null);
+  const layerRef = useRef(null);
   const [query, setQuery] = useState("");
   const [answer, setAnswer] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -25,7 +27,12 @@ export function FintrackAssistant({ open, onClose, context, onNavigate, loadBook
   useEffect(() => {
     if (!open) return undefined;
     const id = window.setTimeout(() => inputRef.current?.focus(), 0);
-    const onKey = event => { if (event.key === "Escape") onClose(); };
+    const onKey = event => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      const layers = [...document.querySelectorAll(".modal-bg, .ft-ask-backdrop")];
+      if (layers.at(-1) !== layerRef.current) return;
+      onClose();
+    };
     document.addEventListener("keydown", onKey);
     return () => {
       window.clearTimeout(id);
@@ -79,7 +86,7 @@ export function FintrackAssistant({ open, onClose, context, onNavigate, loadBook
   };
 
   return (
-    <div className="ft-ask-backdrop" onClick={onClose}>
+    <div className="ft-ask-backdrop" ref={layerRef} onClick={onClose}>
       <section
         className="ft-ask"
         role="dialog"
@@ -93,7 +100,7 @@ export function FintrackAssistant({ open, onClose, context, onNavigate, loadBook
             <h2 id={titleId}>Answers from your records</h2>
             <p className="ft-ask-note">Read-only. Amounts come from the same reports as the screens. Nothing is posted.</p>
           </div>
-          <button type="button" className="btn" onClick={onClose}>Close</button>
+          <CloseButton onClick={onClose} />
         </header>
         <form className="ft-ask-form" onSubmit={event => { event.preventDefault(); ask(query); }}>
           <label className="sr-only" htmlFor="ft-ask-query">Question</label>

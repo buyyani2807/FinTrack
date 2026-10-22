@@ -4,7 +4,8 @@ import { canWhatsAppShare, openManualWhatsAppShare, openWhatsAppWeb } from "../.
 import { buildArReminderMessage, buildOutstandingSummaryMessage, buildPartyStatementMessage, buildPaymentAdviceMessage, buildPurchaseDocumentMessage } from "../model/salesInvoiceModel.js";
 import { downloadSalesInvoicePdf, invoicePdfShareOnThisDevice, salesInvoicePdfFile, salesInvoiceWhatsAppText } from "../io/salesInvoicePdf.js";
 import { downloadPartyStatementPdf } from "../io/partyStatementPdf.js";
-import { CloseButton } from "../../../components/ui.jsx";
+import { CloseButton, ModalScroll } from "../../../components/ui.jsx";
+import { useDialogDismiss } from "../../../components/useDialogDismiss.js";
 
 function sendInvoiceMessage(invoice) {
   const message = salesInvoiceWhatsAppText(invoice);
@@ -34,13 +35,15 @@ function sendSalesInvoiceOnWhatsApp(invoice) {
 }
 
 export function SalesInvoiceViewerModal({ invoice, settings = {}, close }) {
+  const layerRef = useDialogDismiss(close);
   const whatsAppAvailable = canWhatsAppShare(invoice?.customerPhone);
   const m = invoice.money;
 
   return (
-    <div className="modal-bg">
+    <div className="modal-bg" ref={layerRef}>
       <div className="modal receipt-view has-corner-close" role="dialog" aria-modal="true" aria-label="Sales invoice">
         <span className="modal-corner-close"><CloseButton onClick={close} /></span>
+        <ModalScroll>
         <div className="receipt-paper">
           <div className="receipt-header">
             <strong>{invoice.companyName}</strong>
@@ -94,7 +97,8 @@ export function SalesInvoiceViewerModal({ invoice, settings = {}, close }) {
           {invoice.receiptTerms && <p className="small muted">{invoice.receiptTerms}</p>}
           <p className="small muted">Powered by FinTrack</p>
         </div>
-        <div className="row spacer">
+        </ModalScroll>
+        <div className="row spacer modal-foot">
           <button type="button" className="btn" onClick={() => downloadSalesInvoicePdf(invoice)}>Download PDF</button>
           {whatsAppAvailable && (
             <button
@@ -139,16 +143,18 @@ export function SalesInvoiceActions({ invoice, settings = {}, compact = false })
 }
 
 export function SalesInvoiceSuccessModal({ invoice, settings = {}, close }) {
+  const layerRef = useDialogDismiss(close);
   const [viewOpen, setViewOpen] = useState(false);
   const whatsAppAvailable = canWhatsAppShare(invoice?.customerPhone);
   const m = invoice.money;
 
   return (
     <>
-      <div className="modal-bg">
+      <div className="modal-bg" ref={layerRef}>
         <div className="modal receipt-success has-corner-close" role="dialog" aria-modal="true" aria-label="Invoice saved">
           <span className="modal-corner-close"><CloseButton onClick={close} /></span>
           <h2 className="title green">Sale recorded ✓</h2>
+          <ModalScroll>
           <p className="copy">Invoice No: <strong className="gold">{invoice.invoiceNumber}</strong></p>
           <p className="copy">{invoice.companyName} → {invoice.customerName} · {m(invoice.amount)} · {invoice.settlement}</p>
           <p className="small">Date: {formatReceiptDate(invoice.invoiceDate)} · Due: {formatReceiptDate(invoice.dueDate)}</p>
@@ -167,7 +173,8 @@ export function SalesInvoiceSuccessModal({ invoice, settings = {}, close }) {
               )
               : <p className="small">WhatsApp unavailable — add a valid party phone number.</p>}
           </div>
-          <div className="row spacer">
+          </ModalScroll>
+          <div className="row spacer modal-foot">
             <button type="button" className="btn primary" onClick={close}>Done</button>
           </div>
         </div>

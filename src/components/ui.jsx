@@ -1,4 +1,5 @@
-import { cloneElement, isValidElement, useId, useState } from "react";
+import { Children, cloneElement, isValidElement, useEffect, useId, useRef, useState } from "react";
+import { useDialogDismiss } from "./useDialogDismiss.js";
 import { Select } from "./Select.jsx";
 import { Reveal } from "./ui/Reveal.jsx";
 import { ArrowLeft, ChevronRight, Download, Eye, EyeOff, Inbox, Search, X } from "lucide-react";
@@ -42,20 +43,137 @@ export const Badge = ({
 }) => <span className={`badge ${tone}`}>{status}</span>;
 // Popups close with the ✕ in the top-right corner (shown when `close` is given); there is no Cancel button.
 // `isolateClicks` stops clicks inside the dialog reaching clickable parents (e.g. cards).
-export const Modal = ({
-  children,
-  close,
-  isolateClicks = false
-}) => {
+const classTokens = value => String(value || "").split(/\s+/).filter(Boolean);
+
+function nodeHasButton(node) {
+  if (!isValidElement(node)) return false;
+  if (node.type === "button" || node.type === Button) return true;
+  if (classTokens(node.props?.className).includes("btn")) return true;
+  return Children.toArray(node.props?.children).some(nodeHasButton);
+}
+
+function isDialogTitle(node) {
+  if (!isValidElement(node)) return false;
+  return node.type === "h2" || classTokens(node.props?.className).includes("title");
+}
+
+function isDialogFooter(node) {
+  if (!isValidElement(node) || node.type === "form") return false;
+  const tokens = classTokens(node.props?.className);
+  const isBar = tokens.includes("row") || tokens.includes("tabs") || tokens.includes("tool-stack");
+  return isBar && nodeHasButton(node);
+}
+
+function splitDialogChildren(children) {
+  const items = Children.toArray(children);
+  let head = null;
+  let foot = null;
+  let body = items;
+  if (body.length && isDialogTitle(body[0])) {
+    head = body[0];
+    body = body.slice(1);
+  }
+  if (body.length && isDialogFooter(body[body.length - 1])) {
+    foot = body[body.length - 1];
+    body = body.slice(0, -1);
+  }
+  return { head, body, foot };
+}
+
+// Scroll region for dialogs. The header and actions stay put; only this region moves.
+// Scroll for more is only offered at the top. A click glides to the end, and any
+// manual scroll hides it until the body is back at the top.
+export function ModalScroll({ children }) {
+  const ref = useRef(null);
+  const [edges, setEdges] = useState({ above: false, below: false });
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const update = () => {
+      const overflow = el.scrollHeight > el.clientHeight + 2;
+      const next = {
+        above: overflow && el.scrollTop > 1,
+        below: overflow && el.scrollTop + el.clientHeight < el.scrollHeight - 8,
+      };
+      setEdges(current => (current.above === next.above && current.below === next.below ? current : next));
+    };
+    update();
+    const frame = requestAnimationFrame(update);
+    el.addEventListener("scroll", update, { passive: true });
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    const watch = node => { if (node instanceof Element) observer.observe(node); };
+    [...el.children].forEach(watch);
+    const mutations = new MutationObserver(() => {
+      [...el.children].forEach(watch);
+      update();
+    });
+    mutations.observe(el, { childList: true, subtree: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      el.removeEventListener("scroll", update);
+      observer.disconnect();
+      mutations.disconnect();
+    };
+  }, []);
+
+  const classes = `modal-scroll${edges.above ? " has-more-above" : ""}${edges.below ? " has-more-below" : ""}`;
+  return (
+    <div className={classes}>
+      <div ref={ref} className="modal-scroll-body">{children}</div>
+      {edges.below && !edges.above ? (
+        <button
+          type="button"
+          className="modal-scroll-hint"
+          onClick={event => {
+            const body = event.currentTarget.closest(".modal-scroll")?.querySelector(".modal-scroll-body");
+            if (!body) return;
+            body.scrollTo({ top: body.scrollHeight - body.clientHeight, behavior: "smooth" });
+          }}
+        >
+          Scroll for more
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+export function Modal({ children, close, isolateClicks = false }) {
   const stop = isolateClicks ? event => event.stopPropagation() : undefined;
-  return <div className="modal-bg" onClick={stop}><div className={`modal${close ? " has-corner-close" : ""}`} role="dialog" aria-modal="true" onClick={stop}>{close && <span className="modal-corner-close"><CloseButton onClick={close} /></span>}{children}</div></div>;
-};
+  const layerRef = useDialogDismiss(close);
+  const { head, body, foot } = splitDialogChildren(children);
+  return (
+    <div className="modal-bg" ref={layerRef} onClick={stop}>
+      <div className={`modal${close ? " has-corner-close" : ""}`} role="dialog" aria-modal="true" onClick={stop}>
+        {close && <span className="modal-corner-close"><CloseButton onClick={close} /></span>}
+        {head}
+        <ModalScroll>{body}</ModalScroll>
+        {foot ? <div className="modal-foot">{foot}</div> : null}
+      </div>
+    </div>
+  );
+}
 export function ConfirmDialog({ title, message, confirmLabel = "Confirm", danger = false, busy = false, error = "", close, onConfirm }) {
   return <Modal close={() => !busy && close()}><h2 className="title">{title}</h2><p className="copy">{message}</p>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button className={danger ? "danger primary" : "primary"} disabled={busy} onClick={onConfirm}>{busy ? "Please wait…" : confirmLabel}</Button></div></Modal>;
 }
 // Dialog with a title row and Close button; `actions` render after the body.
 export function DialogModal({ title, close, children, actions, className = "" }) {
-  return <div className="modal-bg"><div className={`modal${className ? ` ${className}` : ""}`} role="dialog" aria-modal="true" aria-label={title}><div className="row"><h2 className="title">{title}</h2><CloseButton onClick={close} /></div>{children}{actions}</div></div>;
+  const layerRef = useDialogDismiss(close);
+  const { body, foot } = splitDialogChildren(children);
+  const footer = actions || foot;
+  return (
+    <div className="modal-bg" ref={layerRef}>
+      <div className={`modal${className ? ` ${className}` : ""}`} role="dialog" aria-modal="true" aria-label={title}>
+        <div className="row modal-head">
+          <h2 className="title">{title}</h2>
+          <CloseButton onClick={close} />
+        </div>
+        <ModalScroll>{body}</ModalScroll>
+        {footer ? <div className="modal-foot">{footer}</div> : null}
+      </div>
+    </div>
+  );
 }
 // ✕ icon button for dialogs and drawers; its accessible name is "Close".
 export function CloseButton({ onClick, label = "Close" }) {

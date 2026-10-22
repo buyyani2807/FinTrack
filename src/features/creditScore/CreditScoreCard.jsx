@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { GAUGE_SEGMENTS, calculateFintrackCreditScore, scoreToGaugeAngle } from "./creditScoreModel.js";
 import { formatInr } from "../../lib/formatMoney.js";
-import { CloseButton } from "../../components/ui.jsx";
+import { CloseButton, ModalScroll } from "../../components/ui.jsx";
+import { useDialogDismiss } from "../../components/useDialogDismiss.js";
 
 const money = formatInr;
 
@@ -67,12 +68,14 @@ function FactorList({ items, tone }) {
 }
 
 export function CreditScoreDetails({ result, close, accountLabel }) {
+  const layerRef = useDialogDismiss(close);
   if (!result) return null;
-  return <div className="modal-bg" onClick={close}><div className="modal credit-score-modal" onClick={event => event.stopPropagation()}>
-    <div className="row">
+  return <div className="modal-bg" ref={layerRef} onClick={close}><div className="modal credit-score-modal" onClick={event => event.stopPropagation()}>
+    <div className="row modal-head">
       <h2 className="title">FinTrack Credit Score</h2>
       <CloseButton onClick={close} />
     </div>
+    <ModalScroll>
     <div className="credit-score-details-hero">
         <div className="credit-score-gauge-wrap"><CreditScoreGauge score={result.score} available={result.available} /></div>
       {result.available ? <div>
@@ -117,6 +120,7 @@ export function CreditScoreDetails({ result, close, accountLabel }) {
       </div>}
     </>}
     <p className="small credit-score-disclaimer">FinTrack Credit Score is an internal assessment based on payment history recorded in FinTrack. It is not an official credit-bureau score.</p>
+    </ModalScroll>
   </div></div>;
 }
 

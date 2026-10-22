@@ -1,10 +1,11 @@
+import { ChevronDown } from "lucide-react";
 import { AccMoreMenu } from "./AccUi.jsx";
 import { SIMPLE_ENTRY_KINDS } from "../model/accountingModel.js";
 
 export function NewEntryActions({ openSimple, openVoucher, openParty, openBookkeeper }) {
   return (
     <AccMoreMenu
-      label="New"
+      label={<span className="acc-new-label">New <ChevronDown size={16} aria-hidden="true" /></span>}
       align="end"
       buttonClassName="btn primary"
       items={[

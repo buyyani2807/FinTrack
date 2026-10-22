@@ -1,7 +1,8 @@
 import { downloadReceiptPdf } from "../io/receiptPdf.js";
 import { buildWhatsAppMessage, canWhatsAppShare, openManualWhatsAppShare } from "../io/receiptWhatsApp.js";
 import { formatReceiptDate, withReceiptBranding } from "../model/receiptModel.js";
-import { CloseButton } from "../../../components/ui.jsx";
+import { CloseButton, ModalScroll } from "../../../components/ui.jsx";
+import { useDialogDismiss } from "../../../components/useDialogDismiss.js";
 
 export function ReceiptViewerModal({ receipt, settings, token, onLogAction, close }) {
   const brandedReceipt = withReceiptBranding(receipt, settings);
@@ -14,8 +15,10 @@ export function ReceiptViewerModal({ receipt, settings, token, onLogAction, clos
     }
   };
 
-  return <div className="modal-bg"><div className="modal receipt-view has-corner-close" role="dialog" aria-modal="true" aria-label="Payment receipt">
+  const layerRef = useDialogDismiss(close);
+  return <div className="modal-bg" ref={layerRef}><div className="modal receipt-view has-corner-close" role="dialog" aria-modal="true" aria-label="Payment receipt">
     <span className="modal-corner-close"><CloseButton onClick={close} /></span>
+    <ModalScroll>
     <div className="receipt-paper">
       <div className="receipt-header">
         <strong>{receipt.companyName}</strong>
@@ -48,7 +51,8 @@ export function ReceiptViewerModal({ receipt, settings, token, onLogAction, clos
       {receipt.receiptTerms && <p className="small muted">{receipt.receiptTerms}</p>}
       <p className="small muted">Powered by FinTrack</p>
     </div>
-    <div className="row spacer">
+    </ModalScroll>
+    <div className="row spacer modal-foot">
       <button type="button" className="btn" onClick={async () => { await log("downloaded"); downloadReceiptPdf(receipt); }}>Download PDF</button>
       {whatsAppAvailable && <button type="button" className="btn whatsapp" onClick={() => { openManualWhatsAppShare({ phone: receipt.customerPhone, message: buildWhatsAppMessage(brandedReceipt, settings) }); log("whatsapp_clicked"); }}>WhatsApp</button>}
     </div>

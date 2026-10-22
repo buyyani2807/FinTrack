@@ -28,8 +28,8 @@ import { buildSalesInvoice } from "../model/salesInvoiceModel.js";
 import { downloadSalesInvoicePdf } from "../io/salesInvoicePdf.js";
 import { isValidUpiId, upiPayLink } from "../model/upiPay.js";
 import { QrSvg } from "../PayPage.jsx";
-import { AccMoreMenu } from "./AccUi.jsx";
-import { CloseButton, SearchInput, SegmentedControl } from "../../../components/ui.jsx";
+import { AccMoreMenu, Modal } from "./AccUi.jsx";
+import { SearchInput, SegmentedControl } from "../../../components/ui.jsx";
 
 const money = formatInr;
 const qty = (value, unit) => `${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 3 })}${unit ? ` ${unit}` : ""}`;
@@ -55,21 +55,6 @@ const TYPE_HINTS = {
 
 function Field({ label, children, className = "" }) {
   return <label className={`accounts-filter-field ${className}`.trim()}><span className="small">{label}</span>{children}</label>;
-}
-
-function Modal({ title, close, children, actions, wide = false }) {
-  return (
-    <div className="modal-bg" role="presentation" onClick={event => { if (event.target === event.currentTarget) close(); }}>
-      <div className={`modal acc-modal${wide ? " acc-modal-wide" : ""}`} role="dialog" aria-modal="true" aria-label={title}>
-        <div className="row">
-          <h2 className="title">{title}</h2>
-          <CloseButton onClick={close} />
-        </div>
-        {children}
-        {actions ? <div className="acc-modal-actions">{actions}</div> : null}
-      </div>
-    </div>
-  );
 }
 
 const StatusPill = ({ status }) => (status?.label ? <span className={`acc-doc-status tone-${status.tone || "plain"}`}>{status.label}</span> : null);

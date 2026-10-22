@@ -198,6 +198,11 @@ td:has(> .btn + .btn) { line-height: 2.6; }
 .repayment-progress .metric-value { margin: 12px 0 4px; }
 .repayment-progress-bar { margin-top: 16px; }
 .btn:disabled, .btn[disabled] { opacity: .5 !important; cursor: not-allowed !important; }
+.btn:disabled:hover, .btn[disabled]:hover { background: var(--ft-surface) !important; border-color: var(--ft-border) !important; color: var(--ft-text-2) !important; }
+.btn.primary:disabled:hover, .btn.primary[disabled]:hover { background: var(--ft-primary) !important; border-color: var(--ft-primary) !important; color: var(--ft-on-primary) !important; }
+.btn.danger:disabled:hover, .btn.danger[disabled]:hover { background: var(--ft-surface) !important; border-color: var(--ft-danger) !important; color: var(--ft-danger) !important; }
+.btn.danger.primary:disabled:hover { background: var(--ft-danger) !important; border-color: var(--ft-danger) !important; color: #fff !important; }
+.btn:focus-visible { outline: 3px solid var(--ft-focus-ring) !important; outline-offset: 2px !important; }
 .btn.whatsapp { background: var(--ft-success-soft) !important; border-color: transparent !important; color: var(--ft-success) !important; }
 .btn.whatsapp:hover { border-color: var(--ft-success) !important; }
 .link-button, .phone-link { color: var(--ft-primary) !important; font-weight: 600; }
@@ -666,6 +671,35 @@ input[type="date"], input[type="time"], input[type="month"] { font: 400 var(--ft
 .modal-corner-close .ft-dialog-close { margin: 0; }
 .modal.has-corner-close > :is(h2, .title, .toolbar, .row, form):nth-child(2) { padding-right: 44px; }
 .modal .row.spacer:has(> .btn), .modal .row.spacer:has(> button) { justify-content: flex-start !important; flex-wrap: wrap; gap: 8px; }
+/* dialogs: header and actions stay fixed; only the body scrolls */
+.modal, .acc-modal { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; max-height: min(90svh, 900px); }
+.modal:has(> .modal-scroll:first-child), .modal:has(> .modal-corner-close + .modal-scroll), .acc-modal:has(> .modal-scroll:first-child) { grid-template-rows: minmax(0, 1fr) auto; }
+.modal > .modal-head, .acc-modal > .modal-head, .modal.has-corner-close > h2, .modal.has-corner-close > .title { flex: none; margin-bottom: 0; padding-bottom: 12px; border-bottom: 1px solid var(--ft-border); }
+.modal.has-corner-close > h2, .modal.has-corner-close > .title { padding-right: 40px; }
+.modal-scroll { position: relative; min-height: 0; overflow: hidden; }
+.modal-scroll-body { height: 100%; max-height: 100%; overflow: auto; overscroll-behavior: contain; padding-top: 14px; scrollbar-width: thin; scrollbar-color: var(--ft-border-strong) transparent; }
+.modal-scroll-body::-webkit-scrollbar { width: 8px; }
+.modal-scroll-body::-webkit-scrollbar-thumb { background: var(--ft-border-strong); border-radius: 999px; }
+.modal-scroll.has-more-above::before, .modal-scroll.has-more-below::after { content: ""; position: absolute; left: 0; right: 10px; height: 32px; z-index: 1; pointer-events: none; }
+.modal-scroll.has-more-above::before { top: 0; background: linear-gradient(var(--ft-surface), transparent); }
+.modal-scroll.has-more-below::after { bottom: 0; background: linear-gradient(transparent, var(--ft-surface)); }
+.modal-scroll-hint { position: absolute; z-index: 2; left: 50%; bottom: 8px; display: inline-flex; align-items: center; gap: 6px; margin: 0; padding: 5px 12px; border: 1px solid var(--ft-border); border-radius: 999px; background: var(--ft-surface); color: var(--ft-primary); font: 600 12px/1.2 var(--ft-font); box-shadow: var(--ft-shadow); white-space: nowrap; cursor: pointer; transform: translateX(-50%); }
+.modal-scroll-hint:hover, .modal-scroll-hint:focus-visible { border-color: var(--ft-primary-hover); background: var(--ft-primary-hover); color: var(--ft-on-primary); outline: none; }
+.modal-scroll-hint::after { content: ""; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: translateY(-1px) rotate(45deg); }
+.modal-foot, .row.modal-foot, .acc-modal-actions { flex: none; margin-top: 4px; padding-top: 12px; border-top: 1px solid var(--ft-border); background: var(--ft-surface); }
+.modal-foot > .row, .modal-foot > .tabs { width: 100%; margin: 0; }
+/* every dialog shares the same reading rhythm: description, fields, then a clear error */
+.modal .copy, .acc-modal .copy { max-width: 62ch; margin: 0; color: var(--ft-text-2); }
+.modal .form, .acc-modal .form { align-items: start; gap: 14px 12px; }
+.modal .field, .acc-modal .field { gap: 6px; min-width: 0; }
+.modal p.red, .acc-modal p.red { margin: 12px 0 0; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--ft-danger) 28%, transparent); border-radius: 10px; background: var(--ft-danger-soft); }
+.modal .notice, .acc-modal .notice { margin-top: 12px; }
+.modal .grid.metrics, .acc-modal .grid.metrics { gap: 8px; }
+.modal .grid.metrics > .card, .acc-modal .grid.metrics > .card { padding: 12px; box-shadow: none; }
+.ft-select-menu { scrollbar-width: thin; scrollbar-color: var(--ft-border-strong) transparent; }
+.modal-scroll-body form > .row:last-child:has(.btn), .modal-scroll-body form > .tabs:last-child:has(.btn) { position: sticky; bottom: 0; z-index: 1; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--ft-border); background: var(--ft-surface); }
+.modal-scroll:has(form > .row:last-child:has(.btn)) .modal-scroll-hint, .modal-scroll:has(form > .tabs:last-child:has(.btn)) .modal-scroll-hint { bottom: 60px; }
+.modal-scroll:has(form > .row:last-child:has(.btn)).has-more-below::after, .modal-scroll:has(form > .tabs:last-child:has(.btn)).has-more-below::after { bottom: 52px; }
 
 /* ------------------------------------------------------------------ sidebar (Finance) */
 .financier-nav { background: var(--ft-sidebar-bg) !important; border: 0 !important; box-shadow: none !important; backdrop-filter: none !important; color: var(--ft-sidebar-text) !important; }
@@ -850,9 +884,23 @@ html[data-ft-role="owner"] .top-actions .top-theme { display: none; }
 .accounts-dashboard .accounts-section-nav > .accounts-section-tab { min-height: 34px !important; padding: 6px 14px !important; border: 1px solid transparent !important; border-radius: 999px !important; background: transparent !important; color: var(--ft-muted) !important; font: 600 13px/1.2 var(--ft-font) !important; }
 .accounts-dashboard .accounts-section-nav > .accounts-section-tab:hover { background: var(--ft-surface-hover) !important; color: var(--ft-text) !important; }
 .accounts-dashboard .accounts-section-nav > .accounts-section-tab.active { border-color: var(--ft-primary-soft-strong) !important; background: var(--ft-primary-soft) !important; color: var(--ft-primary) !important; }
+.acc-new-label { display: inline-flex; align-items: center; gap: 6px; }
+.acc-new-label svg { flex: none; }
 @media (width <= 680px) {
-  .accounts-dashboard .acc-page-toolbar { grid-template-columns: minmax(0, 1fr); grid-template-areas: "title" "context" "actions"; }
-  .acc-page-toolbar .acc-page-actions { flex-wrap: wrap; justify-content: flex-start; margin-top: 14px; }
+  .accounts-dashboard .acc-page-toolbar { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "title actions" "context context"; align-items: center; gap: 8px 12px; }
+  .accounts-dashboard .acc-page-toolbar > .title { min-width: 0; }
+  .acc-page-toolbar .acc-page-actions { flex-wrap: nowrap; justify-content: flex-end; align-self: center; margin-top: 0; }
+  .accounts-dashboard .acc-page-actions .acc-more-trigger {
+    height: 34px !important;
+    min-height: 34px !important;
+    max-height: 34px !important;
+    padding: 0 12px !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    line-height: 1 !important;
+  }
+  .accounts-dashboard .acc-page-actions .acc-new-label { gap: 4px; }
+  .accounts-dashboard .acc-page-actions .acc-new-label svg { width: 14px; height: 14px; }
 }
 
 /* ------------------------------------------------------------------ Settings */
@@ -1170,7 +1218,8 @@ html[data-ft-role="owner"] .top-actions .top-theme { display: none; }
 @media (width <= 680px) {
   .shell { padding-left: 16px !important; padding-right: 16px !important; }
   .modal-bg { align-items: flex-end !important; padding: 0 !important; }
-  .modal, .acc-modal { width: 100% !important; max-height: 92svh !important; border-radius: 20px 20px 0 0 !important; padding: 20px !important; }
+  .modal, .acc-modal { width: 100% !important; max-height: 92svh !important; overflow: hidden !important; border-radius: 20px 20px 0 0 !important; padding: 20px !important; }
+  .modal .form, .acc-modal .form { grid-template-columns: 1fr; }
   .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
   .btn { min-height: 44px !important; }
   .accounts-dashboard .accounts-business-action, .accounts-dashboard .acc-ov-link-btn, .link-button { min-height: 44px !important; }

@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { ArrowLeft, CheckCircle2, CircleAlert, FileUp, LoaderCircle, Sparkles } from "lucide-react";
-import { CloseButton } from "../../../components/ui.jsx";
+import { CloseButton, ModalScroll } from "../../../components/ui.jsx";
+import { useDialogDismiss } from "../../../components/useDialogDismiss.js";
 import { Select } from "../../../components/Select.jsx";
 import { readImportFile } from "../model/importReaders.js";
 import {
@@ -128,6 +129,7 @@ export function AccMigrationAssistant({
   const close = () => {
     if (!busy) onClose?.();
   };
+  const layerRef = useDialogDismiss(close);
 
   const reviewRows = analysis
     ? analysis.ledgers.filter(ledger => showAll || ledger.suggested.confidence < AUTO_MAP_CONFIDENCE)
@@ -135,13 +137,13 @@ export function AccMigrationAssistant({
   const counts = analysis?.counts;
 
   return (
-    <div className="modal-bg" role="presentation" onClick={event => { if (event.target === event.currentTarget) close(); }}>
+    <div ref={layerRef} className="modal-bg" role="presentation" onClick={event => { if (event.target === event.currentTarget) close(); }}>
       <div className="modal acc-modal acc-modal-wide acc-mig" role="dialog" aria-modal="true" aria-label="Move your books to FinTrack">
-        <div className="row">
+        <div className="row modal-head">
           <h2 className="title">Move your books to FinTrack</h2>
           <CloseButton onClick={close} />
         </div>
-
+        <ModalScroll>
         {stage === "upload" || stage === "reading" ? (
           <div className="acc-mig-body">
             <p className="acc-setup-ask">Upload what you exported from Tally, Zoho Books, Book Keeper or Excel. I will read it, map your ledgers and parties, and show you anything I am unsure about before importing.</p>
@@ -314,6 +316,7 @@ export function AccMigrationAssistant({
             </div>
           </div>
         )}
+        </ModalScroll>
       </div>
     </div>
   );

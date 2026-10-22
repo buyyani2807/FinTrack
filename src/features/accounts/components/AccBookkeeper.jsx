@@ -15,6 +15,7 @@ import {
   starterLedger,
 } from "../model/bookkeeper.js";
 import { money } from "../accountsFormat.js";
+import { Modal } from "./AccUi.jsx";
 import "../bookkeeper.css";
 
 const LEDGER_LABEL = {
@@ -67,6 +68,7 @@ export function AccBookkeeper({
   onPost,
   onOpenTransactions,
   compact = false,
+  close,
 }) {
   const [input, setInput] = useState("");
   const [entry, setEntry] = useState(null);
@@ -78,7 +80,7 @@ export function AccBookkeeper({
   const draft = useMemo(() => (entry ? buildBookkeeperDraft(entry.fields, ctx) : null), [entry, ctx]);
   const moneyRows = useMemo(() => moneyAccounts(accounts).filter(account => account.isActive !== false), [accounts]);
 
-  const read = async raw => {
+  const read = async (raw, options = {}) => {
     const sentence = String(raw || "").replace(/\s+/g, " ").trim();
     if (!sentence || reading) return;
     const alone = parseEntryText(sentence, { today });
@@ -96,7 +98,7 @@ export function AccBookkeeper({
         requestId: amend ? entry.requestId : newClientRequestId(),
         understood: Boolean(intent.action),
       });
-      setInput("");
+      if (!options.keepInput) setInput("");
     } finally {
       setReading(false);
     }
@@ -128,8 +130,54 @@ export function AccBookkeeper({
   const showMoney = action && (action === "transfer" || !CREDITABLE.has(action) || fields?.settlement === "paid");
   const gstShown = company?.gstRegistration === "regular" && ["asset_purchase", "expense", "stock_purchase", "sale"].includes(action);
 
-  return (
-    <section className={`card acc-bk${compact ? " is-compact" : ""}`} aria-label="Tell FinTrack">
+  const postActions = entry?.understood ? (
+    <div className="acc-bk-actions">
+      <button type="button" className="btn primary" disabled={!canWrite || saving || !draft?.ok} onClick={post}>{saving ? "Posting…" : "Post entry"}</button>
+      <button type="button" className="btn" disabled={saving} onClick={() => setEntry(null)}><RotateCcw size={14} aria-hidden="true" /> Start over</button>
+      {!canWrite && <span className="small">Your Accounts role is view-only.</span>}
+    </div>
+  ) : null;
+
+  const examples = !entry ? (
+    <div className="acc-bk-examples">
+      <span>{compact ? "Try" : "Try:"}</span>
+      {BOOKKEEPER_EXAMPLES.slice(0, compact ? 3 : 5).map(example => (
+        <button key={example} type="button" className="acc-bk-chip" disabled={reading} onClick={() => { setInput(example); read(example, { keepInput: true }); }}>{example}</button>
+      ))}
+    </div>
+  ) : null;
+
+  const form = (
+    <form className="acc-bk-form" onSubmit={event => { event.preventDefault(); read(input); }}>
+      <input
+        aria-label="Describe what happened"
+        value={input}
+        maxLength={500}
+        autoFocus={compact}
+        placeholder={entry ? "Add a detail, such as “paid from HDFC”, or describe a new entry" : "I bought a laptop for ₹85,000 using HDFC"}
+        onChange={event => setInput(event.target.value)}
+      />
+      <button type="submit" className="btn primary" disabled={reading || !input.trim()} aria-label="Read entry">
+        <Send size={15} aria-hidden="true" /> {reading ? "Reading…" : "Go"}
+      </button>
+    </form>
+  );
+
+  const composer = compact ? (
+    <div className="acc-bk-dock">
+      {postActions}
+      {examples}
+      {form}
+    </div>
+  ) : (
+    <div className="acc-bk-composer">
+      {form}
+      {examples}
+    </div>
+  );
+
+  const conversation = (
+    <>
       {compact && <p className="acc-bk-sub">Say it the way you would tell your accountant. Nothing is saved until you post it.</p>}
       {!compact && (
         <header className="acc-bk-head">
@@ -277,36 +325,26 @@ export function AccBookkeeper({
                 </details>
               )}
 
-              <div className="acc-bk-actions">
-                <button type="button" className="btn primary" disabled={!canWrite || saving || !draft?.ok} onClick={post}>{saving ? "Posting…" : "Post entry"}</button>
-                <button type="button" className="btn" disabled={saving} onClick={() => setEntry(null)}><RotateCcw size={14} aria-hidden="true" /> Start over</button>
-                {!canWrite && <span className="small">Your Accounts role is view-only.</span>}
-              </div>
+              {!compact && postActions}
             </div>
           )}
         </div>
       )}
+    </>
+  );
 
-      <form className="acc-bk-form" onSubmit={event => { event.preventDefault(); read(input); }}>
-        <input
-          aria-label="Describe what happened"
-          value={input}
-          maxLength={500}
-          placeholder={entry ? "Add a detail, such as “paid from HDFC”, or describe a new entry" : "I bought a laptop for ₹85,000 using HDFC"}
-          onChange={event => setInput(event.target.value)}
-        />
-        <button type="submit" className="btn primary" disabled={reading || !input.trim()} aria-label="Read entry">
-          <Send size={15} aria-hidden="true" /> {reading ? "Reading…" : "Go"}
-        </button>
-      </form>
-      {!entry && (
-        <div className="acc-bk-examples">
-          <span>Try:</span>
-          {BOOKKEEPER_EXAMPLES.slice(0, compact ? 3 : 5).map(example => (
-            <button key={example} type="button" className="acc-bk-chip" disabled={reading} onClick={() => read(example)}>{example}</button>
-          ))}
-        </div>
-      )}
+  if (compact) {
+    return (
+      <Modal panelClassName="acc-entry-dialog" title="Describe it in words" close={close} actions={composer}>
+        <section className="acc-bk is-compact" aria-label="Tell FinTrack">{conversation}</section>
+      </Modal>
+    );
+  }
+
+  return (
+    <section className="card acc-bk" aria-label="Tell FinTrack">
+      {conversation}
+      {composer}
     </section>
   );
 }
