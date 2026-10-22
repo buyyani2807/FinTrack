@@ -56,8 +56,10 @@ export function CollectionCopilotCard({ copilot }) {
     const el = listRef.current;
     if (!el) return undefined;
     const update = () => {
+      const cards = [...el.querySelectorAll(":scope > li")];
+      const last = cards[cards.length - 1]?.getBoundingClientRect();
       setCanPrev(el.scrollLeft > 4);
-      setCanNext(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+      setCanNext(Boolean(last && last.right > el.getBoundingClientRect().right + 4));
     };
     update();
     el.addEventListener("scroll", update, { passive: true });
@@ -86,7 +88,8 @@ export function CollectionCopilotCard({ copilot }) {
     let current = cards.findIndex(card => card.getBoundingClientRect().left >= origin - 8);
     if (current < 0) current = cards.length - 1;
     const target = cards[Math.min(cards.length - 1, Math.max(0, current + direction * page))];
-    const peek = page === 1 && target !== cards[0] ? 64 : 0;
+    const side = Math.max(0, (el.clientWidth - cards[0].getBoundingClientRect().width) / 2);
+    const peek = page === 1 && target !== cards[0] ? side : 0;
     const left = el.scrollLeft + target.getBoundingClientRect().left - origin - peek;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     el.scrollTo({ left, behavior: reduce ? "auto" : "smooth" });

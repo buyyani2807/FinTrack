@@ -2020,10 +2020,14 @@ button.accounts-summary-card:hover {
   background: var(--ft-surface);
 }
 @container copilot (max-width: 679px) {
-  .collection-copilot-list { scroll-padding-left: 64px; }
-  .collection-copilot-list > li { flex-basis: calc(100% - 120px); }
-  .collection-copilot-list > li:first-child { scroll-margin-left: -64px; }
-  .collection-copilot-slider.has-prev::before { width: 72px; }
+  .collection-copilot-list { scroll-padding-left: 28px; }
+  .collection-copilot-list::after { content: ""; flex: 0 0 28px; }
+  .collection-copilot-list > li { flex-basis: calc(100% - 56px); }
+  .collection-copilot-list > li:first-child { scroll-margin-left: -28px; }
+  .collection-copilot-slider.has-prev::before,
+  .collection-copilot-slider.has-next::after { width: 32px; }
+  .collection-copilot-arrow.is-prev { left: -16px; }
+  .collection-copilot-arrow.is-next { right: -16px; }
 }
 @container copilot (min-width: 680px) {
   .collection-copilot-list > li { flex-basis: calc((100% - 32px) / 2.2); }
