@@ -120,6 +120,48 @@ export function salesInvoiceDocumentText(invoice) {
   return lines.filter(line => line != null).join("\n");
 }
 
+const whatsAppBold = value => {
+  const text = String(value ?? "").replace(/\*/g, "").trim();
+  return text ? `*${text}*` : "";
+};
+
+/** Invoice text WhatsApp can render: bold labels, no legal paragraph. */
+export function salesInvoiceWhatsAppText(invoice) {
+  const model = salesInvoicePdfModel(invoice);
+  const lines = [whatsAppBold(model.title || "SALES INVOICE")];
+  if (model.seller?.name) lines.push(model.seller.name);
+  for (const line of model.seller?.lines || []) if (line) lines.push(line);
+  lines.push("");
+  for (const [label, value] of model.meta || []) {
+    if (value) lines.push(`${whatsAppBold(label)} ${value}`);
+  }
+  lines.push("", whatsAppBold(model.partyHeading || "BILL TO"));
+  if (model.party?.name) lines.push(model.party.name);
+  for (const line of model.party?.lines || []) if (line) lines.push(line);
+  if (model.items?.length) {
+    lines.push("", whatsAppBold("Items"));
+    for (const item of model.items) {
+      const detail = [item.quantity, item.rate ? `× ${item.rate}` : "", item.discount ? `disc ${item.discount}` : "", item.gst ? `GST ${item.gst}` : ""].filter(Boolean).join(" ");
+      lines.push(item.name || "Item");
+      const amount = item.amount ? whatsAppBold(item.amount) : "";
+      if (detail || amount) lines.push([detail, amount].filter(Boolean).join(" · "));
+      if (item.detail) lines.push(item.detail);
+    }
+  }
+  if (model.totals?.length) {
+    lines.push("");
+    for (const total of model.totals) {
+      lines.push(total.bold ? `${whatsAppBold(total.label)} ${whatsAppBold(total.value)}` : `${whatsAppBold(total.label)} ${total.value}`);
+    }
+  }
+  if (model.bankLines?.length) lines.push("", ...model.bankLines);
+  if (invoice?.upiId && Number(invoice.payableAmount || 0) > 0) {
+    lines.push("", ...upiCaption(invoice, invoice.payableAmount, invoice.money));
+  }
+  if (model.footer) lines.push("", model.footer);
+  return lines.filter(line => line != null).join("\n").replace(/\n{3,}/g, "\n\n");
+}
+
 export function salesInvoicePdfFile(invoice, options = {}) {
   if (typeof File !== "function") return null;
   const bytes = pdfBinaryToBytes(renderSalesInvoicePdf(invoice, options));

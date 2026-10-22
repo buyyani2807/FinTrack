@@ -27,6 +27,15 @@ export function whatsAppShareUrl(phone, message = "") {
   return `https://wa.me/${normalized}?text=${encodeURIComponent(String(message || ""))}`;
 }
 
+/** Opens the chat in WhatsApp Web. wa.me on a computer often opens the desktop app instead. */
+export function whatsAppWebSendUrl(phone, message = "") {
+  const normalized = normalizeWhatsAppPhone(phone);
+  if (!normalized) return "";
+  const base = `https://web.whatsapp.com/send?phone=${normalized}`;
+  const text = String(message || "");
+  return text ? `${base}&text=${encodeURIComponent(text)}` : base;
+}
+
 function launchWhatsAppUrl(url) {
   if (typeof window === "undefined" || typeof window.open !== "function") {
     return { opened: false };
@@ -150,6 +159,19 @@ export function openWhatsAppShare({ phone, message }) {
   if (!url || typeof window === "undefined") return false;
   window.open(url, "_blank", "noopener,noreferrer");
   return true;
+}
+
+/** Opens the customer chat in WhatsApp Web. */
+export function openWhatsAppWeb({ phone, message = "", note = "" }) {
+  const url = whatsAppWebSendUrl(phone, message);
+  if (!url) return { opened: false, reason: "no_phone" };
+  const launched = launchWhatsAppUrl(url);
+  if (launched.opened) {
+    showWhatsAppHandoff({ opened: true, note });
+    return { opened: true, reason: "opened" };
+  }
+  showWhatsAppHandoff({ opened: false, message, url, note });
+  return { opened: false, reason: "open_failed" };
 }
 
 /** Manual wa.me handoff. Does not require saved WhatsApp settings. */

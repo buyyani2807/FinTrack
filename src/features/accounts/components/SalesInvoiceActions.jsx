@@ -1,10 +1,19 @@
 import { useState } from "react";
 import { formatReceiptDate } from "../../receipts/model/receiptModel.js";
-import { canWhatsAppShare, openManualWhatsAppShare } from "../../receipts/io/receiptWhatsApp.js";
+import { canWhatsAppShare, openManualWhatsAppShare, openWhatsAppWeb } from "../../receipts/io/receiptWhatsApp.js";
 import { buildArReminderMessage, buildOutstandingSummaryMessage, buildPartyStatementMessage, buildPaymentAdviceMessage, buildPurchaseDocumentMessage } from "../model/salesInvoiceModel.js";
-import { downloadSalesInvoicePdf, invoicePdfShareOnThisDevice, salesInvoicePdfFile } from "../io/salesInvoicePdf.js";
+import { downloadSalesInvoicePdf, invoicePdfShareOnThisDevice, salesInvoicePdfFile, salesInvoiceWhatsAppText } from "../io/salesInvoicePdf.js";
 import { downloadPartyStatementPdf } from "../io/partyStatementPdf.js";
 import { CloseButton } from "../../../components/ui.jsx";
+
+function sendInvoiceMessage(invoice) {
+  const message = salesInvoiceWhatsAppText(invoice);
+  if (invoicePdfShareOnThisDevice(navigator.userAgent, navigator.maxTouchPoints)) {
+    openManualWhatsAppShare({ phone: invoice.customerPhone, message });
+    return;
+  }
+  openWhatsAppWeb({ phone: invoice.customerPhone, message });
+}
 
 function sendSalesInvoiceOnWhatsApp(invoice) {
   const file = salesInvoicePdfFile(invoice);
@@ -17,21 +26,11 @@ function sendSalesInvoiceOnWhatsApp(invoice) {
   if (canGivePdfToWhatsApp) {
     navigator.share({ files: [file], title: file.name }).catch(error => {
       if (error?.name === "AbortError") return;
-      downloadSalesInvoicePdf(invoice);
-      openManualWhatsAppShare({
-        phone: invoice.customerPhone,
-        message: "",
-        note: "The invoice PDF downloaded. Attach that file in the WhatsApp chat.",
-      });
+      sendInvoiceMessage(invoice);
     });
     return;
   }
-  downloadSalesInvoicePdf(invoice);
-  openManualWhatsAppShare({
-    phone: invoice.customerPhone,
-    message: "",
-    note: "The invoice PDF downloaded. Attach that file in the WhatsApp chat.",
-  });
+  sendInvoiceMessage(invoice);
 }
 
 export function SalesInvoiceViewerModal({ invoice, settings = {}, close }) {
