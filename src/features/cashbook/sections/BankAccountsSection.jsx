@@ -17,7 +17,7 @@ export function BankAccountsSection({ allTimeOverview, bankForm, setBankForm, ad
         <div className="form spacer">
           <Field label="Bank name"><input value={bankForm.name} onChange={event => setBankForm(current => ({ ...current, name: event.target.value }))} placeholder="e.g. HDFC" /></Field>
           <Field label="Account last 4 digits"><input value={bankForm.bankAccountLast4} onChange={event => setBankForm(current => ({ ...current, bankAccountLast4: event.target.value }))} maxLength={4} placeholder="1234" /></Field>
-          <button type="button" className="btn primary" onClick={addBank}>Add bank account</button>
+          <button type="button" className="btn primary cashbook-bank-add" onClick={addBank}>Add bank account</button>
         </div>
       </div>
     </div>

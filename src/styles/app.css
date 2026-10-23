@@ -1262,6 +1262,19 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
   padding: 16px 18px;
 }
 
+.accounts-form-card .cashbook-bank-add {
+  grid-column: 2;
+  justify-self: end;
+  align-self: end;
+}
+
+@media (width <= 680px) {
+  .accounts-form-card .cashbook-bank-add {
+    grid-column: 1;
+    justify-self: end;
+  }
+}
+
 .accounts-info-card .copy {
   margin: 0;
 }
