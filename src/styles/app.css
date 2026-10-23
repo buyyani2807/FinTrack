@@ -43,7 +43,7 @@ button {
 
 .brand {
   color: var(--ft-primary);
-  font: 700 28px Syne;
+  font: 700 var(--ft-type-title) Syne;
 }
 
 .sub, .small {
@@ -152,7 +152,7 @@ button {
 
 .field label {
   color: var(--ft-muted);
-  font-size: 12px;
+  font-size: var(--ft-type-caption);
   font-weight: 600;
 }
 
@@ -166,7 +166,7 @@ button {
 }
 
 .form {
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 13px;
   display: grid;
 }
@@ -182,14 +182,14 @@ button {
 .table table {
   border-collapse: collapse;
   width: 100%;
-  font-size: 13px;
+  font-size: var(--ft-type-label);
 }
 
 .table th {
   text-align: left;
   color: var(--ft-muted);
   letter-spacing: .04em;
-  font-size: 11px;
+  font-size: var(--ft-type-micro);
 }
 
 .table td, .table th {
@@ -202,7 +202,7 @@ button {
   text-transform: uppercase;
   border-radius: 14px;
   padding: 4px 8px;
-  font-size: 10px;
+  font-size: var(--ft-type-micro);
   font-weight: 700;
 }
 
@@ -228,7 +228,7 @@ button {
   border-radius: 7px;
   margin: 14px 0;
   padding: 10px 12px;
-  font-size: 12px;
+  font-size: var(--ft-type-caption);
   line-height: 1.5;
 }
 
@@ -309,7 +309,7 @@ button {
   color: var(--ft-primary);
   letter-spacing: -.3px;
   padding: 7px 10px 17px;
-  font: 700 17px Syne;
+  font: 700 var(--ft-type-lead) Syne;
 }
 
 .financier-nav button {
@@ -323,7 +323,7 @@ button {
   border-top: 1px solid var(--ft-border);
   margin-top: 12px;
   padding: 13px 10px 3px;
-  font-size: 11px;
+  font-size: var(--ft-type-micro);
 }
 
 .tool-stack {
@@ -346,7 +346,7 @@ button {
   place-items: center;
   width: 22px;
   height: 22px;
-  font-size: 13px;
+  font-size: var(--ft-type-label);
   display: grid;
 }
 
@@ -400,19 +400,19 @@ button {
   place-items: center;
   width: 34px;
   height: 34px;
-  font-size: 16px;
+  font-size: var(--ft-type-body);
   display: grid;
 }
 
 .dashboard-quick-action strong {
-  font-size: 13px;
+  font-size: var(--ft-type-label);
   display: block;
 }
 
 .dashboard-quick-action span {
   color: var(--ft-muted);
   margin-top: 2px;
-  font-size: 11px;
+  font-size: var(--ft-type-micro);
   display: block;
 }
 
@@ -436,7 +436,7 @@ button {
     min-height: 44px;
     margin: 0;
     padding: 7px 5px;
-    font-size: 11px;
+    font-size: var(--ft-type-micro);
   }
 
   .financier-nav-more {
@@ -467,7 +467,7 @@ button {
   }
 
   .nav-short {
-    font-size: 10px;
+    font-size: var(--ft-type-micro);
     line-height: 1;
     display: block;
   }
@@ -480,7 +480,7 @@ button {
   }
 
   .dashboard-home .toolbar .title {
-    font-size: 27px;
+    font-size: var(--ft-type-title);
   }
 
   .dashboard-quick-actions {
@@ -493,7 +493,7 @@ button {
   }
 
   .dashboard-quick-action span {
-    font-size: 10px;
+    font-size: var(--ft-type-micro);
   }
 
   .dashboard-quick-action-icon {
@@ -583,7 +583,7 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
   border-radius: 10px;
   min-height: 38px;
   padding: 8px 13px;
-  font-size: 13px;
+  font-size: var(--ft-type-label);
   font-weight: 700;
   transition: background .18s, border-color .18s, transform .18s, box-shadow .18s;
 }
@@ -671,16 +671,6 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
   overflow: hidden;
 }
 
-.metrics .card:before {
-  content: "";
-  background: var(--ft-primary);
-  width: 4px;
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-}
-
 .metrics button.card.metric-link {
   text-align: left;
   width: 100%;
@@ -701,7 +691,7 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
 .metric-label {
   color: var(--ft-muted);
   letter-spacing: .09em;
-  font-size: 10px;
+  font-size: var(--ft-type-micro);
   font-weight: 700;
 }
 
@@ -709,7 +699,7 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
   letter-spacing: -.65px;
   margin-top: 9px;
   font-family: Syne, DM Sans, sans-serif;
-  font-size: 24px;
+  font-size: var(--ft-type-title);
 }
 
 .gold {
@@ -735,7 +725,7 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
 .field label {
   letter-spacing: .035em;
   color: var(--ft-text-2);
-  font-size: 11px;
+  font-size: var(--ft-type-micro);
 }
 
 .field input, .field select {
@@ -760,7 +750,7 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
 }
 
 .table table {
-  font-size: 13px;
+  font-size: var(--ft-type-label);
 }
 
 .table th {
@@ -768,7 +758,7 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
   letter-spacing: .08em;
   background: var(--ft-surface);
   padding: 12px 13px;
-  font-size: 10px;
+  font-size: var(--ft-type-micro);
 }
 
 .table td {
@@ -789,7 +779,7 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
   letter-spacing: .06em;
   border-radius: 999px;
   padding: 5px 9px;
-  font-size: 9px;
+  font-size: var(--ft-type-micro);
 }
 
 .notice {
@@ -824,12 +814,12 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
 .login > .brand {
   color: var(--ft-primary);
   text-align: center;
-  font-size: 34px;
+  font-size: var(--ft-type-page);
 }
 
 .login > .sub {
   text-align: center;
-  font-size: 13px;
+  font-size: var(--ft-type-label);
 }
 
 .login .card {
@@ -932,7 +922,7 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
   }
 
   .title {
-    font-size: 24px;
+    font-size: var(--ft-type-title);
   }
 
   .metrics {
@@ -944,7 +934,7 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
   }
 
   .metric-value {
-    font-size: 20px;
+    font-size: var(--ft-type-section);
   }
 
   .login {
@@ -982,7 +972,7 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
   justify-content: flex-start;
   width: 100%;
   min-height: 36px;
-  font-size: 12px;
+  font-size: var(--ft-type-caption);
 }
 
 .accounts-module {
@@ -1011,7 +1001,7 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
   border-bottom: 2px solid #0000;
   flex: none;
   padding: 10px 14px 12px;
-  font-size: 13px;
+  font-size: var(--ft-type-label);
   font-weight: 600;
 }
 
@@ -1040,7 +1030,7 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
 .accounts-panel-title {
   color: var(--ft-text);
   margin: 0;
-  font: 700 20px Syne, sans-serif;
+  font: 700 var(--ft-type-section) Syne, sans-serif;
 }
 
 .accounts-balance-strip {
@@ -1064,7 +1054,7 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
   text-transform: uppercase;
   letter-spacing: .07em;
   margin-bottom: 6px;
-  font-size: 10px;
+  font-size: var(--ft-type-micro);
   display: block;
 }
 
@@ -1107,7 +1097,7 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
   width: 100%;
   min-height: 36px;
   padding: 7px 10px;
-  font-size: 12px;
+  font-size: var(--ft-type-caption);
 }
 
 .accounts-period-pill.active {
@@ -1164,7 +1154,7 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
   text-transform: uppercase;
   letter-spacing: .06em;
   color: var(--ft-muted);
-  font-size: 10px;
+  font-size: var(--ft-type-micro);
 }
 
 .accounts-action-row {
@@ -1201,7 +1191,7 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
 }
 
 .accounts-entry-amounts .green, .accounts-entry-amounts .red {
-  font: 700 16px Syne, sans-serif;
+  font: 700 var(--ft-type-body) Syne, sans-serif;
 }
 
 .accounts-entry-balance {
@@ -1216,7 +1206,7 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
 .accounts-entry-delete {
   margin-top: 10px;
   padding: 6px 10px;
-  font-size: 12px;
+  font-size: var(--ft-type-caption);
 }
 
 .accounts-expense-row .accounts-entry-main {
@@ -1224,7 +1214,7 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
 }
 
 .accounts-expense-amount {
-  font: 700 18px Syne, sans-serif;
+  font: 700 var(--ft-type-card) Syne, sans-serif;
 }
 
 .accounts-empty {
@@ -1253,19 +1243,19 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
   border-radius: 999px;
   width: fit-content;
   padding: 2px 8px;
-  font-size: 10px;
+  font-size: var(--ft-type-micro);
   font-weight: 700;
   display: inline-block;
 }
 
 .accounts-ledger-name {
   color: var(--ft-text);
-  font-size: 15px;
+  font-size: var(--ft-type-ui);
 }
 
 .accounts-ledger-balance {
   color: var(--ft-text);
-  font: 700 22px Syne, sans-serif;
+  font: 700 var(--ft-type-section) Syne, sans-serif;
 }
 
 .accounts-form-card, .accounts-info-card, .accounts-report-card {
@@ -1308,12 +1298,12 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
   text-transform: uppercase;
   letter-spacing: .06em;
   margin-bottom: 4px;
-  font-size: 10px;
+  font-size: var(--ft-type-micro);
   display: block;
 }
 
 .accounts-closing-stats strong {
-  font: 700 16px Syne, sans-serif;
+  font: 700 var(--ft-type-body) Syne, sans-serif;
 }
 
 .accounts-closing-ok strong {
@@ -1367,7 +1357,7 @@ button.accounts-summary-card:hover {
   color: var(--ft-muted);
   text-transform: uppercase;
   letter-spacing: .06em;
-  font-size: 10px;
+  font-size: var(--ft-type-micro);
   display: block;
 }
 
@@ -1436,7 +1426,7 @@ button.accounts-summary-card:hover {
   border-bottom: 2px solid #0000;
   flex: none;
   padding: 10px 14px 12px;
-  font-size: 13px;
+  font-size: var(--ft-type-label);
   font-weight: 600;
 }
 
@@ -1491,7 +1481,7 @@ button.accounts-summary-card:hover {
 
 .acc-sidebar-brand strong {
   color: var(--ft-text);
-  font: 700 15px Syne, sans-serif;
+  font: 700 var(--ft-type-ui) Syne, sans-serif;
 }
 
 .acc-nav-group {
@@ -1500,7 +1490,7 @@ button.accounts-summary-card:hover {
   text-transform: uppercase;
   margin: 10px 4px 4px;
   padding: 8px 6px 0;
-  font-size: 10px;
+  font-size: var(--ft-type-micro);
   font-weight: 700;
 }
 
@@ -1514,7 +1504,7 @@ button.accounts-summary-card:hover {
   width: 100%;
   margin: 1px 0;
   padding: 8px 12px;
-  font-size: 13px;
+  font-size: var(--ft-type-label);
   font-weight: 600;
   display: block;
 }
@@ -1552,7 +1542,7 @@ button.accounts-summary-card:hover {
   border-radius: 999px;
   flex: none;
   padding: 8px 12px;
-  font-size: 12px;
+  font-size: var(--ft-type-caption);
   font-weight: 700;
 }
 
@@ -1653,22 +1643,22 @@ button.accounts-summary-card:hover {
   text-transform: uppercase;
   color: var(--ft-muted);
   margin: 0;
-  font-size: 11px;
+  font-size: var(--ft-type-micro);
 }
 
 .credit-score-number {
-  font: 700 36px / 1 Syne, sans-serif;
+  font: 700 var(--ft-type-page) / 1 Syne, sans-serif;
 }
 
 .credit-score-number.muted {
   color: var(--ft-muted);
-  font-size: 22px;
+  font-size: var(--ft-type-section);
 }
 
 .credit-score-rating {
   letter-spacing: .04em;
   text-transform: uppercase;
-  font: 700 13px DM Sans, sans-serif;
+  font: 700 var(--ft-type-label) DM Sans, sans-serif;
   display: inline-block;
 }
 
@@ -1696,7 +1686,7 @@ button.accounts-summary-card:hover {
   color: var(--ft-muted);
   flex-wrap: wrap;
   gap: 8px 14px;
-  font-size: 12px;
+  font-size: var(--ft-type-caption);
   display: flex;
 }
 
@@ -1708,7 +1698,7 @@ button.accounts-summary-card:hover {
 
 .credit-score-why p {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--ft-type-label);
 }
 
 .credit-score-why-good {
@@ -1739,18 +1729,18 @@ button.accounts-summary-card:hover {
 .credit-score-gauge-label {
   fill: var(--ft-muted);
   letter-spacing: .03em;
-  font: 700 8px DM Sans, sans-serif;
+  font: 700 var(--ft-type-micro) DM Sans, sans-serif;
 }
 
 .credit-score-gauge-range {
   fill: #fff;
-  font: 700 8px DM Sans, sans-serif;
+  font: 700 var(--ft-type-micro) DM Sans, sans-serif;
 }
 
 .credit-score-gauge-title {
   fill: var(--ft-muted);
   letter-spacing: .1em;
-  font: 700 12px DM Sans, sans-serif;
+  font: 700 var(--ft-type-caption) DM Sans, sans-serif;
 }
 
 .credit-score-pill {
@@ -1760,7 +1750,7 @@ button.accounts-summary-card:hover {
   border-radius: 999px;
   margin-top: 4px;
   padding: 2px 7px;
-  font-size: 10px;
+  font-size: var(--ft-type-micro);
   font-weight: 700;
   display: inline-block;
 }
@@ -1803,7 +1793,7 @@ button.accounts-summary-card:hover {
   color: var(--ft-text-2);
   justify-content: space-between;
   gap: 12px;
-  font-size: 13px;
+  font-size: var(--ft-type-label);
   display: flex;
 }
 
@@ -2015,7 +2005,7 @@ button.accounts-summary-card:hover {
   min-width: 0;
   scroll-snap-align: start;
   padding: 12px 12px 12px 14px;
-  border: 1px solid var(--ft-border);
+  border: 1px solid var(--ft-primary);
   border-radius: var(--ft-radius);
   background: var(--ft-surface);
 }
@@ -2035,17 +2025,6 @@ button.accounts-summary-card:hover {
 @container copilot (min-width: 1020px) {
   .collection-copilot-list > li { flex-basis: calc((100% - 48px) / 3.25); }
 }
-.collection-copilot-list > li::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 3px;
-  background: var(--ft-success);
-}
-.collection-copilot-list > li[data-risk="medium"]::before { background: var(--ft-warning); }
-.collection-copilot-list > li[data-risk="high"]::before { background: var(--ft-danger); }
 .collection-copilot-list > li.is-open { border-color: var(--ft-primary); }
 .collection-copilot-top {
   display: grid;
@@ -2225,6 +2204,118 @@ button.accounts-summary-card:hover {
   .collection-copilot-list { scroll-behavior: auto; }
 }
 
+/* Same sideways card slider as Who to collect first, for scheme and dashboard card rows. */
+.ft-card-slider {
+  position: relative;
+  margin-top: 18px;
+  container-type: inline-size;
+  container-name: card-slider;
+}
+.dashboard-chit-slider { margin-top: 20px; }
+.ft-card-slider.has-prev::before,
+.ft-card-slider.has-next::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  width: 56px;
+  pointer-events: none;
+}
+.ft-card-slider.has-prev::before {
+  left: 0;
+  background: linear-gradient(90deg, var(--ft-surface) 8%, transparent);
+}
+.ft-card-slider.has-next::after {
+  right: 0;
+  background: linear-gradient(270deg, var(--ft-surface) 8%, transparent);
+}
+.ft-card-slider-arrow {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ft-text);
+  box-shadow: none;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .16s var(--ft-ease, ease), color .16s var(--ft-ease, ease);
+}
+.ft-card-slider-arrow-icon {
+  display: block;
+  width: 24px;
+  height: min(48%, 112px);
+  min-height: 64px;
+}
+.ft-card-slider-arrow.is-prev { left: 0; }
+.ft-card-slider-arrow.is-next { right: 0; }
+.ft-card-slider-arrow:hover { color: var(--ft-primary); background: transparent; }
+.ft-card-slider-arrow:disabled {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+@media (hover: hover) {
+  .ft-card-slider:hover .ft-card-slider-arrow,
+  .ft-card-slider:focus-within .ft-card-slider-arrow {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+@media (hover: none) {
+  .ft-card-slider-arrow { opacity: 1; pointer-events: auto; }
+}
+.ft-card-slider-track {
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+  margin: 0;
+  padding: 2px 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+}
+.ft-card-slider-track::-webkit-scrollbar { display: none; }
+.ft-card-slider-track:focus-visible {
+  outline: 2px solid var(--ft-primary);
+  outline-offset: 2px;
+}
+.ft-card-slider-track > * {
+  flex: 0 0 86%;
+  min-width: 0;
+  scroll-snap-align: start;
+}
+.ft-card-slider .chit-scheme-card:hover { transform: none; }
+@container card-slider (max-width: 679px) {
+  .ft-card-slider-track { scroll-padding-left: 28px; }
+  .ft-card-slider-track::after { content: ""; flex: 0 0 28px; }
+  .ft-card-slider-track > * { flex-basis: calc(100% - 56px); }
+  .ft-card-slider-track > :first-child { scroll-margin-left: -28px; }
+  .ft-card-slider.has-prev::before,
+  .ft-card-slider.has-next::after { width: 32px; }
+  .ft-card-slider-arrow.is-prev { left: -16px; }
+  .ft-card-slider-arrow.is-next { right: -16px; }
+}
+@container card-slider (min-width: 680px) {
+  .ft-card-slider-track > * { flex-basis: calc((100% - 32px) / 2.2); }
+}
+@container card-slider (min-width: 1020px) {
+  .ft-card-slider-track > * { flex-basis: calc((100% - 48px) / 3.25); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ft-card-slider-track { scroll-behavior: auto; }
+}
+
 .collection-summary {
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
@@ -2243,13 +2334,13 @@ button.accounts-summary-card:hover {
   color: var(--ft-muted);
   text-transform: uppercase;
   letter-spacing: .07em;
-  font-size: 11px;
+  font-size: var(--ft-type-micro);
   display: block;
 }
 
 .collection-summary strong {
   margin-top: 7px;
-  font: 700 22px Syne;
+  font: 700 var(--ft-type-section) Syne;
   display: block;
 }
 
@@ -2268,7 +2359,7 @@ button.accounts-summary-card:hover {
 .collection-section h2 {
   color: var(--ft-text);
   margin: 0 0 6px;
-  font: 700 18px Syne;
+  font: 700 var(--ft-type-card) Syne;
 }
 
 .collection-section h2 span {
@@ -2276,7 +2367,7 @@ button.accounts-summary-card:hover {
   letter-spacing: .04em;
   text-transform: uppercase;
   margin-left: 7px;
-  font: 600 11px DM Sans;
+  font: 600 var(--ft-type-micro) DM Sans;
 }
 
 .collection-list {
@@ -2326,12 +2417,12 @@ button.accounts-summary-card:hover {
 }
 
 .collection-info strong {
-  font-size: 15px;
+  font-size: var(--ft-type-ui);
 }
 
 .collection-info span, .collection-amount small {
   color: var(--ft-muted);
-  font-size: 12px;
+  font-size: var(--ft-type-caption);
 }
 
 .collection-amount {
@@ -2340,7 +2431,7 @@ button.accounts-summary-card:hover {
 
 .collection-amount strong {
   margin: 3px 0;
-  font-size: 16px;
+  font-size: var(--ft-type-body);
   display: block;
 }
 
@@ -2375,7 +2466,7 @@ button.accounts-summary-card:hover {
   align-items: center;
   margin-top: 12px;
   padding: 0;
-  font: 600 13px DM Sans, system-ui;
+  font: 600 var(--ft-type-label) DM Sans, system-ui;
   display: inline-flex;
 }
 
@@ -2454,7 +2545,7 @@ button.accounts-summary-card:hover {
   gap: 8px;
   margin: -8px 0 14px;
   padding: 9px 11px;
-  font-size: 12px;
+  font-size: var(--ft-type-caption);
   display: flex;
 }
 
@@ -2474,7 +2565,7 @@ button.accounts-summary-card:hover {
   .dashboard-section-summary {
     margin: -5px 0 11px;
     padding: 8px 10px;
-    font-size: 11px;
+    font-size: var(--ft-type-micro);
   }
 }
 
@@ -2560,7 +2651,7 @@ button.accounts-summary-card:hover {
     min-width: 0 !important;
     margin: 0 !important;
     padding: 5px 2px !important;
-    font-size: 10px !important;
+    font-size: var(--ft-type-micro) !important;
   }
 
   .financier-nav .nav-label {
@@ -2571,7 +2662,7 @@ button.accounts-summary-card:hover {
   }
 
   .nav-glyph {
-    font-size: 14px;
+    font-size: var(--ft-type-secondary);
     line-height: 1;
   }
 
@@ -2611,12 +2702,12 @@ button.accounts-summary-card:hover {
 
   .brand {
     letter-spacing: -.4px;
-    font-size: 20px !important;
+    font-size: var(--ft-type-section) !important;
   }
 
   .sub {
     margin-top: 2px !important;
-    font-size: 11px !important;
+    font-size: var(--ft-type-micro) !important;
   }
 
   .shell > .toolbar {
@@ -2625,7 +2716,7 @@ button.accounts-summary-card:hover {
   }
 
   .title {
-    font-size: 22px !important;
+    font-size: var(--ft-type-section) !important;
   }
 
   .dashboard-home > .toolbar .copy, .dashboard-finance-heading .small, .label-full {
@@ -2653,7 +2744,7 @@ button.accounts-summary-card:hover {
   .dashboard-finance-icon {
     width: 34px;
     height: 34px;
-    font-size: 16px;
+    font-size: var(--ft-type-body);
   }
 
   .metrics .card {
@@ -2662,7 +2753,7 @@ button.accounts-summary-card:hover {
 
   .metric-value {
     margin-top: 6px !important;
-    font-size: 18px !important;
+    font-size: var(--ft-type-card) !important;
   }
 
   .dashboard-finance-table {
@@ -2724,7 +2815,7 @@ button.accounts-summary-card:hover {
     color: var(--ft-muted);
     letter-spacing: .06em;
     text-transform: uppercase;
-    font-size: 9px;
+    font-size: var(--ft-type-micro);
     font-weight: 700;
     display: block;
   }
@@ -2732,7 +2823,7 @@ button.accounts-summary-card:hover {
   .dashboard-finance-table .btn {
     min-height: 34px;
     padding: 6px 10px;
-    font-size: 12px;
+    font-size: var(--ft-type-caption);
   }
 
   .dashboard-finance-table.can-reorder tr {
@@ -2966,7 +3057,7 @@ button.accounts-summary-card:hover {
   }
 
   .brand, .title {
-    font-size: 18px !important;
+    font-size: var(--ft-type-card) !important;
   }
 
   .copy, .dashboard-finance-heading .small, .label-full {
@@ -3007,12 +3098,12 @@ button.accounts-summary-card:hover {
   }
 
   .metric-label {
-    font-size: 8px !important;
+    font-size: var(--ft-type-micro) !important;
   }
 
   .metric-value {
     margin-top: 4px !important;
-    font-size: 14px !important;
+    font-size: var(--ft-type-secondary) !important;
   }
 
   .financier-nav {
@@ -3022,7 +3113,7 @@ button.accounts-summary-card:hover {
 
   .financier-nav button {
     min-height: 40px;
-    font-size: 9px !important;
+    font-size: var(--ft-type-micro) !important;
   }
 }
 
@@ -3036,7 +3127,7 @@ button.accounts-summary-card:hover {
 
 .receipt-actions.compact .btn {
   padding: 5px 8px;
-  font-size: 11px;
+  font-size: var(--ft-type-micro);
 }
 
 .btn.whatsapp {
@@ -3071,7 +3162,7 @@ button.accounts-summary-card:hover {
 
 .receipt-header strong {
   color: var(--ft-primary);
-  font: 700 18px Syne;
+  font: 700 var(--ft-type-card) Syne;
 }
 
 .receipt-meta {
@@ -3079,7 +3170,7 @@ button.accounts-summary-card:hover {
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 12px;
-  font-size: 12px;
+  font-size: var(--ft-type-caption);
   display: flex;
 }
 
@@ -3103,7 +3194,7 @@ button.accounts-summary-card:hover {
   background: color-mix(in srgb, var(--ft-info) 9%, transparent);
   border-radius: 999px;
   padding: 3px 8px;
-  font-size: 11px;
+  font-size: var(--ft-type-micro);
   font-weight: 700;
   display: inline-flex;
 }
@@ -3141,17 +3232,17 @@ button.accounts-summary-card:hover {
   justify-content: space-between;
   gap: 12px;
   padding: 6px 0;
-  font-size: 13px;
+  font-size: var(--ft-type-label);
   display: flex;
 }
 
 .statement-summary-row.emphasize strong {
   color: var(--ft-primary);
-  font-size: 16px;
+  font-size: var(--ft-type-body);
 }
 
 .statement-outstanding {
-  font-size: 22px;
+  font-size: var(--ft-type-section);
 }
 
 .statement-account .toolbar {
@@ -3184,7 +3275,7 @@ button.accounts-summary-card:hover {
     content: attr(data-label);
     color: var(--ft-muted);
     margin-bottom: 2px;
-    font-size: 11px;
+    font-size: var(--ft-type-micro);
     display: block;
   }
 }

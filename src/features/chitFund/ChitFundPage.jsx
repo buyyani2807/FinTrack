@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { Toasts } from "../../components/Toasts.jsx";
 import { TabScroller } from "../../components/TabScroller.jsx";
 import {
@@ -32,6 +33,7 @@ import { validatePredefinedBidChit } from "./model/predefinedBidChit";
 import { roundMoney } from "./model/calculations";
 import { money, emptySchemeForm, groupRowsBySchemeId } from "./model/chitFormat.js";
 import { latestInRangeCycle } from "./model/liveBidding.js";
+import { Select } from "../../components/Select.jsx";
 import { Button, Spinner } from "../../components/ui.jsx";
 import { ChitActivateSchemeModal } from "./components/ChitAdminControls.jsx";
 import { ChitSchemeForm, ChitTypeChooser, FixedChitSchemeForm, PredefinedBidSchemeForm } from "./components/ChitSchemeForms.jsx";
@@ -253,7 +255,7 @@ export function ChitFundPage({ token, tab: routeTab = "schemes", schemeId = null
       <section className="chit-command-center" aria-label="Chit Fund overview"><div className="chit-command-copy"><span className="eyebrow">Portfolio overview</span><h2>Run your chit books with clarity.</h2><p>Stay ahead of collections, auctions, and member commitments across every scheme.</p></div><div className="chit-command-actions"><Button onClick={() => setLanding("payments")}>Record payment</Button><Button onClick={() => setLanding("bids")}>Review bids</Button></div></section>
       <section className="chit-kpi-strip" aria-label="Chit Fund summary"><div><span>Active schemes</span><strong>{schemes.filter(item => item.status === "active").length}</strong><small>of {schemes.length} total</small></div><div><span>Enrolled members</span><strong>{enrollments.length}</strong><small>across all schemes</small></div><div><span>Monthly commitments</span><strong>{money(schemes.filter(item => item.status === "active").reduce((sum, item) => sum + Number(item.installment_amount || 0), 0))}</strong><small>configured installments</small></div><div><span>Open auctions</span><strong>{rows.filter(item => item.scheme.status === "active" && item.scheme.chit_type === CHIT_TYPES.AUCTION && !item.current).length}</strong><small>need attention</small></div></section>
       <ChitInsightsBrief schemes={schemes} enrollments={enrollments} cycles={cycles} fixedLifts={fixedLifts} predefinedSchedule={predefinedSchedule} token={token} onViewMembers={() => setLanding("members")} />
-      <div className="chit-scheme-toolbar"><div><span className="eyebrow">Your schemes</span><h2>Scheme portfolio</h2></div><div className="chit-scheme-filters"><input aria-label="Search schemes" placeholder="Search schemes" value={schemeQuery} onChange={event => setSchemeQuery(event.target.value)} /><select aria-label="Filter schemes" value={schemeFilter} onChange={event => setSchemeFilter(event.target.value)}><option value="all">All statuses</option><option value="active">Active</option><option value="draft">Draft</option><option value="completed">Completed</option></select></div></div>
+      <div className="chit-scheme-toolbar"><div><span className="eyebrow">Your schemes</span><h2>Scheme portfolio</h2></div><div className="chit-scheme-filters"><input aria-label="Search schemes" placeholder="Search schemes" value={schemeQuery} onChange={event => setSchemeQuery(event.target.value)} /><Select bare className="acc-company-picker" aria-label="Filter schemes" value={schemeFilter} onChange={event => setSchemeFilter(event.target.value)} renderValue={option => <><span className="acc-company-picker-name">{option?.label ?? "All statuses"}</span><ChevronDown className="acc-company-picker-chevron" size={16} aria-hidden="true" /></>}><option value="all">All statuses</option><option value="active">Active</option><option value="draft">Draft</option><option value="completed">Completed</option></Select></div></div>
     </>}
     {landing === "schemes" && <AnomalyReviewCard review={buildAnomalyReview({ today: today(), schemes, cycles })} onNavigate={() => setLanding("bids")} />}
     {busy && !schemes.length && <Spinner label="Loading Chit Fund schemes" />}

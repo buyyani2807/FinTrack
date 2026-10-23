@@ -30,7 +30,7 @@
   max-width: 46ch;
   margin: 0 0 16px;
   color: var(--ft-text-2);
-  font-size: 14px;
+  font-size: var(--ft-type-secondary);
   line-height: 1.5;
 }
 
@@ -121,14 +121,14 @@
 
 .accounts-dashboard .acc-bk-title {
   margin: 0;
-  font: 700 17px/1.25 Syne, sans-serif;
+  font: 700 var(--ft-type-lead)/1.25 Syne, sans-serif;
   color: var(--acc-text);
 }
 
 .accounts-dashboard .acc-bk-sub {
   margin: 4px 0 0;
   color: var(--acc-muted);
-  font-size: 13px;
+  font-size: var(--ft-type-label);
   line-height: 1.45;
 }
 
@@ -165,7 +165,7 @@
 
 .accounts-dashboard .acc-bk-examples > span {
   color: var(--acc-muted);
-  font-size: 12px;
+  font-size: var(--ft-type-caption);
 }
 
 .accounts-dashboard .acc-bk-chip {
@@ -175,7 +175,7 @@
   border-radius: 999px;
   background: var(--acc-card);
   color: var(--acc-text);
-  font-size: 12.5px;
+  font-size: var(--ft-type-caption);
   text-align: left;
   cursor: pointer;
 }
@@ -235,7 +235,7 @@
 
 .accounts-dashboard .acc-bk-field > span {
   color: var(--acc-muted);
-  font-size: 12px;
+  font-size: var(--ft-type-caption);
 }
 
 .accounts-dashboard .acc-bk-field input {
@@ -248,14 +248,14 @@
   gap: 8px;
   min-height: var(--acc-control-h);
   color: var(--acc-text);
-  font-size: 13px;
+  font-size: var(--ft-type-label);
 }
 
 .accounts-dashboard .acc-bk-effects,
 .accounts-dashboard .acc-bk-notes {
   display: grid;
   gap: 6px;
-  font-size: 13.5px;
+  font-size: var(--ft-type-label);
 }
 
 .accounts-dashboard .acc-bk-effects ul,
@@ -271,7 +271,7 @@
 .accounts-dashboard .acc-bk-effects strong,
 .accounts-dashboard .acc-bk-notes strong {
   color: var(--acc-text);
-  font-size: 12.5px;
+  font-size: var(--ft-type-caption);
 }
 
 .accounts-dashboard .acc-bk-effects li { color: var(--acc-text); }
@@ -279,26 +279,26 @@
 
 .accounts-dashboard .acc-bk-errors {
   color: var(--acc-red);
-  font-size: 13px;
+  font-size: var(--ft-type-label);
 }
 
 .accounts-dashboard .acc-bk-newparty {
   margin: 0;
   color: var(--acc-text);
-  font-size: 13px;
+  font-size: var(--ft-type-label);
 }
 
 .accounts-dashboard .acc-bk-ledger summary {
   cursor: pointer;
   color: var(--acc-muted);
-  font-size: 12.5px;
+  font-size: var(--ft-type-caption);
 }
 
 .accounts-dashboard .acc-bk-ledger table {
   width: 100%;
   margin-top: 8px;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: var(--ft-type-label);
 }
 
 .accounts-dashboard .acc-bk-ledger th,
@@ -351,7 +351,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 8px;
-  font-size: 13px;
+  font-size: var(--ft-type-label);
   color: var(--acc-text);
 }
 
@@ -410,7 +410,7 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--acc-gold) 14%, transparent);
   color: var(--acc-gold);
-  font-size: 11.5px;
+  font-size: var(--ft-type-micro);
   font-weight: 600;
   vertical-align: 1px;
 }
@@ -445,7 +445,7 @@
   align-items: flex-start;
   gap: 8px;
   color: var(--acc-muted);
-  font-size: 13.5px;
+  font-size: var(--ft-type-label);
   line-height: 1.45;
 }
 
@@ -528,7 +528,7 @@
 }
 
 .accounts-dashboard .acc-mig-drop span {
-  font-size: 12.5px;
+  font-size: var(--ft-type-caption);
 }
 
 .accounts-dashboard .acc-mig-drop input {
@@ -543,7 +543,7 @@
 .accounts-dashboard .acc-mig-help summary {
   cursor: pointer;
   color: var(--acc-muted);
-  font-size: 13px;
+  font-size: var(--ft-type-label);
 }
 
 .accounts-dashboard .acc-mig-help ul {
@@ -552,7 +552,7 @@
   margin: 8px 0 0;
   padding-left: 18px;
   color: var(--acc-muted);
-  font-size: 13px;
+  font-size: var(--ft-type-label);
   line-height: 1.45;
 }
 
@@ -577,13 +577,13 @@
 
 .accounts-dashboard .acc-mig-tile strong {
   color: var(--acc-text);
-  font: 700 22px/1.2 Syne, sans-serif;
+  font: 700 var(--ft-type-section)/1.2 Syne, sans-serif;
   font-variant-numeric: tabular-nums;
 }
 
 .accounts-dashboard .acc-mig-tile span {
   color: var(--acc-muted);
-  font-size: 12.5px;
+  font-size: var(--ft-type-caption);
 }
 
 .accounts-dashboard .acc-mig-tile.is-warn strong {
@@ -633,7 +633,7 @@
 .accounts-dashboard .acc-mig-section-head h3 {
   margin: 0;
   color: var(--acc-text);
-  font-size: 15px;
+  font-size: var(--ft-type-ui);
 }
 
 .accounts-dashboard .acc-mig-table {
@@ -657,7 +657,7 @@
 
 .accounts-dashboard .acc-mig-th {
   color: var(--acc-muted);
-  font-size: 12px;
+  font-size: var(--ft-type-caption);
 }
 
 .accounts-dashboard .acc-mig-tr.is-unsure {
@@ -673,18 +673,18 @@
 .accounts-dashboard .acc-mig-tr strong {
   overflow-wrap: anywhere;
   color: var(--acc-text);
-  font-size: 13.5px;
+  font-size: var(--ft-type-label);
 }
 
 .accounts-dashboard .acc-mig-tr em {
   color: var(--acc-muted);
-  font-size: 12px;
+  font-size: var(--ft-type-caption);
   font-style: normal;
 }
 
 .accounts-dashboard .acc-mig-tr > span:nth-child(2) {
   color: var(--acc-text);
-  font-size: 13px;
+  font-size: var(--ft-type-label);
   font-variant-numeric: tabular-nums;
 }
 
@@ -714,7 +714,7 @@
   align-items: flex-start;
   gap: 6px;
   color: var(--acc-muted);
-  font-size: 12.5px;
+  font-size: var(--ft-type-caption);
   line-height: 1.45;
 }
 

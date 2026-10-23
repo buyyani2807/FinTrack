@@ -1,0 +1,94 @@
+/*
+ * Theme colors. Light is the base. Dark overrides the same names.
+ * Change a color here and every screen that uses the variable follows.
+ */
+:root {
+  color-scheme: light;
+  --ft-bg: #f4f5f7;
+  --ft-surface: #ffffff;
+  --ft-surface-subtle: #fafafa;
+  --ft-surface-muted: #f3f3f3;
+  --ft-surface-hover: #f7f8f9;
+  --ft-icon-tile: rgba(210, 210, 210, .25);
+  --ft-text: #191919;
+  --ft-text-2: #525256;
+  --ft-text-3: #666666;
+  --ft-muted: #666666;
+  --ft-subtle: #707070;
+  --ft-disabled: #d1d1d1;
+  --ft-border: #e8e8e8;
+  --ft-border-strong: #d1d1d1;
+  --ft-divider: #f3f3f3;
+  --ft-input-border: #d0d5dd;
+  --ft-input-focus: #4b5768;
+  --ft-brand: #299d91;
+  --ft-primary: #217d73;
+  --ft-primary-hover: #1b6b62;
+  --ft-primary-active: #165a53;
+  --ft-primary-soft: rgba(41, 157, 145, .10);
+  --ft-primary-soft-strong: rgba(41, 157, 145, .18);
+  --ft-on-primary: #ffffff;
+  --ft-focus-ring: rgba(41, 157, 145, .32);
+  --ft-secondary-bg: #e4e7eb;
+  --ft-secondary-text: #4b5768;
+  --ft-success: #317d4c;
+  --ft-success-soft: rgba(77, 175, 110, .12);
+  --ft-danger: #cf381a;
+  --ft-danger-soft: rgba(231, 61, 28, .09);
+  --ft-warning: #98651a;
+  --ft-warning-soft: rgba(229, 163, 59, .14);
+  --ft-info: #2f6fd0;
+  --ft-info-soft: rgba(47, 111, 208, .10);
+  --ft-sidebar-bg: #191919;
+  --ft-sidebar-text: rgba(255, 255, 255, .70);
+  --ft-sidebar-text-strong: #ffffff;
+  --ft-sidebar-hover: rgba(255, 255, 255, .06);
+  --ft-sidebar-chip: rgba(255, 255, 255, .08);
+  --ft-sidebar-line: rgba(255, 255, 255, .08);
+  --ft-chart-1: var(--ft-brand);
+  --ft-chart-2: #e8e8e8;
+  --ft-chart-grid: #f0f0f0;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ft-bg: #111315;
+  --ft-surface: #1a1d20;
+  --ft-surface-subtle: #1f2326;
+  --ft-surface-muted: #24282c;
+  --ft-surface-hover: #22262a;
+  --ft-icon-tile: rgba(255, 255, 255, .06);
+  --ft-text: #f1f3f4;
+  --ft-text-2: #c5cacd;
+  --ft-text-3: #aab1b5;
+  --ft-muted: #949ca1;
+  --ft-subtle: #7f878c;
+  --ft-disabled: #4a5157;
+  --ft-border: #2b3034;
+  --ft-border-strong: #3a4146;
+  --ft-divider: #24292c;
+  --ft-input-border: #3a4146;
+  --ft-input-focus: #9aa6ae;
+  --ft-brand: #35b3a6;
+  --ft-primary: #35b3a6;
+  --ft-primary-hover: #46c2b5;
+  --ft-primary-active: #2a9d91;
+  --ft-primary-soft: rgba(53, 179, 166, .14);
+  --ft-primary-soft-strong: rgba(53, 179, 166, .24);
+  --ft-on-primary: #08201d;
+  --ft-focus-ring: rgba(53, 179, 166, .40);
+  --ft-secondary-bg: #2a2f33;
+  --ft-secondary-text: #d5dadd;
+  --ft-success: #5cc283;
+  --ft-success-soft: rgba(92, 194, 131, .14);
+  --ft-danger: #f2694d;
+  --ft-danger-soft: rgba(242, 105, 77, .14);
+  --ft-warning: #f0b44c;
+  --ft-warning-soft: rgba(240, 180, 76, .14);
+  --ft-info: #6ea6f2;
+  --ft-info-soft: rgba(110, 166, 242, .14);
+  --ft-sidebar-bg: #0b0c0d;
+  --ft-sidebar-line: rgba(255, 255, 255, .06);
+  --ft-chart-2: #3a4146;
+  --ft-chart-grid: #262b2f;
+}

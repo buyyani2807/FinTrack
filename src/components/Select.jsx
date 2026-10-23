@@ -62,9 +62,12 @@ export function Select({
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const [position, setPosition] = useState(null);
+  const [moreBelow, setMoreBelow] = useState(false);
   const triggerRef = useRef(null);
   const menuRef = useRef(null);
+  const listRef = useRef(null);
   const typed = useRef({ text: "", at: 0 });
+  const highlightFromPointer = useRef(false);
   const listId = useId();
   const optionId = index => `${listId}-o${index}`;
 
@@ -90,9 +93,21 @@ export function Select({
   };
 
   // Keep the list under the trigger while the page scrolls or resizes.
+  // Scrolling inside the list must not count: that was resetting the position and
+  // jumping the list back to the top on phones.
   useEffect(() => {
     if (!open) return undefined;
-    const follow = () => setPosition(placeMenu(triggerRef.current));
+    const follow = event => {
+      const list = listRef.current;
+      const target = event?.target;
+      if (list && target instanceof Node && (target === list || list.contains(target))) return;
+      const next = placeMenu(triggerRef.current);
+      setPosition(current => {
+        if (!next) return null;
+        if (current && current.left === next.left && current.width === next.width && current.maxHeight === next.maxHeight && current.top === next.top && current.bottom === next.bottom) return current;
+        return next;
+      });
+    };
     window.addEventListener("resize", follow);
     window.addEventListener("scroll", follow, true);
     return () => { window.removeEventListener("resize", follow); window.removeEventListener("scroll", follow, true); };
@@ -109,10 +124,37 @@ export function Select({
     return () => document.removeEventListener("pointerdown", onDown, true);
   }, [open]);
 
-  // Keep the highlighted option in view.
+  // Keep the highlighted option in view when it changes from the keyboard or type-ahead.
+  // Position updates must not scroll the list, or a finger scroll snaps back to the top.
   useEffect(() => {
-    if (open && active >= 0) menuRef.current?.querySelector(`[data-index="${active}"]`)?.scrollIntoView({ block: "nearest" });
-  }, [open, active, position]);
+    if (!open || active < 0) return;
+    if (highlightFromPointer.current) { highlightFromPointer.current = false; return; }
+    listRef.current?.querySelector(`[data-index="${active}"]`)?.scrollIntoView({ block: "nearest" });
+  }, [open, active]);
+
+  const syncMore = () => {
+    const list = listRef.current;
+    if (!list) return;
+    const more = list.scrollHeight - list.clientHeight - list.scrollTop > 2;
+    setMoreBelow(current => current === more ? current : more);
+  };
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const frame = requestAnimationFrame(syncMore);
+    return () => cancelAnimationFrame(frame);
+  }, [open, position, items.length]);
+
+  const scrollMore = event => {
+    event.preventDefault();
+    event.stopPropagation();
+    const list = listRef.current;
+    if (!list) return;
+    const next = Math.min(list.scrollHeight - list.clientHeight, list.scrollTop + Math.max(96, Math.round(list.clientHeight * 0.72)));
+    const before = list.scrollTop;
+    list.scrollTo({ top: next, behavior: "smooth" });
+    requestAnimationFrame(() => { if (list.scrollTop <= before) list.scrollTop = next; });
+  };
 
   const typeAhead = (key, now) => {
     typed.current = { text: (now - typed.current.at > 700 ? "" : typed.current.text) + key.toLowerCase(), at: now };
@@ -167,15 +209,21 @@ export function Select({
     </button>
     {required && <input className="ft-select-validity" tabIndex={-1} aria-hidden="true" required value={selected?.value || ""} onChange={() => {}} onFocus={() => triggerRef.current?.focus()} />}
     {open && position && createPortal(
-      <ul
+      <div
         ref={menuRef}
+        className={`ft-select-popover${moreBelow ? " has-more-below" : ""}`}
+        style={{ left: position.left, width: position.width, ...(position.top != null ? { top: position.top } : { bottom: position.bottom }) }}
+        onMouseDown={event => event.preventDefault()}
+        onClick={event => event.stopPropagation()}
+      >
+      <ul
+        ref={listRef}
         id={listId}
         role="listbox"
         aria-label={ariaLabel || textOf(shown) || "Options"}
         className={`ft-select-menu${menuClassName ? ` ${menuClassName}` : ""}`}
-        style={position}
-        onMouseDown={event => event.preventDefault()}
-        onClick={event => event.stopPropagation()}
+        style={{ maxHeight: position.maxHeight }}
+        onScroll={syncMore}
       >
         {items.map((item, index) => <li
           key={`${item.value}-${index}`}
@@ -185,14 +233,16 @@ export function Select({
           aria-selected={index === selectedIndex}
           aria-disabled={item.disabled || undefined}
           className={`ft-select-option${index === active ? " is-active" : ""}${index === selectedIndex ? " is-selected" : ""}${item.disabled ? " is-disabled" : ""}`}
-          onMouseEnter={() => !item.disabled && setActive(index)}
+          onMouseEnter={() => { if (item.disabled) return; highlightFromPointer.current = true; setActive(index); }}
           onClick={() => choose(index)}
         >
           <span className="ft-select-option-label">{item.label}</span>
           {index === selectedIndex && <Check className="ft-select-check" size={16} aria-hidden="true" />}
         </li>)}
         {!items.length && <li className="ft-select-empty" role="presentation">No options</li>}
-      </ul>,
+      </ul>
+      {moreBelow ? <button type="button" className="ft-select-more" aria-label="Show more options" onClick={scrollMore}><ChevronDown size={16} aria-hidden="true" /></button> : null}
+      </div>,
       document.body,
     )}
   </>;

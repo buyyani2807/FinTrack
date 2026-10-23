@@ -1,7 +1,10 @@
+@import "./fonts.css";
+@import "./colors.css";
+
 :root {
   --text: var(--ft-muted);
   --text-h: var(--ft-bg);
-  --bg: #fff;
+  --bg: var(--ft-surface);
   --border: var(--ft-border);
   --code-bg: var(--ft-surface-muted);
   --accent: var(--ft-info);
@@ -15,7 +18,7 @@
   --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
-  font: 16px/1.5 var(--sans);
+  font: var(--ft-type-body)/1.5 var(--sans);
   letter-spacing: normal;
   color-scheme: light;
   color: var(--text);
@@ -76,12 +79,12 @@ body {
   background: color-mix(in srgb, var(--ft-primary) 9%, transparent);
   border: 1px solid color-mix(in srgb, var(--ft-primary) 33%, transparent);
   color: var(--ft-primary);
-  font-size: 20px;
+  font-size: var(--ft-type-section);
 }
 
 .dashboard-finance-heading strong {
   color: var(--ft-text);
-  font: 700 17px Syne;
+  font: 700 var(--ft-type-lead) Syne;
 }
 
 .dashboard-finance-heading .small {
@@ -155,7 +158,7 @@ body {
   align-items: center;
   gap: 8px;
   color: var(--ft-text);
-  font-size: 14px;
+  font-size: var(--ft-type-secondary);
   font-weight: 700;
 }
 
@@ -168,13 +171,13 @@ body {
   border-radius: 999px;
   background: var(--ft-primary);
   color: var(--ft-on-primary);
-  font-size: 12px;
+  font-size: var(--ft-type-caption);
   font-weight: 700;
 }
 
 .dashboard-customers-hint {
   color: var(--ft-muted);
-  font-size: 12.5px;
+  font-size: var(--ft-type-caption);
   font-weight: 500;
 }
 
@@ -188,7 +191,7 @@ body {
   border-radius: 999px;
   background: var(--ft-primary-soft);
   color: var(--ft-primary);
-  font-size: 13px;
+  font-size: var(--ft-type-label);
   font-weight: 600;
 }
 
@@ -287,12 +290,12 @@ body {
   place-items: center;
   border-radius: 12px;
   border: 1px solid;
-  font-size: 20px;
+  font-size: var(--ft-type-section);
 }
 
 .chit-board-title strong {
   display: block;
-  font: 700 17px Syne, DM Sans, sans-serif;
+  font: 700 var(--ft-type-lead) Syne, DM Sans, sans-serif;
   color: var(--ft-text);
 }
 
@@ -300,7 +303,7 @@ body {
   display: inline-flex;
   padding: 5px 10px;
   border-radius: 999px;
-  font-size: 10px;
+  font-size: var(--ft-type-micro);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -321,18 +324,11 @@ body {
   padding: 18px 18px 16px;
   border-radius: 14px;
   background: var(--ft-surface);
-  border: 1px solid var(--ft-border);
+  border: 1px solid var(--ft-primary);
   overflow: hidden;
   cursor: pointer;
   text-align: left;
   transition: border-color 0.18s, transform 0.18s, box-shadow 0.18s;
-}
-
-.chit-scheme-card:before {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 4px;
 }
 
 .chit-scheme-card:hover {
@@ -364,7 +360,7 @@ body {
   display: inline-flex;
   padding: 4px 8px;
   border-radius: 999px;
-  font-size: 10px;
+  font-size: var(--ft-type-micro);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -372,7 +368,7 @@ body {
 
 .chit-scheme-name {
   margin: 12px 0 2px;
-  font: 700 17px Syne, DM Sans, sans-serif;
+  font: 700 var(--ft-type-lead) Syne, DM Sans, sans-serif;
   color: var(--ft-text);
   letter-spacing: -0.3px;
   overflow-wrap: anywhere;
@@ -380,14 +376,14 @@ body {
 
 .chit-scheme-value {
   margin-top: 10px;
-  font: 700 24px Syne, DM Sans, sans-serif;
+  font: 700 var(--ft-type-title) Syne, DM Sans, sans-serif;
   letter-spacing: -0.6px;
 }
 
 .chit-scheme-value-label {
   margin: 2px 0 0;
   color: var(--ft-muted);
-  font-size: 10px;
+  font-size: var(--ft-type-micro);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -412,7 +408,7 @@ body {
 .chit-scheme-current span {
   display: block;
   color: var(--ft-muted);
-  font-size: 10px;
+  font-size: var(--ft-type-micro);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -421,7 +417,7 @@ body {
 .chit-scheme-current strong {
   display: block;
   margin-top: 3px;
-  font-size: 13px;
+  font-size: var(--ft-type-label);
   color: var(--ft-text);
   overflow-wrap: anywhere;
 }
@@ -463,10 +459,6 @@ body {
   color: var(--ft-primary);
 }
 
-.chit-board-auction .chit-scheme-card:before {
-  background: var(--ft-primary);
-}
-
 .chit-board-auction .chit-scheme-value {
   color: var(--ft-primary);
 }
@@ -487,10 +479,6 @@ body {
   color: var(--ft-primary);
 }
 
-.chit-board-fixed .chit-scheme-card:before {
-  background: var(--ft-primary);
-}
-
 .chit-board-fixed .chit-scheme-value {
   color: var(--ft-primary);
 }
@@ -509,10 +497,6 @@ body {
 .chit-board-predefined .chit-scheme-type {
   background: color-mix(in srgb, var(--ft-info) 9%, transparent);
   color: var(--ft-info);
-}
-
-.chit-board-predefined .chit-scheme-card:before {
-  background: var(--ft-info);
 }
 
 .chit-board-predefined .chit-scheme-value {
@@ -603,7 +587,7 @@ code,
 }
 
 code {
-  font-size: 15px;
+  font-size: var(--ft-type-ui);
   line-height: 135%;
   padding: 4px 8px;
   background: var(--code-bg);

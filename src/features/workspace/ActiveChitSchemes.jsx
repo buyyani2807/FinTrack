@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { CardSlider } from "../../components/CardSlider.jsx";
 import { formatInr as money } from "../../lib/formatMoney.js";
 
 // Active Chit Fund scheme cards shown under the owner dashboard; clicking a card opens that scheme.
@@ -14,5 +15,5 @@ export function ActiveChitSchemes({ schemes = [], onOpen }) {
     });
     return () => cards.forEach(card => card.removeEventListener("click", open));
   }, [onOpen, schemes]);
-  return <section className="shell dashboard-chit"><div className="card dashboard-chit-panel"><div className="toolbar"><div className="dashboard-chit-heading"><div className="dashboard-chit-icon">◎</div><div><strong>Active Chit Fund Schemes</strong><p className="small">Current schemes across all Chit types</p></div></div><span className="badge active">{schemes.length} active</span></div>{schemes.length ? <div className="dashboard-chit-grid">{schemes.map(scheme => <article className="dashboard-chit-card" key={scheme.id}><span className="dashboard-chit-type">{typeLabel(scheme.chit_type)}</span><div className="dashboard-chit-name">{scheme.name}</div><div className="dashboard-chit-value">{money(scheme.chit_value)}</div><div className="dashboard-chit-stats"><div><span>Members</span><strong>{scheme.member_count}</strong></div><div><span>Duration</span><strong>{scheme.duration_months} months</strong></div></div></article>)}</div> : <p className="small spacer">No active Chit Fund schemes yet.</p>}</div></section>;
+  return <section className="shell dashboard-chit"><div className="card dashboard-chit-panel"><div className="toolbar"><div className="dashboard-chit-heading"><div className="dashboard-chit-icon">◎</div><div><strong>Active Chit Fund Schemes</strong><p className="small">Current schemes across all Chit types</p></div></div><span className="badge active">{schemes.length} active</span></div>{schemes.length ? <CardSlider className="dashboard-chit-slider" label="Active Chit Fund schemes">{schemes.map(scheme => <article className="dashboard-chit-card" key={scheme.id}><span className="dashboard-chit-type">{typeLabel(scheme.chit_type)}</span><div className="dashboard-chit-name">{scheme.name}</div><div className="dashboard-chit-value">{money(scheme.chit_value)}</div><div className="dashboard-chit-stats"><div><span>Members</span><strong>{scheme.member_count}</strong></div><div><span>Duration</span><strong>{scheme.duration_months} months</strong></div></div></article>)}</CardSlider> : <p className="small spacer">No active Chit Fund schemes yet.</p>}</div></section>;
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CardSlider } from "../../../components/CardSlider.jsx";
 import { Select } from "../../../components/Select.jsx";
 import { loadChitSchemeDetails } from "../../../lib/financeRepository";
 import { CHIT_TYPES } from "../model/fixedChit";
@@ -72,7 +73,7 @@ export function ChitSchemeDashboardSection({ kind, rows, busy, open, edit, activ
       </div>
       <span className="chit-board-count">{rows.length} {rows.length === 1 ? "scheme" : "schemes"}</span>
     </div>
-    {rows.length ? <div className="chit-board-grid">{rows.map(row => <ChitSchemeCard key={row.scheme.id} kind={kind} row={row} open={open} edit={edit} activate={activate} />)}</div> : !busy && <p className="small chit-board-empty">No {meta.title} yet.</p>}
+    {rows.length ? <CardSlider className="chit-board-slider" label={meta.title}>{rows.map(row => <ChitSchemeCard key={row.scheme.id} kind={kind} row={row} open={open} edit={edit} activate={activate} />)}</CardSlider> : !busy && <p className="small chit-board-empty">No {meta.title} yet.</p>}
   </section>;
 }
 export function ChitLandingReports({ token, schemes, cycles = [], fixedLifts = [], predefinedSchedule = [], enrollments = [], aiEnabled = false, openScheme = null }) {
