@@ -5345,7 +5345,7 @@
 .accounts-dashboard .acc-overview .acc-money-value,
 .accounts-dashboard .acc-overview .acc-ov-recent-row .amt,
 .accounts-dashboard .acc-overview .acc-ov-arap-total strong,
-.accounts-dashboard .acc-overview .ai-advisory-card > strong {
+.accounts-dashboard .acc-overview .ai-advisory-figure:not(.is-status) {
   font-size: var(--ft-type-section) !important;
   font-weight: 700 !important;
   letter-spacing: -0.02em;
@@ -5380,7 +5380,7 @@
   .accounts-dashboard .acc-overview .acc-money-value,
   .accounts-dashboard .acc-overview .metric-value,
   .accounts-dashboard .acc-overview .acc-ov-arap-total strong,
-  .accounts-dashboard .acc-overview .ai-advisory-card > strong {
+  .accounts-dashboard .acc-overview .ai-advisory-figure:not(.is-status) {
     font-size: var(--ft-type-section) !important;
   }
 
