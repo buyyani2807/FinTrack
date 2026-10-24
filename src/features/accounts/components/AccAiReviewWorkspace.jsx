@@ -19,16 +19,17 @@ import { AccEmpty } from "./AccUi.jsx";
 import { AlertsPanel, BankPanel, CashFlowPanel, CollectionsPanel, ExpensesPanel, InventoryPanel, MonthEndPanel } from "./AccAiReviewPanels.jsx";
 import { ItcCheckPanel } from "./ItcCheckPanel.jsx";
 
+// `group` only decides where a divider sits in the tab bar: money, risk, then close and stock.
 const TABS = [
-  { id: "expenses", label: "Expenses", feature: "expenses" },
-  { id: "cashflow", label: "Cash flow", feature: "cashflow" },
-  { id: "collections", label: "Collections", feature: "receivables" },
-  { id: "anomalies", label: "Anomalies", feature: "anomalies" },
-  { id: "gst", label: "GST health", feature: "gst" },
-  { id: "itc", label: "GSTR-2B", feature: "gst" },
-  { id: "month_end", label: "Month-end", feature: "month_end" },
-  { id: "bank", label: "Bank reconciliation", feature: "bank_reconciliation" },
-  { id: "inventory", label: "Inventory", feature: "inventory" },
+  { id: "expenses", label: "Expenses", feature: "expenses", group: "money" },
+  { id: "cashflow", label: "Cash flow", feature: "cashflow", group: "money" },
+  { id: "collections", label: "Collections", feature: "receivables", group: "money" },
+  { id: "anomalies", label: "Anomalies", feature: "anomalies", group: "risk" },
+  { id: "gst", label: "GST health", feature: "gst", group: "risk" },
+  { id: "itc", label: "GSTR-2B", feature: "gst", group: "risk" },
+  { id: "month_end", label: "Month-end", feature: "month_end", group: "close" },
+  { id: "bank", label: "Bank reconciliation", feature: "bank_reconciliation", group: "close" },
+  { id: "inventory", label: "Inventory", feature: "inventory", group: "close" },
 ];
 
 /**
@@ -236,16 +237,23 @@ export function AccAiReviewWorkspace({
 
   const panelLoading = loading && !accounts?.length;
   return (
-    <div className="acc-panel ai-review">
-      <p className="copy">Advisory insights from this company's saved books. Verified figures come from posted records; predictions are labelled and are not guaranteed. Nothing on this page posts, matches, or changes records unless you approve it.</p>
+    <div className="acc-panel ai-review air">
+      <header className="air-head">
+        <p className="air-lede">Advisory insights from this company's saved books. Nothing here changes your records unless you approve it.</p>
+        <details className="air-how">
+          <summary>How this works</summary>
+          <p>Verified figures come from posted records; predictions are labelled and are not guaranteed. Nothing on this page posts, matches, or changes records unless you approve it.</p>
+        </details>
+      </header>
       {!auditAvailable && <div className="notice">{AI_AUDIT_MIGRATION_MESSAGE} Insights still work; decisions are not saved until then.</div>}
       {auditError && auditAvailable && <div className="notice">{auditError}</div>}
       <TabScroller className="is-sub"><nav className="accounts-section-nav" aria-label="AI Review pages">
-        {TABS.map(item => (
-          <button key={item.id} type="button" className={`accounts-section-tab ${tab === item.id ? "active" : ""}`} onClick={() => setTab(item.id)}>{item.label}</button>
-        ))}
+        {TABS.map((item, index) => [
+          index > 0 && TABS[index - 1].group !== item.group ? <span key={`${item.id}-sep`} className="air-tab-sep" aria-hidden="true" /> : null,
+          <button key={item.id} type="button" className={`accounts-section-tab ${tab === item.id ? "active" : ""}`} aria-current={tab === item.id ? "page" : undefined} onClick={() => setTab(item.id)}>{item.label}</button>,
+        ])}
       </nav></TabScroller>
-      {panelLoading ? <AccEmpty title="Loading" copy="Reading this company's books…" /> : <section className="ai-review-body" aria-live="polite">
+      {panelLoading ? <AccEmpty title="Loading" copy="Reading this company's books…" /> : <section className="air-body" aria-live="polite">
         {tab === "expenses" && expenses && <ExpensesPanel data={expenses} openSource={openLink} />}
         {tab === "cashflow" && forecast && <CashFlowPanel forecast={forecast} openSource={openLink} />}
         {tab === "collections" && collections && <CollectionsPanel rows={collections} openSource={openLink} businessName={company?.name} asOf={asOf} canWrite={canWrite} onReminderOpened={reminderOpened} />}
