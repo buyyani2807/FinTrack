@@ -314,6 +314,26 @@ test.describe("Documents", () => {
   });
 });
 
+test.describe("Add party", () => {
+  test("the name example is only for customers and suppliers", async ({ page }) => {
+    await mockAccountsWorkspace(page);
+    await page.goto("/accounting");
+    await page.getByRole("button", { name: "New", exact: true }).click({ timeout: 15_000 });
+    await page.getByRole("menuitem", { name: "Party", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Add party" });
+    const name = dialog.getByRole("textbox", { name: "Name" });
+    await expect(name).toHaveAttribute("placeholder", "e.g. Sai Traders");
+    for (const type of ["Employee", "Agent", "Other"]) {
+      await dialog.getByRole("combobox", { name: "Party type" }).click();
+      await page.getByRole("option", { name: type, exact: true }).click();
+      await expect(name).toHaveAttribute("placeholder", "");
+    }
+    await dialog.getByRole("combobox", { name: "Party type" }).click();
+    await page.getByRole("option", { name: "Supplier", exact: true }).click();
+    await expect(name).toHaveAttribute("placeholder", "e.g. Sai Traders");
+  });
+});
+
 test.describe("Dropdowns", () => {
   test("the state list filters as you type", async ({ page }) => {
     await mockAccountsWorkspace(page);

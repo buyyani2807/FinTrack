@@ -28,7 +28,7 @@ export function PartyFormFields({ form, setForm, originalType = "", hasTransacti
         </Select>
       </Field>
       {form.id ? <p className="small acc-party-current-type">Current type: {partyTypeLabel(currentType)}</p> : null}
-      <Field required label="Name"><input value={form.name} placeholder="e.g. Sai Traders" onChange={event => set({ name: event.target.value })} /></Field>
+      <Field required label="Name"><input value={form.name} placeholder={form.partyType === "customer" || form.partyType === "supplier" ? "e.g. Sai Traders" : ""} onChange={event => set({ name: event.target.value })} /></Field>
       <Field label="Phone"><input value={form.phone} placeholder="10-digit mobile" onChange={event => set({ phone: event.target.value })} /></Field>
       <Field label="Email"><input value={form.email} placeholder="optional" onChange={event => set({ email: event.target.value })} /></Field>
       <Field className="span" label="Address"><input value={form.address} placeholder="optional" onChange={event => set({ address: event.target.value })} /></Field>
