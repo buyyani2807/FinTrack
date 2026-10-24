@@ -105,7 +105,7 @@ function readLogoFile(file) {
         canvas.width = width;
         canvas.height = height;
         const context = canvas.getContext("2d");
-        context.fillStyle = "var(--color-white)";
+        context.fillStyle = "#ffffff";
         context.fillRect(0, 0, width, height);
         context.drawImage(image, 0, 0, width, height);
         const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
