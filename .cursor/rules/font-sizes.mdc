@@ -1,0 +1,37 @@
+---
+description: Use only the font sizes defined in src/styles/fonts.css
+alwaysApply: true
+---
+
+# Font sizes
+
+Set `font-size` only with a variable from `src/styles/fonts.css`. Do not write a px, rem, or em font size in CSS, inline styles, or canvas text.
+
+Allowed sizes:
+
+- `--ft-type-hero`
+- `--ft-type-page`
+- `--ft-type-title`
+- `--ft-type-section`
+- `--ft-type-card`
+- `--ft-type-lead`
+- `--ft-type-body`
+- `--ft-type-ui`
+- `--ft-type-secondary`
+- `--ft-type-label`
+- `--ft-type-caption`
+- `--ft-type-micro`
+
+Font families are `--ft-font` and `--ft-font-brand`. Leading and tracking that already exist are `--ft-leading-tight`, `--ft-leading-body`, and `--ft-tracking-tight`.
+
+Pick the nearest existing step. Do not add a new size token unless the user asks to change `fonts.css`.
+
+```css
+/* BAD */
+font-size: 14px;
+font: 600 13px/1.2 var(--ft-font);
+
+/* GOOD */
+font-size: var(--ft-type-secondary);
+font: 600 var(--ft-type-label)/1.2 var(--ft-font);
+```

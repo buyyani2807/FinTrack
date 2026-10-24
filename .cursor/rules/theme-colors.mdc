@@ -1,0 +1,24 @@
+---
+description: Use only the theme colors defined in src/styles/colors.css
+alwaysApply: true
+---
+
+# Theme colors
+
+Set color only with a variable from `src/styles/colors.css`. Do not write a new hex, rgb, hsl, or named color in CSS, inline styles, or canvas fills.
+
+Use the existing `--ft-*` color tokens, including text, surfaces, borders, brand, status, sidebar, and chart colors. Light values live on `:root`. Dark values live on `:root[data-theme="dark"]`.
+
+`transparent`, `currentColor`, and `color-mix()` of an existing token are allowed. A new color belongs in `colors.css`, and only when the user asks for one.
+
+In canvas or other APIs that cannot take a variable string, read the computed token. Do not substitute a hex code.
+
+```css
+/* BAD */
+color: #217d73;
+background: rgb(26, 29, 32);
+
+/* GOOD */
+color: var(--ft-primary);
+background: var(--ft-surface);
+```
