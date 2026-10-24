@@ -16,8 +16,57 @@ export function usesItemLines(kind, form = {}) {
   return config.returnKind ? form.noteEntryMode === "items" : form.entryMode !== "amount";
 }
 
+// GST unit quantity codes, written the way a bill is read. Nos, Kg, Gram, Litre, Meter,
+// Box, Pack, Bag, Piece, Set, Carton and Quintal stay spelled as already saved items.
+// Hour and Day cover a service sold on the same invoice.
 export const PRODUCT_UNITS = [
-  "Nos", "Kg", "Gram", "Litre", "Meter", "Box", "Pack", "Bag", "Piece", "Set", "Carton", "Quintal", "Hour", "Day",
+  "Bag",
+  "Bale",
+  "Billion units",
+  "Bottle",
+  "Box",
+  "Buckle",
+  "Bunch",
+  "Bundle",
+  "Can",
+  "Carton",
+  "Centimeter",
+  "Cubic centimeter",
+  "Cubic meter",
+  "Day",
+  "Dozen",
+  "Drum",
+  "Gram",
+  "Great gross",
+  "Gross",
+  "Gross yards",
+  "Hour",
+  "Kg",
+  "Kilolitre",
+  "Kilometre",
+  "Litre",
+  "Meter",
+  "Metric ton",
+  "Millilitre",
+  "Nos",
+  "Others",
+  "Pack",
+  "Pair",
+  "Piece",
+  "Quintal",
+  "Roll",
+  "Set",
+  "Square feet",
+  "Square meter",
+  "Square yard",
+  "Tablet",
+  "Ten gross",
+  "Thousand",
+  "Tonne",
+  "Tube",
+  "Unit",
+  "US gallon",
+  "Yard",
 ];
 
 export const SERVICE_UNITS = ["Nos", "Hour", "Day"];
@@ -26,6 +75,14 @@ export const ITEM_UNITS = [...PRODUCT_UNITS, ...SERVICE_UNITS.filter(unit => !PR
 
 export function unitsForItemType(itemType) {
   return itemType === "service" ? SERVICE_UNITS : PRODUCT_UNITS;
+}
+
+/** Every unit for a sale or purchase line, plus a saved unit that is not in the list. */
+export function unitChoices(current = "") {
+  const units = [...ITEM_UNITS].sort((a, b) => a.localeCompare(b, "en"));
+  const extra = String(current || "").trim();
+  if (extra && !units.includes(extra)) return [extra, ...units];
+  return units;
 }
 
 /** Top-level categories, then each subcategory labelled "Parent / Child". */

@@ -10,6 +10,7 @@ import { todayIso } from "../../cashbook/cashbookModel.js";
 import { gstStateFromGstin, isIntraGst } from "../model/accountingGst.js";
 import { emptyItemLine, normalizeItemLine } from "../model/inventoryModel.js";
 import { QtyInput } from "./QtyInput.jsx";
+import { UnitSelect } from "./UnitSelect.jsx";
 import {
   DOCUMENT_NEXT,
   DOCUMENT_TYPES,
@@ -183,7 +184,7 @@ function DocumentForm({ form, setForm, parties, items, stockByItem, gstCompany, 
 
       <section className="acc-form-section acc-item-lines">
         <h3 className="acc-form-section-title">Items</h3>
-        <div className="table acc-table-wrap"><table><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Discount</th>{gstEnabled && <th>GST%</th>}<th className="acc-num">Amount</th><th></th></tr></thead><tbody>
+        <div className="table acc-table-wrap"><table><thead><tr><th>Item</th><th>Qty</th><th>Unit</th><th>Rate</th><th>Discount</th>{gstEnabled && <th>GST%</th>}<th className="acc-num">Amount</th><th></th></tr></thead><tbody>
           {form.lines.map((line, index) => {
             const lineTotals = normalizeItemLine(line);
             const stock = line.itemId ? stockByItem[line.itemId] : null;
@@ -206,6 +207,7 @@ function DocumentForm({ form, setForm, parties, items, stockByItem, gstCompany, 
                   </div>
                 </td>
                 <td><QtyInput aria-label="Quantity" value={line.quantity} onValue={quantity => patchLine(index, { quantity })} /></td>
+                <td><UnitSelect value={line.unit} onValue={unit => patchLine(index, { unit })} /></td>
                 <td><input type="number" min="0" step="0.01" value={line.rate} onChange={event => patchLine(index, { rate: event.target.value, rateTouched: true })} /></td>
                 <td><input inputMode="decimal" value={line.discount || ""} placeholder="₹ or %" aria-label="Discount (amount or percent)" onChange={event => patchLine(index, { discount: event.target.value })} /></td>
                 {gstEnabled && <td><input type="number" min="0" max="100" step="0.01" value={line.gstRate} onChange={event => patchLine(index, { gstRate: event.target.value })} /></td>}
@@ -253,6 +255,9 @@ function DocumentForm({ form, setForm, parties, items, stockByItem, gstCompany, 
                 <div className="acc-item-line-card-grid">
                   <label className="accounts-filter-field"><span className="small">Qty</span>
                     <QtyInput value={line.quantity} onValue={quantity => patchLine(index, { quantity })} />
+                  </label>
+                  <label className="accounts-filter-field"><span className="small">Unit</span>
+                    <UnitSelect value={line.unit} onValue={unit => patchLine(index, { unit })} />
                   </label>
                   <label className="accounts-filter-field"><span className="small">Rate</span>
                     <input type="number" min="0" step="0.01" value={line.rate} onChange={event => patchLine(index, { rate: event.target.value, rateTouched: true })} />

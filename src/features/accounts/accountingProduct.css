@@ -3954,7 +3954,13 @@
 }
 
 .accounts-dashboard .acc-modal .acc-item-line-card-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.accounts-dashboard .acc-item-line-card-grid .ft-select,
+.accounts-dashboard .acc-item-lines td .ft-select {
+  width: 100%;
+  min-width: 0;
 }
 
 .accounts-dashboard .acc-item-line-card-top {
