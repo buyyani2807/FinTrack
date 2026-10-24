@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { openManualWhatsAppShare } from "../../receipts/io/receiptWhatsApp.js";
 import { REMINDER_LANGUAGES, draftCollectionReminder, reminderSendAllowed } from "../../finance/model/collectionCopilot.js";
 import { money } from "../accountsFormat.js";
@@ -168,17 +168,27 @@ function ExpenseDetail({ group, row, openSource }) {
 
 const CHART_PAGE_SIZE = 6;
 const PICK_PAGE_SIZE = 4;
+const PICK_LABELS = { categories: ["This period", "Compared with"], rates: ["Latest rate", "Earlier rate"], spend: ["This period", "3-month average"] };
 
 export function ExpensesPanel({ data, openSource }) {
   const { comparisons, supplierPrices, supplierSpend } = data;
   const [groupId, setGroupId] = useState("categories");
-  const [selectedId, setSelectedId] = useState(null);
-  const [detailOpen, setDetailOpen] = useState(false);
   const [chartPage, setChartPage] = useState(0);
   const [chartDir, setChartDir] = useState("next");
   const goToChartPage = page => { setChartDir(page > chartPage ? "next" : "prev"); setChartPage(page); };
   const [pickPage, setPickPage] = useState(0);
   const [pickDir, setPickDir] = useState("next");
+  // The rows work as an accordion: this is which one is open (none at first).
+  const [openId, setOpenId] = useState(null);
+  // After a row opens, bring it into view if the page shifted it off screen.
+  const keepInView = element => {
+    if (!element) return;
+    const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.setTimeout(() => {
+      const rect = element.getBoundingClientRect();
+      if (rect.top < 72 || rect.bottom > window.innerHeight) element.scrollIntoView({ behavior: calm ? "auto" : "smooth", block: "start" });
+    }, calm ? 0 : 300);
+  };
   const groups = [
     { id: "categories", label: "Categories", items: comparisons.insights },
     { id: "rates", label: "Supplier rates", items: supplierPrices.insights },
@@ -186,7 +196,6 @@ export function ExpensesPanel({ data, openSource }) {
   ].filter(group => group.items.length);
   const nothing = !groups.length;
   const group = groups.find(item => item.id === groupId) || groups[0];
-  const selected = group?.items.find(item => item.id === selectedId) || group?.items[0];
   const flagged = comparisons.insights.length + supplierPrices.insights.length + supplierSpend.length;
   const top = comparisons.insights.reduce((best, row) => (row.changePct != null && (!best || row.changePct > best.changePct) ? row : best), null);
   const sortedByAmount = [...comparisons.insights].sort((a, b) => b.currentAmount - a.currentAmount);
@@ -201,8 +210,7 @@ export function ExpensesPanel({ data, openSource }) {
   const goToPickPage = page => {
     setPickDir(page > currentPickPage ? "next" : "prev");
     setPickPage(page);
-    const first = group.items[page * PICK_PAGE_SIZE];
-    if (first) setSelectedId(first.id);
+    setOpenId(null);
   };
   return <div className="air-stack">
     <p className="air-note">Period {comparisons.period.from} to {comparisons.period.to}, compared with the same days of earlier periods. Amounts come from posted vouchers.</p>
@@ -218,13 +226,9 @@ export function ExpensesPanel({ data, openSource }) {
       {chartRows.length > 0 && <section className="air-panel" aria-label="Spend by category">
         <header className="air-panel-head">
           <div className="air-panel-title">
-            <h3 className="air-h">Spend by category{pageCount > 1 ? <span className="air-count">{currentPage * CHART_PAGE_SIZE + 1} to {currentPage * CHART_PAGE_SIZE + chartRows.length} of {sortedByAmount.length}</span> : null}</h3>
+            <h3 className="air-h">Spend by category</h3>
             <span className="air-legend"><i className="is-now" />This period<i className="is-before" />Compared with</span>
           </div>
-          {pageCount > 1 && <div className="air-pager-buttons" role="group" aria-label="Spend by category pages">
-            <button type="button" className="air-arrow" disabled={currentPage === 0} onClick={() => goToChartPage(currentPage - 1)} aria-label="Previous categories"><ChevronLeft size={18} aria-hidden="true" /></button>
-            <button type="button" className="air-arrow" disabled={currentPage >= pageCount - 1} onClick={() => goToChartPage(currentPage + 1)} aria-label="Next categories"><ChevronRight size={18} aria-hidden="true" /></button>
-          </div>}
         </header>
         <ul key={currentPage} className={`air-bars is-${chartDir}`}>
           {chartRows.map(row => <li key={row.id}>
@@ -238,32 +242,49 @@ export function ExpensesPanel({ data, openSource }) {
           {pageCount > 1 && Array.from({ length: CHART_PAGE_SIZE - chartRows.length }, (_, index) => <li key={`fill-${index}`} className="air-bars-fill" aria-hidden="true" />)}
         </ul>
         <p className="air-meta">{pageCount > 1 ? "Largest spend first. Use the arrows to see more categories." : "Largest spend first."}</p>
+        {pageCount > 1 && <div className="air-pick-head">
+          <span className="air-count">{currentPage * CHART_PAGE_SIZE + 1} to {currentPage * CHART_PAGE_SIZE + chartRows.length} of {sortedByAmount.length}</span>
+          <div className="air-pager-buttons" role="group" aria-label="Spend by category pages">
+            <button type="button" className="air-arrow" disabled={currentPage === 0} onClick={() => goToChartPage(currentPage - 1)} aria-label="Previous categories"><ChevronLeft size={18} aria-hidden="true" /></button>
+            <button type="button" className="air-arrow" disabled={currentPage >= pageCount - 1} onClick={() => goToChartPage(currentPage + 1)} aria-label="Next categories"><ChevronRight size={18} aria-hidden="true" /></button>
+          </div>
+        </div>}
       </section>}
 
       <div className="air-chips" role="tablist" aria-label="Expense views">
-        {groups.map(item => <button key={item.id} type="button" role="tab" aria-selected={group.id === item.id} className={`air-chip${group.id === item.id ? " active" : ""}`} onClick={() => { setGroupId(item.id); setSelectedId(null); setPickPage(0); setPickDir("next"); }}>{item.label}<span>{item.items.length}</span></button>)}
+        {groups.map(item => <button key={item.id} type="button" role="tab" aria-selected={group.id === item.id} className={`air-chip${group.id === item.id ? " active" : ""}`} onClick={() => { setGroupId(item.id); setOpenId(null); setPickPage(0); setPickDir("next"); }}>{item.label}<span>{item.items.length}</span></button>)}
       </div>
       <section className="air-board" aria-label="Expense details">
-        {selected && <aside className={`air-detail${detailOpen ? " is-open" : ""}`} aria-live="polite">
-          <button type="button" className="btn air-detail-back" onClick={() => setDetailOpen(false)}>Back to list</button>
-          <ExpenseDetail group={group.id} row={selected} openSource={openSource} />
-        </aside>}
-        <div className="air-board-list">
-          <div key={`${group.id}-${currentPickPage}`} className={`air-picks is-${pickDir}`}>
-            {pickRows.map(row => <button key={row.id} type="button" className={`air-pick${selected?.id === row.id ? " is-active" : ""}`} aria-pressed={selected?.id === row.id} onClick={() => { setSelectedId(row.id); setDetailOpen(true); }}>
-              <span className="air-pick-main"><strong>{row.category}</strong><span className="air-row-sub">{row.status}</span></span>
-              <span className="air-pick-side"><b className="air-figure">{money(row.currentAmount)}</b><span className={`air-delta is-${row.severity || "low"}`}>{pct(row.changePct)}</span></span>
-            </button>)}
-            {pickPageCount > 1 && Array.from({ length: PICK_PAGE_SIZE - pickRows.length }, (_, index) => <span key={`fill-${index}`} className="air-pick-fill" aria-hidden="true" />)}
-          </div>
-          {pickPageCount > 1 && <div className="air-pick-head">
-            <span className="air-count">{currentPickPage * PICK_PAGE_SIZE + 1} to {currentPickPage * PICK_PAGE_SIZE + pickRows.length} of {group.items.length}</span>
-            <div className="air-pager-buttons" role="group" aria-label={`${group.label} pages`}>
-              <button type="button" className="air-arrow" disabled={currentPickPage === 0} onClick={() => goToPickPage(currentPickPage - 1)} aria-label={`Previous ${group.label.toLowerCase()}`}><ChevronLeft size={18} aria-hidden="true" /></button>
-              <button type="button" className="air-arrow" disabled={currentPickPage >= pickPageCount - 1} onClick={() => goToPickPage(currentPickPage + 1)} aria-label={`Next ${group.label.toLowerCase()}`}><ChevronRight size={18} aria-hidden="true" /></button>
-            </div>
-          </div>}
+        <div key={`${group.id}-${currentPickPage}`} className={`air-picks is-${pickDir}`}>
+          {pickRows.map(row => {
+            const open = openId === row.id;
+            const labels = PICK_LABELS[group.id];
+            return <div key={row.id} className={`air-pick-item${open ? " is-open" : ""}`}>
+              <button type="button" className="air-pick" aria-expanded={open} onClick={event => { setOpenId(open ? null : row.id); if (!open) keepInView(event.currentTarget.parentElement); }}>
+                <span className="air-pick-main"><strong>{row.category}</strong><span className="air-row-sub">{row.status}</span></span>
+                <span className="air-pick-figure"><span className="air-pick-label">{labels[0]}</span><b className="air-figure">{money(row.currentAmount)}</b></span>
+                <span className="air-pick-figure is-compared"><span className="air-pick-label">{labels[1]}</span><b className="air-figure">{row.comparisonAmount == null ? "—" : money(row.comparisonAmount)}</b></span>
+                <span className={`air-delta is-${row.severity || "low"}`}>{pct(row.changePct)}</span>
+                <ChevronDown className="air-pick-chevron" size={18} aria-hidden="true" />
+              </button>
+              <div className={`air-collapse${open ? " is-open" : ""}`}>
+                <div className="air-collapse-inner">
+                  <aside className="air-detail">
+                    <ExpenseDetail group={group.id} row={row} openSource={openSource} />
+                  </aside>
+                </div>
+              </div>
+            </div>;
+          })}
+          {pickPageCount > 1 && Array.from({ length: PICK_PAGE_SIZE - pickRows.length }, (_, index) => <span key={`fill-${index}`} className="air-pick-fill" aria-hidden="true" />)}
         </div>
+        {pickPageCount > 1 && <div className="air-pick-head">
+          <span className="air-count">{currentPickPage * PICK_PAGE_SIZE + 1} to {currentPickPage * PICK_PAGE_SIZE + pickRows.length} of {group.items.length}</span>
+          <div className="air-pager-buttons" role="group" aria-label={`${group.label} pages`}>
+            <button type="button" className="air-arrow" disabled={currentPickPage === 0} onClick={() => goToPickPage(currentPickPage - 1)} aria-label={`Previous ${group.label.toLowerCase()}`}><ChevronLeft size={18} aria-hidden="true" /></button>
+            <button type="button" className="air-arrow" disabled={currentPickPage >= pickPageCount - 1} onClick={() => goToPickPage(currentPickPage + 1)} aria-label={`Next ${group.label.toLowerCase()}`}><ChevronRight size={18} aria-hidden="true" /></button>
+          </div>
+        </div>}
       </section>
       {group.id === "categories" && comparisons.insufficient.length > 0 && <p className="air-note">No trend yet (not enough history): {comparisons.insufficient.map(row => row.accountName).join(", ")}.</p>}
       {group.id === "rates" && supplierPrices.insufficient.length > 0 && <p className="air-note">Without enough history for a rate trend: {supplierPrices.insufficient.slice(0, 8).map(row => `${row.supplierName} · ${row.itemName}`).join(", ")}.</p>}
