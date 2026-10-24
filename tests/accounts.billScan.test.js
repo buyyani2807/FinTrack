@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { markDuplicateInvoices, normalizeBillScan, purchaseFormFromBill, reviewBillScan } from "../src/features/accounts/model/billScan.js";
+import { aggregateItemizedGst } from "../src/features/accounts/model/inventoryModel.js";
 import { DEFAULT_CHART_OF_ACCOUNTS, buildVoucher, paymentLines } from "../src/features/accounts/model/accountingModel.js";
 import handler, { modelCandidates, readFailure } from "../api/accounts/bill-scan.js";
 
@@ -80,6 +81,58 @@ test("gstin and item name fill the existing supplier and catalogue item", () => 
   assert.equal(draft.form.itemLines[0].gstRate, "18");
   assert.equal(draft.form.itemLines[0].unit, "Litre");
   assert.equal(draft.warnings.length, 0);
+});
+
+test("a scanned bill keeps the printed total when quantity times rate is a few paise short", () => {
+  const scan = {
+    supplierName: "Concrete Supplier",
+    billNumber: "B-24300",
+    billDate: "2026-09-06",
+    paymentStatus: "unpaid",
+    taxable: 20593.22,
+    cgst: 1853.39,
+    sgst: 1853.39,
+    igst: 0,
+    total: 24300,
+    lines: [{ name: "Ready mix", quantity: 6, unit: "M3", rate: 3432.2, amount: 20593.22, gstRate: 18 }],
+  };
+  const draft = purchaseFormFromBill(scan, { parties: [], items: [], today: "2026-10-24" });
+  const line = draft.form.itemLines[0];
+  assert.equal(line.unit, "M3");
+  assert.equal(line.quantity, "6");
+  assert.equal(line.rate, "3432.2");
+  assert.equal(line.billedAmount, 20593.22);
+  const preview = aggregateItemizedGst(draft.form.itemLines, { intra: true });
+  assert.equal(preview.taxable, 20593.22);
+  assert.equal(preview.cgst, 1853.39);
+  assert.equal(preview.sgst, 1853.39);
+  assert.equal(preview.total, 24300);
+  assert.match(draft.warnings.join(" "), /24300\.00/);
+  assert.match(draft.warnings.join(" "), /24299\.98/);
+
+  const fromHeader = purchaseFormFromBill({
+    ...scan,
+    lines: [{ name: "Ready mix", quantity: 6, unit: "CBM", rate: 3432.2, gstRate: 18 }],
+  }, { parties: [], items: [], today: "2026-10-24" });
+  assert.equal(fromHeader.form.itemLines[0].unit, "M3");
+  assert.equal(aggregateItemizedGst(fromHeader.form.itemLines, { intra: true }).total, 24300);
+
+  const far = purchaseFormFromBill({
+    ...scan,
+    taxable: 20000,
+    cgst: 1800,
+    sgst: 1800,
+    total: 23600,
+    lines: [{ name: "Ready mix", quantity: 6, unit: "M3", rate: 3432.2, amount: 20000, gstRate: 18 }],
+  }, { parties: [], items: [], today: "2026-10-24" });
+  assert.equal(far.form.itemLines[0].billedAmount, undefined);
+  assert.equal(aggregateItemizedGst(far.form.itemLines, { intra: true }).total, 24299.98);
+
+  const kept = purchaseFormFromBill({
+    supplierGstin: "29ABCDE1234F1Z5",
+    lines: [{ name: "primer", quantity: 1, rate: 10, unit: "M3", gstRate: 18 }],
+  }, { parties, items, today: "2026-10-05" });
+  assert.equal(kept.form.itemLines[0].unit, "Litre");
 });
 
 test("normalize drops unreadable lines and a future bill date is clamped by the form mapper", () => {

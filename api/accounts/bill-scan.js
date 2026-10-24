@@ -14,9 +14,10 @@ const json = (res, status, body) => res.status(status).json(body);
 
 const PROMPT = `Read this supplier bill and return JSON only.
 Use this shape:
-{"documentKind":"invoice","supplierName":"","supplierGstin":"","billNumber":"","billDate":"YYYY-MM-DD","paymentStatus":"unknown","taxable":null,"cgst":null,"sgst":null,"igst":null,"total":null,"lines":[{"name":"","quantity":1,"rate":0,"gstRate":18,"hsn":""}]}
+{"documentKind":"invoice","supplierName":"","supplierGstin":"","billNumber":"","billDate":"YYYY-MM-DD","paymentStatus":"unknown","taxable":null,"cgst":null,"sgst":null,"igst":null,"total":null,"lines":[{"name":"","quantity":1,"unit":"","rate":0,"amount":0,"gstRate":18,"hsn":""}]}
 documentKind is invoice, receipt, payment_proof, or cheque. paymentStatus is paid, unpaid, or unknown. Copy only what is printed. Leave a field empty or null when it is unreadable. Do not add items that are not on the document.
-billDate is the invoice date. quantity is the billed quantity. rate is the price per unit before tax when that column is printed, otherwise the printed rate. gstRate is the percent, such as 18.`;
+billDate is the invoice date. quantity is the billed quantity. unit is the printed UOM, such as M3, Nos, or Kg. rate is the printed price per unit before tax. amount is the printed line amount before tax. gstRate is the percent, such as 18.
+taxable, cgst, sgst, igst, and total are the figures printed on the bill. Copy them as printed. Do not recalculate them from quantity times rate. A printed total can be a few paise away from that multiplication.`;
 
 function mimeOf(value) {
   const mime = String(value || "").toLowerCase();

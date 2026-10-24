@@ -141,7 +141,11 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
   const patchItemLine = (index, patch) => {
     setForm(current => {
       const itemLines = [...(current.itemLines || [emptyItemLine()])];
-      itemLines[index] = { ...itemLines[index], ...patch };
+      const previous = itemLines[index] || emptyItemLine();
+      const next = { ...previous, ...patch };
+      const edited = ["quantity", "rate", "discount"].some(key => key in patch && String(patch[key] ?? "") !== String(previous[key] ?? ""));
+      if (edited) next.billedAmount = null;
+      itemLines[index] = next;
       return { ...current, itemLines };
     });
   };

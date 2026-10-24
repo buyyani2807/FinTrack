@@ -190,7 +190,10 @@ const isWholeQuantity = value => {
 export function normalizeItemLine(line = {}) {
   const quantity = Math.trunc(Math.max(0, Number(line.quantity || 0) || 0));
   const rate = Number(line.rate || 0);
-  const amount = roundMoney(quantity * rate);
+  const computed = roundMoney(quantity * rate);
+  // A scanned bill can print a taxable value a few paise away from quantity × rate.
+  const billed = line.billedAmount == null || line.billedAmount === "" ? null : roundMoney(line.billedAmount);
+  const amount = billed != null && billed > 0 && Math.abs(billed - computed) <= 1 ? billed : computed;
   const discountAmount = line.discountAmount != null && line.discount == null
     ? roundMoney(Number(line.discountAmount || 0))
     : parseLineDiscount(line.discount, amount);
