@@ -1,7 +1,7 @@
 import { addDaysIso, isPosted, roundMoney } from "./accountingModel.js";
 import { gstStateFromGstin, isIntraGst } from "./accountingGst.js";
 import { suggestExpense } from "./bookSuggestions.js";
-import { emptyItemLine } from "./inventoryModel.js";
+import { emptyItemLine, wholeQuantity } from "./inventoryModel.js";
 
 const GST_RATES = [0, 0.25, 3, 5, 12, 18, 28, 40];
 
@@ -146,7 +146,7 @@ function itemLineFromBill(line, items) {
     itemSku: item?.sku || "",
     itemType: item?.itemType || "product",
     unit: item?.unit || "Nos",
-    quantity: String(line.quantity),
+    quantity: wholeQuantity(line.quantity),
     rate: line.rate ? String(line.rate) : "",
     gstRate: item?.gstRate != null && item.gstRate !== "" ? String(item.gstRate) : line.gstRate,
     hsnSac: item?.hsnSac || line.hsn,

@@ -4,7 +4,8 @@ import { PackageMinus, PackagePlus, Plus, Tags, X } from "lucide-react";
 import { todayIso } from "../../../../lib/dates.js";
 import { SegmentedControl } from "../../../../components/ui.jsx";
 import { FilterField as Field } from "../AccUi.jsx";
-import { itemCategoryChoices } from "../../model/inventoryModel.js";
+import { itemCategoryChoices, wholeQuantity } from "../../model/inventoryModel.js";
+import { QtyInput } from "../QtyInput.jsx";
 
 const REASONS = ["Damaged stock", "Expired", "Found in physical count", "Free sample", "Opening correction"];
 const CATEGORY_ERROR = "Could not create category. Apply migration 067 if Items RPCs are missing.";
@@ -60,7 +61,8 @@ export function ItemsSidePanels({
   const chosen = products.find(item => item.id === adjust.itemId);
   const amount = Math.abs(Number(adjust.quantityDelta) || 0);
   const setAmount = (value, side = direction) => {
-    const size = value === "" ? "" : Math.abs(Number(value));
+    const digits = wholeQuantity(value);
+    const size = digits === "" ? "" : Number(digits);
     setAdjust(current => ({ ...current, quantityDelta: size === "" ? "" : String(side === "out" ? -size : size) }));
   };
   const chooseDirection = side => {
@@ -132,7 +134,7 @@ export function ItemsSidePanels({
             </Select>
           </Field>
           <Field label={`Quantity${chosen ? ` (${chosen.unit})` : ""}`}>
-            <input type="number" min="0" step="0.001" inputMode="decimal" value={adjust.quantityDelta === "" ? "" : amount} placeholder="0" onChange={event => setAmount(event.target.value)} />
+            <QtyInput value={adjust.quantityDelta === "" ? "" : amount} placeholder="0" onValue={setAmount} />
           </Field>
           <Field label="Date"><input type="date" value={adjust.date} onChange={event => setAdjust(state => ({ ...state, date: event.target.value }))} /></Field>
           <Field className="span" label="Reason">

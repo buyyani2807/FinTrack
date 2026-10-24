@@ -69,6 +69,17 @@ export const emptyItemForm = () => ({
   isActive: true,
 });
 
+/** Item quantities are whole units. A typed decimal is dropped; a pasted 1.5 becomes 1. */
+export function wholeQuantity(value) {
+  const text = String(value ?? "").trim();
+  if (!text) return "";
+  if (/[.,]/.test(text)) {
+    const amount = Number(text.replace(/,/g, ""));
+    if (Number.isFinite(amount) && amount >= 0) return String(Math.trunc(amount));
+  }
+  return text.replace(/\D/g, "");
+}
+
 export const emptyItemLine = () => ({
   itemId: "",
   itemName: "",
@@ -104,15 +115,22 @@ export function validateItemForm(form = {}) {
   if (!ITEM_UNITS.includes(form.unit) && !String(form.unit || "").trim()) return "Unit is required.";
   if (Number(form.sellingPrice || 0) < 0 || Number(form.purchasePrice || 0) < 0) return "Prices cannot be negative.";
   if (Number(form.gstRate || 0) < 0 || Number(form.gstRate || 0) > 100) return "GST rate must be between 0 and 100.";
+  if (form.itemType === "product" && !isWholeQuantity(form.openingStock)) return "Opening stock must be a whole number.";
   if (form.itemType === "product" && Number(form.openingStock || 0) < 0) return "Opening stock cannot be negative.";
+  if (form.itemType === "product" && !isWholeQuantity(form.reorderLevel)) return "Reorder level must be a whole number.";
   if (form.itemType === "product" && String(form.openingRate ?? "").trim() !== "" && !(Number(form.openingRate) >= 0)) {
     return "Opening rate must be zero or more.";
   }
   return "";
 }
 
+const isWholeQuantity = value => {
+  const text = String(value ?? "").trim();
+  return text === "" || /^\d+$/.test(text);
+};
+
 export function normalizeItemLine(line = {}) {
-  const quantity = Number(line.quantity || 0);
+  const quantity = Math.trunc(Math.max(0, Number(line.quantity || 0) || 0));
   const rate = Number(line.rate || 0);
   const amount = roundMoney(quantity * rate);
   const discountAmount = line.discountAmount != null && line.discount == null
@@ -161,6 +179,7 @@ export function validateItemLines(lines = []) {
   for (let index = 0; index < lines.length; index += 1) {
     const line = normalizeItemLine(lines[index]);
     if (!line.itemId && !line.itemName) return `Choose an item on line ${index + 1}.`;
+    if (!isWholeQuantity(lines[index].quantity)) return `Quantity must be a whole number on line ${index + 1}.`;
     if (!(line.quantity > 0)) return `Quantity must be greater than zero on line ${index + 1}.`;
     if (line.rate < 0) return `Rate cannot be negative on line ${index + 1}.`;
     if (!Number.isFinite(line.discountAmount)) return `Enter the discount as an amount or a percent (e.g. 10%) on line ${index + 1}.`;

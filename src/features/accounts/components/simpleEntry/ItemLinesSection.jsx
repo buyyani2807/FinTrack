@@ -1,6 +1,7 @@
 import { roundMoney } from "../../model/accountingModel.js";
 import { Select } from "../../../../components/Select.jsx";
 import { emptyItemLine, lastSoldRate, normalizeItemLine } from "../../model/inventoryModel.js";
+import { QtyInput } from "../QtyInput.jsx";
 import { formatOverviewDate, money, gstStatusLabel } from "../../accountsFormat.js";
 import { Field, AccTable } from "../AccUi.jsx";
 import { suggestHsn } from "../../../intelligence/ai/hsnSuggest.js";
@@ -67,7 +68,7 @@ export function ItemLinesSection({
         {(form.itemLines || [emptyItemLine()]).map((line, index) => {
           const lineTotals = normalizeItemLine(line);
           const stock = line.itemId ? stockByItem[line.itemId] : null;
-          const suggestion = hsnForLine(line, activeItems);
+          const suggestion = kind === "sale" ? null : hsnForLine(line, activeItems);
           const lastSold = lastSoldFor(line);
           return (
             <tr key={index}>
@@ -85,7 +86,7 @@ export function ItemLinesSection({
                 {suggestion ? <HsnSuggestion suggestion={suggestion} onUse={() => patchItemLine(index, { hsnSac: suggestion.hsn, gstRate: String(suggestion.rate) })} /> : null}
                 {lastSold ? <LastSoldHint last={lastSold} onUse={() => patchItemLine(index, { rate: String(lastSold.rate), rateTouched: true })} /> : null}
               </td>
-              <td><input type="number" min="0" step="0.001" value={line.quantity} onChange={event => patchItemLine(index, { quantity: event.target.value })} /></td>
+              <td><QtyInput aria-label="Quantity" value={line.quantity} onValue={quantity => patchItemLine(index, { quantity })} /></td>
               <td><input type="number" min="0" step="0.01" value={line.rate} onChange={event => patchItemLine(index, { rate: event.target.value, rateTouched: true })} /></td>
               <td><input inputMode="decimal" value={line.discount || ""} placeholder="₹ or %" aria-label="Discount (amount or percent)" onChange={event => patchItemLine(index, { discount: event.target.value })} /></td>
               <td><input type="number" min="0" max="100" step="0.01" value={line.gstRate} onChange={event => patchItemLine(index, { gstRate: event.target.value })} /></td>
@@ -100,7 +101,7 @@ export function ItemLinesSection({
           const lineTotals = normalizeItemLine(line);
           const stock = line.itemId ? stockByItem[line.itemId] : null;
           const lineName = activeItems.find(item => item.id === line.itemId)?.name || line.itemName || "Select item";
-          const suggestion = hsnForLine(line, activeItems);
+          const suggestion = kind === "sale" ? null : hsnForLine(line, activeItems);
           const lastSold = lastSoldFor(line);
           return (
             <article key={index} className="acc-item-line-card">
@@ -124,7 +125,7 @@ export function ItemLinesSection({
               {lastSold ? <LastSoldHint last={lastSold} onUse={() => patchItemLine(index, { rate: String(lastSold.rate), rateTouched: true })} /> : null}
               <div className="acc-item-line-card-grid">
                 <label className="accounts-filter-field"><span className="small">Qty</span>
-                  <input type="number" min="0" step="0.001" value={line.quantity} onChange={event => patchItemLine(index, { quantity: event.target.value })} />
+                  <QtyInput value={line.quantity} onValue={quantity => patchItemLine(index, { quantity })} />
                 </label>
                 <label className="accounts-filter-field"><span className="small">Rate</span>
                   <input type="number" min="0" step="0.01" value={line.rate} onChange={event => patchItemLine(index, { rate: event.target.value, rateTouched: true })} />

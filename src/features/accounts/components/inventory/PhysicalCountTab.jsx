@@ -2,6 +2,7 @@ import { todayIso } from "../../../../lib/dates.js";
 import { FilterField as Field, AccTable } from "../AccUi.jsx";
 import { SearchInput } from "../../../../components/ui.jsx";
 import { money, qty } from "../../accountsFormat.js";
+import { QtyInput } from "../QtyInput.jsx";
 
 export function PhysicalCountTab({
   countDate,
@@ -32,7 +33,7 @@ export function PhysicalCountTab({
           return <tr key={row.itemId} className={variance ? "acc-row-changed" : ""}>
             <td className="acc-cell-stack"><span>{row.name}</span>{row.sku ? <span className="small">{row.sku}</span> : null}</td>
             <td className="acc-num">{qty(row.quantity, row.unit)}</td>
-            <td className="acc-num"><input type="number" min="0" step="0.001" className="acc-count-input" aria-label={`Counted quantity for ${row.name}`} value={counts[row.itemId] ?? ""} disabled={!canEdit} onChange={event => setCounts(current => ({ ...current, [row.itemId]: event.target.value }))} /></td>
+            <td className="acc-num"><QtyInput className="acc-count-input" aria-label={`Counted quantity for ${row.name}`} value={counts[row.itemId] ?? ""} disabled={!canEdit} onValue={quantity => setCounts(current => ({ ...current, [row.itemId]: quantity }))} /></td>
             <td className={`acc-num ${variance ? (variance.quantityDelta < 0 ? "red" : "green") : ""}`}>{variance ? (variance.quantityDelta > 0 ? `+${qty(variance.quantityDelta)}` : qty(variance.quantityDelta)) : ""}</td>
             <td className="acc-num">{variance ? money(variance.valueImpact) : ""}</td>
           </tr>;

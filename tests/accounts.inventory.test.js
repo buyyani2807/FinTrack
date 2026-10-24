@@ -16,6 +16,7 @@ import {
   unitsForItemType,
   validateItemForm,
   validateItemLines,
+  wholeQuantity,
 } from "../src/features/accounts/model/inventoryModel.js";
 import { CASH_PARTY_ID } from "../src/features/accounts/model/accountingModel.js";
 
@@ -113,6 +114,17 @@ test("itemized sale draft keeps double-entry balanced with GST", () => {
   assert.equal(draft.itemLines[0].item_name, undefined);
   assert.ok(draft.totals.total > draft.totals.taxable);
   assert.ok(draft.gstLines.length >= 1);
+});
+
+test("quantity is a whole number with no decimal", () => {
+  assert.equal(wholeQuantity("1"), "1");
+  assert.equal(wholeQuantity("1.041"), "1");
+  assert.equal(wholeQuantity("12.9"), "12");
+  assert.equal(wholeQuantity(""), "");
+  assert.equal(wholeQuantity("1,500"), "1500");
+  assert.match(validateItemLines([{ itemId: "a", itemName: "A", quantity: "1.5", rate: 10 }]), /whole number/i);
+  assert.equal(validateItemLines([{ itemId: "a", itemName: "A", quantity: "3", rate: 10 }]), "");
+  assert.match(validateItemForm({ name: "Cement", sku: "C1", itemType: "product", unit: "Bag", openingStock: "1.5", reorderLevel: "0" }), /whole number/i);
 });
 
 test("rejects invalid item lines", () => {
