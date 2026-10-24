@@ -50,8 +50,8 @@ const placeMenu = trigger => {
  * Themed replacement for <select>. Takes the same <option> children (or `options`) and calls onChange with an
  * event-like object, so `onChange={event => set(event.target.value)}` keeps working. The trigger is a combobox
  * button (labelled by a wrapping <label> or aria-label); the list opens in a portal under it, or above it when
- * there is no room. Lists of eight or more options open with a search box that matches any part of the label.
- * Shorter lists keep keyboard type-ahead, also matching any part of the label.
+ * there is no room. Lists of eight or more options open with a search box that keeps labels whose name starts
+ * with the typed letters. Shorter lists keep keyboard type-ahead with the same rule.
  * `renderValue(option)` customises the trigger content; `bare` drops the field look and the chevron, for pickers
  * whose trigger is a whole card (avatar, name, their own chevron) styled by `className`.
  */
@@ -202,7 +202,7 @@ export function Select({
     const q = typed.current.text;
     const matches = items
       .map((item, index) => ({ item, index }))
-      .filter(({ item }) => !item.disabled && item.text.toLowerCase().includes(q));
+      .filter(({ item }) => !item.disabled && optionMatchesQuery(item.text, q));
     if (!matches.length) return;
     const start = open ? active : selectedIndex;
     const ordered = [...matches.filter(row => row.index > start), ...matches.filter(row => row.index <= start)];

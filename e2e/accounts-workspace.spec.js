@@ -324,9 +324,12 @@ test.describe("Dropdowns", () => {
     await dialog.getByRole("combobox", { name: "State" }).click();
     const search = page.getByRole("textbox", { name: "Search options" });
     await expect(search).toBeVisible();
-    await search.fill("tel");
+    await search.fill("t");
     await expect(page.getByRole("option", { name: /Telangana/ })).toBeVisible();
-    await expect(page.getByRole("option", { name: /Punjab/ })).toHaveCount(0);
+    await expect(page.getByRole("option", { name: /Tamil Nadu/ })).toBeVisible();
+    await expect(page.getByRole("option", { name: /Uttarakhand/ })).toHaveCount(0);
+    await expect(page.getByRole("option", { name: /Rajasthan/ })).toHaveCount(0);
+    await expect(page.getByRole("option", { name: "Select state" })).toHaveCount(0);
     await page.getByRole("option", { name: /Telangana/ }).click();
     await expect(dialog.getByRole("combobox", { name: "State" })).toContainText("Telangana");
   });
