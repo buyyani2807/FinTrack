@@ -3335,7 +3335,18 @@
 }
 
 .accounts-dashboard .acc-invoice-remind {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
   white-space: nowrap;
+}
+
+.accounts-dashboard .acc-invoice-remind .btn,
+.accounts-dashboard .acc-ledger-table .btn,
+.accounts-dashboard .acc-ledger-card .btn {
+  min-height: 30px;
+  padding: 0 10px;
 }
 
 .accounts-dashboard .acc-invoice-remind .btn.whatsapp {
@@ -5387,5 +5398,25 @@
   .accounts-dashboard .acc-overview .acc-money-window button {
     min-height: 36px;
     font-size: var(--ft-type-secondary) !important;
+  }
+}
+
+@media print {
+  body.acc-print-doc * {
+    visibility: hidden;
+  }
+
+  body.acc-print-doc .receipt-paper,
+  body.acc-print-doc .receipt-paper * {
+    visibility: visible;
+  }
+
+  body.acc-print-doc .receipt-paper {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: #fff;
+    color: #111;
   }
 }

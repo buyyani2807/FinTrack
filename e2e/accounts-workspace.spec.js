@@ -355,6 +355,39 @@ test.describe("Dropdowns", () => {
   });
 });
 
+test.describe("Voucher documents", () => {
+  test("sale, purchase and receipt numbers open a document with print", async ({ page }) => {
+    await mockAccountsWorkspace(page);
+    const openNumber = async (number, title) => {
+      await page.getByRole("button", { name: number, exact: true }).first().click();
+      const dialog = page.getByRole("dialog", { name: title });
+      await expect(dialog).toBeVisible();
+      await expect(dialog.getByRole("button", { name: "Print" })).toBeVisible();
+      await expect(dialog.getByRole("button", { name: "Download PDF" })).toBeVisible();
+      await dialog.getByRole("button", { name: "Close", exact: true }).click();
+      await expect(dialog).toHaveCount(0);
+    };
+
+    await page.goto("/accounting/reports/receivables");
+    await expect(page.getByRole("button", { name: "S-1", exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "View", exact: true }).first()).toBeVisible();
+    await openNumber("S-1", "SALES INVOICE");
+
+    await page.goto("/accounting/reports/payables");
+    await expect(page.getByRole("button", { name: "P-1", exact: true })).toBeVisible();
+    await openNumber("P-1", "PURCHASE BILL");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+
+    await page.goto("/accounting/reports/ledger");
+    await page.getByRole("combobox", { name: "Account", exact: true }).click();
+    await page.getByRole("option", { name: "4000 · Sales" }).click();
+    await openNumber("S-1", "SALES INVOICE");
+    await page.getByRole("combobox", { name: "Account", exact: true }).click();
+    await page.getByRole("option", { name: "1000 · Cash" }).click();
+    await openNumber("R-1", "RECEIPT");
+  });
+});
+
 test.describe("Nested routes", () => {
   test("tabs and sub-tabs of every module are URLs", async ({ page }) => {
     await mockAccountsWorkspace(page);

@@ -111,7 +111,7 @@ import { pageSlice } from "./model/accountsList.js";
 import { previousComparisonRange } from "./model/accountsIntelligence.js";
 import { downloadAccountsCsv, downloadAccountsExcel, downloadAccountsPdf } from "./io/accountingExport.js";
 import { loadOrganizationSettings } from "../../lib/financeRepository.js";
-import { buildSalesInvoice } from "./model/salesInvoiceModel.js";
+import { buildSalesInvoice, buildVoucherDocument, canOpenVoucherDocument } from "./model/salesInvoiceModel.js";
 import { SalesInvoiceSuccessModal, SalesInvoiceViewerModal } from "./components/SalesInvoiceActions.jsx";
 import { periodStockValues } from "./model/inventoryValuation.js";
 import { expenseBreakdown, monthlyIncomeExpense } from "./model/accountsCharts.js";
@@ -1784,18 +1784,24 @@ const openVoucher = () => {
       : `${label} saved successfully`;
   });
 
-  const openSalesInvoice = voucher => {
-    if (!voucher || voucher.voucherType !== "sales") return;
-    const party = parties.find(item => item.id === voucher.partyId) || null;
-    setSalesInvoiceView(buildSalesInvoice({
+  const openVoucherDocument = row => {
+    if (!row) return;
+    const voucher = row.lines ? row : vouchers.find(item => item.id === (row.voucherId || row.id));
+    if (!voucher || !canOpenVoucherDocument(voucher.voucherType)) return;
+    const party = parties.find(item => item.id === (voucher.partyId || row.partyId))
+      || (row.partyName ? { name: row.partyName, phone: row.partyPhone } : null);
+    const document = buildVoucherDocument({
       voucher,
       party,
       accounts,
       company: activeCompany,
       workspace,
       itemLines: voucherItemLines.filter(line => line.voucherId === voucher.id),
-    }));
+      outstanding: row.outstanding,
+    });
+    if (document) setSalesInvoiceView(document);
   };
+  const openSalesInvoice = openVoucherDocument;
   const openCoa = account => {
     if (account) {
       setCoaForm({
@@ -2164,6 +2170,7 @@ const openVoucher = () => {
           ledger={ledger}
           pagedLedger={pagedLedger}
           setListPage={setListPage}
+          onViewDocument={openVoucherDocument}
         />}
 
         {section === "vouchers" && <VouchersSection
@@ -2217,6 +2224,7 @@ const openVoucher = () => {
           stockMovements={stockMovements}
           items={items}
           onOpenParty={openPartyProfile}
+          onViewDocument={openVoucherDocument}
         />}
 
         {section === "party" && profileParty && !partyHasTradeProfile(profileParty) && <div className="acc-panel">
@@ -2245,6 +2253,7 @@ const openVoucher = () => {
           voucherItemLines={voucherItemLines}
           stockMovements={stockMovements}
           items={items}
+          onViewDocument={openVoucherDocument}
         />}
 
         {section === "parties" && <PartiesSection
@@ -2414,6 +2423,7 @@ const openVoucher = () => {
           pagedApInvoices={pagedApInvoices}
           salesRows={salesRows}
           purchaseRows={purchaseRows}
+          onViewDocument={openVoucherDocument}
           vouchers={vouchers}
           parties={parties}
           range={range}
