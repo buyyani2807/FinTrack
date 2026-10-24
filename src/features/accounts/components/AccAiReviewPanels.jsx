@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { openManualWhatsAppShare } from "../../receipts/io/receiptWhatsApp.js";
 import { REMINDER_LANGUAGES, draftCollectionReminder, reminderSendAllowed } from "../../finance/model/collectionCopilot.js";
 import { money } from "../accountsFormat.js";
@@ -142,28 +143,42 @@ function ExpenseDetail({ group, row, openSource }) {
       {row.severity ? <SeverityBadge severity={row.severity} /> : null}
     </header>
     <Facts items={facts} />
-    {group === "categories" && row.comparisons?.length > 0 && <div>
-      <span className="air-kicker">Compared with</span>
-      <ul className="air-plain">{row.comparisons.map(item => <li key={item.label}>{item.label}: {money(item.amount)} ({pct(item.changePct)})</li>)}</ul>
-    </div>}
-    {group === "rates" && <div>
-      <span className="air-kicker">Rate history</span>
-      <ul className="air-plain">
-        {row.windows.map(window => <li key={window.days}>{window.days} days: {window.averageRate == null ? "no history" : `${money(window.averageRate)} (${pct(window.changePct)})`}</li>)}
-        {row.otherSuppliersRate ? <li>Other suppliers: {money(row.otherSuppliersRate)}</li> : null}
-      </ul>
-    </div>}
-    <p className="air-text">{row.explanation}</p>
-    {row.recommendedAction ? <p className="air-suggest"><span className="air-kicker">Suggested action</span>{row.recommendedAction}</p> : null}
-    <div className="air-foot">{row.confidence ? <Confidence row={row} /> : null}<SourceLink link={row.source} onOpen={openSource} /></div>
+    <div className="air-detail-cols">
+      <div className="air-detail-col">
+        {group === "categories" && row.comparisons?.length > 0 && <div>
+          <span className="air-kicker">Compared with</span>
+          <ul className="air-plain">{row.comparisons.map(item => <li key={item.label}>{item.label}: {money(item.amount)} ({pct(item.changePct)})</li>)}</ul>
+        </div>}
+        {group === "rates" && <div>
+          <span className="air-kicker">Rate history</span>
+          <ul className="air-plain">
+            {row.windows.map(window => <li key={window.days}>{window.days} days: {window.averageRate == null ? "no history" : `${money(window.averageRate)} (${pct(window.changePct)})`}</li>)}
+            {row.otherSuppliersRate ? <li>Other suppliers: {money(row.otherSuppliersRate)}</li> : null}
+          </ul>
+        </div>}
+        <p className="air-text">{row.explanation}</p>
+      </div>
+      <div className="air-detail-col">
+        {row.recommendedAction ? <p className="air-suggest"><span className="air-kicker">Suggested action</span>{row.recommendedAction}</p> : null}
+        <div className="air-foot">{row.confidence ? <Confidence row={row} /> : null}<SourceLink link={row.source} onOpen={openSource} /></div>
+      </div>
+    </div>
   </>;
 }
+
+const CHART_PAGE_SIZE = 6;
+const PICK_PAGE_SIZE = 4;
 
 export function ExpensesPanel({ data, openSource }) {
   const { comparisons, supplierPrices, supplierSpend } = data;
   const [groupId, setGroupId] = useState("categories");
   const [selectedId, setSelectedId] = useState(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [chartPage, setChartPage] = useState(0);
+  const [chartDir, setChartDir] = useState("next");
+  const goToChartPage = page => { setChartDir(page > chartPage ? "next" : "prev"); setChartPage(page); };
+  const [pickPage, setPickPage] = useState(0);
+  const [pickDir, setPickDir] = useState("next");
   const groups = [
     { id: "categories", label: "Categories", items: comparisons.insights },
     { id: "rates", label: "Supplier rates", items: supplierPrices.insights },
@@ -174,8 +189,21 @@ export function ExpensesPanel({ data, openSource }) {
   const selected = group?.items.find(item => item.id === selectedId) || group?.items[0];
   const flagged = comparisons.insights.length + supplierPrices.insights.length + supplierSpend.length;
   const top = comparisons.insights.reduce((best, row) => (row.changePct != null && (!best || row.changePct > best.changePct) ? row : best), null);
-  const chartRows = [...comparisons.insights].sort((a, b) => b.currentAmount - a.currentAmount).slice(0, 6);
-  const chartMax = Math.max(1, ...chartRows.map(row => Math.max(row.currentAmount, row.comparisonAmount || 0)));
+  const sortedByAmount = [...comparisons.insights].sort((a, b) => b.currentAmount - a.currentAmount);
+  const pageCount = Math.max(1, Math.ceil(sortedByAmount.length / CHART_PAGE_SIZE));
+  const currentPage = Math.min(chartPage, pageCount - 1);
+  const chartRows = sortedByAmount.slice(currentPage * CHART_PAGE_SIZE, (currentPage + 1) * CHART_PAGE_SIZE);
+  // One scale for every page, so bars on different pages can be compared.
+  const chartMax = Math.max(1, ...sortedByAmount.map(row => Math.max(row.currentAmount, row.comparisonAmount || 0)));
+  const pickPageCount = Math.max(1, Math.ceil((group?.items.length || 0) / PICK_PAGE_SIZE));
+  const currentPickPage = Math.min(pickPage, pickPageCount - 1);
+  const pickRows = group ? group.items.slice(currentPickPage * PICK_PAGE_SIZE, (currentPickPage + 1) * PICK_PAGE_SIZE) : [];
+  const goToPickPage = page => {
+    setPickDir(page > currentPickPage ? "next" : "prev");
+    setPickPage(page);
+    const first = group.items[page * PICK_PAGE_SIZE];
+    if (first) setSelectedId(first.id);
+  };
   return <div className="air-stack">
     <p className="air-note">Period {comparisons.period.from} to {comparisons.period.to}, compared with the same days of earlier periods. Amounts come from posted vouchers.</p>
     {comparisons.insufficientHistory && <AccEmpty title="Insufficient history" copy="At least a month of posted expenses is needed before trends are shown. No trend is reported yet." />}
@@ -189,10 +217,16 @@ export function ExpensesPanel({ data, openSource }) {
 
       {chartRows.length > 0 && <section className="air-panel" aria-label="Spend by category">
         <header className="air-panel-head">
-          <h3 className="air-h">Spend by category</h3>
-          <span className="air-legend"><i className="is-now" />This period<i className="is-before" />Compared with</span>
+          <div className="air-panel-title">
+            <h3 className="air-h">Spend by category{pageCount > 1 ? <span className="air-count">{currentPage * CHART_PAGE_SIZE + 1} to {currentPage * CHART_PAGE_SIZE + chartRows.length} of {sortedByAmount.length}</span> : null}</h3>
+            <span className="air-legend"><i className="is-now" />This period<i className="is-before" />Compared with</span>
+          </div>
+          {pageCount > 1 && <div className="air-pager-buttons" role="group" aria-label="Spend by category pages">
+            <button type="button" className="air-arrow" disabled={currentPage === 0} onClick={() => goToChartPage(currentPage - 1)} aria-label="Previous categories"><ChevronLeft size={18} aria-hidden="true" /></button>
+            <button type="button" className="air-arrow" disabled={currentPage >= pageCount - 1} onClick={() => goToChartPage(currentPage + 1)} aria-label="Next categories"><ChevronRight size={18} aria-hidden="true" /></button>
+          </div>}
         </header>
-        <ul className="air-bars">
+        <ul key={currentPage} className={`air-bars is-${chartDir}`}>
           {chartRows.map(row => <li key={row.id}>
             <span className="air-bars-label">{row.category}</span>
             <span className="air-bars-track" aria-hidden="true">
@@ -201,28 +235,38 @@ export function ExpensesPanel({ data, openSource }) {
             </span>
             <span className="air-bars-value">{money(row.currentAmount)}<span className={`air-delta is-${row.severity || "low"}`}>{pct(row.changePct)}</span></span>
           </li>)}
+          {pageCount > 1 && Array.from({ length: CHART_PAGE_SIZE - chartRows.length }, (_, index) => <li key={`fill-${index}`} className="air-bars-fill" aria-hidden="true" />)}
         </ul>
+        <p className="air-meta">{pageCount > 1 ? "Largest spend first. Use the arrows to see more categories." : "Largest spend first."}</p>
       </section>}
 
-      <section className="air-split" aria-label="Expense details">
-        <div className="air-split-list">
-          <div className="air-chips" role="tablist" aria-label="Expense views">
-            {groups.map(item => <button key={item.id} type="button" role="tab" aria-selected={group.id === item.id} className={`air-chip${group.id === item.id ? " active" : ""}`} onClick={() => { setGroupId(item.id); setSelectedId(null); }}>{item.label}<span>{item.items.length}</span></button>)}
-          </div>
-          <div className="air-picks">
-            {group.items.map(row => <button key={row.id} type="button" className={`air-pick${selected?.id === row.id ? " is-active" : ""}`} aria-pressed={selected?.id === row.id} onClick={() => { setSelectedId(row.id); setDetailOpen(true); }}>
-              <span className="air-pick-main"><strong>{row.category}</strong><span className="air-row-sub">{row.status}</span></span>
-              <span className="air-pick-side"><b className="air-figure">{money(row.currentAmount)}</b><span className={`air-delta is-${row.severity || "low"}`}>{pct(row.changePct)}</span></span>
-            </button>)}
-          </div>
-          {group.id === "categories" && comparisons.insufficient.length > 0 && <p className="air-note">No trend yet (not enough history): {comparisons.insufficient.map(row => row.accountName).join(", ")}.</p>}
-          {group.id === "rates" && supplierPrices.insufficient.length > 0 && <p className="air-note">Without enough history for a rate trend: {supplierPrices.insufficient.slice(0, 8).map(row => `${row.supplierName} · ${row.itemName}`).join(", ")}.</p>}
-        </div>
+      <div className="air-chips" role="tablist" aria-label="Expense views">
+        {groups.map(item => <button key={item.id} type="button" role="tab" aria-selected={group.id === item.id} className={`air-chip${group.id === item.id ? " active" : ""}`} onClick={() => { setGroupId(item.id); setSelectedId(null); setPickPage(0); setPickDir("next"); }}>{item.label}<span>{item.items.length}</span></button>)}
+      </div>
+      <section className="air-board" aria-label="Expense details">
         {selected && <aside className={`air-detail${detailOpen ? " is-open" : ""}`} aria-live="polite">
           <button type="button" className="btn air-detail-back" onClick={() => setDetailOpen(false)}>Back to list</button>
           <ExpenseDetail group={group.id} row={selected} openSource={openSource} />
         </aside>}
+        <div className="air-board-list">
+          <div key={`${group.id}-${currentPickPage}`} className={`air-picks is-${pickDir}`}>
+            {pickRows.map(row => <button key={row.id} type="button" className={`air-pick${selected?.id === row.id ? " is-active" : ""}`} aria-pressed={selected?.id === row.id} onClick={() => { setSelectedId(row.id); setDetailOpen(true); }}>
+              <span className="air-pick-main"><strong>{row.category}</strong><span className="air-row-sub">{row.status}</span></span>
+              <span className="air-pick-side"><b className="air-figure">{money(row.currentAmount)}</b><span className={`air-delta is-${row.severity || "low"}`}>{pct(row.changePct)}</span></span>
+            </button>)}
+            {pickPageCount > 1 && Array.from({ length: PICK_PAGE_SIZE - pickRows.length }, (_, index) => <span key={`fill-${index}`} className="air-pick-fill" aria-hidden="true" />)}
+          </div>
+          {pickPageCount > 1 && <div className="air-pick-head">
+            <span className="air-count">{currentPickPage * PICK_PAGE_SIZE + 1} to {currentPickPage * PICK_PAGE_SIZE + pickRows.length} of {group.items.length}</span>
+            <div className="air-pager-buttons" role="group" aria-label={`${group.label} pages`}>
+              <button type="button" className="air-arrow" disabled={currentPickPage === 0} onClick={() => goToPickPage(currentPickPage - 1)} aria-label={`Previous ${group.label.toLowerCase()}`}><ChevronLeft size={18} aria-hidden="true" /></button>
+              <button type="button" className="air-arrow" disabled={currentPickPage >= pickPageCount - 1} onClick={() => goToPickPage(currentPickPage + 1)} aria-label={`Next ${group.label.toLowerCase()}`}><ChevronRight size={18} aria-hidden="true" /></button>
+            </div>
+          </div>}
+        </div>
       </section>
+      {group.id === "categories" && comparisons.insufficient.length > 0 && <p className="air-note">No trend yet (not enough history): {comparisons.insufficient.map(row => row.accountName).join(", ")}.</p>}
+      {group.id === "rates" && supplierPrices.insufficient.length > 0 && <p className="air-note">Without enough history for a rate trend: {supplierPrices.insufficient.slice(0, 8).map(row => `${row.supplierName} · ${row.itemName}`).join(", ")}.</p>}
     </>}
   </div>;
 }
