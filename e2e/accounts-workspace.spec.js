@@ -289,6 +289,31 @@ test.describe("Popups", () => {
   });
 });
 
+test.describe("Documents", () => {
+  test("every document form shows an item line, and Add item adds another", async ({ page }) => {
+    await mockAccountsWorkspace(page);
+    const kinds = [
+      ["quotation", "New quotation"],
+      ["sales_order", "New sales order"],
+      ["delivery_challan", "New delivery challan"],
+      ["purchase_order", "New purchase order"],
+      ["goods_receipt", "New goods receipt"],
+    ];
+    for (const [docType, title] of kinds) {
+      await page.goto(`/accounting/documents/${docType}`);
+      await page.getByRole("button", { name: `+ New ${title.slice(4)}` }).click({ timeout: 15_000 });
+      const dialog = page.getByRole("dialog", { name: title });
+      await expect(dialog).toBeVisible();
+      await expect(dialog.locator(".acc-item-line-card")).toHaveCount(1);
+      await expect(dialog.locator(".acc-item-line-card").getByRole("combobox", { name: "Item" })).toBeVisible();
+      await dialog.getByRole("button", { name: "+ Add item" }).click();
+      await expect(dialog.locator(".acc-item-line-card")).toHaveCount(2);
+      await dialog.getByRole("button", { name: "Close" }).click();
+      await expect(dialog).toHaveCount(0);
+    }
+  });
+});
+
 test.describe("Nested routes", () => {
   test("tabs and sub-tabs of every module are URLs", async ({ page }) => {
     await mockAccountsWorkspace(page);
