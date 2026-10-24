@@ -58,7 +58,7 @@ test("product units include carton and quintal, and a service keeps only service
   assert.deepEqual(serviceUnits, ["Nos", "Hour", "Day"]);
   assert.equal(serviceUnits.includes("Carton"), false);
   assert.equal(serviceUnits.includes("Kg"), false);
-  for (const unit of ["Bottle", "Square meter", "Tonne", "Kg", "Hour", "US gallon"]) {
+  for (const unit of ["Bottle", "Square meter", "Tonne", "Kg", "Hour", "US gallon", "M3"]) {
     assert.ok(productUnits.includes(unit), unit);
   }
   const choices = unitChoices("Reel");

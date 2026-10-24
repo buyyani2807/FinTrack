@@ -45,6 +45,7 @@ export const PRODUCT_UNITS = [
   "Kilolitre",
   "Kilometre",
   "Litre",
+  "M3",
   "Meter",
   "Metric ton",
   "Millilitre",
