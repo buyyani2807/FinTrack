@@ -3,6 +3,7 @@ import { openManualWhatsAppShare } from "../../receipts/io/receiptWhatsApp.js";
 import { REMINDER_LANGUAGES, draftCollectionReminder, reminderSendAllowed } from "../../finance/model/collectionCopilot.js";
 import { money } from "../accountsFormat.js";
 import { AccEmpty, AccTable, SimpleMetric } from "./AccUi.jsx";
+import { Select } from "../../../components/Select.jsx";
 import { CaBriefSheet } from "./CaBriefSheet.jsx";
 
 const pct = value => (value == null ? "—" : `${value > 0 ? "+" : ""}${value}%`);
@@ -200,7 +201,7 @@ export function MonthEndPanel({ readiness, months, month, setMonth, canWrite, bu
   const [briefOpen, setBriefOpen] = useState(false);
   return <>
     <div className="ai-toolbar">
-      <label className="small">Month <select value={month} onChange={event => setMonth(event.target.value)}>{months.map(key => <option key={key} value={key}>{key}</option>)}</select></label>
+      <label className="small">Month <Select aria-label="Month" value={month} onChange={event => setMonth(event.target.value)}>{months.map(key => <option key={key} value={key}>{key}</option>)}</Select></label>
       <span className="small muted">{readiness.locked ? "This period is locked." : "This period is open."} {readiness.note}</span>
       {brief ? <button type="button" className="btn" onClick={() => setBriefOpen(true)}>Brief for the CA</button> : null}
     </div>
@@ -258,10 +259,10 @@ export function BankPanel({ result, decisions, canWrite, busy, isLocked, onAppro
           <td>
             {final ? <DecisionBadge decision={decision} /> : locked ? <span className="small muted">Period locked</span> : canWrite ? <div className="ai-review-actions">
               {decision ? <DecisionBadge decision={decision} /> : null}
-              {row.candidates.length > 0 && (row.actionKind === "match" || row.actionKind === "choose") && <select aria-label="Edit suggestion" value={selected} onChange={event => setChoice(current => ({ ...current, [row.id]: event.target.value }))}>
+              {row.candidates.length > 0 && (row.actionKind === "match" || row.actionKind === "choose") && <Select aria-label="Edit suggestion" value={selected} onChange={event => setChoice(current => ({ ...current, [row.id]: event.target.value }))}>
                 <option value="">Choose voucher…</option>
                 {row.candidates.map(candidate => <option key={candidate.id} value={candidate.id}>{candidate.label} · {candidate.confidence}%</option>)}
-              </select>}
+              </Select>}
               {(row.actionKind === "match" || row.actionKind === "choose") && <button type="button" className="btn primary" disabled={busy || !selected} onClick={() => onApprove(row, selected, selected !== row.voucherLineId)}>Approve</button>}
               {row.actionKind === "create_entry" && <button type="button" className="btn primary" disabled={busy} onClick={() => onApprove(row, null, false)}>Approve</button>}
               {row.actionKind === "create_entry" && <button type="button" className="btn" disabled={busy} onClick={() => onApprove(row, null, true)}>Edit suggestion</button>}

@@ -314,6 +314,24 @@ test.describe("Documents", () => {
   });
 });
 
+test.describe("Dropdowns", () => {
+  test("the state list filters as you type", async ({ page }) => {
+    await mockAccountsWorkspace(page);
+    await page.goto("/accounting");
+    await page.getByRole("button", { name: "New", exact: true }).click({ timeout: 15_000 });
+    await page.getByRole("menuitem", { name: "Party", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Add party" });
+    await dialog.getByRole("combobox", { name: "State" }).click();
+    const search = page.getByRole("textbox", { name: "Search options" });
+    await expect(search).toBeVisible();
+    await search.fill("tel");
+    await expect(page.getByRole("option", { name: /Telangana/ })).toBeVisible();
+    await expect(page.getByRole("option", { name: /Punjab/ })).toHaveCount(0);
+    await page.getByRole("option", { name: /Telangana/ }).click();
+    await expect(dialog.getByRole("combobox", { name: "State" })).toContainText("Telangana");
+  });
+});
+
 test.describe("Nested routes", () => {
   test("tabs and sub-tabs of every module are URLs", async ({ page }) => {
     await mockAccountsWorkspace(page);
