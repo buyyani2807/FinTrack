@@ -322,15 +322,21 @@ test.describe("Add party", () => {
     await page.getByRole("menuitem", { name: "Party", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Add party" });
     const name = dialog.getByRole("textbox", { name: "Name" });
+    const opening = () => dialog.getByRole("textbox", { name: "Opening Balance (If Any)" });
     await expect(name).toHaveAttribute("placeholder", "e.g. Sai Traders");
+    await expect(opening()).toBeVisible();
+    await expect(opening()).toHaveAttribute("placeholder", "They already owe you");
     for (const type of ["Employee", "Agent", "Other"]) {
       await dialog.getByRole("combobox", { name: "Party type" }).click();
       await page.getByRole("option", { name: type, exact: true }).click();
       await expect(name).toHaveAttribute("placeholder", "");
+      await expect(opening()).toHaveCount(0);
     }
     await dialog.getByRole("combobox", { name: "Party type" }).click();
     await page.getByRole("option", { name: "Supplier", exact: true }).click();
     await expect(name).toHaveAttribute("placeholder", "e.g. Sai Traders");
+    await expect(opening()).toBeVisible();
+    await expect(opening()).toHaveAttribute("placeholder", "You already owe them");
   });
 });
 

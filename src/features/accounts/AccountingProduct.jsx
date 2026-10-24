@@ -81,6 +81,8 @@ import {
   partyHasAccountingUse,
   previousIndianFinancialYear,
   roundMoney,
+  partyOpeningDate,
+  partyOpeningVoucher,
   simpleEntryDraft,
   standaloneVisibleAccounts,
   validatePartyForm,
@@ -1492,6 +1494,29 @@ const openVoucher = () => {
     const creditChanged = existing
       ? Number(existing.creditLimit || 0) !== creditLimit || (existing.creditDays ?? null) !== creditDays
       : creditLimit > 0 || creditDays != null;
+    const openingAmount = (partyForm.partyType === "customer" || partyForm.partyType === "supplier")
+      ? roundMoney(Number(partyForm.openingBalance || 0))
+      : 0;
+    const openingDate = partyOpeningDate({
+      booksStartedOn: activeCompany?.booksStartedOn || settings?.booksStartedOn || "",
+      locks,
+      today: todayIso(),
+    });
+    if (!partyForm.id && openingAmount > 0) {
+      try {
+        partyOpeningVoucher({
+          accounts,
+          partyType: partyForm.partyType,
+          partyId: "pending",
+          partyName: partyForm.name,
+          amount: openingAmount,
+          date: openingDate,
+        });
+      } catch (err) {
+        setError(err.message);
+        return;
+      }
+    }
     run(async () => {
       let partyId = partyForm.id;
       if (partyForm.id) {
@@ -1505,6 +1530,17 @@ const openVoucher = () => {
       } else {
         const created = await createParty(token, partyForm);
         partyId = Array.isArray(created) ? created[0] : created;
+        if (openingAmount > 0 && typeof partyId === "string") {
+          const opening = partyOpeningVoucher({
+            accounts,
+            partyType: partyForm.partyType,
+            partyId,
+            partyName: partyForm.name,
+            amount: openingAmount,
+            date: openingDate,
+          });
+          await postVoucher(token, opening);
+        }
       }
       if (creditChanged && typeof partyId === "string") await setPartyCredit(token, partyId, { creditLimit, creditDays });
       if (!partyForm.id && partyCreateTarget && partyForm.partyType === partyCreateTarget && typeof partyId === "string") {
