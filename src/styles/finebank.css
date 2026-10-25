@@ -1894,8 +1894,18 @@ html[data-theme="dark"] .ft-trial-banner.is-urgent { background: #3a2222; color:
 /* ===== AI Review (accounts) =====
    One calm surface per list, dividers instead of nested cards, one primary action per row. */
 .air { display: flex; flex-direction: column; gap: 20px; }
-.air-head { display: block; }
-.air-lede { min-width: 0; margin: 0; color: var(--ft-text-2); font-size: var(--ft-type-ui); line-height: var(--ft-leading-body); }
+.air-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.air-lede { flex: 1 1 28rem; min-width: min(100%, 16rem); margin: 0; color: var(--ft-text-2); font-size: var(--ft-type-ui); line-height: var(--ft-leading-body); }
+.air-how { display: inline-flex; flex: none; align-items: center; gap: 0.35em; margin: 0 0 0 auto; padding: 0; border: 0; background: transparent; color: var(--ft-muted); font: 600 var(--ft-type-ui)/var(--ft-leading-tight) var(--ft-font); white-space: nowrap; cursor: pointer; }
+.air-how svg { width: 1em; height: 1em; flex: none; }
+.air-how:hover, .air-how:focus-visible { color: var(--ft-primary); }
+.air-how:focus-visible { outline: 2px solid var(--ft-primary); outline-offset: 2px; }
+.air-how-tip { position: fixed; z-index: 30; display: flex; align-items: flex-start; gap: 8px; width: min(280px, calc(100% - 16px)); margin: 0; padding: 8px 8px 8px 10px; border: 1px solid var(--ft-border); border-radius: var(--ft-radius); background: var(--ft-surface); box-shadow: var(--ft-shadow); color: var(--ft-text-2); font-size: var(--ft-type-label); line-height: var(--ft-leading-body); }
+.air-how-close { display: inline-grid; place-items: center; flex: none; width: 1.4em; height: 1.4em; margin: 0; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--ft-muted); font-size: inherit; cursor: pointer; }
+.air-how-close svg { width: 1em; height: 1em; }
+.air-how-close:hover, .air-how-close:focus-visible { color: var(--ft-text); }
+.air-how-close:focus-visible { outline: 2px solid var(--ft-primary); outline-offset: 2px; }
+.air-how-tip::after { content: ""; position: absolute; left: var(--air-how-arrow, 16px); bottom: -5px; width: 8px; height: 8px; background: var(--ft-surface); border-right: 1px solid var(--ft-border); border-bottom: 1px solid var(--ft-border); transform: translateX(-50%) rotate(45deg); }
 .air-body { display: block; margin-top: 0; }
 .air-tab-sep { flex: none; width: 1px; align-self: stretch; margin: 6px 4px; background: var(--ft-border); }
 .air-stack { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
@@ -1971,7 +1981,7 @@ html[data-theme="dark"] .ft-trial-banner.is-urgent { background: #3a2222; color:
 /* Expenses: spend chart and split pane */
 .air-legend { display: inline-flex; align-items: center; gap: 6px; color: var(--ft-text-2); font-size: var(--ft-type-label); font-weight: 600; }
 .air-legend i { width: 12px; height: 12px; border-radius: 3px; background: var(--ft-primary); }
-.air-legend i.is-before { margin-left: 12px; background: var(--ft-border-strong); }
+.air-legend i.is-before { margin-left: 12px; background: var(--ft-text-3); }
 .air-bars { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
 .air-bars li { display: grid; grid-template-columns: minmax(110px, 190px) minmax(0, 1fr) minmax(120px, auto); align-items: center; gap: 16px; }
 .air-bars-label { color: var(--ft-text); font-size: var(--ft-type-ui); font-weight: 600; overflow-wrap: anywhere; }
@@ -1982,7 +1992,7 @@ html[data-theme="dark"] .ft-trial-banner.is-urgent { background: #3a2222; color:
 @media (min-width: 1100px) { .air-bars { --air-bar-h: 8px; --air-bar-gap: 4px; } }
 @media (max-width: 720px) { .air-bars { --air-bar-h: 8px; --air-bar-gap: 3px; } }
 .air-bars-now { background: var(--ft-primary); }
-.air-bars-before { background: var(--ft-border-strong); }
+.air-bars-before { background: var(--ft-text-3); }
 .air-bars-value { color: var(--ft-text); font-size: var(--ft-type-ui); font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
 .air-panel-title { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; }
 .air-pager-buttons { display: inline-flex; gap: 8px; }

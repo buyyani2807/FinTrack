@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { Info, X } from "lucide-react";
 import { TabScroller } from "../../../components/TabScroller.jsx";
 import { todayIso } from "../../../lib/dates.js";
 import { dateIsLocked } from "../model/accountingModel.js";
@@ -18,6 +20,89 @@ import { AI_AUDIT_MIGRATION_MESSAGE, loadAiReviewActions, recordAiInsightRun, re
 import { AccEmpty } from "./AccUi.jsx";
 import { AlertsPanel, BankPanel, CashFlowPanel, CollectionsPanel, ExpensesPanel, InventoryPanel, MonthEndPanel } from "./AccAiReviewPanels.jsx";
 import { ItcCheckPanel } from "./ItcCheckPanel.jsx";
+
+const HOW_TEXT = "Verified figures come from posted records. Predictions are labelled and are not guaranteed. Nothing is posted, matched, or changed until you approve it.";
+
+function HowThisWorks() {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef(null);
+  const tipRef = useRef(null);
+
+  const close = () => setOpen(false);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = event => { if (event.key === "Escape") close(); };
+    const onPointer = event => {
+      if (triggerRef.current?.contains(event.target) || tipRef.current?.contains(event.target)) return;
+      close();
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onPointer);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onPointer);
+    };
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open) return undefined;
+    const place = () => {
+      const trigger = triggerRef.current;
+      const tip = tipRef.current;
+      if (!trigger || !tip) return;
+      const box = trigger.getBoundingClientRect();
+      const tipBox = tip.getBoundingClientRect();
+      const view = document.documentElement.clientWidth;
+      let left = box.left;
+      left = Math.min(left, Math.max(8, view - tipBox.width - 8));
+      left = Math.max(8, left);
+      tip.style.left = `${left}px`;
+      tip.style.top = `${Math.max(8, box.top - tipBox.height - 8)}px`;
+      const icon = trigger.querySelector("svg");
+      const iconBox = icon?.getBoundingClientRect();
+      if (iconBox) {
+        const arrow = iconBox.left + iconBox.width / 2 - left;
+        tip.style.setProperty("--air-how-arrow", `${Math.max(12, Math.min(arrow, tipBox.width - 12))}px`);
+      }
+    };
+    place();
+    const observer = new ResizeObserver(place);
+    observer.observe(tipRef.current);
+    document.fonts?.ready.then(place);
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open]);
+
+  return (
+    <>
+      <p className="air-lede">Advisory insights from this company's saved books. Nothing here changes your records unless you approve it.</p>
+      <button
+        type="button"
+        className="air-how"
+        ref={triggerRef}
+        aria-expanded={open}
+        aria-describedby={open ? "air-how-tip" : undefined}
+        onClick={() => setOpen(current => !current)}
+      >
+        <Info aria-hidden="true" />
+        How this works
+      </button>
+      {open ? createPortal(
+        <span ref={tipRef} id="air-how-tip" role="tooltip" className="air-how-tip">
+          <span>{HOW_TEXT}</span>
+          <button type="button" className="air-how-close" aria-label="Close" onClick={close}><X aria-hidden="true" /></button>
+        </span>,
+        document.body,
+      ) : null}
+    </>
+  );
+}
 
 // `group` only decides where a divider sits in the tab bar: money, risk, then close and stock.
 const TABS = [
@@ -239,7 +324,7 @@ export function AccAiReviewWorkspace({
   return (
     <div className="acc-panel ai-review air">
       <header className="air-head">
-        <p className="air-lede">Advisory insights from this company's saved books. Nothing here changes your records unless you approve it.</p>
+        <HowThisWorks />
       </header>
       {!auditAvailable && <div className="notice">{AI_AUDIT_MIGRATION_MESSAGE} Insights still work; decisions are not saved until then.</div>}
       {auditError && auditAvailable && <div className="notice">{auditError}</div>}
