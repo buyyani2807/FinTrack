@@ -4656,7 +4656,7 @@
 }
 
 .accounts-dashboard .acc-modal {
-  width: min(720px, calc(100vw - 24px));
+  width: min(720px, 100%);
   max-height: min(90svh, 900px);
   overflow: hidden;
   border-radius: var(--acc-radius);
@@ -4743,7 +4743,7 @@
     display: grid;
   }
   .accounts-dashboard .acc-modal .acc-item-line-card-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
   .accounts-dashboard .acc-ledger-table {
     display: none;
@@ -5538,7 +5538,7 @@
 
 @media (max-width: 680px) {
   .accounts-dashboard .form {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .accounts-dashboard .form > .span {
@@ -5706,8 +5706,8 @@
 
 /* Sale, purchase, expense, receipt, payment, notes, transfer, voucher, party, describe-it */
 .accounts-dashboard .acc-entry-dialog {
-  width: min(880px, calc(100vw - 32px));
-  max-width: min(880px, calc(100vw - 32px));
+  width: min(880px, 100%);
+  max-width: min(880px, calc(100% - 32px));
   padding: 20px 22px 16px;
 }
 
@@ -5920,8 +5920,39 @@
 @media (max-width: 680px) {
   .accounts-dashboard .acc-entry-dialog {
     width: 100%;
-    max-width: none;
+    max-width: 100%;
+    min-width: 0;
     padding: 18px 16px 14px;
+  }
+  .accounts-dashboard .acc-entry-dialog .modal-scroll,
+  .accounts-dashboard .acc-entry-dialog .modal-scroll-body,
+  .accounts-dashboard .acc-entry-dialog .form,
+  .accounts-dashboard .acc-entry-dialog .field,
+  .accounts-dashboard .acc-entry-dialog .acc-form-section,
+  .accounts-dashboard .acc-entry-dialog .table,
+  .accounts-dashboard .acc-entry-dialog .acc-item-line-card,
+  .accounts-dashboard .acc-entry-dialog .acc-sale-summary,
+  .accounts-dashboard .acc-entry-dialog .acc-sale-summary-grid {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .accounts-dashboard .acc-entry-dialog .acc-sale-summary-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .accounts-dashboard .acc-entry-dialog .table th,
+  .accounts-dashboard .acc-entry-dialog .table td {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .accounts-dashboard .acc-entry-dialog input,
+  .accounts-dashboard .acc-entry-dialog select,
+  .accounts-dashboard .acc-entry-dialog textarea,
+  .accounts-dashboard .acc-entry-dialog .ft-select {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .accounts-dashboard .acc-entry-dialog .field:has(> .acc-party-create) {
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 }
 
