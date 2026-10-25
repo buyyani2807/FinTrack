@@ -92,7 +92,16 @@ export function purchaseSettlementLabel(accounts = [], voucher = {}) {
   return settlementFromMovement(moneyMoved(accounts, voucher, "credit"), "Cash");
 }
 
-const DOCUMENT_TYPES = new Set(["sales", "purchase", "receipt", "payment"]);
+const DOCUMENT_TYPES = new Set(["sales", "purchase", "receipt", "payment", "journal"]);
+
+export function journalSettleKind(accounts = [], voucher = {}) {
+  if (voucher?.voucherType !== "journal") return "";
+  const byId = accountById(accounts);
+  const lines = voucher.lines || [];
+  if (lines.some(line => byId[line.coaId]?.accountType === "receivable" && Number(line.debit || 0) > 0)) return "receipt";
+  if (lines.some(line => byId[line.coaId]?.accountType === "payable" && Number(line.credit || 0) > 0)) return "payment";
+  return "";
+}
 
 export function canOpenVoucherDocument(voucherType) {
   return DOCUMENT_TYPES.has(voucherType);
@@ -324,11 +333,32 @@ export function buildVoucherDocument({ voucher, party = null, accounts = [], com
     company,
     workspace,
     itemLines,
-    outstanding: voucher.voucherType === "sales" || voucher.voucherType === "purchase" ? outstanding : null,
+    outstanding: voucher.voucherType === "sales" || voucher.voucherType === "purchase" || voucher.voucherType === "journal" ? outstanding : null,
   });
   if (!invoice) return null;
   if (voucher.voucherType === "sales") {
     return { ...invoice, partyHeading: "BILL TO", numberLabel: "Invoice No", amountLabel: "Invoice total" };
+  }
+  if (voucher.voucherType === "journal") {
+    const due = outstanding == null ? invoice.amount : Number(outstanding);
+    return {
+      ...invoice,
+      title: "JOURNAL",
+      kind: "journal",
+      partyHeading: "PARTY",
+      numberLabel: "Journal No",
+      amountLabel: "Amount",
+      customerName: party?.name || invoice.customerName || "Party",
+      partyId: party?.id || voucher.partyId || "",
+      settlement: "Journal",
+      settleKind: journalSettleKind(accounts, voucher),
+      outstanding: due,
+      receiptTerms: "",
+      upiLink: "",
+      payUrl: "",
+      payableAmount: 0,
+      showUpiQr: false,
+    };
   }
   if (voucher.voucherType === "purchase") {
     return {

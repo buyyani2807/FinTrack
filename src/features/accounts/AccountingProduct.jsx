@@ -1838,6 +1838,36 @@ const openVoucher = () => {
     });
     if (document) setSalesInvoiceView(document);
   };
+  const openSettleInvoice = row => {
+    if (!canWrite) {
+      setError("Your Accounts role is view-only. Ask the owner for accountant access to post entries.");
+      return;
+    }
+    const kind = row?.settleKind === "payment" ? "payment" : "receipt";
+    const amount = roundMoney(Number(row?.outstanding || 0));
+    const voucherId = row?.voucherId || String(row?.id || "").split(":")[0];
+    const money = moneyAccounts(visibleAccounts);
+    setPendingBankMatch(null);
+    setPendingRecurringId(null);
+    setSalesInvoiceView(null);
+    setSimpleKind(kind);
+    setSimpleRequestId(newClientRequestId());
+    setSimpleForm({
+      ...emptySimpleForm(),
+      date: todayIso(),
+      amount: amount > 0 ? String(amount) : "",
+      partyId: row?.partyId || "",
+      moneyMode: "cash",
+      fromAccountId: money.find(account => account.accountType === "cash")?.id || money[0]?.id || "",
+      narration: row?.invoiceNumber || row?.reference ? `Against ${row.invoiceNumber || row.reference}` : "",
+      settlements: amount > 0 && voucherId ? [{
+        invoiceVoucherId: voucherId,
+        reference: row?.invoiceNumber || row?.reference || "",
+        amount,
+      }] : [],
+    });
+    setShowSimple(true);
+  };
   const openSalesInvoice = openVoucherDocument;
   const openCoa = account => {
     if (account) {
@@ -2689,6 +2719,7 @@ const openVoucher = () => {
           invoice={salesInvoiceView}
           settings={orgSettings}
           close={() => setSalesInvoiceView(null)}
+          onSettle={canWrite ? openSettleInvoice : null}
         />
       )}
       {confirmLogout && <LogoutConfirmModal signingOut={signingOut} setConfirmLogout={setConfirmLogout} confirmAccountsLogout={confirmAccountsLogout} />}

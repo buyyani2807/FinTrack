@@ -558,7 +558,7 @@ export function suggestBillWiseAllocations(openInvoices = [], amount = 0) {
     if (!(open > 0)) continue;
     const apply = Math.min(remaining, open);
     links.push({
-      invoiceVoucherId: invoice.id,
+      invoiceVoucherId: invoice.voucherId || invoice.id,
       reference: invoice.reference || "",
       amount: apply,
     });
@@ -672,15 +672,31 @@ export function invoiceRegister(accounts, vouchers, parties = [], { kind = "rece
   }
 
   const invoiceById = new Map(invoices.map(row => [row.id, row]));
-  for (const link of billLinks) {
-    const invoice = invoiceById.get(link.invoiceVoucherId);
-    if (!invoice) continue;
+  const invoicesByVoucher = new Map();
+  for (const row of invoices) {
+    const key = row.voucherId || row.id;
+    if (!invoicesByVoucher.has(key)) invoicesByVoucher.set(key, []);
+    invoicesByVoucher.get(key).push(row);
+  }
+  const applyLink = (invoice, amount, date) => {
     const room = roundMoney(invoice.amount - invoice.paid);
-    if (!(room > 0)) continue;
-    const apply = Math.min(room, link.amount);
+    if (!invoice || !(room > 0) || !(amount > 0)) return 0;
+    const apply = Math.min(room, amount);
     invoice.paid = roundMoney(invoice.paid + apply);
     invoice.allocation = "bill_wise";
-    notePaid(invoice, link.date);
+    notePaid(invoice, date);
+    return apply;
+  };
+  for (const link of billLinks) {
+    let left = link.amount;
+    const direct = invoiceById.get(link.invoiceVoucherId);
+    if (direct) left = roundMoney(left - applyLink(direct, left, link.date));
+    if (!(left > 0)) continue;
+    for (const invoice of invoicesByVoucher.get(link.invoiceVoucherId) || []) {
+      if (!(left > 0)) break;
+      if (invoice === direct) continue;
+      left = roundMoney(left - applyLink(invoice, left, link.date));
+    }
   }
 
   for (const invoice of invoices) {

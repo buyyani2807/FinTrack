@@ -57,6 +57,7 @@ import {
   invoiceAgingTotals,
   invoiceRegister,
   matchBankLine,
+  suggestBillWiseAllocations,
   partyBalances,
   partyLedger,
   partyTotalsFromInvoices,
@@ -946,6 +947,29 @@ test("journal AR and AP party lines appear on the invoice register", () => {
   });
   assert.equal(payables[0].outstanding, 4000);
   assert.equal(partyBalances(accounts, [accrueAr, settleAr], [ravi], { kind: "receivable" })[0].balance, 5000);
+});
+
+test("a receipt against a journal uses the voucher id and clears that balance", () => {
+  const ravi = { id: "ravi", name: "Janata Garage", partyType: "customer" };
+  const journal = posted("journal", "2026-09-08", [
+    { coaId: "1100", code: "1100", debit: 290000, credit: 0, partyId: "ravi" },
+    { coaId: "4300", code: "4300", debit: 0, credit: 290000 },
+  ], { n: 2, partyId: "ravi", dueDate: "2026-09-15" });
+  journal.id = "jnl-2";
+  const open = invoiceRegister(accounts, [journal], [ravi], { kind: "receivable", today: "2026-10-25" });
+  assert.equal(open[0].reference, "JNL-000002");
+  assert.notEqual(open[0].id, open[0].voucherId);
+  const links = suggestBillWiseAllocations(open, 290000);
+  assert.equal(links[0].invoiceVoucherId, "jnl-2");
+  const receipt = posted("receipt", "2026-10-25", [
+    { coaId: "1000", code: "1000", debit: 290000, credit: 0 },
+    { coaId: "1100", code: "1100", debit: 0, credit: 290000, partyId: "ravi" },
+  ], { n: 1, partyId: "ravi" });
+  receipt.id = "rcpt-1";
+  receipt.settlements = [{ invoiceVoucherId: "jnl-2", amount: 290000 }];
+  const settled = invoiceRegister(accounts, [journal, receipt], [ravi], { kind: "receivable", today: "2026-10-25" });
+  assert.equal(settled[0].outstanding, 0);
+  assert.equal(settled[0].allocation, "bill_wise");
 });
 
 test("days overdue and aging buckets use the due date", () => {

@@ -10,7 +10,8 @@ export function BillwiseSettlement({ partyOpenInvoices, form, setForm, settlemen
       {partyOpenInvoices.length ? (
         <AccTable spaced={false} columns={["Invoice", "Date", { label: "Outstanding", num: true }, { label: "Allocate", num: true }]}>
           {partyOpenInvoices.map(invoice => {
-            const link = (form.settlements || []).find(row => row.invoiceVoucherId === invoice.id);
+            const voucherId = invoice.voucherId || invoice.id;
+            const link = (form.settlements || []).find(row => row.invoiceVoucherId === voucherId);
             return (
               <tr key={invoice.id}>
                 <td>{invoice.reference}</td>
@@ -26,12 +27,12 @@ export function BillwiseSettlement({ partyOpenInvoices, form, setForm, settlemen
                     onChange={event => {
                       const value = Number(event.target.value || 0);
                       setForm(current => {
-                        const rest = (current.settlements || []).filter(row => row.invoiceVoucherId !== invoice.id);
+                        const rest = (current.settlements || []).filter(row => row.invoiceVoucherId !== voucherId);
                         if (!(value > 0)) return { ...current, settlements: rest };
                         return {
                           ...current,
                           settlements: [...rest, {
-                            invoiceVoucherId: invoice.id,
+                            invoiceVoucherId: voucherId,
                             reference: invoice.reference,
                             amount: roundMoney(Math.min(value, invoice.outstanding)),
                           }],

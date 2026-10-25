@@ -7,6 +7,7 @@ import {
   buildSalesInvoice,
   buildSalesInvoiceMessage,
   buildVoucherDocument,
+  canOpenVoucherDocument,
   salesInvoicePresentation,
   salesSettlementLabel,
 } from "../src/features/accounts/model/salesInvoiceModel.js";
@@ -201,6 +202,41 @@ test("WhatsApp sale share uses the invoice content, not the greeting template", 
   assert.match(formatted, /\*Invoice total\* \*₹1,168\*/);
   assert.doesNotMatch(formatted, /Please retain this invoice/);
   assert.doesNotMatch(formatted, /^Hi /);
+});
+
+test("a journal that charges a customer opens and can be received against", () => {
+  const journal = buildVoucherDocument({
+    voucher: {
+      id: "jnl-2",
+      voucherNumber: "JNL-000002",
+      date: "2026-09-08",
+      dueDate: "2026-09-15",
+      voucherType: "journal",
+      status: "posted",
+      partyId: "c1",
+      narration: "Opening balance",
+      lines: [
+        { coaId: "ar", debit: 290000, credit: 0, code: "1100", name: "Accounts Receivable" },
+        { coaId: "sales", debit: 0, credit: 290000, code: "4100", name: "Sales" },
+      ],
+      gstLines: [],
+    },
+    party: { id: "c1", name: "Janata Garage", phone: "9876500000" },
+    accounts,
+    company: { name: "Buyyani's Enterprises" },
+    outstanding: 290000,
+  });
+  assert.equal(canOpenVoucherDocument("journal"), true);
+  assert.equal(journal.kind, "journal");
+  assert.equal(journal.invoiceNumber, "JNL-000002");
+  assert.equal(journal.voucherId, "jnl-2");
+  assert.equal(journal.partyId, "c1");
+  assert.equal(journal.settleKind, "receipt");
+  assert.equal(journal.outstanding, 290000);
+  assert.equal(journal.upiLink, "");
+  const text = salesInvoiceDocumentText(journal);
+  assert.match(text, /Journal No: JNL-000002/);
+  assert.match(text, /Janata Garage/);
 });
 
 test("purchase bills and receipts open as their own documents", () => {

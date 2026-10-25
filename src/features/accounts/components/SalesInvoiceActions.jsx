@@ -139,7 +139,7 @@ function TaxInvoiceSheet({ invoice }) {
   );
 }
 
-export function SalesInvoiceViewerModal({ invoice, close }) {
+export function SalesInvoiceViewerModal({ invoice, close, onSettle }) {
   const layerRef = useDialogDismiss(close);
   const salesDocument = !invoice.kind || invoice.kind === "sales_invoice";
   const whatsAppAvailable = salesDocument && canWhatsAppShare(invoice?.customerPhone);
@@ -209,6 +209,9 @@ export function SalesInvoiceViewerModal({ invoice, close }) {
         </div>
         </ModalScroll>
         <div className="row spacer modal-foot">
+          {onSettle && invoice.settleKind && Number(invoice.outstanding || 0) > 0 ? (
+            <button type="button" className="btn primary" onClick={() => onSettle(invoice)}>{invoice.settleKind === "payment" ? "Pay" : "Receive payment"}</button>
+          ) : null}
           <button type="button" className="btn" onClick={printDocument}>Print</button>
           <button type="button" className="btn" onClick={() => downloadSalesInvoicePdf(invoice)}>Download PDF</button>
           {whatsAppAvailable && (
