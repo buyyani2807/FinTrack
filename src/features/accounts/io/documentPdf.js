@@ -208,6 +208,8 @@ function sheetColumns(spec, width) {
 function drawSheet(model, surface, logo, qr) {
   const { spec } = surface;
   const base = spec.base;
+  surface.fill(surface.left, surface.y, surface.width, 3, 0.28);
+  surface.y += 12;
   const top = surface.y;
   let textLeft = surface.left;
   if (logo) {
@@ -241,7 +243,7 @@ function drawSheet(model, surface, logo, qr) {
   if (model.items.length) {
     const columns = sheetColumns(spec, surface.width);
     const header = () => {
-      surface.fill(surface.left, surface.y, surface.width, base * 2, 0.92);
+      surface.fill(surface.left, surface.y, surface.width, base * 2, 0.9);
       let x = surface.left;
       for (const column of columns) {
         const pad = 4;

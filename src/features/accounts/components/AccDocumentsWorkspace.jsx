@@ -302,52 +302,84 @@ function DocumentViewer({ doc, view, settings, onClose, onEdit, actions }) {
   const [template, setTemplate] = useState(settings.invoiceTemplate || "a4");
   const m = view.money;
   const canShare = canWhatsAppShare(view.partyPhone);
+  const showDiscount = view.lines.some(line => line.discount > 0);
+  const showGst = view.lines.some(line => line.gstRate > 0);
+  const movementNote = view.docType === "delivery_challan" || view.docType === "goods_receipt"
+    ? "Not a tax invoice. This records goods moved."
+    : "";
+  const showBank = (view.docType === "quotation" || view.docType === "sales_order") && view.bankLines?.length;
+  const totalLabel = view.docType === "delivery_challan" || view.docType === "goods_receipt" ? "Total value" : "Total";
   return (
     <Modal wide title={`${view.label} ${view.docNumber}`} close={onClose}>
-      <div className="receipt-paper acc-doc-paper">
-        <div className="receipt-header">
-          {view.companyLogoUrl && <img src={view.companyLogoUrl} alt="" className="acc-doc-logo" />}
-          <strong>{view.companyName}</strong>
-          <span>{view.title}</span>
-        </div>
-        {view.companyAddress && <p className="small">{view.companyAddress}</p>}
-        {view.companyGstin && <p className="small">GSTIN: {view.companyGstin}</p>}
-        <div className="receipt-meta">
-          <span>{view.label} No: {view.docNumber}</span>
-          <span>{formatReceiptDate(view.docDate)}</span>
-        </div>
-        {view.validUntil && view.untilLabel && <p className="small">{view.untilLabel}: {formatReceiptDate(view.validUntil)}</p>}
-        {view.sourceNumber && <p className="small">Against {view.sourceNumber}</p>}
-        {view.reference && <p className="small">Reference: {view.reference}</p>}
-        {doc.status === "cancelled" && <p className="small red">Cancelled{view.cancelReason ? `: ${view.cancelReason}` : ""}</p>}
-        <hr />
-        <section>
-          <strong>{view.partyHeading}</strong>
-          <p>{view.partyName}</p>
-          {view.partyAddress && <p className="small">{view.partyAddress}</p>}
-          {view.partyGstin && <p className="small">GSTIN: {view.partyGstin}</p>}
+      <article className={`acc-sheet${doc.status === "cancelled" ? " is-cancelled" : ""}`}>
+        <header className="acc-sheet-head">
+          <div className="acc-sheet-brand">
+            {view.companyLogoUrl ? <img src={view.companyLogoUrl} alt="" className="acc-doc-logo" /> : null}
+            <div>
+              <h3>{view.companyName}</h3>
+              {view.companyLegalName ? <p className="acc-sheet-legal">{view.companyLegalName}</p> : null}
+              {view.companyAddress ? <p>{view.companyAddress}</p> : null}
+              {view.companyGstin ? <p>GSTIN {view.companyGstin}</p> : null}
+              {(view.companyPhone || view.companyEmail) ? <p>{[view.companyPhone, view.companyEmail].filter(Boolean).join(" · ")}</p> : null}
+            </div>
+          </div>
+          <div className="acc-sheet-id">
+            <p className="acc-sheet-kicker">{view.title}</p>
+            <p className="acc-sheet-number">{view.docNumber}</p>
+            <dl>
+              <div><dt>Date</dt><dd>{formatReceiptDate(view.docDate)}</dd></div>
+              {view.validUntil && view.untilLabel ? <div><dt>{view.untilLabel}</dt><dd>{formatReceiptDate(view.validUntil)}</dd></div> : null}
+              {view.reference ? <div><dt>Reference</dt><dd>{view.reference}</dd></div> : null}
+              {view.sourceNumber ? <div><dt>Against</dt><dd>{view.sourceNumber}</dd></div> : null}
+            </dl>
+          </div>
+        </header>
+        {doc.status === "cancelled" ? <p className="acc-sheet-cancelled">Cancelled{view.cancelReason ? `: ${view.cancelReason}` : ""}</p> : null}
+        <section className="acc-sheet-party">
+          <p className="acc-sheet-kicker">{view.partyHeading}</p>
+          <strong>{view.partyName || "—"}</strong>
+          {view.partyAddress ? <p>{view.partyAddress}</p> : null}
+          {[view.partyGstin ? `GSTIN ${view.partyGstin}` : "", view.partyPhone].filter(Boolean).length
+            ? <p>{[view.partyGstin ? `GSTIN ${view.partyGstin}` : "", view.partyPhone].filter(Boolean).join(" · ")}</p>
+            : null}
         </section>
-        <hr />
-        <div className="table acc-table-wrap"><table><thead><tr><th>Item</th><th className="acc-num">Qty</th><th className="acc-num">Rate</th><th className="acc-num">Amount</th></tr></thead><tbody>
+        <div className="table acc-table-wrap acc-sheet-table"><table><thead><tr>
+          <th className="acc-num">#</th>
+          <th>Item</th>
+          <th className="acc-num">Qty</th>
+          <th className="acc-num">Rate</th>
+          {showDiscount ? <th className="acc-num">Disc.</th> : null}
+          {showGst ? <th className="acc-num">GST</th> : null}
+          <th className="acc-num">Amount</th>
+        </tr></thead><tbody>
           {view.lines.map((line, index) => <tr key={index}>
-            <td>{line.name}{line.hsnSac ? <span className="small"> · HSN {line.hsnSac}</span> : null}{line.discount > 0 ? <span className="small"> · disc {m(line.discount)}</span> : null}</td>
-            <td className="acc-num">{qty(line.quantity, line.unit)}</td>
-            <td className="acc-num">{m(line.rate)}</td>
-            <td className="acc-num">{m(line.amount)}</td>
+            <td className="acc-num acc-sheet-index" data-label="#">{index + 1}</td>
+            <td className="acc-sheet-item-cell" data-label="Item"><div className="acc-sheet-item"><strong>{line.name}</strong>{(line.sku || line.hsnSac) ? <span>{[line.sku ? `SKU ${line.sku}` : "", line.hsnSac ? `HSN ${line.hsnSac}` : ""].filter(Boolean).join(" · ")}</span> : null}</div></td>
+            <td className="acc-num" data-label="Qty">{qty(line.quantity, line.unit)}</td>
+            <td className="acc-num" data-label="Rate">{m(line.rate)}</td>
+            {showDiscount ? <td className="acc-num" data-label="Disc.">{line.discount > 0 ? m(line.discount) : "—"}</td> : null}
+            {showGst ? <td className="acc-num" data-label="GST">{line.gstRate ? `${line.gstRate}%` : "—"}</td> : null}
+            <td className="acc-num acc-sheet-amount" data-label="Amount">{m(line.amount)}</td>
           </tr>)}
         </tbody></table></div>
-        <section className="acc-doc-totals">
-          {view.tax > 0 && <>
-            <p>Taxable: {m(view.taxable)}</p>
-            {view.cgst ? <p>CGST: {m(view.cgst)}</p> : null}
-            {view.sgst ? <p>SGST: {m(view.sgst)}</p> : null}
-            {view.igst ? <p>IGST: {m(view.igst)}</p> : null}
-          </>}
-          <p><strong>Total: {m(view.total)}</strong></p>
-        </section>
-        {view.notes && <p className="small">Notes: {view.notes}</p>}
-        {view.terms && <p className="small muted">Terms: {view.terms}</p>}
-      </div>
+        <footer className="acc-sheet-foot">
+          <div className="acc-sheet-notes">
+            {movementNote ? <p>{movementNote}</p> : null}
+            {view.notes ? <p><span>Notes</span>{view.notes}</p> : null}
+            {view.terms ? <p><span>Terms</span>{view.terms}</p> : null}
+            {showBank ? <p><span>Bank</span>{view.bankLines.join(" ")}</p> : null}
+          </div>
+          <dl className="acc-sheet-totals">
+            {view.tax > 0 && <>
+              <div><dt>Taxable</dt><dd>{m(view.taxable)}</dd></div>
+              {view.cgst ? <div><dt>CGST</dt><dd>{m(view.cgst)}</dd></div> : null}
+              {view.sgst ? <div><dt>SGST</dt><dd>{m(view.sgst)}</dd></div> : null}
+              {view.igst ? <div><dt>IGST</dt><dd>{m(view.igst)}</dd></div> : null}
+            </>}
+            <div className="is-total"><dt>{totalLabel}</dt><dd>{m(view.total)}</dd></div>
+          </dl>
+        </footer>
+      </article>
       <div className="row spacer acc-doc-viewer-actions">
         <Field label="PDF size">
           <Select value={template} onChange={event => setTemplate(event.target.value)}>

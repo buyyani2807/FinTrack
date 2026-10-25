@@ -817,6 +817,319 @@
   text-align: right;
 }
 
+.accounts-dashboard .acc-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--ft-border);
+  border-radius: 12px;
+  background: var(--ft-surface);
+  color: var(--ft-text);
+}
+
+.accounts-dashboard .acc-sheet-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(190px, 0.7fr);
+  gap: 16px 28px;
+  align-items: start;
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--ft-primary);
+}
+
+.accounts-dashboard .acc-sheet-brand {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.accounts-dashboard .acc-sheet-brand h3 {
+  margin: 0;
+  color: var(--ft-primary) !important;
+  font-family: var(--ft-font-brand);
+  font-size: var(--ft-type-card);
+  font-weight: 700;
+  line-height: var(--ft-leading-tight);
+}
+
+.accounts-dashboard .acc-sheet-brand p,
+.accounts-dashboard .acc-sheet-party p,
+.accounts-dashboard .acc-sheet-notes p {
+  margin: 2px 0 0;
+  color: var(--ft-text-2);
+  font-size: var(--ft-type-caption);
+  line-height: var(--ft-leading-body);
+}
+
+.accounts-dashboard .acc-sheet-kicker {
+  margin: 0;
+  color: var(--ft-primary);
+  font-size: var(--ft-type-micro);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.accounts-dashboard .acc-sheet-id {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  text-align: right;
+}
+
+.accounts-dashboard .acc-sheet-number {
+  margin: 0;
+  color: var(--ft-text);
+  font-family: var(--ft-font-brand);
+  font-size: var(--ft-type-title);
+  font-weight: 700;
+  letter-spacing: var(--ft-tracking-tight);
+  line-height: var(--ft-leading-tight);
+}
+
+.accounts-dashboard .acc-sheet-id dl {
+  display: grid;
+  gap: 2px;
+  margin: 8px 0 0;
+}
+
+.accounts-dashboard .acc-sheet-id dl div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.accounts-dashboard .acc-sheet-id dt {
+  color: var(--ft-muted);
+  font-size: var(--ft-type-caption);
+  font-weight: 500;
+}
+
+.accounts-dashboard .acc-sheet-id dd {
+  margin: 0;
+  min-width: 7.5em;
+  color: var(--ft-text);
+  font-size: var(--ft-type-caption);
+  font-weight: 600;
+}
+
+.accounts-dashboard .acc-sheet-party {
+  padding: 12px 14px;
+  border: 1px solid var(--ft-border);
+  border-left: 3px solid var(--ft-primary);
+  border-radius: 10px;
+  background: var(--ft-surface-subtle);
+}
+
+.accounts-dashboard .acc-sheet-party strong {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--ft-type-body);
+}
+
+.accounts-dashboard .acc-sheet-table thead th {
+  background: var(--ft-surface-muted);
+  color: var(--ft-text-2);
+}
+
+.accounts-dashboard .acc-sheet-table tbody tr:nth-child(even) {
+  background: var(--ft-surface-subtle);
+}
+
+.accounts-dashboard .acc-sheet-table tbody tr:hover {
+  background: var(--ft-surface-hover);
+}
+
+.accounts-dashboard .acc-sheet-table th:first-child,
+.accounts-dashboard .acc-sheet-table td:first-child {
+  width: 40px;
+  color: var(--ft-muted);
+}
+
+.accounts-dashboard .acc-sheet-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.accounts-dashboard .acc-sheet-item strong {
+  color: var(--ft-text);
+  font-weight: 600;
+}
+
+.accounts-dashboard .acc-sheet-item span {
+  color: var(--ft-muted);
+  font-size: var(--ft-type-caption);
+}
+
+.accounts-dashboard .acc-sheet-amount {
+  font-weight: 700;
+}
+
+.accounts-dashboard .acc-sheet-foot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+  gap: 16px;
+  align-items: start;
+}
+
+.accounts-dashboard .acc-sheet-notes span {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--ft-muted);
+  font-size: var(--ft-type-micro);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.accounts-dashboard .acc-sheet-totals {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 12px 14px 0;
+  border: 1px solid var(--ft-border);
+  border-radius: 10px;
+  background: var(--ft-surface);
+}
+
+.accounts-dashboard .acc-sheet-totals div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.accounts-dashboard .acc-sheet-totals dt {
+  color: var(--ft-muted);
+  font-size: var(--ft-type-caption);
+  font-weight: 500;
+}
+
+.accounts-dashboard .acc-sheet-totals dd {
+  margin: 0;
+  color: var(--ft-text);
+  font-size: var(--ft-type-secondary);
+  font-weight: 600;
+}
+
+.accounts-dashboard .acc-sheet-totals .is-total {
+  margin: 4px -14px 0;
+  padding: 10px 14px;
+  border-radius: 0 0 9px 9px;
+  background: var(--ft-primary-soft);
+}
+
+.accounts-dashboard .acc-sheet-totals .is-total dt,
+.accounts-dashboard .acc-sheet-totals .is-total dd {
+  color: var(--ft-primary);
+  font-size: var(--ft-type-body);
+  font-weight: 700;
+}
+
+.accounts-dashboard .acc-sheet-cancelled {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: var(--ft-danger);
+  background: color-mix(in srgb, var(--ft-danger) 10%, transparent);
+  font-size: var(--ft-type-caption);
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .accounts-dashboard .acc-sheet {
+    padding: 14px;
+  }
+
+  .accounts-dashboard .acc-sheet-head,
+  .accounts-dashboard .acc-sheet-foot {
+    grid-template-columns: 1fr;
+  }
+
+  .accounts-dashboard .acc-sheet-id {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .accounts-dashboard .acc-sheet-id dl div {
+    justify-content: space-between;
+  }
+
+  .accounts-dashboard .acc-sheet-id dd {
+    min-width: 0;
+  }
+
+  .accounts-dashboard .acc-sheet-table.acc-table-wrap {
+    overflow: visible !important;
+    border: 0;
+    background: transparent !important;
+  }
+
+  .accounts-dashboard .acc-sheet-table table,
+  .accounts-dashboard .acc-sheet-table tbody,
+  .accounts-dashboard .acc-sheet-table tr,
+  .accounts-dashboard .acc-sheet-table td {
+    display: block;
+    width: auto;
+  }
+
+  .accounts-dashboard .acc-sheet-table thead {
+    display: none;
+  }
+
+  .accounts-dashboard .acc-sheet-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .accounts-dashboard .acc-sheet-table tr {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid var(--ft-border);
+    border-radius: 10px;
+    background: var(--ft-surface);
+  }
+
+  .accounts-dashboard .acc-sheet-table td {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0;
+    border: 0;
+  }
+
+  .accounts-dashboard .acc-sheet-table td::before {
+    content: attr(data-label);
+    color: var(--ft-muted);
+    font-size: var(--ft-type-micro);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .accounts-dashboard .acc-sheet-table .acc-sheet-index {
+    display: none;
+  }
+
+  .accounts-dashboard .acc-sheet-table .acc-sheet-item-cell {
+    grid-column: 1 / -1;
+    display: block;
+  }
+
+  .accounts-dashboard .acc-sheet-table .acc-sheet-item-cell::before {
+    content: none;
+  }
+
+  .accounts-dashboard .acc-sheet-table .acc-sheet-amount {
+    grid-column: 1 / -1;
+  }
+}
+
 .accounts-dashboard .acc-credit-alert {
   border: 1px solid color-mix(in srgb, var(--ft-primary) 33%, transparent);
   background: color-mix(in srgb, var(--ft-primary) 8%, transparent);
@@ -5432,5 +5745,13 @@
     width: 100%;
     background: #fff;
     color: #111;
+  }
+}
+
+@media (max-width: 680px) {
+  .accounts-dashboard .acc-sheet-table.acc-table-wrap,
+  .accounts-dashboard .acc-sheet-table.acc-table-wrap table {
+    min-width: 0 !important;
+    width: 100% !important;
   }
 }
