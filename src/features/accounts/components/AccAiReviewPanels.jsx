@@ -7,6 +7,7 @@ import { money } from "../accountsFormat.js";
 import { AccEmpty } from "./AccUi.jsx";
 import { Select } from "../../../components/Select.jsx";
 import { CaBriefSheet } from "./CaBriefSheet.jsx";
+import { AccSpendingDonut } from "./AccOverviewCharts.jsx";
 
 const pct = value => (value == null ? "—" : `${value > 0 ? "+" : ""}${value}%`);
 const differenceText = alert => alert.pattern === "possible_backdated_entry" ? `${alert.difference} day(s)`
@@ -224,7 +225,7 @@ const CHART_PAGE_SIZE = 6;
 const PICK_PAGE_SIZE = 4;
 const PICK_LABELS = { categories: ["This period", "Compared with"], rates: ["Latest rate", "Earlier rate"], spend: ["This period", "3-month average"] };
 
-export function ExpensesPanel({ data, openSource }) {
+export function ExpensesPanel({ data, openSource, onOpenPnl }) {
   const { comparisons, supplierPrices, supplierSpend } = data;
   const [groupId, setGroupId] = useState("categories");
   const [chartPage, setChartPage] = useState(0);
@@ -257,6 +258,7 @@ export function ExpensesPanel({ data, openSource }) {
     setOpenId(null);
   };
   return <div className="air-stack">
+    <AccSpendingDonut breakdown={data.spending} onOpenPnl={onOpenPnl} />
     <p className="air-note">Period {comparisons.period.from} to {comparisons.period.to}, compared with the same days of earlier periods. Amounts come from posted vouchers.</p>
     {comparisons.insufficientHistory && <AccEmpty title="Insufficient history" copy="At least a month of posted expenses is needed before trends are shown. No trend is reported yet." />}
     {!comparisons.insufficientHistory && nothing && <AccEmpty title="No unusual expense changes" copy="Spending is in line with comparable periods." />}
