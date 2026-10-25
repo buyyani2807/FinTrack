@@ -2119,8 +2119,8 @@ html[data-theme="dark"] .ft-trial-banner.is-urgent { background: #3a2222; color:
 .air-factor-sum .is-in { color: var(--ft-success); }
 .air-factor-sum .is-out { color: var(--ft-danger); }
 .air-factor-list { margin: 0; padding: 0; overflow: hidden; list-style: none; border: 1px solid var(--ft-border); border-radius: var(--ft-radius-lg); background: var(--ft-surface); }
-.air-factor-list li { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 12px 16px; min-width: 0; padding: 14px 16px; border-top: 1px solid var(--ft-border); }
-.air-factor-list li:first-child { border-top: 0; }
+.air-factor-list li { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 12px 16px; min-width: 0; padding: 14px 16px; }
+.air-factor-list li:not(.air-factor-fill) { border-bottom: 1px solid var(--ft-border); }
 .air-factor-list.is-next li:not(.air-factor-fill) { animation: air-slide-next .26s var(--ft-ease) both; }
 .air-factor-list.is-prev li:not(.air-factor-fill) { animation: air-slide-prev .26s var(--ft-ease) both; }
 .air-factor-fill { visibility: hidden; }
