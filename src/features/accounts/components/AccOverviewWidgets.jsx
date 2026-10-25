@@ -1,7 +1,7 @@
 import { useId, useMemo, useState } from "react";
 import { SegmentedControl } from "../../../components/ui.jsx";
 import { VOUCHER_TYPES, voucherTotals } from "../model/accountingModel.js";
-import { money } from "../accountsFormat.js";
+import { money, profitResult } from "../accountsFormat.js";
 import { AccMetric } from "./AccUi.jsx";
 
 const MoneyRow = ({ label, value, tone, onClick }) => {
@@ -65,7 +65,7 @@ export function AccountsBusinessPulse({ metrics, receivables, payables, items, s
       <AccMetric label="Cash in hand" value={money(metrics?.cash)} tone="gold" />
       <AccMetric label="Receivables due" value={money(receivables?.total)} tone="blue" onClick={() => onNavigate("receivables")} />
       <AccMetric label="Payables due" value={money(payables?.total)} tone="red" onClick={() => onNavigate("payables")} />
-      <AccMetric label="Profit this period" value={money(metrics?.netProfit)} tone={Number(metrics?.netProfit) < 0 ? "red" : "green"} onClick={() => onNavigate("pnl")} />
+      <AccMetric label={profitResult(metrics?.netProfit).label} value={money(profitResult(metrics?.netProfit).amount)} tone={profitResult(metrics?.netProfit).loss ? "red" : "green"} onClick={() => onNavigate("pnl")} />
       <AccMetric label="Low-stock items" value={String(lowStockCount)} tone={lowStockCount ? "red" : "green"} onClick={() => onNavigate("inventory")} />
       <AccMetric label="Stock movements" value={String((stockMovements || []).length)} tone="blue" onClick={() => onNavigate("inventory")} />
     </div>

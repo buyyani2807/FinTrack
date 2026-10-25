@@ -471,6 +471,8 @@ export function dashboardMetrics(accounts, vouchers, parties, { today, from, to,
     periodPurchases: sumType("purchase", periodRows),
     income: pnl.totalIncome,
     expenses: pnl.totalExpense,
+    openingStock: pnl.openingStock,
+    closingStock: pnl.closingStock,
   };
 }
 

@@ -2,6 +2,13 @@ import { PARTY_TYPES } from "./model/accountingModel.js";
 import { formatInr } from "../../lib/formatMoney.js";
 
 export const money = formatInr;
+
+/** A loss is shown as a positive amount under the label "Net loss". */
+export function profitResult(net) {
+  const value = Number(net) || 0;
+  const loss = value < 0;
+  return { label: loss ? "Net loss" : "Net profit", amount: Math.abs(value), loss };
+}
 // Short rupee amounts for chart axes and bar labels: ₹950, ₹4.5K, ₹1.2L, ₹3Cr.
 export const axisMoney = value => {
   const n = Number(value || 0);

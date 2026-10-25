@@ -23,7 +23,7 @@ import { INDIA_STATES } from "../model/accountingGst.js";
 import { AccIntelligenceBrief } from "../components/AccIntelligenceBrief.jsx";
 import { AccAskBooks } from "../components/AccAskBooks.jsx";
 import { emptyPartyForm } from "../accountsFormDefaults.js";
-import { money } from "../accountsFormat.js";
+import { money, profitResult } from "../accountsFormat.js";
 import { AccOverviewContextBar } from "../components/AccPeriodBars.jsx";
 import { AccountsBusinessPulse, AccMoneyTiles, AccOverviewRecent } from "../components/AccOverviewWidgets.jsx";
 import { IndustryTemplateCard } from "../components/AccSetupWidgets.jsx";
@@ -85,6 +85,7 @@ export function OverviewSection({
   setupKeepsCompany = false,
 }) {
   const [classicSetup, setClassicSetup] = useState(false);
+  const result = profitResult(metrics?.netProfit);
   const finishOnboarding = () => {
     markAccountsOnboardingDone(activeCompanyId);
     setOnboardingDismissed(true);
@@ -301,7 +302,11 @@ export function OverviewSection({
         <div className="acc-metric-grid acc-ov-metrics acc-metric-compact">
           <AccMetric label="Income" value={money(metrics?.income)} tone="green" onClick={() => openSection("pnl")} />
           <AccMetric label="Expenses" value={money(metrics?.expenses)} tone="red" onClick={() => openSection("pnl")} />
-          <AccMetric label="Net profit" value={money(metrics?.netProfit)} tone={metrics?.netProfit < 0 ? "red" : "green"} onClick={() => openSection("pnl")} />
+          {(metrics?.openingStock || metrics?.closingStock) ? <>
+            <AccMetric label="Opening stock" value={money(metrics.openingStock)} onClick={() => openSection("pnl")} />
+            <AccMetric label="Closing stock" value={money(metrics.closingStock)} onClick={() => openSection("pnl")} />
+          </> : null}
+          <AccMetric label={result.label} value={money(result.amount)} tone={result.loss ? "red" : "green"} onClick={() => openSection("pnl")} />
         </div>
       </section>
 
