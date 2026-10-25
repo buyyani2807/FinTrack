@@ -24,9 +24,47 @@ const SORTS = [
 
 const marginText = value => (value == null ? "—" : `${value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`);
 
-const FlowLine = ({ label, quantity, value, unit, always = false }) => {
-  if (!always && !Number(quantity) && !Number(value)) return null;
-  return <p className="row"><span>{label}</span><strong>{qty(quantity, unit)}{value == null ? "" : ` · ${money(value)}`}</strong></p>;
+const Fact = ({ label, children, tone = "" }) => (
+  <p className="acc-profit-fact"><span>{label}</span><strong className={tone}>{children}</strong></p>
+);
+
+const destinationRows = row => {
+  const flow = row.flow;
+  const value = row.flowValue;
+  const rows = [
+    ["Brought forward", row.openingQuantity, null],
+    ["Opening stock", flow.opening, value.opening],
+    ["Purchases", flow.purchase, value.purchase],
+    ["Goods receipts", flow.goodsReceipt, value.goodsReceipt],
+    ["Sold", flow.sale, value.sale],
+    ["Customer returns", flow.salesReturn, value.salesReturn],
+    ["Purchase returns", flow.purchaseReturn, value.purchaseReturn],
+    ["Delivery challans", flow.delivery, value.delivery],
+    ["Adjusted in", flow.adjustmentIn, value.adjustmentIn],
+    ["Adjusted out", flow.adjustmentOut, value.adjustmentOut],
+    ["Reversals in", flow.reversalIn, value.reversalIn],
+    ["Reversals out", flow.reversalOut, value.reversalOut],
+  ].filter(([, quantity, amount]) => Number(quantity) || Number(amount));
+  rows.push(["Available stock", row.stockQuantity, row.stockValue]);
+  return rows;
+};
+
+const reconLines = row => {
+  const flow = row.flow;
+  return [
+    ["Brought forward", row.openingQuantity, 1],
+    ["Opening stock", flow.opening, 1],
+    ["Purchases", flow.purchase, 1],
+    ["Goods receipts", flow.goodsReceipt, 1],
+    ["Customer returns", flow.salesReturn, 1],
+    ["Adjusted in", flow.adjustmentIn, 1],
+    ["Reversals in", flow.reversalIn, 1],
+    ["Sold", flow.sale, -1],
+    ["Purchase returns", flow.purchaseReturn, -1],
+    ["Delivery challans", flow.delivery, -1],
+    ["Adjusted out", flow.adjustmentOut, -1],
+    ["Reversals out", flow.reversalOut, -1],
+  ].filter(([, quantity]) => Number(quantity));
 };
 
 export function ItemProfitReport({
@@ -156,52 +194,82 @@ function ItemProfitDetail({ row, vouchers, onViewDocument, onClose }) {
     if (voucher && onViewDocument && canOpenVoucherDocument(voucher.voucherType)) onViewDocument(voucher);
   };
   const unit = row.unit;
-  const flow = row.flow;
+  const steps = reconLines(row);
   return (
     <div className="card spacer acc-item-profit-detail">
       <div className="toolbar"><strong>{row.name}</strong><button type="button" className="btn" onClick={onClose}>Back to items</button></div>
       <p className="small">{row.sku || "No SKU"} · {row.from || "Start"} to {row.to || "today"}</p>
-      {row.needsReview && <p className="notice">{row.reconciled ? "Requires review." : "Stock movement requires review. The recorded movements do not fully reconcile with the current stock balance."}</p>}
-      {row.warnings.map(warning => <p key={`${warning.code}-${warning.message}`} className="small red">{warning.message}</p>)}
-      <div className="grid two spacer">
-        <div>
-          <p className="row"><span>Current stock</span><strong>{qty(row.stockQuantity, unit)}</strong></p>
-          <p className="row"><span>Stock value</span><strong>{money(row.stockValue)}</strong></p>
-          <p className="row"><span>Purchased</span><strong>{qty(row.purchasedQuantity, unit)}</strong></p>
-          <p className="row"><span>Sold</span><strong>{qty(row.quantitySold, unit)}</strong></p>
-          <p className="row"><span>Customer returns</span><strong>{qty(row.returnedQuantity, unit)}</strong></p>
+      {row.needsReview && (
+        <div className="notice acc-profit-review" role="status">
+          <strong>Requires review</strong>
+          <ul>
+            {row.warnings.map(warning => <li key={`${warning.code}-${warning.message}`}>{warning.message}</li>)}
+          </ul>
         </div>
-        <div>
-          <p className="row"><span>Revenue</span><strong>{money(row.revenue)}</strong></p>
-          <p className="row"><span>Cost of goods sold</span><strong>{money(row.cogs)}</strong></p>
-          <p className="row"><span>Gross profit</span><strong className={row.grossProfit < 0 ? "red" : "green"}>{money(row.grossProfit)}</strong></p>
-          <p className="row"><span>Margin</span><strong>{marginText(row.marginPercent)}</strong></p>
-          <p className="row"><span>Average selling price</span><strong>{row.averageSellingPrice == null ? "—" : money(row.averageSellingPrice)}</strong></p>
-          <p className="row"><span>Average cost</span><strong>{row.averageCostPrice == null ? "—" : money(row.averageCostPrice)}</strong></p>
-          <p className="row"><span>Average purchase price</span><strong>{row.averagePurchasePrice == null ? "—" : money(row.averagePurchasePrice)}</strong></p>
-        </div>
+      )}
+      <div className="acc-profit-facts">
+        <section>
+          <p className="acc-profit-kicker">Stock</p>
+          <Fact label="Current stock">{qty(row.stockQuantity, unit)}</Fact>
+          <Fact label="Stock value">{money(row.stockValue)}</Fact>
+          <Fact label="Purchased">{qty(row.purchasedQuantity, unit)}</Fact>
+          <Fact label="Sold">{qty(row.quantitySold, unit)}</Fact>
+          <Fact label="Customer returns">{qty(row.returnedQuantity, unit)}</Fact>
+        </section>
+        <section>
+          <p className="acc-profit-kicker">Profit</p>
+          <Fact label="Revenue">{money(row.revenue)}</Fact>
+          <Fact label="Cost of goods sold">{money(row.cogs)}</Fact>
+          <Fact label="Gross profit" tone={row.grossProfit < 0 ? "red" : "green"}>{money(row.grossProfit)}</Fact>
+          <Fact label="Margin">{marginText(row.marginPercent)}</Fact>
+          <Fact label="Average selling price">{row.averageSellingPrice == null ? "—" : money(row.averageSellingPrice)}</Fact>
+          <Fact label="Average cost">{row.averageCostPrice == null ? "—" : money(row.averageCostPrice)}</Fact>
+          <Fact label="Average purchase price">{row.averagePurchasePrice == null ? "—" : money(row.averagePurchasePrice)}</Fact>
+        </section>
       </div>
-      <strong>Where the quantity went</strong>
-      <FlowLine label="Brought forward" quantity={row.openingQuantity} unit={unit} always />
-      <FlowLine label="Opening stock" quantity={flow.opening} value={row.flowValue.opening} unit={unit} />
-      <FlowLine label="Purchases" quantity={flow.purchase} value={row.flowValue.purchase} unit={unit} />
-      <FlowLine label="Goods receipts" quantity={flow.goodsReceipt} value={row.flowValue.goodsReceipt} unit={unit} />
-      <FlowLine label="Sold" quantity={flow.sale} value={row.flowValue.sale} unit={unit} />
-      <FlowLine label="Customer returns" quantity={flow.salesReturn} value={row.flowValue.salesReturn} unit={unit} />
-      <FlowLine label="Purchase returns" quantity={flow.purchaseReturn} value={row.flowValue.purchaseReturn} unit={unit} />
-      <FlowLine label="Delivery challans" quantity={flow.delivery} value={row.flowValue.delivery} unit={unit} />
-      <FlowLine label="Adjusted in" quantity={flow.adjustmentIn} value={row.flowValue.adjustmentIn} unit={unit} />
-      <FlowLine label="Adjusted" quantity={flow.adjustmentOut} value={row.flowValue.adjustmentOut} unit={unit} />
-      <FlowLine label="Reversals in" quantity={flow.reversalIn} value={row.flowValue.reversalIn} unit={unit} />
-      <FlowLine label="Reversals out" quantity={flow.reversalOut} value={row.flowValue.reversalOut} unit={unit} />
-      <FlowLine label="Available stock" quantity={row.stockQuantity} value={row.stockValue} unit={unit} always />
+      <p className="acc-profit-kicker">Where the quantity went</p>
+      <div className="table acc-table-wrap acc-profit-table is-narrow">
+        <table>
+          <thead><tr><th>Movement</th><th className="acc-num">Quantity</th><th className="acc-num">Value</th></tr></thead>
+          <tbody>
+            {destinationRows(row).map(([label, quantity, amount]) => (
+              <tr key={label}>
+                <td data-label="Movement">{label}</td>
+                <td className="acc-num" data-label="Quantity">{qty(quantity, unit)}</td>
+                <td className="acc-num" data-label="Value">{amount == null ? "—" : money(amount)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <p className="small">Damaged stock, wastage, and warehouse transfers are not separate movement types. A write-off is an adjustment. A delivery challan leaves stock without a sale.</p>
-      <strong>Stock reconciliation</strong>
-      <p className="small">Opening {qty(row.openingQuantity, unit)} + movements {qty(row.expectedQuantity - row.openingQuantity, unit)} = {qty(row.expectedQuantity, unit)}. Closing quantity is {qty(row.stockQuantity, unit)}.</p>
-      <strong>Profit by date</strong>
+      <p className="acc-profit-kicker">Stock reconciliation</p>
+      <ul className="acc-profit-recon">
+        {steps.map(([label, quantity, sign]) => (
+          <li key={label}><span>{sign < 0 ? "−" : "+"} {label}</span><strong>{qty(quantity, unit)}</strong></li>
+        ))}
+        <li className="is-total"><span>Closing quantity</span><strong>{qty(row.stockQuantity, unit)}</strong></li>
+      </ul>
+      <p className="small">{row.reconciled ? "These movements add up to the closing quantity." : "The recorded movements do not fully reconcile with the current stock balance."}</p>
+      <p className="acc-profit-kicker">Profit by date</p>
       {!row.profitByDate.length && <p className="small">No posted sales in this period.</p>}
-      {row.profitByDate.map(day => <p key={day.date} className="row"><span>{day.date}</span><strong>{money(day.profit)} profit on {money(day.revenue)}</strong></p>)}
-      <strong>Profit by invoice</strong>
+      {row.profitByDate.length > 0 && (
+        <div className="table acc-table-wrap acc-profit-table is-narrow">
+          <table>
+            <thead><tr><th>Date</th><th className="acc-num">Profit</th><th className="acc-num">Revenue</th></tr></thead>
+            <tbody>
+              {row.profitByDate.map(day => (
+                <tr key={day.date}>
+                  <td data-label="Date">{day.date}</td>
+                  <td className={`acc-num ${day.profit < 0 ? "red" : ""}`} data-label="Profit">{money(day.profit)}</td>
+                  <td className="acc-num" data-label="Revenue">{money(day.revenue)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="acc-profit-kicker">Profit by invoice</p>
       <div className="table spacer acc-table-wrap acc-profit-table">
         <table>
           <thead><tr><th>Date</th><th>Invoice</th><th className="acc-num">Revenue</th><th className="acc-num">Cost</th><th className="acc-num">Profit</th><th></th></tr></thead>
@@ -221,7 +289,7 @@ function ItemProfitDetail({ row, vouchers, onViewDocument, onClose }) {
         </table>
       </div>
       <AccPager page={invoices.page} pages={invoices.pages} total={invoices.total} from={invoices.from} to={invoices.to} onPage={invoices.setPage} noun="invoices" />
-      <strong>Stock movements</strong>
+      <p className="acc-profit-kicker">Stock movements</p>
       <div className="table spacer acc-table-wrap acc-profit-table">
         <table>
           <thead><tr><th>Date</th><th>Type</th><th>Reference</th><th className="acc-num">In</th><th className="acc-num">Out</th><th className="acc-num">Balance</th><th className="acc-num">Unit cost</th><th className="acc-num">Value</th><th>Recorded</th><th></th></tr></thead>

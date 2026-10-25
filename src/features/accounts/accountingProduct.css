@@ -1496,6 +1496,91 @@
   }
 }
 
+.accounts-dashboard .acc-profit-review ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.accounts-dashboard .acc-profit-review li + li {
+  margin-top: 4px;
+}
+
+.accounts-dashboard .acc-profit-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 32px;
+  margin-top: 4px;
+}
+
+.accounts-dashboard .acc-profit-table.is-narrow table {
+  min-width: 0;
+}
+
+.accounts-dashboard .acc-profit-facts section {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.accounts-dashboard .acc-profit-kicker {
+  margin: 16px 0 8px;
+  font-size: var(--ft-type-secondary);
+  font-weight: 700;
+}
+
+.accounts-dashboard .acc-profit-facts .acc-profit-kicker {
+  margin-top: 0;
+}
+
+.accounts-dashboard .acc-profit-fact {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: baseline;
+  margin: 0;
+}
+
+.accounts-dashboard .acc-profit-fact span {
+  color: var(--ft-muted);
+  font-size: var(--ft-type-secondary);
+}
+
+.accounts-dashboard .acc-profit-fact strong {
+  font-size: var(--ft-type-secondary);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.accounts-dashboard .acc-profit-recon {
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+}
+
+.accounts-dashboard .acc-profit-recon li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: baseline;
+  font-size: var(--ft-type-secondary);
+}
+
+.accounts-dashboard .acc-profit-recon .is-total {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--ft-border);
+  font-weight: 700;
+}
+
+@media (max-width: 680px) {
+  .accounts-dashboard .acc-profit-facts {
+    grid-template-columns: 1fr;
+  }
+}
+
 .accounts-dashboard .acc-credit-alert {
   border: 1px solid color-mix(in srgb, var(--ft-primary) 33%, transparent);
   background: color-mix(in srgb, var(--ft-primary) 8%, transparent);
