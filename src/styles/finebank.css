@@ -617,6 +617,13 @@ input[type="month"]::-webkit-calendar-picker-indicator { margin: 0; padding: 0; 
 .modal-scroll-body { height: 100%; max-height: 100%; overflow: auto; overscroll-behavior: contain; padding-top: 14px; scrollbar-width: thin; scrollbar-color: var(--ft-border-strong) transparent; }
 .modal-scroll-body::-webkit-scrollbar { width: 8px; }
 .modal-scroll-body::-webkit-scrollbar-thumb { background: var(--ft-border-strong); border-radius: 999px; }
+/* Entry dialogs keep scrolling, without a bar inside the sheet. */
+.acc-entry-dialog .modal-scroll-body,
+.acc-entry-dialog .table,
+.acc-entry-dialog .acc-table-wrap { scrollbar-width: none; -ms-overflow-style: none; }
+.acc-entry-dialog .modal-scroll-body::-webkit-scrollbar,
+.acc-entry-dialog .table::-webkit-scrollbar,
+.acc-entry-dialog .acc-table-wrap::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .modal-scroll.has-more-above::before, .modal-scroll.has-more-below::after { content: ""; position: absolute; left: 0; right: 10px; height: 32px; z-index: 1; pointer-events: none; }
 .modal-scroll.has-more-above::before { top: 0; background: linear-gradient(var(--ft-surface), transparent); }
 .modal-scroll.has-more-below::after { bottom: 0; background: linear-gradient(transparent, var(--ft-surface)); }
@@ -1159,9 +1166,15 @@ html[data-ft-role="owner"] .top-actions .top-theme { display: none; }
   .accounts-dashboard .acc-entry-dialog :is(.field, td, label) > input[type="date"],
   .accounts-dashboard .acc-entry-dialog :is(.field, td, label) > input[type="time"],
   .accounts-dashboard .acc-entry-dialog :is(.field, td, label) > input[type="month"] {
-    display: block; width: 100% !important; min-width: 0 !important; max-width: 100% !important; min-inline-size: 0 !important;
-    box-sizing: border-box; overflow: hidden; appearance: none; -webkit-appearance: none;
-    padding-left: 12px !important; padding-right: 36px !important;
+    display: flex; align-items: center; width: 100% !important; min-width: 0 !important; max-width: 100% !important; min-inline-size: 0 !important;
+    box-sizing: border-box; height: var(--ft-control-h) !important; overflow: hidden; appearance: none; -webkit-appearance: none;
+    padding-top: 0 !important; padding-bottom: 0 !important; padding-left: 12px !important; padding-right: 36px !important; line-height: 1;
+  }
+  .accounts-dashboard .modal.acc-modal :is(input[type="date"], input[type="time"], input[type="month"])::-webkit-datetime-edit,
+  .accounts-dashboard .modal.acc-modal :is(input[type="date"], input[type="time"], input[type="month"])::-webkit-date-and-time-value,
+  .accounts-dashboard .acc-entry-dialog :is(input[type="date"], input[type="time"], input[type="month"])::-webkit-datetime-edit,
+  .accounts-dashboard .acc-entry-dialog :is(input[type="date"], input[type="time"], input[type="month"])::-webkit-date-and-time-value {
+    display: flex; align-items: center; height: auto; margin: 0; padding: 0; line-height: 1;
   }
   .modal :is(.field, td, label):has(> input[type="date"]),
   .modal :is(.field, td, label):has(> input[type="time"]),
