@@ -4,7 +4,7 @@
  */
 :root {
   color-scheme: light;
-  --ft-bg: #f4f5f7;
+  --ft-bg: #f6f4f1;
   --ft-surface: #ffffff;
   --ft-surface-subtle: #fafafa;
   --ft-surface-muted: #f3f3f3;
@@ -35,6 +35,7 @@
   --ft-success-soft: rgba(77, 175, 110, .12);
   --ft-danger: #cf381a;
   --ft-danger-soft: rgba(231, 61, 28, .09);
+  --ft-on-danger: #ffffff;
   --ft-warning: #98651a;
   --ft-warning-soft: rgba(229, 163, 59, .14);
   --ft-info: #2f6fd0;
@@ -83,6 +84,7 @@
   --ft-success-soft: rgba(92, 194, 131, .14);
   --ft-danger: #f2694d;
   --ft-danger-soft: rgba(242, 105, 77, .14);
+  --ft-on-danger: #2a100c;
   --ft-warning: #f0b44c;
   --ft-warning-soft: rgba(240, 180, 76, .14);
   --ft-info: #6ea6f2;

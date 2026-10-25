@@ -5311,7 +5311,7 @@
   --acc-text: var(--ft-text, var(--ft-text)) !important;
   --acc-muted: var(--ft-muted, var(--ft-muted)) !important;
   --acc-gold: var(--ft-warning, var(--ft-primary)) !important;
-  --acc-gold-ink: #fff !important;
+  --acc-gold-ink: var(--ft-on-primary) !important;
   --acc-green: var(--ft-success, var(--ft-success-soft)) !important;
   --acc-red: var(--ft-danger, var(--ft-danger)) !important;
   --acc-blue: var(--ft-info, var(--ft-info)) !important;
@@ -5347,7 +5347,7 @@
 }
 
 .accounts-dashboard .acc-ov-context {
-  background: linear-gradient(135deg, var(--ft-surface) 0%, #fff 58%, var(--ft-surface) 100%) !important;
+  background: var(--ft-surface) !important;
   border-color: var(--acc-line) !important;
   box-shadow: var(--acc-shadow-soft) !important;
 }
@@ -5358,7 +5358,7 @@
 }
 
 .accounts-dashboard .accounts-business-pulse {
-  background: linear-gradient(145deg, #fff, var(--ft-surface)) !important;
+  background: var(--ft-surface) !important;
 }
 
 .accounts-dashboard .accounts-business-action,
@@ -5386,17 +5386,28 @@
 
 .accounts-dashboard .acc-nav-item,
 .accounts-dashboard .acc-nav-sub,
-.accounts-dashboard .acc-nav-toggle,
-.accounts-dashboard .acc-bottom-item {
-  color: var(--ft-muted) !important;
+.accounts-dashboard .acc-nav-toggle {
+  color: var(--ft-sidebar-text) !important;
 }
 
 .accounts-dashboard .acc-nav-item:hover,
-.accounts-dashboard .acc-nav-item.active,
-.accounts-dashboard .acc-nav-sub.active,
+.accounts-dashboard .acc-nav-item.active {
+  background: var(--ft-primary) !important;
+  color: var(--ft-on-primary) !important;
+}
+
+.accounts-dashboard .acc-nav-sub.active {
+  background: var(--ft-sidebar-chip) !important;
+  color: var(--ft-sidebar-text-strong) !important;
+}
+
+.accounts-dashboard .acc-bottom-item {
+  color: var(--ft-text-2) !important;
+}
+
 .accounts-dashboard .acc-bottom-item.active {
-  background: var(--ft-surface-muted) !important;
-  color: var(--ft-info) !important;
+  background: var(--ft-primary-soft) !important;
+  color: var(--ft-primary) !important;
 }
 
 .accounts-dashboard .acc-table-wrap th,
@@ -5405,19 +5416,19 @@
 }
 
 .accounts-dashboard .acc-table-wrap th {
-  background: var(--ft-surface) !important;
+  background: var(--ft-surface-subtle) !important;
   color: var(--acc-muted) !important;
 }
 
 .accounts-dashboard .acc-table-wrap tbody tr:hover,
 .accounts-dashboard .acc-ov-more-menu button:hover,
 .accounts-dashboard .acc-ov-more-menu button:focus-visible {
-  background: var(--ft-surface) !important;
+  background: var(--ft-surface-hover) !important;
 }
 
 @media (max-width: 1050px) {
   .accounts-dashboard .acc-bottom-nav {
-    background: rgba(255, 255, 255, .97) !important;
+    background: var(--ft-surface) !important;
     border-color: var(--acc-line) !important;
     box-shadow: 0 -8px 30px rgba(16, 24, 40, .08) !important;
   }
