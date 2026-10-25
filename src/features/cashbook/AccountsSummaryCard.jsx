@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { loadCashbookEntries, loadLedgerAccounts } from "./cashbookRepository.js";
 import { aggregateOverview, dateRangeForFilter } from "./cashbookModel.js";
 import { money } from "./cashbookConfig.js";
+import { CashbookOverview } from "./components/CashbookOverview.jsx";
 
 export function AccountsSummaryCard({ token, moneyFmt = money, onOpen }) {
   const [overview, setOverview] = useState(null);
@@ -15,15 +16,11 @@ export function AccountsSummaryCard({ token, moneyFmt = money, onOpen }) {
       .catch(() => setOverview(null));
   }, [token]);
   if (!overview) return null;
-  return <button type="button" className="card accounts-summary-card spacer" onClick={onOpen}>
-    <div className="toolbar accounts-summary-heading"><strong>Cashbook</strong><span className="small">Running balances · Open</span></div>
-    <div className="accounts-summary-grid">
-      <div><span className="small">Cash</span><strong className="gold">{moneyFmt(overview.cash)}</strong></div>
-      <div><span className="small">Bank</span><strong>{moneyFmt(overview.bank)}</strong></div>
-      <div><span className="small">UPI</span><strong>{moneyFmt(overview.upi)}</strong></div>
-      <div><span className="small">Total</span><strong className="gold">{moneyFmt(overview.total)}</strong></div>
-      <div><span className="small">Today&apos;s in</span><strong className="green">{moneyFmt(overview.moneyIn)}</strong></div>
-      <div><span className="small">Today&apos;s out</span><strong className="red">{moneyFmt(overview.moneyOut)}</strong></div>
+  return <section className="accounts-summary spacer">
+    <div className="accounts-summary-heading">
+      <strong>Cashbook</strong>
+      <button type="button" className="link-button" onClick={onOpen}>Open</button>
     </div>
-  </button>;
+    <CashbookOverview balances={overview} movement={overview} period="today" onOpen={onOpen} showHint={false} moneyFmt={moneyFmt} />
+  </section>;
 }

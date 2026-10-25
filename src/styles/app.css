@@ -1064,6 +1064,19 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
   display: block;
 }
 
+button.accounts-balance-item {
+  text-align: left;
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  appearance: none;
+}
+
+button.accounts-balance-item:hover {
+  border-color: var(--ft-primary);
+}
+
 .accounts-balance-move {
   background: var(--ft-surface);
   border-color: color-mix(in srgb, var(--ft-border) 53%, transparent);
@@ -1339,39 +1352,20 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
   margin-top: 8px;
 }
 
-.accounts-summary-card {
+.accounts-summary {
   margin-bottom: 28px;
-  padding: 14px 16px;
 }
 
-button.accounts-summary-card {
-  text-align: left;
-  width: 100%;
-  color: inherit;
-  font: inherit;
-  -webkit-appearance: none;
-  appearance: none;
-  cursor: pointer;
-  display: block;
+.accounts-summary-heading {
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  display: flex;
 }
 
-button.accounts-summary-card:hover {
-  border-color: color-mix(in srgb, var(--ft-primary) 44%, transparent);
-}
-
-.accounts-summary-grid {
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-top: 10px;
-  display: grid;
-}
-
-.accounts-summary-grid span {
-  color: var(--ft-muted);
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  font-size: var(--ft-type-micro);
-  display: block;
+.accounts-summary-heading strong {
+  font: 700 var(--ft-type-section) Syne, sans-serif;
 }
 
 @media (width <= 820px) {
@@ -1417,8 +1411,8 @@ button.accounts-summary-card:hover {
     gap: 10px;
   }
 
-  .accounts-summary-grid {
-    grid-template-columns: 1fr 1fr;
+  .accounts-summary {
+    margin-bottom: 16px;
   }
 }
 
@@ -2745,7 +2739,7 @@ button.accounts-summary-card:hover {
     padding: 14px !important;
   }
 
-  .dashboard-home .accounts-summary-card {
+  .dashboard-home .accounts-summary {
     margin-bottom: 14px;
   }
 
@@ -3092,7 +3086,7 @@ button.accounts-summary-card:hover {
     padding: 12px !important;
   }
 
-  .dashboard-home .accounts-summary-card {
+  .dashboard-home .accounts-summary {
     margin-bottom: 10px;
   }
 

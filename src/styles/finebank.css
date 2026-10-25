@@ -937,13 +937,14 @@ html[data-ft-role="owner"] .top-actions .top-theme { display: none; }
 @media (width <= 680px) { .dashboard-chit-panel { padding: 17px; } .dashboard-chit-grid { grid-template-columns: 1fr; } }
 
 /* Cashbook */
-.accounts-module .accounts-balance-item, .accounts-module .accounts-closing-stats > div { background: var(--ft-surface) !important; border-color: var(--ft-border) !important; box-shadow: none !important; color: var(--ft-text) !important; }
-.accounts-module .accounts-balance-move { background: var(--ft-surface-subtle) !important; }
-.accounts-module .accounts-balance-item span, .accounts-module .accounts-closing-stats span, .accounts-module .accounts-balance-hint { color: var(--ft-muted) !important; }
-.accounts-module .accounts-balance-item strong { color: var(--ft-text) !important; }
-.accounts-module .accounts-balance-item strong.gold { color: var(--ft-text) !important; }
-.accounts-module .accounts-balance-item strong.green { color: var(--ft-success) !important; }
-.accounts-module .accounts-balance-item strong.red { color: var(--ft-danger) !important; }
+.accounts-module .accounts-balance-item, .dashboard-home .accounts-balance-item, .accounts-module .accounts-closing-stats > div { background: var(--ft-surface) !important; border-color: var(--ft-border) !important; box-shadow: none !important; color: var(--ft-text) !important; }
+.accounts-module .accounts-balance-move, .dashboard-home .accounts-balance-move { background: var(--ft-surface-subtle) !important; }
+.accounts-module .accounts-balance-item span, .dashboard-home .accounts-balance-item span, .accounts-module .accounts-closing-stats span, .accounts-module .accounts-balance-hint { color: var(--ft-muted) !important; }
+.accounts-module .accounts-balance-item strong, .dashboard-home .accounts-balance-item strong { color: var(--ft-text) !important; }
+.accounts-module .accounts-balance-item strong.gold, .dashboard-home .accounts-balance-item strong.gold { color: var(--ft-text) !important; }
+.accounts-module .accounts-balance-item strong.green, .dashboard-home .accounts-balance-item strong.green { color: var(--ft-success) !important; }
+.accounts-module .accounts-balance-item strong.red, .dashboard-home .accounts-balance-item strong.red { color: var(--ft-danger) !important; }
+.dashboard-home button.accounts-balance-item:hover { border-color: var(--ft-primary) !important; }
 .accounts-section-nav { border-bottom: 1px solid var(--ft-border); gap: 8px !important; }
 /* tab rows scroll sideways when they do not fit */
 .accounts-section-nav, .module-section-nav, .tabs { max-width: 100%; overflow-x: auto; scrollbar-width: thin; flex-wrap: nowrap !important; }
