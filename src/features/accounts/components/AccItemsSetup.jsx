@@ -4,6 +4,8 @@ import { FilterSelect, SearchInput } from "../../../components/ui.jsx";
 import { todayIso } from "../../../lib/dates.js";
 import { currentStockForItem, emptyItemForm, stockMovementReport, stockStatus, validateItemForm } from "../model/inventoryModel.js";
 import { costItemMovements } from "../model/inventoryValuation.js";
+import { AccPager } from "./AccUi.jsx";
+import { usePagedList } from "../model/usePagedList.js";
 import { ItemsTable } from "./items/ItemsTable.jsx";
 import { ItemCards } from "./items/ItemCards.jsx";
 import { ItemsSidePanels } from "./items/ItemsSidePanels.jsx";
@@ -58,6 +60,7 @@ export function AccItemsSetup({
       return [item.name, item.sku, item.hsnSac, item.description].join(" ").toLowerCase().includes(q);
     });
   }, [items, search, typeFilter, activeFilter]);
+  const pagedItems = usePagedList(filtered, `${search}|${typeFilter}|${activeFilter}`);
 
   const detail = items.find(item => item.id === detailId) || null;
   const detailValue = detail && detail.itemType === "product" ? costItemMovements(detail, movements, voucherItemLines) : null;
@@ -148,7 +151,7 @@ export function AccItemsSetup({
       </div>
 
       <ItemsTable
-        filtered={filtered}
+        filtered={pagedItems.items}
         stockByItem={stockByItem}
         setDetailId={setDetailId}
         saving={saving}
@@ -157,7 +160,7 @@ export function AccItemsSetup({
         onDeleteItem={onDeleteItem}
       />
       <ItemCards
-        filtered={filtered}
+        filtered={pagedItems.items}
         stockByItem={stockByItem}
         setDetailId={setDetailId}
         saving={saving}
@@ -165,6 +168,7 @@ export function AccItemsSetup({
         onSetItemActive={onSetItemActive}
         onDeleteItem={onDeleteItem}
       />
+      <AccPager page={pagedItems.page} pages={pagedItems.pages} total={pagedItems.total} from={pagedItems.from} to={pagedItems.to} onPage={pagedItems.setPage} noun="items" />
 
       <ItemsSidePanels
         categoryName={categoryName}

@@ -3395,3 +3395,40 @@ button.accounts-balance-item:hover {
 .phone-link:hover {
   text-decoration: underline;
 }
+
+.acc-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ft-border);
+}
+
+.acc-pager .small {
+  flex: 1;
+  text-align: center;
+}
+
+.acc-pager-pages {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+}
+
+.acc-pager-pages .btn {
+  min-width: 36px;
+  padding-inline: 8px;
+}
+
+@media (max-width: 680px) {
+  .acc-pager {
+    gap: 8px;
+  }
+
+  .acc-pager-pages {
+    display: none;
+  }
+}

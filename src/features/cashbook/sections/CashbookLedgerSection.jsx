@@ -1,4 +1,6 @@
 import { X } from "lucide-react";
+import { AccPager } from "../../accounts/components/AccUi.jsx";
+import { usePagedList } from "../../accounts/model/usePagedList.js";
 import { ExportButton, FilterSelect, SearchInput } from "../../../components/ui.jsx";
 import { backfillCashbook } from "../cashbookRepository.js";
 import { CASHBOOK_SOURCE_FILTERS, sourceOriginLabel } from "../cashbookModel.js";
@@ -41,6 +43,7 @@ export function CashbookLedgerSection({
   removeManual,
 }) {
   const filtersActive = Boolean(search) || accountFilter !== "all" || sourceFilter !== "all" || directionFilter !== "all";
+  const pagedRows = usePagedList(cashbookRows, `${period}|${periodStart}|${search}|${accountFilter}|${sourceFilter}|${directionFilter}`);
   const clearFilters = () => { setSearch(""); setAccountFilter("all"); setSourceFilter("all"); setDirectionFilter("all"); };
   return (
     <div className="accounts-panel">
@@ -85,7 +88,7 @@ export function CashbookLedgerSection({
           </div>
           {period !== "all" && onShowEarlier && <button type="button" className="btn" onClick={onShowEarlier}>Show earlier transactions</button>}
         </article>}
-        {cashbookRows.map(entry => <article key={entry.id} className="card accounts-entry-row">
+        {pagedRows.items.map(entry => <article key={entry.id} className="card accounts-entry-row">
           <div className="accounts-entry-main">
             <div className="accounts-entry-copy">
               <strong>{entry.description}</strong>
@@ -107,6 +110,7 @@ export function CashbookLedgerSection({
         </article>)}
         {!cashbookRows.length && <EmptyState>{priorCount ? `No transactions from ${periodStart} to the end of this filter.` : "No cashbook entries match these filters."}</EmptyState>}
       </div>
+      <AccPager page={pagedRows.page} pages={pagedRows.pages} total={pagedRows.total} from={pagedRows.from} to={pagedRows.to} onPage={pagedRows.setPage} noun="transactions" />
     </div>
   );
 }

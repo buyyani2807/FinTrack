@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Select } from "../../components/Select.jsx";
 import { BackButton, Badge, Button, EmptyState, Field, Metric, Modal, Spinner } from "../../components/ui.jsx";
 import { formatInr as money } from "../../lib/formatMoney.js";
+import { AccPager } from "../accounts/components/AccUi.jsx";
+import { usePagedList } from "../accounts/model/usePagedList.js";
 import { agentCollectsAccounts, financeKindLabel, mapAgentRouteCustomers, staffAssignableLoans } from "./model/collectionStaff";
 import { loanBalance, loanStatus } from "./model/loanState.js";
 
@@ -76,6 +78,9 @@ export function CollectionStaffPage({ loans, loadAgents, createAgent, assignAgen
   if (selected && draftFor !== selected.id) { setDraftFor(selected.id); resetDraft(selected); }
   const assigned = loan => draftIds.includes(loan.id);
   const visibleLoans = staffAssignableLoans(loans, { selectedAgentId: selected?.id, search, statusOf: loanStatus }).sort(byCustomerName);
+  const routeCustomers = shownRouteCustomers.filter(customer => `${customer.name} ${customer.phone} ${customer.routeName}`.toLowerCase().includes(search.trim().toLowerCase()));
+  const pagedRoutes = usePagedList(routeCustomers, `${selected?.id}|${search}|routes`);
+  const pagedLoans = usePagedList(visibleLoans, `${selected?.id}|${search}|loans`);
   const choose = agent => onSelect?.(agent.id);
   const toggle = id => setDraftIds(ids => ids.includes(id) ? ids.filter(value => value !== id) : [...ids, id]);
   const saveStaff = async details => { try { const updated = await updateAgent({ id: selected.id, ...details }); setAgents(current => current.map(agent => agent.id === updated.id ? { ...agent, ...updated, route_customers: updated.route_customers || agent.route_customers } : agent)); setShowEdit(false); setSaved("Staff details saved successfully."); } catch (e) { setError(e.message || "Could not save staff details."); } };
@@ -102,13 +107,15 @@ export function CollectionStaffPage({ loans, loadAgents, createAgent, assignAgen
           <div className="toolbar"><div><strong>Route customers</strong><p className="small">{worksForLabel(selected, companies)} customers on this agent's collection routes. Add or remove them under Accounts, with {worksForLabel(selected, companies)} selected, in Parties → Routes.</p></div>{onOpenRoutes && <Button onClick={() => onOpenRoutes(selected.accounts_company_id)}>Open routes</Button>}</div>
           {saved && <p className="green small">{saved}</p>}
           <div className="customer-search"><input aria-label="Search route customers" placeholder="Search customers" value={search} onChange={e => setSearch(e.target.value)} /></div>
-          {loading ? <Spinner label="Loading route customers" /> : <div className="table"><table><thead><tr><th>Customer</th><th>Route</th><th>Phone</th></tr></thead><tbody>{shownRouteCustomers.filter(customer => `${customer.name} ${customer.phone} ${customer.routeName}`.toLowerCase().includes(search.trim().toLowerCase())).map(customer => <tr key={`${customer.routeId}:${customer.partyId}`}><td>{customer.name}</td><td>{customer.routeName}{customer.routeActive ? "" : " · Paused"}</td><td>{customer.phone || "—"}</td></tr>)}</tbody></table></div>}
+          {loading ? <Spinner label="Loading route customers" /> : <div className="table"><table><thead><tr><th>Customer</th><th>Route</th><th>Phone</th></tr></thead><tbody>{pagedRoutes.items.map(customer => <tr key={`${customer.routeId}:${customer.partyId}`}><td>{customer.name}</td><td>{customer.routeName}{customer.routeActive ? "" : " · Paused"}</td><td>{customer.phone || "—"}</td></tr>)}</tbody></table></div>}
+          <AccPager page={pagedRoutes.page} pages={pagedRoutes.pages} total={pagedRoutes.total} from={pagedRoutes.from} to={pagedRoutes.to} onPage={pagedRoutes.setPage} noun="customers" />
           {!loading && !shownRouteCustomers.length && <p className="copy spacer">No customers on a route for this agent yet. Open routes for {worksForLabel(selected, companies)} and assign {selected.full_name}.</p>}
         </div> : <div className="card">
           <div className="toolbar"><div><strong>Assigned customers</strong><p className="small">Finance and chit customers only. Select customers, then save. {draftIds.length} customers selected.</p></div></div>
           {saved && <p className="green small">{saved}</p>}
           <div className="customer-search"><input aria-label="Search customers" placeholder="Search customers" value={search} onChange={e => setSearch(e.target.value)} /></div>
-          <div className="table"><table><thead><tr><th>Customer</th><th>Finance</th><th>Outstanding</th><th>Assigned</th></tr></thead><tbody>{visibleLoans.map(loan => <tr key={loan.id}><td>{loan.customerName}<br /><span className="small">{loan.phone}</span></td><td>{financeKindLabel(loan.kind)}</td><td>{money(loanBalance(loan))}</td><td><input type="checkbox" aria-label={`Assign ${loan.customerName}`} checked={assigned(loan)} onChange={() => toggle(loan.id)} /></td></tr>)}</tbody></table></div>
+          <div className="table"><table><thead><tr><th>Customer</th><th>Finance</th><th>Outstanding</th><th>Assigned</th></tr></thead><tbody>{pagedLoans.items.map(loan => <tr key={loan.id}><td>{loan.customerName}<br /><span className="small">{loan.phone}</span></td><td>{financeKindLabel(loan.kind)}</td><td>{money(loanBalance(loan))}</td><td><input type="checkbox" aria-label={`Assign ${loan.customerName}`} checked={assigned(loan)} onChange={() => toggle(loan.id)} /></td></tr>)}</tbody></table></div>
+          <AccPager page={pagedLoans.page} pages={pagedLoans.pages} total={pagedLoans.total} from={pagedLoans.from} to={pagedLoans.to} onPage={pagedLoans.setPage} noun="customers" />
           <div className="row spacer collection-staff-actions"><Button onClick={() => resetDraft(selected)}>Cancel</Button><Button className="primary" onClick={saveAssignments}>Save Changes</Button></div>
         </div>}
       </>

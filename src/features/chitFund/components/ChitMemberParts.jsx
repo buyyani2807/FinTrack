@@ -8,6 +8,8 @@ import { chitPaymentDisplayStatus, normalizeMemberPayment } from "../model/membe
 import { chitTypeLabel, membershipEnrollmentId, portalMemberships } from "../model/memberPortal";
 import { today, money, formatChitDate, enrollmentName, paymentStatusClass } from "../model/chitFormat.js";
 import { Button, Field } from "../../../components/ui.jsx";
+import { AccPager } from "../../accounts/components/AccUi.jsx";
+import { usePagedList } from "../../accounts/model/usePagedList.js";
 import { Modal } from "./ChitUi.jsx";
 
 export function ChitReceiptCell({ source, paymentRow, memberName, memberPhone, scheme, orgSettings, workspace, token, onLogAction }) {
@@ -37,7 +39,8 @@ export const ChitPaymentStatus = ({ row, asOfDate = today() }) => {
 };
 export const ChitMemberPaymentHistory = ({ title, rows, empty }) => {
   const payments = (rows || []).map(normalizeMemberPayment).sort((a, b) => a.month - b.month);
-  return <div className="card spacer"><strong>{title}</strong><div className="table spacer chit-member-payments"><table><thead><tr><th>Month</th><th>Due date</th><th>Payment date</th><th>Expected</th><th>Paid</th><th>Balance</th><th>Late fee</th><th>Reference</th><th>Status</th></tr></thead><tbody>{payments.map(item => <tr key={item.id}><td>Month {item.month}</td><td>{formatChitDate(item.dueDate)}</td><td>{formatChitDate(item.paidDate)}</td><td>{money(item.expected)}</td><td>{money(item.paid)}</td><td className="red">{money(item.balance)}</td><td>{item.lateFee ? money(item.lateFee) : "—"}</td><td>{item.reference || "—"}</td><td><ChitPaymentStatus row={{ ...item, amount_due: item.expected, amount_paid: item.paid, due_date: item.dueDate, status: item.storedStatus }} /></td></tr>)}</tbody></table>{!payments.length && <p className="small spacer">{empty}</p>}</div></div>;
+  const paged = usePagedList(payments, `${title}|${payments.length}`);
+  return <div className="card spacer"><strong>{title}</strong><div className="table spacer chit-member-payments"><table><thead><tr><th>Month</th><th>Due date</th><th>Payment date</th><th>Expected</th><th>Paid</th><th>Balance</th><th>Late fee</th><th>Reference</th><th>Status</th></tr></thead><tbody>{paged.items.map(item => <tr key={item.id}><td>Month {item.month}</td><td>{formatChitDate(item.dueDate)}</td><td>{formatChitDate(item.paidDate)}</td><td>{money(item.expected)}</td><td>{money(item.paid)}</td><td className="red">{money(item.balance)}</td><td>{item.lateFee ? money(item.lateFee) : "—"}</td><td>{item.reference || "—"}</td><td><ChitPaymentStatus row={{ ...item, amount_due: item.expected, amount_paid: item.paid, due_date: item.dueDate, status: item.storedStatus }} /></td></tr>)}</tbody></table><AccPager page={paged.page} pages={paged.pages} total={paged.total} from={paged.from} to={paged.to} onPage={paged.setPage} noun="payments" />{!payments.length && <p className="small spacer">{empty}</p>}</div></div>;
 };
 export const ChitMembershipSwitcher = ({ memberships, selectedId, onSelect, disabled }) => {
   const rows = portalMemberships({ memberships });

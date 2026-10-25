@@ -262,13 +262,24 @@ export const AccEmpty = ({ title, copy, actionLabel, onAction, icon: Icon = Inbo
     {actionLabel && onAction && <button type="button" className="btn primary" onClick={onAction}>{actionLabel}</button>}
   </div>
 );
-export function AccPager({ page, pages, total, onPage, noun = "rows" }) {
-  if (total <= LIST_PAGE_SIZE) return null;
+export function AccPager({ page, pages, total, from, to, onPage, noun = "rows" }) {
+  if (!(pages > 1)) return null;
+  const start = from || (page - 1) * LIST_PAGE_SIZE + 1;
+  const end = to || Math.min(page * LIST_PAGE_SIZE, total);
+  const numbers = pages <= 7 ? Array.from({ length: pages }, (_, index) => index + 1) : [];
+  const go = next => { if (next !== page) onPage(next); };
   return (
     <div className="acc-pager">
-      <button type="button" className="btn" disabled={page <= 1} onClick={() => onPage(page - 1)}>Previous</button>
-      <span className="small">Page {page} of {pages} · {total} {noun}</span>
-      <button type="button" className="btn" disabled={page >= pages} onClick={() => onPage(page + 1)}>Next</button>
+      <button type="button" className="btn" disabled={page <= 1} onClick={() => go(page - 1)}>Previous</button>
+      <span className="small">Showing {start}–{end} of {total} {noun}</span>
+      {numbers.length ? (
+        <span className="acc-pager-pages">
+          {numbers.map(number => (
+            <button key={number} type="button" className={`btn${number === page ? " primary" : ""}`} aria-current={number === page ? "page" : undefined} onClick={() => go(number)}>{number}</button>
+          ))}
+        </span>
+      ) : null}
+      <button type="button" className="btn" disabled={page >= pages} onClick={() => go(page + 1)}>Next</button>
     </div>
   );
 }

@@ -1,3 +1,5 @@
+import { AccPager } from "../../components/AccUi.jsx";
+import { usePagedList } from "../../model/usePagedList.js";
 import { ignoreBankLine, matchBankLine as saveBankMatch } from "../../data/accountingRepository.js";
 import { bankVoucherLines } from "../../model/accountingReports.js";
 import { money, bankMatchLabel, bankMatchTone } from "../../accountsFormat.js";
@@ -21,6 +23,7 @@ export function BankStatementCard({
   token,
   openSimpleFromBankLine,
 }) {
+  const pagedLines = usePagedList(displayLines, statement.id);
   return (
     <article className="card acc-bank-statement">
       <header className="acc-bank-statement-head">
@@ -46,7 +49,7 @@ export function BankStatementCard({
         </div>
       </header>
       <div className="table acc-table-wrap acc-bank-match-table"><table><thead><tr><th>Date</th><th>Description</th><th className="acc-num">Amount</th><th>Status</th><th>Match to books</th></tr></thead><tbody>
-        {displayLines.map(line => {
+        {pagedLines.items.map(line => {
           const options = bankVoucherLines(accounts, vouchers, statement.coaId, parties).filter(item => !matchedLineIds.has(item.id) || item.id === line.matchedVoucherLineId);
           const selected = matchChoice[line.id] || line.matchedVoucherLineId || "";
           return <tr key={line.id}>
@@ -70,9 +73,9 @@ export function BankStatementCard({
             </td>
           </tr>;
         })}
-      </tbody></table></div>
+      </tbody></table><AccPager page={pagedLines.page} pages={pagedLines.pages} total={pagedLines.total} from={pagedLines.from} to={pagedLines.to} onPage={pagedLines.setPage} noun="lines" /></div>
       <div className="acc-bank-match-cards">
-        {displayLines.map(line => {
+        {pagedLines.items.map(line => {
           const options = bankVoucherLines(accounts, vouchers, statement.coaId, parties).filter(item => !matchedLineIds.has(item.id) || item.id === line.matchedVoucherLineId);
           const selected = matchChoice[line.id] || line.matchedVoucherLineId || "";
           return (

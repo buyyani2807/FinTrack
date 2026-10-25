@@ -5,11 +5,16 @@ export function pageSlice(items = [], page = 1, size = LIST_PAGE_SIZE) {
   const total = rows.length;
   const pages = Math.max(1, Math.ceil(total / size) || 1);
   const current = Math.min(Math.max(1, Number(page) || 1), pages);
+  const start = total ? (current - 1) * size : 0;
+  const pageItems = rows.slice(start, start + size);
   return {
-    items: rows.slice((current - 1) * size, current * size),
+    items: pageItems,
     total,
     pages,
     page: current,
+    from: total ? start + 1 : 0,
+    to: total ? start + pageItems.length : 0,
+    size,
   };
 }
 

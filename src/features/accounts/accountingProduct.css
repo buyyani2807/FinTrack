@@ -3010,6 +3010,24 @@
   text-align: center;
 }
 
+.accounts-dashboard .acc-pager-pages {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+}
+
+.accounts-dashboard .acc-pager-pages .btn {
+  min-width: 36px;
+  padding-inline: 8px;
+}
+
+@media (max-width: 680px) {
+  .accounts-dashboard .acc-pager-pages {
+    display: none;
+  }
+}
+
 .accounts-dashboard .acc-party-toolbar {
   display: grid;
   grid-template-columns: minmax(180px, 280px) minmax(0, 1fr);

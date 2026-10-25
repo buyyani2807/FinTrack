@@ -1,5 +1,6 @@
 import { todayIso } from "../../../../lib/dates.js";
-import { FilterField as Field, AccTable } from "../AccUi.jsx";
+import { AccPager, FilterField as Field, AccTable } from "../AccUi.jsx";
+import { usePagedList } from "../../model/usePagedList.js";
 import { SearchInput } from "../../../../components/ui.jsx";
 import { money, qty } from "../../accountsFormat.js";
 import { QtyInput } from "../QtyInput.jsx";
@@ -19,6 +20,8 @@ export function PhysicalCountTab({
   saving,
   applyCount,
 }) {
+  const rows = countBook.rows.filter(matches);
+  const paged = usePagedList(rows, `${countDate}|${search}`);
   return (
     <>
       <p className="copy spacer">Enter what you counted on the shelf. Every row starts at 1; clear a row to skip it. Differences are posted as stock adjustments dated on the count date.</p>
@@ -28,7 +31,7 @@ export function PhysicalCountTab({
         {canEdit && <button type="button" className="btn ghost" onClick={() => setCounts(Object.fromEntries(countBook.rows.map(row => [row.itemId, ""])))}>Clear all</button>}
       </div>
       <AccTable columns={["Item", { label: "Book qty", num: true }, { label: "Counted", num: true }, { label: "Difference", num: true }, { label: "Value impact", num: true }]} empty={!countBook.rows.length && "No active products to count."}>
-        {countBook.rows.filter(matches).map(row => {
+        {paged.items.map(row => {
           const variance = variances.find(entry => entry.itemId === row.itemId);
           return <tr key={row.itemId} className={variance ? "acc-row-changed" : ""}>
             <td className="acc-cell-stack"><span>{row.name}</span>{row.sku ? <span className="small">{row.sku}</span> : null}</td>
@@ -39,6 +42,7 @@ export function PhysicalCountTab({
           </tr>;
         })}
       </AccTable>
+      <AccPager page={paged.page} pages={paged.pages} total={paged.total} from={paged.from} to={paged.to} onPage={paged.setPage} noun="items" />
       {countError && <p className="red small">{countError}</p>}
       <div className={`acc-settings-savebar spacer${variances.length ? " is-dirty" : ""}`}>
         <span className="small"><b>{variances.length}</b> item{variances.length === 1 ? "" : "s"} to adjust · value impact <b>{money(variances.reduce((sum, row) => sum + row.valueImpact, 0))}</b></span>

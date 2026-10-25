@@ -27,6 +27,22 @@ test("pageSlice paginates long lists", () => {
   assert.equal(page2.total, 120);
   assert.equal(page2.items[0], 51);
   assert.equal(page2.items.length, 50);
+  assert.equal(page2.from, 51);
+  assert.equal(page2.to, 100);
+  const empty = pageSlice([], 4);
+  assert.equal(empty.page, 1);
+  assert.equal(empty.total, 0);
+  assert.equal(empty.from, 0);
+  assert.equal(empty.to, 0);
+  const single = pageSlice(["only"], 3);
+  assert.deepEqual(single.items, ["only"]);
+  assert.equal(single.from, 1);
+  assert.equal(single.to, 1);
+  const last = pageSlice(rows, 9);
+  assert.equal(last.page, 3);
+  assert.equal(last.from, 101);
+  assert.equal(last.to, 120);
+  assert.equal(last.items.length, 20);
 });
 
 test("dashboardMetrics stays accurate on synthetic books", () => {

@@ -11,6 +11,8 @@ import { downloadCustomerStatementPdf } from "./statementPdf.js";
 import { canWhatsAppShare, openManualWhatsAppShare } from "../receipts/io/receiptWhatsApp.js";
 import { formatInr } from "../../lib/formatMoney.js";
 import { BackButton } from "../../components/ui.jsx";
+import { AccPager } from "../accounts/components/AccUi.jsx";
+import { usePagedList } from "../accounts/model/usePagedList.js";
 
 const money = formatInr;
 
@@ -20,6 +22,7 @@ function SummaryRow({ label, value, emphasize = false }) {
 
 function FinanceAccountSection({ account }) {
   const s = account.summary;
+  const paged = usePagedList(account.payments, `${account.loanId || account.accountId}|${account.payments.length}`);
   return <section className="card spacer statement-account">
     <div className="toolbar"><div><strong>{account.financeType}</strong><p className="small">{account.accountId} · Status: {String(s.status || "").toUpperCase()}</p></div><div className="metric-value gold statement-outstanding">{money(s.outstanding)}</div></div>
     <div className="statement-summary">
@@ -47,7 +50,7 @@ function FinanceAccountSection({ account }) {
     </div>
     <strong className="spacer">Payment history</strong>
     <div className="table spacer statement-payments"><table><thead><tr><th>Date</th><th>Amount</th><th>Payment Mode</th><th>Collected By</th><th>Balance</th><th>Notes</th></tr></thead><tbody>
-      {account.payments.map(payment => <tr key={payment.id}>
+      {paged.items.map(payment => <tr key={payment.id}>
         <td>{formatReceiptDate(payment.date)}</td>
         <td className="green">{money(payment.amount)}{payment.splitPayment ? <div className="small">Cash {money(payment.cashAmount)} · UPI {money(payment.upiAmount)}</div> : null}</td>
         <td>{payment.paymentMode}</td>
@@ -55,12 +58,13 @@ function FinanceAccountSection({ account }) {
         <td>{money(payment.balanceAfter)}</td>
         <td>{payment.notes || ""}</td>
       </tr>)}
-    </tbody></table>{!account.payments.length && <p className="small spacer">No payments recorded up to this statement date.</p>}</div>
+    </tbody></table><AccPager page={paged.page} pages={paged.pages} total={paged.total} from={paged.from} to={paged.to} onPage={paged.setPage} noun="payments" />{!account.payments.length && <p className="small spacer">No payments recorded up to this statement date.</p>}</div>
   </section>;
 }
 
 function ChitAccountSection({ account }) {
   const s = account.summary;
+  const paged = usePagedList(account.payments, `${account.accountId}|${account.payments.length}`);
   return <section className="card spacer statement-account">
     <div className="toolbar"><div><strong>{account.scheme.name}</strong><p className="small">{account.scheme.chitTypeLabel} · Ticket {account.ticketNumber || "—"} · {String(s.status || "").toUpperCase()}</p></div><div className="metric-value gold statement-outstanding">{money(s.outstanding)}</div></div>
     <div className="statement-summary">
@@ -91,7 +95,7 @@ function ChitAccountSection({ account }) {
     {!account.bid?.isWinner && <p className="notice">Lift member: No. This member has not been assigned a lift in this scheme.</p>}
     <strong className="spacer">Payment history</strong>
     <div className="table spacer statement-payments"><table><thead><tr><th>Month</th><th>Due Date</th><th>Amount</th><th>Payment Mode</th><th>Status</th><th>Notes</th></tr></thead><tbody>
-      {account.payments.map(payment => <tr key={payment.id || `${payment.month}-${payment.dueDate}`}>
+      {paged.items.map(payment => <tr key={payment.id || `${payment.month}-${payment.dueDate}`}>
         <td>Month {payment.month || "—"}</td>
         <td>{formatReceiptDate(payment.dueDate)}</td>
         <td className="green">{money(payment.paid || payment.expected)}{payment.splitPayment ? <div className="small">Cash {money(payment.cashAmount)} · UPI {money(payment.upiAmount)}</div> : null}</td>
@@ -99,7 +103,7 @@ function ChitAccountSection({ account }) {
         <td>{payment.status}</td>
         <td>{payment.notes || ""}</td>
       </tr>)}
-    </tbody></table>{!account.payments.length && <p className="small spacer">No payment rows for this statement date.</p>}</div>
+    </tbody></table><AccPager page={paged.page} pages={paged.pages} total={paged.total} from={paged.from} to={paged.to} onPage={paged.setPage} noun="payments" />{!account.payments.length && <p className="small spacer">No payment rows for this statement date.</p>}</div>
   </section>;
 }
 

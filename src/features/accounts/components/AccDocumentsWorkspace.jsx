@@ -30,7 +30,8 @@ import { buildSalesInvoice } from "../model/salesInvoiceModel.js";
 import { downloadSalesInvoicePdf } from "../io/salesInvoicePdf.js";
 import { isValidUpiId, upiPayLink } from "../model/upiPay.js";
 import { QrSvg } from "../PayPage.jsx";
-import { AccMoreMenu, Modal } from "./AccUi.jsx";
+import { AccMoreMenu, AccPager, Modal } from "./AccUi.jsx";
+import { usePagedList } from "../model/usePagedList.js";
 import { SearchInput, SegmentedControl } from "../../../components/ui.jsx";
 
 const money = formatInr;
@@ -615,6 +616,8 @@ export function AccDocumentsWorkspace({
     () => (tab === "pending" ? pendingOrderRows({ documents: docs, fulfilment, side: pendingSide, parties, today }) : []),
     [tab, docs, fulfilment, pendingSide, parties, today],
   );
+  const pagedDocs = usePagedList(rows, `${tab}|${search}|${showClosed}`);
+  const pagedPending = usePagedList(pendingRows, `${tab}|${pendingSide}`);
 
   const viewDoc = viewId ? docs.find(doc => doc.id === viewId) : null;
   const view = useMemo(
@@ -731,7 +734,7 @@ export function AccDocumentsWorkspace({
         <div className="table spacer acc-table-wrap"><table><thead><tr>
           <th>Number</th><th>Date</th><th>{config.partyType === "supplier" ? "Supplier" : "Customer"}</th><th className="acc-num">Total</th><th>Status</th>{tab !== "quotation" && <th className="acc-num">Pending qty</th>}<th></th>
         </tr></thead><tbody>
-          {rows.map(({ doc, summary, status }) => (
+          {pagedDocs.items.map(({ doc, summary, status }) => (
             <tr key={doc.id}>
               <td className="acc-cell-stack"><button type="button" className="btn linkish" onClick={() => setViewId(doc.id)}>{doc.docNumber}</button>{doc.reference ? <span className="small">{doc.reference}</span> : null}</td>
               <td className="acc-cell-stack"><span>{formatReceiptDate(doc.docDate)}</span>{doc.validUntil && config.untilLabel ? <span className="small">{config.untilLabel.toLowerCase()} {formatReceiptDate(doc.validUntil)}</span> : null}</td>
@@ -750,7 +753,7 @@ export function AccDocumentsWorkspace({
             </tr>
           ))}
           {!rows.length && <tr><td colSpan={tab === "quotation" ? 6 : 7}>{showClosed ? `No ${config.plural.toLowerCase()} yet.` : `No open ${config.plural.toLowerCase()}. Choose "All, incl. closed" to see completed and cancelled ones.`}</td></tr>}
-        </tbody></table></div>
+        </tbody></table><AccPager page={pagedDocs.page} pages={pagedDocs.pages} total={pagedDocs.total} from={pagedDocs.from} to={pagedDocs.to} onPage={pagedDocs.setPage} noun={config.plural.toLowerCase()} /></div>
       </>}
 
       {available && tab === "pending" && <>
@@ -763,7 +766,7 @@ export function AccDocumentsWorkspace({
           </dl>
         </div>
         <div className="table spacer acc-table-wrap"><table><thead><tr><th>Order</th><th>Due</th><th>{pendingSide === "purchase" ? "Supplier" : "Customer"}</th><th>Item</th><th className="acc-num">Ordered</th><th className="acc-num">Pending</th><th className="acc-num">Value</th><th></th></tr></thead><tbody>
-          {pendingRows.map(row => {
+          {pagedPending.items.map(row => {
             const doc = docs.find(item => item.id === row.documentId);
             return (
               <tr key={row.lineId}>
@@ -779,7 +782,7 @@ export function AccDocumentsWorkspace({
             );
           })}
           {!pendingRows.length && <tr><td colSpan="8">Nothing pending.</td></tr>}
-        </tbody></table></div>
+        </tbody></table><AccPager page={pagedPending.page} pages={pagedPending.pages} total={pagedPending.total} from={pagedPending.from} to={pagedPending.to} onPage={pagedPending.setPage} noun="lines" /></div>
       </>}
 
       {tab === "settings" && (

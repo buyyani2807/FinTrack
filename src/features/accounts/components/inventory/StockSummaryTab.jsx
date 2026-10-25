@@ -1,11 +1,14 @@
 import { todayIso } from "../../../../lib/dates.js";
 import { ExportButton, SearchInput } from "../../../../components/ui.jsx";
 import { stockStatus } from "../../model/inventoryModel.js";
-import { FilterField as Field, AccTable } from "../AccUi.jsx";
+import { FilterField as Field, AccPager, AccTable } from "../AccUi.jsx";
+import { usePagedList } from "../../model/usePagedList.js";
 import { SimpleMetric } from "../AccUi.jsx";
 import { money, qty } from "../../accountsFormat.js";
 
 export function StockSummaryTab({ asOf, setAsOf, search, setSearch, exportSummary, valuation, matches }) {
+  const rows = valuation.rows.filter(matches);
+  const paged = usePagedList(rows, `${asOf}|${search}`);
   return (
     <>
       <div className="acc-list-toolbar spacer">
@@ -19,13 +22,14 @@ export function StockSummaryTab({ asOf, setAsOf, search, setSearch, exportSummar
         <SimpleMetric label="Negative stock" value={String(valuation.negativeItems)} tone={valuation.negativeItems ? "red" : ""} />
       </div>
       <AccTable columns={["Item", "SKU", { label: "Quantity", num: true }, { label: "Avg cost", num: true }, { label: "Value", num: true }, "Status"]}>
-        {valuation.rows.filter(matches).map(row => {
+        {paged.items.map(row => {
           const status = row.quantity < 0 ? "Negative" : stockStatus(row.quantity, row.reorderLevel) === "low" ? "Low stock" : row.quantity === 0 ? "Out of stock" : "";
           return <tr key={row.itemId}><td>{row.name}</td><td>{row.sku}</td><td className="acc-num">{qty(row.quantity, row.unit)}</td><td className="acc-num">{money(row.averageCost)}</td><td className="acc-num">{money(row.value)}</td><td className={row.quantity < 0 ? "red" : ""}>{status}</td></tr>;
         })}
         {!valuation.rows.length && <tr><td colSpan="6">No products yet. Add items or import them from a CSV.</td></tr>}
         {valuation.rows.length > 0 && <tr><td colSpan="4"><strong>Total</strong></td><td className="acc-num"><strong>{money(valuation.totalValue)}</strong></td><td></td></tr>}
       </AccTable>
+      <AccPager page={paged.page} pages={paged.pages} total={paged.total} from={paged.from} to={paged.to} onPage={paged.setPage} noun="items" />
       <p className="small spacer">Valued at moving weighted-average cost. Purchases use the line value after discount and before GST; opening stock uses the item's opening rate (or purchase price). This value flows into the Profit &amp; Loss and Balance Sheet as closing stock.</p>
     </>
   );
