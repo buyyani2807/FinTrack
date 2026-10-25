@@ -6,7 +6,7 @@ import { usePagedList } from "../../model/usePagedList.js";
 import { SimpleMetric } from "../AccUi.jsx";
 import { money, qty } from "../../accountsFormat.js";
 
-export function StockSummaryTab({ asOf, setAsOf, search, setSearch, exportSummary, valuation, matches }) {
+export function StockSummaryTab({ asOf, setAsOf, search, setSearch, exportSummary, valuation, matches, profitStrip = null }) {
   const rows = valuation.rows.filter(matches);
   const paged = usePagedList(rows, `${asOf}|${search}`);
   return (
@@ -21,6 +21,7 @@ export function StockSummaryTab({ asOf, setAsOf, search, setSearch, exportSummar
         <SimpleMetric label="Products in stock" value={String(valuation.itemsInStock)} />
         <SimpleMetric label="Negative stock" value={String(valuation.negativeItems)} tone={valuation.negativeItems ? "red" : ""} />
       </div>
+      {profitStrip}
       <AccTable columns={["Item", "SKU", { label: "Quantity", num: true }, { label: "Avg cost", num: true }, { label: "Value", num: true }, "Status"]}>
         {paged.items.map(row => {
           const status = row.quantity < 0 ? "Negative" : stockStatus(row.quantity, row.reorderLevel) === "low" ? "Low stock" : row.quantity === 0 ? "Out of stock" : "";

@@ -110,6 +110,7 @@ export const REPORT_TABS = [
   { id: "ledger", label: "Ledger" },
   { id: "item_sales", label: "Item Sales" },
   { id: "item_purchases", label: "Item Purchases" },
+  { id: "item_profit", label: "Item profit" },
   { id: "stock_moves", label: "Stock Movement" },
 ];
 export const MOBILE_TABS = [

@@ -1434,6 +1434,66 @@
   .accounts-dashboard .acc-sheet-table .acc-sheet-amount {
     grid-column: 1 / -1;
   }
+
+  .accounts-dashboard .acc-profit-table.acc-table-wrap {
+    overflow: visible !important;
+    border: 0;
+    background: transparent !important;
+  }
+
+  .accounts-dashboard .acc-profit-table.acc-table-wrap table {
+    min-width: 0;
+  }
+
+  .accounts-dashboard .acc-profit-table table,
+  .accounts-dashboard .acc-profit-table tbody,
+  .accounts-dashboard .acc-profit-table tr,
+  .accounts-dashboard .acc-profit-table td {
+    display: block;
+    width: auto;
+  }
+
+  .accounts-dashboard .acc-profit-table thead {
+    display: none;
+  }
+
+  .accounts-dashboard .acc-profit-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .accounts-dashboard .acc-profit-table tr {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid var(--ft-border);
+    border-radius: 10px;
+    background: var(--ft-surface);
+  }
+
+  .accounts-dashboard .acc-profit-table td {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0;
+    border: 0;
+    text-align: right;
+  }
+
+  .accounts-dashboard .acc-profit-table td::before {
+    content: attr(data-label);
+    color: var(--ft-muted);
+    font-size: var(--ft-type-micro);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-align: left;
+  }
+
+  .accounts-dashboard .acc-profit-table td:last-child {
+    justify-content: flex-end;
+  }
 }
 
 .accounts-dashboard .acc-credit-alert {

@@ -553,6 +553,7 @@ const mapStockMovement = row => ({
   documentId: row.document_id || null,
   documentLineId: row.document_line_id || null,
   createdAt: row.created_at,
+  createdBy: row.created_by || null,
 });
 
 const itemCategoriesPath = columns => `/rest/v1/acc_item_categories?select=${columns}&order=name.asc${companyEq()}`;
@@ -618,7 +619,7 @@ export const loadVoucherItemLines = token => wrap(
     .then(rows => (rows || []).map(mapVoucherItemLine)),
 );
 
-const STOCK_MOVEMENT_COLUMNS = "id,item_id,movement_date,quantity_delta,reason,note,voucher_id,voucher_item_line_id,voucher_number,created_at";
+const STOCK_MOVEMENT_COLUMNS = "id,item_id,movement_date,quantity_delta,reason,note,voucher_id,voucher_item_line_id,voucher_number,created_at,created_by";
 const stockMovementsPath = columns => `/rest/v1/acc_stock_movements?select=${columns}&order=movement_date.desc,created_at.desc&limit=20000${companyEq()}`;
 
 export const loadStockMovements = token => wrap(

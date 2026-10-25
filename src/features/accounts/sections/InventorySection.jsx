@@ -21,6 +21,7 @@ export function InventorySection({
   costLines,
   tab,
   onTabChange,
+  onOpenItemProfit,
 }) {
   return (
     <div className="acc-panel">
@@ -37,6 +38,9 @@ export function InventorySection({
         onApplyCount={applyPhysicalCount}
         tab={tab}
         onTabChange={onTabChange}
+        vouchers={vouchers}
+        salesLines={voucherItemLines}
+        onOpenItemProfit={onOpenItemProfit}
         itemsSetup={<AccItemsSetup
           items={items}
           categories={itemCategories}

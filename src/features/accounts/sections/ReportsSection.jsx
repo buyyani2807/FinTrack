@@ -10,6 +10,7 @@ import { BalanceSheetReport } from "./reports/BalanceSheetReport.jsx";
 import { DayBookReport } from "./reports/DayBookReport.jsx";
 import { GstReport } from "./reports/GstReport.jsx";
 import { LedgerReport } from "./reports/LedgerReport.jsx";
+import { ItemProfitReport } from "./reports/ItemProfitReport.jsx";
 import { VoucherNumberLink } from "../components/SalesInvoiceActions.jsx";
 
 export function ReportsSection({
@@ -49,6 +50,10 @@ export function ReportsSection({
   itemSalesRows,
   itemPurchaseRows,
   stockMoveRows,
+  itemCategories = [],
+  costLines = null,
+  accountsRole = null,
+  onItemProfitExport,
   settings,
   voucherItemLines,
   stockMovements,
@@ -121,6 +126,22 @@ export function ReportsSection({
         <AccTable columns={["Item", "SKU", { label: "Qty bought", num: true }, { label: "Purchase amount", num: true }]} empty={!itemPurchaseRows.length && "No itemized purchases in this period."}>
           {itemPurchaseRows.map(row => <tr key={row.itemId || row.name}><td>{row.name}</td><td>{row.sku || "—"}</td><td className="acc-num">{row.quantity}</td><td className="acc-num">{money(row.amount)}</td></tr>)}
         </AccTable>
+      )}
+      {section === "reports" && reportTab === "item_profit" && (
+        <ItemProfitReport
+          items={items}
+          categories={itemCategories}
+          movements={stockMovements}
+          voucherItemLines={voucherItemLines}
+          costLines={costLines}
+          vouchers={vouchers}
+          parties={parties}
+          range={range}
+          onViewDocument={onViewDocument}
+          workspaceRole={workspace?.role}
+          accountsRole={accountsRole}
+          onExportReady={onItemProfitExport}
+        />
       )}
       {section === "reports" && reportTab === "stock_moves" && (
         <AccTable columns={["Date", "Item", "Direction", { label: "Qty", num: true }, "Reason", "Voucher"]} empty={!stockMoveRows.length && "No stock movements in this period."}>

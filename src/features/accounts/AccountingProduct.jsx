@@ -306,6 +306,8 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const deferredSearch = useDeferredValue(search);
   const deferredPartySearch = useDeferredValue(partySearch);
   const sectionRef = useRef(section);
+  const itemProfitExportRef = useRef(null);
+  const setItemProfitExport = useCallback(getter => { itemProfitExportRef.current = getter; }, []);
   const refreshGen = useRef(0);
   const hasLoadedRef = useRef(Boolean(cached));
   sectionRef.current = section;
@@ -2088,6 +2090,11 @@ const openVoucher = () => {
     if (active === "ledger") {
       return { filename: `fintrack-ledger-${stamp}`, rows: [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])] };
     }
+    if (active === "item_profit") {
+      const built = itemProfitExportRef.current?.();
+      if (built) return built;
+      return { filename: `fintrack-item-profit-${stamp}`, rows: [["Item", "SKU", "Qty sold", "Revenue", "Cost", "Gross profit", "Margin %", "Current stock", "Stock value"]] };
+    }
     if (active === "gst") {
       return {
         filename: `fintrack-gst-books-${stamp}`,
@@ -2437,6 +2444,7 @@ const openVoucher = () => {
           saveItemRecord={saveItemRecord}
           token={token}
           costLines={costLines}
+          onOpenItemProfit={() => openReport("item_profit")}
         />}
 
         {section === "more" && <MoreSection manufacturingEnabled={manufacturingEnabled} openSection={openSection} moreLinks={MORE_LINKS} />}
@@ -2502,6 +2510,10 @@ const openVoucher = () => {
           itemSalesRows={itemSalesRows}
           itemPurchaseRows={itemPurchaseRows}
           stockMoveRows={stockMoveRows}
+          itemCategories={itemCategories}
+          costLines={costLines}
+          accountsRole={accountsAccessRole}
+          onItemProfitExport={setItemProfitExport}
           activeCompany={activeCompany}
           workspace={workspace}
           settings={settings}

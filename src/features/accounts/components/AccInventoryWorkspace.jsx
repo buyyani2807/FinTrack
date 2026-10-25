@@ -7,6 +7,8 @@ import { stockMovementReport } from "../model/inventoryModel.js";
 import { STOCK_AGE_BUCKETS, physicalCountVariances, stockAgeing, stockValuation } from "../model/inventoryValuation.js";
 import { parseItemCsv, planItemImport } from "../io/itemCsvImport.js";
 import { StockSummaryTab } from "./inventory/StockSummaryTab.jsx";
+import { InventoryProfitStrip } from "./inventory/InventoryProfitStrip.jsx";
+import { itemProfitability } from "../model/itemProfitability.js";
 import { StockMovementsTab } from "./inventory/StockMovementsTab.jsx";
 import { PhysicalCountTab } from "./inventory/PhysicalCountTab.jsx";
 import { StockAgeingTab } from "./inventory/StockAgeingTab.jsx";
@@ -41,6 +43,9 @@ export function AccInventoryWorkspace({
   onApplyCount,
   tab: routeTab = null,
   onTabChange,
+  vouchers = [],
+  salesLines = [],
+  onOpenItemProfit,
 }) {
   // The open tab is the URL (/accounting/inventory/:tab).
   const tab = TABS.some(item => item.id === routeTab) ? routeTab : "summary";
@@ -88,6 +93,12 @@ export function AccInventoryWorkspace({
     }
   }, [tab, products, movements, voucherItemLines, countValues, countDate]);
 
+  const profitRows = useMemo(
+    () => (tab === "summary"
+      ? itemProfitability({ items: products, movements, voucherItemLines: salesLines, costLines: voucherItemLines, vouchers, from: range.from, to: range.to }).rows
+      : []),
+    [tab, products, movements, salesLines, voucherItemLines, vouchers, range.from, range.to],
+  );
   const q = search.trim().toLowerCase();
   const matches = row => !q || `${row.name} ${row.sku || ""}`.toLowerCase().includes(q);
 
@@ -156,6 +167,7 @@ export function AccInventoryWorkspace({
         exportSummary={exportSummary}
         valuation={valuation}
         matches={matches}
+        profitStrip={<InventoryProfitStrip rows={profitRows} onOpen={onOpenItemProfit} />}
       />}
 
       {tab === "items" && itemsSetup}
