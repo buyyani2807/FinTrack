@@ -59,7 +59,7 @@ import { trackProductEvent } from "../commercial/productAnalytics.js";
 import { assertVoucherAttachmentMeta, normalizeAttachmentContentType, readFileAsBase64 } from "./data/voucherAttachments.js";
 import {
   CASH_PARTY_ID,
-  PARTY_TYPES,
+  PARTY_FORM_TYPES,
   SIMPLE_ENTRY_KINDS,
   accountNormalSide,
   addDaysIso,
@@ -117,7 +117,7 @@ import { buildSalesInvoice, buildVoucherDocument, canOpenVoucherDocument } from 
 import { SalesInvoiceSuccessModal, SalesInvoiceViewerModal } from "./components/SalesInvoiceActions.jsx";
 import { periodStockValues } from "./model/inventoryValuation.js";
 import { expenseBreakdown, monthlyIncomeExpense } from "./model/accountsCharts.js";
-import { partyHasTradeProfile, partyProfile } from "./model/partyProfile.js";
+import { isEmployeeParty, partyHasTradeProfile, partyProfile } from "./model/partyProfile.js";
 import {
   currentStockForItem,
   itemPurchasesReport,
@@ -757,21 +757,22 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const itemSalesRows = useMemo(() => itemSalesReport(voucherItemLines, vouchers, range), [voucherItemLines, vouchers, range]);
   const itemPurchaseRows = useMemo(() => itemPurchasesReport(voucherItemLines, vouchers, range), [voucherItemLines, vouchers, range]);
   const stockMoveRows = useMemo(() => stockMovementReport(stockMovements, items, range).slice(0, 200), [stockMovements, items, range]);
-  const focusedParty = useMemo(() => parties.find(party => party.id === partyFocusId) || parties[0] || null, [parties, partyFocusId]);
+  const ledgerParties = useMemo(() => parties.filter(party => !isEmployeeParty(party)), [parties]);
+  const focusedParty = useMemo(() => ledgerParties.find(party => party.id === partyFocusId) || ledgerParties[0] || null, [ledgerParties, partyFocusId]);
   const profileParty = useMemo(() => (section === "party" ? parties.find(party => party.id === view.sub) || null : null), [section, parties, view.sub]);
   const profile = useMemo(
     () => (profileParty && partyHasTradeProfile(profileParty) ? partyProfile({ accounts, vouchers, parties, party: profileParty, today: todayIso() }) : null),
     [profileParty, accounts, vouchers, parties],
   );
   const setupParties = useMemo(
-    () => filterParties(parties, { type: partyTypeFilter, search: deferredPartySearch }),
-    [parties, partyTypeFilter, deferredPartySearch],
+    () => filterParties(ledgerParties, { type: partyTypeFilter === "employee" ? "all" : partyTypeFilter, search: deferredPartySearch }),
+    [ledgerParties, partyTypeFilter, deferredPartySearch],
   );
   const partyCountByType = useMemo(() => {
-    const counts = { all: parties.length };
-    for (const type of PARTY_TYPES) counts[type.id] = parties.filter(party => party.partyType === type.id).length;
+    const counts = { all: ledgerParties.length };
+    for (const type of PARTY_FORM_TYPES) counts[type.id] = ledgerParties.filter(party => party.partyType === type.id).length;
     return counts;
-  }, [parties]);
+  }, [ledgerParties]);
   const outstandingByParty = useMemo(() => {
     const map = new Map();
     for (const row of ar) map.set(row.id, { kind: "receivable", balance: row.balance });
@@ -840,9 +841,8 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const openPartyProfile = id => {
     if (!id) return;
     const party = parties.find(row => row.id === id);
-    if (party && !partyHasTradeProfile(party)) {
-      setPartyFocusId(id);
-      openSection("parties");
+    if (party && isEmployeeParty(party)) {
+      openSection("payroll");
       return;
     }
     go({ section: "party", sub: id });
@@ -1564,9 +1564,10 @@ const openVoucher = () => {
     if (!file) return;
     const rows = parsePartyCsv(await file.text());
     if (!rows.length) { setError("No valid party rows found. Use a CSV with a Name column."); return; }
-    const { toCreate, duplicates } = planPartyImport(rows, parties);
+    const { toCreate, duplicates, employees } = planPartyImport(rows, parties);
     const skippedNote = duplicates.length ? ` ${duplicates.length} duplicate${duplicates.length === 1 ? "" : "s"} skipped.` : "";
-    if (!toCreate.length) { setPartyImportStatus(`Nothing to import.${skippedNote}`); return; }
+    const employeeNote = employees.length ? ` ${employees.length} ${employees.length === 1 ? "employee was" : "employees were"} left for Payroll.` : "";
+    if (!toCreate.length) { setPartyImportStatus(`Nothing to import.${skippedNote}${employeeNote}`); return; }
     setPartyImportStatus(`Importing ${toCreate.length} parties…`);
     let imported = 0;
     const failed = [];
@@ -1578,7 +1579,7 @@ const openVoucher = () => {
         failed.push(`${row.name}: ${err?.message || "could not save"}`);
       }
     }
-    setPartyImportStatus(`${imported} ${imported === 1 ? "party" : "parties"} imported.${skippedNote}${failed.length ? ` ${failed.length} failed.` : ""}`);
+    setPartyImportStatus(`${imported} ${imported === 1 ? "party" : "parties"} imported.${skippedNote}${employeeNote}${failed.length ? ` ${failed.length} failed.` : ""}`);
     if (failed.length) setError(`Some parties were not imported. ${failed.slice(0, 3).join("; ")}${failed.length > 3 ? ` and ${failed.length - 3} more` : ""}`);
     if (imported) await refresh();
   };
@@ -2267,7 +2268,6 @@ const openVoucher = () => {
           <section className="card acc-party-staff">
             <p className="copy">Pay, attendance, and leave for {profileParty.name} are in Payroll.</p>
             <div className="acc-party-ledger-actions">
-              <button type="button" className="btn" onClick={() => openPartyLedger(profileParty.id)}>Party ledger</button>
               <button type="button" className="btn primary" onClick={() => openSection("payroll")}>Open payroll</button>
             </div>
           </section>
@@ -2299,7 +2299,7 @@ const openVoucher = () => {
           openSection={openSection}
           focusedParty={focusedParty}
           setPartyFocusId={setPartyFocusId}
-          parties={parties}
+          parties={ledgerParties}
           partyFrom={partyFrom}
           setPartyFrom={setPartyFrom}
           partyTo={partyTo}
@@ -2385,7 +2385,6 @@ const openVoucher = () => {
           booksStartedOn={activeCompany?.booksStartedOn || settings?.booksStartedOn || ""}
           canWrite={canWrite}
           onRefresh={() => refresh()}
-          onOpenParties={() => openSection("parties")}
           onOpenSection={openSection}
         />}
 
@@ -2559,7 +2558,7 @@ const openVoucher = () => {
           removeCoa={removeCoa}
           importParties={importParties}
           openParty={openParty}
-          parties={parties}
+          parties={ledgerParties}
           partySearch={partySearch}
           setPartySearch={setPartySearch}
           partyTypeFilter={partyTypeFilter}

@@ -7,7 +7,7 @@ import { Field } from "./AccUi.jsx";
 export function VoucherForm({ accounts, parties, voucherType, setVoucherType, form, setForm, lines, setLines, onSubmit, saving, maxDate }) {
   const totals = voucherTotals(lines.map(line => ({ ...line, debit: Number(line.debit || 0), credit: Number(line.credit || 0) })));
   const setLine = (index, patch) => setLines(current => current.map((line, i) => i === index ? { ...line, ...patch } : line));
-  const selectableParties = parties.filter(party => party.isActive !== false || party.id === form.partyId);
+  const selectableParties = parties.filter(party => party.partyType !== "employee" && (party.isActive !== false || party.id === form.partyId));
   return <>
     <div className="form">
       <Field label="Voucher type"><Select value={voucherType} onChange={event => setVoucherType(event.target.value)}>{Object.values(VOUCHER_TYPES).map(type => <option key={type.id} value={type.id}>{type.label}</option>)}</Select></Field>

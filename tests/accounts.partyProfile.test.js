@@ -9,7 +9,7 @@ import {
   saleLines,
 } from "../src/features/accounts/model/accountingModel.js";
 import { invoiceRegister } from "../src/features/accounts/model/accountingReports.js";
-import { partyHasTradeProfile, partyProfile } from "../src/features/accounts/model/partyProfile.js";
+import { isEmployeeParty, partyHasTradeProfile, partyProfile } from "../src/features/accounts/model/partyProfile.js";
 import { accountsPath, accountsViewFromPath } from "../src/features/accounts/accountsNavigation.js";
 import { calculateFintrackCreditScore, invoiceInstallments } from "../src/features/creditScore/creditScoreModel.js";
 
@@ -156,6 +156,7 @@ test("a part-paid invoice that is not yet due does not count against the custome
 });
 
 test("an employee has no customer or supplier profile", () => {
+  assert.equal(isEmployeeParty({ id: "amogha", partyType: "employee" }), true);
   assert.equal(partyHasTradeProfile({ id: "amogha", partyType: "employee" }), false);
   assert.equal(partyHasTradeProfile({ id: "ravi", partyType: "customer" }), true);
   assert.equal(partyHasTradeProfile({ id: "mill", partyType: "supplier" }), true);

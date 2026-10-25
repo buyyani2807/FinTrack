@@ -25,7 +25,7 @@ export function PartiesSetupPanel({
     <AccSetupSection
       icon="P"
       title="Parties"
-      copy="Customers, suppliers, employees, agents, and others used only by Accounts. They do not have to exist in Daily Finance, Monthly Finance, or Chit Fund."
+      copy="Customers, suppliers, agents, and others used only by Accounts. Employees are added in Payroll. They do not have to exist in Daily Finance, Monthly Finance, or Chit Fund."
       actions={<div className="acc-btn-group"><label className="btn">Import CSV<input type="file" accept=".csv,text/csv" hidden onChange={importParties} /></label><button type="button" className="btn primary" onClick={() => openParty()}>+ Add Party</button></div>}
       collapsible
       summary={`${parties.length} ${parties.length === 1 ? "party" : "parties"}`}

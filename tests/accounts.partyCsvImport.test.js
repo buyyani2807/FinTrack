@@ -36,7 +36,15 @@ test("party import skips duplicates by name or phone within the same type", () =
     "customer,New Party,9000000001",
     "customer,New Party Again,9000000001",
   ].join("\n"));
-  const { toCreate, duplicates } = planPartyImport(rows, existing);
+  const { toCreate, duplicates, employees } = planPartyImport(rows, existing);
+  assert.deepEqual(employees, []);
   assert.deepEqual(toCreate.map(row => row.name), ["Steel Mart", "New Party"]);
   assert.deepEqual(duplicates.map(row => row.name), ["ravi   traders", "Steel Mart Pvt", "New Party Again"]);
+});
+
+test("party import leaves employees for payroll", () => {
+  const rows = parsePartyCsv("Type,Name,Phone\nemployee,Asha Rao,9000000002\ncustomer,Ravi Traders,\n");
+  const { toCreate, employees } = planPartyImport(rows, []);
+  assert.deepEqual(toCreate.map(row => row.name), ["Ravi Traders"]);
+  assert.deepEqual(employees.map(row => row.name), ["Asha Rao"]);
 });

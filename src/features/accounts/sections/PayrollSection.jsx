@@ -7,6 +7,7 @@ import { downloadAccountsCsv } from "../io/accountingExport.js";
 import { AccEmpty, AccMetric, AccSkeleton, AccTable, Modal } from "../components/AccUi.jsx";
 import {
   createChartAccount,
+  createParty,
   deletePayrollLeave,
   loadPayroll,
   postVoucher,
@@ -14,8 +15,9 @@ import {
   savePayrollLeave,
   savePayrollProfile,
   savePayrollRun,
+  updateParty,
 } from "../data/accountingRepository.js";
-import { findAccount, newClientRequestId, SYSTEM_CODES } from "../model/accountingModel.js";
+import { findAccount, newClientRequestId, SYSTEM_CODES, validatePartyForm } from "../model/accountingModel.js";
 import {
   DAY_BASIS,
   DAY_STATUSES,
@@ -108,7 +110,6 @@ export function PayrollSection({
   booksStartedOn = "",
   canWrite,
   onRefresh,
-  onOpenParties,
   onOpenSection,
 }) {
   const [month, setMonth] = useState(() => todayIso().slice(0, 7));
@@ -129,6 +130,8 @@ export function PayrollSection({
   const [pickedEmployee, setPickedEmployee] = useState("");
   const [markEdit, setMarkEdit] = useState(null);
   const [leaveForm, setLeaveForm] = useState(blankLeave);
+  const [employeeForm, setEmployeeForm] = useState(null);
+  const [employeeError, setEmployeeError] = useState("");
 
   const employees = useMemo(
     () => (parties || []).filter(party => party.partyType === "employee" && party.isActive !== false).sort((a, b) => a.name.localeCompare(b.name)),
@@ -431,6 +434,39 @@ export function PayrollSection({
     }
   };
 
+  const openEmployee = (person = null) => {
+    const source = person?.id ? ((parties || []).find(party => party.id === person.id) || person) : null;
+    setEmployeeError("");
+    setEmployeeForm(source
+      ? { id: source.id, name: source.name || "", phone: source.phone || "", email: source.email || "", address: source.address || "" }
+      : { id: null, name: "", phone: "", email: "", address: "" });
+  };
+
+  const saveEmployee = async () => {
+    const name = String(employeeForm?.name || "").trim();
+    const draft = { ...employeeForm, name, partyType: "employee" };
+    if (!name) { setEmployeeError("Enter the employee name."); return; }
+    const message = validatePartyForm(draft);
+    if (message) { setEmployeeError(message); return; }
+    setBusy(true);
+    setEmployeeError("");
+    setActionError("");
+    try {
+      if (employeeForm.id) {
+        const existing = (parties || []).find(party => party.id === employeeForm.id) || {};
+        await updateParty(token, { ...existing, ...draft, id: employeeForm.id, partyType: "employee" });
+      } else {
+        await createParty(token, draft);
+      }
+      setEmployeeForm(null);
+      if (onRefresh) await onRefresh();
+    } catch (err) {
+      setEmployeeError(err.message || "The employee could not be saved.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const openProfile = person => {
     const profile = bundle.profiles.find(row => row.partyId === person.id) || emptyProfile(person.id);
     setProfileForm({
@@ -482,7 +518,7 @@ export function PayrollSection({
     {loadError ? <p className="copy" role="alert">{loadError}</p> : null}
     {actionError ? <p className="copy" role="alert">{actionError}</p> : null}
     {loading && !bundle ? <AccSkeleton /> : null}
-    {!loadError && bundle && !employees.length && !rows.length ? <AccEmpty title="No employees yet" copy="Add a person under Parties and set the type to Employee. Payroll uses those people." actionLabel="Open parties" onAction={onOpenParties} /> : null}
+    {!loadError && bundle && !employees.length && !rows.length ? <AccEmpty title="No employees yet" copy="Add the people you pay. Salary, attendance, and leave stay in Payroll." actionLabel={canWrite ? "Add employee" : ""} onAction={canWrite ? () => openEmployee() : undefined} /> : null}
 
     {!loadError && bundle && (employees.length > 0 || rows.length > 0) && <>
       {tab === "payroll" && <>
@@ -499,7 +535,7 @@ export function PayrollSection({
           <div className="pay-hero-tools">
             {monthMenu}
             <div className="pay-quick">
-              {onOpenParties ? <button type="button" className="btn" onClick={onOpenParties}>Add employee</button> : null}
+              {canWrite ? <button type="button" className="btn" onClick={() => openEmployee()}>Add employee</button> : null}
               {onOpenSection ? <button type="button" className="btn" onClick={() => onOpenSection("attendance")}>Attendance</button> : null}
               {onOpenSection ? <button type="button" className="btn" onClick={() => onOpenSection("leave")}>Leave</button> : null}
               <button type="button" className="btn" disabled={!visibleRows.length} onClick={exportRegister}>Export</button>
@@ -543,6 +579,7 @@ export function PayrollSection({
                 <td className="acc-num">{`${amount(row.paidDays)} paid · ${amount(row.lopDays)} loss`}</td>
                 <td className="acc-num">{money(row.deductionTotal)}</td>
                 <td><div className="acc-btn-group">
+                  {canWrite && <button type="button" className="btn" onClick={() => openEmployee(person)}>Edit</button>}
                   {canWrite && <button type="button" className={`btn${Number(row.monthly) > 0 ? "" : " primary"}`} onClick={() => openProfile(person)}>Set salary</button>}
                   {canWrite && posted && row.inRun === false && row.earned > 0 && !row.error && <button type="button" className="btn primary" disabled={busy} onClick={() => setConfirmLate(row)}>Post salary</button>}
                   {canWrite && !posted && row.inRun !== false && <button type="button" className="btn" onClick={() => openDeductions(row)}>This month</button>}
@@ -572,6 +609,7 @@ export function PayrollSection({
                 <div><dt>Deductions</dt><dd>{money(row.deductionTotal)}</dd></div>
               </dl>
               <div className="acc-btn-group pay-person-actions">
+                {canWrite && <button type="button" className="btn" onClick={() => openEmployee(person)}>Edit</button>}
                 {canWrite && <button type="button" className={`btn${Number(row.monthly) > 0 ? "" : " primary"}`} onClick={() => openProfile(person)}>Set salary</button>}
                 {canWrite && posted && row.inRun === false && row.earned > 0 && !row.error && <button type="button" className="btn primary" disabled={busy} onClick={() => setConfirmLate(row)}>Post salary</button>}
                 {canWrite && !posted && row.inRun !== false && <button type="button" className="btn" onClick={() => openDeductions(row)}>This month</button>}
@@ -596,6 +634,7 @@ export function PayrollSection({
               {employees.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}
             </Select>
           </LabeledField>
+          {canWrite && <button type="button" className="btn" onClick={() => openEmployee()}>Add employee</button>}
           {canWrite && !posted && <button type="button" className="btn primary" disabled={busy} onClick={saveAttendance}>Save attendance</button>}
         </div>
         <div className="pay-day-grid" role="grid" aria-label={`Attendance for ${monthLabel(monthIso)}`}>
@@ -620,6 +659,7 @@ export function PayrollSection({
         <div className="pay-toolbar">{monthMenu}</div>
         {posted ? <p className="copy pay-note">{monthLabel(monthIso)} is posted. Leave for this month stays as it was posted.</p> : null}
         <p className="copy pay-note">Paid leave and sick leave stay in the salary. Unpaid leave reduces it. The owner records leave here.</p>
+        {canWrite && <div className="pay-toolbar"><button type="button" className="btn" onClick={() => openEmployee()}>Add employee</button></div>}
         {canWrite && !posted && <div className="form pay-toolbar">
           <LabeledField label="Employee">
             <Select value={leaveForm.partyId} onChange={event => setLeaveForm(current => ({ ...current, partyId: event.target.value }))}>
@@ -650,6 +690,17 @@ export function PayrollSection({
         </AccTable>
       </>}
     </>}
+
+    {employeeForm && <Modal title={employeeForm.id ? "Edit employee" : "Add employee"} close={() => !busy && setEmployeeForm(null)} actions={<button type="button" className="btn primary" disabled={busy} onClick={saveEmployee}>{employeeForm.id ? "Save" : "Add employee"}</button>}>
+      <p className="copy">This person is paid from Payroll. They do not appear with customers and suppliers.</p>
+      {employeeError ? <p className="copy" role="alert">{employeeError}</p> : null}
+      <div className="form">
+        <Field label="Name"><input value={employeeForm.name} onChange={event => setEmployeeForm(current => ({ ...current, name: event.target.value }))} /></Field>
+        <Field label="Phone"><input value={employeeForm.phone} placeholder="10-digit mobile" onChange={event => setEmployeeForm(current => ({ ...current, phone: event.target.value }))} /></Field>
+        <Field label="Email"><input value={employeeForm.email} placeholder="optional" onChange={event => setEmployeeForm(current => ({ ...current, email: event.target.value }))} /></Field>
+        <Field className="span" label="Address"><input value={employeeForm.address} placeholder="optional" onChange={event => setEmployeeForm(current => ({ ...current, address: event.target.value }))} /></Field>
+      </div>
+    </Modal>}
 
     {profileParty && profileForm && <Modal title={`Salary for ${profileParty.name}`} close={() => !busy && setProfileParty(null)} actions={<button type="button" className="btn primary" disabled={busy} onClick={saveProfile}>Save salary</button>}>
       <p className="copy">This is the monthly salary on record. A month that is already posted keeps the figures it was posted with.</p>

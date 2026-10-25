@@ -1,6 +1,6 @@
 import { parseDelimitedText } from "./bankStatementImport.js";
 
-export const PARTY_TYPES = ["customer", "supplier", "employee", "agent", "other"];
+export const PARTY_TYPES = ["customer", "supplier", "agent", "other"];
 
 const headerKey = value => String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
 
@@ -32,7 +32,7 @@ export function parsePartyCsv(text) {
   return rows.map(row => {
     const partyType = at(row, "partyType").toLowerCase();
     return {
-      partyType: PARTY_TYPES.includes(partyType) ? partyType : "customer",
+      partyType: partyType === "employee" ? "employee" : (PARTY_TYPES.includes(partyType) ? partyType : "customer"),
       name: at(row, "name"),
       phone: at(row, "phone"),
       email: at(row, "email"),
@@ -61,7 +61,12 @@ export function planPartyImport(rows = [], existingParties = []) {
   }
   const toCreate = [];
   const duplicates = [];
+  const employees = [];
   for (const row of rows) {
+    if (row.partyType === "employee") {
+      employees.push(row);
+      continue;
+    }
     const name = nameKey(row);
     const phone = phoneKey(row);
     if (seenNames.has(name) || (phone && seenPhones.has(phone))) {
@@ -72,5 +77,5 @@ export function planPartyImport(rows = [], existingParties = []) {
     if (phone) seenPhones.add(phone);
     toCreate.push(row);
   }
-  return { toCreate, duplicates };
+  return { toCreate, duplicates, employees };
 }

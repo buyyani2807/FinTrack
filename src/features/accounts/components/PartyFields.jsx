@@ -1,4 +1,4 @@
-import { PARTY_TYPE_CHANGE_WARNING, PARTY_TYPES } from "../model/accountingModel.js";
+import { PARTY_FORM_TYPES, PARTY_TYPE_CHANGE_WARNING } from "../model/accountingModel.js";
 import { Select } from "../../../components/Select.jsx";
 import { INDIA_STATES, gstStateFromGstin } from "../model/accountingGst.js";
 import { partyTypeLabel } from "../accountsFormat.js";
@@ -24,7 +24,7 @@ export function PartyFormFields({ form, setForm, originalType = "", hasTransacti
           });
           onConfirmType?.(false);
         }}>
-          {PARTY_TYPES.map(type => <option key={type.id} value={type.id}>{type.label}</option>)}
+          {PARTY_FORM_TYPES.map(type => <option key={type.id} value={type.id}>{type.label}</option>)}
         </Select>
       </Field>
       {form.id ? <p className="small acc-party-current-type">Current type: {partyTypeLabel(currentType)}</p> : null}

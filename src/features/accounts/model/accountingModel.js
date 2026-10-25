@@ -26,6 +26,9 @@ export const PARTY_TYPES = [
   { id: "other", label: "Other" },
 ];
 
+/** Types offered when adding a party. Employees are added in Payroll. */
+export const PARTY_FORM_TYPES = PARTY_TYPES.filter(type => type.id !== "employee");
+
 export const MONEY_MODES = [
   { id: "cash", label: "Cash" },
   { id: "upi", label: "UPI" },

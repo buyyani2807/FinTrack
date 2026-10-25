@@ -44,7 +44,6 @@ export const PARTY_TYPE_FILTERS = [
   { id: "all", label: "All", emptyTitle: "No parties found", emptyCopy: "Try a different search or clear the filter." },
   { id: "customer", label: "Customers", emptyTitle: "No customers found", emptyCopy: "No customer parties match this search." },
   { id: "supplier", label: "Suppliers", emptyTitle: "No suppliers found", emptyCopy: "No supplier parties match this search." },
-  { id: "employee", label: "Employees", emptyTitle: "No employees found", emptyCopy: "No employee parties match this search." },
   { id: "agent", label: "Agents", emptyTitle: "No agents found", emptyCopy: "No agent parties match this search." },
   { id: "other", label: "Other", emptyTitle: "No other parties found", emptyCopy: "No other parties match this search." },
 ];

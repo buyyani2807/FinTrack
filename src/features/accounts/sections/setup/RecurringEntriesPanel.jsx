@@ -43,7 +43,7 @@ export function RecurringEntriesPanel({
         <Field label="Party">
           <Select value={recurringDraft.partyId} onChange={event => setRecurringDraft(current => ({ ...current, partyId: event.target.value }))}>
             <option value="">Optional</option>
-            {parties.filter(party => party.isActive !== false).map(party => <option key={party.id} value={party.id}>{party.name}</option>)}
+            {parties.filter(party => party.partyType !== "employee" && party.isActive !== false).map(party => <option key={party.id} value={party.id}>{party.name}</option>)}
           </Select>
         </Field>
         <Field label="Payment mode">

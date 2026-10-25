@@ -232,7 +232,7 @@ export function AccRoutesWorkspace({
   const overview = useMemo(() => routeOverview({ routes, stops, parties, positions, agents }), [routes, stops, parties, positions, agents]);
   const stopRouteByParty = useMemo(() => new Map(stops.map(stop => [stop.partyId, stop.routeId])), [stops]);
   const routeNameById = useMemo(() => new Map(routes.map(route => [route.id, route.name])), [routes]);
-  const unrouted = useMemo(() => parties.filter(party => party.partyType !== "supplier" && !stopRouteByParty.has(party.id) && (positions.get(party.id)?.outstanding || 0) > 0), [parties, stopRouteByParty, positions]);
+  const unrouted = useMemo(() => parties.filter(party => party.partyType !== "supplier" && party.partyType !== "employee" && !stopRouteByParty.has(party.id) && (positions.get(party.id)?.outstanding || 0) > 0), [parties, stopRouteByParty, positions]);
   const unroutedDue = unrouted.reduce((sum, party) => sum + (positions.get(party.id)?.outstanding || 0), 0);
   const stopsRoute = stopsRouteId ? overview.find(route => route.id === stopsRouteId) : null;
 

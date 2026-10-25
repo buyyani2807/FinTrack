@@ -326,7 +326,10 @@ test.describe("Add party", () => {
     await expect(name).toHaveAttribute("placeholder", "e.g. Sai Traders");
     await expect(opening()).toBeVisible();
     await expect(opening()).toHaveAttribute("placeholder", "They already owe you");
-    for (const type of ["Employee", "Agent", "Other"]) {
+    await dialog.getByRole("combobox", { name: "Party type" }).click();
+    await expect(page.getByRole("option", { name: "Employee", exact: true })).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    for (const type of ["Agent", "Other"]) {
       await dialog.getByRole("combobox", { name: "Party type" }).click();
       await page.getByRole("option", { name: type, exact: true }).click();
       await expect(name).toHaveAttribute("placeholder", "");

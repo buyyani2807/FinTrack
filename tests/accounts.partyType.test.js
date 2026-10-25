@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import {
+  PARTY_FORM_TYPES,
   PARTY_TYPES,
   applyPartyTypeChange,
   assertCanChangePartyType,
@@ -66,6 +67,7 @@ test("a party with transactions keeps its id and vouchers, and asks for confirma
 test("customer, supplier, employee, agent, and other are the supported types", () => {
   const party = { id: "p1", partyType: "supplier", name: "Sri" };
   assert.deepEqual(PARTY_TYPES.map(type => type.id), ["customer", "supplier", "employee", "agent", "other"]);
+  assert.deepEqual(PARTY_FORM_TYPES.map(type => type.id), ["customer", "supplier", "agent", "other"]);
   assert.equal(applyPartyTypeChange({ ...party, partyType: "customer" }, "supplier").partyType, "supplier");
   assert.equal(applyPartyTypeChange(party, "customer").partyType, "customer");
   for (const type of ["employee", "agent", "other"]) {
