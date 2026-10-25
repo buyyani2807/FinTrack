@@ -100,7 +100,7 @@ export function SettledGoods({ voucher, vouchers, voucherItemLines, stockMovemen
   );
 }
 
-export function InvoiceTable({ rows, kind, orgSettings, activeCompany, workspace, voucherItemLines = [], stockMovements = [], items = [], onOpenParty }) {
+export function InvoiceTable({ rows, kind, orgSettings, activeCompany, workspace, voucherItemLines = [], stockMovements = [], items = [], onOpenParty, onViewDocument }) {
   const [openId, setOpenId] = useState(null);
   const partyName = row => (onOpenParty && row.partyId && row.partyName !== row.partyId
     ? <button type="button" className="acc-invoice-party acc-invoice-party-link" title={`Open ${row.partyName}'s profile`} onClick={() => onOpenParty(row.partyId)}>{row.partyName}</button>
@@ -153,7 +153,7 @@ export function InvoiceTable({ rows, kind, orgSettings, activeCompany, workspace
                       {partyName(row)}
                     </td>
                     <td>
-                      <button type="button" className="acc-invoice-ref-btn" aria-expanded={open} onClick={() => setOpenId(current => current === row.id ? null : row.id)}>
+                      <button type="button" className="acc-invoice-ref-btn" aria-expanded={onViewDocument ? undefined : open} onClick={() => (onViewDocument ? onViewDocument(row) : setOpenId(current => current === row.id ? null : row.id))}>
                         {row.reference}
                       </button>
                       {row.possibleDuplicate ? <span className="small acc-bill-scan-error">Possible duplicate</span> : null}
@@ -166,12 +166,13 @@ export function InvoiceTable({ rows, kind, orgSettings, activeCompany, workspace
                     <td className="acc-num">{row.daysOverdue || 0}</td>
                     <td><span className={`acc-status-pill ${invoiceStatusTone(row.status)}`}>{row.status}</span></td>
                     <td className="acc-invoice-remind">
+                      {onViewDocument ? <button type="button" className="btn" onClick={() => onViewDocument(row)}>View</button> : null}
                       {kind === "payable"
                         ? <PaymentAdviceButton row={row} settings={orgSettings} company={activeCompany} workspace={workspace} compact />
                         : <ArReminderButton row={row} settings={orgSettings} company={activeCompany} workspace={workspace} compact />}
                     </td>
                   </tr>
-                  {open ? <tr className="acc-goods-row"><td colSpan={10}>{goods}</td></tr> : null}
+                  {!onViewDocument && open ? <tr className="acc-goods-row"><td colSpan={10}>{goods}</td></tr> : null}
                 </Fragment>
               );
             })}
@@ -185,7 +186,7 @@ export function InvoiceTable({ rows, kind, orgSettings, activeCompany, workspace
               <div>
                 {partyName(row)}
                 <p className="small">
-                  <button type="button" className="acc-invoice-ref-btn" aria-expanded={openId === row.id} onClick={() => setOpenId(current => current === row.id ? null : row.id)}>
+                  <button type="button" className="acc-invoice-ref-btn" aria-expanded={onViewDocument ? undefined : openId === row.id} onClick={() => (onViewDocument ? onViewDocument(row) : setOpenId(current => current === row.id ? null : row.id))}>
                     {row.reference}
                   </button>
                   {row.possibleDuplicate ? <span className="small acc-bill-scan-error"> · Possible duplicate</span> : null}
@@ -200,11 +201,12 @@ export function InvoiceTable({ rows, kind, orgSettings, activeCompany, workspace
               <span>Outstanding <strong>{money(row.outstanding)}</strong></span>
             </p>
             <div className="acc-invoice-remind">
+              {onViewDocument ? <button type="button" className="btn" onClick={() => onViewDocument(row)}>View</button> : null}
               {kind === "payable"
                 ? <PaymentAdviceButton row={row} settings={orgSettings} company={activeCompany} workspace={workspace} compact />
                 : <ArReminderButton row={row} settings={orgSettings} company={activeCompany} workspace={workspace} compact />}
             </div>
-            {openId === row.id && (
+            {!onViewDocument && openId === row.id && (
               <GoodsLines
                 lines={goodsLinesFor({
                   voucherId: row.voucherId || String(row.id).split(":")[0],

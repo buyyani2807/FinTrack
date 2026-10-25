@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Select } from "../../../components/Select.jsx";
 import { todayIso } from "../../../lib/dates.js";
 import { Field, AccMetric, Modal } from "./AccUi.jsx";
+import { QtyInput } from "./QtyInput.jsx";
 
 export function ManufacturingWorkspace({ items = [], stockMovements = [], onItems, onTransactions, onProductionRun, saving = false }) {
   const rawMaterials = items.filter(item => /raw|material/i.test(`${item.name} ${item.categoryName || ""}`)).length;
@@ -39,9 +40,9 @@ export function ManufacturingWorkspace({ items = [], stockMovements = [], onItem
       <div className="form">
         <Field label="Date"><input type="date" value={run.date} onChange={event => setRun(current => ({ ...current, date: event.target.value }))} /></Field>
         <Field label="Material consumed"><Select value={run.materialId} onChange={event => setRun(current => ({ ...current, materialId: event.target.value }))}><option value="">Select material</option>{products.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</Select></Field>
-        <Field label="Material quantity"><input type="number" min="0" step="0.001" value={run.materialQty} onChange={event => setRun(current => ({ ...current, materialQty: event.target.value }))} /></Field>
+        <Field label="Material quantity"><QtyInput value={run.materialQty} onValue={materialQty => setRun(current => ({ ...current, materialQty }))} /></Field>
         <Field label="Finished goods produced"><Select value={run.outputId} onChange={event => setRun(current => ({ ...current, outputId: event.target.value }))}><option value="">Select output</option>{products.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</Select></Field>
-        <Field label="Output quantity"><input type="number" min="0" step="0.001" value={run.outputQty} onChange={event => setRun(current => ({ ...current, outputQty: event.target.value }))} /></Field>
+        <Field label="Output quantity"><QtyInput value={run.outputQty} onValue={outputQty => setRun(current => ({ ...current, outputQty }))} /></Field>
         <Field className="span" label="Batch note"><input value={run.note} placeholder="e.g. Batch 24 · 100 units" onChange={event => setRun(current => ({ ...current, note: event.target.value }))} /></Field>
       </div>
     </Modal>}

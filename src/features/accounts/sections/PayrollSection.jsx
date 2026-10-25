@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Field, LabeledField } from "../../../components/ui.jsx";
+import { Select } from "../../../components/Select.jsx";
 import { todayIso } from "../../../lib/dates.js";
 import { money, formatOverviewDate } from "../accountsFormat.js";
 import { downloadAccountsCsv } from "../io/accountingExport.js";
@@ -462,9 +463,9 @@ export function PayrollSection({
   };
   const monthMenu = (
     <LabeledField label="Month" className="pay-month">
-      <select value={month} onChange={chooseMonth}>
+      <Select value={month} onChange={chooseMonth}>
         {monthChoices.map(choice => <option key={choice.value} value={choice.value}>{choice.label}</option>)}
-      </select>
+      </Select>
     </LabeledField>
   );
   const blocked = posted || !canWrite || busy;
@@ -516,10 +517,10 @@ export function PayrollSection({
             <input type="date" max={today} value={payDate} disabled={blocked} onChange={event => changePay({ payDate: event.target.value })} />
           </LabeledField>
           <LabeledField label="Paid from">
-            <select value={payAccountId} disabled={blocked} onChange={event => changePay({ payAccountId: event.target.value })}>
+            <Select value={payAccountId} disabled={blocked} onChange={event => changePay({ payAccountId: event.target.value })}>
               {!paidFrom.length && <option value="">Add a cash, bank, or UPI ledger</option>}
               {paidFrom.map(account => <option key={account.id} value={account.id}>{account.name}</option>)}
-            </select>
+            </Select>
           </LabeledField>
           <label className="field pay-search">
             <span>Employees</span>
@@ -591,9 +592,9 @@ export function PayrollSection({
         <p className="copy pay-note">A working day with no mark counts as present. Sunday counts as a weekly off until you change it. Days on leave are changed from Leave.</p>
         <div className="pay-toolbar">
           <LabeledField label="Employee">
-            <select value={attendancePartyId} onChange={event => setPickedEmployee(event.target.value)}>
+            <Select value={attendancePartyId} onChange={event => setPickedEmployee(event.target.value)}>
               {employees.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}
-            </select>
+            </Select>
           </LabeledField>
           {canWrite && !posted && <button type="button" className="btn primary" disabled={busy} onClick={saveAttendance}>Save attendance</button>}
         </div>
@@ -621,10 +622,10 @@ export function PayrollSection({
         <p className="copy pay-note">Paid leave and sick leave stay in the salary. Unpaid leave reduces it. The owner records leave here.</p>
         {canWrite && !posted && <div className="form pay-toolbar">
           <LabeledField label="Employee">
-            <select value={leaveForm.partyId} onChange={event => setLeaveForm(current => ({ ...current, partyId: event.target.value }))}>
+            <Select value={leaveForm.partyId} onChange={event => setLeaveForm(current => ({ ...current, partyId: event.target.value }))}>
               <option value="">Choose</option>
               {employees.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}
-            </select>
+            </Select>
           </LabeledField>
           <LabeledField label="Type">
             <select value={leaveForm.leaveType} onChange={event => setLeaveForm(current => ({ ...current, leaveType: event.target.value }))}>

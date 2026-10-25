@@ -3353,7 +3353,18 @@
 }
 
 .accounts-dashboard .acc-invoice-remind {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
   white-space: nowrap;
+}
+
+.accounts-dashboard .acc-invoice-remind .btn,
+.accounts-dashboard .acc-ledger-table .btn,
+.accounts-dashboard .acc-ledger-card .btn {
+  min-height: 30px;
+  padding: 0 10px;
 }
 
 .accounts-dashboard .acc-invoice-remind .btn.whatsapp {
@@ -3951,7 +3962,13 @@
 }
 
 .accounts-dashboard .acc-modal .acc-item-line-card-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.accounts-dashboard .acc-item-line-card-grid .ft-select,
+.accounts-dashboard .acc-item-lines td .ft-select {
+  width: 100%;
+  min-width: 0;
 }
 
 .accounts-dashboard .acc-item-line-card-top {
@@ -5395,5 +5412,25 @@
   .accounts-dashboard .acc-overview .acc-money-window button {
     min-height: 36px;
     font-size: var(--ft-type-secondary) !important;
+  }
+}
+
+@media print {
+  body.acc-print-doc * {
+    visibility: hidden;
+  }
+
+  body.acc-print-doc .receipt-paper,
+  body.acc-print-doc .receipt-paper * {
+    visibility: visible;
+  }
+
+  body.acc-print-doc .receipt-paper {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: #fff;
+    color: #111;
   }
 }

@@ -25,21 +25,22 @@ export function salesInvoicePdfModel(invoice) {
     if (invoice.sgst) totals.push({ label: "SGST", value: m(invoice.sgst) });
     if (invoice.igst) totals.push({ label: "IGST", value: m(invoice.igst) });
   }
-  totals.push({ label: "Invoice total", value: m(invoice.amount), bold: true });
+  totals.push({ label: invoice.amountLabel || "Invoice total", value: m(invoice.amount), bold: true });
   if (invoice.outstanding != null && invoice.outstanding !== invoice.amount) {
     totals.push({ label: "Balance due", value: m(invoice.outstanding) });
   }
+  const moneyOnly = invoice.kind === "receipt" || invoice.kind === "payment";
   const showQr = invoice.showUpiQr !== false && invoice.upiLink && Number(invoice.payableAmount || 0) > 0;
   return {
     title: invoice.title || "SALES INVOICE",
     meta: [
-      ["Invoice No", invoice.invoiceNumber],
+      [invoice.numberLabel || "Invoice No", invoice.invoiceNumber],
       ["Date", formatReceiptDate(invoice.invoiceDate)],
-      ["Due", formatReceiptDate(invoice.dueDate)],
+      moneyOnly ? null : ["Due", formatReceiptDate(invoice.dueDate)],
       ["Settlement", invoice.settlement || "-"],
-    ],
+    ].filter(Boolean),
     seller: { name: invoice.companyName, lines: sellerLines(invoice), logoDataUrl: invoice.companyLogoUrl },
-    partyHeading: "BILL TO",
+    partyHeading: invoice.partyHeading || "BILL TO",
     party: {
       name: invoice.customerName || "Customer",
       lines: [

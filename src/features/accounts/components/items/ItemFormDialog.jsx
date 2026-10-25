@@ -1,6 +1,7 @@
 import { FilterField as Field } from "../AccUi.jsx";
 import { Select } from "../../../../components/Select.jsx";
 import { ITEM_TYPES, itemCategoryChoices, unitsForItemType } from "../../model/inventoryModel.js";
+import { QtyInput } from "../QtyInput.jsx";
 import { DialogModal } from "../../../../components/ui.jsx";
 import { suggestHsn } from "../../../intelligence/ai/hsnSuggest.js";
 
@@ -35,10 +36,10 @@ export function ItemFormDialog({ form, setShowForm, error, setForm, categories, 
         <Field label="GST %"><input type="number" min="0" max="100" step="0.01" value={form.gstRate} onChange={event => setForm(current => ({ ...current, gstRate: event.target.value }))} /></Field>
         <Field label="HSN / SAC"><input value={form.hsnSac} onChange={event => setForm(current => ({ ...current, hsnSac: event.target.value }))} /></Field>
         {form.itemType === "product" && <>
-          <Field label="Opening stock"><input type="number" min="0" step="0.001" value={form.openingStock} onChange={event => setForm(current => ({ ...current, openingStock: event.target.value }))} /></Field>
+          <Field label="Opening stock"><QtyInput value={form.openingStock} onValue={openingStock => setForm(current => ({ ...current, openingStock }))} /></Field>
           <Field label="Opening date"><input type="date" value={form.openingStockDate} onChange={event => setForm(current => ({ ...current, openingStockDate: event.target.value }))} /></Field>
           <Field label="Opening rate (cost / unit)"><input type="number" min="0" step="0.01" value={form.openingRate ?? ""} placeholder={form.purchasePrice ? `Uses purchase price ${form.purchasePrice}` : "Uses purchase price"} onChange={event => setForm(current => ({ ...current, openingRate: event.target.value }))} /></Field>
-          <Field label="Reorder level"><input type="number" min="0" step="0.001" value={form.reorderLevel} onChange={event => setForm(current => ({ ...current, reorderLevel: event.target.value }))} /></Field>
+          <Field label="Reorder level"><QtyInput value={form.reorderLevel} onValue={reorderLevel => setForm(current => ({ ...current, reorderLevel }))} /></Field>
         </>}
         <Field className="span" label="Description"><input value={form.description} onChange={event => setForm(current => ({ ...current, description: event.target.value }))} /></Field>
       </div>

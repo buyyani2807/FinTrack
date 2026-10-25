@@ -34,20 +34,36 @@ function sendSalesInvoiceOnWhatsApp(invoice) {
   sendInvoiceMessage(invoice);
 }
 
+function printDocument() {
+  document.body.classList.add("acc-print-doc");
+  const cleanup = () => document.body.classList.remove("acc-print-doc");
+  window.addEventListener("afterprint", cleanup, { once: true });
+  window.print();
+  window.setTimeout(cleanup, 1500);
+}
+
+export function VoucherNumberLink({ number, voucherType, onView }) {
+  if (!onView || !number) return number || "—";
+  if (voucherType && !["sales", "purchase", "receipt", "payment"].includes(voucherType)) return number;
+  return <button type="button" className="acc-invoice-ref-btn" onClick={onView}>{number}</button>;
+}
+
 export function SalesInvoiceViewerModal({ invoice, settings = {}, close }) {
   const layerRef = useDialogDismiss(close);
-  const whatsAppAvailable = canWhatsAppShare(invoice?.customerPhone);
+  const salesDocument = !invoice.kind || invoice.kind === "sales_invoice";
+  const whatsAppAvailable = salesDocument && canWhatsAppShare(invoice?.customerPhone);
   const m = invoice.money;
+  const moneyOnly = invoice.kind === "receipt" || invoice.kind === "payment";
 
   return (
     <div className="modal-bg" ref={layerRef}>
-      <div className="modal receipt-view has-corner-close" role="dialog" aria-modal="true" aria-label="Sales invoice">
+      <div className="modal receipt-view has-corner-close" role="dialog" aria-modal="true" aria-label={invoice.title || "Sales invoice"}>
         <span className="modal-corner-close"><CloseButton onClick={close} /></span>
         <ModalScroll>
         <div className="receipt-paper">
           <div className="receipt-header">
             <strong>{invoice.companyName}</strong>
-            <span>SALES INVOICE</span>
+            <span>{invoice.title || "SALES INVOICE"}</span>
           </div>
           {invoice.companyLegalName && <p className="small">Legal name: {invoice.companyLegalName}</p>}
           {invoice.companyAddress && <p className="small">{invoice.companyAddress}</p>}
@@ -56,13 +72,13 @@ export function SalesInvoiceViewerModal({ invoice, settings = {}, close }) {
             <p className="small">{[invoice.companyPhone, invoice.companyEmail].filter(Boolean).join(" · ")}</p>
           )}
           <div className="receipt-meta">
-            <span>Invoice No: {invoice.invoiceNumber}</span>
+            <span>{invoice.numberLabel || "Invoice No"}: {invoice.invoiceNumber}</span>
             <span>{formatReceiptDate(invoice.invoiceDate)}</span>
           </div>
-          <p className="small">Due {formatReceiptDate(invoice.dueDate)} · {invoice.settlement || "Sale"}</p>
+          <p className="small">{moneyOnly ? (invoice.settlement || "") : `Due ${formatReceiptDate(invoice.dueDate)} · ${invoice.settlement || "Sale"}`}</p>
           <hr />
           <section>
-            <strong>BILL TO</strong>
+            <strong>{invoice.partyHeading || "BILL TO"}</strong>
             <p>{invoice.customerName}</p>
             {invoice.customerPhone && <p className="small">Phone: {invoice.customerPhone}</p>}
             {invoice.customerGstin && <p className="small">GSTIN: {invoice.customerGstin}</p>}
@@ -85,7 +101,7 @@ export function SalesInvoiceViewerModal({ invoice, settings = {}, close }) {
               {invoice.sgst ? <p>SGST: {m(invoice.sgst)}</p> : null}
               {invoice.igst ? <p>IGST: {m(invoice.igst)}</p> : null}
             </>}
-            <p>Invoice total: {m(invoice.amount)}</p>
+            <p>{invoice.amountLabel || "Invoice total"}: {m(invoice.amount)}</p>
             {invoice.outstanding != null && invoice.outstanding !== invoice.amount && (
               <p>Outstanding: {m(invoice.outstanding)}</p>
             )}
@@ -99,6 +115,7 @@ export function SalesInvoiceViewerModal({ invoice, settings = {}, close }) {
         </div>
         </ModalScroll>
         <div className="row spacer modal-foot">
+          <button type="button" className="btn" onClick={printDocument}>Print</button>
           <button type="button" className="btn" onClick={() => downloadSalesInvoicePdf(invoice)}>Download PDF</button>
           {whatsAppAvailable && (
             <button

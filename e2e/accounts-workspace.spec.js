@@ -289,6 +289,111 @@ test.describe("Popups", () => {
   });
 });
 
+test.describe("Documents", () => {
+  test("every document form shows an item line, and Add item adds another", async ({ page }) => {
+    await mockAccountsWorkspace(page);
+    const kinds = [
+      ["quotation", "New quotation"],
+      ["sales_order", "New sales order"],
+      ["delivery_challan", "New delivery challan"],
+      ["purchase_order", "New purchase order"],
+      ["goods_receipt", "New goods receipt"],
+    ];
+    for (const [docType, title] of kinds) {
+      await page.goto(`/accounting/documents/${docType}`);
+      await page.getByRole("button", { name: `+ New ${title.slice(4)}` }).click({ timeout: 15_000 });
+      const dialog = page.getByRole("dialog", { name: title });
+      await expect(dialog).toBeVisible();
+      await expect(dialog.locator(".acc-item-line-card")).toHaveCount(1);
+      await expect(dialog.locator(".acc-item-line-card").getByRole("combobox", { name: "Item" })).toBeVisible();
+      await dialog.getByRole("button", { name: "+ Add item" }).click();
+      await expect(dialog.locator(".acc-item-line-card")).toHaveCount(2);
+      await dialog.getByRole("button", { name: "Close" }).click();
+      await expect(dialog).toHaveCount(0);
+    }
+  });
+});
+
+test.describe("Add party", () => {
+  test("the name example is only for customers and suppliers", async ({ page }) => {
+    await mockAccountsWorkspace(page);
+    await page.goto("/accounting");
+    await page.getByRole("button", { name: "New", exact: true }).click({ timeout: 15_000 });
+    await page.getByRole("menuitem", { name: "Party", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Add party" });
+    const name = dialog.getByRole("textbox", { name: "Name" });
+    const opening = () => dialog.getByRole("textbox", { name: "Opening Balance (If Any)" });
+    await expect(name).toHaveAttribute("placeholder", "e.g. Sai Traders");
+    await expect(opening()).toBeVisible();
+    await expect(opening()).toHaveAttribute("placeholder", "They already owe you");
+    for (const type of ["Employee", "Agent", "Other"]) {
+      await dialog.getByRole("combobox", { name: "Party type" }).click();
+      await page.getByRole("option", { name: type, exact: true }).click();
+      await expect(name).toHaveAttribute("placeholder", "");
+      await expect(opening()).toHaveCount(0);
+    }
+    await dialog.getByRole("combobox", { name: "Party type" }).click();
+    await page.getByRole("option", { name: "Supplier", exact: true }).click();
+    await expect(name).toHaveAttribute("placeholder", "e.g. Sai Traders");
+    await expect(opening()).toBeVisible();
+    await expect(opening()).toHaveAttribute("placeholder", "You already owe them");
+  });
+});
+
+test.describe("Dropdowns", () => {
+  test("the state list filters as you type", async ({ page }) => {
+    await mockAccountsWorkspace(page);
+    await page.goto("/accounting");
+    await page.getByRole("button", { name: "New", exact: true }).click({ timeout: 15_000 });
+    await page.getByRole("menuitem", { name: "Party", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Add party" });
+    await dialog.getByRole("combobox", { name: "State" }).click();
+    const search = page.getByRole("textbox", { name: "Search options" });
+    await expect(search).toBeVisible();
+    await search.fill("t");
+    await expect(page.getByRole("option", { name: /Telangana/ })).toBeVisible();
+    await expect(page.getByRole("option", { name: /Tamil Nadu/ })).toBeVisible();
+    await expect(page.getByRole("option", { name: /Uttarakhand/ })).toHaveCount(0);
+    await expect(page.getByRole("option", { name: /Rajasthan/ })).toHaveCount(0);
+    await expect(page.getByRole("option", { name: "Select state" })).toHaveCount(0);
+    await page.getByRole("option", { name: /Telangana/ }).click();
+    await expect(dialog.getByRole("combobox", { name: "State" })).toContainText("Telangana");
+  });
+});
+
+test.describe("Voucher documents", () => {
+  test("sale, purchase and receipt numbers open a document with print", async ({ page }) => {
+    await mockAccountsWorkspace(page);
+    const openNumber = async (number, title) => {
+      await page.getByRole("button", { name: number, exact: true }).first().click();
+      const dialog = page.getByRole("dialog", { name: title });
+      await expect(dialog).toBeVisible();
+      await expect(dialog.getByRole("button", { name: "Print" })).toBeVisible();
+      await expect(dialog.getByRole("button", { name: "Download PDF" })).toBeVisible();
+      await dialog.getByRole("button", { name: "Close", exact: true }).click();
+      await expect(dialog).toHaveCount(0);
+    };
+
+    await page.goto("/accounting/reports/receivables");
+    await expect(page.getByRole("button", { name: "S-1", exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "View", exact: true }).first()).toBeVisible();
+    await openNumber("S-1", "SALES INVOICE");
+
+    await page.goto("/accounting/reports/payables");
+    await expect(page.getByRole("button", { name: "P-1", exact: true })).toBeVisible();
+    await openNumber("P-1", "PURCHASE BILL");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+
+    await page.goto("/accounting/reports/ledger");
+    await page.getByRole("combobox", { name: "Account", exact: true }).click();
+    await page.getByRole("option", { name: "4000 · Sales" }).click();
+    await openNumber("S-1", "SALES INVOICE");
+    await page.getByRole("combobox", { name: "Account", exact: true }).click();
+    await page.getByRole("option", { name: "1000 · Cash" }).click();
+    await openNumber("R-1", "RECEIPT");
+  });
+});
+
 test.describe("Nested routes", () => {
   test("tabs and sub-tabs of every module are URLs", async ({ page }) => {
     await mockAccountsWorkspace(page);

@@ -5,6 +5,7 @@ import { openManualWhatsAppShare } from "../../receipts/io/receiptWhatsApp.js";
 import { REMINDER_LANGUAGES, draftCollectionReminder, reminderSendAllowed } from "../../finance/model/collectionCopilot.js";
 import { money } from "../accountsFormat.js";
 import { AccEmpty } from "./AccUi.jsx";
+import { Select } from "../../../components/Select.jsx";
 import { CaBriefSheet } from "./CaBriefSheet.jsx";
 
 const pct = value => (value == null ? "—" : `${value > 0 ? "+" : ""}${value}%`);
@@ -714,10 +715,10 @@ export function BankPanel({ result, decisions, canWrite, busy, isLocked, onAppro
               : locked ? <div className="air-foot"><span className="air-meta">Period locked</span><SourceLink link={row.source} onOpen={openSource}>Review</SourceLink></div>
               : canWrite ? <div className="air-actions">
                 {decision ? <DecisionBadge decision={decision} /> : null}
-                {row.candidates.length > 0 && canMatch && <select aria-label="Edit suggestion" value={selected} onChange={event => setChoice(current => ({ ...current, [row.id]: event.target.value }))}>
+                {row.candidates.length > 0 && canMatch && <Select aria-label="Edit suggestion" value={selected} onChange={event => setChoice(current => ({ ...current, [row.id]: event.target.value }))}>
                   <option value="">Choose voucher…</option>
                   {row.candidates.map(candidate => <option key={candidate.id} value={candidate.id}>{candidate.label} · {candidate.confidence}%</option>)}
-                </select>}
+                </Select>}
                 {canMatch && <button type="button" className="btn primary" disabled={busy || !selected} onClick={() => onApprove(row, selected, selected !== row.voucherLineId)}>Approve</button>}
                 {row.actionKind === "create_entry" && <button type="button" className="btn primary" disabled={busy} onClick={() => onApprove(row, null, false)}>Approve</button>}
                 {row.actionKind === "create_entry" && <button type="button" className="btn" disabled={busy} onClick={() => onApprove(row, null, true)}>Edit suggestion</button>}

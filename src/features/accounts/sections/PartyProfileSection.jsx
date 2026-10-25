@@ -4,7 +4,8 @@ import { formatReceiptDate } from "../../receipts/model/receiptModel.js";
 import { AccEmpty } from "../components/AccUi.jsx";
 import { InvoiceTable } from "../components/InvoiceTable.jsx";
 import { PartyTypeBadge } from "../components/PartyFields.jsx";
-import { OutstandingWhatsAppButton, PartyStatementButton } from "../components/SalesInvoiceActions.jsx";
+import { OutstandingWhatsAppButton, PartyStatementButton, VoucherNumberLink } from "../components/SalesInvoiceActions.jsx";
+import { canOpenVoucherDocument } from "../model/salesInvoiceModel.js";
 import { VOUCHER_TYPES } from "../model/accountingModel.js";
 import { money, partyTypeLabel } from "../accountsFormat.js";
 
@@ -27,7 +28,7 @@ function HabitRow({ label, value, note }) {
 
 // What is open on one side of the party and how it gets paid: sales to them (with the credit score, owner only)
 // or purchases from them.
-function PartySide({ side, party, both, canAdmin, today, orgSettings, activeCompany, workspace, voucherItemLines, stockMovements, items }) {
+function PartySide({ side, party, both, canAdmin, today, orgSettings, activeCompany, workspace, voucherItemLines, stockMovements, items, onViewDocument }) {
   const isPayable = side.kind === "payable";
   const showScore = !isPayable && canAdmin;
   const agingMax = Math.max(1, ...AGING_BUCKETS.map(bucket => side.aging[bucket.id] || 0));
@@ -93,7 +94,7 @@ function PartySide({ side, party, both, canAdmin, today, orgSettings, activeComp
       <section className="acc-party-profile-block">
         <h3>{isPayable ? "Open purchase bills" : "Open invoices"}</h3>
         {side.open.length
-          ? <InvoiceTable rows={side.open} kind={side.kind} orgSettings={orgSettings} activeCompany={activeCompany} workspace={workspace} voucherItemLines={voucherItemLines} stockMovements={stockMovements} items={items} />
+          ? <InvoiceTable rows={side.open} kind={side.kind} orgSettings={orgSettings} activeCompany={activeCompany} workspace={workspace} voucherItemLines={voucherItemLines} stockMovements={stockMovements} items={items} onViewDocument={onViewDocument} />
           : <p className="copy">Nothing open. Every {isPayable ? "purchase bill" : "invoice"} is settled.</p>}
       </section>
 
@@ -103,7 +104,9 @@ function PartySide({ side, party, both, canAdmin, today, orgSettings, activeComp
           {side.payments.map(row => <li key={`${row.voucherId}-${row.date}`}>
             <Receipt size={15} aria-hidden="true" />
             <span className="acc-party-payments-what">
-              <strong>{row.voucherNumber}</strong>
+              {onViewDocument && canOpenVoucherDocument(row.voucherType)
+                ? <VoucherNumberLink number={row.voucherNumber} voucherType={row.voucherType} onView={() => onViewDocument(row)} />
+                : <strong>{row.voucherNumber}</strong>}
               <span className="small">{formatReceiptDate(row.date)} · {VOUCHER_TYPES[row.voucherType]?.label || row.voucherType}</span>
             </span>
             <strong className="acc-num">{money(row.amount)}</strong>
@@ -132,6 +135,7 @@ export function PartyProfileSection({
   voucherItemLines = [],
   stockMovements = [],
   items = [],
+  onViewDocument,
 }) {
   if (!party || !profile) {
     return <div className="acc-panel">
@@ -140,7 +144,7 @@ export function PartyProfileSection({
   }
   const { primary, both } = profile;
   const isSupplier = profile.kind === "payable";
-  const sideProps = { party, both, canAdmin, today, orgSettings, activeCompany, workspace, voucherItemLines, stockMovements, items };
+  const sideProps = { party, both, canAdmin, today, orgSettings, activeCompany, workspace, voucherItemLines, stockMovements, items, onViewDocument };
 
   return (
     <div className="acc-panel acc-party-profile">

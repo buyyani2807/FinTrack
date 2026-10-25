@@ -62,17 +62,39 @@ const withPayLink = (message, payUrl) => {
   return `${message.trimEnd()}\n\nPay by UPI: ${payUrl}`;
 };
 
+const moneyMoved = (accounts, voucher, side) => {
+  const byId = accountById(accounts);
+  const lines = voucher.lines || [];
+  const hit = type => lines.some(line => byId[line.coaId]?.accountType === type && Number(line[side] || 0) > 0);
+  return { cash: hit("cash"), upi: hit("upi"), bank: hit("bank") };
+};
+
+const settlementFromMovement = ({ cash, upi, bank }, fallback) => {
+  if (cash && upi) return "Cash + UPI";
+  if (upi) return "UPI";
+  if (bank) return "Bank transfer";
+  if (cash) return "Cash";
+  return fallback;
+};
+
 export function salesSettlementLabel(accounts = [], voucher = {}) {
   const byId = accountById(accounts);
   const lines = voucher.lines || [];
   if (lines.some(line => byId[line.coaId]?.accountType === "receivable")) return "Credit";
-  const cash = lines.some(line => byId[line.coaId]?.accountType === "cash" && Number(line.debit || 0) > 0);
-  const upi = lines.some(line => byId[line.coaId]?.accountType === "upi" && Number(line.debit || 0) > 0);
-  const bank = lines.some(line => byId[line.coaId]?.accountType === "bank" && Number(line.debit || 0) > 0);
-  if (cash && upi) return "Cash + UPI";
-  if (upi) return "UPI";
-  if (bank) return "Bank transfer";
-  return "Cash";
+  return settlementFromMovement(moneyMoved(accounts, voucher, "debit"), "Cash");
+}
+
+export function purchaseSettlementLabel(accounts = [], voucher = {}) {
+  const byId = accountById(accounts);
+  const lines = voucher.lines || [];
+  if (lines.some(line => byId[line.coaId]?.accountType === "payable" && Number(line.credit || 0) > 0)) return "Credit";
+  return settlementFromMovement(moneyMoved(accounts, voucher, "credit"), "Cash");
+}
+
+const DOCUMENT_TYPES = new Set(["sales", "purchase", "receipt", "payment"]);
+
+export function canOpenVoucherDocument(voucherType) {
+  return DOCUMENT_TYPES.has(voucherType);
 }
 
 export function buildSalesInvoice({
@@ -151,6 +173,60 @@ export function buildSalesInvoice({
     })),
     ...branding,
     money,
+  };
+}
+
+// Sale, purchase, receipt, and payment vouchers share one document the lists can open.
+export function buildVoucherDocument({ voucher, party = null, accounts = [], company = null, workspace = {}, outstanding = null, itemLines = [] }) {
+  if (!voucher || !canOpenVoucherDocument(voucher.voucherType)) return null;
+  const invoice = buildSalesInvoice({
+    voucher,
+    party,
+    accounts,
+    company,
+    workspace,
+    itemLines,
+    outstanding: voucher.voucherType === "sales" || voucher.voucherType === "purchase" ? outstanding : null,
+  });
+  if (!invoice) return null;
+  if (voucher.voucherType === "sales") {
+    return { ...invoice, partyHeading: "BILL TO", numberLabel: "Invoice No", amountLabel: "Invoice total" };
+  }
+  if (voucher.voucherType === "purchase") {
+    return {
+      ...invoice,
+      title: "PURCHASE BILL",
+      kind: "purchase_bill",
+      partyHeading: "SUPPLIER",
+      numberLabel: "Bill No",
+      amountLabel: "Bill total",
+      customerName: party?.name || "Supplier",
+      settlement: purchaseSettlementLabel(accounts, voucher),
+      receiptTerms: `Issued by ${invoice.companyName}. Please retain this bill for your records.`,
+      upiLink: "",
+      payUrl: "",
+      payableAmount: 0,
+      showUpiQr: false,
+    };
+  }
+  const received = voucher.voucherType === "receipt";
+  return {
+    ...invoice,
+    title: received ? "RECEIPT" : "PAYMENT",
+    kind: received ? "receipt" : "payment",
+    partyHeading: received ? "RECEIVED FROM" : "PAID TO",
+    numberLabel: received ? "Receipt No" : "Payment No",
+    amountLabel: received ? "Amount received" : "Amount paid",
+    customerName: party?.name || (received ? "Customer" : "Supplier"),
+    settlement: received
+      ? settlementFromMovement(moneyMoved(accounts, voucher, "debit"), "Receipt")
+      : purchaseSettlementLabel(accounts, voucher),
+    outstanding: invoice.amount,
+    receiptTerms: `Issued by ${invoice.companyName}. Please retain this ${received ? "receipt" : "payment"} for your records.`,
+    upiLink: "",
+    payUrl: "",
+    payableAmount: 0,
+    showUpiQr: false,
   };
 }
 

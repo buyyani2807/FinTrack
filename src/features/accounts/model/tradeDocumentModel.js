@@ -1,7 +1,7 @@
 import { formatInr } from "../../../lib/formatMoney.js";
 import { formatReceiptDate } from "../../receipts/model/receiptModel.js";
 import { addDaysIso, roundMoney } from "./accountingModel.js";
-import { aggregateItemizedGst, emptyItemLine, normalizeItemLine, validateItemLines } from "./inventoryModel.js";
+import { aggregateItemizedGst, emptyItemLine, normalizeItemLine, validateItemLines, wholeQuantity } from "./inventoryModel.js";
 import { accountsCompanyBranding } from "./salesInvoiceModel.js";
 
 export const DOCUMENT_TYPES = {
@@ -185,7 +185,7 @@ export function conversionLines(doc, summary) {
         itemSku: line.itemSku || "",
         itemType: line.itemType || "product",
         unit: line.unit || "Nos",
-        quantity: String(pending),
+        quantity: wholeQuantity(pending),
         rate: String(line.rate ?? ""),
         rateTouched: true,
         discount: discount ? String(discount) : "",

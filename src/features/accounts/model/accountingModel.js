@@ -419,7 +419,57 @@ export function validatePartyForm(form) {
   if (phone && !/^[\d+\-\s()]{6,20}$/.test(phone)) return "Enter a valid phone number, or leave it blank.";
   const gstinMessage = gstinValidationMessage(form?.gstin);
   if (gstinMessage) return gstinMessage;
+  const opening = String(form?.openingBalance ?? "").trim();
+  if (opening && (form?.partyType === "customer" || form?.partyType === "supplier")) {
+    const amount = Number(opening);
+    if (!Number.isFinite(amount) || amount < 0) return "Opening balance must be zero or more, or leave it blank.";
+  }
   return "";
+}
+
+/** Date for a party opening: books start when that day is open, otherwise today. */
+export function partyOpeningDate({ booksStartedOn = "", locks = [], today = accountingTodayIso() } = {}) {
+  const day = String(today || "").slice(0, 10);
+  const start = String(booksStartedOn || "").slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(start) && start <= day && !dateIsLocked(start, locks)) return start;
+  return day;
+}
+
+/**
+ * Opening a customer debits Accounts Receivable (they owe you).
+ * Opening a supplier credits Accounts Payable (you owe them). Capital takes the other side.
+ */
+export function partyOpeningVoucher({ accounts, partyType, partyId, partyName, amount, date }) {
+  const value = roundMoney(Number(amount || 0));
+  if (!(value > 0)) return null;
+  if (partyType !== "customer" && partyType !== "supplier") return null;
+  if (!partyId) throw new Error("Save the party before posting the opening balance.");
+  const capital = findAccount(accounts, { code: SYSTEM_CODES.capital });
+  const control = findAccount(accounts, { code: partyType === "customer" ? SYSTEM_CODES.receivable : SYSTEM_CODES.payable });
+  if (!capital || !control) throw new Error("Opening balance needs the Capital ledger and the customer or supplier ledger.");
+  const narration = `Opening balance — ${String(partyName || "party").trim() || "party"}`;
+  const controlLine = {
+    coaId: control.id,
+    partyId,
+    debit: partyType === "customer" ? value : 0,
+    credit: partyType === "supplier" ? value : 0,
+    description: narration,
+  };
+  const capitalLine = {
+    coaId: capital.id,
+    debit: partyType === "supplier" ? value : 0,
+    credit: partyType === "customer" ? value : 0,
+    description: narration,
+  };
+  return {
+    voucherType: "journal",
+    date,
+    narration,
+    partyId,
+    sourceModule: "accounts",
+    sourceType: "party_opening",
+    lines: [controlLine, capitalLine],
+  };
 }
 
 export function filterParties(parties = [], { type = "all", search = "" } = {}) {

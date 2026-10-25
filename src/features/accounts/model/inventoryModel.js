@@ -16,8 +16,58 @@ export function usesItemLines(kind, form = {}) {
   return config.returnKind ? form.noteEntryMode === "items" : form.entryMode !== "amount";
 }
 
+// GST unit quantity codes, written the way a bill is read. Nos, Kg, Gram, Litre, Meter,
+// Box, Pack, Bag, Piece, Set, Carton and Quintal stay spelled as already saved items.
+// Hour and Day cover a service sold on the same invoice.
 export const PRODUCT_UNITS = [
-  "Nos", "Kg", "Gram", "Litre", "Meter", "Box", "Pack", "Bag", "Piece", "Set", "Carton", "Quintal", "Hour", "Day",
+  "Bag",
+  "Bale",
+  "Billion units",
+  "Bottle",
+  "Box",
+  "Buckle",
+  "Bunch",
+  "Bundle",
+  "Can",
+  "Carton",
+  "Centimeter",
+  "Cubic centimeter",
+  "Cubic meter",
+  "Day",
+  "Dozen",
+  "Drum",
+  "Gram",
+  "Great gross",
+  "Gross",
+  "Gross yards",
+  "Hour",
+  "Kg",
+  "Kilolitre",
+  "Kilometre",
+  "Litre",
+  "M3",
+  "Meter",
+  "Metric ton",
+  "Millilitre",
+  "Nos",
+  "Others",
+  "Pack",
+  "Pair",
+  "Piece",
+  "Quintal",
+  "Roll",
+  "Set",
+  "Square feet",
+  "Square meter",
+  "Square yard",
+  "Tablet",
+  "Ten gross",
+  "Thousand",
+  "Tonne",
+  "Tube",
+  "Unit",
+  "US gallon",
+  "Yard",
 ];
 
 export const SERVICE_UNITS = ["Nos", "Hour", "Day"];
@@ -26,6 +76,14 @@ export const ITEM_UNITS = [...PRODUCT_UNITS, ...SERVICE_UNITS.filter(unit => !PR
 
 export function unitsForItemType(itemType) {
   return itemType === "service" ? SERVICE_UNITS : PRODUCT_UNITS;
+}
+
+/** Every unit for a sale or purchase line, plus a saved unit that is not in the list. */
+export function unitChoices(current = "") {
+  const units = [...ITEM_UNITS].sort((a, b) => a.localeCompare(b, "en"));
+  const extra = String(current || "").trim();
+  if (extra && !units.includes(extra)) return [extra, ...units];
+  return units;
 }
 
 /** Top-level categories, then each subcategory labelled "Parent / Child". */
@@ -69,6 +127,17 @@ export const emptyItemForm = () => ({
   isActive: true,
 });
 
+/** Item quantities are whole units. A typed decimal is dropped; a pasted 1.5 becomes 1. */
+export function wholeQuantity(value) {
+  const text = String(value ?? "").trim();
+  if (!text) return "";
+  if (/[.,]/.test(text)) {
+    const amount = Number(text.replace(/,/g, ""));
+    if (Number.isFinite(amount) && amount >= 0) return String(Math.trunc(amount));
+  }
+  return text.replace(/\D/g, "");
+}
+
 export const emptyItemLine = () => ({
   itemId: "",
   itemName: "",
@@ -104,17 +173,27 @@ export function validateItemForm(form = {}) {
   if (!ITEM_UNITS.includes(form.unit) && !String(form.unit || "").trim()) return "Unit is required.";
   if (Number(form.sellingPrice || 0) < 0 || Number(form.purchasePrice || 0) < 0) return "Prices cannot be negative.";
   if (Number(form.gstRate || 0) < 0 || Number(form.gstRate || 0) > 100) return "GST rate must be between 0 and 100.";
+  if (form.itemType === "product" && !isWholeQuantity(form.openingStock)) return "Opening stock must be a whole number.";
   if (form.itemType === "product" && Number(form.openingStock || 0) < 0) return "Opening stock cannot be negative.";
+  if (form.itemType === "product" && !isWholeQuantity(form.reorderLevel)) return "Reorder level must be a whole number.";
   if (form.itemType === "product" && String(form.openingRate ?? "").trim() !== "" && !(Number(form.openingRate) >= 0)) {
     return "Opening rate must be zero or more.";
   }
   return "";
 }
 
+const isWholeQuantity = value => {
+  const text = String(value ?? "").trim();
+  return text === "" || /^\d+$/.test(text);
+};
+
 export function normalizeItemLine(line = {}) {
-  const quantity = Number(line.quantity || 0);
+  const quantity = Math.trunc(Math.max(0, Number(line.quantity || 0) || 0));
   const rate = Number(line.rate || 0);
-  const amount = roundMoney(quantity * rate);
+  const computed = roundMoney(quantity * rate);
+  // A scanned bill can print a taxable value a few paise away from quantity × rate.
+  const billed = line.billedAmount == null || line.billedAmount === "" ? null : roundMoney(line.billedAmount);
+  const amount = billed != null && billed > 0 && Math.abs(billed - computed) <= 1 ? billed : computed;
   const discountAmount = line.discountAmount != null && line.discount == null
     ? roundMoney(Number(line.discountAmount || 0))
     : parseLineDiscount(line.discount, amount);
@@ -161,6 +240,7 @@ export function validateItemLines(lines = []) {
   for (let index = 0; index < lines.length; index += 1) {
     const line = normalizeItemLine(lines[index]);
     if (!line.itemId && !line.itemName) return `Choose an item on line ${index + 1}.`;
+    if (!isWholeQuantity(lines[index].quantity)) return `Quantity must be a whole number on line ${index + 1}.`;
     if (!(line.quantity > 0)) return `Quantity must be greater than zero on line ${index + 1}.`;
     if (line.rate < 0) return `Rate cannot be negative on line ${index + 1}.`;
     if (!Number.isFinite(line.discountAmount)) return `Enter the discount as an amount or a percent (e.g. 10%) on line ${index + 1}.`;

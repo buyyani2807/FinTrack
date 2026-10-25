@@ -30,6 +30,8 @@ import {
   ledgerBalances,
   ledgerHasPostedLines,
   partyHasAccountingUse,
+  partyOpeningDate,
+  partyOpeningVoucher,
   paymentLines,
   prepareGstAmount,
   previousIndianFinancialYear,
@@ -392,6 +394,39 @@ test("party search and type filter work together without resetting either", () =
   assert.equal(validatePartyForm({ partyType: "customer", name: "Ravi", email: "ravi@test.com" }), "");
   assert.equal(validatePartyForm({ partyType: "customer", name: "Ravi", gstin: "36AAAAA0000A1Z5" }), "GSTIN checksum is not valid.");
   assert.equal(validatePartyForm({ partyType: "customer", name: "Ravi", gstin: "27AAPFU0939F1ZV" }), "");
+  assert.equal(validatePartyForm({ partyType: "customer", name: "Ravi", openingBalance: "" }), "");
+  assert.match(validatePartyForm({ partyType: "customer", name: "Ravi", openingBalance: "-5" }), /Opening balance/);
+});
+
+test("party opening balance posts against capital", () => {
+  const customer = partyOpeningVoucher({
+    accounts: DEFAULT_CHART_OF_ACCOUNTS,
+    partyType: "customer",
+    partyId: "p1",
+    partyName: "Sai Traders",
+    amount: 1500,
+    date: "2026-04-01",
+  });
+  assert.equal(customer.voucherType, "journal");
+  assert.equal(customer.lines[0].debit, 1500);
+  assert.equal(customer.lines[0].credit, 0);
+  assert.equal(customer.lines[0].partyId, "p1");
+  assert.equal(customer.lines[1].credit, 1500);
+  assert.equal(customer.lines[0].debit + customer.lines[1].debit, customer.lines[0].credit + customer.lines[1].credit);
+  const supplier = partyOpeningVoucher({
+    accounts: DEFAULT_CHART_OF_ACCOUNTS,
+    partyType: "supplier",
+    partyId: "s1",
+    partyName: "Initial Coatings",
+    amount: 800,
+    date: "2026-04-01",
+  });
+  assert.equal(supplier.lines[0].credit, 800);
+  assert.equal(supplier.lines[0].partyId, "s1");
+  assert.equal(supplier.lines[1].debit, 800);
+  assert.equal(partyOpeningVoucher({ accounts: DEFAULT_CHART_OF_ACCOUNTS, partyType: "customer", partyId: "p1", amount: 0, date: "2026-04-01" }), null);
+  assert.equal(partyOpeningDate({ booksStartedOn: "2026-04-01", locks: [], today: "2026-10-24" }), "2026-04-01");
+  assert.equal(partyOpeningDate({ booksStartedOn: "2026-04-01", locks: [{ isLocked: true, periodFrom: "2026-04-01", periodTo: "2026-04-30" }], today: "2026-10-24" }), "2026-10-24");
 });
 
 test("unused ledgers can be deleted and used or system ledgers cannot", () => {

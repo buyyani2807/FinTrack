@@ -6,6 +6,7 @@ import {
   buildArReminderMessage,
   buildSalesInvoice,
   buildSalesInvoiceMessage,
+  buildVoucherDocument,
   salesSettlementLabel,
 } from "../src/features/accounts/model/salesInvoiceModel.js";
 import { invoicePdfShareOnThisDevice, renderSalesInvoicePdf, salesInvoiceDocumentText, salesInvoiceWhatsAppText } from "../src/features/accounts/io/salesInvoicePdf.js";
@@ -199,4 +200,68 @@ test("WhatsApp sale share uses the invoice content, not the greeting template", 
   assert.match(formatted, /\*Invoice total\* \*₹1,168\*/);
   assert.doesNotMatch(formatted, /Please retain this invoice/);
   assert.doesNotMatch(formatted, /^Hi /);
+});
+
+test("purchase bills and receipts open as their own documents", () => {
+  const books = [
+    ...accounts,
+    { id: "ap", code: "2000", name: "Accounts Payable", accountType: "payable", groupType: "liability" },
+    { id: "purchase", code: "5110", name: "Purchase", accountType: "expense", groupType: "expense" },
+  ];
+  const purchase = buildVoucherDocument({
+    voucher: {
+      id: "pur",
+      voucherNumber: "PUR-000008",
+      date: "2026-10-24",
+      voucherType: "purchase",
+      status: "posted",
+      partyId: "s1",
+      lines: [
+        { coaId: "purchase", debit: 168150, credit: 0, code: "5110", name: "Purchase" },
+        { coaId: "ap", debit: 0, credit: 168150, code: "2000", name: "Accounts Payable" },
+      ],
+      gstLines: [],
+    },
+    party: { id: "s1", name: "Initial Coatings" },
+    accounts: books,
+    company: { name: "Buyyani's Enterprises" },
+    outstanding: 50000,
+  });
+  const purchaseText = salesInvoiceDocumentText(purchase);
+  assert.equal(purchase.title, "PURCHASE BILL");
+  assert.equal(purchase.partyHeading, "SUPPLIER");
+  assert.equal(purchase.settlement, "Credit");
+  assert.equal(purchase.upiLink, "");
+  assert.equal(purchase.outstanding, 50000);
+  assert.match(purchaseText, /Bill No: PUR-000008/);
+  assert.match(purchaseText, /SUPPLIER/);
+  assert.match(purchaseText, /Initial Coatings/);
+  assert.match(purchaseText, /Balance due/);
+
+  const receipt = buildVoucherDocument({
+    voucher: {
+      id: "rcp",
+      voucherNumber: "RCT-000003",
+      date: "2026-10-20",
+      voucherType: "receipt",
+      status: "posted",
+      partyId: "c1",
+      lines: [
+        { coaId: "cash", debit: 5000, credit: 0, code: "1000", name: "Cash" },
+        { coaId: "ar", debit: 0, credit: 5000, code: "1100", name: "Accounts Receivable" },
+      ],
+      gstLines: [],
+    },
+    party: { id: "c1", name: "Sai Traders" },
+    accounts: books,
+    company: { name: "Buyyani's Enterprises" },
+  });
+  const receiptText = salesInvoiceDocumentText(receipt);
+  assert.equal(receipt.title, "RECEIPT");
+  assert.equal(receipt.partyHeading, "RECEIVED FROM");
+  assert.equal(receipt.settlement, "Cash");
+  assert.equal(receipt.payableAmount, 0);
+  assert.match(receiptText, /Receipt No: RCT-000003/);
+  assert.doesNotMatch(receiptText, /Balance due/);
+  assert.doesNotMatch(receiptText, /Due:/);
 });

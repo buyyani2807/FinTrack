@@ -28,7 +28,7 @@ export function PartyFormFields({ form, setForm, originalType = "", hasTransacti
         </Select>
       </Field>
       {form.id ? <p className="small acc-party-current-type">Current type: {partyTypeLabel(currentType)}</p> : null}
-      <Field required label="Name"><input value={form.name} placeholder="e.g. Sai Traders" onChange={event => set({ name: event.target.value })} /></Field>
+      <Field required label="Name"><input value={form.name} placeholder={form.partyType === "customer" || form.partyType === "supplier" ? "e.g. Sai Traders" : ""} onChange={event => set({ name: event.target.value })} /></Field>
       <Field label="Phone"><input value={form.phone} placeholder="10-digit mobile" onChange={event => set({ phone: event.target.value })} /></Field>
       <Field label="Email"><input value={form.email} placeholder="optional" onChange={event => set({ email: event.target.value })} /></Field>
       <Field className="span" label="Address"><input value={form.address} placeholder="optional" onChange={event => set({ address: event.target.value })} /></Field>
@@ -47,6 +47,18 @@ export function PartyFormFields({ form, setForm, originalType = "", hasTransacti
           <Field label="Credit limit (₹)"><input className="acc-plain-number" type="text" inputMode="decimal" value={form.creditLimit ?? ""} placeholder="0 = no limit" onChange={event => set({ creditLimit: event.target.value.replace(/[^\d.]/g, "") })} /></Field>
         )}
         <Field label="Credit days"><input type="number" min="0" max="365" step="1" value={form.creditDays ?? ""} placeholder="Default due date" onChange={event => set({ creditDays: event.target.value })} /></Field>
+        {!form.id && (
+          <Field label="Opening Balance (If Any)">
+            <input
+              className="acc-plain-number"
+              type="text"
+              inputMode="decimal"
+              value={form.openingBalance ?? ""}
+              placeholder={form.partyType === "supplier" ? "You already owe them" : "They already owe you"}
+              onChange={event => set({ openingBalance: event.target.value.replace(/[^\d.]/g, "") })}
+            />
+          </Field>
+        )}
       </>}
       {needsConfirm ? <div className="acc-party-type-warn" role="status">
         <p>{PARTY_TYPE_CHANGE_WARNING}</p>

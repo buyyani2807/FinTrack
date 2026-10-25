@@ -1,6 +1,7 @@
 import { Children, Fragment, isValidElement, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown } from "lucide-react";
+import { optionMatchesQuery } from "./selectOptions.js";
 
 // Plain text of option children, for type-ahead and the hidden validity input.
 const textOf = node => {
@@ -28,6 +29,8 @@ const optionsFrom = children => {
 
 const MENU_GAP = 4;
 const MENU_MAX = 320;
+// A short list stays a plain menu. Longer lists get a box you can type into.
+const SEARCH_AT = 8;
 
 // Under the trigger, or above it when the space below is short; never wider than the screen.
 const placeMenu = trigger => {
@@ -47,7 +50,8 @@ const placeMenu = trigger => {
  * Themed replacement for <select>. Takes the same <option> children (or `options`) and calls onChange with an
  * event-like object, so `onChange={event => set(event.target.value)}` keeps working. The trigger is a combobox
  * button (labelled by a wrapping <label> or aria-label); the list opens in a portal under it, or above it when
- * there is no room, and supports arrows, Home/End, Enter, Escape and type-ahead.
+ * there is no room. Lists of eight or more options open with a search box that keeps labels whose name starts
+ * with the typed letters. Shorter lists keep keyboard type-ahead with the same rule.
  * `renderValue(option)` customises the trigger content; `bare` drops the field look and the chevron, for pickers
  * whose trigger is a whole card (avatar, name, their own chevron) styled by `className`.
  */
@@ -66,24 +70,42 @@ export function Select({
   const triggerRef = useRef(null);
   const menuRef = useRef(null);
   const listRef = useRef(null);
+  const [query, setQuery] = useState("");
   const typed = useRef({ text: "", at: 0 });
   const highlightFromPointer = useRef(false);
+  const searchRef = useRef(null);
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
   const listId = useId();
   const optionId = index => `${listId}-o${index}`;
+  const searchable = items.length >= SEARCH_AT;
+  const filtered = items
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => optionMatchesQuery(item.text, query));
 
   const firstEnabled = (from, step) => {
     for (let index = from; index >= 0 && index < items.length; index += step) if (!items[index].disabled) return index;
     return -1;
   };
-  const openMenu = () => {
+  const openMenu = (initialQuery = "") => {
     if (disabled) return;
+    setQuery(initialQuery);
     setActive(selectedIndex >= 0 ? selectedIndex : firstEnabled(0, 1));
     setPosition(placeMenu(triggerRef.current));
     setOpen(true);
   };
   const close = (refocus = true) => {
     setOpen(false);
+    setQuery("");
     if (refocus) triggerRef.current?.focus();
+  };
+  const stepFiltered = (fromIndex, step) => {
+    const pos = filtered.findIndex(row => row.index === fromIndex);
+    const start = pos < 0 ? (step > 0 ? -1 : filtered.length) : pos;
+    for (let index = start + step; index >= 0 && index < filtered.length; index += step) {
+      if (!filtered[index].item.disabled) return filtered[index].index;
+    }
+    return fromIndex;
   };
   const choose = index => {
     const item = items[index];
@@ -143,7 +165,26 @@ export function Select({
     if (!open) return undefined;
     const frame = requestAnimationFrame(syncMore);
     return () => cancelAnimationFrame(frame);
-  }, [open, position, items.length]);
+  }, [open, position, filtered.length]);
+
+  // A long list opens on its search box, so the first letters filter instead of picking an item.
+  useEffect(() => {
+    if (!open || !searchable) return undefined;
+    const frame = requestAnimationFrame(() => searchRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [open, searchable]);
+
+  useEffect(() => {
+    if (!open) return;
+    const list = itemsRef.current;
+    const q = query.trim().toLowerCase();
+    if (!q) {
+      const currentIndex = list.findIndex(item => item.value === String(value ?? ""));
+      setActive(currentIndex >= 0 ? currentIndex : list.findIndex(item => !item.disabled));
+      return;
+    }
+    setActive(list.findIndex(item => !item.disabled && optionMatchesQuery(item.text, q)));
+  }, [open, query, value]);
 
   const scrollMore = event => {
     event.preventDefault();
@@ -158,12 +199,33 @@ export function Select({
 
   const typeAhead = (key, now) => {
     typed.current = { text: (now - typed.current.at > 700 ? "" : typed.current.text) + key.toLowerCase(), at: now };
+    const q = typed.current.text;
+    const matches = items
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => !item.disabled && optionMatchesQuery(item.text, q));
+    if (!matches.length) return;
     const start = open ? active : selectedIndex;
-    const order = items.map((_, index) => (start + 1 + index) % items.length);
-    const match = order.find(index => !items[index].disabled && items[index].text.toLowerCase().startsWith(typed.current.text));
-    if (match === undefined) return;
-    if (open) setActive(match);
-    else choose(match);
+    const ordered = [...matches.filter(row => row.index > start), ...matches.filter(row => row.index <= start)];
+    const preferred = ordered.find(row => row.item.text.toLowerCase().startsWith(q)) || ordered[0];
+    if (open) setActive(preferred.index);
+    else choose(preferred.index);
+  };
+
+  const moveInList = event => {
+    const { key } = event;
+    if (key === "Escape") { event.preventDefault(); event.stopPropagation(); close(); return true; }
+    if (key === "Tab") { setOpen(false); setQuery(""); return true; }
+    if (key === "ArrowDown") { event.preventDefault(); setActive(index => stepFiltered(index, 1)); return true; }
+    if (key === "ArrowUp") { event.preventDefault(); setActive(index => stepFiltered(index, -1)); return true; }
+    if (key === "Home") { event.preventDefault(); setActive(filtered.find(row => !row.item.disabled)?.index ?? -1); return true; }
+    if (key === "End") {
+      event.preventDefault();
+      const last = [...filtered].reverse().find(row => !row.item.disabled);
+      setActive(last?.index ?? -1);
+      return true;
+    }
+    if (key === "Enter") { event.preventDefault(); choose(active); return true; }
+    return false;
   };
 
   const onKeyDown = event => {
@@ -171,17 +233,27 @@ export function Select({
     const { key } = event;
     if (!open) {
       if (["ArrowDown", "ArrowUp", "Enter", " "].includes(key)) { event.preventDefault(); openMenu(); return; }
-      if (key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey) typeAhead(key, event.timeStamp);
+      if (key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        event.preventDefault();
+        if (searchable) openMenu(key);
+        else typeAhead(key, event.timeStamp);
+      }
       return;
     }
-    if (key === "Escape") { event.preventDefault(); event.stopPropagation(); close(); return; }
-    if (key === "Tab") { setOpen(false); return; }
-    if (key === "ArrowDown") { event.preventDefault(); setActive(index => { const next = firstEnabled(index + 1, 1); return next < 0 ? index : next; }); return; }
-    if (key === "ArrowUp") { event.preventDefault(); setActive(index => { const next = firstEnabled(index - 1, -1); return next < 0 ? index : next; }); return; }
-    if (key === "Home") { event.preventDefault(); setActive(firstEnabled(0, 1)); return; }
-    if (key === "End") { event.preventDefault(); setActive(firstEnabled(items.length - 1, -1)); return; }
-    if (key === "Enter" || key === " ") { event.preventDefault(); choose(active); return; }
+    if (searchable && key === "Backspace") { event.preventDefault(); setQuery(current => current.slice(0, -1)); return; }
+    if (searchable && key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey) {
+      event.preventDefault();
+      setQuery(current => current + key);
+      return;
+    }
+    if (moveInList(event)) return;
+    if (key === " ") { event.preventDefault(); choose(active); return; }
     if (key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey) typeAhead(key, event.timeStamp);
+  };
+
+  const onSearchKeyDown = event => {
+    if (moveInList(event)) return;
+    event.stopPropagation();
   };
 
   const shown = renderValue ? renderValue(selected) : (selected ? selected.label : placeholder || "Select…");
@@ -213,19 +285,36 @@ export function Select({
         ref={menuRef}
         className={`ft-select-popover${moreBelow ? " has-more-below" : ""}`}
         style={{ left: position.left, width: position.width, ...(position.top != null ? { top: position.top } : { bottom: position.bottom }) }}
-        onMouseDown={event => event.preventDefault()}
+        onMouseDown={event => { if (event.target instanceof HTMLInputElement) return; event.preventDefault(); }}
         onClick={event => event.stopPropagation()}
       >
+      {searchable && (
+        <div className="ft-select-search">
+          <input
+            ref={searchRef}
+            value={query}
+            placeholder="Type to search"
+            aria-label="Search options"
+            aria-controls={listId}
+            aria-activedescendant={active >= 0 ? optionId(active) : undefined}
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            onChange={event => setQuery(event.target.value)}
+            onKeyDown={onSearchKeyDown}
+          />
+        </div>
+      )}
       <ul
         ref={listRef}
         id={listId}
         role="listbox"
         aria-label={ariaLabel || textOf(shown) || "Options"}
         className={`ft-select-menu${menuClassName ? ` ${menuClassName}` : ""}`}
-        style={{ maxHeight: position.maxHeight }}
+        style={{ maxHeight: Math.max(120, position.maxHeight - (searchable ? 52 : 0)) }}
         onScroll={syncMore}
       >
-        {items.map((item, index) => <li
+        {filtered.map(({ item, index }) => <li
           key={`${item.value}-${index}`}
           id={optionId(index)}
           data-index={index}
@@ -239,7 +328,7 @@ export function Select({
           <span className="ft-select-option-label">{item.label}</span>
           {index === selectedIndex && <Check className="ft-select-check" size={16} aria-hidden="true" />}
         </li>)}
-        {!items.length && <li className="ft-select-empty" role="presentation">No options</li>}
+        {!filtered.length && <li className="ft-select-empty" role="presentation">{items.length ? "No matches" : "No options"}</li>}
       </ul>
       {moreBelow ? <button type="button" className="ft-select-more" aria-label="Show more options" onClick={scrollMore}><ChevronDown size={16} aria-hidden="true" /></button> : null}
       </div>,

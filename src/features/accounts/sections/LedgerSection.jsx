@@ -4,6 +4,8 @@ import { ExportGroup } from "../../../components/ui.jsx";
 import { todayIso } from "../../../lib/dates.js";
 import { downloadAccountsCsv, downloadAccountsExcel, downloadAccountsPdf } from "../io/accountingExport.js";
 import { money } from "../accountsFormat.js";
+import { VoucherNumberLink } from "../components/SalesInvoiceActions.jsx";
+import { canOpenVoucherDocument } from "../model/salesInvoiceModel.js";
 import { ReportRangeBar } from "../components/AccPeriodBars.jsx";
 
 export function LedgerSection({
@@ -18,6 +20,7 @@ export function LedgerSection({
   ledger,
   pagedLedger,
   setListPage,
+  onViewDocument,
 }) {
   const header = ["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"];
   const rows = () => ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance]);
@@ -38,15 +41,20 @@ export function LedgerSection({
           <AccMoreMenu className="acc-show-mobile" label="Export" items={exports.map(item => ({ ...item, label: `Export ${item.label}` }))} />
         </div>
       </div>
-      <div className="table spacer acc-table-wrap acc-ledger-table"><table><thead><tr><th>Date</th><th>Voucher</th><th>Narration</th><th className="acc-num">Debit</th><th className="acc-num">Credit</th><th className="acc-num">Balance</th></tr></thead><tbody>
-        {pagedLedger.items.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.narration}</td><td className="acc-num">{row.debit ? money(row.debit) : ""}</td><td className="acc-num">{row.credit ? money(row.credit) : ""}</td><td className="acc-num">{money(row.balance)}</td></tr>)}
-        {!ledger.rows.length && <tr><td colSpan="6">No postings on this ledger yet. Post a voucher to see movement here.</td></tr>}
+      <div className="table spacer acc-table-wrap acc-ledger-table"><table><thead><tr><th>Date</th><th>Voucher</th><th>Narration</th><th className="acc-num">Debit</th><th className="acc-num">Credit</th><th className="acc-num">Balance</th><th>View</th></tr></thead><tbody>
+        {pagedLedger.items.map((row, index) => {
+          const openDoc = onViewDocument && canOpenVoucherDocument(row.voucherType) ? () => onViewDocument(row) : null;
+          return <tr key={`${row.voucherNumber}-${index}`}><td>{row.date}</td><td><VoucherNumberLink number={row.voucherNumber} voucherType={row.voucherType} onView={openDoc} /></td><td>{row.narration}</td><td className="acc-num">{row.debit ? money(row.debit) : ""}</td><td className="acc-num">{row.credit ? money(row.credit) : ""}</td><td className="acc-num">{money(row.balance)}</td><td>{openDoc ? <button type="button" className="btn" onClick={openDoc}>View</button> : null}</td></tr>;
+        })}
+        {!ledger.rows.length && <tr><td colSpan="7">No postings on this ledger yet. Post a voucher to see movement here.</td></tr>}
       </tbody></table></div>
       <div className="acc-ledger-cards spacer">
-        {pagedLedger.items.map((row, index) => (
+        {pagedLedger.items.map((row, index) => {
+          const openDoc = onViewDocument && canOpenVoucherDocument(row.voucherType) ? () => onViewDocument(row) : null;
+          return (
           <article key={`${row.voucherNumber}-${index}`} className="acc-ledger-card">
             <div className="acc-ledger-card-top">
-              <strong>{row.voucherNumber}</strong>
+              {openDoc ? <VoucherNumberLink number={row.voucherNumber} voucherType={row.voucherType} onView={openDoc} /> : <strong>{row.voucherNumber}</strong>}
               <span className="small">{row.date}</span>
             </div>
             {row.narration ? <p className="small">{row.narration}</p> : null}
@@ -55,8 +63,10 @@ export function LedgerSection({
               {row.credit ? <span>Credit <strong>{money(row.credit)}</strong></span> : null}
               <span>Balance <strong>{money(row.balance)}</strong></span>
             </p>
+            {openDoc ? <button type="button" className="btn" onClick={openDoc}>View</button> : null}
           </article>
-        ))}
+          );
+        })}
         {!ledger.rows.length && <p className="copy">No postings on this ledger yet. Post a voucher to see movement here.</p>}
       </div>
       <AccPager page={pagedLedger.page} pages={pagedLedger.pages} total={pagedLedger.total} onPage={setListPage} noun="postings" />

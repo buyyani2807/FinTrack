@@ -9,6 +9,8 @@ import { canWhatsAppShare, openManualWhatsAppShare } from "../../receipts/io/rec
 import { todayIso } from "../../cashbook/cashbookModel.js";
 import { gstStateFromGstin, isIntraGst } from "../model/accountingGst.js";
 import { emptyItemLine, normalizeItemLine } from "../model/inventoryModel.js";
+import { QtyInput } from "./QtyInput.jsx";
+import { UnitSelect } from "./UnitSelect.jsx";
 import {
   DOCUMENT_NEXT,
   DOCUMENT_TYPES,
@@ -182,7 +184,7 @@ function DocumentForm({ form, setForm, parties, items, stockByItem, gstCompany, 
 
       <section className="acc-form-section acc-item-lines">
         <h3 className="acc-form-section-title">Items</h3>
-        <div className="table acc-table-wrap"><table><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Discount</th>{gstEnabled && <th>GST%</th>}<th className="acc-num">Amount</th><th></th></tr></thead><tbody>
+        <div className="table acc-table-wrap"><table><thead><tr><th>Item</th><th>Qty</th><th>Unit</th><th>Rate</th><th>Discount</th>{gstEnabled && <th>GST%</th>}<th className="acc-num">Amount</th><th></th></tr></thead><tbody>
           {form.lines.map((line, index) => {
             const lineTotals = normalizeItemLine(line);
             const stock = line.itemId ? stockByItem[line.itemId] : null;
@@ -204,7 +206,8 @@ function DocumentForm({ form, setForm, parties, items, stockByItem, gstCompany, 
                     {stock != null ? `${pending != null ? " · " : ""}Stock ${qty(stock, line.unit)}` : ""}
                   </div>
                 </td>
-                <td><input type="number" min="0" step="0.001" value={line.quantity} onChange={event => patchLine(index, { quantity: event.target.value })} /></td>
+                <td><QtyInput aria-label="Quantity" value={line.quantity} onValue={quantity => patchLine(index, { quantity })} /></td>
+                <td><UnitSelect value={line.unit} onValue={unit => patchLine(index, { unit })} /></td>
                 <td><input type="number" min="0" step="0.01" value={line.rate} onChange={event => patchLine(index, { rate: event.target.value, rateTouched: true })} /></td>
                 <td><input inputMode="decimal" value={line.discount || ""} placeholder="₹ or %" aria-label="Discount (amount or percent)" onChange={event => patchLine(index, { discount: event.target.value })} /></td>
                 {gstEnabled && <td><input type="number" min="0" max="100" step="0.01" value={line.gstRate} onChange={event => patchLine(index, { gstRate: event.target.value })} /></td>}
@@ -214,7 +217,66 @@ function DocumentForm({ form, setForm, parties, items, stockByItem, gstCompany, 
             );
           })}
         </tbody></table></div>
-        {!source && <button type="button" className="btn" onClick={() => set({ lines: [...form.lines, emptyItemLine()] })}>+ Add item</button>}
+        <div className="acc-item-line-cards">
+          {form.lines.map((line, index) => {
+            const lineTotals = normalizeItemLine(line);
+            const stock = line.itemId ? stockByItem[line.itemId] : null;
+            const pending = line.sourceLineId ? sourcePending.get(line.sourceLineId) : null;
+            const lineName = line.itemName || activeItems.find(item => item.id === line.itemId)?.name || "Select item";
+            return (
+              <article key={index} className="acc-item-line-card">
+                <div className="acc-item-line-card-top">
+                  <strong>{lineName}</strong>
+                  <span className="acc-item-line-amount">{money(lineTotals.netAmount)}</span>
+                </div>
+                {line.sourceLineId
+                  ? <p className="small">{line.itemName}</p>
+                  : (
+                    <label className="accounts-filter-field">
+                      <span className="small">Item</span>
+                      <Select value={line.itemId || ""} onChange={event => selectItem(index, event.target.value)}>
+                        <option value="">Select item</option>
+                        {activeItems.map(item => <option key={item.id} value={item.id}>{item.name} · {item.sku}</option>)}
+                      </Select>
+                    </label>
+                  )}
+                {!line.itemId && !line.sourceLineId && config.stock === 0 && (
+                  <label className="accounts-filter-field">
+                    <span className="small">Description</span>
+                    <input value={line.itemName || ""} placeholder="or type a description" onChange={event => patchLine(index, { itemName: event.target.value, itemType: "service" })} />
+                  </label>
+                )}
+                {(pending != null || stock != null) && (
+                  <p className="small">
+                    {pending != null ? `Pending ${qty(pending, line.unit)}` : ""}
+                    {stock != null ? `${pending != null ? " · " : ""}Stock ${qty(stock, line.unit)}` : ""}
+                  </p>
+                )}
+                <div className="acc-item-line-card-grid">
+                  <label className="accounts-filter-field"><span className="small">Qty</span>
+                    <QtyInput value={line.quantity} onValue={quantity => patchLine(index, { quantity })} />
+                  </label>
+                  <label className="accounts-filter-field"><span className="small">Unit</span>
+                    <UnitSelect value={line.unit} onValue={unit => patchLine(index, { unit })} />
+                  </label>
+                  <label className="accounts-filter-field"><span className="small">Rate</span>
+                    <input type="number" min="0" step="0.01" value={line.rate} onChange={event => patchLine(index, { rate: event.target.value, rateTouched: true })} />
+                  </label>
+                  <label className="accounts-filter-field"><span className="small">Discount</span>
+                    <input inputMode="decimal" value={line.discount || ""} placeholder="₹ or %" aria-label="Discount (amount or percent)" onChange={event => patchLine(index, { discount: event.target.value })} />
+                  </label>
+                  {gstEnabled && (
+                    <label className="accounts-filter-field"><span className="small">GST %</span>
+                      <input type="number" min="0" max="100" step="0.01" value={line.gstRate} onChange={event => patchLine(index, { gstRate: event.target.value })} />
+                    </label>
+                  )}
+                </div>
+                {form.lines.length > 1 && <button type="button" className="btn danger" onClick={() => set({ lines: form.lines.filter((_, i) => i !== index) })}>Remove</button>}
+              </article>
+            );
+          })}
+        </div>
+        {!source && <button type="button" className="btn" onClick={() => setForm(current => ({ ...current, lines: [...(current.lines || []), emptyItemLine()] }))}>+ Add item</button>}
         <p className="small acc-gst-preview">
           Subtotal {money(totals.taxable)}
           {gstEnabled && totals.tax > 0 ? (totals.igst > 0 ? ` · IGST ${money(totals.igst)}` : ` · CGST ${money(totals.cgst)} · SGST ${money(totals.sgst)}`) : ""}

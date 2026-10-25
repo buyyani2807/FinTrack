@@ -57,6 +57,7 @@ export function accountLedger(accounts, vouchers, coaId, { from, to } = {}) {
       closing = running;
       rows.push({
         date: voucher.date,
+        voucherId: voucher.id,
         voucherNumber: voucher.voucherNumber,
         voucherType: voucher.voucherType,
         narration: line.description || voucher.narration,

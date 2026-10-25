@@ -1,7 +1,7 @@
 import { addDaysIso, isPosted, roundMoney } from "./accountingModel.js";
 import { gstStateFromGstin, isIntraGst } from "./accountingGst.js";
 import { suggestExpense } from "./bookSuggestions.js";
-import { emptyItemLine } from "./inventoryModel.js";
+import { aggregateItemizedGst, emptyItemLine, ITEM_UNITS, wholeQuantity } from "./inventoryModel.js";
 
 const GST_RATES = [0, 0.25, 3, 5, 12, 18, 28, 40];
 
@@ -52,13 +52,134 @@ function normalizeLine(raw) {
     rate = roundMoney(amount / quantity);
   }
   if (!Number.isFinite(rate) || rate < 0) rate = 0;
+  const printed = Number(source.amount ?? source.lineAmount ?? source.taxableAmount);
   return {
     name,
     quantity,
     rate: roundMoney(rate),
+    printedAmount: Number.isFinite(printed) && printed > 0 ? roundMoney(printed) : null,
+    unit: clip(source.unit || source.uom, 40),
     gstRate: snapGst(source.gstRate ?? source.gst_rate ?? source.gst),
     hsn: clip(source.hsn || source.hsnSac, 12),
   };
+}
+
+const UNIT_ALIASES = {
+  m3: "M3",
+  cbm: "M3",
+  cum: "M3",
+  "cubic meter": "M3",
+  "cubic metre": "M3",
+  "cubic meters": "M3",
+  "cubic metres": "M3",
+  nos: "Nos",
+  no: "Nos",
+  number: "Nos",
+  numbers: "Nos",
+  pcs: "Piece",
+  pc: "Piece",
+  piece: "Piece",
+  pieces: "Piece",
+  kgs: "Kg",
+  kg: "Kg",
+  kilogram: "Kg",
+  kilograms: "Kg",
+  ltr: "Litre",
+  ltrs: "Litre",
+  litre: "Litre",
+  liter: "Litre",
+  mtr: "Meter",
+  meter: "Meter",
+  metre: "Meter",
+  sqm: "Square meter",
+  "sq m": "Square meter",
+  qtl: "Quintal",
+  ton: "Tonne",
+  mt: "Metric ton",
+  mts: "Metric ton",
+};
+
+/** Printed UOM, matched to a unit the purchase line can store. */
+export function unitFromBill(value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  const direct = ITEM_UNITS.find(unit => unit.toLowerCase() === text.toLowerCase());
+  if (direct) return direct;
+  const key = text.toLowerCase().replace(/[._]+/g, " ").replace(/\s+/g, " ").trim();
+  return UNIT_ALIASES[key] || UNIT_ALIASES[key.replace(/\s/g, "")] || "";
+}
+
+const ROUNDING_LIMIT = 1;
+
+function lineGross(line) {
+  return roundMoney(Number(line.quantity) * Number(line.rate));
+}
+
+function billIsIntra(bill) {
+  const igst = Number(bill?.igst || 0);
+  const local = Number(bill?.cgst || 0) + Number(bill?.sgst || 0);
+  return !(igst > 0 && local === 0);
+}
+
+function taxesMatch(preview, bill) {
+  const same = (printed, actual) => printed == null || roundMoney(printed) === roundMoney(actual);
+  return same(bill.cgst, preview.cgst) && same(bill.sgst, preview.sgst) && same(bill.igst, preview.igst);
+}
+
+/**
+ * Keep a scanned line on the printed taxable value when it is within ₹1 of quantity × rate.
+ * That is the usual paise gap between a rate column and the bill total.
+ */
+export function applyPrintedBillRounding(itemLines, bill) {
+  const source = bill && typeof bill === "object" ? bill : {};
+  const intra = billIsIntra(source);
+  let lines = (itemLines || []).map(line => {
+    const computed = lineGross(line);
+    const printed = line.printedAmount == null || line.printedAmount === "" ? null : roundMoney(line.printedAmount);
+    const rest = { ...line };
+    delete rest.printedAmount;
+    if (printed == null || !(printed > 0) || printed === computed || Math.abs(printed - computed) > ROUNDING_LIMIT) return rest;
+    return { ...rest, billedAmount: printed };
+  });
+  if (!lines.length) return lines;
+
+  const previewOf = rows => aggregateItemizedGst(rows, { intra });
+  const printedTotal = source.total == null ? null : roundMoney(source.total);
+  const printedTaxable = source.taxable == null ? null : roundMoney(source.taxable);
+  const current = previewOf(lines);
+  const totalGap = printedTotal == null ? 0 : roundMoney(printedTotal - current.total);
+  const taxableGap = printedTaxable == null ? 0 : roundMoney(printedTaxable - current.taxable);
+  if (totalGap === 0 && taxableGap === 0) return lines;
+  const trustTotal = printedTotal != null && Math.abs(totalGap) <= ROUNDING_LIMIT;
+  const trustTaxable = printedTaxable != null && Math.abs(taxableGap) <= ROUNDING_LIMIT;
+  if (!trustTotal && !trustTaxable) return lines;
+
+  const headerAgrees = printedTaxable != null && printedTotal != null
+    && roundMoney(printedTaxable + Number(source.cgst || 0) + Number(source.sgst || 0) + Number(source.igst || 0)) === printedTotal;
+  const index = lines.length - 1;
+  const base = roundMoney(lines[index].billedAmount ?? lineGross(lines[index]));
+  let best = null;
+  for (let paise = -100; paise <= 100; paise += 1) {
+    const candidate = roundMoney(base + paise / 100);
+    if (!(candidate > 0)) continue;
+    const trial = lines.map((line, lineIndex) => lineIndex === index ? { ...line, billedAmount: candidate } : line);
+    const preview = previewOf(trial);
+    if (trustTotal && roundMoney(preview.total) !== printedTotal) continue;
+    if (!trustTotal && roundMoney(preview.taxable) !== printedTaxable) continue;
+    if (headerAgrees && roundMoney(preview.taxable) !== printedTaxable) continue;
+    if (!taxesMatch(preview, source)) continue;
+    const moved = Math.abs(paise);
+    if (!best || moved < best.moved) best = { trial, moved };
+    if (moved === 0) break;
+  }
+  if (!best || best.moved === 0) return lines;
+  return best.trial.map(line => {
+    if (line.billedAmount == null || roundMoney(line.billedAmount) === lineGross(line)) {
+      const { billedAmount, ...rest } = line;
+      return rest;
+    }
+    return line;
+  });
 }
 
 export function normalizeBillScan(raw) {
@@ -145,8 +266,9 @@ function itemLineFromBill(line, items) {
     itemName: item?.name || line.name,
     itemSku: item?.sku || "",
     itemType: item?.itemType || "product",
-    unit: item?.unit || "Nos",
-    quantity: String(line.quantity),
+    unit: item?.unit || unitFromBill(line.unit) || "Nos",
+    quantity: wholeQuantity(line.quantity),
+    ...(line.printedAmount != null ? { printedAmount: line.printedAmount } : {}),
     rate: line.rate ? String(line.rate) : "",
     gstRate: item?.gstRate != null && item.gstRate !== "" ? String(item.gstRate) : line.gstRate,
     hsnSac: item?.hsnSac || line.hsn,
@@ -165,10 +287,17 @@ export function purchaseFormFromBill(scan, { parties = [], items = [], form = {}
     date = today;
     warnings.push("The bill date is after today, so the draft uses today.");
   }
-  const itemLines = bill.lines.map(line => itemLineFromBill(line, items));
+  const readLines = bill.lines.map(line => itemLineFromBill(line, items));
+  const before = readLines.length ? aggregateItemizedGst(readLines, { intra: billIsIntra(bill) }) : null;
+  const itemLines = applyPrintedBillRounding(readLines, bill);
+  const after = itemLines.length ? aggregateItemizedGst(itemLines, { intra: billIsIntra(bill) }) : null;
   const unmatched = itemLines.filter(line => !line.itemId).map(line => line.itemName);
   if (!itemLines.length) warnings.push("No item lines could be read. Add them before saving.");
   else if (unmatched.length) warnings.push(`Select a catalogue item for ${unmatched.join(", ")}.`);
+  if (before && after && (before.total !== after.total || before.taxable !== after.taxable)) {
+    const printed = bill.total != null ? roundMoney(bill.total) : after.total;
+    warnings.push(`Printed bill total is ${printed.toFixed(2)}. Quantity times rate comes to ${before.total.toFixed(2)}, so the draft uses the printed total.`);
+  }
   const narration = [
     bill.billNumber ? `Bill ${bill.billNumber}` : "",
     !party && bill.supplierName ? bill.supplierName : "",

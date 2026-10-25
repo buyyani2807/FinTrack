@@ -10,6 +10,7 @@ import { BalanceSheetReport } from "./reports/BalanceSheetReport.jsx";
 import { DayBookReport } from "./reports/DayBookReport.jsx";
 import { GstReport } from "./reports/GstReport.jsx";
 import { LedgerReport } from "./reports/LedgerReport.jsx";
+import { VoucherNumberLink } from "../components/SalesInvoiceActions.jsx";
 
 export function ReportsSection({
   fy,
@@ -34,6 +35,7 @@ export function ReportsSection({
   pagedApInvoices,
   salesRows,
   purchaseRows,
+  onViewDocument,
   vouchers,
   parties,
   range,
@@ -71,18 +73,18 @@ export function ReportsSection({
         <p className="small">Internal cash/bank/UPI transfers ({money(flow.transfers || 0)}) are excluded from inflow and outflow. Closing cash still follows the ledgers.</p>
       </>}
       {section === "reports" && reportTab === "receivables" && <>
-        <InvoiceTable rows={pagedArInvoices.items} kind="receivable" orgSettings={orgSettings} activeCompany={activeCompany} workspace={workspace} voucherItemLines={voucherItemLines} stockMovements={stockMovements} items={items} />
+        <InvoiceTable rows={pagedArInvoices.items} kind="receivable" orgSettings={orgSettings} activeCompany={activeCompany} workspace={workspace} voucherItemLines={voucherItemLines} stockMovements={stockMovements} items={items} onViewDocument={onViewDocument} />
         <AccPager page={pagedArInvoices.page} pages={pagedArInvoices.pages} total={pagedArInvoices.total} onPage={setListPage} noun="invoices" />
       </>}
       {section === "reports" && reportTab === "payables" && <>
-        <InvoiceTable rows={pagedApInvoices.items} kind="payable" orgSettings={orgSettings} activeCompany={activeCompany} workspace={workspace} voucherItemLines={voucherItemLines} stockMovements={stockMovements} items={items} />
+        <InvoiceTable rows={pagedApInvoices.items} kind="payable" orgSettings={orgSettings} activeCompany={activeCompany} workspace={workspace} voucherItemLines={voucherItemLines} stockMovements={stockMovements} items={items} onViewDocument={onViewDocument} />
         <AccPager page={pagedApInvoices.page} pages={pagedApInvoices.pages} total={pagedApInvoices.total} onPage={setListPage} noun="invoices" />
       </>}
-      {section === "reports" && reportTab === "sales" && <AccTable columns={["Date", "Number", "Narration", { label: "Amount", num: true }]} empty={!salesRows.length && "No sales vouchers in this period."}>
-        {salesRows.map(row => <tr key={row.id}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.narration}</td><td className="acc-num">{money(row.debit)}</td></tr>)}
+      {section === "reports" && reportTab === "sales" && <AccTable columns={["Date", "Number", "Narration", { label: "Amount", num: true }, "View"]} empty={!salesRows.length && "No sales vouchers in this period."}>
+        {salesRows.map(row => <tr key={row.id}><td>{row.date}</td><td><VoucherNumberLink number={row.voucherNumber} voucherType="sales" onView={onViewDocument ? () => onViewDocument(row) : null} /></td><td>{row.narration}</td><td className="acc-num">{money(row.debit)}</td><td>{onViewDocument ? <button type="button" className="btn" onClick={() => onViewDocument(row)}>View</button> : null}</td></tr>)}
       </AccTable>}
-      {section === "reports" && reportTab === "purchases" && <AccTable columns={["Date", "Number", "Narration", { label: "Amount", num: true }]} empty={!purchaseRows.length && "No purchase vouchers in this period."}>
-        {purchaseRows.map(row => <tr key={row.id}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.narration}</td><td className="acc-num">{money(row.debit)}</td></tr>)}
+      {section === "reports" && reportTab === "purchases" && <AccTable columns={["Date", "Number", "Narration", { label: "Amount", num: true }, "View"]} empty={!purchaseRows.length && "No purchase vouchers in this period."}>
+        {purchaseRows.map(row => <tr key={row.id}><td>{row.date}</td><td><VoucherNumberLink number={row.voucherNumber} voucherType="purchase" onView={onViewDocument ? () => onViewDocument(row) : null} /></td><td>{row.narration}</td><td className="acc-num">{money(row.debit)}</td><td>{onViewDocument ? <button type="button" className="btn" onClick={() => onViewDocument(row)}>View</button> : null}</td></tr>)}
       </AccTable>}
       {section === "reports" && reportTab === "gst" && <GstReport
         vouchers={vouchers}
@@ -108,6 +110,7 @@ export function ReportsSection({
         setLedgerId={setLedgerId}
         visibleAccounts={visibleAccounts}
         ledger={ledger}
+        onViewDocument={onViewDocument}
       />}
       {section === "reports" && reportTab === "item_sales" && (
         <AccTable columns={["Item", "SKU", { label: "Qty sold", num: true }, { label: "Sales amount", num: true }]} empty={!itemSalesRows.length && "No itemized sales in this period. Use Line items on a Sale entry."}>
