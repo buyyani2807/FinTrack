@@ -380,18 +380,25 @@ function DocumentViewer({ doc, view, settings, onClose, onEdit, actions }) {
           </dl>
         </footer>
       </article>
-      <div className="row spacer acc-doc-viewer-actions">
-        <Field label="PDF size">
-          <Select value={template} onChange={event => setTemplate(event.target.value)}>
+      <div className="acc-doc-viewer-actions">
+        <label className="acc-doc-pdf-size">
+          <span>PDF size</span>
+          <Select value={template} aria-label="PDF size" onChange={event => setTemplate(event.target.value)}>
             {Object.values(PDF_TEMPLATES).map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
           </Select>
-        </Field>
+        </label>
         <button type="button" className="btn" onClick={() => downloadTradeDocumentPdf(view, { template })}>Download PDF</button>
-        {canShare
-          ? <button type="button" className="btn whatsapp" onClick={() => openManualWhatsAppShare({ phone: view.partyPhone, message: buildTradeDocumentMessage(view) })}>WhatsApp</button>
-          : <span className="small muted">Add party phone for WhatsApp</span>}
-        {onEdit && <button type="button" className="btn" onClick={onEdit}>Edit</button>}
-        <AccMoreMenu label="Actions" items={actions} />
+        <button
+          type="button"
+          className={canShare ? "btn whatsapp" : "btn"}
+          disabled={!canShare}
+          title={canShare ? "Share on WhatsApp" : "Add a party phone to share on WhatsApp"}
+          onClick={() => canShare && openManualWhatsAppShare({ phone: view.partyPhone, message: buildTradeDocumentMessage(view) })}
+        >WhatsApp</button>
+        <button type="button" className="btn" disabled={!onEdit} onClick={onEdit || undefined}>Edit</button>
+        {actions.length
+          ? <AccMoreMenu label="Actions" items={actions} />
+          : <button type="button" className="btn" disabled>Actions</button>}
         <button type="button" className="btn primary" onClick={onClose}>Close</button>
       </div>
     </Modal>

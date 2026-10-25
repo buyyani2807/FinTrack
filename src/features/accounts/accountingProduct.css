@@ -795,12 +795,48 @@
 }
 
 .accounts-dashboard .acc-doc-logo-row,
-.accounts-dashboard .acc-doc-qr-preview,
-.accounts-dashboard .acc-doc-viewer-actions {
+.accounts-dashboard .acc-doc-qr-preview {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 12px;
+}
+
+.accounts-dashboard .acc-doc-viewer-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.accounts-dashboard .acc-doc-pdf-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  margin: 0;
+}
+
+.accounts-dashboard .acc-doc-pdf-size > span {
+  color: var(--ft-text-2);
+  font-size: var(--ft-type-caption);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.accounts-dashboard .acc-doc-pdf-size .ft-select {
+  width: 96px;
+  min-height: 40px;
+}
+
+.accounts-dashboard .acc-doc-viewer-actions > .btn,
+.accounts-dashboard .acc-doc-viewer-actions .acc-more,
+.accounts-dashboard .acc-doc-viewer-actions .acc-more-trigger {
+  flex: none;
+  min-height: 40px;
 }
 
 .accounts-dashboard .acc-doc-qr-preview .acc-qr {
