@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 // directly (no state), and the arrows line up with the row whatever margins it has.
 export function TabScroller({ children, className = "" }) {
   const ref = useRef(null);
+  const activeRef = useRef(null);
   useEffect(() => {
     const wrap = ref.current;
     const row = wrap?.querySelector(":scope > :not(.tab-scroller-arrow)");
@@ -16,6 +17,12 @@ export function TabScroller({ children, className = "" }) {
       wrap.classList.toggle("has-end", max > 1 && row.scrollLeft < max - 2);
       wrap.style.setProperty("--tab-scroller-top", `${row.offsetTop}px`);
       wrap.style.setProperty("--tab-scroller-h", `${row.offsetHeight}px`);
+      const active = row.querySelector(".active, [aria-current='page'], [aria-selected='true']");
+      if (active && active !== activeRef.current) {
+        activeRef.current = active;
+        const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        row.scrollTo({ left: Math.max(0, active.offsetLeft - (row.clientWidth - active.offsetWidth) / 2), behavior: calm ? "auto" : "smooth" });
+      }
     };
     update();
     row.addEventListener("scroll", update, { passive: true });

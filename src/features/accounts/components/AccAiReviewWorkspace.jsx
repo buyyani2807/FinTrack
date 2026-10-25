@@ -240,10 +240,6 @@ export function AccAiReviewWorkspace({
     <div className="acc-panel ai-review air">
       <header className="air-head">
         <p className="air-lede">Advisory insights from this company's saved books. Nothing here changes your records unless you approve it.</p>
-        <details className="air-how">
-          <summary>How this works</summary>
-          <p>Verified figures come from posted records; predictions are labelled and are not guaranteed. Nothing on this page posts, matches, or changes records unless you approve it.</p>
-        </details>
       </header>
       {!auditAvailable && <div className="notice">{AI_AUDIT_MIGRATION_MESSAGE} Insights still work; decisions are not saved until then.</div>}
       {auditError && auditAvailable && <div className="notice">{auditError}</div>}

@@ -2034,16 +2034,34 @@
   padding: 16px;
 }
 
-.accounts-dashboard .acc-empty {
+.accounts-dashboard .card.acc-empty {
   display: grid;
   gap: 8px;
-  justify-items: start;
-  padding: 28px 22px;
+  justify-items: center;
+  max-width: 440px;
+  margin: 16px auto;
+  padding: 36px 24px;
+  border: 1px dashed var(--ft-border) !important;
+  border-radius: var(--ft-radius-lg) !important;
+  background: var(--ft-surface) !important;
+  box-shadow: none !important;
+  text-align: center;
+}
+
+.accounts-dashboard .acc-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 4px;
+  border-radius: 50%;
+  background: var(--ft-surface-muted);
+  color: var(--ft-muted);
 }
 
 .accounts-dashboard .acc-empty strong {
-  color: var(--acc-text);
-  font: 700 var(--ft-type-body) Syne, sans-serif;
+  color: var(--ft-text);
+  font: 700 var(--ft-type-card)/var(--ft-leading-tight) var(--ft-font);
 }
 
 .accounts-dashboard .accounts-action-row {
@@ -3752,22 +3770,12 @@
   box-shadow: 0 0 0 3px #e8b84a22;
 }
 
-.accounts-dashboard .acc-empty {
-  text-align: center;
-  padding: 28px 20px;
-  max-width: 420px;
-  margin: 16px auto;
-}
-
-.accounts-dashboard .acc-empty strong {
-  display: block;
-  font: 700 var(--ft-type-card) Syne, sans-serif;
-  margin-bottom: 8px;
-}
-
 .accounts-dashboard .acc-empty .copy {
-  color: var(--acc-muted);
-  margin: 0 0 16px;
+  max-width: 360px;
+  margin: 0 0 8px;
+  color: var(--ft-text-2);
+  font-size: var(--ft-type-secondary);
+  line-height: var(--ft-leading-body);
 }
 
 .accounts-dashboard .acc-toast,

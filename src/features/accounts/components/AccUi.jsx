@@ -1,5 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
-import { Activity, ArrowLeftRight, CalendarRange, ChevronDown, CreditCard, FileUp, History, Landmark, ListTree, Lock, Package, Percent, Repeat, ShieldCheck, Sparkles, UserCog, Users } from "lucide-react";
+import { Activity, ArrowLeftRight, CalendarRange, ChevronDown, CreditCard, FileUp, History, Inbox, Landmark, ListTree, Lock, Package, Percent, Repeat, ShieldCheck, Sparkles, UserCog, Users } from "lucide-react";
 import { LIST_PAGE_SIZE } from "../model/accountsList.js";
 import { CloseButton, LabeledField, ModalScroll } from "../../../components/ui.jsx";
 import { useDialogDismiss } from "../../../components/useDialogDismiss.js";
@@ -254,8 +254,9 @@ export const AccMetric = ({ label, value, tone = "", onClick, hint = "" }) => (
     {hint ? <div className="metric-hint">{hint}</div> : null}
   </article>
 );
-export const AccEmpty = ({ title, copy, actionLabel, onAction }) => (
+export const AccEmpty = ({ title, copy, actionLabel, onAction, icon: Icon = Inbox }) => (
   <div className="card acc-empty">
+    <span className="acc-empty-icon" aria-hidden="true"><Icon size={22} /></span>
     <strong>{title}</strong>
     <p className="copy">{copy}</p>
     {actionLabel && onAction && <button type="button" className="btn primary" onClick={onAction}>{actionLabel}</button>}
