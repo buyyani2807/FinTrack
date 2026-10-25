@@ -7,6 +7,7 @@ import {
   buildSalesInvoice,
   buildSalesInvoiceMessage,
   buildVoucherDocument,
+  salesInvoicePresentation,
   salesSettlementLabel,
 } from "../src/features/accounts/model/salesInvoiceModel.js";
 import { invoicePdfShareOnThisDevice, renderSalesInvoicePdf, salesInvoiceDocumentText, salesInvoiceWhatsAppText } from "../src/features/accounts/io/salesInvoicePdf.js";
@@ -264,4 +265,52 @@ test("purchase bills and receipts open as their own documents", () => {
   assert.match(receiptText, /Receipt No: RCT-000003/);
   assert.doesNotMatch(receiptText, /Balance due/);
   assert.doesNotMatch(receiptText, /Due:/);
+});
+
+test("sales invoice sheet groups HSN tax and spells the amount", () => {
+  const invoice = buildSalesInvoice({
+    voucher: {
+      id: "v-tax",
+      voucherNumber: "ic/2026-27/203",
+      date: "2026-10-23",
+      dueDate: "2026-10-23",
+      narration: "",
+      voucherType: "sales",
+      status: "posted",
+      partyId: "p1",
+      lines: [
+        { coaId: "ar", debit: 61500, credit: 0 },
+        { coaId: "sales", debit: 0, credit: 61500 },
+      ],
+      gstLines: [{ taxable: 52118.58, cgst: 4690.67, sgst: 4690.67, igst: 0, rate: 18 }],
+    },
+    party: { name: "Srinivas Paints", address: "Kukatpally", gstin: "36BBBBB0000B1Z5", phone: "9876500000" },
+    accounts,
+    company: { name: "Initial Coatings", gstin: "36AAAAA0000A1Z5", stateName: "Telangana", stateCode: "36", documentSettings: { businessAddress: "Hyderabad" } },
+    itemLines: [
+      { itemName: "Cement Primer", hsnSac: "320901090", quantity: 15, unit: "NOS", rate: 2542.37, taxableAmount: 38135.55, gstRate: 18 },
+      { itemName: "Interior Cp", hsnSac: "320901090", quantity: 5, unit: "NOS", rate: 2288.13, taxableAmount: 11440.65, gstRate: 18 },
+      { itemName: "Micro Concrete", hsnSac: "32141000", quantity: 3, unit: "NOS", rate: 847.46, taxableAmount: 2542.38, gstRate: 18 },
+    ],
+  });
+  const sheet = salesInvoicePresentation(invoice);
+  assert.equal(sheet.title, "TAX INVOICE");
+  assert.equal(sheet.quantityTotal, "23 NOS");
+  assert.equal(sheet.hsn.length, 2);
+  assert.equal(sheet.hsn[0].hsn, "320901090");
+  assert.equal(sheet.hsn[0].cgstRate, "9%");
+  assert.equal(sheet.hsn[0].taxable, "₹49,576.20");
+  assert.equal(sheet.totals.find(row => row.label === "Round off").value, "₹0.08");
+  assert.equal(sheet.totals.find(row => row.bold).value, "₹61,500");
+  assert.match(sheet.amountWords, /Sixty One Thousand Five Hundred/);
+  assert.match(sheet.taxWords, /Nine Thousand Three Hundred Eighty One and Thirty Four Paise/);
+  assert.match(sheet.declaration, /actual price of the goods/);
+  const pdf = renderSalesInvoicePdf(invoice);
+  assert.match(pdf, /Amount chargeable/);
+  assert.match(pdf, /HSN\/SAC/);
+  assert.match(pdf, /Authorised Signatory/);
+  assert.match(pdf, /computer generated invoice/);
+  assert.match(pdf, /320901090/);
+  const thermal = renderSalesInvoicePdf(invoice, { template: "thermal" });
+  assert.match(thermal, /Amount chargeable/);
 });

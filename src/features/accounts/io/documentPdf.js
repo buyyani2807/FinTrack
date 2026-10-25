@@ -335,6 +335,236 @@ function drawSheet(model, surface, logo, qr) {
   });
 }
 
+function taxItemColumns(width, discount) {
+  const index = 16;
+  const hsn = Math.min(72, Math.round(width * 0.15));
+  const qty = Math.min(70, Math.round(width * 0.14));
+  const rate = Math.min(68, Math.round(width * 0.13));
+  const per = 32;
+  const disc = discount ? 48 : 0;
+  const amount = Math.min(74, Math.round(width * 0.15));
+  const name = Math.max(80, width - index - hsn - qty - rate - per - disc - amount);
+  const columns = [
+    { key: "index", label: "#", width: index, align: "right" },
+    { key: "name", label: "Description", width: name },
+    { key: "hsn", label: "HSN/SAC", width: hsn },
+    { key: "quantity", label: "Qty", width: qty, align: "right" },
+    { key: "rate", label: "Rate", width: rate, align: "right" },
+    { key: "per", label: "per", width: per },
+  ];
+  if (discount) columns.push({ key: "discount", label: "Disc.", width: disc, align: "right" });
+  columns.push({ key: "amount", label: "Amount", width: amount, align: "right" });
+  return columns;
+}
+
+function taxHsnColumns(width, sheet) {
+  const amount = 58;
+  const rate = 34;
+  const columns = [
+    { key: "hsn", label: "HSN/SAC", width: 0 },
+    { key: "taxable", label: "Taxable", width: 64, align: "right" },
+  ];
+  if (sheet.showCgst) {
+    columns.push({ key: "cgstRate", label: "CGST", width: rate, align: "right" });
+    columns.push({ key: "cgst", label: "Amount", width: amount, align: "right" });
+    columns.push({ key: "sgstRate", label: "SGST", width: rate, align: "right" });
+    columns.push({ key: "sgst", label: "Amount", width: amount, align: "right" });
+  }
+  if (sheet.showIgst) {
+    columns.push({ key: "igstRate", label: "IGST", width: rate, align: "right" });
+    columns.push({ key: "igst", label: "Amount", width: amount, align: "right" });
+  }
+  columns.push({ key: "tax", label: "Total tax", width: 62, align: "right" });
+  columns[0].width = width - columns.reduce((sum, column) => sum + column.width, 0);
+  return columns;
+}
+
+function drawTaxCells(surface, columns, values, top, size, { bold = false, gray = 0 } = {}) {
+  let x = surface.left;
+  const pad = 3;
+  for (const column of columns) {
+    const value = values[column.key] || "";
+    if (value) {
+      const align = column.align || "left";
+      surface.text(value, align === "right" ? x + column.width - pad : x + pad, top, { size, bold, align, gray });
+    }
+    x += column.width;
+  }
+}
+
+function drawTaxInvoice(sheet, surface, logo, qr) {
+  const { spec } = surface;
+  const base = spec.base;
+  const gap = base * 1.35;
+  surface.text(sheet.title || "TAX INVOICE", (surface.left + surface.right) / 2, surface.y, { size: base + 1, bold: true, align: "center" });
+  surface.y += gap + 4;
+  const top = surface.y;
+  let textLeft = surface.left;
+  if (logo) {
+    const scale = Math.min(spec.logo / logo.width, spec.logo / logo.height);
+    surface.image(surface.left, top, logo.width * scale, logo.height * scale);
+    textLeft += logo.width * scale + 10;
+  }
+  surface.y = top;
+  surface.paragraph(sheet.sellerName, textLeft, surface.width * 0.7, { size: base + 4, bold: true, lineGap: 1.2 });
+  for (const line of sheet.sellerLines || []) surface.paragraph(line, textLeft, surface.width * 0.7, { size: base - 0.5, gray: 0.3 });
+  surface.y = Math.max(surface.y, top + (logo ? spec.logo : 0)) + 6;
+  surface.rule(surface.y);
+  surface.y += 8;
+  const meta = sheet.meta || [];
+  const metaHeight = Math.ceil(meta.length / 2) * gap;
+  surface.room(metaHeight + 8);
+  const metaTop = surface.y;
+  meta.forEach((row, index) => {
+    const column = index % 2;
+    const y = metaTop + Math.floor(index / 2) * gap;
+    const x = column === 0 ? surface.left : surface.left + surface.width * 0.52;
+    surface.text(row.label, x, y, { size: base - 0.5, gray: 0.4 });
+    surface.text(row.value, x + surface.width * 0.46, y, { size: base - 0.5, bold: true, align: "right" });
+  });
+  surface.y = metaTop + metaHeight + 4;
+  surface.rule(surface.y);
+  surface.y += 10;
+  surface.text(sheet.partyHeading || "BILL TO", surface.left, surface.y, { size: base - 1, bold: true, gray: 0.4 });
+  surface.y += gap;
+  surface.paragraph(sheet.partyName, surface.left, surface.width * 0.7, { size: base + 1, bold: true });
+  for (const line of sheet.partyLines || []) surface.paragraph(line, surface.left, surface.width * 0.7, { size: base - 0.5, gray: 0.3 });
+  surface.y += 6;
+
+  if (sheet.items?.length) {
+    const columns = taxItemColumns(surface.width, sheet.showDiscount);
+    const header = () => {
+      surface.fill(surface.left, surface.y, surface.width, base * 1.8, 0.93);
+      drawTaxCells(surface, columns, Object.fromEntries(columns.map(column => [column.key, column.label])), surface.y + base * 0.4, base - 1, { bold: true, gray: 0.35 });
+      surface.y += base * 1.8 + 4;
+    };
+    surface.room(base * 6);
+    header();
+    sheet.items.forEach((item, index) => {
+      const nameColumn = columns.find(column => column.key === "name");
+      const nameLines = wrapText(item.name, base, nameColumn.width - 8);
+      const detailLines = item.detail ? wrapText(item.detail, base - 1.5, nameColumn.width - 8) : [];
+      const height = nameLines.length * base * 1.25 + detailLines.length * (base - 1.5) * 1.25 + 4;
+      if (spec.height && surface.y + height > spec.height - spec.margin - 24) {
+        surface.newPage();
+        header();
+      }
+      const rowTop = surface.y;
+      const nameX = surface.left + columns[0].width;
+      nameLines.forEach(line => {
+        surface.text(line, nameX + 3, surface.y, { size: base });
+        surface.y += base * 1.25;
+      });
+      detailLines.forEach(line => {
+        surface.text(line, nameX + 3, surface.y, { size: base - 1.5, gray: 0.4 });
+        surface.y += (base - 1.5) * 1.25;
+      });
+      drawTaxCells(surface, columns, {
+        index: String(index + 1),
+        hsn: item.hsn,
+        quantity: item.quantity,
+        rate: item.rate,
+        per: item.per,
+        discount: item.discount,
+        amount: item.amount,
+      }, rowTop, base);
+      surface.y = Math.max(surface.y, rowTop + height);
+      surface.rule(surface.y - 2, { weight: 0.3, gray: 0.85 });
+    });
+  }
+
+  surface.y += 6;
+  surface.room(base * ((sheet.totals || []).length + 2));
+  if (sheet.quantityTotal) {
+    surface.text(`Total quantity ${sheet.quantityTotal}`, surface.left, surface.y, { size: base - 0.5, gray: 0.35 });
+  }
+  const labelX = surface.right - 180;
+  for (const total of sheet.totals || []) {
+    const size = total.bold ? base + 1 : base;
+    if (total.bold) surface.fill(labelX - 8, surface.y - 3, surface.right - labelX + 8, size * 1.7, 0.94);
+    surface.text(total.label, labelX, surface.y, { size, bold: total.bold });
+    surface.text(total.value, surface.right, surface.y, { size, bold: total.bold, align: "right" });
+    surface.y += size * 1.55;
+  }
+  surface.text("E. & O.E.", surface.right, surface.y, { size: base - 2, gray: 0.45, align: "right" });
+  surface.y += gap;
+  surface.room(base * 4);
+  surface.text("Amount chargeable (in words)", surface.left, surface.y, { size: base - 1, bold: true, gray: 0.4 });
+  surface.y += gap;
+  surface.paragraph(sheet.amountWords, surface.left, surface.width, { size: base, bold: true });
+  surface.y += 4;
+
+  if (sheet.hsn?.length) {
+    const columns = taxHsnColumns(surface.width, sheet);
+    surface.room(base * (sheet.hsn.length + 3));
+    surface.fill(surface.left, surface.y, surface.width, base * 1.8, 0.93);
+    drawTaxCells(surface, columns, Object.fromEntries(columns.map(column => [column.key, column.label])), surface.y + base * 0.4, base - 1.5, { bold: true, gray: 0.35 });
+    surface.y += base * 1.8 + 4;
+    for (const row of sheet.hsn) {
+      drawTaxCells(surface, columns, row, surface.y, base - 0.5);
+      surface.y += gap;
+      surface.rule(surface.y - 3, { weight: 0.3, gray: 0.85 });
+    }
+    surface.y += 4;
+    if (sheet.taxWords) {
+      surface.text("Tax amount (in words)", surface.left, surface.y, { size: base - 1, bold: true, gray: 0.4 });
+      surface.y += gap;
+      surface.paragraph(sheet.taxWords, surface.left, surface.width, { size: base, bold: true });
+      surface.y += 4;
+    }
+  }
+
+  surface.room(base * 8);
+  surface.rule(surface.y);
+  surface.y += 8;
+  const signTop = surface.y;
+  surface.text("Declaration", surface.left, surface.y, { size: base - 1, bold: true, gray: 0.4 });
+  surface.y += gap;
+  surface.paragraph(sheet.declaration, surface.left, surface.width * 0.62, { size: base - 0.5, gray: 0.3 });
+  const signX = surface.right;
+  surface.text(`for ${sheet.signatory}`, signX, signTop, { size: base - 0.5, bold: true, align: "right" });
+  surface.text("Authorised Signatory", signX, signTop + gap * 3, { size: base - 1, gray: 0.4, align: "right" });
+  surface.y = Math.max(surface.y, signTop + gap * 4) + 6;
+  if (sheet.notes) {
+    surface.text("Notes", surface.left, surface.y, { size: base - 1, bold: true, gray: 0.4 });
+    surface.y += gap;
+    surface.paragraph(sheet.notes, surface.left, surface.width, { size: base - 0.5 });
+    surface.y += 4;
+  }
+  if (sheet.bankLines?.length) {
+    surface.text("Bank", surface.left, surface.y, { size: base - 1, bold: true, gray: 0.4 });
+    surface.y += gap;
+    for (const line of sheet.bankLines) surface.paragraph(line, surface.left, surface.width * 0.65, { size: base - 0.5 });
+  }
+  if (qr) {
+    const qrSize = spec.qr;
+    surface.room(qrSize + base * 4);
+    const x = surface.right - qrSize;
+    const qrTop = surface.y;
+    surface.qr(qr.matrix, x, qrTop, qrSize);
+    let captionY = qrTop + qrSize + 2;
+    for (const line of qr.caption || []) {
+      surface.text(line, x + qrSize / 2, captionY, { size: base - 1, align: "center", bold: line === qr.caption[0] });
+      captionY += (base - 1) * 1.3;
+    }
+    surface.y = Math.max(surface.y, captionY);
+  }
+  if (sheet.courtesy) {
+    surface.y += 6;
+    surface.paragraph(sheet.courtesy, surface.left, surface.width, { size: base - 0.5, gray: 0.35 });
+  }
+  surface.y += 8;
+  surface.room(base * 2);
+  surface.text(sheet.computerNote || "This is a computer generated invoice.", (surface.left + surface.right) / 2, surface.y, { size: base - 1, gray: 0.4, align: "center" });
+
+  surface.pages.forEach((page, index) => {
+    surface.page = page;
+    if (!spec.height) return;
+    surface.text("Powered by FinTrack", surface.left, spec.height - spec.margin + 4, { size: base - 2, gray: 0.5 });
+    if (surface.pages.length > 1) surface.text(`Page ${index + 1} of ${surface.pages.length}`, surface.right, spec.height - spec.margin + 4, { size: base - 2, gray: 0.5, align: "right" });
+  });
+}
+
 function drawThermal(model, surface, logo, qr) {
   const { spec } = surface;
   const base = spec.base;
@@ -445,6 +675,7 @@ export function renderDocumentPdf(model, { template = "a4" } = {}) {
   };
   const surface = createSurface(spec);
   if (spec.id === "thermal") drawThermal(normalized, surface, logo, qr);
+  else if (model.layout === "tax" && model.taxSheet) drawTaxInvoice(model.taxSheet, surface, logo, qr);
   else drawSheet(normalized, surface, logo, qr);
   return serialize(surface.pages, { width: spec.width, logo });
 }

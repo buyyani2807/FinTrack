@@ -1,7 +1,8 @@
 import { formatInr } from "../../../lib/formatMoney.js";
 import { applyTemplate, resolveWhatsAppTemplate } from "../../receipts/model/templateEngine.js";
 import { formatReceiptDate } from "../../receipts/model/receiptModel.js";
-import { voucherTotals } from "./accountingModel.js";
+import { roundMoney, voucherTotals } from "./accountingModel.js";
+import { rupeesInWords } from "./payroll.js";
 import { browserOrigin, isValidUpiId, payPageUrl, upiPayLink } from "./upiPay.js";
 
 const money = formatInr;
@@ -173,6 +174,143 @@ export function buildSalesInvoice({
     })),
     ...branding,
     money,
+  };
+}
+
+const percentText = value => {
+  const number = Math.round(Number(value || 0) * 100) / 100;
+  if (!number) return "";
+  return `${Number.isInteger(number) ? number : number}%`;
+};
+
+const quantityLabel = (quantity, unit) => {
+  const text = Number(quantity || 0).toLocaleString("en-IN", { maximumFractionDigits: 3 });
+  return unit ? `${text} ${unit}` : text;
+};
+
+const allocateShares = (total, rows) => {
+  const base = rows.reduce((sum, row) => sum + row.taxable, 0);
+  if (!total || !base) return rows.map(() => 0);
+  let used = 0;
+  return rows.map((row, index) => {
+    if (index === rows.length - 1) return roundMoney(total - used);
+    const share = roundMoney(total * row.taxable / base);
+    used = roundMoney(used + share);
+    return share;
+  });
+};
+
+/** GST tax-invoice sections for a sales invoice: HSN breakup, round off, and amounts in words. */
+export function salesInvoicePresentation(invoice) {
+  const m = invoice.money;
+  const lines = invoice.itemLines || [];
+  const taxable = roundMoney(invoice.taxable);
+  const cgst = roundMoney(invoice.cgst);
+  const sgst = roundMoney(invoice.sgst);
+  const igst = roundMoney(invoice.igst);
+  const tax = roundMoney(cgst + sgst + igst);
+  const amount = roundMoney(invoice.amount);
+  const roundOff = roundMoney(amount - roundMoney(taxable + tax));
+  const showRoundOff = roundOff !== 0 && Math.abs(roundOff) < 1;
+  const units = [...new Set(lines.map(line => String(line.unit || "").trim()).filter(Boolean))];
+  const quantityTotal = lines.length && units.length <= 1
+    ? quantityLabel(lines.reduce((sum, line) => sum + Number(line.quantity || 0), 0), units[0] || "")
+    : "";
+  const grouped = new Map();
+  const hsnSource = lines.length
+    ? lines
+    : (tax > 0 ? [{ hsnSac: invoice.hsnSac || "", gstRate: invoice.gstRate || 0, amount: taxable }] : []);
+  for (const line of hsnSource) {
+    const hsn = String(line.hsnSac || "").trim();
+    const rate = Number(line.gstRate || 0);
+    const key = `${hsn}|${rate}`;
+    const entry = grouped.get(key) || { hsn, rate, taxable: 0 };
+    entry.taxable = roundMoney(entry.taxable + Number(line.amount ?? line.taxableAmount ?? 0));
+    grouped.set(key, entry);
+  }
+  const groupedRows = [...grouped.values()];
+  const cgstShares = allocateShares(cgst, groupedRows);
+  const sgstShares = allocateShares(sgst, groupedRows);
+  const igstShares = allocateShares(igst, groupedRows);
+  const hsn = groupedRows.map((row, index) => {
+    const rowCgst = cgstShares[index];
+    const rowSgst = sgstShares[index];
+    const rowIgst = igstShares[index];
+    return {
+      hsn: row.hsn || "—",
+      taxable: m(row.taxable),
+      rate: percentText(row.rate),
+      cgstRate: percentText(rowCgst ? row.rate / 2 : 0),
+      cgst: m(rowCgst),
+      sgstRate: percentText(rowSgst ? row.rate / 2 : 0),
+      sgst: m(rowSgst),
+      igstRate: percentText(rowIgst ? row.rate : 0),
+      igst: m(rowIgst),
+      tax: m(roundMoney(rowCgst + rowSgst + rowIgst)),
+    };
+  });
+  const generatedTerms = !invoice.receiptTerms || String(invoice.receiptTerms).startsWith("Issued by ");
+  const totals = [];
+  if (tax > 0) {
+    totals.push({ label: "Taxable", value: m(taxable) });
+    if (cgst) totals.push({ label: "CGST", value: m(cgst) });
+    if (sgst) totals.push({ label: "SGST", value: m(sgst) });
+    if (igst) totals.push({ label: "IGST", value: m(igst) });
+  }
+  if (showRoundOff) totals.push({ label: "Round off", value: m(roundOff) });
+  if (invoice.outstanding != null && roundMoney(invoice.outstanding) !== amount) {
+    totals.push({ label: "Balance due", value: m(invoice.outstanding) });
+  }
+  totals.push({ label: "Total", value: m(amount), bold: true });
+  return {
+    title: invoice.title || "SALES INVOICE",
+    sellerName: invoice.companyName || "",
+    sellerLines: [
+      invoice.companyLegalName || "",
+      invoice.companyAddress || "",
+      invoice.companyGstin ? `GSTIN ${invoice.companyGstin}` : "",
+      [invoice.companyPhone, invoice.companyEmail].filter(Boolean).join(" · "),
+    ].filter(Boolean),
+    logoUrl: invoice.companyLogoUrl || "",
+    meta: [
+      { label: invoice.numberLabel || "Invoice No", value: invoice.invoiceNumber || "" },
+      { label: "Dated", value: formatReceiptDate(invoice.invoiceDate) },
+      invoice.kind === "receipt" || invoice.kind === "payment" ? null : { label: "Due", value: formatReceiptDate(invoice.dueDate) },
+      { label: "Mode / Terms of payment", value: invoice.settlement || "" },
+    ].filter(row => row?.value),
+    partyHeading: invoice.partyHeading || "BILL TO",
+    partyName: invoice.customerName || "Customer",
+    partyLines: [
+      invoice.customerAddress || "",
+      invoice.customerGstin ? `GSTIN ${invoice.customerGstin}` : "",
+      invoice.customerPhone || "",
+    ].filter(Boolean),
+    showDiscount: lines.some(line => Number(line.discount) > 0),
+    showCgst: cgst > 0 || sgst > 0,
+    showIgst: igst > 0,
+    items: lines.map(line => ({
+      name: line.name || "Item",
+      detail: line.sku ? `SKU ${line.sku}` : "",
+      hsn: line.hsnSac || "—",
+      quantity: quantityLabel(line.quantity, line.unit),
+      rate: m(line.rate),
+      per: line.unit || "—",
+      discount: Number(line.discount) > 0 ? m(line.discount) : "",
+      amount: m(line.amount),
+    })),
+    quantityTotal,
+    totals,
+    amountWords: `Indian ${rupeesInWords(amount)}`,
+    hsn,
+    taxWords: tax > 0 ? `Indian ${rupeesInWords(tax)}` : "",
+    declaration: generatedTerms
+      ? "We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct."
+      : invoice.receiptTerms,
+    signatory: invoice.companyName || "",
+    courtesy: invoice.receiptFooter || "",
+    notes: invoice.narration || "",
+    bankLines: (invoice.bankLines || []).filter(Boolean),
+    computerNote: "This is a computer generated invoice.",
   };
 }
 

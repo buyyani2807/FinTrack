@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { formatReceiptDate } from "../../receipts/model/receiptModel.js";
 import { canWhatsAppShare, openManualWhatsAppShare, openWhatsAppWeb } from "../../receipts/io/receiptWhatsApp.js";
-import { buildArReminderMessage, buildOutstandingSummaryMessage, buildPartyStatementMessage, buildPaymentAdviceMessage, buildPurchaseDocumentMessage } from "../model/salesInvoiceModel.js";
+import { buildArReminderMessage, buildOutstandingSummaryMessage, buildPartyStatementMessage, buildPaymentAdviceMessage, buildPurchaseDocumentMessage, salesInvoicePresentation } from "../model/salesInvoiceModel.js";
 import { downloadSalesInvoicePdf, invoicePdfShareOnThisDevice, salesInvoicePdfFile, salesInvoiceWhatsAppText } from "../io/salesInvoicePdf.js";
 import { downloadPartyStatementPdf } from "../io/partyStatementPdf.js";
 import { CloseButton, ModalScroll } from "../../../components/ui.jsx";
@@ -48,7 +48,98 @@ export function VoucherNumberLink({ number, voucherType, onView }) {
   return <button type="button" className="acc-invoice-ref-btn" onClick={onView}>{number}</button>;
 }
 
-export function SalesInvoiceViewerModal({ invoice, settings = {}, close }) {
+function TaxInvoiceSheet({ invoice }) {
+  const sheet = salesInvoicePresentation(invoice);
+  return (
+    <article className="acc-tax-invoice">
+      <header className="acc-tax-head">
+        <p className="acc-tax-kicker">{sheet.title}</p>
+        <div className="acc-tax-brand">
+          {sheet.logoUrl ? <img src={sheet.logoUrl} alt="" className="acc-doc-logo" /> : null}
+          <div>
+            <h3>{sheet.sellerName}</h3>
+            {sheet.sellerLines.map(line => <p key={line}>{line}</p>)}
+          </div>
+        </div>
+      </header>
+      <dl className="acc-tax-meta">
+        {sheet.meta.map(row => <div key={row.label}><dt>{row.label}</dt><dd>{row.value}</dd></div>)}
+      </dl>
+      <section className="acc-tax-party">
+        <p className="acc-tax-kicker">{sheet.partyHeading}</p>
+        <strong>{sheet.partyName}</strong>
+        {sheet.partyLines.map(line => <p key={line}>{line}</p>)}
+      </section>
+      {sheet.items.length ? (
+        <div className="table acc-tax-table"><table><thead><tr>
+          <th className="acc-num">#</th>
+          <th>Description of goods</th>
+          <th>HSN/SAC</th>
+          <th className="acc-num">Quantity</th>
+          <th className="acc-num">Rate</th>
+          <th>per</th>
+          {sheet.showDiscount ? <th className="acc-num">Disc.</th> : null}
+          <th className="acc-num">Amount</th>
+        </tr></thead><tbody>
+          {sheet.items.map((line, index) => <tr key={`${line.name}-${index}`}>
+            <td className="acc-num">{index + 1}</td>
+            <td><div className="acc-tax-item"><strong>{line.name}</strong>{line.detail ? <span>{line.detail}</span> : null}</div></td>
+            <td>{line.hsn}</td>
+            <td className="acc-num">{line.quantity}</td>
+            <td className="acc-num">{line.rate}</td>
+            <td>{line.per}</td>
+            {sheet.showDiscount ? <td className="acc-num">{line.discount || "—"}</td> : null}
+            <td className="acc-num">{line.amount}</td>
+          </tr>)}
+        </tbody></table></div>
+      ) : null}
+      <footer className="acc-tax-foot">
+        <p>{sheet.quantityTotal ? <>Total quantity <strong>{sheet.quantityTotal}</strong></> : null}</p>
+        <div className="acc-tax-totals-wrap">
+          <dl className="acc-tax-totals">
+            {sheet.totals.map(row => <div key={row.label} className={row.bold ? "is-total" : ""}><dt>{row.label}</dt><dd>{row.value}</dd></div>)}
+          </dl>
+          <p className="acc-tax-eoe">E. &amp; O.E.</p>
+        </div>
+      </footer>
+      <p className="acc-tax-words"><span>Amount chargeable (in words)</span><strong>{sheet.amountWords}</strong></p>
+      {sheet.hsn.length ? (
+        <div className="table acc-tax-table acc-tax-hsn"><table><thead><tr>
+          <th>HSN/SAC</th>
+          <th className="acc-num">Taxable value</th>
+          {sheet.showCgst ? <><th className="acc-num">CGST</th><th className="acc-num">Amount</th><th className="acc-num">SGST</th><th className="acc-num">Amount</th></> : null}
+          {sheet.showIgst ? <><th className="acc-num">IGST</th><th className="acc-num">Amount</th></> : null}
+          <th className="acc-num">Total tax</th>
+        </tr></thead><tbody>
+          {sheet.hsn.map(row => <tr key={`${row.hsn}-${row.rate}`}>
+            <td>{row.hsn}</td>
+            <td className="acc-num">{row.taxable}</td>
+            {sheet.showCgst ? <><td className="acc-num">{row.cgstRate}</td><td className="acc-num">{row.cgst}</td><td className="acc-num">{row.sgstRate}</td><td className="acc-num">{row.sgst}</td></> : null}
+            {sheet.showIgst ? <><td className="acc-num">{row.igstRate}</td><td className="acc-num">{row.igst}</td></> : null}
+            <td className="acc-num">{row.tax}</td>
+          </tr>)}
+        </tbody></table></div>
+      ) : null}
+      {sheet.taxWords ? <p className="acc-tax-words"><span>Tax amount (in words)</span><strong>{sheet.taxWords}</strong></p> : null}
+      <div className="acc-tax-bottom">
+        <section>
+          <p className="acc-tax-kicker">Declaration</p>
+          <p>{sheet.declaration}</p>
+        </section>
+        <section className="acc-tax-sign">
+          <p>for <strong>{sheet.signatory}</strong></p>
+          <p>Authorised Signatory</p>
+        </section>
+      </div>
+      {invoice.narration ? <p className="acc-tax-note"><span>Notes</span>{invoice.narration}</p> : null}
+      {invoice.bankLines?.length ? <p className="acc-tax-note"><span>Bank</span>{invoice.bankLines.join(" ")}</p> : null}
+      {sheet.courtesy ? <p className="acc-tax-note">{sheet.courtesy}</p> : null}
+      <p className="acc-tax-computer">{sheet.computerNote}</p>
+    </article>
+  );
+}
+
+export function SalesInvoiceViewerModal({ invoice, close }) {
   const layerRef = useDialogDismiss(close);
   const salesDocument = !invoice.kind || invoice.kind === "sales_invoice";
   const whatsAppAvailable = salesDocument && canWhatsAppShare(invoice?.customerPhone);
@@ -57,10 +148,12 @@ export function SalesInvoiceViewerModal({ invoice, settings = {}, close }) {
 
   return (
     <div className="modal-bg" ref={layerRef}>
-      <div className="modal receipt-view has-corner-close" role="dialog" aria-modal="true" aria-label={invoice.title || "Sales invoice"}>
+      <div className={`modal receipt-view has-corner-close${salesDocument ? " acc-modal acc-modal-wide" : ""}`} role="dialog" aria-modal="true" aria-label={invoice.title || "Sales invoice"}>
         <span className="modal-corner-close"><CloseButton onClick={close} /></span>
         <ModalScroll>
         <div className="receipt-paper">
+          {salesDocument ? <TaxInvoiceSheet invoice={invoice} /> : null}
+          {salesDocument ? null : <>
           <div className="receipt-header">
             <strong>{invoice.companyName}</strong>
             <span>{invoice.title || "SALES INVOICE"}</span>
@@ -112,6 +205,7 @@ export function SalesInvoiceViewerModal({ invoice, settings = {}, close }) {
           <p className="small">{invoice.receiptFooter}</p>
           {invoice.receiptTerms && <p className="small muted">{invoice.receiptTerms}</p>}
           <p className="small muted">Powered by FinTrack</p>
+          </>}
         </div>
         </ModalScroll>
         <div className="row spacer modal-foot">

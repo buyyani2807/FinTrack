@@ -1073,6 +1073,277 @@
   font-weight: 700;
 }
 
+.accounts-dashboard .acc-tax-invoice {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  color: var(--ft-text);
+}
+
+.accounts-dashboard .acc-tax-head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.accounts-dashboard .acc-tax-kicker {
+  margin: 0;
+  color: var(--ft-muted);
+  font-size: var(--ft-type-micro);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.accounts-dashboard .acc-tax-head > .acc-tax-kicker {
+  text-align: center;
+  color: var(--ft-text);
+}
+
+.accounts-dashboard .acc-tax-brand {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.accounts-dashboard .acc-tax-brand h3 {
+  margin: 0;
+  color: var(--ft-primary) !important;
+  font-family: var(--ft-font-brand);
+  font-size: var(--ft-type-card);
+  font-weight: 700;
+  line-height: var(--ft-leading-tight);
+}
+
+.accounts-dashboard .acc-tax-brand p,
+.accounts-dashboard .acc-tax-party p,
+.accounts-dashboard .acc-tax-note,
+.accounts-dashboard .acc-tax-bottom p,
+.accounts-dashboard .acc-tax-computer {
+  margin: 2px 0 0;
+  color: var(--ft-text-2);
+  font-size: var(--ft-type-caption);
+  line-height: var(--ft-leading-body);
+}
+
+.accounts-dashboard .acc-tax-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 24px;
+  margin: 0;
+  padding: 12px 0;
+  border-top: 1px solid var(--ft-border);
+  border-bottom: 1px solid var(--ft-border);
+}
+
+.accounts-dashboard .acc-tax-meta div {
+  display: grid;
+  grid-template-columns: minmax(88px, 42%) minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+}
+
+.accounts-dashboard .acc-tax-meta dt {
+  color: var(--ft-muted);
+  font-size: var(--ft-type-caption);
+  font-weight: 500;
+}
+
+.accounts-dashboard .acc-tax-meta dd {
+  margin: 0;
+  color: var(--ft-text);
+  font-size: var(--ft-type-caption);
+  font-weight: 700;
+}
+
+.accounts-dashboard .acc-tax-party {
+  padding: 12px 14px;
+  border: 1px solid var(--ft-border);
+  border-radius: 10px;
+  background: var(--ft-surface-subtle);
+}
+
+.accounts-dashboard .acc-tax-party strong {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--ft-type-body);
+}
+
+.accounts-dashboard .acc-tax-table {
+  border-radius: 10px;
+}
+
+.accounts-dashboard .acc-tax-table table {
+  min-width: 640px;
+}
+
+.accounts-dashboard .acc-tax-table th,
+.accounts-dashboard .acc-tax-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--ft-border);
+  font-size: var(--ft-type-caption);
+}
+
+.accounts-dashboard .acc-tax-table th {
+  background: var(--ft-surface-muted);
+  color: var(--ft-text-2);
+  letter-spacing: 0.04em;
+}
+
+.accounts-dashboard .acc-tax-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.accounts-dashboard .acc-tax-item strong {
+  color: var(--ft-text);
+  font-size: var(--ft-type-secondary);
+  font-weight: 600;
+}
+
+.accounts-dashboard .acc-tax-item span {
+  color: var(--ft-muted);
+  font-size: var(--ft-type-caption);
+}
+
+.accounts-dashboard .acc-tax-foot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+  gap: 16px;
+  align-items: start;
+}
+
+.accounts-dashboard .acc-tax-foot > p {
+  margin: 0;
+  color: var(--ft-text-2);
+  font-size: var(--ft-type-caption);
+}
+
+.accounts-dashboard .acc-tax-totals-wrap {
+  border: 1px solid var(--ft-border);
+  border-radius: 10px;
+  background: var(--ft-surface);
+}
+
+.accounts-dashboard .acc-tax-totals {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 12px 14px 0;
+}
+
+.accounts-dashboard .acc-tax-totals div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.accounts-dashboard .acc-tax-totals dt {
+  color: var(--ft-muted);
+  font-size: var(--ft-type-caption);
+  font-weight: 500;
+}
+
+.accounts-dashboard .acc-tax-totals dd {
+  margin: 0;
+  color: var(--ft-text);
+  font-size: var(--ft-type-secondary);
+  font-weight: 600;
+}
+
+.accounts-dashboard .acc-tax-totals .is-total {
+  margin: 4px -14px 0;
+  padding: 10px 14px;
+  background: var(--ft-primary-soft);
+}
+
+.accounts-dashboard .acc-tax-totals .is-total dt,
+.accounts-dashboard .acc-tax-totals .is-total dd {
+  color: var(--ft-primary);
+  font-size: var(--ft-type-body);
+  font-weight: 700;
+}
+
+.accounts-dashboard .acc-tax-eoe {
+  margin: 0;
+  padding: 6px 14px 8px;
+  color: var(--ft-muted);
+  font-size: var(--ft-type-micro);
+  text-align: right;
+}
+
+.accounts-dashboard .acc-tax-words {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--ft-border);
+  border-radius: 10px;
+  background: var(--ft-surface-subtle);
+}
+
+.accounts-dashboard .acc-tax-words span {
+  color: var(--ft-muted);
+  font-size: var(--ft-type-micro);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.accounts-dashboard .acc-tax-words strong {
+  color: var(--ft-text);
+  font-size: var(--ft-type-secondary);
+  font-weight: 700;
+}
+
+.accounts-dashboard .acc-tax-bottom {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(160px, 0.7fr);
+  gap: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ft-border);
+}
+
+.accounts-dashboard .acc-tax-sign {
+  text-align: right;
+}
+
+.accounts-dashboard .acc-tax-sign p:last-child {
+  margin-top: 28px;
+  color: var(--ft-muted);
+}
+
+.accounts-dashboard .acc-tax-note span {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--ft-muted);
+  font-size: var(--ft-type-micro);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.accounts-dashboard .acc-tax-computer {
+  margin: 0;
+  color: var(--ft-muted);
+  font-size: var(--ft-type-micro);
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .accounts-dashboard .acc-tax-meta,
+  .accounts-dashboard .acc-tax-foot,
+  .accounts-dashboard .acc-tax-bottom {
+    grid-template-columns: 1fr;
+  }
+
+  .accounts-dashboard .acc-tax-sign {
+    text-align: left;
+  }
+}
+
 @media (max-width: 640px) {
   .accounts-dashboard .acc-sheet {
     padding: 14px;

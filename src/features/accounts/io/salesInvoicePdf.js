@@ -1,4 +1,5 @@
 import { formatReceiptDate } from "../../receipts/model/receiptModel.js";
+import { salesInvoicePresentation } from "../model/salesInvoiceModel.js";
 import { downloadPdf, pdfBinaryToBytes, renderDocumentPdf } from "./documentPdf.js";
 
 const quantityText = (quantity, unit) => `${Number(quantity || 0).toLocaleString("en-IN", { maximumFractionDigits: 3 })}${unit ? ` ${unit}` : ""}`;
@@ -31,7 +32,10 @@ export function salesInvoicePdfModel(invoice) {
   }
   const moneyOnly = invoice.kind === "receipt" || invoice.kind === "payment";
   const showQr = invoice.showUpiQr !== false && invoice.upiLink && Number(invoice.payableAmount || 0) > 0;
+  const taxSheet = !invoice.kind || invoice.kind === "sales_invoice" ? salesInvoicePresentation(invoice) : null;
   return {
+    layout: taxSheet ? "tax" : "",
+    taxSheet,
     title: invoice.title || "SALES INVOICE",
     meta: [
       [invoice.numberLabel || "Invoice No", invoice.invoiceNumber],
@@ -60,6 +64,7 @@ export function salesInvoicePdfModel(invoice) {
     })),
     description: [invoice.narration, invoice.hsnSac ? `HSN/SAC: ${invoice.hsnSac}` : ""].filter(Boolean).join(" - "),
     totals,
+    amountNote: taxSheet ? `Amount chargeable (in words): ${taxSheet.amountWords}` : "",
     notes: [
       invoice.itemLines?.length && invoice.narration ? { heading: "Notes", lines: [invoice.narration] } : null,
       invoice.receiptTerms ? { heading: "Terms", lines: [invoice.receiptTerms] } : null,
