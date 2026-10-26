@@ -6350,7 +6350,11 @@
 .accounts-dashboard .acc-nav-item svg,
 .accounts-dashboard .acc-nav-expand svg { flex: none; }
 .accounts-dashboard .acc-nav .acc-nav-item,
-.accounts-dashboard .acc-nav .acc-nav-expand { color: var(--ft-text-2) !important; background: transparent !important; }
+.accounts-dashboard .acc-nav .acc-nav-expand { width: 100% !important; color: var(--ft-text-2) !important; background: transparent !important; }
+.accounts-dashboard .acc-nav-group { margin: 0 !important; padding: 0 !important; color: inherit !important; letter-spacing: normal !important; text-transform: none !important; font-size: inherit !important; font-weight: inherit !important; }
+.accounts-dashboard .acc-nav-desktop .acc-nav-item,
+.accounts-dashboard .acc-nav-tablet.is-expanded .acc-nav-item,
+.accounts-dashboard .acc-nav-tablet.is-expanded .acc-nav-expand { justify-content: flex-start !important; }
 .accounts-dashboard .acc-nav .acc-nav-item:hover,
 .accounts-dashboard .acc-nav .acc-nav-child:hover,
 .accounts-dashboard .acc-nav .acc-nav-expand:hover { background: var(--ft-surface-hover) !important; color: var(--ft-text) !important; }
