@@ -122,6 +122,71 @@ export const MOBILE_TABS = [
   { id: "reports", label: "Reports" },
   { id: "more", label: "More" },
 ];
+
+// One destination list. Desktop, tablet, and phone each present this same tree.
+const PLACE_BOOKS = [
+  { id: "vouchers", label: "Transactions", kind: "section" },
+  { id: "documents", label: "Documents", kind: "section" },
+  { id: "inventory", label: "Inventory", kind: "section" },
+  { id: "expenses", label: "Expenses", kind: "section" },
+  { id: "payroll", label: "Payroll", kind: "section" },
+  { id: "attendance", label: "Attendance", kind: "section" },
+  { id: "leave", label: "Leave", kind: "section" },
+  { id: "bank", label: "Banking", kind: "section" },
+];
+const PLACE_PARTIES = [
+  { id: "parties", label: "Party Ledger", kind: "section" },
+  { id: "receivables", label: "Receivables", kind: "section" },
+  { id: "payables", label: "Payables", kind: "section" },
+  { id: "routes", label: "Collection routes", kind: "section" },
+];
+const PLACE_PARTY = new Set(["parties", "party", "receivables", "payables", "routes"]);
+const PLACE_REPORT = new Set(["reports", "gst", "ledger", "trial", "pnl", "balance", "ca", "ai"]);
+const PLACE_MORE = new Set(["more", "setup", "crm", "manufacturing"]);
+export function accountsPlaces({ aiEnabled = false, manufacturingEnabled = false } = {}) {
+  return [
+    { id: "overview", label: "Home", section: "overview" },
+    { id: "books", label: "Books", section: "vouchers", children: PLACE_BOOKS },
+    { id: "parties", label: "Parties", section: "parties", children: PLACE_PARTIES },
+    {
+      id: "reports",
+      label: "Reports",
+      section: "reports",
+      children: [
+        ...REPORT_TABS.map(item => ({ id: item.id, label: item.label, kind: "report" })),
+        { id: "ca", label: "For the CA", kind: "section" },
+        ...(aiEnabled ? [{ id: "ai", label: "AI Review", kind: "section" }] : []),
+      ],
+    },
+    {
+      id: "more",
+      label: "More",
+      section: "more",
+      children: [
+        { id: "more", label: "All tools", kind: "section" },
+        { id: "setup", label: "Setup", kind: "section" },
+        ...(manufacturingEnabled ? [{ id: "manufacturing", label: "Manufacturing", kind: "section" }] : []),
+        { id: "crm", label: "Customer Pipeline", kind: "section" },
+      ],
+    },
+  ];
+}
+export function accountsPlaceId(section) {
+  if (!section || section === "overview") return "overview";
+  if (PLACE_PARTY.has(section)) return "parties";
+  if (PLACE_REPORT.has(section)) return "reports";
+  if (PLACE_MORE.has(section)) return "more";
+  return "books";
+}
+export function accountsPlaceChildId(section, reportTab) {
+  if (accountsPlaceId(section) === "reports") {
+    if (["trial", "pnl", "balance", "ca", "ai"].includes(section)) return section;
+    if (section === "ledger" || section === "gst") return section;
+    return reportTab || "daybook";
+  }
+  if (section === "party") return "parties";
+  return section;
+}
 const REPORT_HUB_CARDS = [
   { id: "daybook", label: "Day Book", copy: "Every sale, purchase, receipt and payment in the period." },
   { id: "receivables", label: "Receivables", copy: "Who still owes you — overdue first." },

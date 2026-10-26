@@ -1,48 +1,87 @@
-import { Building2, ChevronDown, Plus, Sparkles } from "lucide-react";
+import { useState } from "react";
+import { BookOpen, Building2, ChevronDown, ChevronLeft, ChevronRight, Ellipsis, House, PieChart, Plus, Users } from "lucide-react";
 import { Select } from "../../../components/Select.jsx";
-import { TabScroller } from "../../../components/TabScroller.jsx";
-import { useActiveTabInView } from "./useActiveTabInView.js";
-import { NAV_TREE, REPORT_TABS, navItemIsActive } from "../accountsNavigation.js";
+import { accountsPlaceChildId, accountsPlaceId, accountsPlaces } from "../accountsNavigation.js";
 
-// Accounts sections as horizontal tabs inside the page (like Daily Finance's Overview / Customers / Reports).
-// A section with sub-pages (Parties, Reports) shows them as a second row once it is selected.
-// Cashbook is left out: it is its own item in the workspace sidebar. "More" holds the remaining pages.
-// Reports lists every report (Day Book, Trial Balance … Stock Movement), opened through `openReport`.
-// AI Review follows Reports only when the AI plan is enabled.
-const BASE_TABS = NAV_TREE.filter(item => item.id !== "cashbook");
-const CA_TAB = { id: "ca", label: "For the CA" };
-const AI_TAB = { id: "ai", label: "AI Review", icon: Sparkles };
-const MORE_TAB = { id: "more", label: "More" };
-const afterReports = (tabs, extra) => tabs.flatMap(item => (item.id === "reports" ? [item, ...extra] : [item]));
-const TAB_ITEMS = [...afterReports(BASE_TABS, [CA_TAB]), MORE_TAB];
-const TAB_ITEMS_WITH_AI = [...afterReports(BASE_TABS, [CA_TAB, AI_TAB]), MORE_TAB];
-const STATEMENT_SECTIONS = ["trial", "pnl", "balance"];
-const MORE_SECTIONS = ["more", "crm", "manufacturing"];
-const tabIsActive = (item, section) => (item.id === "more" ? MORE_SECTIONS.includes(section) : navItemIsActive(item, section));
+const PLACE_ICONS = { overview: House, books: BookOpen, parties: Users, reports: PieChart, more: Ellipsis };
 
-export function AccSectionTabs({ section, reportTab, onNavigate, openReport, aiEnabled = false }) {
-  const tabs = aiEnabled ? TAB_ITEMS_WITH_AI : TAB_ITEMS;
-  const current = tabs.find(item => tabIsActive(item, section));
-  const isReports = current?.id === "reports";
-  const children = isReports ? REPORT_TABS : current?.children;
-  const childId = isReports ? (STATEMENT_SECTIONS.includes(section) ? section : section === "reports" ? reportTab : section) : section;
-  const openChild = id => (isReports ? openReport(id) : onNavigate(id));
-  const ref = useActiveTabInView([section, reportTab]);
-  return <div className="acc-section-tabs" ref={ref}>
-    <TabScroller><nav className="module-section-nav acc-section-nav" aria-label="Accounts sections">
-      {tabs.map(item => {
-        const active = item === current;
-        const Icon = item.icon;
-        return <button key={item.id} type="button" className={`module-section-tab${Icon ? " acc-ai-tab" : ""}${active ? " active" : ""}`} aria-current={active ? (item.children ? "true" : "page") : undefined} onClick={() => onNavigate(item.id)}>{Icon && <Icon size={14} aria-hidden="true" />}{item.label}</button>;
-      })}
-    </nav></TabScroller>
-    {children && <TabScroller className="is-sub"><nav className="acc-subsection-nav" aria-label={`${current.label} pages`}>
-      {children.map(child => {
-        const active = child.id === childId;
-        return <button key={child.id} type="button" className={`acc-subsection-tab${active ? " active" : ""}`} aria-current={active ? "page" : undefined} onClick={() => openChild(child.id)}>{child.label}</button>;
-      })}
-    </nav></TabScroller>}
+function usePlaces(section, reportTab, aiEnabled, manufacturingEnabled) {
+  const places = accountsPlaces({ aiEnabled, manufacturingEnabled });
+  const placeId = accountsPlaceId(section);
+  const childId = accountsPlaceChildId(section, reportTab);
+  const current = places.find(item => item.id === placeId) || places[0];
+  return { places, placeId, childId, current };
+}
+
+function openPlaceChild(child, onNavigate, openReport) {
+  if (child.kind === "report") openReport(child.id);
+  else onNavigate(child.id);
+}
+
+function PlaceLinks({ places, placeId, onNavigate, showLabel }) {
+  return places.map(item => {
+    const Icon = PLACE_ICONS[item.id];
+    const active = item.id === placeId;
+    return <button key={item.id} type="button" className={`acc-place-link${active ? " is-active" : ""}`} aria-current={active ? "page" : undefined} title={item.label} onClick={() => onNavigate(item.section)}>
+      <Icon size={18} aria-hidden="true" />
+      {showLabel ? <span>{item.label}</span> : <span className="acc-place-sr">{item.label}</span>}
+    </button>;
+  });
+}
+
+function PlaceChildren({ children, childId, onNavigate, openReport }) {
+  if (!children?.length) return null;
+  return <div className="acc-place-sub" role="group">
+    {children.map(child => {
+      const active = child.id === childId;
+      return <button key={child.id} type="button" className={`acc-place-child${active ? " is-active" : ""}`} aria-current={active ? "page" : undefined} onClick={() => openPlaceChild(child, onNavigate, openReport)}>{child.label}</button>;
+    })}
   </div>;
+}
+
+// Same five destinations on every screen. Desktop is a narrow column beside the books.
+// Tablet is an icon rail that widens on demand. Phone is a bottom bar.
+export function AccPlacesSide({ section, reportTab, onNavigate, openReport, aiEnabled = false, manufacturingEnabled = false }) {
+  const { places, placeId, childId, current } = usePlaces(section, reportTab, aiEnabled, manufacturingEnabled);
+  const [open, setOpen] = useState(false);
+  return <aside className={`acc-places-side${open ? " is-open" : ""}`}>
+    <nav className="acc-places-desktop" aria-label="Accounts">
+      {places.map(item => {
+        const Icon = PLACE_ICONS[item.id];
+        const active = item.id === placeId;
+        return <div key={item.id} className="acc-place-group">
+          <button type="button" className={`acc-place-link${active ? " is-active" : ""}`} aria-current={active && !item.children ? "page" : undefined} onClick={() => onNavigate(item.section)}>
+            <Icon size={18} aria-hidden="true" /><span>{item.label}</span>
+          </button>
+          {active ? <PlaceChildren children={item.children} childId={childId} onNavigate={onNavigate} openReport={openReport} /> : null}
+        </div>;
+      })}
+    </nav>
+    <nav className="acc-places-tablet" aria-label="Accounts">
+      <button type="button" className="acc-place-expand" aria-expanded={open} onClick={() => setOpen(value => !value)}>
+        {open ? <ChevronLeft size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}
+        <span>{open ? "Hide labels" : "Show labels"}</span>
+      </button>
+      <PlaceLinks places={places} placeId={placeId} onNavigate={onNavigate} showLabel={open} />
+      {open ? <PlaceChildren children={current.children} childId={childId} onNavigate={onNavigate} openReport={openReport} /> : null}
+    </nav>
+  </aside>;
+}
+
+export function AccPlacesPages({ section, reportTab, onNavigate, openReport, aiEnabled = false, manufacturingEnabled = false }) {
+  const { childId, current } = usePlaces(section, reportTab, aiEnabled, manufacturingEnabled);
+  if (!current.children?.length) return null;
+  return <div className="acc-places-pages">
+    <p className="acc-places-kicker">{current.label}</p>
+    <PlaceChildren children={current.children} childId={childId} onNavigate={onNavigate} openReport={openReport} />
+  </div>;
+}
+
+export function AccPlacesBar({ section, reportTab, onNavigate, aiEnabled = false, manufacturingEnabled = false }) {
+  const { places, placeId } = usePlaces(section, reportTab, aiEnabled, manufacturingEnabled);
+  return <nav className="acc-places-bar" aria-label="Accounts">
+    <PlaceLinks places={places} placeId={placeId} onNavigate={onNavigate} showLabel />
+  </nav>;
 }
 const niceDate = iso => {
   const date = iso ? new Date(`${iso}T00:00:00`) : null;

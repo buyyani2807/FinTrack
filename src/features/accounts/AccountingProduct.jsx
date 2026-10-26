@@ -144,7 +144,7 @@ import {
 } from "./accountsFormDefaults.js";
 import { REPORT_TABS, MORE_LINKS } from "./accountsNavigation.js";
 import { gstStatusLabel } from "./accountsFormat.js";
-import { AccSectionTabs, AccCompanyBar, AccPageHeader } from "./components/AccLayout.jsx";
+import { AccCompanyBar, AccPageHeader, AccPlacesBar, AccPlacesPages, AccPlacesSide } from "./components/AccLayout.jsx";
 import { CustomerPipeline } from "./components/CustomerPipeline.jsx";
 import { ManufacturingWorkspace } from "./components/ManufacturingWorkspace.jsx";
 import { VoucherForm } from "./components/VoucherForm.jsx";
@@ -2156,12 +2156,13 @@ const openVoucher = () => {
   const invoicePartyRows = partyTotalsFromInvoices(isInvoicePayables ? apInvoices : arInvoices);
 
 
-  return <div className="acc-shell">
+  return <div className="acc-shell acc-places">
+    <AccPlacesSide section={section} reportTab={reportTab} onNavigate={openSection} openReport={openReport} aiEnabled={aiEnabled} manufacturingEnabled={manufacturingEnabled} />
     <main className="acc-main acc-print-root">
       <AccPageHeader
         title="Accounts"
         copy={`${activeCompany?.name || settings?.companyName || workspace.businessName || "Your business"} · ${fy.label} · ${range.from} to ${range.to}`}
-        tabs={<AccSectionTabs section={section} reportTab={reportTab} onNavigate={openSection} openReport={openReport} aiEnabled={aiEnabled} />}
+        tabs={<AccPlacesPages section={section} reportTab={reportTab} onNavigate={openSection} openReport={openReport} aiEnabled={aiEnabled} manufacturingEnabled={manufacturingEnabled} />}
         companyBar={<AccCompanyBar
           companies={companies}
           activeId={activeCompanyId}
@@ -2775,6 +2776,7 @@ const openVoucher = () => {
         />
       )}
       {confirmLogout && <LogoutConfirmModal signingOut={signingOut} setConfirmLogout={setConfirmLogout} confirmAccountsLogout={confirmAccountsLogout} />}
+      <AccPlacesBar section={section} reportTab={reportTab} onNavigate={openSection} aiEnabled={aiEnabled} manufacturingEnabled={manufacturingEnabled} />
     </main>
   </div>;
 }
