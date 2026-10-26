@@ -2053,21 +2053,6 @@ html[data-theme="dark"] .ft-trial-banner.is-urgent { background: #3a2222; color:
 .air-plain.is-roomy { gap: 12px; font-size: var(--ft-type-ui); }
 
 /* Expenses: spend chart and split pane */
-.air-legend { display: inline-flex; align-items: center; gap: 6px; color: var(--ft-text-2); font-size: var(--ft-type-label); font-weight: 600; }
-.air-legend i { width: 12px; height: 12px; border-radius: 3px; background: var(--ft-primary); }
-.air-legend i.is-before { margin-left: 12px; background: var(--ft-text-3); }
-.air-bars { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
-.air-bars li { display: grid; grid-template-columns: minmax(110px, 190px) minmax(0, 1fr) minmax(120px, auto); align-items: center; gap: 16px; }
-.air-bars-label { color: var(--ft-text); font-size: var(--ft-type-ui); font-weight: 600; overflow-wrap: anywhere; }
-.air-bars { --air-bar-h: 10px; --air-bar-gap: 4px; }
-.air-bars-track { display: flex; flex-direction: column; gap: var(--air-bar-gap); min-width: 0; }
-.air-bars-now, .air-bars-before { display: block; height: var(--air-bar-h); border-radius: 999px; }
-/* Bar thickness follows the width of the track: slimmer on phones, fuller on wide screens. */
-@media (min-width: 1100px) { .air-bars { --air-bar-h: 8px; --air-bar-gap: 4px; } }
-@media (max-width: 720px) { .air-bars { --air-bar-h: 8px; --air-bar-gap: 3px; } }
-.air-bars-now { background: var(--ft-primary); }
-.air-bars-before { background: var(--ft-text-3); }
-.air-bars-value { color: var(--ft-text); font-size: var(--ft-type-ui); font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
 .air-panel-title { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; }
 .air-pager-buttons { display: inline-flex; gap: 8px; }
 .air-arrow { display: inline-grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 1px solid var(--ft-border); border-radius: 50%; background: var(--ft-surface); color: var(--ft-text); cursor: pointer; transition: background .15s var(--ft-ease), border-color .15s var(--ft-ease), transform .15s var(--ft-ease), opacity .15s var(--ft-ease); }
@@ -2075,23 +2060,9 @@ html[data-theme="dark"] .ft-trial-banner.is-urgent { background: #3a2222; color:
 .air-arrow:active:not(:disabled) { transform: scale(.92); }
 .air-arrow:disabled { opacity: .35; cursor: default; }
 .air-arrow:focus-visible { outline: 2px solid var(--ft-primary); outline-offset: 2px; }
-.air-bars li { min-height: 44px; }
-.air-bars-fill { visibility: hidden; }
-/* A page change slides the rows in from the side they came from, and the bars grow out from the left. */
-.air-bars.is-next li:not(.air-bars-fill) { animation: air-slide-next .26s var(--ft-ease) both; }
-.air-bars.is-prev li:not(.air-bars-fill) { animation: air-slide-prev .26s var(--ft-ease) both; }
-.air-bars li:nth-child(2) { animation-delay: .03s !important; }
-.air-bars li:nth-child(3) { animation-delay: .06s !important; }
-.air-bars li:nth-child(4) { animation-delay: .09s !important; }
-.air-bars li:nth-child(5) { animation-delay: .12s !important; }
-.air-bars li:nth-child(6) { animation-delay: .15s !important; }
-.air-bars-now, .air-bars-before { transform-origin: left center; animation: air-grow .5s var(--ft-ease) both; }
-.air-bars li:nth-child(n + 2) .air-bars-now, .air-bars li:nth-child(n + 2) .air-bars-before { animation-delay: .05s; }
 @keyframes air-slide-next { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
 @keyframes air-slide-prev { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
-@keyframes air-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @media (prefers-reduced-motion: reduce) {
-  .air-bars li, .air-bars-now, .air-bars-before { animation: none !important; }
   .air-arrow { transition: none; }
 }
 .air-board { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
@@ -2318,8 +2289,6 @@ html[data-theme="dark"] .ft-trial-banner.is-urgent { background: #3a2222; color:
   .air-tools .air-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   .air-tools .air-chips::-webkit-scrollbar { display: none; }
   .air-tools .ft-filter-select { width: 100%; min-height: 40px; }
-  .air-bars li { grid-template-columns: minmax(0, 1fr) auto; row-gap: 6px; }
-  .air-bars-track { grid-column: 1 / -1; grid-row: 2; }
   .air-check-list .air-clear-main, .air-check-list .air-actions, .air-check-list .air-check-value { min-width: 0; }
   .air-check-list .air-actions { gap: 6px; }
   .air-check-list .air-actions .btn, .air-check-list .air-actions .ai-source-link { height: 32px !important; max-height: 32px !important; min-height: 32px !important; padding: 4px 10px !important; font-size: var(--ft-type-label) !important; line-height: 1.2 !important; }

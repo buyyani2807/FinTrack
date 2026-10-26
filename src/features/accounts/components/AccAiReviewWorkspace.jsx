@@ -4,8 +4,6 @@ import { Info, X } from "lucide-react";
 import { TabScroller } from "../../../components/TabScroller.jsx";
 import { todayIso } from "../../../lib/dates.js";
 import { dateIsLocked } from "../model/accountingModel.js";
-import { profitAndLoss } from "../model/accountingReports.js";
-import { expenseBreakdown } from "../model/accountsCharts.js";
 import { matchBankLine as saveBankMatch } from "../data/accountingRepository.js";
 import { buildExpenseComparisons, buildSupplierPriceInsights, buildSupplierSpendInsights } from "../../intelligence/ai/expenseIntelligence.js";
 import { buildCashFlowForecast } from "../../intelligence/ai/cashFlowForecast.js";
@@ -181,7 +179,6 @@ export function AccAiReviewWorkspace({
       comparisons,
       supplierPrices: buildSupplierPriceInsights({ vouchers, voucherItemLines, parties, asOf }),
       supplierSpend: buildSupplierSpendInsights({ vouchers, parties, asOf }),
-      spending: expenseBreakdown(profitAndLoss(accounts, vouchers, comparisons.period).expenses),
     };
   }, [tab, accounts, vouchers, voucherItemLines, parties, asOf]); // eslint-disable-line react-hooks/exhaustive-deps
   const forecast = useMemo(() => (needs("cashflow") ? buildCashFlowForecast({ accounts, vouchers, parties, asOf }) : null), [tab, accounts, vouchers, parties, asOf]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -342,7 +339,7 @@ export function AccAiReviewWorkspace({
         ])}
       </nav></TabScroller>
       {panelLoading ? <AccEmpty title="Loading" copy="Reading this company's books…" /> : <section className="air-body" aria-live="polite">
-        {tab === "expenses" && expenses && <ExpensesPanel data={expenses} openSource={openLink} onOpenPnl={() => openSource({ section: "pnl" })} />}
+        {tab === "expenses" && expenses && <ExpensesPanel data={expenses} openSource={openLink} />}
         {tab === "cashflow" && forecast && <CashFlowPanel forecast={forecast} openSource={openLink} />}
         {tab === "collections" && collections && <CollectionsPanel rows={collections} openSource={openLink} businessName={company?.name} asOf={asOf} canWrite={canWrite} onReminderOpened={reminderOpened} />}
         {tab === "anomalies" && anomalies && <AlertsPanel

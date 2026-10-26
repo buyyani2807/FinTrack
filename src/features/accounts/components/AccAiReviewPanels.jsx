@@ -3,11 +3,10 @@ import { ChevronDown, ChevronLeft, ChevronRight, FileText } from "lucide-react";
 import { FilterSelect } from "../../../components/ui.jsx";
 import { openManualWhatsAppShare } from "../../receipts/io/receiptWhatsApp.js";
 import { REMINDER_LANGUAGES, draftCollectionReminder, reminderSendAllowed } from "../../finance/model/collectionCopilot.js";
-import { money } from "../accountsFormat.js";
+import { axisMoney, money } from "../accountsFormat.js";
 import { AccEmpty } from "./AccUi.jsx";
 import { Select } from "../../../components/Select.jsx";
 import { CaBriefSheet } from "./CaBriefSheet.jsx";
-import { AccSpendingDonut } from "./AccOverviewCharts.jsx";
 
 const pct = value => (value == null ? "—" : `${value > 0 ? "+" : ""}${value}%`);
 const differenceText = alert => alert.pattern === "possible_backdated_entry" ? `${alert.difference} day(s)`
@@ -221,16 +220,39 @@ function ExpenseDetail({ group, row, openSource }) {
   </>;
 }
 
-const CHART_PAGE_SIZE = 6;
 const PICK_PAGE_SIZE = 4;
 const PICK_LABELS = { categories: ["This period", "Compared with"], rates: ["Latest rate", "Earlier rate"], spend: ["This period", "3-month average"] };
+const DONUT_R = 58;
+const DONUT_CIRC = 2 * Math.PI * DONUT_R;
+const shareLabel = share => (share > 0 && share < 0.005 ? "<1%" : `${Math.round(share * 100)}%`);
 
-export function ExpensesPanel({ data, openSource, onOpenPnl }) {
+/** Largest flagged categories, with the tail folded into Other. Shares use this period's amount. */
+function spendRing(rows) {
+  const positive = rows.filter(row => Number(row.currentAmount) > 0);
+  const total = positive.reduce((sum, row) => sum + Number(row.currentAmount), 0);
+  const slices = positive.slice(0, 5).map(row => ({
+    id: row.id,
+    name: row.category,
+    amount: Number(row.currentAmount),
+    changePct: row.changePct,
+    severity: row.severity,
+  }));
+  const rest = positive.slice(5);
+  if (rest.length) {
+    slices.push({
+      id: "other",
+      name: "Other",
+      amount: rest.reduce((sum, row) => sum + Number(row.currentAmount), 0),
+      changePct: null,
+      severity: "",
+    });
+  }
+  return { total, slices: slices.map(slice => ({ ...slice, share: total ? slice.amount / total : 0 })) };
+}
+
+export function ExpensesPanel({ data, openSource }) {
   const { comparisons, supplierPrices, supplierSpend } = data;
   const [groupId, setGroupId] = useState("categories");
-  const [chartPage, setChartPage] = useState(0);
-  const [chartDir, setChartDir] = useState("next");
-  const goToChartPage = page => { setChartDir(page > chartPage ? "next" : "prev"); setChartPage(page); };
   const [pickPage, setPickPage] = useState(0);
   const [pickDir, setPickDir] = useState("next");
   const [openId, toggle, setOpenId] = useAccordion();
@@ -243,12 +265,8 @@ export function ExpensesPanel({ data, openSource, onOpenPnl }) {
   const group = groups.find(item => item.id === groupId) || groups[0];
   const flagged = comparisons.insights.length + supplierPrices.insights.length + supplierSpend.length;
   const top = comparisons.insights.reduce((best, row) => (row.changePct != null && (!best || row.changePct > best.changePct) ? row : best), null);
-  const sortedByAmount = [...comparisons.insights].sort((a, b) => b.currentAmount - a.currentAmount);
-  const pageCount = Math.max(1, Math.ceil(sortedByAmount.length / CHART_PAGE_SIZE));
-  const currentPage = Math.min(chartPage, pageCount - 1);
-  const chartRows = sortedByAmount.slice(currentPage * CHART_PAGE_SIZE, (currentPage + 1) * CHART_PAGE_SIZE);
-  // One scale for every page, so bars on different pages can be compared.
-  const chartMax = Math.max(1, ...sortedByAmount.map(row => Math.max(row.currentAmount, row.comparisonAmount || 0)));
+  const spend = spendRing([...comparisons.insights].sort((a, b) => b.currentAmount - a.currentAmount));
+  const ringStarts = spend.slices.map((_, index) => spend.slices.slice(0, index).reduce((sum, slice) => sum + slice.share * DONUT_CIRC, 0));
   const pickPageCount = Math.max(1, Math.ceil((group?.items.length || 0) / PICK_PAGE_SIZE));
   const currentPickPage = Math.min(pickPage, pickPageCount - 1);
   const pickRows = group ? group.items.slice(currentPickPage * PICK_PAGE_SIZE, (currentPickPage + 1) * PICK_PAGE_SIZE) : [];
@@ -258,7 +276,6 @@ export function ExpensesPanel({ data, openSource, onOpenPnl }) {
     setOpenId(null);
   };
   return <div className="air-stack">
-    <AccSpendingDonut breakdown={data.spending} onOpenPnl={onOpenPnl} />
     <p className="air-note">Period {comparisons.period.from} to {comparisons.period.to}, compared with the same days of earlier periods. Amounts come from posted vouchers.</p>
     {comparisons.insufficientHistory && <AccEmpty title="Insufficient history" copy="At least a month of posted expenses is needed before trends are shown. No trend is reported yet." />}
     {!comparisons.insufficientHistory && nothing && <AccEmpty title="No unusual expense changes" copy="Spending is in line with comparable periods." />}
@@ -269,32 +286,39 @@ export function ExpensesPanel({ data, openSource, onOpenPnl }) {
         { label: "Categories compared", value: String(comparisons.insights.length) },
       ]} />
 
-      {chartRows.length > 0 && <section className="air-panel" aria-label="Spend by category">
+      {spend.slices.length > 0 && <section className="air-panel acc-ov-spend air-spend" aria-label="Spend by category">
         <header className="air-panel-head">
           <div className="air-panel-title">
             <h3 className="air-h">Spend by category</h3>
-            <span className="air-legend"><i className="is-now" />This period<i className="is-before" />Compared with</span>
+            <span className="air-row-sub">Share of this period in the categories flagged for review</span>
           </div>
         </header>
-        <ul key={currentPage} className={`air-bars is-${chartDir}`}>
-          {chartRows.map(row => <li key={row.id}>
-            <span className="air-bars-label">{row.category}</span>
-            <span className="air-bars-track" aria-hidden="true">
-              <span className="air-bars-now" style={{ width: `${Math.max(2, (row.currentAmount / chartMax) * 100)}%` }} />
-              <span className="air-bars-before" style={{ width: `${Math.max(2, ((row.comparisonAmount || 0) / chartMax) * 100)}%` }} />
-            </span>
-            <span className="air-bars-value">{money(row.currentAmount)}<span className={`air-delta is-${row.severity || "low"}`}>{pct(row.changePct)}</span></span>
-          </li>)}
-          {pageCount > 1 && Array.from({ length: CHART_PAGE_SIZE - chartRows.length }, (_, index) => <li key={`fill-${index}`} className="air-bars-fill" aria-hidden="true" />)}
-        </ul>
-        <p className="air-meta">{pageCount > 1 ? "Largest spend first. Use the arrows to see more categories." : "Largest spend first."}</p>
-        {pageCount > 1 && <div className="air-pick-head">
-          <span className="air-count">{currentPage * CHART_PAGE_SIZE + 1} to {currentPage * CHART_PAGE_SIZE + chartRows.length} of {sortedByAmount.length}</span>
-          <div className="air-pager-buttons" role="group" aria-label="Spend by category pages">
-            <button type="button" className="air-arrow" disabled={currentPage === 0} onClick={() => goToChartPage(currentPage - 1)} aria-label="Previous categories"><ChevronLeft size={18} aria-hidden="true" /></button>
-            <button type="button" className="air-arrow" disabled={currentPage >= pageCount - 1} onClick={() => goToChartPage(currentPage + 1)} aria-label="Next categories"><ChevronRight size={18} aria-hidden="true" /></button>
-          </div>
-        </div>}
+        <div className="acc-ov-spend-body">
+          <svg className="acc-ov-donut" viewBox="0 0 160 160" role="img" aria-label={`Spend by category ${axisMoney(spend.total)}: ${spend.slices.map(slice => `${slice.name} ${money(slice.amount)}`).join(", ")}`}>
+            <circle cx="80" cy="80" r={DONUT_R} className="acc-ov-donut-track" />
+            {spend.slices.map((slice, index) => <circle
+              key={slice.id}
+              cx="80"
+              cy="80"
+              r={DONUT_R}
+              className={`acc-ov-donut-slice slice-${index}`}
+              strokeDasharray={`${Math.max(0, slice.share * DONUT_CIRC - (spend.slices.length > 1 ? 1.5 : 0))} ${DONUT_CIRC}`}
+              strokeDashoffset={-ringStarts[index]}
+              transform="rotate(-90 80 80)"
+            ><title>{`${slice.name} · ${money(slice.amount)} · ${shareLabel(slice.share)}`}</title></circle>)}
+            <text x="80" y="76" textAnchor="middle" className="acc-ov-donut-total">{axisMoney(spend.total)}</text>
+            <text x="80" y="94" textAnchor="middle" className="acc-ov-donut-caption">this period</text>
+          </svg>
+          <ul className="acc-ov-spend-legend">
+            {spend.slices.map((slice, index) => <li key={slice.id}>
+              <i className={`slice-${index}`} aria-hidden="true" />
+              <span className="name">{slice.name}</span>
+              <span className="amount">{money(slice.amount)}</span>
+              {slice.changePct == null ? <span /> : <span className={`air-delta is-${slice.severity || "low"}`}>{pct(slice.changePct)}</span>}
+              <span className="share">{shareLabel(slice.share)}</span>
+            </li>)}
+          </ul>
+        </div>
       </section>}
 
       <div className="air-chips" role="tablist" aria-label="Expense views">

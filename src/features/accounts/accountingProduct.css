@@ -1807,9 +1807,46 @@
   gap: 8px;
 }
 
+.accounts-dashboard .air-panel.air-spend {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+}
+
+.accounts-dashboard .air-spend .acc-ov-spend-body {
+  grid-template-columns: 190px max-content;
+  align-items: center;
+  justify-content: start;
+  justify-items: start;
+  gap: 36px;
+}
+
+.accounts-dashboard .air-spend .acc-ov-spend-legend { width: max-content; max-width: 100%; }
+
+.accounts-dashboard .air-spend .acc-ov-spend-legend li {
+  grid-template-columns: 10px auto auto auto 44px;
+  column-gap: 16px;
+}
+
+.accounts-dashboard .air-spend .acc-ov-spend-legend .air-delta { margin-left: 0; }
+
 @media (max-width: 900px) {
   .accounts-dashboard .acc-ov-charts {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .accounts-dashboard .air-spend .acc-ov-spend-body {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .accounts-dashboard .air-spend .acc-ov-spend-legend { width: 100%; }
+
+  .accounts-dashboard .air-spend .acc-ov-spend-legend li {
+    grid-template-columns: 10px minmax(0, 1fr) auto auto minmax(40px, auto);
   }
 }
 
