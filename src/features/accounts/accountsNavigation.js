@@ -67,6 +67,7 @@ export function sectionTrail(section, reportTab) {
   if (section === "bank") return ["Banking"];
   if (section === "cashbook") return ["Cashbook"];
   if (section === "setup") return ["Setup"];
+  if (section === "ca") return ["For the CA"];
   if (section === "more") return ["More"];
   return [SECTIONS.find(item => item.id === section)?.label || "Accounts"];
 }
@@ -92,6 +93,7 @@ export const SECTIONS = [
   { id: "pnl", label: "Profit & Loss", group: "Reports" },
   { id: "balance", label: "Balance Sheet", group: "Reports" },
   { id: "trial", label: "Trial Balance", group: "Reports" },
+  { id: "ca", label: "For the CA", group: "Reports" },
   { id: "ai", label: "AI Review", group: "Reports" },
   { id: "setup", label: "Setup", group: "Company" },
   { id: "more", label: "More", group: "Company" },
@@ -150,7 +152,7 @@ export const MORE_LINKS = [
 // A view is { section, reportTab, sub }: `sub` is the document type (documents), the inventory tab (inventory), the
 // collection-routes tab (routes) or the party id (party profile). Trial Balance, P&L and Balance Sheet are their own
 // sections but live under Reports.
-const SECTION_SLUGS = { vouchers: "transactions", bank: "banking", crm: "pipeline", ai: "ai-review" };
+const SECTION_SLUGS = { vouchers: "transactions", bank: "banking", crm: "pipeline", ai: "ai-review", ca: "for-the-ca" };
 const PARTY_SLUGS = { parties: "ledger", receivables: "receivables", payables: "payables", routes: "routes", party: "profile" };
 const PARTY_SUB_SECTIONS = ["routes", "party"];
 const STATEMENTS = ["trial", "pnl", "balance"];

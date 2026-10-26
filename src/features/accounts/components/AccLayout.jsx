@@ -10,10 +10,12 @@ import { NAV_TREE, REPORT_TABS, navItemIsActive } from "../accountsNavigation.js
 // Reports lists every report (Day Book, Trial Balance … Stock Movement), opened through `openReport`.
 // AI Review follows Reports only when the AI plan is enabled.
 const BASE_TABS = NAV_TREE.filter(item => item.id !== "cashbook");
+const CA_TAB = { id: "ca", label: "For the CA" };
 const AI_TAB = { id: "ai", label: "AI Review", icon: Sparkles };
 const MORE_TAB = { id: "more", label: "More" };
-const TAB_ITEMS = [...BASE_TABS, MORE_TAB];
-const TAB_ITEMS_WITH_AI = BASE_TABS.flatMap(item => (item.id === "reports" ? [item, AI_TAB] : [item])).concat(MORE_TAB);
+const afterReports = (tabs, extra) => tabs.flatMap(item => (item.id === "reports" ? [item, ...extra] : [item]));
+const TAB_ITEMS = [...afterReports(BASE_TABS, [CA_TAB]), MORE_TAB];
+const TAB_ITEMS_WITH_AI = [...afterReports(BASE_TABS, [CA_TAB, AI_TAB]), MORE_TAB];
 const STATEMENT_SECTIONS = ["trial", "pnl", "balance"];
 const MORE_SECTIONS = ["more", "crm", "manufacturing"];
 const tabIsActive = (item, section) => (item.id === "more" ? MORE_SECTIONS.includes(section) : navItemIsActive(item, section));

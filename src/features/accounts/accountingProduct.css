@@ -6303,3 +6303,25 @@
     width: 100% !important;
   }
 }
+
+.accounts-dashboard .ca-pack { display: grid; gap: 16px; }
+.accounts-dashboard .ca-pack-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; }
+.accounts-dashboard .ca-pack-kicker { margin: 0; color: var(--ft-primary); font-size: var(--ft-type-label); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.accounts-dashboard .ca-pack-title { margin: 2px 0 0; font-size: var(--ft-type-title); font-weight: 700; letter-spacing: var(--ft-tracking-tight); line-height: var(--ft-leading-tight); }
+.accounts-dashboard .ca-pack-sub { margin: 4px 0 0; color: var(--ft-muted); font-size: var(--ft-type-secondary); }
+.accounts-dashboard .ca-pack-actions { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; }
+.accounts-dashboard .ca-pack-note { margin: 0; color: var(--ft-text-2); font-size: var(--ft-type-secondary); }
+.accounts-dashboard .ca-pack-h { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: var(--ft-type-card); font-weight: 700; }
+.accounts-dashboard .ca-pack-count { color: var(--ft-muted); font-size: var(--ft-type-label); font-weight: 650; }
+.accounts-dashboard .ca-pack-empty { margin: 0; color: var(--ft-muted); font-size: var(--ft-type-secondary); }
+.accounts-dashboard .ca-pack-books { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.accounts-dashboard .ca-pack-books article { display: grid; gap: 4px; margin: 0; padding: 12px 14px; }
+.accounts-dashboard .ca-pack-books span { color: var(--ft-muted); font-size: var(--ft-type-label); }
+.accounts-dashboard .ca-pack-books strong { font-size: var(--ft-type-section); font-variant-numeric: tabular-nums; }
+.accounts-dashboard .ca-pack-loss { color: var(--ft-danger); }
+.accounts-dashboard .ca-pack-sub { display: block; color: var(--ft-muted); font-size: var(--ft-type-label); }
+.accounts-dashboard .ca-pack-pile .ca-pack-actions { justify-content: flex-end; }
+@media (max-width: 720px) {
+  .accounts-dashboard .ca-pack-actions { width: 100%; }
+  .accounts-dashboard .ca-pack-pile .ca-pack-actions { width: auto; }
+}

@@ -80,12 +80,14 @@ export function ItemProfitReport({
   workspaceRole,
   accountsRole,
   onExportReady,
+  focusItemId = "",
+  onFocusHandled,
 }) {
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [stockStatus, setStockStatus] = useState("all");
   const [sort, setSort] = useState("revenue");
-  const [selectedId, setSelectedId] = useState("");
+  const [selectedId, setSelectedId] = useState(focusItemId || "");
   const allowed = canViewItemProfitability({ workspaceRole, accountsRole });
   const report = useMemo(
     () => (allowed ? itemProfitability({ items, movements, voucherItemLines, costLines, vouchers, parties, from: range.from, to: range.to }) : null),
@@ -180,7 +182,7 @@ export function ItemProfitReport({
         </table>
       </div>
       <AccPager page={paged.page} pages={paged.pages} total={paged.total} from={paged.from} to={paged.to} onPage={paged.setPage} noun="items" />
-      {selected && <ItemProfitDetail row={selected} vouchers={vouchers} onViewDocument={onViewDocument} onClose={() => setSelectedId("")} />}
+      {selected && <ItemProfitDetail row={selected} vouchers={vouchers} onViewDocument={onViewDocument} onClose={() => { setSelectedId(""); onFocusHandled?.(); }} />}
       <p className="small spacer">{ITEM_PROFIT_LIMITATIONS[0]} {ITEM_PROFIT_LIMITATIONS[2]}</p>
     </div>
   );

@@ -160,6 +160,7 @@ import { ExpensesSection } from "./sections/ExpensesSection.jsx";
 import { PayrollSection } from "./sections/PayrollSection.jsx";
 import { MoreSection } from "./sections/MoreSection.jsx";
 import { ReportsSection } from "./sections/ReportsSection.jsx";
+import { CaPackSection } from "./sections/CaPackSection.jsx";
 import { BankSection } from "./sections/BankSection.jsx";
 import { SetupSection } from "./sections/SetupSection.jsx";
 import { NewEntryActions } from "./components/NewEntryActions.jsx";
@@ -229,6 +230,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const lastFy = useMemo(() => previousIndianFinancialYear(todayIso()), []);
   const [rangeFrom, setRangeFrom] = useState(fy.from);
   const [rangeTo, setRangeTo] = useState(fy.to);
+  const [caItemId, setCaItemId] = useState("");
   const range = useMemo(() => ({ from: rangeFrom, to: rangeTo }), [rangeFrom, rangeTo]);
   const intelligencePreviousRange = useMemo(
     () => previousComparisonRange({ from: range.from, to: range.to, fy, lastFy }),
@@ -352,10 +354,15 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
         const nextLocks = await loadPeriodLocks(token);
         if (gen !== refreshGen.current) return;
         setLocks(nextLocks);
-      } else if (sectionRef.current === "bank" || sectionRef.current === "ai") {
+      } else if (sectionRef.current === "bank" || sectionRef.current === "ai" || sectionRef.current === "ca") {
         const nextStatements = await loadBankStatements(token);
         if (gen !== refreshGen.current) return;
         setStatements(nextStatements || []);
+        if (sectionRef.current === "ca") {
+          const nextLocks = await loadPeriodLocks(token).catch(() => null);
+          if (gen !== refreshGen.current) return;
+          if (nextLocks) setLocks(nextLocks);
+        }
       }
     } catch (err) {
       if (gen !== refreshGen.current) return;
@@ -482,7 +489,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
 
   useEffect(() => {
     if (!token || migrationRequired) return undefined;
-    if (section !== "setup" && section !== "bank" && section !== "overview" && section !== "ai") return undefined;
+    if (section !== "setup" && section !== "bank" && section !== "overview" && section !== "ai" && section !== "ca") return undefined;
     let cancelled = false;
     const loadExtras = async () => {
       try {
@@ -505,7 +512,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
         }
         const [nextStatements, nextLocks, nextCashbook] = await Promise.all([
           loadBankStatements(token).catch(() => []),
-          section === "overview" || section === "ai" ? loadPeriodLocks(token).catch(() => null) : Promise.resolve(null),
+          section === "overview" || section === "ai" || section === "ca" ? loadPeriodLocks(token).catch(() => null) : Promise.resolve(null),
           section === "overview" || section === "ai" ? loadCashbookEntries(token).catch(() => null) : Promise.resolve(undefined),
         ]);
         if (!cancelled) {
@@ -2449,6 +2456,37 @@ const openVoucher = () => {
 
         {section === "more" && <MoreSection manufacturingEnabled={manufacturingEnabled} openSection={openSection} moreLinks={MORE_LINKS} />}
 
+        {section === "ca" && <CaPackSection
+          token={token}
+          company={activeCompany}
+          accounts={visibleAccounts}
+          vouchers={vouchers}
+          parties={parties}
+          items={items}
+          stockMovements={stockMovements}
+          voucherItemLines={voucherItemLines}
+          costLines={costLines}
+          statements={statements}
+          locks={locks}
+          canWrite={canWrite}
+          aiEnabled={aiEnabled}
+          onOpenVoucher={voucherId => {
+            const voucher = vouchers.find(row => row.id === voucherId);
+            if (voucher && canOpenVoucherDocument(voucher.voucherType)) {
+              openVoucherDocument(voucher);
+              return;
+            }
+            if (voucher?.voucherNumber) setSearch(voucher.voucherNumber);
+            openSection("vouchers");
+          }}
+          onOpenSection={openSection}
+          onOpenItem={(itemId, from, to) => {
+            setReportRange(from, to);
+            setCaItemId(itemId);
+            openReport("item_profit");
+          }}
+        />}
+
         {section === "ai" && <AccAiReviewWorkspace
           token={token}
           aiEnabled={aiEnabled}
@@ -2526,6 +2564,8 @@ const openVoucher = () => {
           canWrite={canWrite}
           saving={saving}
           markGstFiled={markGstFiled}
+          focusItemId={caItemId}
+          onFocusHandled={() => setCaItemId("")}
         />}
 
         {section === "bank" && <BankSection

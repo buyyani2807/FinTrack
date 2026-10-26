@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, FileText } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { FilterSelect } from "../../../components/ui.jsx";
 import { openManualWhatsAppShare } from "../../receipts/io/receiptWhatsApp.js";
 import { REMINDER_LANGUAGES, draftCollectionReminder, reminderSendAllowed } from "../../finance/model/collectionCopilot.js";
 import { axisMoney, money } from "../accountsFormat.js";
 import { AccEmpty } from "./AccUi.jsx";
 import { Select } from "../../../components/Select.jsx";
-import { CaBriefSheet } from "./CaBriefSheet.jsx";
 
 const pct = value => (value == null ? "—" : `${value > 0 ? "+" : ""}${value}%`);
 const differenceText = alert => alert.pattern === "possible_backdated_entry" ? `${alert.difference} day(s)`
@@ -641,8 +640,7 @@ export function AlertsPanel({ alerts, decisions, feature, canWrite, busy, onDeci
 
 /* ---------- Month-end: executive summary ---------- */
 
-export function MonthEndPanel({ readiness, months, month, setMonth, canWrite, busy, onResolve, openSource, brief }) {
-  const [briefOpen, setBriefOpen] = useState(false);
+export function MonthEndPanel({ readiness, months, month, setMonth, canWrite, busy, onResolve, openSource }) {
   const [checkFilter, setCheckFilter] = useState("all");
   const tone = readiness.readinessPct >= 90 ? "success" : readiness.readinessPct >= 60 ? "warning" : "danger";
   const percent = Math.max(0, Math.min(readiness.readinessPct, 100));
@@ -663,11 +661,9 @@ export function MonthEndPanel({ readiness, months, month, setMonth, canWrite, bu
           <FilterSelect label="Month" value={month} allValue={month} onChange={setMonth}>
             {months.map(key => <option key={key} value={key}>{key}</option>)}
           </FilterSelect>
-          {brief ? <button type="button" className="btn primary air-brief-btn" onClick={() => setBriefOpen(true)}><FileText size={16} aria-hidden="true" />Brief for the CA</button> : null}
         </div>
       </div>
     </section>
-    {briefOpen && brief ? <CaBriefSheet brief={brief} onClose={() => setBriefOpen(false)} /> : null}
 
     <div className="air-kpis">
       <div className={`air-kpi${readiness.critical ? " is-danger" : ""}`}><span>Critical</span><b>{readiness.critical}</b></div>

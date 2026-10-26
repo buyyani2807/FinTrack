@@ -64,6 +64,8 @@ export function ReportsSection({
   canWrite,
   saving,
   markGstFiled,
+  focusItemId = "",
+  onFocusHandled,
 }) {
   return (
     <div className="acc-panel">
@@ -129,6 +131,7 @@ export function ReportsSection({
       )}
       {section === "reports" && reportTab === "item_profit" && (
         <ItemProfitReport
+          key={focusItemId || "list"}
           items={items}
           categories={itemCategories}
           movements={stockMovements}
@@ -141,6 +144,8 @@ export function ReportsSection({
           workspaceRole={workspace?.role}
           accountsRole={accountsRole}
           onExportReady={onItemProfitExport}
+          focusItemId={focusItemId}
+          onFocusHandled={onFocusHandled}
         />
       )}
       {section === "reports" && reportTab === "stock_moves" && (
