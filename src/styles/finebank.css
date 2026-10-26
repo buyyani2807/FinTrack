@@ -782,12 +782,6 @@ html[data-ft-role="owner"] .top-actions .top-theme { display: none; }
 /* Accounts: a normal page beside the workspace sidebar (like Daily Finance), sections as tabs inside the page */
 .accounts-dashboard { position: static !important; inset: auto !important; z-index: auto !important; overflow: visible !important; min-height: 100svh; padding: 0 !important; }
 .accounts-dashboard .acc-shell { display: block !important; min-height: 0; }
-@media (width >= 1051px) {
-  .accounts-dashboard .acc-shell { display: grid !important; grid-template-columns: 220px minmax(0, 1fr) !important; align-items: start; }
-}
-@media (681px <= width <= 1050px) {
-  .accounts-dashboard .acc-shell { display: grid !important; grid-template-columns: auto minmax(0, 1fr) !important; align-items: start; }
-}
 .accounts-dashboard .acc-main { padding: 36px 44px 74px !important; }
 @media (width >= 1051px) { html[data-ft-role="owner"] .accounts-dashboard { margin-left: calc(var(--ft-sidebar-w) + 8px); } }
 @media (681px <= width <= 1050px) { html[data-ft-role="owner"] .accounts-dashboard { margin-left: var(--ft-rail-w); } .accounts-dashboard .acc-main { padding: 28px 24px 48px !important; } }
