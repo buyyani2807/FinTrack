@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { DEFAULT_CHART_OF_ACCOUNTS } from "../src/features/accounts/model/accountingModel.js";
-import { NAV_TREE, accountsPath, accountsViewFromPath, navItemIsActive, sectionTrail } from "../src/features/accounts/accountsNavigation.js";
+import { NAV_TREE, accountsNavChildId, accountsNavGroupId, accountsNavModel, accountsPath, accountsViewFromPath, navItemIsActive, sectionTrail } from "../src/features/accounts/accountsNavigation.js";
 import {
   attendanceExceptions,
   buildPayLine,
@@ -286,5 +286,10 @@ test("payroll sits beside expenses", () => {
   assert.equal(accountsPath({ section: "attendance" }), "/accounting/attendance");
   assert.equal(accountsViewFromPath("leave").section, "leave");
   assert.deepEqual(sectionTrail("payroll"), ["Payroll", "Pay"]);
+  assert.deepEqual(accountsNavModel().map(item => item.id), ["overview", "books", "parties", "reports", "more"]);
+  assert.equal(accountsNavGroupId("attendance"), "books");
+  assert.equal(accountsNavGroupId("pnl"), "reports");
+  assert.equal(accountsNavChildId("reports", "gst"), "gst");
+  assert.equal(accountsNavModel({ aiEnabled: true }).find(item => item.id === "reports").children.some(item => item.id === "ai"), true);
   assert.deepEqual(sectionTrail("leave"), ["Payroll", "Leave"]);
 });
