@@ -113,6 +113,8 @@ const FEATURE_SCENE = {
   "ai-bookkeeper": "ai-bookkeeper",
   "ai-setup": "ai-setup",
   "ai-migration": "ai-migration",
+  "item-profit": "accounts-inventory",
+  "for-the-ca": "accounts-pnl",
 };
 
 const CATEGORY_FALLBACK = {

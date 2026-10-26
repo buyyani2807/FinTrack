@@ -24,7 +24,7 @@ const PILLARS = [
     id: "accounts",
     title: "Accounting",
     text: "The company book for a shop, a trader, a service business, or a finance company.",
-    items: ["Chart of accounts and ledgers", "Sales, purchases, receipts, and payments", "Contra, journal, and credit and debit notes", "Inventory and GST preparation", "Receivables, payables, and bank reconciliation", "Customer profiles with a FinTrack credit score", "Day book, trial balance, profit and loss, balance sheet, and cash flow", "Monthly income and expense chart and spending analysis", "Expenses by month and category, with every entry", "Move in from Tally, Zoho Books, Book Keeper, or Excel"],
+    items: ["Chart of accounts and ledgers", "Sales, purchases, receipts, and payments", "Contra, journal, and credit and debit notes", "Quotations, orders, delivery challans, and goods receipts", "Inventory, item profit, and GST preparation", "Payroll, attendance, leave, and payslips", "Receivables, payables, and bank reconciliation", "Customer profiles with a FinTrack credit score", "Expenses by month and category, with every entry", "Day book, trial balance, profit and loss, balance sheet, and cash flow", "For the CA: the month’s books, GST checks, unmatched bank lines, and stock to review", "Move in from Tally, Zoho Books, Book Keeper, or Excel"],
     to: "accounts-overview",
     link: "Explore Accounting",
   },
@@ -340,7 +340,7 @@ const AUDIENCES = [
 
 const FAQ = [
   { question: "What is FinTrack?", answer: "One login for accounting, daily and monthly finance, collections, chit funds, payments, and AI suggestions from those records." },
-  { question: "Can I use it only for accounting?", answer: "Yes. Accounts can stand on its own: vouchers, inventory, GST preparation, banking, receivables, payables, and the statements." },
+  { question: "Can I use it only for accounting?", answer: "Yes. Accounts can stand on its own: vouchers, inventory, payroll, GST preparation, banking, receivables, payables, and the statements, including a page to hand the month to your accountant." },
   { question: "Can a finance business use it?", answer: "Yes. Daily Finance and Monthly Finance keep customer accounts, repayments, and collections." },
   { question: "Does it support chit funds?", answer: "Yes. Schemes, members, live bidding, payments, dividends, and reports." },
   { question: "Does it support GST?", answer: "It prepares GST summaries from posted vouchers. Filing stays outside FinTrack." },
@@ -349,7 +349,7 @@ const FAQ = [
   { question: "What is Ask FinTrack?", answer: "A question box on every screen. Ask “Who has not paid today?”, “Why did profit decrease?”, or “Which expenses increased this month?” and the answer comes from this workspace’s records, with the period and the report it used. It is read-only and does not guess figures it cannot find." },
   { question: "Does the AI change my books?", answer: "No. It does not post vouchers, file GST, lock a period, reverse an entry, create a purchase order, or send a message. A bank match is posted only when you approve it, a Tell FinTrack draft only when you choose Post, and imported data only when you choose Import. A locked period cannot be changed from a suggestion." },
   { question: "Can I move my books from Tally or Excel?", answer: "Yes. Upload a Tally XML export, or Excel and CSV files from Zoho Books, Book Keeper, or your own sheets. FinTrack shows how many customers, suppliers, ledgers, and transactions it found, how many accounts it mapped automatically, and the exceptions for you to review before anything is imported." },
-  { question: "What reports are included?", answer: "Daily and Monthly Finance have a collection report for any date and a Daily or Monthly P&L for the lending book. Chit Fund has a month statement PDF, a commission Profit & Loss by scheme, and scheme health. Accounts has the Day Book, Trial Balance, Profit & Loss, Balance Sheet, Cash Flow, GST, receivables, payables, and stock reports, with CSV, Excel, and PDF export." },
+  { question: "What reports are included?", answer: "Daily and Monthly Finance have a collection report for any date and a Daily or Monthly P&L for the lending book. Chit Fund has a month statement PDF, a commission Profit & Loss by scheme, and scheme health. Accounts has the Day Book, Trial Balance, Profit & Loss, Balance Sheet, Cash Flow, GST, item profit, receivables, payables, and stock reports, with CSV, Excel, and PDF export. For the CA gathers the month’s books, GST invoices to check, unmatched bank lines, and stock rows that need review." },
   { question: "Can I install it on my phone?", answer: "Yes. FinTrack is the mobile app: add it to the home screen from Safari on iPhone or iPad, or from Chrome on Android. It opens from its own icon. Sign in the same way you do in the browser." },
   { question: "How is this different from Tally?", answer: "TallyPrime does not have a mobile app for recording the books. On a phone it is for viewing reports. FinTrack installs on the phone, and collections, vouchers, and chit work are done there." },
 ];

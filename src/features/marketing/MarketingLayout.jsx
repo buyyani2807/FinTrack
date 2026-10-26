@@ -21,7 +21,7 @@ function NavIcon({ item, size = 15 }) {
 }
 
 const MENU_MODULES = {
-  accounts: ["accounts-overview", "vouchers", "receivables", "inventory", "gst-preparation", "bank-reconciliation"],
+  accounts: ["accounts-overview", "payroll", "trade-documents", "inventory", "item-profit", "for-the-ca"],
   intelligence: ["ask-fintrack", "ai-review", "forecasting", "month-end-readiness", "bank-matching", "gst-review"],
 };
 
