@@ -144,7 +144,7 @@ import {
 } from "./accountsFormDefaults.js";
 import { REPORT_TABS, MORE_LINKS } from "./accountsNavigation.js";
 import { gstStatusLabel } from "./accountsFormat.js";
-import { AccAccountsNav, AccBottomNav, AccCompanyBar, AccPageHeader, AccSectionMenu } from "./components/AccLayout.jsx";
+import { AccSectionTabs, AccCompanyBar, AccPageHeader } from "./components/AccLayout.jsx";
 import { CustomerPipeline } from "./components/CustomerPipeline.jsx";
 import { ManufacturingWorkspace } from "./components/ManufacturingWorkspace.jsx";
 import { VoucherForm } from "./components/VoucherForm.jsx";
@@ -2157,12 +2157,11 @@ const openVoucher = () => {
 
 
   return <div className="acc-shell">
-    <AccAccountsNav section={section} reportTab={reportTab} onNavigate={openSection} openReport={openReport} aiEnabled={aiEnabled} manufacturingEnabled={manufacturingEnabled} />
     <main className="acc-main acc-print-root">
       <AccPageHeader
         title="Accounts"
         copy={`${activeCompany?.name || settings?.companyName || workspace.businessName || "Your business"} · ${fy.label} · ${range.from} to ${range.to}`}
-        tabs={<AccSectionMenu section={section} reportTab={reportTab} onNavigate={openSection} openReport={openReport} aiEnabled={aiEnabled} manufacturingEnabled={manufacturingEnabled} />}
+        tabs={<AccSectionTabs section={section} reportTab={reportTab} onNavigate={openSection} openReport={openReport} aiEnabled={aiEnabled} />}
         companyBar={<AccCompanyBar
           companies={companies}
           activeId={activeCompanyId}
@@ -2776,7 +2775,6 @@ const openVoucher = () => {
         />
       )}
       {confirmLogout && <LogoutConfirmModal signingOut={signingOut} setConfirmLogout={setConfirmLogout} confirmAccountsLogout={confirmAccountsLogout} />}
-      <AccBottomNav section={section} reportTab={reportTab} onNavigate={openSection} aiEnabled={aiEnabled} manufacturingEnabled={manufacturingEnabled} />
     </main>
   </div>;
 }
