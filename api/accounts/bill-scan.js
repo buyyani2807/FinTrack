@@ -19,10 +19,10 @@ documentKind is invoice, receipt, payment_proof, or cheque. paymentStatus is pai
 billDate is the invoice date. quantity is the billed quantity. unit is the printed UOM, such as M3, Nos, or Kg. rate is the printed price per unit before tax. amount is the printed line amount before tax. gstRate is the percent, such as 18.
 taxable, cgst, sgst, igst, and total are the figures printed on the bill. Copy them as printed. Do not recalculate them from quantity times rate. A printed total can be a few paise away from that multiplication.`;
 
-function mimeOf(value) {
+export function mimeOf(value) {
   const mime = String(value || "").toLowerCase();
   if (mime === "image/jpg") return "image/jpeg";
-  return ["image/jpeg", "image/png", "image/webp"].includes(mime) ? mime : "";
+  return ["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(mime) ? mime : "";
 }
 
 async function signedIn(token) {
@@ -75,9 +75,15 @@ export default async function handler(req, res) {
   if (!geminiKey) return json(res, 503, { error: "Bill reading is not set up on this server yet." });
 
   const mimeType = mimeOf(req.body?.mimeType);
-  const data = String(req.body?.data || "").replace(/^data:image\/[a-z0-9.+-]+;base64,/i, "");
-  if (!mimeType || !data) return json(res, 400, { error: "Choose a photo of the bill." });
-  if (data.length > 2_000_000) return json(res, 413, { error: "That photo is too large. Take it again, closer to the bill." });
+  const data = String(req.body?.data || "").replace(/^data:(?:image\/[a-z0-9.+-]+|application\/pdf);base64,/i, "");
+  if (!mimeType || !data) return json(res, 400, { error: "Choose a photo or a PDF of the bill." });
+  if (data.length > 2_000_000) {
+    return json(res, 413, {
+      error: mimeType === "application/pdf"
+        ? "That PDF is too large. Choose a smaller file."
+        : "That photo is too large. Take it again, closer to the bill.",
+    });
+  }
   if (refuseOverQuota(res, await takeAiQuota(token, "bill_scan"))) return undefined;
 
   try {

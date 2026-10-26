@@ -1794,7 +1794,7 @@ const openVoucher = () => {
       try {
         const meta = assertVoucherAttachmentMeta({
           fileName: simpleForm.billPhoto.fileName || "supplier-bill.jpg",
-          contentType: "image/jpeg",
+          contentType: simpleForm.billPhoto.contentType || "image/jpeg",
           byteSize: simpleForm.billPhoto.byteSize,
         });
         await addVoucherAttachment(token, {
@@ -1826,7 +1826,7 @@ const openVoucher = () => {
   }, result => {
     const label = SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry";
     return result?.billAttached === false
-      ? `${label} saved. The bill photo was not attached.`
+      ? `${label} saved. The bill was not attached.`
       : `${label} saved successfully`;
   });
 

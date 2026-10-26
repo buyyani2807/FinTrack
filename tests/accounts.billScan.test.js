@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { markDuplicateInvoices, normalizeBillScan, purchaseFormFromBill, reviewBillScan } from "../src/features/accounts/model/billScan.js";
 import { aggregateItemizedGst } from "../src/features/accounts/model/inventoryModel.js";
 import { DEFAULT_CHART_OF_ACCOUNTS, buildVoucher, paymentLines } from "../src/features/accounts/model/accountingModel.js";
-import handler, { modelCandidates, readFailure } from "../api/accounts/bill-scan.js";
+import handler, { mimeOf, modelCandidates, readFailure } from "../api/accounts/bill-scan.js";
 
 const parties = [
   { id: "s1", name: "City Supplies", partyType: "supplier", gstin: "29ABCDE1234F1Z5", isActive: true, creditDays: 15 },
@@ -18,6 +18,13 @@ test("a new Gemini project uses a current flash model", () => {
   assert.equal(models[0], "gemini-2.5-flash");
   assert.ok(models.includes("gemini-3.5-flash-lite"));
   assert.equal(models.includes("gemini-2.5-flash-lite"), false);
+});
+
+test("a bill can be a photo or a PDF", () => {
+  assert.equal(mimeOf("application/pdf"), "application/pdf");
+  assert.equal(mimeOf("image/jpg"), "image/jpeg");
+  assert.equal(mimeOf("image/png"), "image/png");
+  assert.equal(mimeOf("application/zip"), "");
 });
 
 test("a rejected Gemini key is not described as a bad photo", () => {

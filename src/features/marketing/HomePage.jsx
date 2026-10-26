@@ -60,7 +60,7 @@ const AI = [
   { slug: "stock-forecast", title: "Stock forecast", text: "Which items may run out, when, and how much to consider buying." },
   { slug: "chit-scheme-health", title: "Chit scheme health", text: "Collection rate, overdue members, and members paying later each month." },
   { slug: "ai-review", title: "AI Review", text: "Eight reviews in one Accounts tab, each with its reason, confidence, and a link to the record." },
-  { slug: "bill-scanning", title: "Bill draft", text: "A supplier photo becomes a draft. You review it, then save." },
+  { slug: "bill-scanning", title: "Bill draft", text: "A supplier photo or PDF becomes a draft. You review it, then save." },
   { slug: "credit-score", title: "Customer credit score", text: "A score from each customer’s own payment history, with the reasons." },
 ];
 
