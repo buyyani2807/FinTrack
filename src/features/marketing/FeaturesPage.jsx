@@ -31,7 +31,7 @@ export function FeaturesPage() {
       <div className="mkt-wrap">
         <Reveal as="p" className="mkt-kicker">Features</Reveal>
         <Reveal as="h1" index={1}>Start with Accounts and AI.</Reveal>
-        <Reveal as="p" className="mkt-lead" index={2}>Company books for small and medium businesses, then the suggestions that read those records. Collections and chit funds are in the same login.</Reveal>
+        <Reveal as="p" className="mkt-lead" index={2}>Company books for small and medium businesses, including a supplier bill scanned from a photo or a PDF. Then the suggestions that read those records. Collections and chit funds are in the same login.</Reveal>
         <Reveal className="mkt-tabs" index={3}>
           {FEATURE_CATEGORIES.map(category => <a key={category.id} href={`#${category.id}`}>{category.label}</a>)}
         </Reveal>

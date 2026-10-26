@@ -232,6 +232,8 @@ html[data-theme="dark"] .mkt-section h2 { color: #fff; }
 }
 .mkt-text-link { color: var(--mkt-accent); font-weight: 700; font-size: var(--ft-type-secondary); }
 .mkt-text-link:hover { text-decoration: underline; }
+.mkt-inline-link { color: var(--mkt-accent); font-weight: 700; }
+.mkt-inline-link:hover { text-decoration: underline; }
 .mkt-burger, .mkt-drawer { display: none; }
 .mkt-burger {
   place-items: center;

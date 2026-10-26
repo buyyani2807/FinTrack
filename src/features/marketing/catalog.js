@@ -3,7 +3,7 @@
 
 export const FEATURE_CATEGORIES = [
   { id: "accounts", label: "Accounts", blurb: "Company books, payroll, stock, and a page to hand the month to the accountant." },
-  { id: "intelligence", label: "AI", blurb: "Cash-flow outlook, expense and supplier price changes, collection priorities, unusual activity, GST review, month-end readiness, bank matching, stock forecasts, and chit scheme health. Each suggestion shows its reason and a link to the record. You decide what happens next." },
+  { id: "intelligence", label: "AI", blurb: "Scan a supplier bill from a photo or a PDF and review the purchase draft. Also cash-flow outlook, expense and supplier price changes, collection priorities, unusual activity, GST review, month-end readiness, bank matching, stock forecasts, and chit scheme health. Each suggestion shows its reason and a link to the record. You decide what happens next." },
   { id: "finance", label: "Finance", blurb: "Daily and monthly collections, with collection reports and a profit and loss view for the lending book." },
   { id: "chit", label: "Chit Fund", blurb: "Schemes, bidding, dividends, month statements, and commission income." },
   { id: "portals", label: "Portals", blurb: "Financier sign in opens the owner workspace. Agents, customers, and members have their own login." },

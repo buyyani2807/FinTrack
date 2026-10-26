@@ -39,7 +39,7 @@ export function SolutionsPage() {
 
 const STEPS = [
   { title: "Open one workspace", text: "Financier sign in opens the owner workspace, or create the business account when signup is open. A collection agent, a customer, and a chit member each sign in on the same screen with their own ID and PIN." },
-  { title: "Record the work", text: "Add daily or monthly customers, enroll a chit scheme, or post a voucher on the company you have open." },
+  { title: "Record the work", text: "Add daily or monthly customers, enroll a chit scheme, or post a voucher on the company you have open. Scan a supplier bill from a photo or a PDF and review the draft before you save." },
   { title: "Review what FinTrack highlights", text: "Insights, unusual days, bill drafts, and bank suggestions are there to read. You record the payment, accept the match, or save the voucher." },
   { title: "Share only when you mean to", text: "Download a receipt or statement, or open WhatsApp with a draft. The message is sent when you send it. Portals show a customer or member their own records." },
 ];
@@ -91,6 +91,7 @@ const PLAN_INCLUDES = [
   "Chit schemes and live bidding",
   "Collection agents, customer portals, and member portals",
   "Collection reports, Daily and Monthly P&L, chit statements, and company reports",
+  "Bill scan: a supplier photo or PDF becomes a purchase draft",
   "AI Review: cash-flow forecast, expense, GST, and month-end checks, bank matching, and stock forecasts",
   "Receipts, and Ask FinTrack when you confirm",
 ];
