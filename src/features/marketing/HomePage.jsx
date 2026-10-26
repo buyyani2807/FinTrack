@@ -11,7 +11,7 @@ import { ProductCta } from "./ProductCta.jsx";
 import { ProductPreview } from "./ProductPreview.jsx";
 
 const VALUES = [
-  { icon: "Landmark", title: "Accounting", text: "Vouchers, stock, GST preparation, and statements for the company you open. Scan a supplier bill from a photo or a PDF." },
+  { icon: "Landmark", title: "Accounting", text: "Vouchers, stock, GST preparation, and statements for the company you open." },
   { icon: "HandCoins", title: "Collections", text: "See who is due and record what was received." },
   { icon: "CalendarDays", title: "Finance", text: "Daily collections and monthly repayments on the customer account." },
   { icon: "Gavel", title: "Chit Funds", text: "Schemes, members, auctions, and dividends." },
@@ -24,7 +24,7 @@ const PILLARS = [
     id: "accounts",
     title: "Accounting",
     text: "The company book for a shop, a trader, a service business, or a finance company.",
-    items: ["Chart of accounts and ledgers", "Sales, purchases, receipts, and payments", "Scan a supplier bill from a photo or a PDF, then review the draft", "Contra, journal, and credit and debit notes", "Quotations, orders, delivery challans, and goods receipts", "Inventory, item profit, and GST preparation", "Payroll, attendance, leave, and payslips", "Receivables, payables, and bank reconciliation", "Customer profiles with a FinTrack credit score", "Expenses by month and category, with every entry", "Day book, trial balance, profit and loss, balance sheet, and cash flow", "For the CA: the month’s books, GST checks, unmatched bank lines, and stock to review", "Move in from Tally, Zoho Books, Book Keeper, or Excel"],
+    items: ["Chart of accounts and ledgers", "Sales, purchases, receipts, and payments", "Contra, journal, and credit and debit notes", "Quotations, orders, delivery challans, and goods receipts", "Inventory, item profit, and GST preparation", "Payroll, attendance, leave, and payslips", "Receivables, payables, and bank reconciliation", "Customer profiles with a FinTrack credit score", "Expenses by month and category, with every entry", "Day book, trial balance, profit and loss, balance sheet, and cash flow", "For the CA: the month’s books, GST checks, unmatched bank lines, and stock to review", "Move in from Tally, Zoho Books, Book Keeper, or Excel"],
     to: "accounts-overview",
     link: "Explore Accounting",
   },
@@ -47,7 +47,6 @@ const PILLARS = [
 ];
 
 const AI = [
-  { slug: "bill-scanning", title: "Bill scan", text: "A supplier photo or PDF becomes a purchase draft. You review it, then save. Nothing is posted until you save." },
   { slug: "ai-bookkeeper", title: "Tell FinTrack", text: "“I bought a laptop for ₹85,000 using HDFC” becomes a balanced draft, explained in plain words. You post it." },
   { slug: "ai-setup", title: "AI setup", text: "Say what kind of business you run and answer a few questions. FinTrack sets up ledgers, banks, GST, and stock categories." },
   { slug: "ai-migration", title: "Move from Tally or Excel", text: "Upload your old books. FinTrack maps the accounts, finds duplicate parties, and asks only about the exceptions." },
@@ -345,13 +344,13 @@ const FAQ = [
   { question: "Does it support chit funds?", answer: "Yes. Schemes, members, live bidding, payments, dividends, and reports." },
   { question: "Does it support GST?", answer: "It prepares GST summaries from posted vouchers. Filing stays outside FinTrack." },
   { question: "Can I send WhatsApp messages?", answer: "FinTrack opens WhatsApp with a reminder, receipt, or statement. You send the message." },
-  { question: "Does it have AI?", answer: "Yes, included in the plan. Scan a supplier bill from a photo or a PDF and FinTrack drafts the purchase for you to review. AI Review in Accounts gives a cash-flow forecast, expense and supplier price changes, collection priorities, unusual activity alerts, GST checks, month-end readiness, bank matching suggestions, and stock forecasts. Chit Fund has scheme health. Ask FinTrack answers questions from this workspace, and Tell FinTrack turns a plain sentence into an entry. AI also sets up new books from a few questions and maps data brought in from Tally, Zoho Books, or Excel. Every suggestion shows its reason and waits for you to act." },
+  { question: "Does it have AI?", answer: "Yes, included in the plan. AI Review in Accounts gives a cash-flow forecast, expense and supplier price changes, collection priorities, unusual activity alerts, GST checks, month-end readiness, bank matching suggestions, and stock forecasts. Chit Fund has scheme health. Ask FinTrack answers questions from this workspace, and Tell FinTrack turns a plain sentence into an entry. AI also sets up new books from a few questions and maps data brought in from Tally, Zoho Books, or Excel. Every suggestion shows its reason and waits for you to act." },
   { question: "What is Ask FinTrack?", answer: "A question box on every screen. Ask “Who has not paid today?”, “Why did profit decrease?”, or “Which expenses increased this month?” and the answer comes from this workspace’s records, with the period and the report it used. It is read-only and does not guess figures it cannot find." },
   { question: "Does the AI change my books?", answer: "No. It does not post vouchers, file GST, lock a period, reverse an entry, create a purchase order, or send a message. A bank match is posted only when you approve it, a Tell FinTrack draft only when you choose Post, and imported data only when you choose Import. A locked period cannot be changed from a suggestion." },
   { question: "Can I move my books from Tally or Excel?", answer: "Yes. Upload a Tally XML export, or Excel and CSV files from Zoho Books, Book Keeper, or your own sheets. FinTrack shows how many customers, suppliers, ledgers, and transactions it found, how many accounts it mapped automatically, and the exceptions for you to review before anything is imported." },
   { question: "What reports are included?", answer: "Daily and Monthly Finance have a collection report for any date and a Daily or Monthly P&L for the lending book. Chit Fund has a month statement PDF, a commission Profit & Loss by scheme, and scheme health. Accounts has the Day Book, Trial Balance, Profit & Loss, Balance Sheet, Cash Flow, GST, item profit, receivables, payables, and stock reports, with CSV, Excel, and PDF export. For the CA gathers the month’s books, GST invoices to check, unmatched bank lines, and stock rows that need review." },
   { question: "Can I install it on my phone?", answer: "Yes. FinTrack is the mobile app: add it to the home screen from Safari on iPhone or iPad, or from Chrome on Android. It opens from its own icon. Sign in the same way you do in the browser." },
-  { question: "How is this different from Tally?", answer: "TallyPrime does not have a mobile app for recording the books. On a phone it is for viewing reports. FinTrack installs on the phone, and collections, vouchers, and chit work are done there." },
+  { question: "How is this different from Tally?", answer: "FinTrack keeps accounting, daily and monthly collections, and chit funds in one login, and it installs on the phone. You record the day’s work there." },
 ];
 
 export function HomePage() {
@@ -363,8 +362,8 @@ export function HomePage() {
       <div className="mkt-wrap mkt-hero-grid">
         <div className="mkt-hero-copy">
           <Reveal as="p" className="mkt-kicker">A mobile app for the books</Reveal>
-          <Reveal as="h1" index={1}>Your business, on the phone.</Reveal>
-          <Reveal as="p" index={2}>FinTrack installs on iPhone and Android and opens from its own icon. Collections, company accounts, and chit funds are in that app. <Link className="mkt-inline-link" to={featurePath("bill-scanning")}>Scan a supplier bill</Link> from a photo or a PDF, then review the purchase draft before you save. TallyPrime does not have a mobile app for recording the books. On a phone it is for viewing reports.</Reveal>
+          <Reveal as="h1" index={1}>Your Tally on mobile.</Reveal>
+          <Reveal as="p" index={2}>FinTrack installs on iPhone and Android and opens from its own icon. Collections, company accounts, and chit funds are in that app.</Reveal>
           <Reveal className="mkt-cta-row" index={3}>
             {signedIn ? <ProductCta primary /> : null}
             <Link className="mkt-btn" to={`${marketingPaths.how}#install`}>Install on iPhone or Android</Link>
@@ -423,7 +422,7 @@ export function HomePage() {
       <div className="mkt-wrap">
         <div className="mkt-section-head">
           <Reveal as="h2">AI that reviews the books with you.</Reveal>
-          <Reveal as="p" className="mkt-lead" index={1}>Scan a supplier bill from a photo or a PDF and review the purchase draft before you save. FinTrack also reads your own records and points out what needs a look: cash that may run short, costs that rose, GST details to fix, bank lines to match, and stock to reorder. Every suggestion shows its reason, its confidence, and a link to the record. You post the voucher, approve the match, and send the message.</Reveal>
+          <Reveal as="p" className="mkt-lead" index={1}>FinTrack reads your own records and points out what needs a look: cash that may run short, costs that rose, GST details to fix, bank lines to match, and stock to reorder. Every suggestion shows its reason, its confidence, and a link to the record. You post the voucher, approve the match, and send the message.</Reveal>
         </div>
         <div className="mkt-grid three">
           {AI.map((item, index) => <Reveal as={Link} key={item.slug} to={featurePath(item.slug)} className="mkt-card mkt-card-link" index={index % 3}>
@@ -451,7 +450,7 @@ export function HomePage() {
 
     <section className="mkt-section">
       <div className="mkt-wrap">
-        <Reveal as="h2">The mobile app Tally does not have.</Reveal>
+        <Reveal as="h2">The books, on your phone.</Reveal>
         <Reveal as="p" className="mkt-lead" index={1}>Add FinTrack from the browser and record the day’s work on the phone. The owner signs in with email. A collection agent, a customer, or a chit member uses a portal ID and PIN.</Reveal>
         <Reveal className="mkt-cta-row" index={2}>
           <Link className="mkt-btn" to={`${marketingPaths.how}#install`}>Install on iPhone or Android</Link>
