@@ -1127,7 +1127,6 @@ export const FEATURES = [
       "Bank ledgers for each bank you name, and extra ledgers such as Freight Inward or Discount Allowed",
       "Suggested answers for common businesses, and a GSTIN check before it is saved",
       "Change your last answer at any time before setting up, and run it again later from Setup",
-      "The step-by-step form is still there if you prefer it",
     ],
     benefits: ["Ready to record the first entry in a few minutes", "Ledgers and categories fit the business", "You see the whole setup before anything is saved", "Ledgers already in the books are left as they are"],
     sections: [

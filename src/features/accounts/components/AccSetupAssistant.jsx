@@ -83,7 +83,6 @@ export function AccSetupAssistant({
   onApply,
   onDone,
   onSkip,
-  onClassic,
   onOpenMigration,
 }) {
   const companyId = company?.id || "";
@@ -181,7 +180,6 @@ export function AccSetupAssistant({
             : "Answer a few questions in your own words. FinTrack sets up the ledgers, banks, GST and stock categories for you. Nothing is saved until you confirm."}</p>
         </div>
         <div className="acc-setup-head-actions">
-          {onClassic && <button type="button" className="acc-ov-link-btn" disabled={saving} onClick={onClassic}>Use the step-by-step form</button>}
           {onSkip && <button type="button" className="btn" disabled={saving} onClick={onSkip}>Skip for now</button>}
         </div>
       </header>

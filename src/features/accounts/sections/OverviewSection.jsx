@@ -1,9 +1,6 @@
-import { useState } from "react";
 import {
   createChartAccount,
-  createParty,
   initializeAccounting,
-  inviteTeamMember,
   loadChartOfAccounts,
   loadItemCategories,
   saveAccountingSettings,
@@ -11,7 +8,7 @@ import {
   updateChartAccount,
   upsertItemCategory,
 } from "../data/accountingRepository.js";
-import { AccOnboardingWizard, markAccountsOnboardingDone, saveIndustry } from "../components/AccOnboardingWizard.jsx";
+import { markAccountsOnboardingDone, saveIndustry } from "../components/AccOnboardingWizard.jsx";
 import { AccSetupAssistant } from "../components/AccSetupAssistant.jsx";
 import { applySetupPlan } from "../model/setupAssistant.js";
 import { Field, AccMetric } from "../components/AccUi.jsx";
@@ -19,10 +16,8 @@ import { AttentionCenterCard } from "../../intelligence/AttentionCenterCard.jsx"
 import { AnomalyReviewCard } from "../../intelligence/AnomalyReviewCard.jsx";
 import { trackProductEvent } from "../../commercial/productAnalytics.js";
 import { todayIso } from "../../../lib/dates.js";
-import { INDIA_STATES } from "../model/accountingGst.js";
 import { AccIntelligenceBrief } from "../components/AccIntelligenceBrief.jsx";
 import { AccAskBooks } from "../components/AccAskBooks.jsx";
-import { emptyPartyForm } from "../accountsFormDefaults.js";
 import { money, profitResult } from "../accountsFormat.js";
 import { AccOverviewContextBar } from "../components/AccPeriodBars.jsx";
 import { AccountsBusinessPulse, AccMoneyTiles, AccOverviewRecent } from "../components/AccOverviewWidgets.jsx";
@@ -84,7 +79,6 @@ export function OverviewSection({
   openMigration = null,
   setupKeepsCompany = false,
 }) {
-  const [classicSetup, setClassicSetup] = useState(false);
   const result = profitResult(metrics?.netProfit);
   const finishOnboarding = () => {
     markAccountsOnboardingDone(activeCompanyId);
@@ -102,7 +96,7 @@ export function OverviewSection({
         <button type="button" className="btn primary" disabled={saving} onClick={() => run(() => initializeAccounting(token, setupForm), "Accounts opened.")}>{saving ? "Saving…" : "Create chart of accounts"}</button>
       </div>}
 
-      {showOnboarding && !classicSetup && (
+      {showOnboarding && (
         <AccSetupAssistant
           key={activeCompanyId || "setup-assistant"}
           company={activeCompany}
@@ -134,51 +128,7 @@ export function OverviewSection({
           }}
           onDone={finishOnboarding}
           onSkip={finishOnboarding}
-          onClassic={setupKeepsCompany ? null : () => setClassicSetup(true)}
           onOpenMigration={openMigration ? () => { finishOnboarding(); openMigration(); } : null}
-        />
-      )}
-
-      {showOnboarding && classicSetup && (
-        <AccOnboardingWizard
-          key={activeCompanyId || "onboarding"}
-          company={activeCompany}
-          canAdmin={canAdmin}
-          canWrite={canWrite}
-          saving={saving}
-          onSaveCompany={async ({ companyName, booksStartedOn }) => {
-            const ok = await run(() => saveAccountingSettings(token, { companyName, booksStartedOn }), "Company saved.");
-            if (!ok) throw new Error("Could not save company.");
-          }}
-          onSaveGst={async payload => {
-            const ok = await run(() => saveGstSettings(token, {
-              ...payload,
-              stateName: INDIA_STATES.find(state => state.code === payload.stateCode)?.name || "",
-            }), "GST settings saved.");
-            if (!ok) throw new Error("Could not save GST.");
-          }}
-          onCreateParty={async payload => {
-            const ok = await run(() => createParty(token, {
-              ...emptyPartyForm(),
-              ...payload,
-            }), "Party created.");
-            if (!ok) throw new Error("Could not create party.");
-          }}
-          onInviteCa={async ({ email, role }) => {
-            const ok = await run(async () => {
-              await inviteTeamMember(token, { email, role });
-            }, `Invite processed for ${email}.`);
-            if (!ok) throw new Error("Could not invite. Apply migration 075 if this is the first invite.");
-          }}
-          onFinish={() => {
-            markAccountsOnboardingDone(activeCompanyId);
-            setOnboardingDismissed(true);
-            setNotice("Accounts setup complete.");
-          }}
-          onSkip={() => {
-            markAccountsOnboardingDone(activeCompanyId);
-            setOnboardingDismissed(true);
-          }}
         />
       )}
 
