@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Select } from "../../../../components/Select.jsx";
 import { Field, AccSetupSection, AccTable } from "../../components/AccUi.jsx";
 import { money } from "../../accountsFormat.js";
@@ -26,10 +26,12 @@ export function PriceListsPanel({
 }) {
   const [draft, setDraft] = useState(() => emptyPriceListDraft());
   const [error, setError] = useState("");
+  const editorRef = useRef(null);
   const products = useMemo(
     () => (items || []).filter(item => item.isActive !== false).sort((a, b) => a.name.localeCompare(b.name)),
     [items],
   );
+  const editing = Boolean(draft.id);
 
   const openList = list => {
     setError("");
@@ -41,6 +43,13 @@ export function PriceListsPanel({
       isActive: list.isActive !== false,
       rates: { ...(list.rates || {}) },
     });
+    requestAnimationFrame(() => editorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  };
+
+  const startNew = (kind = "selling") => {
+    setError("");
+    setDraft(emptyPriceListDraft(kind));
+    requestAnimationFrame(() => editorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
   };
 
   const setRate = (itemId, value) => {
@@ -78,66 +87,76 @@ export function PriceListsPanel({
     >
       {!canWrite ? <p className="small">View-only. An owner or accountant can edit price lists.</p> : null}
       {error ? <p className="notice" role="alert">{error}</p> : null}
-      <div className="form">
-        <Field label="Name"><input value={draft.name} placeholder="e.g. Dealer" onChange={event => setDraft(current => ({ ...current, name: event.target.value }))} disabled={!canWrite} /></Field>
-        <Field label="Kind">
-          <Select value={draft.kind} disabled={!canWrite || Boolean(draft.id)} onChange={event => setDraft(current => ({ ...current, kind: event.target.value, rates: {} }))}>
-            {PRICE_LIST_KINDS.map(kind => <option key={kind.id} value={kind.id}>{kind.label}</option>)}
-          </Select>
-        </Field>
-        <Field label="Default for this kind">
-          <label className="small"><input type="checkbox" checked={draft.isDefault} disabled={!canWrite} onChange={event => setDraft(current => ({ ...current, isDefault: event.target.checked }))} /> Use when a party has no list</label>
-        </Field>
-      </div>
-      <p className="small spacer">Rates on this list. Leave blank to fall back to the item price.</p>
-      <div className="table acc-table-wrap">
-        <table>
-          <thead><tr><th>Item</th><th>SKU</th><th className="acc-num">Item price</th><th className="acc-num">List rate</th></tr></thead>
-          <tbody>
-            {products.map(item => {
-              const itemPrice = draft.kind === "purchase" ? item.purchasePrice : item.sellingPrice;
-              return (
-                <tr key={item.id}>
-                  <td>{item.name}</td>
-                  <td>{item.sku || "—"}</td>
-                  <td className="acc-num">{money(itemPrice)}</td>
-                  <td className="acc-num">
-                    <input
-                      className="acc-num-input"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      disabled={!canWrite}
-                      value={draft.rates[item.id] ?? ""}
-                      onChange={event => setRate(item.id, event.target.value)}
-                    />
-                  </td>
-                </tr>
-              );
-            })}
-            {!products.length && <tr><td colSpan={4}>Add items in Inventory before setting list rates.</td></tr>}
-          </tbody>
-        </table>
-      </div>
-      {canWrite ? (
-        <div className="acc-form-actions">
-          <button type="button" className="btn primary" disabled={saving || !draft.name.trim()} onClick={() => save().catch(err => setError(err.message || "Could not save the price list."))}>{saving ? "Saving…" : draft.id ? "Update list" : "Save list"}</button>
-          {draft.id ? <button type="button" className="btn" disabled={saving} onClick={() => setDraft(emptyPriceListDraft(draft.kind))}>Clear</button> : null}
-        </div>
-      ) : null}
+
       <AccTable columns={["Name", "Kind", "Rates", ""]} empty={!priceLists.length && "No price lists yet."}>
         {(priceLists || []).map(list => (
-          <tr key={list.id}>
+          <tr key={list.id} className={draft.id === list.id ? "is-selected" : undefined}>
             <td>{list.name}{list.isDefault ? " · default" : ""}{list.isActive === false ? " · inactive" : ""}</td>
             <td>{PRICE_LIST_KINDS.find(kind => kind.id === list.kind)?.label || list.kind}</td>
             <td>{Object.keys(list.rates || {}).length}</td>
             <td className="accounts-action-row">
-              <button type="button" className="btn" onClick={() => openList(list)}>Open</button>
+              <button type="button" className="btn" onClick={() => openList(list)}>{draft.id === list.id ? "Editing" : "Open"}</button>
               {canWrite ? <button type="button" className="btn" disabled={saving} onClick={() => remove(list).catch(err => setError(err.message || "Could not delete the price list."))}>Delete</button> : null}
             </td>
           </tr>
         ))}
       </AccTable>
+
+      <div className="acc-price-list-editor spacer" ref={editorRef}>
+        <div className="toolbar">
+          <strong>{editing ? `Editing · ${draft.name || "price list"}` : "New price list"}</strong>
+          {canWrite && editing ? (
+            <button type="button" className="btn" disabled={saving} onClick={() => startNew(draft.kind)}>New list</button>
+          ) : null}
+        </div>
+        <div className="form">
+          <Field label="Name"><input value={draft.name} placeholder="e.g. Dealer" onChange={event => setDraft(current => ({ ...current, name: event.target.value }))} disabled={!canWrite} /></Field>
+          <Field label="Kind">
+            <Select value={draft.kind} disabled={!canWrite || editing} onChange={event => setDraft(current => ({ ...current, kind: event.target.value, rates: {} }))}>
+              {PRICE_LIST_KINDS.map(kind => <option key={kind.id} value={kind.id}>{kind.label}</option>)}
+            </Select>
+          </Field>
+          <Field label="Default for this kind">
+            <label className="small"><input type="checkbox" checked={draft.isDefault} disabled={!canWrite} onChange={event => setDraft(current => ({ ...current, isDefault: event.target.checked }))} /> Use when a party has no list</label>
+          </Field>
+        </div>
+        <p className="small spacer">Rates on this list. Leave blank to fall back to the item price.</p>
+        <div className="table acc-table-wrap">
+          <table>
+            <thead><tr><th>Item</th><th>SKU</th><th className="acc-num">Item price</th><th className="acc-num">List rate</th></tr></thead>
+            <tbody>
+              {products.map(item => {
+                const itemPrice = draft.kind === "purchase" ? item.purchasePrice : item.sellingPrice;
+                return (
+                  <tr key={item.id}>
+                    <td>{item.name}</td>
+                    <td>{item.sku || "—"}</td>
+                    <td className="acc-num">{money(itemPrice)}</td>
+                    <td className="acc-num">
+                      <input
+                        className="acc-num-input"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        disabled={!canWrite}
+                        value={draft.rates[item.id] ?? ""}
+                        onChange={event => setRate(item.id, event.target.value)}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+              {!products.length && <tr><td colSpan={4}>Add items in Inventory before setting list rates.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+        {canWrite ? (
+          <div className="acc-form-actions">
+            <button type="button" className="btn primary" disabled={saving || !draft.name.trim()} onClick={() => save().catch(err => setError(err.message || "Could not save the price list."))}>{saving ? "Saving…" : editing ? "Update list" : "Save list"}</button>
+            {editing ? <button type="button" className="btn" disabled={saving} onClick={() => startNew(draft.kind)}>Cancel</button> : null}
+          </div>
+        ) : null}
+      </div>
     </AccSetupSection>
   );
 }
