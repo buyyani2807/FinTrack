@@ -80,31 +80,34 @@ declare
   org_id uuid;
   active_company_id uuid;
   nm text;
-  kind text;
+  list_kind text;
   new_id uuid;
 begin
   org_id := public.acc_require_owner();
   active_company_id := public.acc_require_company(input_company_id);
   nm := nullif(trim(coalesce(input_name, '')), '');
-  kind := lower(trim(coalesce(input_kind, 'selling')));
+  list_kind := lower(trim(coalesce(input_kind, 'selling')));
   if nm is null then raise exception 'Price list name is required'; end if;
   if length(nm) > 80 then raise exception 'Price list name is too long'; end if;
-  if kind not in ('selling', 'purchase') then raise exception 'Choose selling or purchase'; end if;
+  if list_kind not in ('selling', 'purchase') then raise exception 'Choose selling or purchase'; end if;
 
   if coalesce(input_is_default, false) then
     update public.acc_price_lists
       set is_default = false, updated_at = now()
-    where organization_id = org_id and company_id = active_company_id and kind = kind and is_default;
+    where organization_id = org_id
+      and company_id = active_company_id
+      and acc_price_lists.kind = list_kind
+      and is_default;
   end if;
 
   if input_id is null then
     insert into public.acc_price_lists (organization_id, company_id, name, kind, is_default, is_active)
-    values (org_id, active_company_id, nm, kind, coalesce(input_is_default, false), coalesce(input_is_active, true))
+    values (org_id, active_company_id, nm, list_kind, coalesce(input_is_default, false), coalesce(input_is_active, true))
     returning id into new_id;
   else
     update public.acc_price_lists
       set name = nm,
-          kind = kind,
+          kind = list_kind,
           is_default = coalesce(input_is_default, is_default),
           is_active = coalesce(input_is_active, is_active),
           updated_at = now()
