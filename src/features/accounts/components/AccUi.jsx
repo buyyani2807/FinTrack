@@ -37,7 +37,7 @@ function placeMoreMenu(rect, align, menuWidth, menuHeight) {
   const viewWidth = view?.width || window.innerWidth;
   const viewHeight = view?.height || window.innerHeight;
   const margin = 8;
-  const nav = document.querySelector(".accounts-dashboard .acc-bottom-nav");
+  const nav = document.querySelector(".accounts-dashboard .acc-places-bar, .accounts-dashboard .acc-bottom-nav");
   let limitBottom = viewTop + viewHeight - margin;
   if (nav && getComputedStyle(nav).display !== "none") {
     const navTop = nav.getBoundingClientRect().top;
