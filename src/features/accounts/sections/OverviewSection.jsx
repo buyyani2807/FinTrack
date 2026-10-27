@@ -182,17 +182,7 @@ export function OverviewSection({
         />
       )}
 
-      {settings && metrics && <AccMoneyTiles
-        metrics={metrics}
-        periodLabel={rangeFrom === fy.from && rangeTo === fy.to ? "This FY" : rangeFrom === lastFy.from && rangeTo === lastFy.to ? "Last FY" : "Period"}
-        onNavigate={target => {
-          if (typeof target === "string") openSection(target);
-          else if (target?.reportTab) setReportTab(target.reportTab);
-        }}
-      />}
-
-      {settings && bookkeeper}
-
+      {/* First viewport: what to do, then cash position, then entry. Charts and deeper reviews follow. */}
       {ownerBrief && settings && <AccOwnerDailyBrief
         brief={ownerBrief}
         parties={parties}
@@ -209,6 +199,28 @@ export function OverviewSection({
         onLockPeriod={canAdmin ? lockMonth : null}
       />}
 
+      {settings && metrics && <AccMoneyTiles
+        metrics={metrics}
+        periodLabel={rangeFrom === fy.from && rangeTo === fy.to ? "This FY" : rangeFrom === lastFy.from && rangeTo === lastFy.to ? "Last FY" : "Period"}
+        onNavigate={target => {
+          if (typeof target === "string") openSection(target);
+          else if (target?.reportTab) setReportTab(target.reportTab);
+        }}
+      />}
+
+      {settings && bookkeeper}
+
+      {accountsAttention?.count > 0 && <AttentionCenterCard attention={accountsAttention} onNavigate={href => {
+        trackProductEvent("accounts_attention_navigate", { section: href?.section || "" });
+        if (href?.reportTab) setReportTab(href.reportTab);
+        else if (href?.section) openSection(href.section);
+      }} />}
+
+      {anomalyReview && <AnomalyReviewCard review={anomalyReview} showWhenClear onNavigate={href => {
+        trackProductEvent("accounts_review_navigate", { section: href?.section || "" });
+        if (href?.section) openSection(href.section);
+      }} />}
+
       <AccOverviewContextBar
         fy={fy}
         lastFy={lastFy}
@@ -223,6 +235,13 @@ export function OverviewSection({
         <AccMonthlyChart rows={overviewCharts.trend} onOpenPnl={() => openSection("pnl")} />
         <AccSpendingDonut breakdown={overviewCharts.spending} onOpenPnl={() => openSection("pnl")} onOpenReview={() => openSection("ai")} />
       </div>}
+
+      <AccArApAgingChart
+        ar={overviewArAging}
+        ap={overviewApAging}
+        onReceivables={() => openSection("receivables")}
+        onPayables={() => openSection("payables")}
+      />
 
       <IndustryTemplateCard companyId={activeCompanyId} />
 
@@ -239,24 +258,6 @@ export function OverviewSection({
           else if (target?.reportTab) setReportTab(target.reportTab);
           else if (target?.section) openSection(target.section);
         }}
-      />
-
-      {accountsAttention?.count > 0 && <AttentionCenterCard attention={accountsAttention} onNavigate={href => {
-        trackProductEvent("accounts_attention_navigate", { section: href?.section || "" });
-        if (href?.reportTab) setReportTab(href.reportTab);
-        else if (href?.section) openSection(href.section);
-      }} />}
-
-      {anomalyReview && <AnomalyReviewCard review={anomalyReview} showWhenClear onNavigate={href => {
-        trackProductEvent("accounts_review_navigate", { section: href?.section || "" });
-        if (href?.section) openSection(href.section);
-      }} />}
-
-      <AccArApAgingChart
-        ar={overviewArAging}
-        ap={overviewApAging}
-        onReceivables={() => openSection("receivables")}
-        onPayables={() => openSection("payables")}
       />
 
       {settings && <AccAskBooks
@@ -297,8 +298,8 @@ export function OverviewSection({
         onNavigate={openSection}
       />}
 
-      <section className="acc-section">
-        <h2 className="acc-section-title">Metrics</h2>
+      <section className="acc-section acc-ov-metrics-block">
+        <h2 className="acc-section-title">Period metrics</h2>
         <div className="acc-metric-grid acc-ov-metrics acc-metric-compact">
           <AccMetric label="Income" value={money(metrics?.income)} tone="green" onClick={() => openSection("pnl")} />
           <AccMetric label="Expenses" value={money(metrics?.expenses)} tone="red" onClick={() => openSection("pnl")} />

@@ -100,8 +100,8 @@ export function TodayCollectionRouteTable({
             <td data-label="Customer"><strong>{loan.customerName}</strong><br /><a className="small phone-link" href={`tel:${loan.phone}`}>{loan.phone}</a></td>
             <td className={paid ? "green" : monthly && !monthlyDue.pending ? "" : "gold"} data-label={dueLabel}>{paid ? "✓ Paid" : monthly && !monthlyDue.pending ? "—" : money(due)}</td>
             <td className="red" data-label="Balance">{money(balance)}</td>
-            <td data-label="Status">{statusLabel}</td>
-            <td><Button onClick={() => view(loan)}>Details</Button>{showCollect && <Button className="primary" onClick={() => collect(loan)}>Collect</Button>}</td>
+            <td data-label="Status"><span className={`badge ${paid ? "completed" : statusLabel === "Pending" ? "pending" : ""}`}>{statusLabel}</span></td>
+            <td className="collection-row-actions"><Button onClick={() => view(loan)}>Details</Button>{showCollect && <Button className="primary" onClick={() => collect(loan)}>Collect</Button>}</td>
           </tr>;
         })}
       </tbody>

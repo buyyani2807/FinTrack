@@ -1599,7 +1599,28 @@
 
 .accounts-dashboard .acc-overview {
   display: grid;
-  gap: 16px;
+  gap: 20px;
+}
+
+/* Phone: money tiles already cover cash/AR/AP — hide duplicate KPI walls. */
+@media (width <= 680px) {
+  .accounts-dashboard .acc-overview {
+    gap: 14px;
+  }
+  .accounts-dashboard .acc-overview .accounts-business-kpis,
+  .accounts-dashboard .acc-overview .acc-ov-metrics-block {
+    display: none !important;
+  }
+  .accounts-dashboard .acc-overview .accounts-business-pulse {
+    padding: 12px 14px;
+  }
+  .accounts-dashboard .acc-money-row {
+    min-height: 44px;
+    padding: 12px 14px;
+  }
+  .accounts-dashboard .acc-money-value {
+    font-size: var(--ft-type-section);
+  }
 }
 
 .accounts-dashboard .acc-ov-metrics {
