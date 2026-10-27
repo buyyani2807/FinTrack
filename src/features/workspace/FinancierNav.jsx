@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from "react-router";
 import { useEffect, useState } from "react";
 import { BookOpenText, CalendarDays, CalendarRange, Coins, LayoutGrid, LogOut, Menu, MessageCircle, Settings, Users, Wallet, X } from "lucide-react";
-import { Button } from "../../components/ui.jsx";
+import { Button, ConfirmDialog } from "../../components/ui.jsx";
 import { ThemeToggle } from "../../components/ThemeToggle.jsx";
 import { assertModuleEntitled } from "../commercial/entitlements.js";
 import { financeSectionPath, isWithin, workspacePaths } from "./paths.js";
@@ -25,6 +25,7 @@ export function FinancierNav({ access, orgSettings = {}, businessName = "", logo
   const isActive = target => isWithin(path, target);
   // The phone drawer belongs to the current history entry, so navigating anywhere closes it.
   const [drawerKey, setDrawerKey] = useState(null);
+  const [planNotice, setPlanNotice] = useState("");
   const drawerOpen = drawerKey === location.key;
   const closeDrawer = () => setDrawerKey(null);
   useEffect(() => {
@@ -41,7 +42,7 @@ export function FinancierNav({ access, orgSettings = {}, businessName = "", logo
       assertModuleEntitled(orgSettings, moduleId);
       go(target);
     } catch (err) {
-      window.alert(err.message || "This module is not enabled for your plan.");
+      setPlanNotice(err.message || "This module is not enabled for your plan.");
     }
   };
   const itemClass = active => (active ? "tab active" : "");
@@ -73,5 +74,6 @@ export function FinancierNav({ access, orgSettings = {}, businessName = "", logo
       </div>
     </div>
   </aside>
+  {planNotice ? <ConfirmDialog title="Plan required" message={planNotice} confirmLabel="OK" cancelLabel="Close" close={() => setPlanNotice("")} onConfirm={() => setPlanNotice("")} /> : null}
   </>;
 }

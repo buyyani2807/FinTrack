@@ -99,8 +99,8 @@ export function AccCompanyBar({ companies, activeId, onSelect, onCreate, gstLabe
       <div className="acc-company-meta-wrap"><ul className="acc-company-meta">
         {fyLabel ? <li>{fyLabel}</li> : null}
         {rangeFrom && rangeTo ? <li><span className="acc-company-meta-key">Period</span> {niceDate(rangeFrom)} – {niceDate(rangeTo)}</li> : null}
-        {started ? <li><span className="acc-company-meta-key">Books from</span> {niceDate(started)}</li> : null}
-        {gstLabel ? <li><span className={`acc-company-gst${registered ? " is-registered" : ""}`}>{gstLabel}</span></li> : null}
+        {started ? <li className="acc-company-meta-extra"><span className="acc-company-meta-key">Books from</span> {niceDate(started)}</li> : null}
+        {gstLabel ? <li className="acc-company-meta-extra"><span className={`acc-company-gst${registered ? " is-registered" : ""}`}>{gstLabel}</span></li> : null}
       </ul></div>
     </div>
   );

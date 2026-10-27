@@ -33,7 +33,7 @@ import { ManualEntryModal } from "./dialogs/ManualEntryModal.jsx";
 import { ExpenseModal } from "./dialogs/ExpenseModal.jsx";
 import { TransferModal } from "./dialogs/TransferModal.jsx";
 import { DayClosingModal } from "./dialogs/DayClosingModal.jsx";
-import { Spinner } from "../../components/ui.jsx";
+import { ConfirmDialog, Spinner } from "../../components/ui.jsx";
 
 // The open section is the URL (/cashbook/:section, see app/AppRoutes.jsx).
 export function CashbookWorkspace({ token, loans = [], section: routeSection = "cashbook", onSectionChange }) {
@@ -246,14 +246,23 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
     }
   };
 
-  const removeManual = async entry => {
+  const [deleteEntry, setDeleteEntry] = useState(null);
+  const [deletingEntry, setDeletingEntry] = useState(false);
+  const removeManual = entry => {
     if (!entry.isEditable) return;
-    if (!window.confirm("Delete this manual transaction?")) return;
+    setDeleteEntry(entry);
+  };
+  const confirmRemoveManual = async () => {
+    if (!deleteEntry) return;
+    setDeletingEntry(true);
     try {
-      await deleteManualEntry(token, entry.id);
+      await deleteManualEntry(token, deleteEntry.id);
+      setDeleteEntry(null);
       refresh();
     } catch (err) {
       setError(err.message || "Could not delete transaction.");
+    } finally {
+      setDeletingEntry(false);
     }
   };
 
@@ -358,6 +367,15 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
       closingForm={closingForm}
       setClosingForm={setClosingForm}
       ledgers={ledgers}
+    />}
+    {deleteEntry && <ConfirmDialog
+      title="Delete transaction"
+      message="Delete this manual transaction? This cannot be undone."
+      confirmLabel="Delete"
+      danger
+      busy={deletingEntry}
+      close={() => !deletingEntry && setDeleteEntry(null)}
+      onConfirm={confirmRemoveManual}
     />}
   </div>;
 }

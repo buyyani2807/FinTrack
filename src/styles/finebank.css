@@ -7,11 +7,19 @@
 /* Type lives in fonts.css. Color lives in colors.css. Shape stays here. */
 :root {
   --ft-sidebar-w: 256px;
+  --ft-rail-w: 84px;
+  /* Canonical layout widths: phone ≤680, tablet 681–1050, desktop ≥1051. Prefer these over inventing new cutoffs. */
+  --ft-bp-phone: 680px;
+  --ft-bp-tablet: 1050px;
+  --ft-bp-desktop: 1051px;
   --ft-radius-xs: 6px;
   --ft-radius-sm: 8px;
   --ft-radius: 12px;
   --ft-radius-lg: 16px;
   --ft-control-h: 44px;
+  --ft-icon-sm: 16px;
+  --ft-icon-md: 20px;
+  --ft-icon-lg: 22px;
   --ft-space-1: 4px;
   --ft-space-2: 8px;
   --ft-space-3: 12px;
@@ -57,14 +65,17 @@ a { color: var(--ft-primary); }
 .accounts-dashboard h2, .accounts-dashboard h3, .accounts-dashboard h4, .accounts-dashboard .accounts-panel-title, .shell h2, .shell h3 { color: var(--ft-text) !important; }
 /* gold was decoration in the old design; amounts read as plain bold text, green/red keep meaning in/out */
 .gold { color: var(--ft-text) !important; }
-.green { color: var(--ft-success) !important; }
-.red { color: var(--ft-danger) !important; }
+.green, .ft-profit { color: var(--ft-profit) !important; }
+.red, .ft-loss { color: var(--ft-loss) !important; }
 .blue { color: var(--ft-info) !important; }
+.ft-pending { color: var(--ft-pending) !important; }
+.ft-overdue { color: var(--ft-overdue) !important; }
+.ft-completed { color: var(--ft-completed) !important; }
 
 /* ------------------------------------------------------------------ buttons */
 .btn {
   display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 8px !important;
-  min-height: 40px !important; padding: 8px 16px !important;
+  min-height: var(--ft-control-h) !important; padding: 8px 16px !important;
   border: 1px solid var(--ft-border) !important; border-radius: var(--ft-radius-sm) !important;
   background: var(--ft-surface) !important; color: var(--ft-text-2) !important; box-shadow: none !important;
   font-weight: 600 !important; font-size: var(--ft-type-secondary) !important; line-height: 20px !important;
@@ -524,13 +535,13 @@ input[type="month"]::-webkit-calendar-picker-indicator { margin: 0; padding: 0; 
 }
 .badge.active, .badge.completed, .badge.paid, .badge.posted, .badge.reconciled,
 .acc-status-pill.active, .acc-status-pill.posted, .acc-status-pill.reconciled, .acc-chip.ok,
-.acc-doc-status.tone-green { background: var(--ft-success-soft) !important; color: var(--ft-success) !important; }
+.acc-doc-status.tone-green { background: var(--ft-completed-soft) !important; color: var(--ft-completed) !important; }
 .badge.overdue, .badge.bankrupt, .badge.cancelled, .badge.unreconciled,
 .acc-status-pill.inactive, .acc-status-pill.cancelled, .acc-status-pill.overdue,
-.acc-doc-status.tone-red { background: var(--ft-danger-soft) !important; color: var(--ft-danger) !important; }
+.acc-doc-status.tone-red { background: var(--ft-overdue-soft) !important; color: var(--ft-overdue) !important; }
 .badge.closed, .badge.pending, .badge.draft, .badge.warning, .badge.partial,
 .acc-status-pill.pending, .acc-status-pill.draft, .acc-status-pill.suggested,
-.acc-doc-status.tone-amber, .acc-doc-status.tone-warn { background: var(--ft-warning-soft) !important; color: var(--ft-warning) !important; }
+.acc-doc-status.tone-amber, .acc-doc-status.tone-warn { background: var(--ft-pending-soft) !important; color: var(--ft-pending) !important; }
 .badge.info, .acc-status-pill.info, .acc-doc-status.tone-blue { background: var(--ft-info-soft) !important; color: var(--ft-info) !important; }
 .badge.warning::before, .badge.pending::before, .badge.overdue::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 
@@ -846,6 +857,10 @@ html[data-ft-role="owner"] .top-actions .top-theme { display: none; }
 .acc-company-meta > li { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .acc-company-meta > li::before { content: ""; flex: none; width: 3px; height: 3px; margin: 0 10px; border-radius: 50%; background: var(--ft-disabled); }
 .acc-company-meta-key { color: var(--ft-muted); }
+/* Tablet and phone: keep FY + period; books-start and GST stay in Setup. */
+@media (width <= 1050px) {
+  .acc-company-meta-extra { display: none !important; }
+}
 .acc-company-gst { padding: 2px 8px; border-radius: 999px; background: var(--ft-surface-muted); color: var(--ft-muted); font-size: var(--ft-type-caption); font-weight: 600; }
 .acc-company-gst.is-registered { background: var(--ft-success-soft, var(--ft-primary-soft)); color: var(--ft-success); }
 .acc-company-new { display: inline-flex; align-items: center; gap: 4px; padding: 6px 8px; border: 0; border-radius: 6px; background: none; color: var(--ft-primary); font: 600 var(--ft-type-label)/1.2 var(--ft-font); cursor: pointer; }
@@ -979,6 +994,20 @@ html[data-ft-role="owner"] .top-actions .top-theme { display: none; }
 .chit-scheme-name, .chit-scheme-current strong { color: var(--ft-text) !important; }
 .chit-scheme-value-label, .chit-scheme-current span { color: var(--ft-muted) !important; }
 .collection-summary > div, .collection-card { background: var(--ft-surface) !important; border-color: var(--ft-border) !important; box-shadow: none !important; }
+.collection-summary { gap: 10px !important; margin: 0 0 16px !important; }
+.collection-summary > div { padding: 14px 16px !important; border-radius: var(--ft-radius) !important; }
+.collection-summary strong { font-size: var(--ft-type-card) !important; font-variant-numeric: tabular-nums; }
+.collection-search { position: sticky; top: 0; z-index: 2; margin-bottom: 12px !important; padding: 8px 0; background: var(--ft-bg); }
+.collection-row-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.collection-row-actions .btn { min-height: var(--ft-control-h) !important; }
+@media (width <= 680px) {
+  .app:has(.ft-mobile-header) .collection-search { top: calc(56px + env(safe-area-inset-top, 0px)); }
+  .collection-summary { grid-template-columns: 1fr !important; }
+  .collection-summary > div:last-child { grid-column: auto !important; }
+  .collection-row-actions { width: 100%; }
+  .collection-row-actions .btn { flex: 1 1 auto; min-width: 0; }
+  .dashboard-finance-table.collection-route-table td .badge { max-width: 100%; }
+}
 .collection-section h2, .collection-info strong { color: var(--ft-text) !important; }
 .collection-summary span, .collection-info span, .collection-amount small { color: var(--ft-muted) !important; }
 .collection-avatar { background: var(--ft-icon-tile) !important; color: var(--ft-text-2) !important; }

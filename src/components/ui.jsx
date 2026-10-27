@@ -154,8 +154,16 @@ export function Modal({ children, close, isolateClicks = false }) {
     </div>
   );
 }
-export function ConfirmDialog({ title, message, confirmLabel = "Confirm", danger = false, busy = false, error = "", close, onConfirm }) {
-  return <Modal close={() => !busy && close()}><h2 className="title">{title}</h2><p className="copy">{message}</p>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button className={danger ? "danger primary" : "primary"} disabled={busy} onClick={onConfirm}>{busy ? "Please wait…" : confirmLabel}</Button></div></Modal>;
+export function ConfirmDialog({ title, message, confirmLabel = "Confirm", cancelLabel = "Cancel", danger = false, busy = false, error = "", close, onConfirm }) {
+  return <Modal close={() => !busy && close()}>
+    <h2 className="title">{title}</h2>
+    <p className="copy">{message}</p>
+    {error && <p className="red small" role="alert">{error}</p>}
+    <div className="row spacer">
+      <Button type="button" className="ghost" disabled={busy} onClick={close}>{cancelLabel}</Button>
+      <Button type="button" className={danger ? "danger primary" : "primary"} disabled={busy} onClick={onConfirm}>{busy ? "Please wait…" : confirmLabel}</Button>
+    </div>
+  </Modal>;
 }
 // Dialog with a title row and Close button; `actions` render after the body.
 export function DialogModal({ title, close, children, actions, className = "" }) {

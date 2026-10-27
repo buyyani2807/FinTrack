@@ -40,6 +40,17 @@
   --ft-warning-soft: rgba(229, 163, 59, .14);
   --ft-info: #2f6fd0;
   --ft-info-soft: rgba(47, 111, 208, .10);
+  /* Money and workflow status — use these instead of inventing per-module colors. */
+  --ft-profit: var(--ft-success);
+  --ft-profit-soft: var(--ft-success-soft);
+  --ft-loss: var(--ft-danger);
+  --ft-loss-soft: var(--ft-danger-soft);
+  --ft-pending: var(--ft-warning);
+  --ft-pending-soft: var(--ft-warning-soft);
+  --ft-overdue: var(--ft-danger);
+  --ft-overdue-soft: var(--ft-danger-soft);
+  --ft-completed: var(--ft-success);
+  --ft-completed-soft: var(--ft-success-soft);
   --ft-sidebar-bg: #191919;
   --ft-sidebar-text: rgba(255, 255, 255, .70);
   --ft-sidebar-text-strong: #ffffff;
@@ -89,6 +100,16 @@
   --ft-warning-soft: rgba(240, 180, 76, .14);
   --ft-info: #6ea6f2;
   --ft-info-soft: rgba(110, 166, 242, .14);
+  --ft-profit: var(--ft-success);
+  --ft-profit-soft: var(--ft-success-soft);
+  --ft-loss: var(--ft-danger);
+  --ft-loss-soft: var(--ft-danger-soft);
+  --ft-pending: var(--ft-warning);
+  --ft-pending-soft: var(--ft-warning-soft);
+  --ft-overdue: var(--ft-danger);
+  --ft-overdue-soft: var(--ft-danger-soft);
+  --ft-completed: var(--ft-success);
+  --ft-completed-soft: var(--ft-success-soft);
   --ft-sidebar-bg: #0b0c0d;
   --ft-sidebar-line: rgba(255, 255, 255, .06);
   --ft-chart-2: #3a4146;

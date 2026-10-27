@@ -182,7 +182,7 @@ import { creditCheck, documentFulfilment, documentLabel, pendingOrderRows } from
 import { receivablePositions } from "./model/routeCollectionsModel.js";
 import { buildOwnerDailyBrief, reorderPurchaseOrderLines } from "./model/ownerDailyBrief.js";
 import { addMonths, gstFilingSchedule, monthKey, monthLabel, monthRange, readGstFrequency, writeGstFrequency } from "./model/gstCalendar.js";
-import { Spinner } from "../../components/ui.jsx";
+import { ConfirmDialog, Spinner } from "../../components/ui.jsx";
 
 // Re-exported for the workspace preloader, which lazy-loads this module.
 export { prefetchAccounts } from "./data/accountsCache.js";
@@ -286,6 +286,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [reasonDialog, setReasonDialog] = useState(null);
   const [reasonText, setReasonText] = useState("");
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const [coaDelete, setCoaDelete] = useState(null);
   const [signingOut, setSigningOut] = useState(false);
   const [partyFocusId, setPartyFocusId] = useState("");
   const [partyTxnType, setPartyTxnType] = useState("");
@@ -1930,7 +1931,12 @@ const openVoucher = () => {
       setError(err.message);
       return;
     }
-    if (!window.confirm(`Delete ${account.code} ${account.name}? This cannot be undone.`)) return;
+    setCoaDelete(account);
+  };
+  const confirmRemoveCoa = () => {
+    if (!coaDelete) return;
+    const account = coaDelete;
+    setCoaDelete(null);
     run(() => deleteChartAccount(token, account.id), "Account deleted.");
   };
 
@@ -2775,6 +2781,14 @@ const openVoucher = () => {
         />
       )}
       {confirmLogout && <LogoutConfirmModal signingOut={signingOut} setConfirmLogout={setConfirmLogout} confirmAccountsLogout={confirmAccountsLogout} />}
+      {coaDelete && <ConfirmDialog
+        title="Delete account"
+        message={`Delete ${coaDelete.code} ${coaDelete.name}? This cannot be undone.`}
+        confirmLabel="Delete"
+        danger
+        close={() => setCoaDelete(null)}
+        onConfirm={confirmRemoveCoa}
+      />}
       <AccPlacesBar section={section} reportTab={reportTab} onNavigate={openSection} aiEnabled={aiEnabled} manufacturingEnabled={manufacturingEnabled} />
     </main>
   </div>;
