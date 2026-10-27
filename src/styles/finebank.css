@@ -782,79 +782,33 @@ html[data-ft-role="owner"] .top-actions .top-theme { display: none; }
 /* Accounts: a normal page beside the workspace sidebar (like Daily Finance), sections as tabs inside the page */
 .accounts-dashboard { position: static !important; inset: auto !important; z-index: auto !important; overflow: visible !important; min-height: 100svh; padding: 0 !important; }
 .accounts-dashboard .acc-shell { display: block !important; min-height: 0; }
-/* Accounts destinations sit in their own column. These names are not the old sidebar classes, so they stay left-aligned and a fixed width. */
-.accounts-dashboard .acc-shell.acc-places { display: flex !important; flex-direction: row !important; align-items: flex-start !important; }
-.accounts-dashboard .acc-shell.acc-places > .acc-main { flex: 1 1 auto; width: auto !important; min-width: 0; }
-.accounts-dashboard .acc-places-side,
-.accounts-dashboard .acc-places-desktop,
-.accounts-dashboard .acc-places-tablet,
-.accounts-dashboard .acc-places-pages,
+/* Accounts destinations: page tabs on desktop/tablet (like Daily Finance), bottom bar on the phone. No second sidebar. */
+.accounts-dashboard .acc-places-tabs { display: grid; gap: 12px; margin: 20px 0 24px; }
+.accounts-dashboard .acc-places-nav { margin: 0 !important; }
+.accounts-dashboard .acc-places-nav .module-section-tab { display: inline-flex; align-items: center; gap: 6px; }
+.accounts-dashboard .acc-places-nav .module-section-tab svg { flex: none; }
 .accounts-dashboard .acc-places-bar { display: none; }
-.accounts-dashboard .acc-place-link,
-.accounts-dashboard .acc-place-child,
-.accounts-dashboard .acc-place-expand {
-  display: flex; align-items: center; justify-content: flex-start; gap: 10px; width: 100%;
-  min-height: 40px; padding: 8px 10px; border: 0; border-radius: var(--ft-radius-sm);
-  background: transparent; color: var(--ft-text-2); font: 600 var(--ft-type-ui)/1.2 var(--ft-font);
-  text-align: left; cursor: pointer;
+.accounts-dashboard .acc-place-link {
+  display: flex; align-items: center; justify-content: center; gap: 3px;
+  min-height: 48px; padding: 6px 2px; border: 0; border-radius: 12px;
+  background: transparent; color: var(--ft-text-2); font: 700 var(--ft-type-micro)/1.2 var(--ft-font);
+  cursor: pointer;
 }
-.accounts-dashboard .acc-place-link svg,
-.accounts-dashboard .acc-place-expand svg { flex: none; }
-.accounts-dashboard .acc-place-link:hover,
-.accounts-dashboard .acc-place-child:hover,
-.accounts-dashboard .acc-place-expand:hover { background: var(--ft-surface-hover); color: var(--ft-text); }
-.accounts-dashboard .acc-place-link.is-active,
-.accounts-dashboard .acc-place-child.is-active { background: var(--ft-primary-soft); color: var(--ft-primary); }
-.accounts-dashboard .acc-place-link:focus-visible,
-.accounts-dashboard .acc-place-child:focus-visible,
-.accounts-dashboard .acc-place-expand:focus-visible { outline: 2px solid var(--ft-primary); outline-offset: 1px; }
-.accounts-dashboard .acc-place-sub { display: grid; gap: 2px; margin: 2px 0 8px; }
-.accounts-dashboard .acc-places-desktop .acc-place-sub { padding-left: 16px; }
-.accounts-dashboard .acc-place-child { min-height: 34px; color: var(--ft-muted); font-size: var(--ft-type-label); }
-.accounts-dashboard .acc-place-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-@media (width >= 1051px) {
-  .accounts-dashboard .acc-places-side {
-    display: block; flex: 0 0 208px; width: 208px; position: sticky; top: 0; align-self: flex-start;
-    max-height: 100svh; overflow: auto; padding: 32px 12px 24px 28px;
-  }
-  .accounts-dashboard .acc-places-desktop { display: flex; flex-direction: column; gap: 2px; }
-  .accounts-dashboard .acc-shell.acc-places > .acc-main { padding-left: 20px !important; }
-}
-@media (681px <= width <= 1050px) {
-  .accounts-dashboard .acc-places-side {
-    display: block; flex: 0 0 68px; width: 68px; position: sticky; top: 0; align-self: flex-start;
-    max-height: 100svh; overflow: auto; padding: 16px 8px; border-right: 1px solid var(--ft-border); background: var(--ft-surface);
-  }
-  .accounts-dashboard .acc-places-side.is-open { flex-basis: 220px; width: 220px; }
-  .accounts-dashboard .acc-places-tablet { display: flex; flex-direction: column; gap: 2px; }
-  .accounts-dashboard .acc-places-side:not(.is-open) .acc-place-link,
-  .accounts-dashboard .acc-places-side:not(.is-open) .acc-place-expand { justify-content: center; padding: 0; }
-  .accounts-dashboard .acc-places-side:not(.is-open) .acc-place-expand span,
-  .accounts-dashboard .acc-places-side:not(.is-open) .acc-places-tablet .acc-place-link span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-  .accounts-dashboard .acc-places-pages { display: grid; gap: 8px; margin: 16px 0 8px; }
-  .accounts-dashboard .acc-places:has(.acc-places-side.is-open) .acc-places-pages { display: none; }
-  .accounts-dashboard .acc-places-kicker { margin: 0; color: var(--ft-muted); font-size: var(--ft-type-label); font-weight: 700; }
-  .accounts-dashboard .acc-places-pages .acc-place-sub { display: flex; gap: 6px; margin: 0; overflow-x: auto; scrollbar-width: none; }
-  .accounts-dashboard .acc-places-pages .acc-place-child { flex: none; width: auto; border-radius: 999px; }
-}
+.accounts-dashboard .acc-place-link svg { flex: none; }
+.accounts-dashboard .acc-place-link.is-active { background: var(--ft-primary-soft); color: var(--ft-primary); }
+.accounts-dashboard .acc-place-link:focus-visible { outline: 2px solid var(--ft-primary); outline-offset: 1px; }
 @media (width <= 680px) {
-  .accounts-dashboard .acc-places-pages { display: grid; gap: 8px; margin: 12px 0 4px; }
-  .accounts-dashboard .acc-places-kicker { margin: 0; color: var(--ft-muted); font-size: var(--ft-type-label); font-weight: 700; }
-  .accounts-dashboard .acc-places-pages .acc-place-sub { display: flex; gap: 6px; margin: 0; overflow-x: auto; scrollbar-width: none; }
-  .accounts-dashboard .acc-places-pages .acc-place-child { flex: none; width: auto; border-radius: 999px; }
+  .accounts-dashboard .acc-places-primary { display: none; }
   .accounts-dashboard .acc-places-bar {
     display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); position: fixed;
     left: 10px; right: 10px; bottom: max(8px, env(safe-area-inset-bottom, 0px)); z-index: 9;
     gap: 4px; padding: 6px; border: 1px solid var(--ft-border); border-radius: 16px;
     background: var(--ft-surface); box-shadow: var(--ft-shadow);
   }
-  .accounts-dashboard .acc-places-bar .acc-place-link { flex-direction: column; justify-content: center; gap: 3px; min-height: 48px; padding: 6px 2px; font-size: var(--ft-type-micro); }
 }
 @media print {
-  .accounts-dashboard .acc-places-side,
-  .accounts-dashboard .acc-places-pages,
+  .accounts-dashboard .acc-places-tabs,
   .accounts-dashboard .acc-places-bar { display: none !important; }
-  .accounts-dashboard .acc-shell.acc-places { display: block !important; }
 }
 .accounts-dashboard .acc-main { padding: 36px 44px 74px !important; }
 @media (width >= 1051px) { html[data-ft-role="owner"] .accounts-dashboard { margin-left: calc(var(--ft-sidebar-w) + 8px); } }

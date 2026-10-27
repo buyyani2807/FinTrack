@@ -144,7 +144,7 @@ import {
 } from "./accountsFormDefaults.js";
 import { REPORT_TABS, MORE_LINKS } from "./accountsNavigation.js";
 import { gstStatusLabel } from "./accountsFormat.js";
-import { AccCompanyBar, AccPageHeader, AccPlacesBar, AccPlacesPages, AccPlacesSide } from "./components/AccLayout.jsx";
+import { AccCompanyBar, AccPageHeader, AccPlacesBar, AccPlacesNav } from "./components/AccLayout.jsx";
 import { CustomerPipeline } from "./components/CustomerPipeline.jsx";
 import { ManufacturingWorkspace } from "./components/ManufacturingWorkspace.jsx";
 import { VoucherForm } from "./components/VoucherForm.jsx";
@@ -2157,12 +2157,11 @@ const openVoucher = () => {
 
 
   return <div className="acc-shell acc-places">
-    <AccPlacesSide section={section} reportTab={reportTab} onNavigate={openSection} openReport={openReport} aiEnabled={aiEnabled} manufacturingEnabled={manufacturingEnabled} />
     <main className="acc-main acc-print-root">
       <AccPageHeader
         title="Accounts"
         copy={`${activeCompany?.name || settings?.companyName || workspace.businessName || "Your business"} · ${fy.label} · ${range.from} to ${range.to}`}
-        tabs={<AccPlacesPages section={section} reportTab={reportTab} onNavigate={openSection} openReport={openReport} aiEnabled={aiEnabled} manufacturingEnabled={manufacturingEnabled} />}
+        tabs={<AccPlacesNav section={section} reportTab={reportTab} onNavigate={openSection} openReport={openReport} aiEnabled={aiEnabled} manufacturingEnabled={manufacturingEnabled} />}
         companyBar={<AccCompanyBar
           companies={companies}
           activeId={activeCompanyId}
