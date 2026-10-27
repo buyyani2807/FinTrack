@@ -16,6 +16,7 @@ import {
   loadDocumentSettings,
   loadComplianceFilings,
   loadCollectionRoutes,
+  loadPriceLists,
 } from "./accountingRepository.js";
 
 export const COMPANY_STORAGE_KEY = "fintrack-accounts-company";
@@ -44,7 +45,7 @@ export async function fetchAccountsBundle(token, { preferredCompanyId, wantRecur
   if (company) {
     try { sessionStorage.setItem(COMPANY_STORAGE_KEY, company.id); } catch { /* ignore */ }
   }
-  const [settings, accounts, parties, pipeline, vouchers, items, itemCategories, stockMovements, voucherItemLines, recurring, tradeDocuments, documentSettings, complianceFilings, collectionRoutes] = await Promise.all([
+  const [settings, accounts, parties, pipeline, vouchers, items, itemCategories, stockMovements, voucherItemLines, recurring, tradeDocuments, documentSettings, complianceFilings, collectionRoutes, priceLists] = await Promise.all([
     loadAccountingSettings(token),
     loadChartOfAccounts(token),
     loadParties(token),
@@ -59,6 +60,7 @@ export async function fetchAccountsBundle(token, { preferredCompanyId, wantRecur
     loadDocumentSettings(token).catch(() => ({ ...DEFAULT_DOCUMENT_SETTINGS, available: false })),
     loadComplianceFilings(token).catch(() => null),
     loadCollectionRoutes(token).catch(() => null),
+    loadPriceLists(token).catch(() => []),
   ]);
   const mergedSettings = {
     ...(settings || {}),
@@ -93,6 +95,7 @@ export async function fetchAccountsBundle(token, { preferredCompanyId, wantRecur
     documentSettings,
     complianceFilings,
     collectionRoutes,
+    priceLists: priceLists || [],
   };
   accountsSnapshot = bundle;
   return bundle;

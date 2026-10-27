@@ -43,6 +43,7 @@ import {
   saveTradeDocument,
   setComplianceFiling,
   setPartyCredit,
+  setPartyPriceList,
   setRouteStops,
   setTradeDocumentStatus,
 } from "./data/accountingRepository.js";
@@ -210,6 +211,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [stockMovements, setStockMovements] = useState(cached?.stockMovements ?? []);
   const [voucherItemLines, setVoucherItemLines] = useState(cached?.voucherItemLines ?? []);
   const [tradeDocuments, setTradeDocuments] = useState(cached?.tradeDocuments ?? null);
+  const [priceLists, setPriceLists] = useState(cached?.priceLists ?? []);
   const [documentSettings, setDocumentSettings] = useState(cached?.documentSettings ?? { ...DEFAULT_DOCUMENT_SETTINGS, available: false });
   const [complianceFilings, setComplianceFilings] = useState(cached?.complianceFilings ?? null);
   const [collectionRoutes, setCollectionRoutes] = useState(cached?.collectionRoutes ?? null);
@@ -340,6 +342,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       setStockMovements(bundle.stockMovements);
       setVoucherItemLines(bundle.voucherItemLines);
       setTradeDocuments(bundle.tradeDocuments);
+      setPriceLists(bundle.priceLists || []);
       setDocumentSettings(bundle.documentSettings);
       setComplianceFilings(bundle.complianceFilings);
       setCollectionRoutes(bundle.collectionRoutes);
@@ -1444,6 +1447,7 @@ const openVoucher = () => {
         gstRegistration: party.gstRegistration || "",
         notes: party.notes || "",
         creditLimit: party.creditLimit ? String(party.creditLimit) : "",
+        priceListId: party.priceListId || "",
         creditDays: party.creditDays == null ? "" : String(party.creditDays),
       });
     } else {
@@ -1552,6 +1556,19 @@ const openVoucher = () => {
         }
       }
       if (creditChanged && typeof partyId === "string") await setPartyCredit(token, partyId, { creditLimit, creditDays });
+      const nextPriceListId = (partyForm.partyType === "customer" || partyForm.partyType === "supplier")
+        ? (partyForm.priceListId || null)
+        : null;
+      const priceListChanged = existing
+        ? (existing.priceListId || null) !== nextPriceListId
+        : Boolean(nextPriceListId);
+      if (priceListChanged && typeof partyId === "string") {
+        try {
+          await setPartyPriceList(token, partyId, nextPriceListId);
+        } catch (err) {
+          if (err.code !== "MIGRATION_REQUIRED") throw err;
+        }
+      }
       if (!partyForm.id && partyCreateTarget && partyForm.partyType === partyCreateTarget && typeof partyId === "string") {
         setSimpleForm(current => ({
           ...current,
@@ -2381,6 +2398,9 @@ const openVoucher = () => {
             onConvertToEntry={openSimpleFromDocument}
             onSaveSettings={saveDocSettings}
             prefill={documentPrefill}
+            vouchers={vouchers}
+            voucherItemLines={voucherItemLines}
+            priceLists={priceLists}
             tab={view.sub}
             onTabChange={next => go({ section: "documents", sub: next })}
           />
@@ -2568,6 +2588,11 @@ const openVoucher = () => {
           onFocusHandled={() => setCaItemId("")}
           token={token}
           aiEnabled={aiEnabled}
+          tradeDocuments={tradeDocuments || []}
+          onOpenTradeDocument={id => {
+            setDocumentPrefill({ key: `view:${id}:${Date.now()}`, viewId: id });
+            go({ section: "documents", sub: "purchase_match" });
+          }}
         />}
 
         {section === "bank" && <BankSection
@@ -2678,6 +2703,9 @@ const openVoucher = () => {
           setRecurringDraft={setRecurringDraft}
           setRecurringTemplates={setRecurringTemplates}
           openSimpleFromRecurring={openSimpleFromRecurring}
+          priceLists={priceLists}
+          setPriceLists={setPriceLists}
+          items={items}
           audit={audit}
           pagedAudit={pagedAudit}
         />}
@@ -2717,10 +2745,11 @@ const openVoucher = () => {
         }}
       />}
       {showSimple && <Modal panelClassName="acc-entry-dialog" title={SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry"} close={closeSimple}>
-        <SimpleEntryForm kind={simpleKind} accounts={visibleAccounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} maxDate={todayIso()} gstCompany={activeCompany} onGstSetup={() => { setShowSimple(false); openSection("setup"); }} onCreateParty={openPartyForEntry} items={items} stockByItem={stockByItem} openInvoices={settlementOpenInvoices} creditInfo={saleCreditInfo} token={token} vouchers={vouchers} voucherItemLines={voucherItemLines} />
+        <SimpleEntryForm kind={simpleKind} accounts={visibleAccounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} maxDate={todayIso()} gstCompany={activeCompany} onGstSetup={() => { setShowSimple(false); openSection("setup"); }} onCreateParty={openPartyForEntry} items={items} stockByItem={stockByItem} openInvoices={settlementOpenInvoices} creditInfo={saleCreditInfo} token={token} vouchers={vouchers} voucherItemLines={voucherItemLines} priceLists={priceLists} />
       </Modal>}
       {showParty && <PartyModal
         partyForm={partyForm}
+        priceLists={priceLists}
         closeParty={closeParty}
         saving={saving}
         saveParty={saveParty}

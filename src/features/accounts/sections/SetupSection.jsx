@@ -10,6 +10,7 @@ import { IntegrationSetupPanel } from "./setup/IntegrationSetupPanel.jsx";
 import { PeriodLockPanel } from "./setup/PeriodLockPanel.jsx";
 import { AccessRolesPanel } from "./setup/AccessRolesPanel.jsx";
 import { RecurringEntriesPanel } from "./setup/RecurringEntriesPanel.jsx";
+import { PriceListsPanel } from "./setup/PriceListsPanel.jsx";
 import { AuditTrailPanel } from "./setup/AuditTrailPanel.jsx";
 
 export function SetupSection({
@@ -78,6 +79,9 @@ export function SetupSection({
   setRecurringDraft,
   setRecurringTemplates,
   openSimpleFromRecurring,
+  priceLists = [],
+  setPriceLists,
+  items = [],
   audit,
   pagedAudit,
   openMigration = null,
@@ -218,6 +222,15 @@ export function SetupSection({
         canWrite={canWrite}
         openSimpleFromRecurring={openSimpleFromRecurring}
       />}
+      <PriceListsPanel
+        priceLists={priceLists}
+        setPriceLists={setPriceLists}
+        items={items}
+        token={token}
+        canWrite={canWrite}
+        saving={saving}
+        run={run}
+      />
       <AuditTrailPanel audit={audit} pagedAudit={pagedAudit} setListPage={setListPage} />
     </div>
   );

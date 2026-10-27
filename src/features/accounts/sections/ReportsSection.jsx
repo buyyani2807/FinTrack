@@ -11,6 +11,7 @@ import { DayBookReport } from "./reports/DayBookReport.jsx";
 import { GstReport } from "./reports/GstReport.jsx";
 import { LedgerReport } from "./reports/LedgerReport.jsx";
 import { ItemProfitReport } from "./reports/ItemProfitReport.jsx";
+import { PurchaseMatchReport } from "./reports/PurchaseMatchReport.jsx";
 import { VoucherNumberLink } from "../components/SalesInvoiceActions.jsx";
 
 export function ReportsSection({
@@ -68,11 +69,15 @@ export function ReportsSection({
   onFocusHandled,
   token = "",
   aiEnabled = false,
+  tradeDocuments = [],
+  onOpenTradeDocument,
 }) {
   return (
     <div className="acc-panel">
-      <ReportRangeBar fy={fy} lastFy={lastFy} from={rangeFrom} to={rangeTo} onChange={setReportRange} />
-      <ReportActions exportReport={exportReport} />
+      {reportTab !== "purchase_match" && <>
+        <ReportRangeBar fy={fy} lastFy={lastFy} from={rangeFrom} to={rangeTo} onChange={setReportRange} />
+        <ReportActions exportReport={exportReport} />
+      </>}
       {(section === "trial" || reportTab === "trial") && section !== "pnl" && section !== "balance" && <TrialBalanceReport tb={tb} />}
       {(section === "pnl" || reportTab === "pnl") && section !== "trial" && section !== "balance" && <ProfitLossReport pnl={pnl} />}
       {(section === "balance" || reportTab === "balance") && section !== "trial" && section !== "pnl" && <BalanceSheetReport sheet={sheet} />}
@@ -157,6 +162,15 @@ export function ReportsSection({
         <AccTable columns={["Date", "Item", "Direction", { label: "Qty", num: true }, "Reason", "Voucher"]} empty={!stockMoveRows.length && "No stock movements in this period."}>
           {stockMoveRows.map(row => <tr key={row.id}><td>{row.movementDate}</td><td>{row.itemName}</td><td>{row.direction}</td><td className="acc-num">{row.quantityDelta}</td><td>{stockReasonLabel(row.reason)}</td><td>{row.voucherNumber || "—"}</td></tr>)}
         </AccTable>
+      )}
+      {section === "reports" && reportTab === "purchase_match" && (
+        <PurchaseMatchReport
+          documents={tradeDocuments || []}
+          voucherItemLines={voucherItemLines}
+          vouchers={vouchers}
+          parties={parties}
+          onOpenDocument={onOpenTradeDocument}
+        />
       )}
     </div>
   );

@@ -2,12 +2,13 @@ import { PARTY_FORM_TYPES, PARTY_TYPE_CHANGE_WARNING } from "../model/accounting
 import { Select } from "../../../components/Select.jsx";
 import { INDIA_STATES, gstStateFromGstin } from "../model/accountingGst.js";
 import { partyTypeLabel } from "../accountsFormat.js";
+import { priceListsForParty } from "../model/priceLists.js";
 import { Field } from "./AccUi.jsx";
 
 export const PartyTypeBadge = ({ type }) => (
   <span className={`acc-type-badge ${type || "other"}`}>{partyTypeLabel(type)}</span>
 );
-export function PartyFormFields({ form, setForm, originalType = "", hasTransactions = false, typeConfirmed = false, onConfirmType, lockPartyType = false }) {
+export function PartyFormFields({ form, setForm, originalType = "", hasTransactions = false, typeConfirmed = false, onConfirmType, lockPartyType = false, priceLists = [] }) {
   const set = patch => setForm(current => ({ ...current, ...patch }));
   const currentType = originalType || form.partyType;
   const typeChanged = Boolean(form.id) && currentType !== form.partyType;
@@ -47,6 +48,14 @@ export function PartyFormFields({ form, setForm, originalType = "", hasTransacti
           <Field label="Credit limit (₹)"><input className="acc-plain-number" type="text" inputMode="decimal" value={form.creditLimit ?? ""} placeholder="0 = no limit" onChange={event => set({ creditLimit: event.target.value.replace(/[^\d.]/g, "") })} /></Field>
         )}
         <Field label="Credit days"><input type="number" min="0" max="365" step="1" value={form.creditDays ?? ""} placeholder="Default due date" onChange={event => set({ creditDays: event.target.value })} /></Field>
+        <Field label="Price list">
+          <Select value={form.priceListId || ""} onChange={event => set({ priceListId: event.target.value })}>
+            <option value="">Item price (no list)</option>
+            {priceListsForParty(priceLists, form).map(list => (
+              <option key={list.id} value={list.id}>{list.name}{list.isDefault ? " · default" : ""}</option>
+            ))}
+          </Select>
+        </Field>
         {!form.id && (
           <Field label="Opening Balance (If Any)">
             <input

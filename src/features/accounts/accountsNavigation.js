@@ -114,6 +114,7 @@ export const REPORT_TABS = [
   { id: "item_purchases", label: "Item Purchases" },
   { id: "item_profit", label: "Item profit" },
   { id: "stock_moves", label: "Stock Movement" },
+  { id: "purchase_match", label: "PO match" },
 ];
 export const MOBILE_TABS = [
   { id: "overview", label: "Home" },

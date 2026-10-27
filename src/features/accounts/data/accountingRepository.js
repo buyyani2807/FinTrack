@@ -2,6 +2,7 @@ import { supabase } from "../../../lib/supabase";
 import { groupByKey } from "../model/accountsList.js";
 import { assembleVouchers } from "../model/accountsVoucherAssembly.js";
 import { mapVoucherItemLinesForRpc } from "../model/inventoryModel.js";
+import { assemblePriceLists } from "../model/priceLists.js";
 
 export { assembleVouchers, mapVoucherItemLinesForRpc };
 
@@ -65,6 +66,7 @@ const mapParty = row => ({
   isActive: row.is_active,
   creditLimit: Number(row.credit_limit || 0),
   creditDays: row.credit_days === null || row.credit_days === undefined ? null : Number(row.credit_days),
+  priceListId: row.price_list_id || null,
 });
 
 const mapCompany = row => ({
@@ -124,8 +126,14 @@ const PARTY_COLUMNS = "id,party_type,name,phone,email,address,gstin,state_code,g
 const partiesPath = columns => `/rest/v1/acc_parties?select=${columns}&order=name.asc${companyEq()}`;
 
 export const loadParties = token => wrap(
-  accQuery(partiesPath(`${PARTY_COLUMNS},credit_limit,credit_days`), token)
+  accQuery(partiesPath(`${PARTY_COLUMNS},credit_limit,credit_days,price_list_id`), token)
     .catch(err => {
+      if (/price_list_id/i.test(String(err?.message || ""))) {
+        return accQuery(partiesPath(`${PARTY_COLUMNS},credit_limit,credit_days`), token).catch(inner => {
+          if (!/credit_limit|credit_days/i.test(String(inner?.message || ""))) throw inner;
+          return accQuery(partiesPath(PARTY_COLUMNS), token);
+        });
+      }
       if (!/credit_limit|credit_days/i.test(String(err?.message || ""))) throw err;
       return accQuery(partiesPath(PARTY_COLUMNS), token);
     })
@@ -145,6 +153,60 @@ export const setPartyCredit = (token, partyId, { creditLimit, creditDays }) =>
     input_credit_limit: Number(creditLimit || 0),
     input_credit_days: creditDays === "" || creditDays === null || creditDays === undefined ? null : Number(creditDays),
   }, token).catch(err => { throw migration081Error(err); });
+
+const migration107Error = err => {
+  if (!isMissing(err)) return err;
+  const error = new Error("Run migration 107_accounts_price_lists.sql in the Supabase SQL editor to enable price lists.");
+  error.code = "MIGRATION_REQUIRED";
+  return error;
+};
+
+const mapPriceList = row => ({
+  id: row.id,
+  name: row.name,
+  kind: row.kind,
+  isDefault: Boolean(row.is_default),
+  isActive: row.is_active !== false,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+const mapPriceListRate = row => ({
+  id: row.id,
+  priceListId: row.price_list_id,
+  itemId: row.item_id,
+  rate: Number(row.rate || 0),
+});
+
+/** Price lists with rates, or [] when migration 107 has not been run. */
+export const loadPriceLists = token => ignoreMissing(Promise.all([
+  accQuery(`/rest/v1/acc_price_lists?select=id,name,kind,is_default,is_active,created_at,updated_at&order=kind.asc,name.asc${companyEq()}`, token),
+  accQuery(`/rest/v1/acc_price_list_rates?select=id,price_list_id,item_id,rate&order=item_id.asc&limit=50000${companyEq()}`, token),
+]).then(([lists, rates]) => assemblePriceLists((lists || []).map(mapPriceList), (rates || []).map(mapPriceListRate))));
+
+export const upsertPriceList = (token, draft) =>
+  accRpc("acc_upsert_price_list", {
+    input_id: draft.id || null,
+    input_name: draft.name,
+    input_kind: draft.kind,
+    input_is_default: Boolean(draft.isDefault),
+    input_is_active: draft.isActive !== false,
+  }, token).catch(err => { throw migration107Error(err); });
+
+export const deletePriceList = (token, id) =>
+  accRpc("acc_delete_price_list", { input_id: id }, token).catch(err => { throw migration107Error(err); });
+
+export const savePriceListRates = (token, priceListId, rates) =>
+  accRpc("acc_save_price_list_rates", {
+    input_price_list_id: priceListId,
+    input_rates: rates,
+  }, token).catch(err => { throw migration107Error(err); });
+
+export const setPartyPriceList = (token, partyId, priceListId) =>
+  accRpc("acc_set_party_price_list", {
+    input_party_id: partyId,
+    input_price_list_id: priceListId || null,
+  }, token).catch(err => { throw migration107Error(err); });
 
 export const loadPartyPipeline = token => wrap(
   supabase.rpc("acc_list_party_pipeline", { input_company_id: activeCompanyId }, token).then(rows => (Array.isArray(rows) ? rows : []).map(row => ({ partyId: row.party_id, stage: row.stage }))),
