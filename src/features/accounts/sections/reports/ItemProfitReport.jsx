@@ -3,6 +3,7 @@ import { SearchInput } from "../../../../components/ui.jsx";
 import { Select } from "../../../../components/Select.jsx";
 import { AccPager, FilterField as Field } from "../../components/AccUi.jsx";
 import { money, qty } from "../../accountsFormat.js";
+import { AI_AUDIT_MIGRATION_MESSAGE, loadAiReviewActions, recordAiReviewAction } from "../../../intelligence/ai/aiReviewRepository.js";
 import { canOpenVoucherDocument } from "../../model/salesInvoiceModel.js";
 import { usePagedList } from "../../model/usePagedList.js";
 import {
@@ -10,6 +11,7 @@ import {
   filterItemProfit,
   itemProfitability,
   itemProfitExportRows,
+  itemProfitReviewKey,
   itemProfitTotals,
   ITEM_PROFIT_LIMITATIONS,
 } from "../../model/itemProfitability.js";
@@ -82,13 +84,21 @@ export function ItemProfitReport({
   onExportReady,
   focusItemId = "",
   onFocusHandled,
+  token = "",
+  canWrite = false,
+  aiEnabled = false,
 }) {
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [stockStatus, setStockStatus] = useState("all");
   const [sort, setSort] = useState("revenue");
   const [selectedId, setSelectedId] = useState(focusItemId || "");
+  const [decisionRows, setDecisionRows] = useState([]);
+  const [auditAvailable, setAuditAvailable] = useState(true);
+  const [auditError, setAuditError] = useState("");
+  const [busy, setBusy] = useState(false);
   const allowed = canViewItemProfitability({ workspaceRole, accountsRole });
+  const canMark = Boolean(canWrite && aiEnabled && auditAvailable && token);
   const report = useMemo(
     () => (allowed ? itemProfitability({ items, movements, voucherItemLines, costLines, vouchers, parties, from: range.from, to: range.to }) : null),
     [allowed, items, movements, voucherItemLines, costLines, vouchers, parties, range.from, range.to],
@@ -100,6 +110,53 @@ export function ItemProfitReport({
   const totals = useMemo(() => itemProfitTotals(filtered), [filtered]);
   const paged = usePagedList(filtered, `${range.from}|${range.to}|${search}|${categoryId}|${stockStatus}|${sort}`);
   const selected = filtered.find(row => row.itemId === selectedId) || report?.rows.find(row => row.itemId === selectedId) || null;
+  const reviewedKeys = useMemo(() => new Set(
+    decisionRows.filter(row => row.feature === "inventory" && row.action === "reviewed").map(row => row.insightKey),
+  ), [decisionRows]);
+  const isReviewed = row => Boolean(row?.needsReview && reviewedKeys.has(itemProfitReviewKey(row)));
+
+  useEffect(() => {
+    if (!token || !aiEnabled || !allowed) return undefined;
+    let cancelled = false;
+    // Stored on the inventory audit feature. Keys are scoped to item profit and do not match AI Review inventory insights.
+    loadAiReviewActions(token, { module: "accounts", feature: "inventory" })
+      .then(rows => {
+        if (cancelled) return;
+        setAuditAvailable(rows !== null);
+        setDecisionRows(rows || []);
+      })
+      .catch(err => { if (!cancelled) setAuditError(err.message || "Could not load review marks."); });
+    return () => { cancelled = true; };
+  }, [token, aiEnabled, allowed, range.from, range.to]);
+
+  const markReviewed = async row => {
+    if (!canMark || busy || !row?.needsReview) return;
+    const insightKey = itemProfitReviewKey(row);
+    setBusy(true);
+    try {
+      const result = await recordAiReviewAction(token, {
+        module: "accounts",
+        feature: "inventory",
+        insightKey,
+        action: "reviewed",
+        sourceType: "item_profit",
+        sourceId: row.itemId || null,
+      });
+      setDecisionRows(rows => [...rows, {
+        id: result?.id || insightKey,
+        feature: "inventory",
+        insightKey,
+        action: "reviewed",
+        createdAt: new Date().toISOString(),
+      }]);
+      setAuditError("");
+    } catch (err) {
+      if (err.message === AI_AUDIT_MIGRATION_MESSAGE) setAuditAvailable(false);
+      setAuditError(err.message || "Could not save the review mark.");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (!allowed) {
@@ -167,7 +224,7 @@ export function ItemProfitReport({
           <tbody>
             {paged.items.map(row => (
               <tr key={row.itemId}>
-                <td data-label="Item"><strong>{row.name}</strong>{row.sku ? <span className="small"> {row.sku}</span> : null}{row.needsReview ? <span className="small red"> Requires review</span> : null}</td>
+                <td data-label="Item"><strong>{row.name}</strong>{row.sku ? <span className="small"> {row.sku}</span> : null}{row.needsReview ? (isReviewed(row) ? <span className="small"> Reviewed</span> : <span className="small red"> Requires review</span>) : null}</td>
                 <td className="acc-num" data-label="Qty sold">{qty(row.quantitySold, row.unit)}</td>
                 <td className="acc-num" data-label="Revenue">{money(row.revenue)}</td>
                 <td className="acc-num" data-label="Cost">{money(row.cogs)}</td>
@@ -182,13 +239,26 @@ export function ItemProfitReport({
         </table>
       </div>
       <AccPager page={paged.page} pages={paged.pages} total={paged.total} from={paged.from} to={paged.to} onPage={paged.setPage} noun="items" />
-      {selected && <ItemProfitDetail row={selected} vouchers={vouchers} onViewDocument={onViewDocument} onClose={() => { setSelectedId(""); onFocusHandled?.(); }} />}
+      {selected && (
+        <ItemProfitDetail
+          row={selected}
+          reviewed={isReviewed(selected)}
+          canMark={canMark}
+          busy={busy}
+          onReview={markReviewed}
+          vouchers={vouchers}
+          onViewDocument={onViewDocument}
+          onClose={() => { setSelectedId(""); onFocusHandled?.(); }}
+        />
+      )}
+      {auditError ? <p className="notice spacer" role="status">{auditError}</p> : null}
+      {!auditAvailable && aiEnabled && canWrite ? <p className="notice spacer">{AI_AUDIT_MIGRATION_MESSAGE} Review marks are not saved until then.</p> : null}
       <p className="small spacer">{ITEM_PROFIT_LIMITATIONS[0]} {ITEM_PROFIT_LIMITATIONS[2]}</p>
     </div>
   );
 }
 
-function ItemProfitDetail({ row, vouchers, onViewDocument, onClose }) {
+function ItemProfitDetail({ row, reviewed = false, canMark = false, busy = false, onReview, vouchers, onViewDocument, onClose }) {
   const ledger = usePagedList(row.ledger, row.itemId);
   const invoices = usePagedList(row.invoices, `${row.itemId}|invoices`);
   const openVoucher = entry => {
@@ -202,11 +272,16 @@ function ItemProfitDetail({ row, vouchers, onViewDocument, onClose }) {
       <div className="toolbar"><strong>{row.name}</strong><button type="button" className="btn" onClick={onClose}>Back to items</button></div>
       <p className="small">{row.sku || "No SKU"} · {row.from || "Start"} to {row.to || "today"}</p>
       {row.needsReview && (
-        <div className="notice acc-profit-review" role="status">
-          <strong>Requires review</strong>
+        <div className={`notice acc-profit-review${reviewed ? " is-done" : ""}`} role="status">
+          <div className="acc-profit-review-head">
+            <strong>{reviewed ? "Reviewed" : "Requires review"}</strong>
+            {!reviewed && canMark ? <button type="button" className="btn" disabled={busy} onClick={() => onReview?.(row)}>Mark reviewed</button> : null}
+          </div>
           <ul>
             {row.warnings.map(warning => <li key={`${warning.code}-${warning.message}`}>{warning.message}</li>)}
           </ul>
+          {reviewed ? <p className="small">You marked this reviewed. The reasons stay listed. Nothing was posted.</p> : null}
+          {!reviewed && canMark ? <p className="small">Marking reviewed records that you saw these reasons. The figures stay the same.</p> : null}
         </div>
       )}
       <div className="acc-profit-facts">

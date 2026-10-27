@@ -2566,6 +2566,8 @@ const openVoucher = () => {
           markGstFiled={markGstFiled}
           focusItemId={caItemId}
           onFocusHandled={() => setCaItemId("")}
+          token={token}
+          aiEnabled={aiEnabled}
         />}
 
         {section === "bank" && <BankSection

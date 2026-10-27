@@ -1496,6 +1496,14 @@
   }
 }
 
+.accounts-dashboard .acc-profit-review-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .accounts-dashboard .acc-profit-review ul {
   margin: 8px 0 0;
   padding-left: 18px;
@@ -1503,6 +1511,11 @@
 
 .accounts-dashboard .acc-profit-review li + li {
   margin-top: 4px;
+}
+
+.accounts-dashboard .acc-profit-review.is-done {
+  border-color: var(--ft-border);
+  background: color-mix(in srgb, var(--ft-surface) 88%, var(--ft-primary) 12%);
 }
 
 .accounts-dashboard .acc-profit-facts {

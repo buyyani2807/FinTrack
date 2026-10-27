@@ -66,6 +66,8 @@ export function ReportsSection({
   markGstFiled,
   focusItemId = "",
   onFocusHandled,
+  token = "",
+  aiEnabled = false,
 }) {
   return (
     <div className="acc-panel">
@@ -146,6 +148,9 @@ export function ReportsSection({
           onExportReady={onItemProfitExport}
           focusItemId={focusItemId}
           onFocusHandled={onFocusHandled}
+          token={token}
+          canWrite={canWrite}
+          aiEnabled={aiEnabled}
         />
       )}
       {section === "reports" && reportTab === "stock_moves" && (
