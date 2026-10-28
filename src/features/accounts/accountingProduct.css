@@ -4921,6 +4921,58 @@
   max-width: 62ch;
 }
 
+.accounts-dashboard .acc-report-plain {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--acc-line);
+  border-radius: var(--acc-radius);
+  background: color-mix(in srgb, var(--acc-card) 88%, var(--ft-primary) 12%);
+  max-width: 62ch;
+}
+
+.accounts-dashboard .acc-report-plain.is-ok {
+  background: color-mix(in srgb, var(--acc-card) 88%, var(--ft-success) 12%);
+}
+
+.accounts-dashboard .acc-report-plain.is-warn {
+  background: color-mix(in srgb, var(--acc-card) 85%, var(--ft-danger) 15%);
+}
+
+.accounts-dashboard .acc-report-plain-blurb {
+  margin: 0;
+  color: var(--acc-muted);
+  font-size: var(--ft-type-secondary);
+  line-height: var(--ft-leading-body);
+}
+
+.accounts-dashboard .acc-report-plain-insight {
+  margin: 0;
+  color: var(--acc-text);
+  font-size: var(--ft-type-ui);
+  font-weight: 600;
+  line-height: var(--ft-leading-body);
+}
+
+.accounts-dashboard .acc-report-plain-help {
+  margin: 2px 0 0;
+}
+
+.accounts-dashboard .acc-report-plain-help summary {
+  cursor: pointer;
+  color: var(--ft-primary);
+  font-size: var(--ft-type-label);
+  font-weight: 650;
+}
+
+.accounts-dashboard .acc-report-plain-help p {
+  margin: 6px 0 0;
+  color: var(--acc-muted);
+  font-size: var(--ft-type-secondary);
+  line-height: var(--ft-leading-body);
+}
+
 .accounts-dashboard .acc-landing-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
