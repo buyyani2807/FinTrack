@@ -95,6 +95,18 @@ export const loadAccountsCompanies = token => wrap(
   }),
 );
 
+/** Company ids this Accounts-team user may open (empty for owners — they use the full company list). */
+export const loadMyAccountsCompanyIds = (token, userId) => {
+  if (!userId) return Promise.resolve([]);
+  return wrap(
+    accQuery(
+      `/rest/v1/acc_user_company_access?user_id=eq.${encodeURIComponent(userId)}&select=company_id`,
+      token,
+    ).then(rows => (Array.isArray(rows) ? rows.map(row => row.company_id).filter(Boolean) : []))
+      .catch(() => []),
+  );
+};
+
 export const createAccountsCompany = (token, payload) =>
   wrap(supabase.rpc("acc_create_company", {
     input_name: payload.name,

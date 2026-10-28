@@ -11,7 +11,7 @@ import { RevealProvider } from "../../components/ui/Reveal.jsx";
 import { FintrackAssistant } from "../intelligence/assistant/FintrackAssistant.jsx";
 import { visibleFinanceLoans } from "../intelligence/assistant/askFintrack.js";
 import { COMPANY_STORAGE_KEY } from "../accounts/data/accountsCache.js";
-import { loadAccountsCompanies } from "../accounts/data/accountingRepository.js";
+import { loadAccountsCompanies, loadMyAccountsCompanyIds } from "../accounts/data/accountingRepository.js";
 import { loadAccountsModule } from "./accountsModuleLoader.js";
 import { FinancierNav } from "./FinancierNav.jsx";
 import { workspacePaths, workspaceModuleAccess } from "./paths.js";
@@ -63,21 +63,29 @@ export function WorkspaceLayout() {
     };
     window.addEventListener("ft-accounts-company", onCompany);
     let cancelled = false;
-    loadAccountsCompanies(token)
-      .then(companies => {
+    Promise.all([
+      loadAccountsCompanies(token),
+      loadMyAccountsCompanyIds(token, workspace?.id || ""),
+    ])
+      .then(([companies, allowedIds]) => {
         if (cancelled) return;
-        const list = Array.isArray(companies) ? companies.filter(row => row.status !== "archived") : [];
+        const allowed = new Set(allowedIds || []);
+        const list = (Array.isArray(companies) ? companies : [])
+          .filter(row => row.status !== "archived")
+          .filter(row => !allowed.size || allowed.has(row.id));
         let stored = "";
         try { stored = sessionStorage.getItem(COMPANY_STORAGE_KEY) || ""; } catch { stored = ""; }
-        const active = list.find(row => row.id === stored) || list.find(row => row.isPrimary) || list[0];
+        // Never jump a CA to the org primary — only their assigned companies.
+        const active = list.find(row => row.id === stored) || list[0];
         if (active?.name) setAccountsCompanyName(active.name);
+        else setAccountsCompanyName("");
       })
       .catch(() => {});
     return () => {
       cancelled = true;
       window.removeEventListener("ft-accounts-company", onCompany);
     };
-  }, [access.isAccountsUser, token]);
+  }, [access.isAccountsUser, token, workspace?.id]);
 
   // Signing out from inside Accounts sets this flag so the next owner sign-in lands back in Accounts.
   // Accounts-team (CA) users always land in Accounts after sign-in.
@@ -103,14 +111,21 @@ export function WorkspaceLayout() {
   // Warm the Accounts bundle and data while the owner is idle so opening Accounts is instant.
   useEffect(() => {
     if (subscriptionLocked || !access.accounts || !token) return undefined;
-    const preload = () => { loadAccountsModule().then(module => module.prefetchAccounts?.(token)).catch(() => {}); };
+    const preload = () => {
+      loadAccountsModule()
+        .then(module => module.prefetchAccounts?.(token, {
+          workspaceRole: workspace?.role || "",
+          userId: workspace?.id || "",
+        }))
+        .catch(() => {});
+    };
     if (typeof window.requestIdleCallback === "function") {
       const id = window.requestIdleCallback(preload, { timeout: 4000 });
       return () => window.cancelIdleCallback?.(id);
     }
     const id = window.setTimeout(preload, 1500);
     return () => window.clearTimeout(id);
-  }, [subscriptionLocked, access.accounts, token]);
+  }, [subscriptionLocked, access.accounts, token, workspace?.role, workspace?.id]);
 
   const routeContext = {
     access, token, loans, workspace: workspace || {}, orgSettings, logout,

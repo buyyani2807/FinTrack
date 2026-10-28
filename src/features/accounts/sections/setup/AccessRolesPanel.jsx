@@ -161,7 +161,7 @@ export function AccessRolesPanel({
       <div className="accounts-collab-guide">
         <div>
           <strong>Recommended</strong>
-          <p className="small">Default is the company you have open now. Add more companies only if this CA should see them. Use <b>Viewer</b> for review-only; <b>Accountant</b> if they should post.</p>
+          <p className="small">Default is only the company you have open now — not every company, and not the primary unless that is the open one. Use <b>Viewer</b> so they cannot use New (sale, purchase, …). Use <b>Accountant</b> only if they should post.</p>
         </div>
         <span className="acc-chip ok">Per company</span>
       </div>

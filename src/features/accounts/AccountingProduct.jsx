@@ -315,11 +315,14 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     if (!hasLoadedRef.current) setLoading(true);
     setError("");
     try {
-      const inFlight = !preferredCompanyId ? inFlightAccountsPrefetch(token) : null;
+      const workspaceRole = workspace?.role || "";
+      const inFlight = !preferredCompanyId ? inFlightAccountsPrefetch(token, workspaceRole) : null;
       const bundle = (inFlight && await inFlight.catch(() => null))
         || await fetchAccountsBundle(token, {
           preferredCompanyId,
           wantRecurring: sectionRef.current === "overview" || sectionRef.current === "bank",
+          workspaceRole,
+          userId: workspace?.id || "",
         });
       if (gen !== refreshGen.current) return;
       setCompanies(bundle.companies);
@@ -370,7 +373,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
         setLoading(false);
       }
     }
-  }, [token]);
+  }, [token, workspace?.role, workspace?.id]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -412,9 +415,14 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     return () => { cancelled = true; };
   }, [token, workspace?.role]);
 
-  const canWrite = accountsAccessRole === "owner" || accountsAccessRole === "accountant";
-  const canAdmin = accountsAccessRole === "owner";
-  const readOnly = Boolean(accountsAccessRole) && !canWrite;
+  // Accounts-team (CA) never gets owner admin; posting only when explicitly Accountant.
+  const canWrite = workspace?.role === "accounts"
+    ? accountsAccessRole === "accountant"
+    : accountsAccessRole === "owner" || accountsAccessRole === "accountant";
+  const canAdmin = workspace?.role !== "accounts" && accountsAccessRole === "owner";
+  const readOnly = workspace?.role === "accounts"
+    ? accountsAccessRole !== "accountant"
+    : Boolean(accountsAccessRole) && !canWrite;
   const manufacturingEnabled = Boolean(activeCompanyId) && readIndustry(activeCompanyId) === "manufacturing";
   // Keep the wizard mounted across refresh()/loading so Continue does not
   // unmount mid-flow (that looked like “Step 1/6 finishes in 2 steps”).

@@ -1,6 +1,7 @@
 import {
   loadAccountingSettings,
   loadAccountsCompanies,
+  loadMyAccountsCompanyIds,
   loadChartOfAccounts,
   loadParties,
   loadPartyPipeline,
@@ -26,12 +27,23 @@ let accountsSnapshot = null;
 let accountsPrefetch = null;
 export const readAccountsSnapshot = token => (token && accountsSnapshot?.token === token ? accountsSnapshot : null);
 const orEmptyWhenMigrating = promise => promise.catch(err => { if (err.code === "MIGRATION_REQUIRED") return []; throw err; });
-export async function fetchAccountsBundle(token, { preferredCompanyId, wantRecurring = true } = {}) {
+export async function fetchAccountsBundle(token, {
+  preferredCompanyId,
+  wantRecurring = true,
+  workspaceRole = "",
+  userId = "",
+} = {}) {
+  const accountsTeam = workspaceRole === "accounts";
   let companies = [];
   try {
     companies = await loadAccountsCompanies(token);
   } catch (err) {
     if (err.code !== "MIGRATION_REQUIRED") throw err;
+  }
+  // Defense in depth: even if list_companies is stale, restrict CAs to assigned rows.
+  if (accountsTeam && userId) {
+    const allowed = new Set(await loadMyAccountsCompanyIds(token, userId));
+    companies = companies.filter(company => allowed.has(company.id));
   }
   let stored = "";
   try { stored = sessionStorage.getItem(COMPANY_STORAGE_KEY) || ""; } catch { stored = ""; }
@@ -41,9 +53,11 @@ export async function fetchAccountsBundle(token, { preferredCompanyId, wantRecur
     try { sessionStorage.removeItem(COMPANY_STORAGE_KEY); } catch { /* ignore */ }
     stored = "";
   }
+  // CAs must not jump to the org primary — only preferred, stored, or first assigned company.
   const company = (preferredCompanyId && activeCompanies.find(item => item.id === preferredCompanyId))
     || activeCompanies.find(item => item.id === stored)
     || (activeCompanies.length === 1 ? activeCompanies[0] : null)
+    || (accountsTeam ? activeCompanies[0] : null)
     || activeCompanies.find(item => item.isPrimary)
     || activeCompanies[0]
     || null;
@@ -114,13 +128,17 @@ export async function fetchAccountsBundle(token, { preferredCompanyId, wantRecur
 }
 // Warm the Accounts books in the background (e.g. from the dashboard) so the
 // first open after login skips the loading placeholders.
-export function prefetchAccounts(token) {
+export function prefetchAccounts(token, options = {}) {
   if (!token || readAccountsSnapshot(token) || accountsPrefetch?.token === token) return;
-  const promise = fetchAccountsBundle(token);
-  accountsPrefetch = { token, promise };
+  const promise = fetchAccountsBundle(token, options);
+  accountsPrefetch = { token, promise, workspaceRole: options.workspaceRole || "" };
   promise.catch(() => {}).finally(() => {
     if (accountsPrefetch?.promise === promise) accountsPrefetch = null;
   });
 }
-export const inFlightAccountsPrefetch = token => (accountsPrefetch?.token === token ? accountsPrefetch.promise : null);
+export const inFlightAccountsPrefetch = (token, workspaceRole = "") => (
+  accountsPrefetch?.token === token && (accountsPrefetch.workspaceRole || "") === (workspaceRole || "")
+    ? accountsPrefetch.promise
+    : null
+);
 export const clearAccountsSnapshot = () => { accountsSnapshot = null; };
