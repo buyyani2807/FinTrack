@@ -28,18 +28,28 @@ export const REPORT_HELP = {
   balance: "Assets are what the business owns. Liabilities are what it owes. Equity is the owners’ stake that makes the equation balance.",
   receivables: "Outstanding is still unpaid. Ageing shows how long each amount has remained unpaid past the due date.",
   payables: "Outstanding is what you still owe. Ageing shows how long each bill has been unpaid.",
-  pnl: "Net profit is what remains after expenses (and stock adjustments when inventory is used). A net loss means expenses were higher than income.",
+  pnl: "Net profit or loss is income minus expenses, then stock when inventory is used: opening stock is charged and closing stock is added back. A loss can come from expenses, stock, or both.",
 };
 
 export function pnlInsight(pnl) {
   if (!pnl) return "";
   const result = profitResult(pnl.net);
-  const income = money(pnl.totalIncome);
-  const expense = money(pnl.totalExpense);
-  if (result.loss) {
-    return `Expenses (${expense}) exceeded income (${income}) by ${money(result.amount)}.`;
+  const beforeStock = Number(pnl.totalIncome || 0) - Number(pnl.totalExpense || 0);
+  const hasStock = Boolean(pnl.openingStock || pnl.closingStock);
+  if (!hasStock) {
+    if (result.loss) {
+      return `Expenses (${money(pnl.totalExpense)}) exceeded income (${money(pnl.totalIncome)}) by ${money(result.amount)}.`;
+    }
+    return `Income (${money(pnl.totalIncome)}) covered expenses (${money(pnl.totalExpense)}) with ${money(result.amount)} left as profit.`;
   }
-  return `Income (${income}) covered expenses (${expense}) with ${money(result.amount)} left as profit.`;
+  const before = profitResult(beforeStock);
+  const beforePhrase = before.loss
+    ? `a loss of ${money(before.amount)} before stock`
+    : `a profit of ${money(before.amount)} before stock`;
+  if (result.loss) {
+    return `Trading shows ${beforePhrase}. After charging opening stock (${money(pnl.openingStock)}) and adding back closing stock (${money(pnl.closingStock)}), the period is a net loss of ${money(result.amount)}.`;
+  }
+  return `Trading shows ${beforePhrase}. After stock (opening ${money(pnl.openingStock)}, closing ${money(pnl.closingStock)}), net profit is ${money(result.amount)}.`;
 }
 
 export function trialInsight(tb) {
