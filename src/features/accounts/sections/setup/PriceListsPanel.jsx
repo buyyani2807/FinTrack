@@ -6,6 +6,7 @@ import {
   deletePriceList,
   loadPriceLists,
   savePriceListRates,
+  setPartyPriceList,
   upsertPriceList,
 } from "../../data/accountingRepository.js";
 import {
@@ -18,6 +19,7 @@ import {
 export function PriceListsPanel({
   priceLists = [],
   setPriceLists,
+  parties = [],
   items = [],
   token,
   canWrite,
@@ -32,13 +34,22 @@ export function PriceListsPanel({
     [items],
   );
   const editing = Boolean(draft.id);
+  const partyType = draft.kind === "purchase" ? "supplier" : "customer";
+  const partyOptions = useMemo(
+    () => (parties || [])
+      .filter(party => party.partyType === partyType && party.isActive !== false)
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    [parties, partyType],
+  );
 
   const openList = list => {
     setError("");
+    const assigned = (parties || []).find(party => party.priceListId === list.id);
     setDraft({
       id: list.id,
       name: list.name,
       kind: list.kind,
+      partyId: assigned?.id || "",
       isDefault: Boolean(list.isDefault),
       isActive: list.isActive !== false,
       rates: { ...(list.rates || {}) },
@@ -52,6 +63,16 @@ export function PriceListsPanel({
     requestAnimationFrame(() => editorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
   };
 
+  const pickParty = partyId => {
+    const party = partyOptions.find(row => row.id === partyId);
+    setDraft(current => ({
+      ...current,
+      partyId,
+      name: party?.name || (current.isDefault ? current.name : ""),
+      isDefault: partyId ? false : current.isDefault,
+    }));
+  };
+
   const setRate = (itemId, value) => {
     setDraft(current => {
       const rates = { ...current.rates };
@@ -62,11 +83,27 @@ export function PriceListsPanel({
     });
   };
 
+  const assignParty = async (listId, partyId) => {
+    const previous = (parties || []).filter(party => party.priceListId === listId && party.id !== partyId);
+    for (const party of previous) await setPartyPriceList(token, party.id, null);
+    if (partyId) await setPartyPriceList(token, partyId, listId);
+  };
+
   const save = () => run(async () => {
     setError("");
+    if (!draft.isDefault && !draft.partyId) {
+      throw new Error(draft.kind === "purchase"
+        ? "Choose a supplier for this purchase list, or mark it as the company default."
+        : "Choose a customer for this selling list, or mark it as the company default.");
+    }
     const ready = assertPriceListDraft(draft, { existing: priceLists });
     const id = await upsertPriceList(token, ready);
     await savePriceListRates(token, id, ratesPayload(ready.rates));
+    try {
+      await assignParty(id, draft.partyId || null);
+    } catch (err) {
+      if (err.code !== "MIGRATION_REQUIRED") throw err;
+    }
     setPriceLists(await loadPriceLists(token) || []);
     setDraft(emptyPriceListDraft(ready.kind));
   }, draft.id ? "Price list updated." : "Price list saved.");
@@ -77,29 +114,38 @@ export function PriceListsPanel({
     if (draft.id === list.id) setDraft(emptyPriceListDraft(list.kind));
   }, "Price list deleted.");
 
+  const partyLabel = draft.kind === "purchase" ? "Supplier" : "Customer";
+  const canSave = draft.isDefault
+    ? Boolean(draft.name.trim())
+    : Boolean(draft.partyId);
+
   return (
     <AccSetupSection
       icon="₹"
       title="Price lists"
-      copy="Named selling or purchase rates for items. Assign a list on a customer or supplier. The item’s own price is used when the list has no rate. Requires migration 107."
+      copy="Pick a customer or supplier, set their item rates, and save — the list is assigned to them automatically. Leave a rate blank to use the item price. Requires migration 107."
       collapsible
       summary={`${(priceLists || []).filter(row => row.isActive !== false).length} lists`}
     >
       {!canWrite ? <p className="small">View-only. An owner or accountant can edit price lists.</p> : null}
       {error ? <p className="notice" role="alert">{error}</p> : null}
 
-      <AccTable columns={["Name", "Kind", "Rates", ""]} empty={!priceLists.length && "No price lists yet."}>
-        {(priceLists || []).map(list => (
-          <tr key={list.id} className={draft.id === list.id ? "is-selected" : undefined}>
-            <td>{list.name}{list.isDefault ? " · default" : ""}{list.isActive === false ? " · inactive" : ""}</td>
-            <td>{PRICE_LIST_KINDS.find(kind => kind.id === list.kind)?.label || list.kind}</td>
-            <td>{Object.keys(list.rates || {}).length}</td>
-            <td className="accounts-action-row">
-              <button type="button" className="btn" onClick={() => openList(list)}>{draft.id === list.id ? "Editing" : "Open"}</button>
-              {canWrite ? <button type="button" className="btn" disabled={saving} onClick={() => remove(list).catch(err => setError(err.message || "Could not delete the price list."))}>Delete</button> : null}
-            </td>
-          </tr>
-        ))}
+      <AccTable columns={["Name", "Kind", "For", "Rates", ""]} empty={!priceLists.length && "No price lists yet."}>
+        {(priceLists || []).map(list => {
+          const assigned = (parties || []).find(party => party.priceListId === list.id);
+          return (
+            <tr key={list.id} className={draft.id === list.id ? "is-selected" : undefined}>
+              <td>{list.name}{list.isDefault ? " · default" : ""}{list.isActive === false ? " · inactive" : ""}</td>
+              <td>{PRICE_LIST_KINDS.find(kind => kind.id === list.kind)?.label || list.kind}</td>
+              <td>{assigned?.name || (list.isDefault ? "Any party without a list" : "—")}</td>
+              <td>{Object.keys(list.rates || {}).length}</td>
+              <td className="accounts-action-row">
+                <button type="button" className="btn" onClick={() => openList(list)}>{draft.id === list.id ? "Editing" : "Open"}</button>
+                {canWrite ? <button type="button" className="btn" disabled={saving} onClick={() => remove(list).catch(err => setError(err.message || "Could not delete the price list."))}>Delete</button> : null}
+              </td>
+            </tr>
+          );
+        })}
       </AccTable>
 
       <div className="acc-price-list-editor spacer" ref={editorRef}>
@@ -110,14 +156,56 @@ export function PriceListsPanel({
           ) : null}
         </div>
         <div className="form">
-          <Field label="Name"><input value={draft.name} placeholder="e.g. Dealer" onChange={event => setDraft(current => ({ ...current, name: event.target.value }))} disabled={!canWrite} /></Field>
           <Field label="Kind">
-            <Select value={draft.kind} disabled={!canWrite || editing} onChange={event => setDraft(current => ({ ...current, kind: event.target.value, rates: {} }))}>
+            <Select
+              value={draft.kind}
+              disabled={!canWrite || editing}
+              onChange={event => setDraft(current => ({
+                ...emptyPriceListDraft(event.target.value),
+                id: current.id,
+                isDefault: current.isDefault,
+                rates: {},
+              }))}
+            >
               {PRICE_LIST_KINDS.map(kind => <option key={kind.id} value={kind.id}>{kind.label}</option>)}
             </Select>
           </Field>
-          <Field label="Default for this kind">
-            <label className="small"><input type="checkbox" checked={draft.isDefault} disabled={!canWrite} onChange={event => setDraft(current => ({ ...current, isDefault: event.target.checked }))} /> Use when a party has no list</label>
+          <Field label={partyLabel}>
+            <Select value={draft.partyId || ""} disabled={!canWrite} onChange={event => pickParty(event.target.value)}>
+              <option value="">{draft.isDefault ? "Company default (no party)" : `Select ${partyLabel.toLowerCase()}`}</option>
+              {partyOptions.map(party => (
+                <option key={party.id} value={party.id}>
+                  {party.name}{party.priceListId && party.priceListId !== draft.id ? " · has a list" : ""}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          {draft.isDefault && !draft.partyId ? (
+            <Field label="List name">
+              <input
+                value={draft.name}
+                placeholder={draft.kind === "purchase" ? "e.g. Standard purchase" : "e.g. Standard selling"}
+                onChange={event => setDraft(current => ({ ...current, name: event.target.value }))}
+                disabled={!canWrite}
+              />
+            </Field>
+          ) : null}
+          <Field label="Company default">
+            <label className="small">
+              <input
+                type="checkbox"
+                checked={draft.isDefault}
+                disabled={!canWrite}
+                onChange={event => setDraft(current => ({
+                  ...current,
+                  isDefault: event.target.checked,
+                  name: event.target.checked && !current.partyId
+                    ? (current.name || (current.kind === "purchase" ? "Standard purchase" : "Standard selling"))
+                    : current.name,
+                }))}
+              />
+              {" "}Use this list for any {partyType} who does not have their own list
+            </label>
           </Field>
         </div>
         <p className="small spacer">Rates on this list. Leave blank to fall back to the item price.</p>
@@ -152,7 +240,7 @@ export function PriceListsPanel({
         </div>
         {canWrite ? (
           <div className="acc-form-actions">
-            <button type="button" className="btn primary" disabled={saving || !draft.name.trim()} onClick={() => save().catch(err => setError(err.message || "Could not save the price list."))}>{saving ? "Saving…" : editing ? "Update list" : "Save list"}</button>
+            <button type="button" className="btn primary" disabled={saving || !canSave} onClick={() => save().catch(err => setError(err.message || "Could not save the price list."))}>{saving ? "Saving…" : editing ? "Update list" : "Save list"}</button>
             {editing ? <button type="button" className="btn" disabled={saving} onClick={() => startNew(draft.kind)}>Cancel</button> : null}
           </div>
         ) : null}

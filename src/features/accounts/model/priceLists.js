@@ -9,6 +9,7 @@ export const emptyPriceListDraft = (kind = "selling") => ({
   id: null,
   name: "",
   kind,
+  partyId: "",
   isDefault: false,
   isActive: true,
   rates: {},

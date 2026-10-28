@@ -225,6 +225,7 @@ export function SetupSection({
       <PriceListsPanel
         priceLists={priceLists}
         setPriceLists={setPriceLists}
+        parties={parties}
         items={items}
         token={token}
         canWrite={canWrite}
