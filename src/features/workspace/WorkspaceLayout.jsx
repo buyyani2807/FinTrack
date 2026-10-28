@@ -10,6 +10,8 @@ import { PageReveal } from "../../components/ui/PageReveal.jsx";
 import { RevealProvider } from "../../components/ui/Reveal.jsx";
 import { FintrackAssistant } from "../intelligence/assistant/FintrackAssistant.jsx";
 import { visibleFinanceLoans } from "../intelligence/assistant/askFintrack.js";
+import { COMPANY_STORAGE_KEY } from "../accounts/data/accountsCache.js";
+import { loadAccountsCompanies } from "../accounts/data/accountingRepository.js";
 import { loadAccountsModule } from "./accountsModuleLoader.js";
 import { FinancierNav } from "./FinancierNav.jsx";
 import { workspacePaths, workspaceModuleAccess } from "./paths.js";
@@ -34,6 +36,7 @@ export function WorkspaceLayout() {
       : { ...moduleAccess, isOwner: false, chit: false, cashbook: false, accounts: false };
   const [chitSchemes, setChitSchemes] = useState([]);
   const [askOpen, setAskOpen] = useState(false);
+  const [accountsCompanyName, setAccountsCompanyName] = useState("");
   const askEnabled = isModuleEnabled(orgSettings, "ai");
   const location = useLocation();
   const subscription = workspace?.subscription;
@@ -47,6 +50,34 @@ export function WorkspaceLayout() {
       .catch(() => { if (!cancelled) setChitSchemes([]); });
     return () => { cancelled = true; };
   }, [subscriptionLocked, showOwnerChrome, token]);
+
+  // CA top bar: show the Acc company they can open (e.g. Buyyani's), not the FinTrack org name.
+  useEffect(() => {
+    if (!access.isAccountsUser || !token) {
+      setAccountsCompanyName("");
+      return undefined;
+    }
+    const onCompany = event => {
+      const name = String(event?.detail?.name || "").trim();
+      if (name) setAccountsCompanyName(name);
+    };
+    window.addEventListener("ft-accounts-company", onCompany);
+    let cancelled = false;
+    loadAccountsCompanies(token)
+      .then(companies => {
+        if (cancelled) return;
+        const list = Array.isArray(companies) ? companies.filter(row => row.status !== "archived") : [];
+        let stored = "";
+        try { stored = sessionStorage.getItem(COMPANY_STORAGE_KEY) || ""; } catch { stored = ""; }
+        const active = list.find(row => row.id === stored) || list.find(row => row.isPrimary) || list[0];
+        if (active?.name) setAccountsCompanyName(active.name);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+      window.removeEventListener("ft-accounts-company", onCompany);
+    };
+  }, [access.isAccountsUser, token]);
 
   // Signing out from inside Accounts sets this flag so the next owner sign-in lands back in Accounts.
   // Accounts-team (CA) users always land in Accounts after sign-in.
@@ -108,7 +139,7 @@ export function WorkspaceLayout() {
         {access.isAccountsUser && !subscriptionLocked ? (
           <header className="ft-accounts-team-bar">
             <span className="ft-brand"><span className="ft-brand-strong">FIN</span>Track <span className="ft-wordmark-suffix">Accounts</span></span>
-            <span className="ft-accounts-team-biz">{workspace?.businessName || "Accounts"}</span>
+            <span className="ft-accounts-team-biz">{accountsCompanyName || workspace?.businessName || "Accounts"}</span>
             <TopActions logout={logout} />
           </header>
         ) : null}

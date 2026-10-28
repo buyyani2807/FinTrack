@@ -36,8 +36,14 @@ export async function fetchAccountsBundle(token, { preferredCompanyId, wantRecur
   let stored = "";
   try { stored = sessionStorage.getItem(COMPANY_STORAGE_KEY) || ""; } catch { stored = ""; }
   const activeCompanies = companies.filter(item => item.status !== "archived");
+  // Drop a stale company id (e.g. owner session on this browser, or a company the CA cannot open).
+  if (stored && !activeCompanies.some(item => item.id === stored)) {
+    try { sessionStorage.removeItem(COMPANY_STORAGE_KEY); } catch { /* ignore */ }
+    stored = "";
+  }
   const company = (preferredCompanyId && activeCompanies.find(item => item.id === preferredCompanyId))
     || activeCompanies.find(item => item.id === stored)
+    || (activeCompanies.length === 1 ? activeCompanies[0] : null)
     || activeCompanies.find(item => item.isPrimary)
     || activeCompanies[0]
     || null;
@@ -45,6 +51,12 @@ export async function fetchAccountsBundle(token, { preferredCompanyId, wantRecur
   if (company) {
     try { sessionStorage.setItem(COMPANY_STORAGE_KEY, company.id); } catch { /* ignore */ }
   }
+  // CA top bar (and any listeners) show the Acc company, not the FinTrack org name.
+  try {
+    window.dispatchEvent(new CustomEvent("ft-accounts-company", {
+      detail: { id: company?.id || "", name: company?.name || "" },
+    }));
+  } catch { /* ignore */ }
   const [settings, accounts, parties, pipeline, vouchers, items, itemCategories, stockMovements, voucherItemLines, recurring, tradeDocuments, documentSettings, complianceFilings, collectionRoutes, priceLists] = await Promise.all([
     loadAccountingSettings(token),
     loadChartOfAccounts(token),

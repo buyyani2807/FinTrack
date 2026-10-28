@@ -5,6 +5,14 @@ const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const LEGACY_ACCESS_KEY = "fintrack_access_token";
 const LEGACY_REFRESH_KEY = "fintrack_refresh_token";
 
+/** Public app origin for Auth emails (password reset). Prefer VITE_APP_ORIGIN so local forgot-password does not email localhost links. */
+const authRedirectOrigin = () => {
+  const configured = String(import.meta.env.VITE_APP_ORIGIN || "").trim().replace(/\/$/, "");
+  if (configured) return configured;
+  if (typeof window !== "undefined" && window.location?.origin) return window.location.origin;
+  return "";
+};
+
 if (!url || !anonKey) {
   console.warn("Supabase is not configured. Copy .env.example to .env and add public project values.");
 }
@@ -136,10 +144,14 @@ export const supabase = {
       clearLegacyStorage();
       return session;
     },
-    resetPasswordForEmail: email => request("/auth/v1/recover", {
-      method: "POST",
-      body: JSON.stringify({ email, redirect_to: `${window.location.origin}?reset-password=1` }),
-    }),
+    resetPasswordForEmail: email => {
+      const origin = authRedirectOrigin();
+      if (!origin) throw new Error("App origin is not configured for password reset.");
+      return request("/auth/v1/recover", {
+        method: "POST",
+        body: JSON.stringify({ email, redirect_to: `${origin}?reset-password=1` }),
+      });
+    },
     updatePassword: (password, accessToken) => request("/auth/v1/user", {
       method: "PUT",
       body: JSON.stringify({ password }),
