@@ -86,11 +86,19 @@ export function AccessRolesPanel({
           className="btn primary"
           disabled={saving || !draft.fullName.trim() || !draft.email.trim()}
           onClick={() => run(async () => {
-            const result = await createAccountsTeamUser(token, draft);
-            setDraft(emptyDraft());
-            await refreshMembers();
-            setCreatedLogin(result);
-            return result;
+            try {
+              const result = await createAccountsTeamUser(token, draft);
+              setDraft(emptyDraft());
+              await refreshMembers();
+              setCreatedLogin(result);
+              return result;
+            } catch (err) {
+              // Clear the taken address so the owner can type another without selecting first.
+              if (/already|different email|registered|belongs to another/i.test(err?.message || "")) {
+                setDraft(current => ({ ...current, email: "" }));
+              }
+              throw err;
+            }
           }, result => result?.message || "Accounts login ready. Share the details below.")}
         >
           {saving ? "Creating…" : "Create login"}
