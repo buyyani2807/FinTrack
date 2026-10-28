@@ -62,14 +62,18 @@ export function ItemLinesSection({
     if (!last) return null;
     return { ...last, partyName: parties.find(party => party.id === last.partyId)?.name || "" };
   };
+  const showHsn = Boolean(gstKinds);
+  const columns = showHsn
+    ? ["Item", "Qty", "Unit", "Rate", "Discount", "GST%", "HSN / SAC", { label: "Amount", num: true }, ""]
+    : ["Item", "Qty", "Unit", "Rate", "Discount", "GST%", { label: "Amount", num: true }, ""];
   return (
     <section className="acc-form-section acc-item-lines">
       <h3 className="acc-form-section-title">Line items</h3>
-      <AccTable spaced={false} columns={["Item", "Qty", "Unit", "Rate", "Discount", "GST%", { label: "Amount", num: true }, ""]}>
+      <AccTable spaced={false} columns={columns}>
         {(form.itemLines || [emptyItemLine()]).map((line, index) => {
           const lineTotals = normalizeItemLine(line);
           const stock = line.itemId ? stockByItem[line.itemId] : null;
-          const suggestion = kind === "sale" ? null : hsnForLine(line, activeItems);
+          const suggestion = hsnForLine(line, activeItems);
           const lastSold = lastSoldFor(line);
           return (
             <tr key={index}>
@@ -91,7 +95,19 @@ export function ItemLinesSection({
               <td><UnitSelect value={line.unit} onValue={unit => patchItemLine(index, { unit })} /></td>
               <td><input type="number" min="0" step="0.01" value={line.rate} onChange={event => patchItemLine(index, { rate: event.target.value, rateTouched: true })} /></td>
               <td><input inputMode="decimal" value={line.discount || ""} placeholder="₹ or %" aria-label="Discount (amount or percent)" onChange={event => patchItemLine(index, { discount: event.target.value })} /></td>
-              <td><input type="number" min="0" max="100" step="0.01" value={line.gstRate} onChange={event => patchItemLine(index, { gstRate: event.target.value })} /></td>
+              <td><input type="number" min="0" max="100" step="0.01" value={line.gstRate} onChange={event => patchItemLine(index, { gstRate: event.target.value })} disabled={!gstOn} /></td>
+              {showHsn ? (
+                <td>
+                  <input
+                    value={line.hsnSac || ""}
+                    placeholder="optional"
+                    aria-label="HSN / SAC"
+                    inputMode="text"
+                    autoComplete="off"
+                    onChange={event => patchItemLine(index, { hsnSac: event.target.value.replace(/[^\dA-Za-z./-]/g, "").slice(0, 16) })}
+                  />
+                </td>
+              ) : null}
               <td className="acc-num">{money(lineTotals.netAmount)}</td>
               <td>{(form.itemLines || []).length > 1 && <button type="button" className="btn danger" onClick={() => setForm(current => ({ ...current, itemLines: current.itemLines.filter((_, i) => i !== index) }))}>Remove</button>}</td>
             </tr>
@@ -103,7 +119,7 @@ export function ItemLinesSection({
           const lineTotals = normalizeItemLine(line);
           const stock = line.itemId ? stockByItem[line.itemId] : null;
           const lineName = activeItems.find(item => item.id === line.itemId)?.name || line.itemName || "Select item";
-          const suggestion = kind === "sale" ? null : hsnForLine(line, activeItems);
+          const suggestion = hsnForLine(line, activeItems);
           const lastSold = lastSoldFor(line);
           return (
             <article key={index} className="acc-item-line-card">
@@ -139,8 +155,19 @@ export function ItemLinesSection({
                   <input inputMode="decimal" value={line.discount || ""} placeholder="₹ or %" onChange={event => patchItemLine(index, { discount: event.target.value })} />
                 </label>
                 <label className="accounts-filter-field"><span className="small">GST %</span>
-                  <input type="number" min="0" max="100" step="0.01" value={line.gstRate} onChange={event => patchItemLine(index, { gstRate: event.target.value })} />
+                  <input type="number" min="0" max="100" step="0.01" value={line.gstRate} disabled={!gstOn} onChange={event => patchItemLine(index, { gstRate: event.target.value })} />
                 </label>
+                {showHsn ? (
+                  <label className="accounts-filter-field"><span className="small">HSN / SAC</span>
+                    <input
+                      value={line.hsnSac || ""}
+                      placeholder="optional"
+                      inputMode="text"
+                      autoComplete="off"
+                      onChange={event => patchItemLine(index, { hsnSac: event.target.value.replace(/[^\dA-Za-z./-]/g, "").slice(0, 16) })}
+                    />
+                  </label>
+                ) : null}
               </div>
               {(form.itemLines || []).length > 1 && (
                 <button type="button" className="btn danger" onClick={() => setForm(current => ({ ...current, itemLines: current.itemLines.filter((_, i) => i !== index) }))}>Remove</button>
