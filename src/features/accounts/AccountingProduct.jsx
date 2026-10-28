@@ -131,6 +131,7 @@ import {
   itemSalesReport,
   itemizedEntryDraft,
   stockMovementReport,
+  stockReasonLabel,
   usesItemLines,
 } from "./model/inventoryModel.js";
 import {
@@ -2264,7 +2265,57 @@ const openVoucher = () => {
         ],
       };
     }
-    return { filename: `fintrack-cash-flow-${stamp}`, rows: cashflowExportRows(flow, exportMeta) };
+    if (active === "item_sales") {
+      return {
+        filename: `fintrack-item-sales-${stamp}`,
+        rows: [
+          ["Item sales"],
+          [companyName],
+          [`Period: ${rangeFrom} to ${rangeTo}`],
+          [],
+          ["Item", "SKU", "Qty sold", "Sales amount (₹)"],
+          ...itemSalesRows.map(row => [row.name, row.sku || "", row.quantity, row.amount]),
+        ],
+      };
+    }
+    if (active === "item_purchases") {
+      return {
+        filename: `fintrack-item-purchases-${stamp}`,
+        rows: [
+          ["Item purchases"],
+          [companyName],
+          [`Period: ${rangeFrom} to ${rangeTo}`],
+          [],
+          ["Item", "SKU", "Qty bought", "Purchase amount (₹)"],
+          ...itemPurchaseRows.map(row => [row.name, row.sku || "", row.quantity, row.amount]),
+        ],
+      };
+    }
+    if (active === "stock_moves") {
+      const moveRows = stockMovementReport(stockMovements, items, range);
+      return {
+        filename: `fintrack-stock-movement-${stamp}`,
+        rows: [
+          ["Stock movement"],
+          [companyName],
+          [`Period: ${rangeFrom} to ${rangeTo}`],
+          [],
+          ["Date", "Item", "Direction", "Qty", "Reason", "Voucher"],
+          ...moveRows.map(row => [
+            row.movementDate,
+            row.itemName,
+            row.direction,
+            row.quantityDelta,
+            stockReasonLabel(row.reason),
+            row.voucherNumber || "",
+          ]),
+        ],
+      };
+    }
+    if (active === "cashflow") {
+      return { filename: `fintrack-cash-flow-${stamp}`, rows: cashflowExportRows(flow, exportMeta) };
+    }
+    throw new Error(`Export is not available for this report yet.`);
   };
 
   const exportReport = format => {
@@ -2275,7 +2326,8 @@ const openVoucher = () => {
         const active = ["receivables", "payables", "pnl", "balance", "trial"].includes(section) ? section : reportTab;
         const title = REPORT_TABS.find(item => item.id === active)?.label || "Accounts report";
         const companyLabel = activeCompany?.name || settings?.companyName || "FinTrack";
-        const subtitle = `${companyLabel} · ${rangeFrom} to ${rangeTo}`;
+        // PDF Helvetica is ASCII-only — avoid middle dots that become "?".
+        const subtitle = `${companyLabel} - ${rangeFrom} to ${rangeTo}`;
         // PDF already has title/subtitle; start the table at the column-header row.
         const headerIdx = rows.findIndex(row => {
           const first = String(row?.[0] || "").toLowerCase();
