@@ -786,6 +786,37 @@ html[data-ft-role="owner"] .top-actions .top-theme { display: none; }
 @media (width >= 1051px) { html[data-ft-role="owner"] .accounts-dashboard { margin-left: calc(var(--ft-sidebar-w) + 8px); } }
 @media (681px <= width <= 1050px) { html[data-ft-role="owner"] .accounts-dashboard { margin-left: var(--ft-rail-w); } .accounts-dashboard .acc-main { padding: 28px 24px 48px !important; } }
 @media (width <= 680px) { .accounts-dashboard .acc-main { padding: 20px 16px calc(96px + env(safe-area-inset-bottom, 0px)) !important; } }
+/* CA login: Accounts fills the viewport (no Financier sidebar / no owner margin). */
+html[data-ft-role="accounts"] .accounts-dashboard { margin-left: 0 !important; }
+.ft-accounts-team-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--ft-border);
+  background: var(--ft-surface);
+}
+.ft-accounts-team-bar .ft-brand {
+  color: var(--ft-text) !important;
+  font-size: var(--ft-type-title) !important;
+  letter-spacing: .06em !important;
+  white-space: nowrap;
+}
+.ft-accounts-team-bar .ft-wordmark-suffix { color: var(--ft-muted); }
+.ft-accounts-team-biz {
+  flex: 1;
+  min-width: 0;
+  color: var(--ft-muted);
+  font-size: var(--ft-type-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (width <= 680px) {
+  .ft-accounts-team-bar { padding: 10px 16px; gap: 8px; }
+  .ft-accounts-team-biz { display: none; }
+}
 /* title + actions on one line, the books context across the full width below */
 .accounts-dashboard .acc-page-toolbar { display: grid !important; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "title actions" "context context"; align-items: center; gap: 0 16px; }
 .accounts-dashboard .acc-page-toolbar > .title { grid-area: title; margin: 0 !important; }

@@ -5,6 +5,7 @@ import { todayIso } from "../../lib/dates.js";
 import { isModuleEnabled } from "../commercial/entitlements.js";
 import { TrialBanner } from "../commercial/TrialBanner.jsx";
 import { subscriptionPathAllowed, workspaceAccessAllowed } from "../commercial/trial.js";
+import { TopActions } from "../../components/TopActions.jsx";
 import { PageReveal } from "../../components/ui/PageReveal.jsx";
 import { RevealProvider } from "../../components/ui/Reveal.jsx";
 import { FintrackAssistant } from "../intelligence/assistant/FintrackAssistant.jsx";
@@ -100,10 +101,18 @@ export function WorkspaceLayout() {
         <button type="button" className="btn" onClick={logout}>Log out</button>
       </div>
     </div> : <TrialBanner subscription={subscription} isOwner={showOwnerChrome} />}
-    {showWorkspaceChrome && !subscriptionLocked
-      ? <div className="financier-tools"><FinancierNav access={access} orgSettings={orgSettings} businessName={workspace?.businessName} logout={logout} askEnabled={askEnabled && showOwnerChrome} onAsk={() => setAskOpen(true)} /><PageReveal routeKey={location.pathname}><Outlet context={routeContext} /></PageReveal></div>
+    {showOwnerChrome && !subscriptionLocked
+      ? <div className="financier-tools"><FinancierNav access={access} orgSettings={orgSettings} businessName={workspace?.businessName} logout={logout} askEnabled={askEnabled} onAsk={() => setAskOpen(true)} /><PageReveal routeKey={location.pathname}><Outlet context={routeContext} /></PageReveal></div>
       : <>
-        {!subscriptionLocked && askEnabled ? <div className="ft-ask-staff-bar"><button type="button" className="btn" onClick={() => setAskOpen(true)}>Ask FinTrack</button></div> : null}
+        {/* CA / Accounts-team: full-viewport Accounts (no Financier sidebar). Theme + logout stay in the slim bar. */}
+        {access.isAccountsUser && !subscriptionLocked ? (
+          <header className="ft-accounts-team-bar">
+            <span className="ft-brand"><span className="ft-brand-strong">FIN</span>Track <span className="ft-wordmark-suffix">Accounts</span></span>
+            <span className="ft-accounts-team-biz">{workspace?.businessName || "Accounts"}</span>
+            <TopActions logout={logout} />
+          </header>
+        ) : null}
+        {!subscriptionLocked && askEnabled && !access.isAccountsUser ? <div className="ft-ask-staff-bar"><button type="button" className="btn" onClick={() => setAskOpen(true)}>Ask FinTrack</button></div> : null}
         <PageReveal routeKey={location.pathname}><Outlet context={routeContext} /></PageReveal>
       </>}
     {!subscriptionLocked && <FintrackAssistant
