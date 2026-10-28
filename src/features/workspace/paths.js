@@ -9,6 +9,7 @@ export const workspacePaths = {
   chit: "/chit-fund",
   cashbook: "/cashbook",
   accounts: "/accounting",
+  reports: "/reports",
   collectionStaff: "/collection-staff",
   routeCollections: "/route-collections",
   settings: "/settings",

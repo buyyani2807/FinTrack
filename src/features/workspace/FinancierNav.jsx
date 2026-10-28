@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from "react-router";
 import { useEffect, useState } from "react";
-import { BookOpenText, CalendarDays, CalendarRange, Coins, LayoutGrid, LogOut, Menu, MessageCircle, Settings, Users, Wallet, X } from "lucide-react";
+import { BookOpenText, CalendarDays, CalendarRange, Coins, FileBarChart, LayoutGrid, LogOut, Menu, MessageCircle, Settings, Users, Wallet, X } from "lucide-react";
 import { Button } from "../../components/ui.jsx";
 import { ThemeToggle } from "../../components/ThemeToggle.jsx";
 import { assertModuleEntitled } from "../commercial/entitlements.js";
@@ -61,6 +61,11 @@ export function FinancierNav({ access, orgSettings = {}, businessName = "", logo
     {access.chit && <Button className={itemClass(isActive(workspacePaths.chit))} onClick={() => openEntitled("chit", workspacePaths.chit)}><NavLabel icon={Coins} long="Chit Fund" short="Chit" /></Button>}
     {access.cashbook && <Button className={itemClass(isActive(workspacePaths.cashbook))} onClick={() => openEntitled("cashbook", workspacePaths.cashbook)}><NavLabel icon={Wallet} long="Cashbook" short="Cash" /></Button>}
     {access.accounts && <Button className={itemClass(isActive(workspacePaths.accounts))} onClick={() => openEntitled("accounts", workspacePaths.accounts)}><NavLabel icon={BookOpenText} long="Accounts" short="Accounts" /></Button>}
+    {access.isOwner && (access.accounts || access.cashbook || access.daily || access.monthly || access.chit) && (
+      <Button className={itemClass(isActive(workspacePaths.reports))} onClick={() => go(workspacePaths.reports)}>
+        <NavLabel icon={FileBarChart} long="Reports" short="Reports" />
+      </Button>
+    )}
     {access.isOwner && <Button className={itemClass(isActive(workspacePaths.collectionStaff))} onClick={() => go(workspacePaths.collectionStaff)}><NavLabel icon={Users} long="Collection Staff" short="Staff" /></Button>}
     {access.isOwner && <Button className={itemClass(isActive(workspacePaths.settings))} onClick={() => go(workspacePaths.settings)}><NavLabel icon={Settings} long="Settings" short="Settings" /></Button>}
     {askEnabled && onAsk ? <Button onClick={() => { closeDrawer(); onAsk(); }}><NavLabel icon={MessageCircle} long="Ask FinTrack" short="Ask" /></Button> : null}
