@@ -139,7 +139,7 @@ export function WorkspaceLayout() {
         {access.isAccountsUser && !subscriptionLocked ? (
           <header className="ft-accounts-team-bar">
             <span className="ft-brand"><span className="ft-brand-strong">FIN</span>Track <span className="ft-wordmark-suffix">Accounts</span></span>
-            <span className="ft-accounts-team-biz">{accountsCompanyName || workspace?.businessName || "Accounts"}</span>
+            <span className="ft-accounts-team-biz">{accountsCompanyName || (access.isAccountsUser ? "No company assigned" : workspace?.businessName) || "Accounts"}</span>
             <TopActions logout={logout} />
           </header>
         ) : null}

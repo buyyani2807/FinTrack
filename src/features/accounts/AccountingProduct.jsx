@@ -2178,12 +2178,17 @@ const openVoucher = () => {
           booksStartedOn={activeCompany?.booksStartedOn || settings?.booksStartedOn || ""}
           rangeFrom={range.from}
           rangeTo={range.to}
-          fallbackName={settings?.companyName || workspace.businessName || ""}
+          fallbackName={canAdmin ? (settings?.companyName || workspace.businessName || "") : ""}
         />}
         extras={canWrite ? <NewEntryActions openSimple={openSimple} openVoucher={openVoucher} openParty={openParty} openBookkeeper={settings ? () => setShowBookkeeper(true) : null} /> : <span className="small">View-only · {accountsAccessRole || "viewer"}</span>}
       />
       <Toasts items={[{ id: "error", tone: "error", message: error, onClose: () => setError("") }, { id: "notice", message: notice, onClose: () => setNotice("") }]} />
       {readOnly && <div className="notice">Accounts access: <strong>viewer</strong>. You can review books and reports, but posting and setup changes are blocked.</div>}
+      {!loading && workspace?.role === "accounts" && !companies.filter(row => row.status !== "archived").length && (
+        <div className="notice" role="status">
+          No Accounts company is assigned to this login. Ask the owner to open <strong>Setup → Add CA / Accounts login → Companies</strong> and tick the company you should access.
+        </div>
+      )}
       {migrationRequired && <div className="notice">Run <strong>052</strong> through <strong>076_fix_ambiguous_item_type.sql</strong> in the Supabase SQL editor (including <strong>059</strong>, <strong>064–067</strong>, <strong>070–076</strong>), then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
       {loading && !settings ? <Spinner label="Loading Accounts" /> : <>
         {section === "overview" && <OverviewSection

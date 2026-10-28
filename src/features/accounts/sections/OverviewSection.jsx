@@ -86,7 +86,13 @@ export function OverviewSection({
   };
   return (
     <div className="acc-panel acc-overview">
-      {!settings && <div className="card accounts-form-card">
+      {!settings && !canAdmin && (
+        <div className="card accounts-form-card" role="status">
+          <strong>No company access yet</strong>
+          <p className="copy">Your login is active, but the owner has not assigned an Accounts company. Ask them to open Accounts → Setup → Add CA / Accounts login → <b>Companies</b>, and tick the company you should see (for example Buyyani&apos;s Enterprises).</p>
+        </div>
+      )}
+      {!settings && canAdmin && <div className="card accounts-form-card">
         <strong>Open the books</strong>
         <p className="copy">Create a chart of accounts for this business. You do not need Daily Finance, Monthly Finance, or Chit Fund records.</p>
         <div className="form spacer">

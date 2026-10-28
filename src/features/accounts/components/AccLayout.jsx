@@ -67,12 +67,16 @@ export function AccCompanyBar({ companies, activeId, onSelect, onCreate, canAdmi
         onChange={event => onSelect(event.target.value)}
         renderValue={() => <>
           <Building2 className="acc-company-picker-icon" size={18} aria-hidden="true" />
-          <span className="acc-company-picker-name">{active?.name || fallbackName || "No company yet"}</span>
+          <span className="acc-company-picker-name">{active?.name || (canAdmin ? fallbackName : "") || (canAdmin ? "No company yet" : "No company assigned")}</span>
           {active?.isPrimary && <span className="acc-company-primary">Primary</span>}
           <ChevronDown className="acc-company-picker-chevron" size={16} aria-hidden="true" />
         </>}
       >
-        {!companies.length && <option value="">No companies yet — run 059 or create one</option>}
+        {!companies.length && (
+          <option value="">
+            {canAdmin ? "No companies yet — create one from Setup" : "No company assigned — ask the owner"}
+          </option>
+        )}
         {companies.filter(company => company.status !== "archived").map(company => (
           <option key={company.id} value={company.id}>
             {company.name}{company.isPrimary ? " · primary" : ""}
