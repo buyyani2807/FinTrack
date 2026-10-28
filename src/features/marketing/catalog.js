@@ -1194,6 +1194,7 @@ export const FEATURES = [
       "Batch supplier bill photos and PDFs with AI reading and a review grid",
       "ZIP unpack for bill folders, progress bar and Stop while posting",
       "Idempotent posting so a retry does not double the books",
+      "Party name mappings saved on the company so the whole team reuses them",
     ],
     benefits: ["Faster backlog clearance", "You approve before anything posts", "Same posting rules as a normal sale or purchase"],
     sections: [

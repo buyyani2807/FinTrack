@@ -151,7 +151,7 @@ export function SetupSection({
         <AccSetupSection
           icon="⇪"
           title="Bulk import sales, purchases and bills"
-          copy="For day-to-day backlog: upload a CSV or Excel of sales and purchases, or a batch of supplier bill photos and PDFs. Review each row, then post. Use migration above when moving a full set of old books."
+          copy="For day-to-day backlog: upload a CSV or Excel of sales and purchases, or a batch of supplier bill photos and PDFs. Review each row, then post. Party matches are saved on this company for the whole team. Use migration above when moving a full set of old books."
           collapsible
           summary="Bulk import"
         >

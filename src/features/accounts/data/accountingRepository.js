@@ -220,6 +220,40 @@ export const setPartyPriceList = (token, partyId, priceListId) =>
     input_price_list_id: priceListId || null,
   }, token).catch(err => { throw migration107Error(err); });
 
+const migration112Error = err => {
+  if (!isMissing(err)) throw err;
+  const error = new Error("Run migration 112_accounts_bulk_party_maps.sql in the Supabase SQL editor to share bulk-import party mappings across the team.");
+  error.code = "MIGRATION_REQUIRED";
+  throw error;
+};
+
+/** Company-shared bulk import maps: { "customer|acme traders": partyId, ... } */
+export const loadBulkPartyMaps = token =>
+  accQuery(
+    `/rest/v1/acc_bulk_party_maps?select=party_type,name_key,party_id&limit=5000${companyEq()}`,
+    token,
+  )
+    .then(rows => {
+      const map = {};
+      for (const row of rows || []) {
+        const type = row.party_type === "supplier" ? "supplier" : "customer";
+        const key = String(row.name_key || "").trim();
+        if (key && row.party_id) map[`${type}|${key}`] = row.party_id;
+      }
+      return map;
+    })
+    .catch(err => {
+      if (isMissing(err)) return {};
+      throw err;
+    });
+
+export const upsertBulkPartyMap = (token, { partyName, partyId, partyType }) =>
+  accRpc("acc_upsert_bulk_party_map", {
+    input_party_name: partyName,
+    input_party_id: partyId,
+    input_party_type: partyType === "supplier" ? "supplier" : "customer",
+  }, token).catch(err => { throw migration112Error(err); });
+
 export const loadPartyPipeline = token => wrap(
   supabase.rpc("acc_list_party_pipeline", { input_company_id: activeCompanyId }, token).then(rows => (Array.isArray(rows) ? rows : []).map(row => ({ partyId: row.party_id, stage: row.stage }))),
 );

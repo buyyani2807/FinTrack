@@ -44,6 +44,8 @@ import {
   setPartyPriceList,
   setRouteStops,
   setTradeDocumentStatus,
+  loadBulkPartyMaps,
+  upsertBulkPartyMap,
 } from "./data/accountingRepository.js";
 import { isAccountsOnboardingDone, readIndustry } from "./components/AccOnboardingWizard.jsx";
 import { parsePartyCsv, planPartyImport } from "./io/partyCsvImport.js";
@@ -1199,6 +1201,8 @@ const openVoucher = () => {
       outcome = await runBulkVoucherPlan(plan, {
         createParty: party => createParty(token, { ...emptyPartyForm(), ...party }),
         postVoucher: payload => postVoucher(token, payload),
+        rememberPartyMapping: ({ partyName, partyId, partyType }) =>
+          upsertBulkPartyMap(token, { partyName, partyId, partyType }),
       }, {
         accounts: visibleAccounts,
         company: activeCompany,
@@ -1217,6 +1221,8 @@ const openVoucher = () => {
     await run(async () => {
       outcome = await runBulkBillPost(sources, {
         postVoucher: payload => postVoucher(token, payload),
+        rememberPartyMapping: ({ partyName, partyId, partyType }) =>
+          upsertBulkPartyMap(token, { partyName, partyId, partyType }),
         addAttachment: async ({ voucherId, fileName, contentType, contentBase64, byteSize }) => {
           const meta = assertVoucherAttachmentMeta({
             fileName,
@@ -2787,6 +2793,7 @@ const openVoucher = () => {
         today={todayIso()}
         token={token}
         canWrite={canWrite}
+        loadPartyMaps={() => loadBulkPartyMaps(token)}
         onRunExcel={runBulkExcel}
         onRunBills={runBulkBills}
         onClose={() => setShowBulkImport(false)}

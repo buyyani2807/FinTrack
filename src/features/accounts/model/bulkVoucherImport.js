@@ -1,43 +1,36 @@
 import { buildVoucherDraftFromEntry } from "../io/voucherCsvImport.js";
 
-const mappingKey = companyId => `ft-bulk-map:${companyId || "default"}`;
+export const partyMapKey = (partyType, partyName) => {
+  const type = partyType === "supplier" || partyType === "purchase" ? "supplier" : "customer";
+  const key = String(partyName || "").toLowerCase().replace(/\s+/g, " ").trim();
+  return key ? `${type}|${key}` : "";
+};
 
-/** Remember party name → partyId mappings per company (local only). */
-export function loadBulkPartyMappings(companyId) {
-  try {
-    const raw = localStorage.getItem(mappingKey(companyId));
-    const parsed = raw ? JSON.parse(raw) : {};
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch {
-    return {};
-  }
-}
-
-export function rememberBulkPartyMapping(companyId, partyName, partyId) {
-  if (!partyName || !partyId) return;
-  const key = String(partyName).toLowerCase().replace(/\s+/g, " ").trim();
-  if (!key) return;
-  try {
-    const current = loadBulkPartyMappings(companyId);
-    current[key] = partyId;
-    localStorage.setItem(mappingKey(companyId), JSON.stringify(current));
-  } catch {
-    /* ignore quota */
-  }
-}
-
-export function applyBulkPartyMappings(entries = [], companyId = "") {
-  const map = loadBulkPartyMappings(companyId);
-  if (!Object.keys(map).length) return entries;
+/** Apply company-shared maps ({ "customer|name": partyId }) onto planned entries. */
+export function applyBulkPartyMappings(entries = [], maps = {}) {
+  if (!maps || !Object.keys(maps).length) return entries;
   return entries.map(entry => {
     if (entry.partyId || !entry.partyName) return entry;
-    const id = map[String(entry.partyName).toLowerCase().replace(/\s+/g, " ").trim()];
-    return id ? { ...entry, partyId: id, partyRef: "", warnings: entry.warnings.filter(note => !/Will create /.test(note)) } : entry;
+    const type = entry.kind === "purchase" ? "supplier" : "customer";
+    const id = maps[partyMapKey(type, entry.partyName)];
+    if (!id) return entry;
+    const warnings = (entry.warnings || []).filter(note => !/Will create /.test(note));
+    return {
+      ...entry,
+      partyId: id,
+      partyRef: "",
+      warnings,
+      status: entry.errors?.length ? "error" : (warnings.length ? "warning" : "ready"),
+    };
   });
 }
 
 /**
- * api: { createParty(party) -> id, postVoucher(payload) -> id }
+ * api: {
+ *   createParty(party) -> id,
+ *   postVoucher(payload) -> id,
+ *   rememberPartyMapping?.({ partyName, partyId, partyType }) -> Promise
+ * }
  */
 export async function runBulkVoucherPlan(plan, api, {
   accounts = [],
@@ -60,13 +53,21 @@ export async function runBulkVoucherPlan(plan, api, {
     step += 1;
     onProgress({ step, total, label, done: { ...done }, failed: failed.length });
   };
+  const remember = async (partyName, partyId, partyType) => {
+    if (!api.rememberPartyMapping || !partyName || !partyId) return;
+    try {
+      await api.rememberPartyMapping({ partyName, partyId, partyType });
+    } catch {
+      /* posting succeeded; mapping sync can retry next import */
+    }
+  };
 
   for (const party of partiesNeeded) {
     if (shouldStop()) return { done, failed, stopped: true };
     try {
       const id = await api.createParty(party);
       partyIds.set(party.ref, id);
-      rememberBulkPartyMapping(company?.id, party.name, id);
+      await remember(party.name, id, party.partyType);
       done.parties += 1;
     } catch (error) {
       failed.push({ label: `Party ${party.name}`, message: error?.message || "Failed" });
@@ -79,7 +80,7 @@ export async function runBulkVoucherPlan(plan, api, {
     try {
       const partyId = entry.partyId || partyIds.get(entry.partyRef) || "";
       if (!partyId) throw new Error(`Party “${entry.partyName}” was not created.`);
-      if (entry.partyName) rememberBulkPartyMapping(company?.id, entry.partyName, partyId);
+      await remember(entry.partyName, partyId, entry.kind === "purchase" ? "supplier" : "customer");
       const draft = buildVoucherDraftFromEntry(
         { ...entry, partyId },
         { accounts, company, today },

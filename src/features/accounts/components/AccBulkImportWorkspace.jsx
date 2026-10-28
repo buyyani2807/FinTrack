@@ -4,8 +4,8 @@ import { CloseButton, ModalScroll } from "../../../components/ui.jsx";
 import { useDialogDismiss } from "../../../components/useDialogDismiss.js";
 import { downloadAccountsCsv } from "../io/accountingExport.js";
 import { VOUCHER_CSV_TEMPLATE, parseVoucherImportFile, planVoucherImport } from "../io/voucherCsvImport.js";
-import { applyBulkPartyMappings, runBulkVoucherPlan } from "../model/bulkVoucherImport.js";
-import { collectBillSources, runBulkBillPost, scanBillQueue } from "../model/bulkBillImport.js";
+import { applyBulkPartyMappings } from "../model/bulkVoucherImport.js";
+import { collectBillSources, scanBillQueue } from "../model/bulkBillImport.js";
 import { money } from "../accountsFormat.js";
 import { AccTable } from "./AccUi.jsx";
 import "../bookkeeper.css";
@@ -26,6 +26,8 @@ export function AccBulkImportWorkspace({
   today = "",
   token = "",
   canWrite = false,
+  partyMaps = null,
+  loadPartyMaps = null,
   onRunExcel,
   onRunBills,
   onClose,
@@ -38,10 +40,27 @@ export function AccBulkImportWorkspace({
   const [progress, setProgress] = useState(null);
   const [result, setResult] = useState(null);
   const [billSources, setBillSources] = useState([]);
+  const [maps, setMaps] = useState(partyMaps || {});
   const stopRef = useRef(false);
   const excelInputRef = useRef(null);
   const billInputRef = useRef(null);
   const busy = stage === "reading" || stage === "scanning" || stage === "importing";
+
+  const ensureMaps = async () => {
+    if (partyMaps && Object.keys(partyMaps).length) {
+      setMaps(partyMaps);
+      return partyMaps;
+    }
+    if (!loadPartyMaps) return maps;
+    try {
+      const next = await loadPartyMaps();
+      const resolved = next && typeof next === "object" ? next : {};
+      setMaps(resolved);
+      return resolved;
+    } catch {
+      return maps;
+    }
+  };
 
   const selectedExcel = useMemo(
     () => (plan?.entries || []).filter(entry => entry.selected && entry.status !== "error"),
@@ -79,6 +98,7 @@ export function AccBulkImportWorkspace({
     setError("");
     setStage("reading");
     try {
+      const sharedMaps = await ensureMaps();
       const rows = await parseVoucherImportFile(file);
       if (!rows.length) throw new Error("No data rows found. Check the template columns.");
       const next = planVoucherImport(rows, {
@@ -93,7 +113,7 @@ export function AccBulkImportWorkspace({
       setPlan({
         ...next,
         rawRows: rows,
-        entries: applyBulkPartyMappings(next.entries, company?.id),
+        entries: applyBulkPartyMappings(next.entries, sharedMaps),
       });
       setStage("review");
     } catch (readError) {
@@ -102,9 +122,10 @@ export function AccBulkImportWorkspace({
     }
   };
 
-  const rebuildPlan = nextCreate => {
+  const rebuildPlan = async nextCreate => {
     setCreateMissingParties(nextCreate);
     if (!plan?.rawRows) return;
+    const sharedMaps = await ensureMaps();
     const next = planVoucherImport(plan.rawRows, {
       parties,
       items,
@@ -117,7 +138,7 @@ export function AccBulkImportWorkspace({
     setPlan({
       ...next,
       rawRows: plan.rawRows,
-      entries: applyBulkPartyMappings(next.entries, company?.id),
+      entries: applyBulkPartyMappings(next.entries, sharedMaps),
     });
   };
 
@@ -255,7 +276,6 @@ export function AccBulkImportWorkspace({
                       type="checkbox"
                       checked={createMissingParties}
                       onChange={event => {
-                        setCreateMissingParties(event.target.checked);
                         rebuildPlan(event.target.checked);
                       }}
                     />

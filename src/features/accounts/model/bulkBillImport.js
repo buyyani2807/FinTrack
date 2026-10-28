@@ -270,6 +270,14 @@ export async function runBulkBillPost(sources, api, {
       const clientRequestId = stableUuid(`${company?.id || ""}|bill|${source.fileName}|${built.date}|${built.billNumber}|${built.partyId}`);
       const voucherId = await api.postVoucher({ ...built.draft, clientRequestId });
       done.vouchers += 1;
+      const supplierName = source.review?.supplier?.name || source.review?.bill?.supplierName || "";
+      if (api.rememberPartyMapping && supplierName && built.partyId) {
+        try {
+          await api.rememberPartyMapping({ partyName: supplierName, partyId: built.partyId, partyType: "supplier" });
+        } catch {
+          /* optional */
+        }
+      }
       if (voucherId && source.data && source.byteSize <= 512 * 1024) {
         try {
           await api.addAttachment({
