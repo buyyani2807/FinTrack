@@ -136,6 +136,8 @@ export function SetupSection({
           icon="AI"
           title="Set up with AI"
           copy={`For a different business, set up a new company: it gets its own books, and FinTrack asks what kind of business it is. To add missing bank ledgers, stock categories and ledgers to ${activeCompany?.name || "this company"}, fill its gaps; its name, GST and books start date are not changed.`}
+          collapsible
+          summary="Setup options"
         >
           <div className="acc-form-actions">
             {setUpNewCompany && <button type="button" className="btn primary acc-setup-link-btn" onClick={setUpNewCompany}>Set up a new company<ArrowRight size={15} aria-hidden="true" /></button>}
@@ -148,6 +150,8 @@ export function SetupSection({
           icon="↥"
           title="Move from Tally, Zoho or Excel"
           copy="Upload your Tally XML, Zoho Books or Book Keeper export, or an Excel sheet. FinTrack maps ledgers and parties, finds duplicates, and shows you what it is unsure about before importing."
+          collapsible
+          summary="Migration"
         >
           <button type="button" className="btn primary acc-setup-link-btn" onClick={openMigration}>Start migration<ArrowRight size={15} aria-hidden="true" /></button>
         </AccSetupSection>
@@ -181,6 +185,8 @@ export function SetupSection({
         icon="I"
         title="Items & inventory"
         copy="Items, stock value, physical count, ageing, CSV import and stock rules now live in the Inventory section."
+        collapsible
+        summary="Inventory"
       >
         <button type="button" className="btn primary acc-setup-link-btn" onClick={() => openSection("inventory")}>Open Inventory<ArrowRight size={15} aria-hidden="true" /></button>
       </AccSetupSection>

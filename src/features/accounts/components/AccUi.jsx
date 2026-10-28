@@ -329,6 +329,37 @@ export function AccSetupSection({ icon, title, copy, actions, children, collapsi
     </section>
   );
 }
+
+/** Inline Show/Hide for a long list inside an otherwise open setup card. */
+export function AccReveal({ summary, children, defaultOpen = false, className = "" }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const panelId = useId();
+  const toggleId = useId();
+  return (
+    <div className={`acc-reveal${className ? ` ${className}` : ""}`.trim()}>
+      <button
+        type="button"
+        id={toggleId}
+        className="acc-setup-toggle"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen(current => !current)}
+      >
+        <span>{open ? `Hide ${summary}` : `Show ${summary}`}</span>
+        <ChevronDown className="acc-setup-chevron" size={18} aria-hidden="true" />
+      </button>
+      <div
+        id={panelId}
+        className="acc-reveal-body"
+        role="region"
+        aria-labelledby={toggleId}
+        hidden={!open}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
 export const AccSkeleton = () => (
   <div className="acc-skeleton" aria-hidden="true">
     {Array.from({ length: 8 }, (_, index) => <div key={index} className="acc-skel" />)}

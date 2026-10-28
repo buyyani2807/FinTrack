@@ -1,5 +1,5 @@
 import { saveAccountingSettings } from "../../data/accountingRepository.js";
-import { Field, AccSetupSection } from "../../components/AccUi.jsx";
+import { Field, AccSetupSection, AccReveal } from "../../components/AccUi.jsx";
 import { todayIso } from "../../../../lib/dates.js";
 import { gstStatusLabel } from "../../accountsFormat.js";
 
@@ -35,6 +35,9 @@ export function CompanySetupPanel({
   setShowCreateCompany,
 }) {
   const companyChanged = companyDetailsChanged(setupForm, activeCompany);
+  const activeCount = (companies || []).filter(company => company.status !== "archived").length;
+  const listSummary = `${activeCount} ${activeCount === 1 ? "company" : "companies"}`;
+
   return (
     <AccSetupSection icon="FY" title="Company / financial year" copy="Indian financial year is 1 April to 31 March. Saving the name here updates the current Accounts company, not Finance.">
       <div className="form">
@@ -65,35 +68,38 @@ export function CompanySetupPanel({
       </div>
       {!canAdmin && <p className="small">Only the business owner can change company name / books start settings.</p>}
       <p className="small">Backups are company-isolated. Restore only works into the same company when it has no vouchers yet. Cross-company overwrite is blocked.</p>
-      <div className="acc-company-setup-list">
-        <p className="small">Each company has its own books. Switching never mixes vouchers.</p>
-        {companies.map(company => (
-          <div
-            key={company.id}
-            className={`acc-company-setup-item${company.id === activeCompanyId ? " current" : ""}${company.status === "archived" ? " archived" : ""}`}
-          >
-            <button
-              type="button"
-              className="acc-company-setup-pick"
-              disabled={company.status === "archived"}
-              onClick={() => company.id !== activeCompanyId && company.status !== "archived" && switchCompany(company.id)}
+      <p className="small">Current company: <strong>{activeCompany?.name || "None"}</strong>{activeCompany ? ` · ${gstStatusLabel(activeCompany)}` : ""}</p>
+      <AccReveal summary={listSummary}>
+        <div className="acc-company-setup-list">
+          <p className="small">Each company has its own books. Switching never mixes vouchers.</p>
+          {companies.map(company => (
+            <div
+              key={company.id}
+              className={`acc-company-setup-item${company.id === activeCompanyId ? " current" : ""}${company.status === "archived" ? " archived" : ""}`}
             >
-              <strong>{company.name}</strong>
-              <span className="small">
-                {company.isPrimary ? "Primary" : "Company"}
-                {company.status === "archived" ? " · archived" : ""}
-                {company.id === activeCompanyId ? " · current" : ""}
-                {` · ${gstStatusLabel(company)}`}
-              </span>
-            </button>
-            {canAdmin && company.status !== "archived" && !company.isPrimary && (
-              <button type="button" className="btn" disabled={saving} onClick={() => archiveCompany(company)}>Archive</button>
-            )}
-          </div>
-        ))}
-        {canAdmin && <button type="button" className="btn" onClick={() => { setCompanyDraft({ name: "", booksStartedOn: todayIso(), industry: "retail" }); setShowCreateCompany(true); }}>+ Create company</button>}
-        {!canAdmin && <p className="small">Only the owner can create or archive Accounts companies.</p>}
-      </div>
+              <button
+                type="button"
+                className="acc-company-setup-pick"
+                disabled={company.status === "archived"}
+                onClick={() => company.id !== activeCompanyId && company.status !== "archived" && switchCompany(company.id)}
+              >
+                <strong>{company.name}</strong>
+                <span className="small">
+                  {company.isPrimary ? "Primary" : "Company"}
+                  {company.status === "archived" ? " · archived" : ""}
+                  {company.id === activeCompanyId ? " · current" : ""}
+                  {` · ${gstStatusLabel(company)}`}
+                </span>
+              </button>
+              {canAdmin && company.status !== "archived" && !company.isPrimary && (
+                <button type="button" className="btn" disabled={saving} onClick={() => archiveCompany(company)}>Archive</button>
+              )}
+            </div>
+          ))}
+          {canAdmin && <button type="button" className="btn" onClick={() => { setCompanyDraft({ name: "", booksStartedOn: todayIso(), industry: "retail" }); setShowCreateCompany(true); }}>+ Create company</button>}
+          {!canAdmin && <p className="small">Only the owner can create or archive Accounts companies.</p>}
+        </div>
+      </AccReveal>
     </AccSetupSection>
   );
 }

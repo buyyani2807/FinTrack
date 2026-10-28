@@ -8,6 +8,8 @@ export function IntegrationSetupPanel({ settings, saving, run, token }) {
       title="Accounting integration"
       copy="The finance company is created with this business account. Cashbook stays the finance cash book. Sync copies it into that finance company only while integration is on. Collections, loans given, chit receipts and payouts, expenses, openings, transfers and manual lines go there. A sale, receipt or route collection typed in Accounts stays in the Accounts company where it was entered. The same cashbook row is never posted twice in the finance company."
       actions={<span className={`acc-chip ${settings?.integrationEnabled ? "ok" : ""}`}>Status: {settings?.integrationEnabled ? "ON" : "OFF"}</span>}
+      collapsible
+      summary={settings?.integrationEnabled ? "On" : "Off"}
     >
       <div className="accounts-action-row">
         <button type="button" className="btn" disabled={saving} onClick={() => run(() => setAccountingIntegration(token, !settings?.integrationEnabled), `Integration ${settings?.integrationEnabled ? "disabled" : "enabled"}.`)}>{settings?.integrationEnabled ? "Turn integration off" : "Turn integration on"}</button>

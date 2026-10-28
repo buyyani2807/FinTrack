@@ -3186,6 +3186,18 @@
   line-height: 1;
 }
 
+.accounts-dashboard .acc-reveal {
+  margin-top: 4px;
+}
+
+.accounts-dashboard .acc-reveal-body {
+  padding-top: 10px;
+}
+
+.accounts-dashboard .acc-reveal-body[hidden] {
+  display: none;
+}
+
 .accounts-dashboard .acc-setup-body[hidden] {
   display: none;
 }

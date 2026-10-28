@@ -16,7 +16,13 @@ function gstDetailsChanged(form, company) {
 export function GstSetupPanel({ activeCompany, canAdmin, gstForm, setGstForm, saving, setError, run, token }) {
   const gstChanged = gstDetailsChanged(gstForm, activeCompany);
   return (
-    <AccSetupSection icon="GST" title={`GST${activeCompany?.name ? ` · ${activeCompany.name}` : ""}`} copy="GST is per company. These settings never apply to another Accounts company or to Daily / Monthly Finance. Books reports only — not GST portal filing. Owner manages GST registration.">
+    <AccSetupSection
+      icon="GST"
+      title={`GST${activeCompany?.name ? ` · ${activeCompany.name}` : ""}`}
+      copy="GST is per company. These settings never apply to another Accounts company or to Daily / Monthly Finance. Books reports only — not GST portal filing. Owner manages GST registration."
+      collapsible
+      summary={gstForm.gstRegistration === "unregistered" ? "Unregistered" : gstForm.gstRegistration || "GST"}
+    >
       {!canAdmin && <p className="small">View GST details below. Only the owner can change GST registration settings.</p>}
       <div className="form">
         <Field label="Registration">
