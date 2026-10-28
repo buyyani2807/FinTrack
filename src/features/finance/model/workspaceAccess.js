@@ -10,7 +10,7 @@ export function workspaceAccess(workspace) {
 
 export function sessionUserRole(workspaceRole) {
   if (workspaceRole === "staff") return "agent";
-  // Owner and Accounts team (CA) both use email/password Financier sign-in.
+  // Owner and Accounts team (CA) both use email/password Owner sign-in.
   return "financier";
 }
 

@@ -40,10 +40,14 @@ export async function fetchAccountsBundle(token, {
   } catch (err) {
     if (err.code !== "MIGRATION_REQUIRED") throw err;
   }
-  // Defense in depth: even if list_companies is stale, restrict CAs to assigned rows.
-  if (accountsTeam && userId) {
-    const allowed = new Set(await loadMyAccountsCompanyIds(token, userId));
-    companies = companies.filter(company => allowed.has(company.id));
+  // Defense in depth: CAs only see assigned companies (fail closed if ids are missing).
+  if (accountsTeam) {
+    if (!userId) {
+      companies = [];
+    } else {
+      const allowed = new Set(await loadMyAccountsCompanyIds(token, userId));
+      companies = companies.filter(company => allowed.has(company.id));
+    }
   }
   let stored = "";
   try { stored = sessionStorage.getItem(COMPANY_STORAGE_KEY) || ""; } catch { stored = ""; }

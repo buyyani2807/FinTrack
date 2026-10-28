@@ -72,7 +72,7 @@ export function WorkspaceLayout() {
         const allowed = new Set(allowedIds || []);
         const list = (Array.isArray(companies) ? companies : [])
           .filter(row => row.status !== "archived")
-          .filter(row => !allowed.size || allowed.has(row.id));
+          .filter(row => allowed.has(row.id));
         let stored = "";
         try { stored = sessionStorage.getItem(COMPANY_STORAGE_KEY) || ""; } catch { stored = ""; }
         // Never jump a CA to the org primary — only their assigned companies.

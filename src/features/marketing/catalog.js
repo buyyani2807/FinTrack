@@ -6,7 +6,7 @@ export const FEATURE_CATEGORIES = [
   { id: "intelligence", label: "AI", blurb: "Scan a supplier bill from a photo or a PDF and review the purchase draft. Also cash-flow outlook, expense and supplier price changes, collection priorities, unusual activity, GST review, month-end readiness, bank matching, stock forecasts, and chit scheme health. Each suggestion shows its reason and a link to the record. You decide what happens next." },
   { id: "finance", label: "Finance", blurb: "Daily and monthly collections, with collection reports and a profit and loss view for the lending book." },
   { id: "chit", label: "Chit Fund", blurb: "Schemes, bidding, dividends, month statements, and commission income." },
-  { id: "portals", label: "Portals", blurb: "Financier sign in opens the owner workspace. Agents, customers, and members have their own login." },
+  { id: "portals", label: "Portals", blurb: "Owner sign in opens the owner workspace. Agents, customers, and members have their own login." },
 ];
 
 export const FEATURES = [
@@ -1287,7 +1287,7 @@ export const SOLUTIONS = [
 export const SECURITY_POINTS = [
   {
     title: "Sign-in for each role",
-    text: "Financier sign in uses email and opens the owner workspace. A collection agent uses an agent ID and PIN. A finance customer and a chit member use a portal ID and PIN. A staff login does not open the owner books.",
+    text: "Owner sign in uses email and opens the owner workspace. A collection agent uses an agent ID and PIN. A finance customer and a chit member use a portal ID and PIN. A staff login does not open the owner books.",
   },
   {
     title: "Workspace isolation",

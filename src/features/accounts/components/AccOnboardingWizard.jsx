@@ -241,7 +241,7 @@ export function AccOnboardingWizard({
 
       {step.id === "invite" && (
         <div className="form spacer">
-          <p className="copy">Optional — create a login for your CA. They sign in as Financier with the email and temporary password you share. Viewer is recommended.</p>
+          <p className="copy">Optional — create a login for your CA. They use Owner sign-in with the email and temporary password you share. Viewer is recommended.</p>
           {!canAdmin && <p className="small">Only the owner can add a CA. Continue.</p>}
           <label className="accounts-filter-field"><span className="small">Full name</span>
             <input value={inviteName} disabled={!canAdmin} placeholder="e.g. Ravi CA" onChange={event => setInviteName(event.target.value)} />

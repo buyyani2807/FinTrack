@@ -373,7 +373,7 @@ export default async function handler(req, res) {
       companyIds: resolved.companyIds,
       companyNames: resolved.companyNames,
       temporaryPassword: password,
-      message: "Share the email and temporary password with your CA. They sign in as Financier and only see the companies you assigned.",
+      message: "Share the email and temporary password with your CA. They use Owner sign-in and only see the companies you assigned.",
     });
   } catch (error) {
     return json(res, 500, { error: error.message || "Could not create the Accounts login." });

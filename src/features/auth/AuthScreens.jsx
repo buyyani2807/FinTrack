@@ -11,17 +11,17 @@ import { openLegalView } from "../legal/LegalPage.jsx";
 
 // Who is signing in. `label` stays the button's accessible name.
 const SIGN_IN_MODES = [
-  { id: "signIn", label: "Financier sign in", title: "Financier", hint: "Business email", icon: Briefcase },
+  { id: "signIn", label: "Owner sign in", title: "Owner", hint: "Business email", icon: Briefcase },
   { id: "agent", label: "Agent login", title: "Collection agent", hint: "Route & collections", icon: Route },
   { id: "customer", label: "Customer login", title: "Customer", hint: "Loan balance", icon: UserRound },
   { id: "chitCustomer", label: "Chit customer", title: "Chit member", hint: "Schemes & bids", icon: Coins },
 ];
 
-// One line of guidance under the sign-in options: where this person's credentials come from (none for Financier owner).
+// One line of guidance under the sign-in options: where this person's credentials come from.
 const MODE_GUIDE = {
-  signIn: "Owners use the email from signup. A CA or bookkeeper uses the email and temporary password the owner shared from Accounts → Setup.",
-  agent: "Your financier shares your agent ID (it starts with AG-) and a 6-digit PIN when they add you under Collection Staff.",
-  customer: "Your financier shares your portal ID (it starts with FT-) and a 6-digit PIN when they open your customer portal.",
+  signIn: "Owners use the email from signup. A CA or bookkeeper uses the same Owner sign-in with the email and temporary password shared from Accounts → Setup — they only see companies they are assigned.",
+  agent: "Your owner shares your agent ID (it starts with AG-) and a 6-digit PIN when they add you under Collection Staff.",
+  customer: "Your owner shares your portal ID (it starts with FT-) and a 6-digit PIN when they open your customer portal.",
   chitCustomer: "Your chit manager shares your portal ID (it starts with CF-) and a 6-digit PIN when you join a scheme.",
   signUp: "The 14 days start when the workspace is created. Opening this page does not start the trial. After 14 days you can still sign in, your records stay, and recording waits until you choose a plan. CAs should not create a business here — ask the owner to Add CA in Accounts Setup.",
 };
@@ -66,7 +66,7 @@ export function PasswordRecovery() {
   const fail = (title, text, fields = {}) => { setNotice({ tone: "error", title, text }); setInvalid(fields); };
   const save = async event => {
     event.preventDefault();
-    if (!token) { fail("This link has expired", "This password-reset link is invalid or has expired. Request a new one from Financier sign in."); return; }
+    if (!token) { fail("This link has expired", "This password-reset link is invalid or has expired. Request a new one from Owner sign in."); return; }
     if (password.length < 8) { fail("Password too short", "Use a password with at least 8 characters.", { password: true }); return; }
     if (password !== confirmPassword) { fail("Passwords don't match", "The passwords do not match.", { confirm: true }); return; }
     setBusy(true); setNotice(null); setInvalid({});
@@ -81,7 +81,7 @@ export function PasswordRecovery() {
     <main className="login ft-auth-panel">
       <div className="ft-auth-panel-inner">
         <div className="ft-auth-brandrow"><Wordmark /></div>
-        <h1 className="ft-auth-title">Set a new Financier password</h1>
+        <h1 className="ft-auth-title">Set a new password</h1>
         <p className="sub ft-auth-sub">Use at least 8 characters.</p>
         <form className="ft-auth-form" onSubmit={save} noValidate>
           <Field label="New password"><PasswordInput icon={LockKeyhole} disabled={complete} minLength="8" autoComplete="new-password" placeholder="e.g. Secure@2026" aria-invalid={invalid.password || undefined} value={password} onChange={event => { setPassword(event.target.value); setInvalid(current => ({ ...current, password: false })); }} /></Field>
@@ -123,7 +123,7 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
     const result = await supabase.auth.signIn(email, password);
     const profile = await loadWorkspace(result.access_token);
     if (!profile.active) { await supabase.auth.signOut(); throw new Error("This account has been disabled. Contact your financier."); }
-    if (mode === "agent" && profile.role !== "staff") { await supabase.auth.signOut(); throw new Error("This account is not a Collection Agent. Use Financier sign in."); }
+    if (mode === "agent" && profile.role !== "staff") { await supabase.auth.signOut(); throw new Error("This account is not a Collection Agent. Use Owner sign in."); }
     if (mode === "signIn" && profile.role === "staff") { await supabase.auth.signOut(); throw new Error("Use Collection Agent sign in for this account."); }
     onLogin({ role: sessionUserRole(profile.role), authToken: result.access_token, name: profile.fullName, workspace: profile });
   };
@@ -152,7 +152,7 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
         const session = await supabase.auth.signInAgent(portalId, password);
         const profile = await loadWorkspace(session.access_token);
         if (!profile.active) { await supabase.auth.signOut(); throw new Error("This account has been disabled. Contact your financier."); }
-        if (profile.role !== "staff") { await supabase.auth.signOut(); throw new Error("This account is not a Collection Agent. Use Financier sign in."); }
+        if (profile.role !== "staff") { await supabase.auth.signOut(); throw new Error("This account is not a Collection Agent. Use Owner sign in."); }
         onLogin({ role: sessionUserRole(profile.role), authToken: session.access_token, name: profile.fullName, workspace: profile });
       } else if (mode === "signUp") {
         if (!allowSignup) throw new Error("New business signup is invite-only. Contact FinTrack support for access.");

@@ -54,7 +54,7 @@ const SHOTS = {
   "ai-bookkeeper": "Tell FinTrack with “I bought a laptop for ₹85,000 using HDFC” turned into a draft: Fixed Assets up, HDFC Bank down, explained in plain words with the debit and credit view",
   "ai-setup": "AI setup for an electrical wholesaler: the questions answered and the setup FinTrack will create, with GST, banks, stock categories, credit sales, and extra ledgers",
   "ai-migration": "Migration summary for files from Tally, Zoho Books, and Book Keeper: customers, suppliers, ledgers, transactions, duplicate parties, accounts to map, and 85% mapped automatically",
-  portals: "Sign-in screen with Financier sign in, Collection agent, Customer login, and Chit customer",
+  portals: "Sign-in screen with Owner sign-in, Collection agent, Customer login, and Chit customer",
 };
 
 const FEATURE_SCENE = {

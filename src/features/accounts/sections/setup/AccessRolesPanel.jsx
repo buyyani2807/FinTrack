@@ -154,7 +154,7 @@ export function AccessRolesPanel({
     <AccSetupSection
       icon="R"
       title="Add CA / Accounts login"
-      copy="Create a login for your CA or bookkeeper. They sign in as Financier with the email and temporary password you share. They only see Accounts, and only the companies you choose. Requires migrations 109 and 111."
+      copy="Create a login for your CA or bookkeeper. They use Owner sign-in with the email and temporary password you share. They only see Accounts, and only the companies you choose. Requires migrations 109 and 111."
       collapsible
       summary={`${members.filter(row => row.active).length} logins`}
     >
@@ -212,7 +212,7 @@ export function AccessRolesPanel({
       {createdLogin && (
         <div className="notice accounts-invite-email" role="status">
           <strong>{createdLogin.status === "created" ? "Login created" : "Login updated"} · {createdLogin.fullName || createdLogin.email}</strong>
-          <p className="small">Tell them to open FinTrack → sign in as <b>Financier</b> (not Agent / Customer / Chit member).</p>
+          <p className="small">Tell them to open FinTrack → sign in as <b>Owner</b> (not Agent / Customer / Chit member). They only open the companies you assigned.</p>
           <div className="form">
             <Field label="Email"><input readOnly value={createdLogin.email || ""} /></Field>
             {createdLogin.temporaryPassword ? (
@@ -232,7 +232,7 @@ export function AccessRolesPanel({
                   const companiesLine = (createdLogin.companyNames || []).length
                     ? `\nCompanies: ${createdLogin.companyNames.join(", ")}`
                     : "";
-                  const text = `FinTrack Accounts access\n\nSign in as Financier (email + password).\nEmail: ${createdLogin.email}\nTemporary password: ${createdLogin.temporaryPassword}\nAccess: ${createdLogin.role}${companiesLine}\n\nChange the password after first sign-in using Forgot password if you prefer.`;
+                  const text = `FinTrack Accounts access\n\nSign in as Owner (email + password).\nEmail: ${createdLogin.email}\nTemporary password: ${createdLogin.temporaryPassword}\nAccess: ${createdLogin.role}${companiesLine}\n\nChange the password after first sign-in using Forgot password if you prefer.`;
                   try {
                     await navigator.clipboard.writeText(text);
                     setNotice("Login details copied. Paste them into WhatsApp or email for your CA.");
@@ -251,8 +251,8 @@ export function AccessRolesPanel({
               const subject = encodeURIComponent("FinTrack Accounts access");
               const body = encodeURIComponent(
                 createdLogin.temporaryPassword
-                  ? `You have Accounts access on FinTrack.\n\n1. Open FinTrack and choose Financier sign-in.\n2. Email: ${createdLogin.email}\n3. Temporary password: ${createdLogin.temporaryPassword}\n4. Access: ${createdLogin.role}${companiesLine}\n\nPlease change the password after you sign in (Forgot password).`
-                  : `Your FinTrack Accounts access was updated (${createdLogin.role}).\n\nSign in as Financier with ${createdLogin.email}. Use Forgot password if you need a new password.`,
+                  ? `You have Accounts access on FinTrack.\n\n1. Open FinTrack and choose Owner sign-in.\n2. Email: ${createdLogin.email}\n3. Temporary password: ${createdLogin.temporaryPassword}\n4. Access: ${createdLogin.role}${companiesLine}\n\nPlease change the password after you sign in (Forgot password).`
+                  : `Your FinTrack Accounts access was updated (${createdLogin.role}).\n\nSign in as Owner with ${createdLogin.email}. Use Forgot password if you need a new password.`,
               );
               window.location.href = `mailto:${createdLogin.email}?subject=${subject}&body=${body}`;
             }}

@@ -127,7 +127,7 @@ test.describe("Workspace sidebar", () => {
     const sidebar = page.getByRole("complementary", { name: "Workspace" });
     await expect(sidebar).toBeVisible({ timeout: 15_000 });
     await sidebar.getByRole("button", { name: "Logout" }).click();
-    await expect(page.getByRole("button", { name: "Financier sign in" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Owner sign in" })).toBeVisible();
   });
 });
 

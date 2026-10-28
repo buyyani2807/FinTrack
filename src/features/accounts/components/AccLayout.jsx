@@ -56,9 +56,18 @@ export function AccCompanyBar({ companies, activeId, onSelect, onCreate, canAdmi
   const active = companies.find(company => company.id === activeId);
   const started = booksStartedOn || active?.booksStartedOn;
   const registered = gstLabel && !/unregistered/i.test(gstLabel);
+  const openCompanies = companies.filter(company => company.status !== "archived");
+  // CA with a single assigned company: show the name only (no switcher).
+  const singleAssigned = !canAdmin && openCompanies.length === 1;
   return (
     <div className="acc-company-bar" role="group" aria-label="Company books context">
       <div className="acc-company-row">
+      {singleAssigned ? (
+        <div className="acc-company-picker acc-company-picker-static" aria-label="Accounts company">
+          <Building2 className="acc-company-picker-icon" size={18} aria-hidden="true" />
+          <span className="acc-company-picker-name">{openCompanies[0].name}</span>
+        </div>
+      ) : (
       <Select
         bare
         className="acc-company-picker"
@@ -72,17 +81,18 @@ export function AccCompanyBar({ companies, activeId, onSelect, onCreate, canAdmi
           <ChevronDown className="acc-company-picker-chevron" size={16} aria-hidden="true" />
         </>}
       >
-        {!companies.length && (
+        {!openCompanies.length && (
           <option value="">
             {canAdmin ? "No companies yet — create one from Setup" : "No company assigned — ask the owner"}
           </option>
         )}
-        {companies.filter(company => company.status !== "archived").map(company => (
+        {openCompanies.map(company => (
           <option key={company.id} value={company.id}>
             {company.name}{company.isPrimary ? " · primary" : ""}
           </option>
         ))}
       </Select>
+      )}
       {canAdmin ? <button type="button" className="acc-company-new" onClick={onCreate}><Plus size={14} aria-hidden="true" />New company</button> : null}
       </div>
       <div className="acc-company-meta-wrap"><ul className="acc-company-meta">
