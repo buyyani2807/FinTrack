@@ -15,7 +15,6 @@ import { FinanceRoute } from "../features/workspace/routes/FinanceRoute.jsx";
 import { RequireModule } from "../features/workspace/routes/RequireModule.jsx";
 import { RouteCollectionsRoute } from "../features/workspace/routes/RouteCollectionsRoute.jsx";
 import { SettingsRoute } from "../features/workspace/routes/SettingsRoute.jsx";
-import { ReportsCenterRoute } from "../features/workspace/routes/ReportsCenterRoute.jsx";
 import { SubscribePage } from "../features/commercial/SubscribePage.jsx";
 
 // Every URL in the app and the component it shows. Paths match `workspacePaths` in features/workspace/paths.js,
@@ -91,10 +90,6 @@ export function AppRoutes() {
           {/* :report = daybook | trial | pnl | balance | cashflow | receivables | payables | sales | purchases | gst | ledger | item_sales | … */}
           <Route path="/accounting/reports/:report" element={<RequireModule module="accounts"><AccountsRoute /></RequireModule>} />
           <Route path="/accounting/*" element={<Navigate to="/accounting/overview" replace />} />
-
-          <Route path="/reports" element={<RequireModule module="isOwner"><ReportsCenterRoute /></RequireModule>} />
-          <Route path="/reports/:reportId" element={<RequireModule module="isOwner"><ReportsCenterRoute /></RequireModule>} />
-          <Route path="/reports/*" element={<Navigate to="/reports" replace />} />
 
           <Route path="/collection-staff" element={<RequireModule module="isOwner"><CollectionStaffRoute /></RequireModule>} />
           <Route path="/collection-staff/:staffId" element={<RequireModule module="isOwner"><CollectionStaffRoute /></RequireModule>} />
