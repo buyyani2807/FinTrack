@@ -808,13 +808,9 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   }), [vouchers, q]);
   const pagedVouchers = useMemo(() => pageSlice(shownVouchers, listPage), [shownVouchers, listPage]);
   const pagedLedger = useMemo(() => pageSlice(ledger.rows, listPage), [ledger.rows, listPage]);
-  const pagedBooks = useMemo(() => pageSlice(books, listPage), [books, listPage]);
   const pagedAudit = useMemo(() => pageSlice(audit, listPage), [audit, listPage]);
-  const pagedArInvoices = useMemo(() => pageSlice(arInvoices, listPage), [arInvoices, listPage]);
-  const pagedApInvoices = useMemo(() => pageSlice(apInvoices, listPage), [apInvoices, listPage]);
   const pagedSetupParties = useMemo(() => pageSlice(setupParties, listPage), [setupParties, listPage]);
   const pagedPartyBook = useMemo(() => pageSlice(partyBook.rows, listPage), [partyBook.rows, listPage]);
-  const pagedGstOutput = useMemo(() => pageSlice(gstReport.output, listPage), [gstReport.output, listPage]);
   const bankAccounts = useMemo(() => accounts.filter(account => account.accountType === "bank" && account.isActive !== false), [accounts]);
   const matchedLineIds = useMemo(() => new Set(
     statements.flatMap(statement => statement.lines.map(line => line.matchedVoucherLineId).filter(Boolean)),
@@ -2165,7 +2161,6 @@ const openVoucher = () => {
 
   const isInvoicePayables = section === "payables";
   const invoiceAging = invoiceAgingTotals(isInvoicePayables ? apInvoices : arInvoices);
-  const pagedInvoiceRows = isInvoicePayables ? pagedApInvoices : pagedArInvoices;
   const invoicePartyRows = partyTotalsFromInvoices(isInvoicePayables ? apInvoices : arInvoices);
 
 
@@ -2314,7 +2309,8 @@ const openVoucher = () => {
           outstandingOnly={outstandingOnly}
           setOutstandingOnly={setOutstandingOnly}
           exportReport={exportReport}
-          pagedInvoiceRows={pagedInvoiceRows}
+          invoiceRows={isInvoicePayables ? apInvoices : arInvoices}
+          listPage={listPage}
           orgSettings={orgSettings}
           activeCompany={activeCompany}
           workspace={workspace}
@@ -2545,15 +2541,15 @@ const openVoucher = () => {
           tb={tb}
           pnl={pnl}
           sheet={sheet}
-          pagedBooks={pagedBooks}
           books={books}
           setListPage={setListPage}
+          listPage={listPage}
           flow={flow}
-          pagedArInvoices={pagedArInvoices}
+          arInvoices={arInvoices}
           orgSettings={orgSettings}
           activeCompany={activeCompany}
           workspace={workspace}
-          pagedApInvoices={pagedApInvoices}
+          apInvoices={apInvoices}
           salesRows={salesRows}
           purchaseRows={purchaseRows}
           onViewDocument={openVoucherDocument}
@@ -2562,7 +2558,6 @@ const openVoucher = () => {
           range={range}
           setNotice={setNotice}
           gstReport={gstReport}
-          pagedGstOutput={pagedGstOutput}
           ledgerId={ledgerId}
           setLedgerId={setLedgerId}
           visibleAccounts={visibleAccounts}

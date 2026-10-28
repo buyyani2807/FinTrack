@@ -19,7 +19,8 @@ import {
   routeOverview,
   weekdaysLabel,
 } from "../model/routeCollectionsModel.js";
-import { AccMoreMenu, Modal } from "./AccUi.jsx";
+import { AccMoreMenu, DateSortTh, Modal } from "./AccUi.jsx";
+import { useDateSort } from "../model/useDateSort.js";
 
 const money = formatInr;
 
@@ -149,10 +150,11 @@ function FieldCollections({ token, today }) {
     return () => { cancelled = true; };
   }, [token, from, to]);
   const handover = useMemo(() => agentHandoverSummary(rows || []), [rows]);
+  const dateSort = useDateSort(rows || [], "date");
 
   const exportCsv = () => downloadAccountsCsv(`field-collections-${from}-to-${to}.csv`, [
     ["Date", "Receipt", "Customer", "Agent", "Mode", "Amount", "Status", "Narration"],
-    ...(rows || []).map(row => [row.date, row.voucherNumber, row.partyName, row.agentName, collectionModeLabel(row.mode), row.amount, row.status, row.narration]),
+    ...dateSort.sorted.map(row => [row.date, row.voucherNumber, row.partyName, row.agentName, collectionModeLabel(row.mode), row.amount, row.status, row.narration]),
   ]);
 
   if (rows === null) return <div className="card spacer"><strong>Field collections need a database update</strong><p className="copy">Run migration 082_accounts_route_collections_gst_filings.sql in the Supabase SQL editor.</p></div>;
@@ -182,8 +184,11 @@ function FieldCollections({ token, today }) {
     </tbody></table></div>
     <p className="small">Cash and cheques should match what each agent hands over. Reversed receipts are excluded from the totals.</p>
     <h3 className="acc-routes-subhead">Receipts</h3>
-    <div className="table acc-table-wrap"><table><thead><tr><th>Date</th><th>Receipt</th><th>Customer</th><th>Agent</th><th>Mode</th><th className="acc-num">Amount</th><th>Status</th></tr></thead><tbody>
-      {(rows || []).map(row => <tr key={row.voucherId} className={row.status !== "posted" ? "acc-row-muted" : ""}>
+    <div className="table acc-table-wrap"><table><thead><tr>
+      <th><DateSortTh label="Date" direction={dateSort.direction} onToggle={dateSort.toggle} /></th>
+      <th>Receipt</th><th>Customer</th><th>Agent</th><th>Mode</th><th className="acc-num">Amount</th><th>Status</th>
+    </tr></thead><tbody>
+      {dateSort.sorted.map(row => <tr key={row.voucherId} className={row.status !== "posted" ? "acc-row-muted" : ""}>
         <td>{formatReceiptDate(row.date)}</td><td>{row.voucherNumber}</td><td>{row.partyName}</td><td>{row.agentName}</td>
         <td>{collectionModeLabel(row.mode)}</td><td className="acc-num">{money(row.amount)}</td><td>{row.status}</td>
       </tr>)}

@@ -1,7 +1,9 @@
-import { Fragment, useState } from "react";
-import { AccEmpty } from "./AccUi.jsx";
+import { Fragment, useMemo, useState } from "react";
+import { AccEmpty, AccPager, DateSortTh } from "./AccUi.jsx";
 import { ArReminderButton, PaymentAdviceButton } from "./SalesInvoiceActions.jsx";
 import { money } from "../accountsFormat.js";
+import { pageSlice } from "../model/accountsList.js";
+import { sortByDate } from "../model/dateSort.js";
 import { markDuplicateInvoices } from "../model/billScan.js";
 
 const invoiceStatusTone = status => {
@@ -100,8 +102,22 @@ export function SettledGoods({ voucher, vouchers, voucherItemLines, stockMovemen
   );
 }
 
-export function InvoiceTable({ rows, kind, orgSettings, activeCompany, workspace, voucherItemLines = [], stockMovements = [], items = [], onOpenParty, onViewDocument }) {
+export function InvoiceTable({
+  rows,
+  kind,
+  orgSettings,
+  activeCompany,
+  workspace,
+  voucherItemLines = [],
+  stockMovements = [],
+  items = [],
+  onOpenParty,
+  onViewDocument,
+  page = null,
+  onPage = null,
+}) {
   const [openId, setOpenId] = useState(null);
+  const [sort, setSort] = useState({ column: "invoiceDate", direction: "desc" });
   const partyName = row => (onOpenParty && row.partyId && row.partyName !== row.partyId
     ? <button type="button" className="acc-invoice-party acc-invoice-party-link" title={`Open ${row.partyName}'s profile`} onClick={() => onOpenParty(row.partyId)}>{row.partyName}</button>
     : <strong className="acc-invoice-party">{row.partyName}</strong>);
@@ -109,10 +125,23 @@ export function InvoiceTable({ rows, kind, orgSettings, activeCompany, workspace
   const emptyCopy = kind === "payable"
     ? "Supplier invoices will appear here after you record a purchase."
     : "Customer invoices will appear here after you record a credit sale.";
+  const toggleSort = column => {
+    setSort(current => (
+      current.column === column
+        ? { column, direction: current.direction === "desc" ? "asc" : "desc" }
+        : { column, direction: "desc" }
+    ));
+    if (onPage) onPage(1);
+  };
+  const sorted = useMemo(
+    () => sortByDate(rows, sort.column, sort.direction),
+    [rows, sort.column, sort.direction],
+  );
+  const paged = page != null && onPage ? pageSlice(sorted, page) : { items: sorted, page: 1, pages: 1, total: sorted.length };
   if (!rows.length) {
     return <AccEmpty title={emptyTitle} copy={emptyCopy} />;
   }
-  const shown = markDuplicateInvoices(rows);
+  const shown = markDuplicateInvoices(paged.items);
   return (
     <>
       <div className="table spacer acc-table-wrap accounts-invoice-table acc-invoice-desktop">
@@ -121,8 +150,22 @@ export function InvoiceTable({ rows, kind, orgSettings, activeCompany, workspace
             <tr>
               <th>{kind === "payable" ? "Supplier" : "Customer"}</th>
               <th>Invoice</th>
-              <th>Invoice date</th>
-              <th>Due date</th>
+              <th>
+                <DateSortTh
+                  label="Invoice date"
+                  active={sort.column === "invoiceDate"}
+                  direction={sort.direction}
+                  onToggle={() => toggleSort("invoiceDate")}
+                />
+              </th>
+              <th>
+                <DateSortTh
+                  label="Due date"
+                  active={sort.column === "dueDate"}
+                  direction={sort.direction}
+                  onToggle={() => toggleSort("dueDate")}
+                />
+              </th>
               <th className="acc-num">Amount</th>
               <th className="acc-num">Paid</th>
               <th className="acc-num">Outstanding</th>
@@ -221,6 +264,9 @@ export function InvoiceTable({ rows, kind, orgSettings, activeCompany, workspace
           </article>
         ))}
       </div>
+      {page != null && onPage ? (
+        <AccPager page={paged.page} pages={paged.pages} total={paged.total} onPage={onPage} noun="invoices" />
+      ) : null}
     </>
   );
 }

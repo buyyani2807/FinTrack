@@ -1,11 +1,13 @@
 import { stockReasonLabel } from "../../model/inventoryModel.js";
 import { Select } from "../../../../components/Select.jsx";
-import { AccPager, FilterField as Field, AccTable } from "../AccUi.jsx";
+import { AccPager, DateSortTh, FilterField as Field, AccTable } from "../AccUi.jsx";
 import { usePagedList } from "../../model/usePagedList.js";
+import { useDateSort } from "../../model/useDateSort.js";
 import { qty } from "../../accountsFormat.js";
 
 export function StockMovementsTab({ moveFrom, setMoveFrom, moveTo, setMoveTo, moveItemId, setMoveItemId, products, moveRows }) {
-  const paged = usePagedList(moveRows, `${moveFrom}|${moveTo}|${moveItemId}`);
+  const dateSort = useDateSort(moveRows, "movementDate");
+  const paged = usePagedList(dateSort.sorted, `${moveFrom}|${moveTo}|${moveItemId}|${dateSort.direction}`);
   return (
     <>
       <div className="accounts-action-row spacer">
@@ -18,8 +20,27 @@ export function StockMovementsTab({ moveFrom, setMoveFrom, moveTo, setMoveTo, mo
           </Select>
         </Field>
       </div>
-      <AccTable columns={["Date", "Item", "Reason", { label: "Qty", num: true }, "Voucher / note"]} empty={!moveRows.length && "No stock movements for this filter."}>
-        {paged.items.map(row => <tr key={row.id}><td>{row.movementDate}</td><td>{row.itemName}</td><td>{stockReasonLabel(row.reason)}</td><td className={`acc-num ${row.quantityDelta < 0 ? "red" : "green"}`}>{row.quantityDelta > 0 ? `+${qty(row.quantityDelta)}` : qty(row.quantityDelta)}</td><td>{row.voucherNumber || row.note || "—"}</td></tr>)}
+      <AccTable
+        columns={[
+          { label: <DateSortTh label="Date" direction={dateSort.direction} onToggle={dateSort.toggle} /> },
+          "Item",
+          "Reason",
+          { label: "Qty", num: true },
+          "Voucher / note",
+        ]}
+        empty={!moveRows.length && "No stock movements for this filter."}
+      >
+        {paged.items.map(row => (
+          <tr key={row.id}>
+            <td>{row.movementDate}</td>
+            <td>{row.itemName}</td>
+            <td>{stockReasonLabel(row.reason)}</td>
+            <td className={`acc-num ${row.quantityDelta < 0 ? "red" : "green"}`}>
+              {row.quantityDelta > 0 ? `+${qty(row.quantityDelta)}` : qty(row.quantityDelta)}
+            </td>
+            <td>{row.voucherNumber || row.note || "—"}</td>
+          </tr>
+        ))}
       </AccTable>
       <AccPager page={paged.page} pages={paged.pages} total={paged.total} from={paged.from} to={paged.to} onPage={paged.setPage} noun="movements" />
     </>

@@ -389,15 +389,39 @@ export function ReasonModal({ title, label, value, onChange, onConfirm, onClose,
   </Modal>;
 }
 /**
+ * Date-column sort control (button only — wrap in <th> or pass as AccTable label).
+ * Click toggles newest ↔ oldest. Default from useDateSort is newest first.
+ */
+export function DateSortTh({ label = "Date", direction = "desc", onToggle, active = true }) {
+  const newestFirst = direction !== "asc";
+  return (
+    <button
+      type="button"
+      className={`acc-date-sort${active ? " is-active" : ""}`}
+      onClick={onToggle}
+      title={active
+        ? (newestFirst ? "Latest first. Click for oldest first." : "Oldest first. Click for latest first.")
+        : `Sort by ${label} (latest first)`}
+      aria-label={active
+        ? `${label}, sorted ${newestFirst ? "newest first" : "oldest first"}`
+        : `Sort by ${label}`}
+    >
+      <span>{label}</span>
+      <ChevronDown className={`acc-date-sort-icon${active && !newestFirst ? " is-asc" : ""}`} size={14} strokeWidth={2.25} aria-hidden />
+    </button>
+  );
+}
+
+/**
  * Standard Accounts table. columns: ["Label", { label, num: true }] (num right-aligns).
  * `empty` (truthy) renders a single full-width row, e.g. empty={!rows.length && "No rows yet."}.
  * `spaced={false}` drops the top margin for tables inside cards and dialogs.
  */
 export function AccTable({ columns, empty = null, spaced = true, children }) {
   return (
-    <div className={`table${spaced ? " spacer" : ""} acc-table-wrap`}><table><thead><tr>{columns.map(column => {
+    <div className={`table${spaced ? " spacer" : ""} acc-table-wrap`}><table><thead><tr>{columns.map((column, index) => {
       const { label, num } = typeof column === "string" ? { label: column } : column;
-      return <th key={typeof label === "string" ? label : undefined} className={num ? "acc-num" : undefined}>{label}</th>;
+      return <th key={typeof label === "string" ? label : index} className={num ? "acc-num" : undefined}>{label}</th>;
     })}</tr></thead><tbody>
       {children}
       {empty ? <tr><td colSpan={columns.length}>{empty}</td></tr> : null}

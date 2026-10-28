@@ -1,6 +1,7 @@
-import { AccMetric, AccPager, AccTable } from "../components/AccUi.jsx";
+import { AccMetric, AccTable, DateSortTh } from "../components/AccUi.jsx";
 import { stockReasonLabel } from "../model/inventoryModel.js";
 import { money } from "../accountsFormat.js";
+import { useDateSort } from "../model/useDateSort.js";
 import { ReportRangeBar } from "../components/AccPeriodBars.jsx";
 import { InvoiceTable } from "../components/InvoiceTable.jsx";
 import { ReportActions } from "./reports/ReportActions.jsx";
@@ -8,11 +9,11 @@ import { TrialBalanceReport } from "./reports/TrialBalanceReport.jsx";
 import { ProfitLossReport } from "./reports/ProfitLossReport.jsx";
 import { BalanceSheetReport } from "./reports/BalanceSheetReport.jsx";
 import { DayBookReport } from "./reports/DayBookReport.jsx";
+import { DateSortedVoucherTable } from "./reports/DateSortedVoucherTable.jsx";
 import { GstReport } from "./reports/GstReport.jsx";
 import { LedgerReport } from "./reports/LedgerReport.jsx";
 import { ItemProfitReport } from "./reports/ItemProfitReport.jsx";
 import { PurchaseMatchReport } from "./reports/PurchaseMatchReport.jsx";
-import { VoucherNumberLink } from "../components/SalesInvoiceActions.jsx";
 
 export function ReportsSection({
   fy,
@@ -26,15 +27,15 @@ export function ReportsSection({
   tb,
   pnl,
   sheet,
-  pagedBooks,
   books,
   setListPage,
+  listPage,
   flow,
-  pagedArInvoices,
+  arInvoices,
   orgSettings,
   activeCompany,
   workspace,
-  pagedApInvoices,
+  apInvoices,
   salesRows,
   purchaseRows,
   onViewDocument,
@@ -43,7 +44,6 @@ export function ReportsSection({
   range,
   setNotice,
   gstReport,
-  pagedGstOutput,
   ledgerId,
   setLedgerId,
   visibleAccounts,
@@ -72,6 +72,7 @@ export function ReportsSection({
   tradeDocuments = [],
   onOpenTradeDocument,
 }) {
+  const stockSort = useDateSort(stockMoveRows, "movementDate");
   return (
     <div className="acc-panel">
       {reportTab !== "purchase_match" && <>
@@ -81,32 +82,64 @@ export function ReportsSection({
       {(section === "trial" || reportTab === "trial") && section !== "pnl" && section !== "balance" && <TrialBalanceReport tb={tb} />}
       {(section === "pnl" || reportTab === "pnl") && section !== "trial" && section !== "balance" && <ProfitLossReport pnl={pnl} />}
       {(section === "balance" || reportTab === "balance") && section !== "trial" && section !== "pnl" && <BalanceSheetReport sheet={sheet} />}
-      {section === "reports" && reportTab === "daybook" && <DayBookReport pagedBooks={pagedBooks} books={books} setListPage={setListPage} />}
+      {section === "reports" && reportTab === "daybook" && <DayBookReport books={books} listPage={listPage} setListPage={setListPage} />}
       {section === "reports" && reportTab === "cashflow" && <>
         <div className="acc-metric-grid three"><AccMetric label="Inflow" value={money(flow.inflow)} tone="green" /><AccMetric label="Outflow" value={money(flow.outflow)} tone="red" /><AccMetric label="Net cash" value={money(flow.net)} tone="gold" /></div>
         <p className="small">Internal cash/bank/UPI transfers ({money(flow.transfers || 0)}) are excluded from inflow and outflow. Closing cash still follows the ledgers.</p>
       </>}
-      {section === "reports" && reportTab === "receivables" && <>
-        <InvoiceTable rows={pagedArInvoices.items} kind="receivable" orgSettings={orgSettings} activeCompany={activeCompany} workspace={workspace} voucherItemLines={voucherItemLines} stockMovements={stockMovements} items={items} onViewDocument={onViewDocument} />
-        <AccPager page={pagedArInvoices.page} pages={pagedArInvoices.pages} total={pagedArInvoices.total} onPage={setListPage} noun="invoices" />
-      </>}
-      {section === "reports" && reportTab === "payables" && <>
-        <InvoiceTable rows={pagedApInvoices.items} kind="payable" orgSettings={orgSettings} activeCompany={activeCompany} workspace={workspace} voucherItemLines={voucherItemLines} stockMovements={stockMovements} items={items} onViewDocument={onViewDocument} />
-        <AccPager page={pagedApInvoices.page} pages={pagedApInvoices.pages} total={pagedApInvoices.total} onPage={setListPage} noun="invoices" />
-      </>}
-      {section === "reports" && reportTab === "sales" && <AccTable columns={["Date", "Number", "Narration", { label: "Amount", num: true }, "View"]} empty={!salesRows.length && "No sales vouchers in this period."}>
-        {salesRows.map(row => <tr key={row.id}><td>{row.date}</td><td><VoucherNumberLink number={row.voucherNumber} voucherType="sales" onView={onViewDocument ? () => onViewDocument(row) : null} /></td><td>{row.narration}</td><td className="acc-num">{money(row.debit)}</td><td>{onViewDocument ? <button type="button" className="btn" onClick={() => onViewDocument(row)}>View</button> : null}</td></tr>)}
-      </AccTable>}
-      {section === "reports" && reportTab === "purchases" && <AccTable columns={["Date", "Number", "Narration", { label: "Amount", num: true }, "View"]} empty={!purchaseRows.length && "No purchase vouchers in this period."}>
-        {purchaseRows.map(row => <tr key={row.id}><td>{row.date}</td><td><VoucherNumberLink number={row.voucherNumber} voucherType="purchase" onView={onViewDocument ? () => onViewDocument(row) : null} /></td><td>{row.narration}</td><td className="acc-num">{money(row.debit)}</td><td>{onViewDocument ? <button type="button" className="btn" onClick={() => onViewDocument(row)}>View</button> : null}</td></tr>)}
-      </AccTable>}
+      {section === "reports" && reportTab === "receivables" && (
+        <InvoiceTable
+          rows={arInvoices}
+          page={listPage}
+          onPage={setListPage}
+          kind="receivable"
+          orgSettings={orgSettings}
+          activeCompany={activeCompany}
+          workspace={workspace}
+          voucherItemLines={voucherItemLines}
+          stockMovements={stockMovements}
+          items={items}
+          onViewDocument={onViewDocument}
+        />
+      )}
+      {section === "reports" && reportTab === "payables" && (
+        <InvoiceTable
+          rows={apInvoices}
+          page={listPage}
+          onPage={setListPage}
+          kind="payable"
+          orgSettings={orgSettings}
+          activeCompany={activeCompany}
+          workspace={workspace}
+          voucherItemLines={voucherItemLines}
+          stockMovements={stockMovements}
+          items={items}
+          onViewDocument={onViewDocument}
+        />
+      )}
+      {section === "reports" && reportTab === "sales" && (
+        <DateSortedVoucherTable
+          rows={salesRows}
+          voucherType="sales"
+          empty="No sales vouchers in this period."
+          onViewDocument={onViewDocument}
+        />
+      )}
+      {section === "reports" && reportTab === "purchases" && (
+        <DateSortedVoucherTable
+          rows={purchaseRows}
+          voucherType="purchase"
+          empty="No purchase vouchers in this period."
+          onViewDocument={onViewDocument}
+        />
+      )}
       {section === "reports" && reportTab === "gst" && <GstReport
         vouchers={vouchers}
         parties={parties}
         range={range}
         setNotice={setNotice}
         gstReport={gstReport}
-        pagedGstOutput={pagedGstOutput}
+        listPage={listPage}
         setListPage={setListPage}
         activeCompany={activeCompany}
         workspace={workspace}
@@ -159,8 +192,27 @@ export function ReportsSection({
         />
       )}
       {section === "reports" && reportTab === "stock_moves" && (
-        <AccTable columns={["Date", "Item", "Direction", { label: "Qty", num: true }, "Reason", "Voucher"]} empty={!stockMoveRows.length && "No stock movements in this period."}>
-          {stockMoveRows.map(row => <tr key={row.id}><td>{row.movementDate}</td><td>{row.itemName}</td><td>{row.direction}</td><td className="acc-num">{row.quantityDelta}</td><td>{stockReasonLabel(row.reason)}</td><td>{row.voucherNumber || "—"}</td></tr>)}
+        <AccTable
+          columns={[
+            { label: <DateSortTh label="Date" direction={stockSort.direction} onToggle={stockSort.toggle} /> },
+            "Item",
+            "Direction",
+            { label: "Qty", num: true },
+            "Reason",
+            "Voucher",
+          ]}
+          empty={!stockMoveRows.length && "No stock movements in this period."}
+        >
+          {stockSort.sorted.map(row => (
+            <tr key={row.id}>
+              <td>{row.movementDate}</td>
+              <td>{row.itemName}</td>
+              <td>{row.direction}</td>
+              <td className="acc-num">{row.quantityDelta}</td>
+              <td>{stockReasonLabel(row.reason)}</td>
+              <td>{row.voucherNumber || "—"}</td>
+            </tr>
+          ))}
         </AccTable>
       )}
       {section === "reports" && reportTab === "purchase_match" && (

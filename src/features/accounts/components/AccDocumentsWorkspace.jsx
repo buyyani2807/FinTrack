@@ -30,8 +30,9 @@ import { buildSalesInvoice } from "../model/salesInvoiceModel.js";
 import { downloadSalesInvoicePdf } from "../io/salesInvoicePdf.js";
 import { isValidUpiId, upiPayLink } from "../model/upiPay.js";
 import { QrSvg } from "../PayPage.jsx";
-import { AccMoreMenu, AccPager, Modal } from "./AccUi.jsx";
+import { AccMoreMenu, AccPager, DateSortTh, Modal } from "./AccUi.jsx";
 import { usePagedList } from "../model/usePagedList.js";
+import { useDateSort } from "../model/useDateSort.js";
 import { SearchInput, SegmentedControl } from "../../../components/ui.jsx";
 import { PurchaseMatchReport } from "../sections/reports/PurchaseMatchReport.jsx";
 import { resolveItemRate } from "../model/priceLists.js";
@@ -631,7 +632,8 @@ export function AccDocumentsWorkspace({
     () => (tab === "pending" ? pendingOrderRows({ documents: docs, fulfilment, side: pendingSide, parties, today }) : []),
     [tab, docs, fulfilment, pendingSide, parties, today],
   );
-  const pagedDocs = usePagedList(rows, `${tab}|${search}|${showClosed}`);
+  const docDateSort = useDateSort(rows, item => item.doc?.docDate);
+  const pagedDocs = usePagedList(docDateSort.sorted, `${tab}|${search}|${showClosed}|${docDateSort.direction}`);
   const pagedPending = usePagedList(pendingRows, `${tab}|${pendingSide}`);
 
   const viewDoc = viewId ? docs.find(doc => doc.id === viewId) : null;
@@ -747,7 +749,13 @@ export function AccDocumentsWorkspace({
           {canEdit && <button type="button" className="btn primary acc-list-new" disabled={saving} onClick={() => openNew(tab)}>+ New {config.label.toLowerCase()}</button>}
         </div>
         <div className="table spacer acc-table-wrap"><table><thead><tr>
-          <th>Number</th><th>Date</th><th>{config.partyType === "supplier" ? "Supplier" : "Customer"}</th><th className="acc-num">Total</th><th>Status</th>{tab !== "quotation" && <th className="acc-num">Pending qty</th>}<th></th>
+          <th>Number</th>
+          <th><DateSortTh label="Date" direction={docDateSort.direction} onToggle={docDateSort.toggle} /></th>
+          <th>{config.partyType === "supplier" ? "Supplier" : "Customer"}</th>
+          <th className="acc-num">Total</th>
+          <th>Status</th>
+          {tab !== "quotation" && <th className="acc-num">Pending qty</th>}
+          <th></th>
         </tr></thead><tbody>
           {pagedDocs.items.map(({ doc, summary, status }) => (
             <tr key={doc.id}>

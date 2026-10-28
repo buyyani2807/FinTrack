@@ -6345,6 +6345,38 @@
   }
 }
 
+/* Date column sort control (Receivables, Sales, Day book, etc.) */
+.accounts-dashboard .acc-date-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.accounts-dashboard .acc-date-sort-icon {
+  flex: none;
+  opacity: 0.4;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.accounts-dashboard .acc-date-sort.is-active .acc-date-sort-icon {
+  opacity: 0.95;
+  color: var(--ft-primary);
+}
+.accounts-dashboard .acc-date-sort-icon.is-asc {
+  transform: rotate(180deg);
+}
+.accounts-dashboard .acc-date-sort:hover .acc-date-sort-icon,
+.accounts-dashboard .acc-date-sort:focus-visible .acc-date-sort-icon {
+  opacity: 1;
+}
+
 .accounts-dashboard .ca-pack { display: grid; gap: 16px; }
 .accounts-dashboard .ca-pack-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; }
 .accounts-dashboard .ca-pack-kicker { margin: 0; color: var(--ft-primary); font-size: var(--ft-type-label); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }

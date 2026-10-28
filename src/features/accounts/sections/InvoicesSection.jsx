@@ -1,4 +1,4 @@
-import { AccMoreMenu, AccPager } from "../components/AccUi.jsx";
+import { AccMoreMenu } from "../components/AccUi.jsx";
 import { ExportGroup } from "../../../components/ui.jsx";
 import { money } from "../accountsFormat.js";
 import { ReportRangeBar } from "../components/AccPeriodBars.jsx";
@@ -15,7 +15,8 @@ export function InvoicesSection({
   outstandingOnly,
   setOutstandingOnly,
   exportReport,
-  pagedInvoiceRows,
+  invoiceRows,
+  listPage,
   orgSettings,
   activeCompany,
   workspace,
@@ -74,13 +75,19 @@ export function InvoicesSection({
           />
         </div>
       </div>
-      <InvoiceTable rows={pagedInvoiceRows.items} kind={isInvoicePayables ? "payable" : "receivable"} orgSettings={orgSettings} activeCompany={activeCompany} workspace={workspace} voucherItemLines={voucherItemLines} stockMovements={stockMovements} items={items} onOpenParty={onOpenParty} onViewDocument={onViewDocument} />
-      <AccPager
-        page={pagedInvoiceRows.page}
-        pages={pagedInvoiceRows.pages}
-        total={pagedInvoiceRows.total}
+      <InvoiceTable
+        rows={invoiceRows}
+        page={listPage}
         onPage={setListPage}
-        noun="invoices"
+        kind={isInvoicePayables ? "payable" : "receivable"}
+        orgSettings={orgSettings}
+        activeCompany={activeCompany}
+        workspace={workspace}
+        voucherItemLines={voucherItemLines}
+        stockMovements={stockMovements}
+        items={items}
+        onOpenParty={onOpenParty}
+        onViewDocument={onViewDocument}
       />
       <div className="acc-invoice-parties">
         <span className="acc-invoice-parties-label">Party totals</span>
