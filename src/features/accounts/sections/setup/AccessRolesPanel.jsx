@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import {
   createAccountsTeamUser,
   listAccountsTeamUsers,
@@ -14,33 +15,79 @@ const emptyDraft = (activeCompanyId = "") => ({
   companyIds: activeCompanyId ? [activeCompanyId] : [],
 });
 
-function CompanyChecklist({ companies, selectedIds, onChange, disabled = false }) {
+function companySummary(companies, selectedIds) {
+  if (!selectedIds.length) return "Choose companies…";
+  const names = companies.filter(company => selectedIds.includes(company.id)).map(company => company.name);
+  if (!names.length) return "Choose companies…";
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return names.join(", ");
+  return `${names[0]} +${names.length - 1} more`;
+}
+
+/** Compact multi-select: trigger looks like a select; menu lists companies with checkboxes. */
+function CompanyMultiSelect({ companies, selectedIds, onChange, disabled = false }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef(null);
+  const listId = useId();
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onPointer = event => {
+      if (rootRef.current && !rootRef.current.contains(event.target)) setOpen(false);
+    };
+    const onKey = event => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
   if (!companies.length) {
     return <p className="small">No active Accounts companies to assign.</p>;
   }
+
+  const toggle = companyId => {
+    const checked = selectedIds.includes(companyId);
+    if (checked && selectedIds.length === 1) return;
+    onChange(checked ? selectedIds.filter(id => id !== companyId) : [...selectedIds, companyId]);
+  };
+
   return (
-    <div className="accounts-company-checklist" role="group" aria-label="Companies this login can open">
-      {companies.map(company => {
-        const checked = selectedIds.includes(company.id);
-        return (
-          <label key={company.id} className="accounts-company-check">
-            <input
-              type="checkbox"
-              checked={checked}
-              disabled={disabled}
-              onChange={() => {
-                if (checked && selectedIds.length === 1) return;
-                onChange(
-                  checked
-                    ? selectedIds.filter(id => id !== company.id)
-                    : [...selectedIds, company.id],
-                );
-              }}
-            />
-            <span>{company.name}{company.isPrimary ? " · primary" : ""}</span>
-          </label>
-        );
-      })}
+    <div className={`accounts-company-multi${open ? " is-open" : ""}`} ref={rootRef}>
+      <button
+        type="button"
+        className={`ft-select accounts-company-multi-trigger${!selectedIds.length ? " is-placeholder" : ""}`}
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={open ? listId : undefined}
+        onClick={() => setOpen(current => !current)}
+      >
+        <span className="ft-select-value">{companySummary(companies, selectedIds)}</span>
+        <ChevronDown className="ft-select-chevron" size={16} aria-hidden="true" />
+      </button>
+      {open ? (
+        <div className="accounts-company-multi-menu" id={listId} role="listbox" aria-multiselectable="true" aria-label="Companies this login can open">
+          {companies.map(company => {
+            const checked = selectedIds.includes(company.id);
+            return (
+              <label key={company.id} className={`accounts-company-multi-option${checked ? " is-selected" : ""}`}>
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={disabled || (checked && selectedIds.length === 1)}
+                  onChange={() => toggle(company.id)}
+                />
+                <span>{company.name}{company.isPrimary ? " · primary" : ""}</span>
+              </label>
+            );
+          })}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -107,14 +154,14 @@ export function AccessRolesPanel({
     <AccSetupSection
       icon="R"
       title="Add CA / Accounts login"
-      copy="Create a login for your CA or bookkeeper. They sign in as Financier with the email and temporary password you share. They only see Accounts, and only the companies you tick below. Requires migrations 109 and 111."
+      copy="Create a login for your CA or bookkeeper. They sign in as Financier with the email and temporary password you share. They only see Accounts, and only the companies you choose. Requires migrations 109 and 111."
       collapsible
       summary={`${members.filter(row => row.active).length} logins`}
     >
       <div className="accounts-collab-guide">
         <div>
           <strong>Recommended</strong>
-          <p className="small">Default is the company you have open now. Tick more companies only if this CA should see them. Use <b>Viewer</b> for review-only; <b>Accountant</b> if they should post.</p>
+          <p className="small">Default is the company you have open now. Add more companies only if this CA should see them. Use <b>Viewer</b> for review-only; <b>Accountant</b> if they should post.</p>
         </div>
         <span className="acc-chip ok">Per company</span>
       </div>
@@ -130,7 +177,7 @@ export function AccessRolesPanel({
           </Select>
         </Field>
         <Field label="Companies">
-          <CompanyChecklist
+          <CompanyMultiSelect
             companies={activeCompanies}
             selectedIds={draft.companyIds}
             onChange={companyIds => setDraft(current => ({ ...current, companyIds }))}
@@ -273,8 +320,8 @@ export function AccessRolesPanel({
       {editingCompaniesFor ? (
         <div className="notice accounts-invite-email" role="dialog" aria-label="Edit company access">
           <strong>Companies for this login</strong>
-          <p className="small">They will only see the companies you tick.</p>
-          <CompanyChecklist
+          <p className="small">They will only see the companies you choose.</p>
+          <CompanyMultiSelect
             companies={activeCompanies}
             selectedIds={editCompanyIds}
             onChange={setEditCompanyIds}

@@ -11,7 +11,7 @@ import { openLegalView } from "../legal/LegalPage.jsx";
 
 // Who is signing in. `label` stays the button's accessible name.
 const SIGN_IN_MODES = [
-  { id: "signIn", label: "Financier sign in", title: "Financier", hint: "Owner or CA", icon: Briefcase },
+  { id: "signIn", label: "Financier sign in", title: "Financier", hint: "Business email", icon: Briefcase },
   { id: "agent", label: "Agent login", title: "Collection agent", hint: "Route & collections", icon: Route },
   { id: "customer", label: "Customer login", title: "Customer", hint: "Loan balance", icon: UserRound },
   { id: "chitCustomer", label: "Chit customer", title: "Chit member", hint: "Schemes & bids", icon: Coins },
