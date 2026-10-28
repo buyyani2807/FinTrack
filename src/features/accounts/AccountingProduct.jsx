@@ -165,7 +165,10 @@ import { SetupSection } from "./sections/SetupSection.jsx";
 import { NewEntryActions } from "./components/NewEntryActions.jsx";
 import { AccBookkeeper } from "./components/AccBookkeeper.jsx";
 import { AccMigrationAssistant } from "./components/AccMigrationAssistant.jsx";
+import { AccBulkImportWorkspace } from "./components/AccBulkImportWorkspace.jsx";
 import { runMigrationPlan } from "./model/migrationAssistant.js";
+import { runBulkVoucherPlan } from "./model/bulkVoucherImport.js";
+import { runBulkBillPost } from "./model/bulkBillImport.js";
 import { withNewLedger, withNewParty } from "./model/bookkeeper.js";
 import { CreateCompanyModal } from "./components/dialogs/CreateCompanyModal.jsx";
 import { PartyModal } from "./components/dialogs/PartyModal.jsx";
@@ -241,6 +244,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [showVoucher, setShowVoucher] = useState(false);
   const [showBookkeeper, setShowBookkeeper] = useState(false);
   const [showMigration, setShowMigration] = useState(false);
+  const [showBulkImport, setShowBulkImport] = useState(false);
   const [showParty, setShowParty] = useState(false);
   const [showCoa, setShowCoa] = useState(false);
   const [voucherType, setVoucherType] = useState("receipt");
@@ -1178,6 +1182,63 @@ const openVoucher = () => {
         postVoucher: payload => postVoucher(token, payload),
       }, options);
     }, () => (outcome?.failed?.length ? "" : "Import finished."));
+    return outcome;
+  };
+
+  const openBulkImport = () => {
+    if (!canWrite) {
+      setError("Your Accounts role is view-only. Ask the owner for accountant access to import.");
+      return;
+    }
+    setShowBulkImport(true);
+  };
+
+  const runBulkExcel = async (plan, options = {}) => {
+    let outcome = null;
+    await run(async () => {
+      outcome = await runBulkVoucherPlan(plan, {
+        createParty: party => createParty(token, { ...emptyPartyForm(), ...party }),
+        postVoucher: payload => postVoucher(token, payload),
+      }, {
+        accounts: visibleAccounts,
+        company: activeCompany,
+        today: todayIso(),
+        createMissingParties: options.createMissingParties !== false,
+        onProgress: options.onProgress,
+        shouldStop: options.shouldStop,
+      });
+      await refresh();
+    }, () => (outcome?.failed?.length ? "" : "Bulk import finished."));
+    return outcome;
+  };
+
+  const runBulkBills = async (sources, options = {}) => {
+    let outcome = null;
+    await run(async () => {
+      outcome = await runBulkBillPost(sources, {
+        postVoucher: payload => postVoucher(token, payload),
+        addAttachment: async ({ voucherId, fileName, contentType, contentBase64, byteSize }) => {
+          const meta = assertVoucherAttachmentMeta({
+            fileName,
+            contentType,
+            byteSize: byteSize || Math.ceil((contentBase64?.length || 0) * 0.75),
+          });
+          await addVoucherAttachment(token, {
+            voucherId,
+            fileName: meta.fileName,
+            contentType: meta.contentType,
+            contentBase64,
+          });
+        },
+      }, {
+        accounts: visibleAccounts,
+        company: activeCompany,
+        today: todayIso(),
+        onProgress: options.onProgress,
+        shouldStop: options.shouldStop,
+      });
+      await refresh();
+    }, () => (outcome?.failed?.length ? "" : "Bill import finished."));
     return outcome;
   };
 
@@ -2183,7 +2244,7 @@ const openVoucher = () => {
           rangeTo={range.to}
           fallbackName={canAdmin ? (settings?.companyName || workspace.businessName || "") : ""}
         />}
-        extras={canWrite ? <NewEntryActions openSimple={openSimple} openVoucher={openVoucher} openParty={openParty} openBookkeeper={settings ? () => setShowBookkeeper(true) : null} /> : <span className="small">View-only · {accountsAccessRole || "viewer"}</span>}
+        extras={canWrite ? <NewEntryActions openSimple={openSimple} openVoucher={openVoucher} openParty={openParty} openBookkeeper={settings ? () => setShowBookkeeper(true) : null} openBulkImport={!migrationRequired ? openBulkImport : null} /> : <span className="small">View-only · {accountsAccessRole || "viewer"}</span>}
       />
       <Toasts items={[{ id: "error", tone: "error", message: error, onClose: () => setError("") }, { id: "notice", message: notice, onClose: () => setNotice("") }]} />
       {readOnly && <div className="notice">Accounts access: <strong>viewer</strong>. You can review books and reports, but posting and setup changes are blocked.</div>}
@@ -2272,6 +2333,7 @@ const openVoucher = () => {
           canWrite={canWrite}
           openSimple={openSimple}
           openVoucher={openVoucher}
+          openBulkImport={canWrite && !migrationRequired ? openBulkImport : null}
           search={search}
           setSearch={setSearch}
           pagedVouchers={pagedVouchers}
@@ -2625,6 +2687,7 @@ const openVoucher = () => {
 
         {section === "setup" && <SetupSection
           openMigration={canAdmin && settings ? () => setShowMigration(true) : null}
+          openBulkImport={canWrite && settings && !migrationRequired ? openBulkImport : null}
           openSetupAssistant={canAdmin && settings && activeCompanyId && !migrationRequired ? () => {
             setOnboardingDismissed(false);
             setSetupAssistantRequested(true);
@@ -2714,6 +2777,19 @@ const openVoucher = () => {
         canAdmin={canAdmin}
         onRun={runMigration}
         onClose={() => setShowMigration(false)}
+      />}
+      {showBulkImport && <AccBulkImportWorkspace
+        accounts={visibleAccounts}
+        parties={parties}
+        items={items}
+        vouchers={vouchers}
+        company={activeCompany}
+        today={todayIso()}
+        token={token}
+        canWrite={canWrite}
+        onRunExcel={runBulkExcel}
+        onRunBills={runBulkBills}
+        onClose={() => setShowBulkImport(false)}
       />}
       {showCreateCompany && <CreateCompanyModal
         saving={saving}

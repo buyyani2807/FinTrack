@@ -6,6 +6,7 @@ export function VouchersSection({
   canWrite,
   openSimple,
   openVoucher,
+  openBulkImport = null,
   search,
   setSearch,
   pagedVouchers,
@@ -51,6 +52,7 @@ export function VouchersSection({
                       onClick: () => openSimple(item.id),
                     })),
                   { id: "advanced", label: "+ Advanced voucher", onClick: openVoucher },
+                  ...(openBulkImport ? [{ id: "bulk", label: "Bulk import…", onClick: openBulkImport }] : []),
                 ]}
               />
             </div>

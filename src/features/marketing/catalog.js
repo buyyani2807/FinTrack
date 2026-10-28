@@ -1173,9 +1173,42 @@ export const FEATURES = [
         text: "Opening balances are posted as a balanced opening entry on the books start date. If the old balances do not agree, the difference goes to an Opening Balance Adjustment ledger so your CA can review it, instead of being hidden. Cancelled and optional Tally vouchers, and entries without a date or that do not balance, are listed and left out.",
       },
     ],
-    related: ["ai-setup", "chart-of-accounts", "vouchers"],
+    related: ["ai-setup", "chart-of-accounts", "vouchers", "bulk-import"],
     appPath: "/accounting/setup",
     icon: "FileSpreadsheet",
+  },
+  {
+    slug: "bulk-import",
+    category: "intelligence",
+    name: "Bulk import sales, purchases and bills",
+    summary: "Clear a month’s backlog from a spreadsheet or a folder of supplier bills — review, then post.",
+    problem: "Month-end and festival seasons leave a pile of invoices. Typing each sale or purchase by hand is slow, and photo bills arrive in batches.",
+    how: [
+      "Open Accounts → Setup → Open bulk import, or Transactions → More → Bulk import.",
+      "Excel tab: download the template, fill sales and purchases, upload CSV or Excel, review, then post.",
+      "Bill photos tab: upload JPEG/PNG/PDF files or a ZIP, let FinTrack read each bill, review, then post purchases.",
+    ],
+    capabilities: [
+      "CSV and Excel sales and purchase vouchers with amount-only or item lines",
+      "Create missing customers and suppliers when you choose",
+      "Batch supplier bill photos and PDFs with AI reading and a review grid",
+      "ZIP unpack for bill folders, progress bar and Stop while posting",
+      "Idempotent posting so a retry does not double the books",
+    ],
+    benefits: ["Faster backlog clearance", "You approve before anything posts", "Same posting rules as a normal sale or purchase"],
+    sections: [
+      {
+        title: "Excel for day-to-day vouchers",
+        text: "Use the template columns Type, Date, Party, Invoice number and Amount — or Item, Qty and Rate for itemized rows. FinTrack groups lines that share an invoice number, matches parties, and shows warnings such as possible duplicates before you post.",
+      },
+      {
+        title: "Bill photos for supplier purchases",
+        text: "Upload many bills at once. Each file is read like the single bill scanner, then listed for review. Approved rows post as purchase vouchers; small files can be kept as attachments.",
+      },
+    ],
+    related: ["ai-migration", "vouchers", "ai-bookkeeper"],
+    appPath: "/accounting/setup",
+    icon: "FileUp",
   },
   {
     slug: "agent-portal",

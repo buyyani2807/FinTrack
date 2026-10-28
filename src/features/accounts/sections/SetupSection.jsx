@@ -75,6 +75,7 @@ export function SetupSection({
   audit,
   pagedAudit,
   openMigration = null,
+  openBulkImport = null,
   openSetupAssistant = null,
   setUpNewCompany = null,
 }) {
@@ -144,6 +145,17 @@ export function SetupSection({
           summary="Migration"
         >
           <button type="button" className="btn primary acc-setup-link-btn" onClick={openMigration}>Start migration<ArrowRight size={15} aria-hidden="true" /></button>
+        </AccSetupSection>
+      )}
+      {openBulkImport && (
+        <AccSetupSection
+          icon="⇪"
+          title="Bulk import sales, purchases and bills"
+          copy="For day-to-day backlog: upload a CSV or Excel of sales and purchases, or a batch of supplier bill photos and PDFs. Review each row, then post. Use migration above when moving a full set of old books."
+          collapsible
+          summary="Bulk import"
+        >
+          <button type="button" className="btn primary acc-setup-link-btn" onClick={openBulkImport}>Open bulk import<ArrowRight size={15} aria-hidden="true" /></button>
         </AccSetupSection>
       )}
       <PartiesSetupPanel
