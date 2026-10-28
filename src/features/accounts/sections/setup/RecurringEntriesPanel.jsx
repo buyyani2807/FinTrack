@@ -39,7 +39,16 @@ export function RecurringEntriesPanel({
           </Select>
         </Field>
         <Field label="Next run"><input type="date" value={recurringDraft.nextRunOn} onChange={event => setRecurringDraft(current => ({ ...current, nextRunOn: event.target.value }))} /></Field>
-        <Field label="Amount"><input className="acc-num-input" type="number" min="0" step="0.01" value={recurringDraft.amount} onChange={event => setRecurringDraft(current => ({ ...current, amount: event.target.value }))} /></Field>
+        <Field label="Amount (₹)">
+          <input
+            className="acc-plain-number"
+            type="text"
+            inputMode="numeric"
+            value={recurringDraft.amount}
+            placeholder="e.g. 15000"
+            onChange={event => setRecurringDraft(current => ({ ...current, amount: event.target.value.replace(/[^\d]/g, "") }))}
+          />
+        </Field>
         <Field label="Party">
           <Select value={recurringDraft.partyId} onChange={event => setRecurringDraft(current => ({ ...current, partyId: event.target.value }))}>
             <option value="">Optional</option>
@@ -80,7 +89,7 @@ export function RecurringEntriesPanel({
                 kind: row.kind,
                 frequency: row.frequency,
                 nextRunOn: row.nextRunOn || todayIso(),
-                amount: String(row.amount || ""),
+                amount: row.amount ? String(Math.round(Number(row.amount))) : "",
                 partyId: row.partyId || "",
                 narration: row.narration || "",
                 mode: row.mode || "cash",
