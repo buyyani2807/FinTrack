@@ -52,7 +52,7 @@ const niceDate = iso => {
 // The books context under the page title: the company switcher with a link to add a company, then one quiet line
 // of FY · report period · books start · GST status. The native select covers the switcher, so the
 // system list and keyboard support are kept.
-export function AccCompanyBar({ companies, activeId, onSelect, onCreate, gstLabel, fyLabel = "", booksStartedOn = "", rangeFrom = "", rangeTo = "", fallbackName = "" }) {
+export function AccCompanyBar({ companies, activeId, onSelect, onCreate, canAdmin = true, gstLabel, fyLabel = "", booksStartedOn = "", rangeFrom = "", rangeTo = "", fallbackName = "" }) {
   const active = companies.find(company => company.id === activeId);
   const started = booksStartedOn || active?.booksStartedOn;
   const registered = gstLabel && !/unregistered/i.test(gstLabel);
@@ -79,7 +79,7 @@ export function AccCompanyBar({ companies, activeId, onSelect, onCreate, gstLabe
           </option>
         ))}
       </Select>
-      <button type="button" className="acc-company-new" onClick={onCreate}><Plus size={14} aria-hidden="true" />New company</button>
+      {canAdmin ? <button type="button" className="acc-company-new" onClick={onCreate}><Plus size={14} aria-hidden="true" />New company</button> : null}
       </div>
       <div className="acc-company-meta-wrap"><ul className="acc-company-meta">
         {fyLabel ? <li>{fyLabel}</li> : null}

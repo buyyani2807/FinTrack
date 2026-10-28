@@ -11,18 +11,19 @@ import { openLegalView } from "../legal/LegalPage.jsx";
 
 // Who is signing in. `label` stays the button's accessible name.
 const SIGN_IN_MODES = [
-  { id: "signIn", label: "Financier sign in", title: "Financier", hint: "Owner workspace", icon: Briefcase },
+  { id: "signIn", label: "Financier sign in", title: "Financier", hint: "Owner or CA", icon: Briefcase },
   { id: "agent", label: "Agent login", title: "Collection agent", hint: "Route & collections", icon: Route },
   { id: "customer", label: "Customer login", title: "Customer", hint: "Loan balance", icon: UserRound },
   { id: "chitCustomer", label: "Chit customer", title: "Chit member", hint: "Schemes & bids", icon: Coins },
 ];
 
-// One line of guidance under the sign-in options: where this person's credentials come from (none for Financier).
+// One line of guidance under the sign-in options: where this person's credentials come from (none for Financier owner).
 const MODE_GUIDE = {
+  signIn: "Owners use the email from signup. A CA or bookkeeper uses the email and temporary password the owner shared from Accounts → Setup.",
   agent: "Your financier shares your agent ID (it starts with AG-) and a 6-digit PIN when they add you under Collection Staff.",
   customer: "Your financier shares your portal ID (it starts with FT-) and a 6-digit PIN when they open your customer portal.",
   chitCustomer: "Your chit manager shares your portal ID (it starts with CF-) and a 6-digit PIN when you join a scheme.",
-  signUp: "The 14 days start when the workspace is created. Opening this page does not start the trial. After 14 days you can still sign in, your records stay, and recording waits until you choose a plan.",
+  signUp: "The 14 days start when the workspace is created. Opening this page does not start the trial. After 14 days you can still sign in, your records stay, and recording waits until you choose a plan. CAs should not create a business here — ask the owner to Add CA in Accounts Setup.",
 };
 
 // Plain-language versions of common sign-in errors; anything else is shown as it comes.

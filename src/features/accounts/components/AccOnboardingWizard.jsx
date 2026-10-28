@@ -92,8 +92,10 @@ export function AccOnboardingWizard({
   const [partyName, setPartyName] = useState("");
   const [partyType, setPartyType] = useState("customer");
   const [partyPhone, setPartyPhone] = useState("");
+  const [inviteName, setInviteName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("viewer");
+  const [createdLogin, setCreatedLogin] = useState(null);
   const [localError, setLocalError] = useState("");
 
   useEffect(() => {
@@ -143,7 +145,9 @@ export function AccOnboardingWizard({
         });
       }
       if (step.id === "invite" && canAdmin && inviteEmail.trim() && onInviteCa) {
-        await onInviteCa({ email: inviteEmail.trim(), role: inviteRole });
+        if (!inviteName.trim()) throw new Error("Enter the CA’s name.");
+        const result = await onInviteCa({ fullName: inviteName.trim(), email: inviteEmail.trim(), role: inviteRole });
+        if (result?.temporaryPassword || result?.email) setCreatedLogin(result);
       }
       if (step.id === "done") {
         finishWizard();
@@ -237,17 +241,25 @@ export function AccOnboardingWizard({
 
       {step.id === "invite" && (
         <div className="form spacer">
-          <p className="copy">Invite your CA as <strong>viewer</strong> (recommended) so they can review books without your password.</p>
-          {!canAdmin && <p className="small">Only the owner can invite. Continue.</p>}
+          <p className="copy">Optional — create a login for your CA. They sign in as Financier with the email and temporary password you share. Viewer is recommended.</p>
+          {!canAdmin && <p className="small">Only the owner can add a CA. Continue.</p>}
+          <label className="accounts-filter-field"><span className="small">Full name</span>
+            <input value={inviteName} disabled={!canAdmin} placeholder="e.g. Ravi CA" onChange={event => setInviteName(event.target.value)} />
+          </label>
           <label className="accounts-filter-field"><span className="small">CA email</span>
             <input type="email" value={inviteEmail} disabled={!canAdmin} placeholder="ca@example.com" onChange={event => setInviteEmail(event.target.value)} />
           </label>
-          <label className="accounts-filter-field"><span className="small">Role</span>
+          <label className="accounts-filter-field"><span className="small">Access</span>
             <Select value={inviteRole} disabled={!canAdmin} onChange={event => setInviteRole(event.target.value)}>
               <option value="viewer">Viewer (read only)</option>
               <option value="accountant">Accountant (can post)</option>
             </Select>
           </label>
+          {createdLogin?.temporaryPassword ? (
+            <p className="notice accounts-invite-email" role="status">
+              Share with {createdLogin.email}: temporary password <strong>{createdLogin.temporaryPassword}</strong>. Copy it before continuing — you can also add CAs later from Setup.
+            </p>
+          ) : null}
         </div>
       )}
 
@@ -257,7 +269,7 @@ export function AccOnboardingWizard({
           <ul className="copy">
             <li>Share invoices and party statements on WhatsApp when the party has a phone.</li>
             <li>Match bank lines from Banking — suggestions appear automatically.</li>
-            <li>Invite more teammates later from Setup → Accounts access roles.</li>
+            <li>Add a CA later from Setup → Add CA / Accounts login.</li>
           </ul>
         </div>
       )}

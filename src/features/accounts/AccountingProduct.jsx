@@ -10,7 +10,6 @@ import {
   deleteChartAccount,
   deleteParty,
   deleteVoucherAttachment,
-  loadAccountsRoles,
   loadAccountsAccessRole,
   loadAuditLog,
   loadBankStatements,
@@ -29,7 +28,6 @@ import {
   upsertItemCategory,
   adjustStock,
   claimTeamInvites,
-  listTeamInvites,
   loadRecurringTemplates,
   markRecurringRun,
   setItemOpeningRate,
@@ -269,12 +267,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [bankImportMapping, setBankImportMapping] = useState({});
   const [matchChoice, setMatchChoice] = useState({});
   const [pendingBankMatch, setPendingBankMatch] = useState(null);
-  const [accountsRoles, setAccountsRoles] = useState([]);
   const [accountsAccessRole, setAccountsAccessRole] = useState(workspace?.role === "owner" ? "owner" : null);
-  const [roleDraft, setRoleDraft] = useState({ userId: "", role: "accountant" });
-  const [inviteDraft, setInviteDraft] = useState({ email: "", role: "viewer", note: "" });
-  const [inviteEmailDraft, setInviteEmailDraft] = useState(null);
-  const [teamInvites, setTeamInvites] = useState([]);
   const [recurringTemplates, setRecurringTemplates] = useState(cached?.recurringTemplates ?? []);
   const [recurringDraft, setRecurringDraft] = useState(() => emptyRecurringDraft());
   const [pendingRecurringId, setPendingRecurringId] = useState(null);
@@ -497,18 +490,14 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     const loadExtras = async () => {
       try {
         if (section === "setup") {
-          const [nextAudit, nextLocks, nextRoles, nextInvites, nextRecurring] = await Promise.all([
+          const [nextAudit, nextLocks, nextRecurring] = await Promise.all([
             loadAuditLog(token),
             loadPeriodLocks(token),
-            loadAccountsRoles(token).catch(() => []),
-            listTeamInvites(token).catch(() => []),
             loadRecurringTemplates(token).catch(() => []),
           ]);
           if (!cancelled) {
             setAudit(nextAudit);
             setLocks(nextLocks);
-            setAccountsRoles(nextRoles || []);
-            setTeamInvites(nextInvites || []);
             setRecurringTemplates(nextRecurring || []);
           }
           return;
@@ -892,7 +881,6 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     setLocks([]);
     setLedgerId("");
     setMatchChoice({});
-    setTeamInvites([]);
     setRecurringTemplates([]);
     setTradeDocuments(null);
     setDocumentSettings({ ...DEFAULT_DOCUMENT_SETTINGS, available: false });
@@ -2184,6 +2172,7 @@ const openVoucher = () => {
           activeId={activeCompanyId}
           onSelect={switchCompany}
           onCreate={() => { setCompanyDraft({ name: "", booksStartedOn: todayIso(), industry: "retail" }); setShowCreateCompany(true); }}
+          canAdmin={canAdmin}
           gstLabel={gstStatusLabel(activeCompany)}
           fyLabel={fy?.label || ""}
           booksStartedOn={activeCompany?.booksStartedOn || settings?.booksStartedOn || ""}
@@ -2686,17 +2675,7 @@ const openVoucher = () => {
           setLockForm={setLockForm}
           locks={locks}
           askReason={askReason}
-          accountsRoles={accountsRoles}
-          teamInvites={teamInvites}
-          inviteDraft={inviteDraft}
-          setInviteDraft={setInviteDraft}
-          setTeamInvites={setTeamInvites}
-          setAccountsRoles={setAccountsRoles}
-          setInviteEmailDraft={setInviteEmailDraft}
           setNotice={setNotice}
-          inviteEmailDraft={inviteEmailDraft}
-          roleDraft={roleDraft}
-          setRoleDraft={setRoleDraft}
           canWrite={canWrite}
           recurringTemplates={recurringTemplates}
           recurringDraft={recurringDraft}

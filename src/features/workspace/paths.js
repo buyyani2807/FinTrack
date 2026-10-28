@@ -49,12 +49,14 @@ export const isWithin = (pathname, target) => pathname === target || pathname.st
 // Which workspace modules this user may open. Owner-only modules also need the owner role.
 export function workspaceModuleAccess(orgSettings = {}, workspace = {}) {
   const isOwner = workspace?.role === "owner";
+  const isAccountsUser = workspace?.role === "accounts";
   return {
     isOwner,
-    daily: isModuleEnabled(orgSettings, "daily"),
-    monthly: isModuleEnabled(orgSettings, "monthly"),
+    isAccountsUser,
+    daily: isOwner && isModuleEnabled(orgSettings, "daily"),
+    monthly: isOwner && isModuleEnabled(orgSettings, "monthly"),
     chit: isOwner && isModuleEnabled(orgSettings, "chit"),
     cashbook: isOwner && isModuleEnabled(orgSettings, "cashbook"),
-    accounts: isOwner && isModuleEnabled(orgSettings, "accounts"),
+    accounts: (isOwner || isAccountsUser) && isModuleEnabled(orgSettings, "accounts"),
   };
 }

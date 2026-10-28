@@ -18,15 +18,19 @@ import { workspacePaths, workspaceModuleAccess } from "./paths.js";
 export function WorkspaceLayout() {
   const session = useOutletContext();
   const {
-    dataError, loans, workspace, showOwnerChrome, logout, user, logReceipt, refreshWorkspace, addCollectionAgent,
+    dataError, loans, workspace, showOwnerChrome, showWorkspaceChrome, logout, user, logReceipt, refreshWorkspace, addCollectionAgent,
     getManagedAgents, updateAgentAssignment, saveCollectionStaff,
   } = session;
   const navigate = useNavigate();
   const token = user.authToken;
   const orgSettings = workspace?.organizationSettings || {};
   const moduleAccess = workspaceModuleAccess(orgSettings, workspace || {});
-  // Owner-only routes also require the owner layout (a staff session never gets them, whatever the workspace says).
-  const access = showOwnerChrome ? moduleAccess : { ...moduleAccess, isOwner: false, chit: false, cashbook: false, accounts: false };
+  // Owner gets full chrome. Accounts-team (CA) gets Accounts only. Staff agents get neither owner module.
+  const access = showOwnerChrome
+    ? moduleAccess
+    : moduleAccess.isAccountsUser
+      ? { ...moduleAccess, isOwner: false, daily: false, monthly: false, chit: false, cashbook: false }
+      : { ...moduleAccess, isOwner: false, chit: false, cashbook: false, accounts: false };
   const [chitSchemes, setChitSchemes] = useState([]);
   const [askOpen, setAskOpen] = useState(false);
   const askEnabled = isModuleEnabled(orgSettings, "ai");
@@ -44,8 +48,15 @@ export function WorkspaceLayout() {
   }, [subscriptionLocked, showOwnerChrome, token]);
 
   // Signing out from inside Accounts sets this flag so the next owner sign-in lands back in Accounts.
+  // Accounts-team (CA) users always land in Accounts after sign-in.
   useEffect(() => {
-    if (!showOwnerChrome) return;
+    if (!showWorkspaceChrome) return;
+    if (workspace?.role === "accounts") {
+      const onAccounts = location.pathname === workspacePaths.accounts
+        || location.pathname.startsWith(`${workspacePaths.accounts}/`);
+      if (!onAccounts) navigate(workspacePaths.accounts, { replace: true });
+      return;
+    }
     if (workspace?.role !== "owner") {
       sessionStorage.removeItem("fintrack-open-accounts");
       return;
@@ -55,11 +66,11 @@ export function WorkspaceLayout() {
       sessionStorage.removeItem("fintrack-login-context");
       navigate(workspacePaths.accounts, { replace: true });
     }
-  }, [showOwnerChrome, workspace?.role, navigate]);
+  }, [showWorkspaceChrome, workspace?.role, location.pathname, navigate]);
 
   // Warm the Accounts bundle and data while the owner is idle so opening Accounts is instant.
   useEffect(() => {
-    if (subscriptionLocked || !showOwnerChrome || !access.accounts || !token) return undefined;
+    if (subscriptionLocked || !access.accounts || !token) return undefined;
     const preload = () => { loadAccountsModule().then(module => module.prefetchAccounts?.(token)).catch(() => {}); };
     if (typeof window.requestIdleCallback === "function") {
       const id = window.requestIdleCallback(preload, { timeout: 4000 });
@@ -67,7 +78,7 @@ export function WorkspaceLayout() {
     }
     const id = window.setTimeout(preload, 1500);
     return () => window.clearTimeout(id);
-  }, [subscriptionLocked, showOwnerChrome, access.accounts, token]);
+  }, [subscriptionLocked, access.accounts, token]);
 
   const routeContext = {
     access, token, loans, workspace: workspace || {}, orgSettings, logout,
@@ -89,8 +100,8 @@ export function WorkspaceLayout() {
         <button type="button" className="btn" onClick={logout}>Log out</button>
       </div>
     </div> : <TrialBanner subscription={subscription} isOwner={showOwnerChrome} />}
-    {showOwnerChrome && !subscriptionLocked
-      ? <div className="financier-tools"><FinancierNav access={access} orgSettings={orgSettings} businessName={workspace?.businessName} logout={logout} askEnabled={askEnabled} onAsk={() => setAskOpen(true)} /><PageReveal routeKey={location.pathname}><Outlet context={routeContext} /></PageReveal></div>
+    {showWorkspaceChrome && !subscriptionLocked
+      ? <div className="financier-tools"><FinancierNav access={access} orgSettings={orgSettings} businessName={workspace?.businessName} logout={logout} askEnabled={askEnabled && showOwnerChrome} onAsk={() => setAskOpen(true)} /><PageReveal routeKey={location.pathname}><Outlet context={routeContext} /></PageReveal></div>
       : <>
         {!subscriptionLocked && askEnabled ? <div className="ft-ask-staff-bar"><button type="button" className="btn" onClick={() => setAskOpen(true)}>Ask FinTrack</button></div> : null}
         <PageReveal routeKey={location.pathname}><Outlet context={routeContext} /></PageReveal>

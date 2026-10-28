@@ -883,6 +883,38 @@ export const inviteTeamMember = (token, { email, role, note } = {}) =>
     input_note: note || null,
   }, token));
 
+/** Create a CA / Accounts-team login inside the owner's organization (API + service role). */
+export async function createAccountsTeamUser(token, { fullName, email, role } = {}) {
+  const response = await fetch("/api/accounts/team-user", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ fullName, email, role }),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || "Could not create the Accounts login.");
+  return body;
+}
+
+export async function listAccountsTeamUsers(token) {
+  const response = await fetch("/api/accounts/team-user", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || "Could not load Accounts logins.");
+  return Array.isArray(body.members) ? body.members : [];
+}
+
+export async function updateAccountsTeamUser(token, { userId, active, role } = {}) {
+  const response = await fetch("/api/accounts/team-user", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ userId, active, role }),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || "Could not update the Accounts login.");
+  return body;
+}
+
 export const listTeamInvites = token =>
   ignoreMissing(supabase.rpc("acc_list_team_invites", {}, token))
     .then(rows => {

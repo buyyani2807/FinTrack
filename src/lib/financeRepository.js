@@ -102,7 +102,9 @@ export async function loadWorkspace(token) {
   const rows = await loadProfileOrganization(token, "id,full_name,role,is_active");
   const profile = rows[0];
   const organization = Array.isArray(profile?.organizations) ? profile.organizations[0] : profile?.organizations;
-  if (profile?.role !== "owner" && profile?.role !== "staff") throw new Error("Could not load workspace role.");
+  if (profile?.role !== "owner" && profile?.role !== "staff" && profile?.role !== "accounts") {
+    throw new Error("Could not load workspace role.");
+  }
   let businessName = organization?.name || "My Finance Business";
   let collectionScope = "";
   let accountsCompanyId = "";

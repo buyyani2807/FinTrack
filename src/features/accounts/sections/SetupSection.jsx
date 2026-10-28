@@ -62,17 +62,7 @@ export function SetupSection({
   setLockForm,
   locks,
   askReason,
-  accountsRoles,
-  teamInvites,
-  inviteDraft,
-  setInviteDraft,
-  setTeamInvites,
-  setAccountsRoles,
-  setInviteEmailDraft,
   setNotice,
-  inviteEmailDraft,
-  roleDraft,
-  setRoleDraft,
   canWrite,
   recurringTemplates,
   recurringDraft,
@@ -200,22 +190,13 @@ export function SetupSection({
         locks={locks}
         askReason={askReason}
       />
-      {canAdmin && <AccessRolesPanel
-        accountsRoles={accountsRoles}
-        teamInvites={teamInvites}
-        inviteDraft={inviteDraft}
-        setInviteDraft={setInviteDraft}
+      <AccessRolesPanel
         saving={saving}
         run={run}
         token={token}
-        setTeamInvites={setTeamInvites}
-        setAccountsRoles={setAccountsRoles}
-        setInviteEmailDraft={setInviteEmailDraft}
         setNotice={setNotice}
-        inviteEmailDraft={inviteEmailDraft}
-        roleDraft={roleDraft}
-        setRoleDraft={setRoleDraft}
-      />}
+        canAdmin={canAdmin}
+      />
       {canWrite && <RecurringEntriesPanel
         recurringTemplates={recurringTemplates}
         recurringDraft={recurringDraft}

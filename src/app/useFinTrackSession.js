@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { useNavigate } from "react-router";
-import { financeRolesAligned, ownerChromeAllowed, sessionUserRole, workspaceSessionAllowed } from "../features/finance/model/workspaceAccess.js";
+import { financeRolesAligned, ownerChromeAllowed, sessionUserRole, workspaceChromeAllowed, workspaceSessionAllowed } from "../features/finance/model/workspaceAccess.js";
 import { legalViewFromLocation } from "../features/legal/LegalPage.jsx";
 import { loadFinanceAccounts, loadWorkspace } from "../lib/financeRepository";
 import { supabase } from "../lib/supabase";
@@ -150,6 +150,7 @@ export function useFinTrackSession() {
   }, [user?.authToken]);
   useLayoutEffect(() => {
     const role = ownerChromeAllowed(user?.role, workspace?.role) ? "owner"
+      : user?.role === "financier" && workspace?.role === "accounts" ? "accounts"
       : user?.role === "agent" && workspace?.role === "staff" ? "staff"
       : "unknown";
     document.documentElement.dataset.ftRole = role;
@@ -167,6 +168,7 @@ export function useFinTrackSession() {
   const actions = useFinanceActions({ user, setLoans, refreshLoans });
   const financeSession = user?.role === "financier" || user?.role === "agent";
   const showOwnerChrome = ownerChromeAllowed(user?.role, workspace?.role);
+  const showWorkspaceChrome = workspaceChromeAllowed(user?.role, workspace?.role);
   const waitingForWorkspaceRole = financeSession && !financeRolesAligned(user?.role, workspace?.role);
   // Hold the loading screen until the first finance load settles, so pages open (and reveal) with their data.
   const waitingForFinanceData = financeSession && Boolean(user?.authToken) && !financeLoaded;
@@ -176,7 +178,7 @@ export function useFinTrackSession() {
   return {
     ...actions,
     isPasswordRecovery, legalView, isLoading, user, customerLoan, loans, setLoans, workspace, dataError,
-    showOwnerChrome, enterSession, enterCustomerSession, enterChitCustomerSession,
+    showOwnerChrome, showWorkspaceChrome, enterSession, enterCustomerSession, enterChitCustomerSession,
     logout, refreshWorkspace,
   };
 }
