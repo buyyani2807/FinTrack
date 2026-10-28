@@ -113,6 +113,12 @@ import {
 import { pageSlice } from "./model/accountsList.js";
 import { previousComparisonRange } from "./model/accountsIntelligence.js";
 import { downloadAccountsCsv, downloadAccountsExcel, downloadAccountsPdf } from "./io/accountingExport.js";
+import {
+  balanceExportRows,
+  cashflowExportRows,
+  pnlExportRows,
+  trialExportRows,
+} from "./sections/reports/reportStatementRows.js";
 import { loadOrganizationSettings } from "../../lib/financeRepository.js";
 import { buildSalesInvoice, buildVoucherDocument, canOpenVoucherDocument } from "./model/salesInvoiceModel.js";
 import { SalesInvoiceSuccessModal, SalesInvoiceViewerModal } from "./components/SalesInvoiceActions.jsx";
@@ -2146,32 +2152,95 @@ const openVoucher = () => {
   const exportRows = () => {
     const active = ["receivables", "payables", "pnl", "balance", "trial"].includes(section) ? section : reportTab;
     const stamp = todayIso();
+    const companyName = activeCompany?.name || settings?.companyName || "FinTrack";
+    const exportMeta = { companyName, from: rangeFrom, to: rangeTo };
     if (active === "trial") {
-      return { filename: `fintrack-trial-balance-${stamp}`, rows: [["Code", "Account", "Debit", "Credit"], ...tb.rows.map(row => [row.code, row.name, row.debit, row.credit]), ["", "Total", tb.totalDebit, tb.totalCredit]] };
+      return { filename: `fintrack-trial-balance-${stamp}`, rows: trialExportRows(tb, exportMeta) };
     }
     if (active === "pnl") {
-      return { filename: `fintrack-profit-loss-${stamp}`, rows: [["Section", "Account", "Amount"], ...pnl.income.map(row => ["Income", row.name, row.amount]), ["Income", "Total income", pnl.totalIncome], ...pnl.expenses.map(row => ["Expense", row.name, row.amount]), ["Expense", "Total expenses", pnl.totalExpense], ...(pnl.openingStock || pnl.closingStock ? [["Stock", "Opening stock", -pnl.openingStock], ["Stock", "Closing stock", pnl.closingStock]] : []), ["", "Net profit", pnl.net]] };
+      return { filename: `fintrack-profit-loss-${stamp}`, rows: pnlExportRows(pnl, exportMeta) };
     }
     if (active === "balance") {
-      return { filename: `fintrack-balance-sheet-${stamp}`, rows: [["Section", "Code", "Account", "Amount"], ...sheet.assets.map(row => ["Asset", row.code, row.name, row.balance]), ...sheet.liabilities.map(row => ["Liability", row.code, row.name, row.balance]), ...sheet.equity.map(row => ["Equity", row.code, row.name, row.balance])] };
+      return { filename: `fintrack-balance-sheet-${stamp}`, rows: balanceExportRows(sheet, exportMeta) };
     }
     if (active === "daybook") {
-      return { filename: `fintrack-day-book-${stamp}`, rows: [["Date", "Number", "Type", "Narration", "Amount"], ...books.map(row => [row.date, row.voucherNumber, row.voucherType, row.narration, row.debit])] };
+      return {
+        filename: `fintrack-day-book-${stamp}`,
+        rows: [
+          ["Day Book"],
+          [companyName],
+          [`Period: ${rangeFrom} to ${rangeTo}`],
+          [],
+          ["Date", "Number", "Type", "Narration", "Amount (₹)"],
+          ...books.map(row => [row.date, row.voucherNumber, row.voucherType, row.narration, row.debit]),
+        ],
+      };
     }
     if (active === "receivables") {
-      return { filename: `fintrack-receivables-${stamp}`, rows: [["Customer", "Invoice", "Invoice date", "Due date", "Amount", "Paid", "Outstanding", "Days outstanding", "Days overdue", "Status"], ...arInvoices.map(row => [row.partyName, row.reference, row.invoiceDate, row.dueDate, row.amount, row.paid, row.outstanding, row.daysOutstanding, row.daysOverdue, row.status])] };
+      return {
+        filename: `fintrack-receivables-${stamp}`,
+        rows: [
+          ["Receivables"],
+          [companyName],
+          [`Period: ${rangeFrom} to ${rangeTo}`],
+          [],
+          ["Customer", "Invoice", "Invoice date", "Due date", "Amount", "Paid", "Outstanding", "Days outstanding", "Days overdue", "Status"],
+          ...arInvoices.map(row => [row.partyName, row.reference, row.invoiceDate, row.dueDate, row.amount, row.paid, row.outstanding, row.daysOutstanding, row.daysOverdue, row.status]),
+        ],
+      };
     }
     if (active === "payables") {
-      return { filename: `fintrack-payables-${stamp}`, rows: [["Supplier", "Invoice", "Invoice date", "Due date", "Amount", "Paid", "Outstanding", "Days overdue", "Status"], ...apInvoices.map(row => [row.partyName, row.reference, row.invoiceDate, row.dueDate, row.amount, row.paid, row.outstanding, row.daysOverdue, row.status])] };
+      return {
+        filename: `fintrack-payables-${stamp}`,
+        rows: [
+          ["Payables"],
+          [companyName],
+          [`Period: ${rangeFrom} to ${rangeTo}`],
+          [],
+          ["Supplier", "Invoice", "Invoice date", "Due date", "Amount", "Paid", "Outstanding", "Days overdue", "Status"],
+          ...apInvoices.map(row => [row.partyName, row.reference, row.invoiceDate, row.dueDate, row.amount, row.paid, row.outstanding, row.daysOverdue, row.status]),
+        ],
+      };
     }
     if (active === "sales") {
-      return { filename: `fintrack-sales-${stamp}`, rows: [["Date", "Number", "Narration", "Amount"], ...salesRows.map(row => [row.date, row.voucherNumber, row.narration, row.debit])] };
+      return {
+        filename: `fintrack-sales-${stamp}`,
+        rows: [
+          ["Sales register"],
+          [companyName],
+          [`Period: ${rangeFrom} to ${rangeTo}`],
+          [],
+          ["Date", "Number", "Narration", "Amount (₹)"],
+          ...salesRows.map(row => [row.date, row.voucherNumber, row.narration, row.debit]),
+        ],
+      };
     }
     if (active === "purchases") {
-      return { filename: `fintrack-purchases-${stamp}`, rows: [["Date", "Number", "Narration", "Amount"], ...purchaseRows.map(row => [row.date, row.voucherNumber, row.narration, row.debit])] };
+      return {
+        filename: `fintrack-purchases-${stamp}`,
+        rows: [
+          ["Purchase register"],
+          [companyName],
+          [`Period: ${rangeFrom} to ${rangeTo}`],
+          [],
+          ["Date", "Number", "Narration", "Amount (₹)"],
+          ...purchaseRows.map(row => [row.date, row.voucherNumber, row.narration, row.debit]),
+        ],
+      };
     }
     if (active === "ledger") {
-      return { filename: `fintrack-ledger-${stamp}`, rows: [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])] };
+      return {
+        filename: `fintrack-ledger-${stamp}`,
+        rows: [
+          ["Account ledger"],
+          [companyName],
+          [`${ledger.account?.code || ""} ${ledger.account?.name || ""}`.trim() || "Ledger"],
+          [`Period: ${rangeFrom} to ${rangeTo}`],
+          [],
+          ["Date", "Voucher", "Narration", "Debit (₹)", "Credit (₹)", "Balance (₹)"],
+          ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance]),
+        ],
+      };
     }
     if (active === "item_profit") {
       const built = itemProfitExportRef.current?.();
@@ -2182,15 +2251,20 @@ const openVoucher = () => {
       return {
         filename: `fintrack-gst-books-${stamp}`,
         rows: [
+          ["GST books (for review — not portal filing)"],
+          [companyName],
+          [`Period: ${rangeFrom} to ${rangeTo}`],
+          [],
           ["Date", "Voucher", "Type", "HSN / SAC", "Taxable", "Rate", "CGST", "SGST", "IGST", "Direction"],
           ...gstReport.rows.map(row => [row.date, row.voucherNumber, row.voucherType, row.hsnSac || "", row.taxable, row.rate, row.cgst, row.sgst, row.igst, row.direction]),
+          [],
           ["", "", "", "Output GST", "", "", "", "", gstReport.outputTax, ""],
           ["", "", "", "Eligible ITC", "", "", "", "", gstReport.inputTax, ""],
           ["", "", "", "Net GST payable", "", "", "", "", gstReport.netPayable, ""],
         ],
       };
     }
-    return { filename: `fintrack-cash-flow-${stamp}`, rows: [["Metric", "Amount"], ["Inflow", flow.inflow], ["Outflow", flow.outflow], ["Internal transfers (excluded)", flow.transfers || 0], ["Net", flow.net]] };
+    return { filename: `fintrack-cash-flow-${stamp}`, rows: cashflowExportRows(flow, exportMeta) };
   };
 
   const exportReport = format => {
@@ -2200,9 +2274,16 @@ const openVoucher = () => {
         const { filename, rows } = exportRows();
         const active = ["receivables", "payables", "pnl", "balance", "trial"].includes(section) ? section : reportTab;
         const title = REPORT_TABS.find(item => item.id === active)?.label || "Accounts report";
-        const subtitle = `${settings?.companyName || "FinTrack"} · ${rangeFrom} to ${rangeTo}`;
+        const companyLabel = activeCompany?.name || settings?.companyName || "FinTrack";
+        const subtitle = `${companyLabel} · ${rangeFrom} to ${rangeTo}`;
+        // PDF already has title/subtitle; start the table at the column-header row.
+        const headerIdx = rows.findIndex(row => {
+          const first = String(row?.[0] || "").toLowerCase();
+          return ["particulars", "code", "date", "customer", "supplier", "section", "item", "metric"].includes(first);
+        });
+        const pdfRows = headerIdx >= 0 ? rows.slice(headerIdx) : rows;
         if (format === "xlsx") downloadAccountsExcel(`${filename}.xlsx`, rows);
-        else if (format === "pdf") downloadAccountsPdf(`${filename}.pdf`, { title, subtitle, rows });
+        else if (format === "pdf") downloadAccountsPdf(`${filename}.pdf`, { title, subtitle, rows: pdfRows });
         else downloadAccountsCsv(`${filename}.csv`, rows);
         setNotice("");
       } catch (err) {

@@ -4921,6 +4921,152 @@
   max-width: 62ch;
 }
 
+/* Financial statement presentation (P&L, Balance Sheet, Cash Flow). */
+.accounts-dashboard .acc-stmt {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 8px;
+}
+
+.accounts-dashboard .acc-stmt-head {
+  display: grid;
+  gap: 2px;
+}
+
+.accounts-dashboard .acc-stmt-title {
+  margin: 0;
+  font-size: var(--ft-type-section);
+  font-weight: 700;
+  letter-spacing: var(--ft-tracking-tight);
+  color: var(--acc-text);
+}
+
+.accounts-dashboard .acc-stmt-period {
+  margin: 0;
+  color: var(--acc-muted);
+  font-size: var(--ft-type-caption);
+}
+
+.accounts-dashboard .acc-stmt-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.accounts-dashboard .acc-stmt-table-wrap {
+  border: 1px solid var(--acc-line);
+  border-radius: var(--acc-radius);
+  background: var(--acc-card);
+  overflow: hidden;
+}
+
+.accounts-dashboard .acc-stmt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.accounts-dashboard .acc-stmt-table th,
+.accounts-dashboard .acc-stmt-table td {
+  padding: 9px 14px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid color-mix(in srgb, var(--acc-line) 80%, transparent);
+}
+
+.accounts-dashboard .acc-stmt-table th {
+  color: var(--acc-muted);
+  font-size: var(--ft-type-caption);
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  background: color-mix(in srgb, var(--acc-card) 92%, var(--acc-muted) 8%);
+}
+
+.accounts-dashboard .acc-stmt-table .acc-num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.accounts-dashboard .acc-stmt-section td {
+  padding-top: 14px;
+  color: var(--acc-text);
+  font-size: var(--ft-type-label);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom-color: transparent;
+}
+
+.accounts-dashboard .acc-stmt-section td.acc-num {
+  font-size: inherit;
+}
+
+.accounts-dashboard .acc-stmt-line td:first-child {
+  padding-left: 22px;
+  color: var(--acc-text);
+  font-size: var(--ft-type-ui);
+}
+
+.accounts-dashboard .acc-stmt-total td {
+  font-weight: 700;
+  border-top: 1px solid var(--acc-line);
+  border-bottom: 1px solid var(--acc-line);
+  background: color-mix(in srgb, var(--acc-card) 94%, var(--ft-primary) 6%);
+}
+
+.accounts-dashboard .acc-stmt-result td {
+  font-size: var(--ft-type-card);
+  font-weight: 750;
+  border-top: 2px solid var(--acc-text);
+  border-bottom: 0;
+  background: color-mix(in srgb, var(--acc-card) 90%, var(--ft-primary) 10%);
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+
+.accounts-dashboard .acc-stmt-blank td {
+  padding: 6px 14px;
+  border-bottom: 0;
+}
+
+.accounts-dashboard .acc-stmt-note td {
+  color: var(--acc-muted);
+  font-size: var(--ft-type-caption);
+  line-height: var(--ft-leading-body);
+  border-bottom: 0;
+  padding-top: 4px;
+  padding-bottom: 12px;
+}
+
+.accounts-dashboard .acc-stmt-total.is-good td.acc-num,
+.accounts-dashboard .acc-stmt-result.is-good td.acc-num,
+.accounts-dashboard .acc-stmt-line.is-good td.acc-num {
+  color: var(--ft-success);
+}
+
+.accounts-dashboard .acc-stmt-total.is-bad td.acc-num,
+.accounts-dashboard .acc-stmt-result.is-bad td.acc-num,
+.accounts-dashboard .acc-stmt-line.is-bad td.acc-num {
+  color: var(--ft-danger);
+}
+
+@media (max-width: 720px) {
+  .accounts-dashboard .acc-stmt-pair {
+    grid-template-columns: 1fr;
+  }
+
+  .accounts-dashboard .acc-stmt-line td:first-child {
+    padding-left: 14px;
+  }
+
+  .accounts-dashboard .acc-stmt-table th,
+  .accounts-dashboard .acc-stmt-table td {
+    padding: 8px 12px;
+  }
+}
+
 .accounts-dashboard .acc-report-plain {
   display: grid;
   gap: 6px;

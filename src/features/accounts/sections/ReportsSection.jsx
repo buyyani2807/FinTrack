@@ -1,4 +1,4 @@
-import { AccMetric, AccTable, DateSortTh } from "../components/AccUi.jsx";
+import { AccTable, DateSortTh } from "../components/AccUi.jsx";
 import { stockReasonLabel } from "../model/inventoryModel.js";
 import { money } from "../accountsFormat.js";
 import { useDateSort } from "../model/useDateSort.js";
@@ -6,6 +6,7 @@ import { ReportRangeBar } from "../components/AccPeriodBars.jsx";
 import { InvoiceTable } from "../components/InvoiceTable.jsx";
 import { ReportActions } from "./reports/ReportActions.jsx";
 import { ReportPlainSpeak } from "./reports/ReportPlainSpeak.jsx";
+import { StatementSheet } from "./reports/StatementSheet.jsx";
 import {
   agingInsight,
   balanceInsight,
@@ -15,6 +16,7 @@ import {
   pnlInsight,
   trialInsight,
 } from "./reports/reportPlainCopy.js";
+import { cashflowStatementRows, periodCaption } from "./reports/reportStatementRows.js";
 import { TrialBalanceReport } from "./reports/TrialBalanceReport.jsx";
 import { ProfitLossReport } from "./reports/ProfitLossReport.jsx";
 import { BalanceSheetReport } from "./reports/BalanceSheetReport.jsx";
@@ -83,6 +85,7 @@ export function ReportsSection({
   onOpenTradeDocument,
 }) {
   const stockSort = useDateSort(stockMoveRows, "movementDate");
+  const companyName = activeCompany?.name || settings?.companyName || "";
   const showTrial = (section === "trial" || reportTab === "trial") && section !== "pnl" && section !== "balance";
   const showPnl = (section === "pnl" || reportTab === "pnl") && section !== "trial" && section !== "balance";
   const showBalance = (section === "balance" || reportTab === "balance") && section !== "trial" && section !== "pnl";
@@ -96,19 +99,19 @@ export function ReportsSection({
       {showTrial && (
         <>
           <ReportPlainSpeak reportId="trial" insight={trialInsight(tb)} />
-          <TrialBalanceReport tb={tb} />
+          <TrialBalanceReport tb={tb} rangeFrom={rangeFrom} rangeTo={rangeTo} companyName={companyName} />
         </>
       )}
       {showPnl && (
         <>
           <ReportPlainSpeak reportId="pnl" insight={pnlInsight(pnl)} />
-          <ProfitLossReport pnl={pnl} />
+          <ProfitLossReport pnl={pnl} rangeFrom={rangeFrom} rangeTo={rangeTo} companyName={companyName} />
         </>
       )}
       {showBalance && (
         <>
           <ReportPlainSpeak reportId="balance" insight={balanceInsight(sheet)} />
-          <BalanceSheetReport sheet={sheet} />
+          <BalanceSheetReport sheet={sheet} rangeFrom={rangeFrom} rangeTo={rangeTo} companyName={companyName} />
         </>
       )}
       {section === "reports" && reportTab === "daybook" && (
@@ -120,12 +123,11 @@ export function ReportsSection({
       {section === "reports" && reportTab === "cashflow" && (
         <>
           <ReportPlainSpeak reportId="cashflow" insight={cashflowInsight(flow)} />
-          <div className="acc-metric-grid three">
-            <AccMetric label="Inflow" value={money(flow.inflow)} tone="green" />
-            <AccMetric label="Outflow" value={money(flow.outflow)} tone="red" />
-            <AccMetric label="Net cash" value={money(flow.net)} tone="gold" />
-          </div>
-          <p className="small">Internal cash/bank/UPI transfers ({money(flow.transfers || 0)}) are excluded from inflow and outflow. Closing cash still follows the ledgers.</p>
+          <StatementSheet
+            title="Cash Flow"
+            periodLabel={[companyName, periodCaption(rangeFrom, rangeTo)].filter(Boolean).join(" · ")}
+            rows={cashflowStatementRows(flow)}
+          />
         </>
       )}
       {section === "reports" && reportTab === "receivables" && (

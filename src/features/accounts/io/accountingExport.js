@@ -222,7 +222,12 @@ export function renderAccountsPdf({ title = "FinTrack report", subtitle = "", ro
     };
     paintRow(header, true);
     commands.push(line(PAGE.left, y + 8, PAGE.right, y + 8));
-    chunk.forEach(row => paintRow(row, false));
+    chunk.forEach(row => {
+      const label = String(row?.[0] ?? "").toLowerCase();
+      const emphasize = /^(total|net |income|expenses|stock|assets|liabilit|equity|inflow|outflow|balanced|difference)/i.test(label)
+        || (row || []).filter(cell => cell !== "" && cell != null).length === 1;
+      paintRow(row, emphasize);
+    });
     pages.push(commands);
   });
   return buildPdf(pages);
