@@ -170,7 +170,7 @@ export function ExpensesSection({
   const exports = [
     { id: "csv", label: "CSV", disabled: !tableRows.length, onClick: () => downloadAccountsCsv(exportName("csv"), exportRows()) },
     { id: "xlsx", label: "Excel", disabled: !tableRows.length, onClick: () => downloadAccountsExcel(exportName("xlsx"), exportRows()) },
-    { id: "pdf", label: "PDF", disabled: !tableRows.length, onClick: () => downloadAccountsPdf(exportName("pdf"), { title: "Expenses", subtitle: `${companyName ? `${companyName} · ` : ""}${period.label}${scopeName}`, rows: exportRows() }) },
+    { id: "pdf", label: "PDF", disabled: !tableRows.length, onClick: () => downloadAccountsPdf(exportName("pdf"), { title: "Expenses", subtitle: `${companyName ? `${companyName} - ` : ""}${period.label}${String(scopeName || "").replace(/·/g, "-")}`, rows: exportRows() }) },
   ];
 
   const hasInsights = Boolean(rise || repeats.length || aiInsights.length);
