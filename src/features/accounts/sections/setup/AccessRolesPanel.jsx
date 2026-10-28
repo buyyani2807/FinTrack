@@ -7,7 +7,43 @@ import {
 import { Select } from "../../../../components/Select.jsx";
 import { Field, AccSetupSection, AccTable } from "../../components/AccUi.jsx";
 
-const emptyDraft = () => ({ fullName: "", email: "", role: "viewer" });
+const emptyDraft = (activeCompanyId = "") => ({
+  fullName: "",
+  email: "",
+  role: "viewer",
+  companyIds: activeCompanyId ? [activeCompanyId] : [],
+});
+
+function CompanyChecklist({ companies, selectedIds, onChange, disabled = false }) {
+  if (!companies.length) {
+    return <p className="small">No active Accounts companies to assign.</p>;
+  }
+  return (
+    <div className="accounts-company-checklist" role="group" aria-label="Companies this login can open">
+      {companies.map(company => {
+        const checked = selectedIds.includes(company.id);
+        return (
+          <label key={company.id} className="accounts-company-check">
+            <input
+              type="checkbox"
+              checked={checked}
+              disabled={disabled}
+              onChange={() => {
+                if (checked && selectedIds.length === 1) return;
+                onChange(
+                  checked
+                    ? selectedIds.filter(id => id !== company.id)
+                    : [...selectedIds, company.id],
+                );
+              }}
+            />
+            <span>{company.name}{company.isPrimary ? " · primary" : ""}</span>
+          </label>
+        );
+      })}
+    </div>
+  );
+}
 
 export function AccessRolesPanel({
   saving,
@@ -15,11 +51,25 @@ export function AccessRolesPanel({
   token,
   setNotice,
   canAdmin = true,
+  companies = [],
+  activeCompanyId = "",
 }) {
-  const [draft, setDraft] = useState(emptyDraft);
+  const activeCompanies = companies.filter(company => company.status !== "archived");
+  const [draft, setDraft] = useState(() => emptyDraft(activeCompanyId));
   const [members, setMembers] = useState([]);
   const [createdLogin, setCreatedLogin] = useState(null);
   const [loadError, setLoadError] = useState("");
+  const [editingCompaniesFor, setEditingCompaniesFor] = useState(null);
+  const [editCompanyIds, setEditCompanyIds] = useState([]);
+
+  useEffect(() => {
+    setDraft(current => {
+      if (current.fullName || current.email) return current;
+      if (current.companyIds.length) return current;
+      if (!activeCompanyId) return current;
+      return { ...current, companyIds: [activeCompanyId] };
+    });
+  }, [activeCompanyId]);
 
   const refreshMembers = async () => {
     try {
@@ -57,16 +107,16 @@ export function AccessRolesPanel({
     <AccSetupSection
       icon="R"
       title="Add CA / Accounts login"
-      copy="Create a login inside this business for your CA or bookkeeper. They sign in as Financier with the email and temporary password you share. They only see Accounts — not Daily Finance, Chit, or Settings. Requires migration 109."
+      copy="Create a login for your CA or bookkeeper. They sign in as Financier with the email and temporary password you share. They only see Accounts, and only the companies you tick below. Requires migrations 109 and 111."
       collapsible
       summary={`${members.filter(row => row.active).length} logins`}
     >
       <div className="accounts-collab-guide">
         <div>
           <strong>Recommended</strong>
-          <p className="small">Use <b>Viewer</b> for a CA who only reviews. Use <b>Accountant</b> if they should post and reconcile. You stay the only owner.</p>
+          <p className="small">Default is the company you have open now. Tick more companies only if this CA should see them. Use <b>Viewer</b> for review-only; <b>Accountant</b> if they should post.</p>
         </div>
-        <span className="acc-chip ok">Same business</span>
+        <span className="acc-chip ok">Per company</span>
       </div>
 
       <h4 className="acc-subsection-title">New login</h4>
@@ -79,21 +129,28 @@ export function AccessRolesPanel({
             <option value="accountant">Accountant (can post)</option>
           </Select>
         </Field>
+        <Field label="Companies">
+          <CompanyChecklist
+            companies={activeCompanies}
+            selectedIds={draft.companyIds}
+            onChange={companyIds => setDraft(current => ({ ...current, companyIds }))}
+            disabled={saving}
+          />
+        </Field>
       </div>
       <div className="acc-form-actions">
         <button
           type="button"
           className="btn primary"
-          disabled={saving || !draft.fullName.trim() || !draft.email.trim()}
+          disabled={saving || !draft.fullName.trim() || !draft.email.trim() || !draft.companyIds.length}
           onClick={() => run(async () => {
             try {
               const result = await createAccountsTeamUser(token, draft);
-              setDraft(emptyDraft());
+              setDraft(emptyDraft(activeCompanyId));
               await refreshMembers();
               setCreatedLogin(result);
               return result;
             } catch (err) {
-              // Clear the taken address so the owner can type another without selecting first.
               if (/already|different email|registered|belongs to another/i.test(err?.message || "")) {
                 setDraft(current => ({ ...current, email: "" }));
               }
@@ -117,6 +174,7 @@ export function AccessRolesPanel({
               <p className="small">No new password — they already had a login. Ask them to use Forgot password if needed.</p>
             )}
             <Field label="Access"><input readOnly value={createdLogin.role === "accountant" ? "Accountant (can post)" : "Viewer (read only)"} /></Field>
+            <Field label="Companies"><input readOnly value={(createdLogin.companyNames || []).join(", ") || "—"} /></Field>
           </div>
           <div className="acc-form-actions">
             {createdLogin.temporaryPassword ? (
@@ -124,7 +182,10 @@ export function AccessRolesPanel({
                 type="button"
                 className="btn"
                 onClick={async () => {
-                  const text = `FinTrack Accounts access\n\nSign in as Financier (email + password).\nEmail: ${createdLogin.email}\nTemporary password: ${createdLogin.temporaryPassword}\nAccess: ${createdLogin.role}\n\nChange the password after first sign-in using Forgot password if you prefer.`;
+                  const companiesLine = (createdLogin.companyNames || []).length
+                    ? `\nCompanies: ${createdLogin.companyNames.join(", ")}`
+                    : "";
+                  const text = `FinTrack Accounts access\n\nSign in as Financier (email + password).\nEmail: ${createdLogin.email}\nTemporary password: ${createdLogin.temporaryPassword}\nAccess: ${createdLogin.role}${companiesLine}\n\nChange the password after first sign-in using Forgot password if you prefer.`;
                   try {
                     await navigator.clipboard.writeText(text);
                     setNotice("Login details copied. Paste them into WhatsApp or email for your CA.");
@@ -137,10 +198,13 @@ export function AccessRolesPanel({
               </button>
             ) : null}
             <button type="button" className="btn" onClick={() => {
+              const companiesLine = (createdLogin.companyNames || []).length
+                ? `\nCompanies: ${createdLogin.companyNames.join(", ")}`
+                : "";
               const subject = encodeURIComponent("FinTrack Accounts access");
               const body = encodeURIComponent(
                 createdLogin.temporaryPassword
-                  ? `You have Accounts access on FinTrack.\n\n1. Open FinTrack and choose Financier sign-in.\n2. Email: ${createdLogin.email}\n3. Temporary password: ${createdLogin.temporaryPassword}\n4. Access: ${createdLogin.role}\n\nPlease change the password after you sign in (Forgot password).`
+                  ? `You have Accounts access on FinTrack.\n\n1. Open FinTrack and choose Financier sign-in.\n2. Email: ${createdLogin.email}\n3. Temporary password: ${createdLogin.temporaryPassword}\n4. Access: ${createdLogin.role}${companiesLine}\n\nPlease change the password after you sign in (Forgot password).`
                   : `Your FinTrack Accounts access was updated (${createdLogin.role}).\n\nSign in as Financier with ${createdLogin.email}. Use Forgot password if you need a new password.`,
               );
               window.location.href = `mailto:${createdLogin.email}?subject=${subject}&body=${body}`;
@@ -156,12 +220,17 @@ export function AccessRolesPanel({
       {loadError ? <p className="notice" role="alert">{loadError}</p> : null}
 
       <h4 className="acc-subsection-title">Existing logins</h4>
-      <AccTable columns={["Name", "Email", "Access", ""]} empty={!members.length && "No CA or Accounts logins yet."}>
+      <AccTable columns={["Name", "Email", "Access", "Companies", ""]} empty={!members.length && "No CA or Accounts logins yet."}>
         {members.map(row => (
           <tr key={row.userId}>
             <td>{row.fullName || "—"}{row.active === false ? " · inactive" : ""}</td>
             <td>{row.email || "—"}</td>
             <td>{row.role === "accountant" ? "Accountant" : "Viewer"}</td>
+            <td>
+              {(row.companyNames || []).length
+                ? row.companyNames.join(", ")
+                : <span className="small">None assigned — they cannot open any company until you assign one.</span>}
+            </td>
             <td className="accounts-action-row">
               <Select
                 value={row.role}
@@ -177,6 +246,17 @@ export function AccessRolesPanel({
               <button
                 type="button"
                 className="btn"
+                disabled={saving || row.active === false}
+                onClick={() => {
+                  setEditingCompaniesFor(row.userId);
+                  setEditCompanyIds(row.companyIds?.length ? [...row.companyIds] : (activeCompanyId ? [activeCompanyId] : []));
+                }}
+              >
+                Companies
+              </button>
+              <button
+                type="button"
+                className="btn"
                 disabled={saving}
                 onClick={() => run(async () => {
                   await updateAccountsTeamUser(token, { userId: row.userId, active: row.active === false });
@@ -189,6 +269,34 @@ export function AccessRolesPanel({
           </tr>
         ))}
       </AccTable>
+
+      {editingCompaniesFor ? (
+        <div className="notice accounts-invite-email" role="dialog" aria-label="Edit company access">
+          <strong>Companies for this login</strong>
+          <p className="small">They will only see the companies you tick.</p>
+          <CompanyChecklist
+            companies={activeCompanies}
+            selectedIds={editCompanyIds}
+            onChange={setEditCompanyIds}
+            disabled={saving}
+          />
+          <div className="acc-form-actions">
+            <button
+              type="button"
+              className="btn primary"
+              disabled={saving || !editCompanyIds.length}
+              onClick={() => run(async () => {
+                await updateAccountsTeamUser(token, { userId: editingCompaniesFor, companyIds: editCompanyIds });
+                setEditingCompaniesFor(null);
+                await refreshMembers();
+              }, "Company access updated.")}
+            >
+              {saving ? "Saving…" : "Save companies"}
+            </button>
+            <button type="button" className="btn" disabled={saving} onClick={() => setEditingCompaniesFor(null)}>Cancel</button>
+          </div>
+        </div>
+      ) : null}
     </AccSetupSection>
   );
 }

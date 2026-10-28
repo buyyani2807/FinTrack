@@ -884,11 +884,11 @@ export const inviteTeamMember = (token, { email, role, note } = {}) =>
   }, token));
 
 /** Create a CA / Accounts-team login inside the owner's organization (API + service role). */
-export async function createAccountsTeamUser(token, { fullName, email, role } = {}) {
+export async function createAccountsTeamUser(token, { fullName, email, role, companyIds } = {}) {
   const response = await fetch("/api/accounts/team-user", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ fullName, email, role }),
+    body: JSON.stringify({ fullName, email, role, companyIds }),
   });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(body.error || "Could not create the Accounts login.");
@@ -904,11 +904,11 @@ export async function listAccountsTeamUsers(token) {
   return Array.isArray(body.members) ? body.members : [];
 }
 
-export async function updateAccountsTeamUser(token, { userId, active, role } = {}) {
+export async function updateAccountsTeamUser(token, { userId, active, role, companyIds } = {}) {
   const response = await fetch("/api/accounts/team-user", {
     method: "PATCH",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ userId, active, role }),
+    body: JSON.stringify({ userId, active, role, companyIds }),
   });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(body.error || "Could not update the Accounts login.");

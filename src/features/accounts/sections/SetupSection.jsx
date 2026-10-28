@@ -196,6 +196,8 @@ export function SetupSection({
         token={token}
         setNotice={setNotice}
         canAdmin={canAdmin}
+        companies={companies}
+        activeCompanyId={activeCompanyId}
       />
       {canWrite && <RecurringEntriesPanel
         recurringTemplates={recurringTemplates}

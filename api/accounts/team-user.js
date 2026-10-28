@@ -1,5 +1,6 @@
 /* global process */
-// Owner creates a CA / Accounts team login inside their own organization.
+// Owner creates a CA / Accounts team login inside their own organization,
+// scoped to one or more Accounts companies.
 import { temporaryAuthPassword } from "../_lib/agentPortal.js";
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
@@ -43,6 +44,59 @@ async function deleteAuthUser(userId) {
   }).catch(() => {});
 }
 
+/** Validate company UUIDs belong to this org and are active. */
+async function resolveCompanyIds(orgId, companyIds) {
+  const requested = [...new Set((Array.isArray(companyIds) ? companyIds : []).filter(isUuid))];
+  if (!requested.length) {
+    return { error: "Choose at least one Accounts company for this login." };
+  }
+  const companiesRes = await fetch(
+    `${supabaseUrl}/rest/v1/acc_companies?organization_id=eq.${orgId}&status=eq.active&id=in.(${requested.join(",")})&select=id,name`,
+    { headers: serviceHeaders() },
+  );
+  const companies = await companiesRes.json().catch(() => []);
+  if (!companiesRes.ok || !Array.isArray(companies) || companies.length !== requested.length) {
+    return { error: "One or more selected companies were not found in this business." };
+  }
+  return {
+    companyIds: companies.map(row => row.id),
+    companyNames: companies.map(row => row.name),
+  };
+}
+
+async function replaceCompanyAccess(orgId, userId, companyIds, createdBy) {
+  const deleted = await fetch(
+    `${supabaseUrl}/rest/v1/acc_user_company_access?organization_id=eq.${orgId}&user_id=eq.${userId}`,
+    { method: "DELETE", headers: serviceHeaders() },
+  );
+  if (!deleted.ok) {
+    const detail = await deleted.text();
+    if (/acc_user_company_access|schema cache|does not exist/i.test(detail)) {
+      return { error: "Run migration 111_accounts_team_company_access.sql in the Supabase SQL editor, then try again." };
+    }
+    return { error: "Could not update company access." };
+  }
+  const rows = companyIds.map(companyId => ({
+    organization_id: orgId,
+    user_id: userId,
+    company_id: companyId,
+    created_by: createdBy,
+  }));
+  const inserted = await fetch(`${supabaseUrl}/rest/v1/acc_user_company_access`, {
+    method: "POST",
+    headers: { ...serviceHeaders(), Prefer: "return=minimal" },
+    body: JSON.stringify(rows),
+  });
+  if (!inserted.ok) {
+    const detail = await inserted.text();
+    if (/acc_user_company_access|schema cache|does not exist/i.test(detail)) {
+      return { error: "Run migration 111_accounts_team_company_access.sql in the Supabase SQL editor, then try again." };
+    }
+    return { error: "Could not save company access." };
+  }
+  return { ok: true };
+}
+
 export default async function handler(req, res) {
   if (!supabaseUrl || !serviceKey || !anonKey) {
     return json(res, 500, { error: "Accounts team login is not configured on the server." });
@@ -60,7 +114,7 @@ export default async function handler(req, res) {
     if (!isUuid(orgId)) return json(res, 400, { error: "Organization not found." });
 
     if (req.method === "GET") {
-      const [rolesRes, profilesRes] = await Promise.all([
+      const [rolesRes, profilesRes, accessRes, companiesRes] = await Promise.all([
         fetch(
           `${supabaseUrl}/rest/v1/acc_user_roles?organization_id=eq.${orgId}&select=id,user_id,role,created_at&order=created_at.desc`,
           { headers: serviceHeaders() },
@@ -69,24 +123,49 @@ export default async function handler(req, res) {
           `${supabaseUrl}/rest/v1/profiles?organization_id=eq.${orgId}&role=eq.accounts&select=id,full_name,email,is_active,created_at&order=created_at.desc`,
           { headers: serviceHeaders() },
         ),
+        fetch(
+          `${supabaseUrl}/rest/v1/acc_user_company_access?organization_id=eq.${orgId}&select=user_id,company_id`,
+          { headers: serviceHeaders() },
+        ),
+        fetch(
+          `${supabaseUrl}/rest/v1/acc_companies?organization_id=eq.${orgId}&status=eq.active&select=id,name&order=name.asc`,
+          { headers: serviceHeaders() },
+        ),
       ]);
       const roles = await rolesRes.json().catch(() => []);
       const profiles = await profilesRes.json().catch(() => []);
+      const accessRows = await accessRes.json().catch(() => []);
+      const companies = await companiesRes.json().catch(() => []);
+      if (!accessRes.ok && /acc_user_company_access|schema cache|does not exist/i.test(String(accessRows?.message || accessRows?.error || ""))) {
+        return json(res, 500, { error: "Run migration 111_accounts_team_company_access.sql in the Supabase SQL editor, then try again." });
+      }
       const roleByUser = new Map((Array.isArray(roles) ? roles : []).map(row => [row.user_id, row]));
-      const members = (Array.isArray(profiles) ? profiles : []).map(row => ({
-        userId: row.id,
-        fullName: row.full_name || "",
-        email: row.email || "",
-        active: row.is_active !== false,
-        role: roleByUser.get(row.id)?.role || "viewer",
-        roleId: roleByUser.get(row.id)?.id || null,
-        createdAt: row.created_at,
-      }));
+      const nameByCompany = new Map((Array.isArray(companies) ? companies : []).map(row => [row.id, row.name]));
+      const companiesByUser = new Map();
+      for (const row of Array.isArray(accessRows) ? accessRows : []) {
+        const list = companiesByUser.get(row.user_id) || [];
+        list.push(row.company_id);
+        companiesByUser.set(row.user_id, list);
+      }
+      const members = (Array.isArray(profiles) ? profiles : []).map(row => {
+        const companyIds = companiesByUser.get(row.id) || [];
+        return {
+          userId: row.id,
+          fullName: row.full_name || "",
+          email: row.email || "",
+          active: row.is_active !== false,
+          role: roleByUser.get(row.id)?.role || "viewer",
+          roleId: roleByUser.get(row.id)?.id || null,
+          companyIds,
+          companyNames: companyIds.map(id => nameByCompany.get(id) || id),
+          createdAt: row.created_at,
+        };
+      });
       return json(res, 200, { members });
     }
 
     if (req.method === "PATCH") {
-      const { userId, active, role } = req.body || {};
+      const { userId, active, role, companyIds } = req.body || {};
       if (!isUuid(userId)) return json(res, 400, { error: "Choose a team member to update." });
       const targetRes = await fetch(
         `${supabaseUrl}/rest/v1/profiles?id=eq.${userId}&organization_id=eq.${orgId}&role=eq.accounts&select=id&limit=1`,
@@ -115,7 +194,6 @@ export default async function handler(req, res) {
             created_by: profile.id,
           }),
         });
-        // Fallback if upsert preference unsupported: patch then insert.
         if (!upserted.ok) {
           await fetch(
             `${supabaseUrl}/rest/v1/acc_user_roles?organization_id=eq.${orgId}&user_id=eq.${userId}`,
@@ -127,17 +205,26 @@ export default async function handler(req, res) {
           );
         }
       }
+      if (companyIds !== undefined) {
+        const resolved = await resolveCompanyIds(orgId, companyIds);
+        if (resolved.error) return json(res, 400, { error: resolved.error });
+        const access = await replaceCompanyAccess(orgId, userId, resolved.companyIds, profile.id);
+        if (access.error) return json(res, 500, { error: access.error });
+      }
       return json(res, 200, { ok: true });
     }
 
     if (req.method !== "POST") return json(res, 405, { error: "Method not allowed" });
 
-    const { fullName, email, role = "viewer" } = req.body || {};
+    const { fullName, email, role = "viewer", companyIds } = req.body || {};
     const emailAddress = contactEmail(email);
     const name = String(fullName || "").trim();
     const accountsRole = role === "accountant" ? "accountant" : "viewer";
     if (!name) return json(res, 400, { error: "Enter the CA’s name." });
     if (!emailAddress) return json(res, 400, { error: "Enter a valid email address." });
+
+    const resolved = await resolveCompanyIds(orgId, companyIds);
+    if (resolved.error) return json(res, 400, { error: resolved.error });
 
     const existingLookup = await fetch(`${supabaseUrl}/rest/v1/rpc/acc_admin_find_auth_user_id`, {
       method: "POST",
@@ -197,14 +284,18 @@ export default async function handler(req, res) {
           headers: { ...serviceHeaders(), Prefer: "return=minimal" },
           body: JSON.stringify({ full_name: name, email: emailAddress, is_active: true }),
         });
+        const access = await replaceCompanyAccess(orgId, existingUserId, resolved.companyIds, profile.id);
+        if (access.error) return json(res, 500, { error: access.error });
         return json(res, 200, {
           status: "updated",
           userId: existingUserId,
           email: emailAddress,
           fullName: name,
           role: accountsRole,
+          companyIds: resolved.companyIds,
+          companyNames: resolved.companyNames,
           temporaryPassword: null,
-          message: "This CA already had a login. Their Accounts role was updated. Ask them to sign in with their existing password, or use Forgot password.",
+          message: "This CA already had a login. Their role and company access were updated. Ask them to sign in with their existing password, or use Forgot password.",
         });
       }
       return json(res, 409, { error: "That email is already registered on FinTrack. Use a different email." });
@@ -265,14 +356,24 @@ export default async function handler(req, res) {
       return json(res, 500, { error: "Login was created but the Accounts role could not be saved. Run migrations 070–076 and 109, then try again." });
     }
 
+    const access = await replaceCompanyAccess(orgId, userId, resolved.companyIds, profile.id);
+    if (access.error) {
+      await fetch(`${supabaseUrl}/rest/v1/acc_user_roles?organization_id=eq.${orgId}&user_id=eq.${userId}`, { method: "DELETE", headers: serviceHeaders() });
+      await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${userId}`, { method: "DELETE", headers: serviceHeaders() });
+      await deleteAuthUser(userId);
+      return json(res, 500, { error: access.error });
+    }
+
     return json(res, 201, {
       status: "created",
       userId,
       email: emailAddress,
       fullName: name,
       role: accountsRole,
+      companyIds: resolved.companyIds,
+      companyNames: resolved.companyNames,
       temporaryPassword: password,
-      message: "Share the email and temporary password with your CA. They sign in as Financier.",
+      message: "Share the email and temporary password with your CA. They sign in as Financier and only see the companies you assigned.",
     });
   } catch (error) {
     return json(res, 500, { error: error.message || "Could not create the Accounts login." });
