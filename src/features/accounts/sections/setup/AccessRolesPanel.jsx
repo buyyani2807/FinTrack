@@ -22,7 +22,7 @@ export function AccessRolesPanel({
     <AccSetupSection
       icon="R"
       title="Accounts access roles"
-      copy="Invite your CA by email (viewer recommended), or paste a user UUID. Requires migrations 070–076."
+      copy="Invite your CA by email (viewer recommended), or paste a user UUID. If they already have a FinTrack login, the role is assigned immediately and listed as accepted. FinTrack does not email invites yet — use Open email draft after a pending invite."
       collapsible
       summary={`${accountsRoles.length} assigned · ${teamInvites.filter(row => row.status === "pending").length} pending`}
     >
@@ -42,16 +42,29 @@ export function AccessRolesPanel({
         <Field label="Note (optional)"><input value={inviteDraft.note} onChange={event => setInviteDraft(current => ({ ...current, note: event.target.value }))} placeholder="e.g. FY 2026-27 review" /></Field>
       </div>
       <div className="acc-form-actions">
-        <button type="button" className="btn primary" disabled={saving || !inviteDraft.email.trim()} onClick={() => run(async () => {
-          const result = await inviteTeamMember(token, inviteDraft);
-          setInviteDraft({ email: "", role: "viewer", note: "" });
-          setTeamInvites(await listTeamInvites(token));
-          setAccountsRoles(await loadAccountsRoles(token));
-          if (result?.status === "pending") setInviteEmailDraft({ email: result.email, role: result.role, expiresAt: result.expiresAt });
-          if (result?.status === "assigned") {
-            setNotice(`Assigned ${result.role} to ${result.email}.`);
-          }
-        }, inviteDraft.email ? `Invite processed for ${inviteDraft.email.trim()}.` : "Invite saved.")}>{saving ? "Saving…" : "Send invite"}</button>
+        <button type="button" className="btn primary" disabled={saving || !inviteDraft.email.trim()} onClick={() => {
+          const email = inviteDraft.email.trim();
+          run(async () => {
+            const result = await inviteTeamMember(token, inviteDraft);
+            setInviteDraft({ email: "", role: "viewer", note: "" });
+            setTeamInvites(await listTeamInvites(token) || []);
+            setAccountsRoles(await loadAccountsRoles(token) || []);
+            if (result?.status === "pending") {
+              setInviteEmailDraft({ email: result.email, role: result.role, expiresAt: result.expiresAt });
+            } else {
+              setInviteEmailDraft(null);
+            }
+            return result;
+          }, result => {
+            if (result?.status === "assigned") {
+              return `${result.email} already has a login — assigned as ${result.role}. Shown under invites as accepted, and in roles below.`;
+            }
+            if (result?.status === "pending") {
+              return `Invite saved for ${result.email}. No email is sent automatically — use Open email draft if shown.`;
+            }
+            return email ? `Invite processed for ${email}.` : "Invite saved.";
+          });
+        }}>{saving ? "Saving…" : "Send invite"}</button>
       </div>
       {inviteEmailDraft && <div className="notice accounts-invite-email" role="status"><strong>Invite recorded for {inviteEmailDraft.email}</strong><p className="small">The current backend does not send email automatically. Use your email client to send the instructions below; after the user signs up with this email, the invite is claimed automatically.</p><button type="button" className="btn" onClick={() => { const subject = encodeURIComponent(`FinTrack Accounts access · ${inviteEmailDraft.role}`); const body = encodeURIComponent(`You have been invited to FinTrack Accounts as ${inviteEmailDraft.role}. Sign up or sign in using this email address. Your Accounts access will be activated automatically after sign-in.`); window.location.href = `mailto:${inviteEmailDraft.email}?subject=${subject}&body=${body}`; }}>Open email draft</button><button type="button" className="btn" onClick={() => setInviteEmailDraft(null)}>Dismiss</button></div>}
       <AccTable columns={["Email", "Role", "Status", ""]} empty={!teamInvites.length && "No email invites yet."}>

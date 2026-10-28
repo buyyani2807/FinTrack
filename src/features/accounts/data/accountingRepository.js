@@ -887,6 +887,14 @@ export const listTeamInvites = token =>
   ignoreMissing(supabase.rpc("acc_list_team_invites", {}, token))
     .then(rows => {
       if (Array.isArray(rows)) return rows;
+      if (typeof rows === "string") {
+        try {
+          const parsed = JSON.parse(rows);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      }
       if (rows == null) return [];
       return [];
     });
