@@ -389,10 +389,10 @@ export function itemizedEntryDraft({
 export function currentStockForItem(item, movements = []) {
   if (!item || item.itemType === "service") return null;
   const rows = (movements || []).filter(row => row.itemId === item.id);
-  if (rows.length) {
-    return roundMoney(rows.reduce((sum, row) => sum + Number(row.quantityDelta || 0), 0));
-  }
-  return roundMoney(Number(item.openingStock || 0));
+  const moved = rows.reduce((sum, row) => sum + Number(row.quantityDelta || 0), 0);
+  const hasOpeningMovement = rows.some(row => row.reason === "opening");
+  const opening = hasOpeningMovement ? 0 : Number(item.openingStock || 0);
+  return roundMoney(moved + opening);
 }
 
 export function stockStatus(current, reorderLevel) {

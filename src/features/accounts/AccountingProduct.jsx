@@ -1010,16 +1010,40 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   };
 
   // Each variance is its own stock RPC; report how far a partial run got.
+  // Patch local movements immediately so Physical count book qty updates even if a soft refresh is slow.
   const applyPhysicalCount = ({ date, variances }) => run(async () => {
     let posted = 0;
+    const created = [];
     for (const row of variances) {
       try {
-        await adjustStock(token, { itemId: row.itemId, date, quantityDelta: row.quantityDelta, reasonNote: `Physical stock count ${date}` });
+        const id = await adjustStock(token, {
+          itemId: row.itemId,
+          date,
+          quantityDelta: row.quantityDelta,
+          reasonNote: `Physical stock count ${date}`,
+        });
         posted += 1;
+        created.push({
+          id: typeof id === "string" ? id : `count:${row.itemId}:${date}:${posted}`,
+          itemId: row.itemId,
+          movementDate: date,
+          quantityDelta: Number(row.quantityDelta),
+          reason: "adjustment",
+          note: `Physical stock count ${date}`,
+          voucherId: null,
+          voucherItemLineId: null,
+          voucherNumber: "",
+          documentId: null,
+          documentLineId: null,
+          createdAt: new Date().toISOString(),
+          createdBy: null,
+        });
       } catch (err) {
+        if (created.length) setStockMovements(current => [...created, ...current]);
         throw new Error(`${row.name}: ${err.message || "could not adjust"}${posted ? ` (${posted} of ${variances.length} adjustments already posted)` : ""}`);
       }
     }
+    if (created.length) setStockMovements(current => [...created, ...current]);
   }, `${variances.length} stock adjustment${variances.length === 1 ? "" : "s"} posted from the physical count.`);
 
   // Settings-only write — do not call run()/refresh(); reloading all books made the toggle feel stuck.

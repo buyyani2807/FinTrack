@@ -136,19 +136,28 @@ export function AccInventoryWorkspace({
 
   const applyCount = async () => {
     setCountError("");
+    if (!onApplyCount) {
+      setCountError("Posting is not available on this screen.");
+      return;
+    }
     let rows;
     try {
       rows = physicalCountVariances({ items: products, movements, voucherItemLines, counts: countValues, date: countDate });
     } catch (err) {
-      setCountError(err.message);
+      setCountError(err.message || "Could not read the count.");
       return;
     }
     if (!rows.length) {
       setCountError("Counted quantities match the books — nothing to adjust.");
       return;
     }
-    const ok = await onApplyCount({ date: countDate, variances: rows });
-    if (ok) setCounts({});
+    try {
+      const ok = await onApplyCount({ date: countDate, variances: rows });
+      if (ok) setCounts({});
+      else setCountError("Adjustments were not posted. Check the error toast, then try again.");
+    } catch (err) {
+      setCountError(err?.message || "Could not post adjustments.");
+    }
   };
 
   return (
