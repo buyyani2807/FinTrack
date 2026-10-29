@@ -2,10 +2,10 @@
   <rect width="512" height="512" rx="112" fill="#217d73"/>
   <rect x="40" y="40" width="432" height="432" rx="88" fill="#191919"/>
   <!-- F -->
-  <path fill="#ffffff" d="M132 148h188v44H180v52h120v42H180v118h-48V148Z"/>
-  <!-- i (dot + stem) above a -->
-  <circle cx="400" cy="176" r="14" fill="#35b3a6"/>
-  <rect x="386" y="204" width="28" height="86" rx="6" fill="#35b3a6"/>
-  <!-- a below i -->
-  <path fill="#35b3a6" d="M372 318c-28 0-48 18-48 46 0 27 18 45 48 45 14 0 26-4 34-11v7h28v-78c0-32-22-49-62-49zm0 28c16 0 26 8 26 21s-10 22-26 22-26-9-26-22 10-21 26-21Z"/>
+  <path fill="#ffffff" d="M118 148h178v44H166v52h114v42H166v118h-48V148Z"/>
+  <!-- italic a with superscript i -->
+  <g fill="#35b3a6" font-family="Libre Baskerville, Georgia, Times New Roman, serif" font-style="italic">
+    <text x="300" y="360" font-size="200" font-weight="400">a</text>
+    <text x="420" y="210" font-size="96" font-weight="400">i</text>
+  </g>
 </svg>

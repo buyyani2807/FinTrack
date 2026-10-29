@@ -1,12 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 120" role="img" aria-label="FinTrackit">
-  <text x="0" y="72" font-family="Poppins, Arial, sans-serif" font-size="72" letter-spacing="0.04em">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 120" role="img" aria-label="FinTrackit">
+  <text x="0" y="78" font-family="Poppins, Arial, sans-serif" font-size="72" letter-spacing="0.04em">
     <tspan font-weight="800" fill="#191919">FIN</tspan>
     <tspan font-weight="500" fill="#217d73">Track</tspan>
   </text>
-  <!-- i above a, same wordmark line -->
-  <g font-family="Poppins, Arial, sans-serif" text-anchor="middle" fill="#217d73">
-    <text x="428" y="72" font-size="72" font-weight="500">i</text>
-    <text x="428" y="102" font-size="28" font-weight="800">a</text>
+  <!-- a with superscript i (AI) -->
+  <g fill="#217d73" font-family="Libre Baskerville, Georgia, Times New Roman, serif" font-style="italic">
+    <text x="404" y="78" font-size="72" font-weight="400">a</text>
+    <text x="448" y="42" font-size="34" font-weight="400">i</text>
   </g>
-  <text x="448" y="72" font-family="Poppins, Arial, sans-serif" font-size="72" font-weight="500" fill="#217d73">t</text>
+  <text x="470" y="78" font-family="Poppins, Arial, sans-serif" font-size="72" font-weight="500" fill="#217d73">t</text>
 </svg>
