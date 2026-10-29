@@ -265,6 +265,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [partyTypeBaseline, setPartyTypeBaseline] = useState("");
   const [partyTypeConfirmed, setPartyTypeConfirmed] = useState(false);
   const [partyCreateTarget, setPartyCreateTarget] = useState("");
+  const [pipelineOnCreate, setPipelineOnCreate] = useState(false);
   const [partyImportStatus, setPartyImportStatus] = useState("");
   const [coaForm, setCoaForm] = useState(emptyCoaForm);
   const [setupForm, setSetupForm] = useState({ companyName: "", booksStartedOn: todayIso() });
@@ -1569,6 +1570,7 @@ const openVoucher = () => {
       setPartyForm(emptyPartyForm());
     }
     setPartyCreateTarget("");
+    setPipelineOnCreate(false);
     setShowParty(true);
   };
 
@@ -1581,6 +1583,20 @@ const openVoucher = () => {
     setPartyTypeBaseline("");
     setPartyForm({ ...emptyPartyForm(), partyType: partyType === "supplier" ? "supplier" : "customer" });
     setPartyCreateTarget(partyType === "supplier" ? "supplier" : "customer");
+    setPipelineOnCreate(false);
+    setShowParty(true);
+  };
+
+  const openPartyForCrm = () => {
+    if (!canWrite) {
+      setError("Your Accounts role is view-only.");
+      return;
+    }
+    setPartyTypeConfirmed(false);
+    setPartyTypeBaseline("");
+    setPartyForm({ ...emptyPartyForm(), partyType: "customer" });
+    setPartyCreateTarget("customer");
+    setPipelineOnCreate(true);
     setShowParty(true);
   };
 
@@ -1590,6 +1606,7 @@ const openVoucher = () => {
     setPartyTypeBaseline("");
     setPartyTypeConfirmed(false);
     setPartyCreateTarget("");
+    setPipelineOnCreate(false);
     setPartyForm(emptyPartyForm());
   };
 
@@ -1690,12 +1707,17 @@ const openVoucher = () => {
           ...(creditDays != null ? { dueDate: addDaysIso(current.date, creditDays) } : {}),
         }));
       }
+      if (!partyForm.id && pipelineOnCreate && typeof partyId === "string") {
+        await setPartyPipelineStage(token, partyId, "Lead");
+        setPartyPipeline(current => ({ ...current, [partyId]: "Lead" }));
+      }
       setShowParty(false);
       setPartyTypeBaseline("");
       setPartyTypeConfirmed(false);
       setPartyCreateTarget("");
+      setPipelineOnCreate(false);
       setPartyForm(emptyPartyForm());
-    }, partyForm.id ? (typeChanged ? "Party type updated. Historical vouchers are unchanged." : "Party updated successfully") : createdLabel);
+    }, partyForm.id ? (typeChanged ? "Party type updated. Historical vouchers are unchanged." : "Party updated successfully") : (pipelineOnCreate ? "Lead added to pipeline." : createdLabel));
   };
 
   const importParties = async event => {
@@ -2862,10 +2884,26 @@ const openVoucher = () => {
           openSimpleFromBankLine={openSimpleFromBankLine}
         />}
 
-        {section === "crm" && <CustomerPipeline companyId={activeCompanyId} parties={parties} pipeline={partyPipeline} saving={saving} onStageChange={(partyId, stage) => run(async () => {
-          await setPartyPipelineStage(token, partyId, stage);
-          setPartyPipeline(current => ({ ...current, [partyId]: stage }));
-        }, "Pipeline stage saved.")} />}
+        {section === "crm" && <CustomerPipeline
+          parties={parties}
+          pipeline={partyPipeline}
+          saving={saving}
+          canWrite={canWrite}
+          onAddLead={openPartyForCrm}
+          onOpenParty={openParty}
+          onStageChange={(partyId, stage) => run(async () => {
+            await setPartyPipelineStage(token, partyId, stage);
+            setPartyPipeline(current => ({ ...current, [partyId]: stage }));
+          }, "Pipeline stage saved.")}
+          onAddMany={(partyIds, stage) => run(async () => {
+            for (const partyId of partyIds) await setPartyPipelineStage(token, partyId, stage);
+            setPartyPipeline(current => {
+              const next = { ...current };
+              for (const partyId of partyIds) next[partyId] = stage;
+              return next;
+            });
+          }, partyIds.length === 1 ? "Pipeline stage saved." : `${partyIds.length} customers added to ${stage}.`)}
+        />}
 
         {section === "setup" && <SetupSection
           openMigration={canAdmin && settings ? () => setShowMigration(true) : null}
