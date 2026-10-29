@@ -62,6 +62,7 @@ import {
   CASH_PARTY_ID,
   PARTY_FORM_TYPES,
   SIMPLE_ENTRY_KINDS,
+  VOUCHER_TYPES,
   accountNormalSide,
   addDaysIso,
   entryPartyId,
@@ -815,10 +816,15 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     [wantLedger, accounts, vouchers, ledgerId, range],
   );
   const q = String(deferredSearch || "").trim().toLowerCase();
-  const shownVouchers = useMemo(() => vouchers.filter(voucher => {
-    if (!q) return true;
-    return `${voucher.voucherNumber} ${voucher.narration} ${voucher.voucherType}`.toLowerCase().includes(q);
-  }), [vouchers, q]);
+  const shownVouchers = useMemo(() => {
+    if (!q) return vouchers;
+    const partyName = id => parties.find(party => party.id === id)?.name || "";
+    return vouchers.filter(voucher => (
+      `${voucher.voucherNumber} ${voucher.narration} ${voucher.voucherType} ${partyName(voucher.partyId)} ${VOUCHER_TYPES[voucher.voucherType]?.label || ""}`
+        .toLowerCase()
+        .includes(q)
+    ));
+  }, [vouchers, parties, q]);
   const pagedVouchers = useMemo(() => pageSlice(shownVouchers, listPage), [shownVouchers, listPage]);
   const pagedLedger = useMemo(() => pageSlice(ledger.rows, listPage), [ledger.rows, listPage]);
   const pagedAudit = useMemo(() => pageSlice(audit, listPage), [audit, listPage]);

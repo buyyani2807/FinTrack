@@ -33,10 +33,10 @@ export function VouchersSection({
   setListPage,
 }) {
   return (
-    <div className="acc-panel">
+    <div className="acc-panel acc-tx">
       {canWrite && (
         <AccToolbar
-          className="spacer"
+          className="acc-tx-toolbar"
           start={(
             <div className="acc-btn-group">
               <button type="button" className="btn primary" onClick={() => openSimple("sale")}>+ Sale</button>
@@ -58,42 +58,64 @@ export function VouchersSection({
             </div>
           )}
           end={(
-            <input className="accounts-search" placeholder="Search voucher or narration" value={search} onChange={event => setSearch(event.target.value)} />
+            <input
+              className="accounts-search acc-tx-search"
+              placeholder="Search voucher, party, or narration"
+              value={search}
+              onChange={event => setSearch(event.target.value)}
+              aria-label="Search transactions"
+            />
           )}
         />
       )}
       {!canWrite && (
-        <div className="accounts-action-row spacer">
-          <input className="accounts-search" placeholder="Search voucher or narration" value={search} onChange={event => setSearch(event.target.value)} />
+        <div className="accounts-action-row acc-tx-toolbar">
+          <input
+            className="accounts-search acc-tx-search"
+            placeholder="Search voucher, party, or narration"
+            value={search}
+            onChange={event => setSearch(event.target.value)}
+            aria-label="Search transactions"
+          />
         </div>
       )}
-      <div className="accounts-entry-list spacer">
-        {pagedVouchers.items.map(voucher => <VoucherRow
-          key={voucher.id}
-          voucher={voucher}
-          setExpandedVoucherId={setExpandedVoucherId}
-          expandedVoucherId={expandedVoucherId}
-          openSalesInvoice={openSalesInvoice}
-          canWrite={canWrite}
-          duplicateVoucher={duplicateVoucher}
-          saving={saving}
-          askReason={askReason}
-          run={run}
-          token={token}
-          shownVouchers={shownVouchers}
-          showAdjacentVoucher={showAdjacentVoucher}
-          parties={parties}
-          accounts={accounts}
-          activeCompany={activeCompany}
-          workspace={workspace}
-          voucherItemLines={voucherItemLines}
-          orgSettings={orgSettings}
-          attachmentBusy={attachmentBusy}
-          onAttachVoucherFile={onAttachVoucherFile}
-          voucherAttachments={voucherAttachments}
-          onDeleteAttachment={onDeleteAttachment}
-        />)}
-        {!shownVouchers.length && <AccEmpty title="No transactions yet" copy="Use a guided entry for everyday work, or an advanced voucher for a custom journal." actionLabel="+ Create transaction" onAction={() => openSimple("sale")} />}
+      <div className="acc-tx-list" role="list">
+        {pagedVouchers.items.map(voucher => (
+          <div key={voucher.id} role="listitem">
+            <VoucherRow
+              voucher={voucher}
+              setExpandedVoucherId={setExpandedVoucherId}
+              expandedVoucherId={expandedVoucherId}
+              openSalesInvoice={openSalesInvoice}
+              canWrite={canWrite}
+              duplicateVoucher={duplicateVoucher}
+              saving={saving}
+              askReason={askReason}
+              run={run}
+              token={token}
+              shownVouchers={shownVouchers}
+              showAdjacentVoucher={showAdjacentVoucher}
+              parties={parties}
+              accounts={accounts}
+              activeCompany={activeCompany}
+              workspace={workspace}
+              voucherItemLines={voucherItemLines}
+              orgSettings={orgSettings}
+              attachmentBusy={attachmentBusy}
+              onAttachVoucherFile={onAttachVoucherFile}
+              voucherAttachments={voucherAttachments}
+              onDeleteAttachment={onDeleteAttachment}
+            />
+          </div>
+        ))}
+        {!shownVouchers.length && (
+          <AccEmpty
+            title="No transactions yet"
+            copy="Use a guided entry for everyday work, or an advanced voucher for a custom journal."
+            actionLabel="+ Create transaction"
+            onAction={() => openSimple("sale")}
+          />
+        )}
       </div>
       <AccPager page={pagedVouchers.page} pages={pagedVouchers.pages} total={pagedVouchers.total} onPage={setListPage} noun="vouchers" />
     </div>
