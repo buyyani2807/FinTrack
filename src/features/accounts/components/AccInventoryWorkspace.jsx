@@ -27,8 +27,6 @@ const TABS = [
 ];
 
 
-const DEFAULT_COUNT = "1";
-
 export function AccInventoryWorkspace({
   items = [],
   movements = [],
@@ -79,19 +77,15 @@ export function AccInventoryWorkspace({
     () => (tab === "count" ? stockValuation({ items: products.filter(item => item.isActive !== false), movements, voucherItemLines, asOf: countDate }) : null),
     [tab, products, movements, voucherItemLines, countDate],
   );
-  // Every counted box starts at 1; clearing a box skips that item. `counts` only holds what the user typed.
-  const countValues = useMemo(
-    () => Object.fromEntries((countBook?.rows || []).map(row => [row.itemId, counts[row.itemId] ?? DEFAULT_COUNT])),
-    [countBook, counts],
-  );
+  // Blank counted = skip that item. Only rows the user typed are considered for adjustments.
   const variances = useMemo(() => {
     if (tab !== "count") return [];
     try {
-      return physicalCountVariances({ items: products, movements, voucherItemLines, counts: countValues, date: countDate });
+      return physicalCountVariances({ items: products, movements, voucherItemLines, counts, date: countDate });
     } catch {
       return [];
     }
-  }, [tab, products, movements, voucherItemLines, countValues, countDate]);
+  }, [tab, products, movements, voucherItemLines, counts, countDate]);
 
   const profitRows = useMemo(
     () => (tab === "summary"
@@ -142,19 +136,25 @@ export function AccInventoryWorkspace({
     }
     let rows;
     try {
-      rows = physicalCountVariances({ items: products, movements, voucherItemLines, counts: countValues, date: countDate });
+      rows = physicalCountVariances({ items: products, movements, voucherItemLines, counts, date: countDate });
     } catch (err) {
       setCountError(err.message || "Could not read the count.");
       return;
     }
     if (!rows.length) {
-      setCountError("Counted quantities match the books — nothing to adjust.");
+      setCountError("Enter a counted quantity that differs from book qty, then post.");
       return;
     }
     try {
       const ok = await onApplyCount({ date: countDate, variances: rows });
-      if (ok) setCounts({});
-      else setCountError("Adjustments were not posted. Check the error toast, then try again.");
+      if (ok) {
+        // Drop posted rows from the form so only unfinished counts stay.
+        setCounts(current => {
+          const next = { ...current };
+          for (const row of rows) delete next[row.itemId];
+          return next;
+        });
+      } else setCountError("Adjustments were not posted. Check the error toast, then try again.");
     } catch (err) {
       setCountError(err?.message || "Could not post adjustments.");
     }
@@ -200,7 +200,7 @@ export function AccInventoryWorkspace({
         countBook={countBook}
         matches={matches}
         variances={variances}
-        counts={countValues}
+        counts={counts}
         canEdit={canEdit}
         setCounts={setCounts}
         countError={countError}
