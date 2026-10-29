@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 120" role="img" aria-label="FinTrackit">
+  <text x="0" y="82" font-family="Poppins, Arial, sans-serif" font-size="72" letter-spacing="0.04em">
+    <tspan font-weight="800" fill="#191919">FIN</tspan>
+    <tspan font-weight="500" fill="#217d73">Track</tspan>
+  </text>
+  <!-- a stacked on i -->
+  <g font-family="Poppins, Arial, sans-serif" text-anchor="middle" fill="#217d73">
+    <text x="428" y="42" font-size="28" font-weight="800">a</text>
+    <text x="428" y="82" font-size="72" font-weight="500">1</text>
+  </g>
+  <text x="448" y="82" font-family="Poppins, Arial, sans-serif" font-size="72" font-weight="500" fill="#217d73">t</text>
+</svg>

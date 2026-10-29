@@ -1,4 +1,5 @@
 import { BellRing, CheckCheck, MapPin, TrendingUp } from "lucide-react";
+import { BrandWordmark } from "../../../components/BrandWordmark.jsx";
 
 // Decorative product preview beside the sign-in form (sample figures, hidden from screen readers).
 // Everything inside .ft-auth-stage is sized in one scale unit (--u), so the composition grows and
@@ -10,7 +11,7 @@ const CALENDAR = Array.from({ length: 21 }, (_, index) => index + 8);
 export function AuthShowcase() {
   return (
     <aside className="ft-auth-showcase" aria-hidden="true">
-      <span className="ft-auth-showcase-brand ft-brand"><span className="ft-brand-strong">FIN</span>Track</span>
+      <BrandWordmark className="ft-auth-showcase-brand" />
       <div className="ft-auth-showcase-copy">
         <p className="ft-auth-kicker">Finance · Chit Fund · Accounts</p>
         <h2>Every collection, scheme and ledger in one place.</h2>

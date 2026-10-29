@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { AlertCircle, ArrowRight, ArrowUpRight, Briefcase, Building2, CheckCircle2, Coins, IdCard, Info, KeyRound, LockKeyhole, Mail, Route, ShieldCheck, Ticket, UserRound } from "lucide-react";
+import { BrandWordmark } from "../../components/BrandWordmark.jsx";
 import { Button, Field, IconInput, PasswordInput } from "../../components/ui.jsx";
 import { AuthShowcase } from "./components/AuthShowcase.jsx";
 import { chitCustomerPortalLogin, customerPortalLogin, loadWorkspace } from "../../lib/financeRepository";
@@ -50,9 +51,9 @@ function AuthNotice({ notice }) {
   </div>;
 }
 
-// FINTrack wordmark (Poppins, as in the Finebank logo) with an optional product suffix such as "Accounts".
+// FinTrackit wordmark with an optional product suffix such as "Accounts".
 function Wordmark({ suffix = "" }) {
-  return <span className="ft-brand"><span className="ft-brand-strong">FIN</span>Track{suffix ? <span className="ft-wordmark-suffix"> {suffix}</span> : null}</span>;
+  return <BrandWordmark suffix={suffix} />;
 }
 
 export function PasswordRecovery() {
