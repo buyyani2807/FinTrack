@@ -824,7 +824,6 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
         .includes(q)
     ));
   }, [vouchers, parties, q]);
-  const pagedVouchers = useMemo(() => pageSlice(shownVouchers, listPage), [shownVouchers, listPage]);
   const pagedLedger = useMemo(() => pageSlice(ledger.rows, listPage), [ledger.rows, listPage]);
   const pagedAudit = useMemo(() => pageSlice(audit, listPage), [audit, listPage]);
   const pagedSetupParties = useMemo(() => pageSlice(setupParties, listPage), [setupParties, listPage]);
@@ -1152,13 +1151,6 @@ const openVoucher = () => {
     setLines(copied.length >= 2 ? copied : [...copied, emptyLine(), emptyLine()].slice(0, Math.max(2, copied.length)));
     setVoucherRequestId(newClientRequestId());
     setShowVoucher(true);
-  };
-
-  const showAdjacentVoucher = (voucherId, delta) => {
-    const index = shownVouchers.findIndex(item => item.id === voucherId);
-    if (index < 0) return;
-    const next = shownVouchers[index + delta];
-    if (next) setExpandedVoucherId(next.id);
   };
 
   const reloadExpandedAttachments = async voucherId => {
@@ -2529,7 +2521,7 @@ const openVoucher = () => {
           openSimple={openSimple}
           search={search}
           setSearch={setSearch}
-          pagedVouchers={pagedVouchers}
+          shownVouchers={shownVouchers}
           setExpandedVoucherId={setExpandedVoucherId}
           expandedVoucherId={expandedVoucherId}
           openSalesInvoice={openSalesInvoice}
@@ -2538,8 +2530,6 @@ const openVoucher = () => {
           askReason={askReason}
           run={run}
           token={token}
-          shownVouchers={shownVouchers}
-          showAdjacentVoucher={showAdjacentVoucher}
           parties={parties}
           accounts={accounts}
           activeCompany={activeCompany}
@@ -2550,6 +2540,7 @@ const openVoucher = () => {
           onAttachVoucherFile={onAttachVoucherFile}
           voucherAttachments={voucherAttachments}
           onDeleteAttachment={onDeleteAttachment}
+          listPage={listPage}
           setListPage={setListPage}
         />}
 

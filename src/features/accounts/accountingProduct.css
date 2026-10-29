@@ -6597,74 +6597,16 @@
   .accounts-dashboard .ca-pack-pile .ca-pack-actions { width: auto; }
 }
 
-/* ===== Transactions list ===== */
-.accounts-dashboard .acc-tx {
-  width: min(100%, 52rem);
-  max-width: 100%;
-}
-
+/* ===== Transactions list (Sales / Day Book style table) ===== */
 .accounts-dashboard .acc-tx-toolbar {
   margin-bottom: 12px;
 }
 
 .accounts-dashboard .acc-tx-search {
-  width: 100%;
+  width: min(100%, 28rem);
   min-width: 0;
 }
 
-.accounts-dashboard .acc-tx-list {
-  display: grid;
-  gap: 0;
-  border: 1px solid var(--ft-border);
-  border-radius: 12px;
-  background: var(--ft-surface);
-  overflow: hidden;
-}
-
-.accounts-dashboard .acc-tx-row {
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--ft-border);
-  background: var(--ft-surface);
-}
-
-.accounts-dashboard .acc-tx-list > :last-child .acc-tx-row,
-.accounts-dashboard .acc-tx-list > .acc-tx-row:last-child {
-  border-bottom: 0;
-}
-
-.accounts-dashboard .acc-tx-row.is-open {
-  background: color-mix(in srgb, var(--ft-primary) 4%, var(--ft-surface));
-}
-
-.accounts-dashboard .acc-tx-row:hover {
-  background: color-mix(in srgb, var(--ft-surface-hover) 80%, var(--ft-surface));
-}
-
-.accounts-dashboard .acc-tx-row.is-open:hover {
-  background: color-mix(in srgb, var(--ft-primary) 6%, var(--ft-surface));
-}
-
-.accounts-dashboard .acc-tx-main {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px 16px;
-  align-items: start;
-}
-
-.accounts-dashboard .acc-tx-copy {
-  min-width: 0;
-  display: grid;
-  gap: 4px;
-}
-
-.accounts-dashboard .acc-tx-topline {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-.accounts-dashboard .acc-tx-type,
 .accounts-dashboard .acc-tx-status {
   display: inline-flex;
   align-items: center;
@@ -6674,37 +6616,7 @@
   font-size: var(--ft-type-caption);
   font-weight: 650;
   line-height: 1;
-}
-
-.accounts-dashboard .acc-tx-type {
-  background: var(--ft-surface-muted);
-  color: var(--ft-text-2);
-}
-
-.accounts-dashboard .acc-tx-type.is-sale {
-  background: color-mix(in srgb, var(--ft-success) 14%, transparent);
-  color: var(--ft-success);
-}
-
-.accounts-dashboard .acc-tx-type.is-buy {
-  background: color-mix(in srgb, var(--ft-primary) 12%, transparent);
-  color: var(--ft-primary);
-}
-
-.accounts-dashboard .acc-tx-type.is-in {
-  background: color-mix(in srgb, var(--ft-success) 12%, transparent);
-  color: var(--ft-success);
-}
-
-.accounts-dashboard .acc-tx-type.is-out {
-  background: color-mix(in srgb, var(--ft-warning) 16%, transparent);
-  color: var(--ft-warning);
-}
-
-.accounts-dashboard .acc-tx-type.is-note,
-.accounts-dashboard .acc-tx-type.is-book {
-  background: color-mix(in srgb, var(--ft-text-2) 10%, transparent);
-  color: var(--ft-text-2);
+  text-transform: capitalize;
 }
 
 .accounts-dashboard .acc-tx-status.is-posted {
@@ -6727,81 +6639,26 @@
   color: var(--ft-muted);
 }
 
-.accounts-dashboard .acc-tx-source {
-  color: var(--ft-muted);
-  font-size: var(--ft-type-caption);
-}
-
-.accounts-dashboard .acc-tx-title-row {
+.accounts-dashboard .acc-tx-table-actions {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: 8px 12px;
-}
-
-.accounts-dashboard .acc-tx-number {
-  color: var(--ft-text);
-  font: 700 var(--ft-type-ui)/var(--ft-leading-tight) var(--ft-font);
-  letter-spacing: var(--ft-tracking-tight);
-}
-
-.accounts-dashboard .acc-tx-date {
-  color: var(--ft-muted);
-  font-size: var(--ft-type-secondary);
-}
-
-.accounts-dashboard .acc-tx-narration {
-  margin: 0;
-  color: var(--ft-text-2);
-  font-size: var(--ft-type-secondary);
-  line-height: var(--ft-leading-body);
-  overflow-wrap: anywhere;
-}
-
-.accounts-dashboard .acc-tx-party {
-  color: var(--ft-text);
-  font-weight: 600;
-}
-
-.accounts-dashboard .acc-tx-dot {
-  margin: 0 0.35em;
-  color: var(--ft-muted);
-}
-
-.accounts-dashboard .acc-tx-note {
-  margin: 0;
-  color: var(--ft-muted);
-  font-size: var(--ft-type-caption);
-}
-
-.accounts-dashboard .acc-tx-side {
-  display: grid;
-  justify-items: end;
+  align-items: center;
   gap: 6px;
-  min-width: 6.5rem;
 }
 
-.accounts-dashboard .acc-tx-amount {
-  color: var(--ft-text);
-  font: 700 var(--ft-type-ui)/1 var(--ft-font);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: var(--ft-tracking-tight);
-  white-space: nowrap;
+.accounts-dashboard .acc-tx-table tr.is-open {
+  background: color-mix(in srgb, var(--ft-primary) 4%, var(--ft-surface));
 }
 
-.accounts-dashboard .acc-tx-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 6px;
+.accounts-dashboard .acc-tx-expand-row > td {
+  padding: 0 12px 14px;
+  background: color-mix(in srgb, var(--ft-primary) 3%, var(--ft-surface));
 }
 
 .accounts-dashboard .acc-tx-detail {
   display: grid;
   gap: 12px;
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--ft-border);
+  padding-top: 12px;
 }
 
 .accounts-dashboard .acc-tx-lines {
@@ -6833,40 +6690,19 @@
   border: 0 !important;
 }
 
-@media (max-width: 900px) {
-  .accounts-dashboard .acc-tx {
-    width: 100%;
-  }
-
-  .accounts-dashboard .acc-tx-row {
-    padding: 11px 12px;
-  }
-
-  .accounts-dashboard .acc-tx-main {
-    gap: 8px 12px;
-  }
+.accounts-dashboard .acc-tx-cards .acc-tx-detail {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--ft-border);
 }
 
 @media (max-width: 720px) {
-  .accounts-dashboard .acc-tx-main {
-    grid-template-columns: 1fr;
+  .accounts-dashboard .acc-tx-table {
+    display: none;
   }
 
-  .accounts-dashboard .acc-tx-side {
+  .accounts-dashboard .acc-tx-search {
     width: 100%;
-    grid-template-columns: 1fr auto;
-    align-items: center;
-    justify-items: stretch;
-    min-width: 0;
-  }
-
-  .accounts-dashboard .acc-tx-amount {
-    justify-self: start;
-    font-size: var(--ft-type-body);
-  }
-
-  .accounts-dashboard .acc-tx-actions {
-    justify-self: end;
   }
 
   .accounts-dashboard .acc-tx-toolbar {
