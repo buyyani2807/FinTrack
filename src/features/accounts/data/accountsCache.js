@@ -107,6 +107,7 @@ export async function fetchAccountsBundle(token, {
     gstForm: company ? {
       gstRegistration: company.gstRegistration || "unregistered",
       gstin: company.gstin || "",
+      pan: company.pan || "",
       legalName: company.legalName || "",
       stateCode: company.stateCode || "",
     } : null,

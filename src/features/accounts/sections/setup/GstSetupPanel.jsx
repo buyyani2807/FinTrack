@@ -1,7 +1,14 @@
 import { saveGstSettings } from "../../data/accountingRepository.js";
 import { Select } from "../../../../components/Select.jsx";
 import { Field, AccSetupSection } from "../../components/AccUi.jsx";
-import { INDIA_STATES, gstStateFromGstin, normalizeGstin, validateGstSettings } from "../../model/accountingGst.js";
+import {
+  INDIA_STATES,
+  gstStateFromGstin,
+  normalizeGstin,
+  normalizePan,
+  panFromGstin,
+  validateGstSettings,
+} from "../../model/accountingGst.js";
 
 function gstDetailsChanged(form, company) {
   if (!company?.id) return true;
@@ -9,6 +16,7 @@ function gstDetailsChanged(form, company) {
   const savedRegistration = company.gstRegistration || "unregistered";
   return registration !== savedRegistration
     || normalizeGstin(form?.gstin) !== normalizeGstin(company.gstin)
+    || normalizePan(form?.pan) !== normalizePan(company.pan)
     || String(form?.legalName || "").trim() !== String(company.legalName || "").trim()
     || String(form?.stateCode || "") !== String(company.stateCode || "");
 }
@@ -32,7 +40,27 @@ export function GstSetupPanel({ activeCompany, canAdmin, gstForm, setGstForm, sa
             <option value="composition">Composition</option>
           </Select>
         </Field>
-        <Field label="GSTIN"><input value={gstForm.gstin} disabled={!canAdmin} placeholder="e.g. 36AAAAA0000A1Z3" onChange={event => setGstForm(current => ({ ...current, gstin: event.target.value, stateCode: gstStateFromGstin(event.target.value) || current.stateCode }))} /></Field>
+        <Field label="GSTIN"><input value={gstForm.gstin} disabled={!canAdmin} placeholder="e.g. 36AAAAA0000A1Z3" onChange={event => {
+          const gstin = event.target.value;
+          const fromGstin = panFromGstin(gstin);
+          setGstForm(current => ({
+            ...current,
+            gstin,
+            stateCode: gstStateFromGstin(gstin) || current.stateCode,
+            pan: fromGstin || current.pan,
+          }));
+        }} /></Field>
+        <Field label="PAN">
+          <input
+            value={gstForm.pan || ""}
+            disabled={!canAdmin}
+            placeholder="e.g. ABCDE1234F"
+            maxLength={10}
+            autoComplete="off"
+            onChange={event => setGstForm(current => ({ ...current, pan: normalizePan(event.target.value) }))}
+          />
+          <span className="small">Optional. Filled from GSTIN when possible; keep for unregistered companies too.</span>
+        </Field>
         <Field label="Legal name"><input value={gstForm.legalName} disabled={!canAdmin} onChange={event => setGstForm(current => ({ ...current, legalName: event.target.value }))} /></Field>
         <Field label="State">
           <Select value={gstForm.stateCode} disabled={!canAdmin} onChange={event => setGstForm(current => ({ ...current, stateCode: event.target.value }))}>

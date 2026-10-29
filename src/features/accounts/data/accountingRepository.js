@@ -80,6 +80,7 @@ const mapCompany = row => ({
   updatedAt: row.updatedAt || row.updated_at,
   gstRegistration: row.gstRegistration || row.gst_registration || "unregistered",
   gstin: row.gstin || "",
+  pan: row.pan || "",
   legalName: row.legalName || row.legal_name || "",
   stateCode: row.stateCode || row.state_code || "",
   stateName: row.stateName || row.state_name || "",
@@ -112,6 +113,7 @@ export const createAccountsCompany = (token, payload) =>
     input_name: payload.name,
     input_books_started_on: payload.booksStartedOn || null,
     input_fy_start_month: payload.fyStartMonth || 4,
+    input_pan: payload.pan || null,
   }, token));
 
 export const archiveAccountsCompany = (token, id, reason) =>
@@ -352,6 +354,7 @@ export const saveGstSettings = (token, payload) =>
     input_legal_name: payload.legalName || null,
     input_state_code: payload.stateCode || null,
     input_state_name: payload.stateName || null,
+    input_pan: payload.pan || null,
   }, token));
 
 export const setAccountingIntegration = (token, enabled) =>

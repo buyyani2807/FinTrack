@@ -307,8 +307,8 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [activeCompanyId, setActiveCompanyId] = useState(cached?.activeCompanyId ?? "");
   const [showCreateCompany, setShowCreateCompany] = useState(false);
   const [setupAfterCreate, setSetupAfterCreate] = useState(false);
-  const [companyDraft, setCompanyDraft] = useState({ name: "", booksStartedOn: todayIso(), industry: "retail" });
-  const [gstForm, setGstForm] = useState(cached?.gstForm ?? { gstRegistration: "unregistered", gstin: "", legalName: "", stateCode: "" });
+  const [companyDraft, setCompanyDraft] = useState({ name: "", booksStartedOn: todayIso(), industry: "retail", pan: "" });
+  const [gstForm, setGstForm] = useState(cached?.gstForm ?? { gstRegistration: "unregistered", gstin: "", pan: "", legalName: "", stateCode: "" });
   const [listPage, setListPage] = useState(1);
   const [expandedVoucherId, setExpandedVoucherId] = useState(null);
   const [voucherAttachments, setVoucherAttachments] = useState([]);
@@ -2391,7 +2391,7 @@ const openVoucher = () => {
           companies={companies}
           activeId={activeCompanyId}
           onSelect={switchCompany}
-          onCreate={() => { setCompanyDraft({ name: "", booksStartedOn: todayIso(), industry: "retail" }); setShowCreateCompany(true); }}
+          onCreate={() => { setCompanyDraft({ name: "", booksStartedOn: todayIso(), industry: "retail", pan: "" }); setShowCreateCompany(true); }}
           canAdmin={canAdmin}
           gstLabel={gstStatusLabel(activeCompany)}
           fyLabel={fy?.label || ""}
@@ -2850,7 +2850,7 @@ const openVoucher = () => {
             openSection("overview");
           } : null}
           setUpNewCompany={canAdmin && !migrationRequired ? () => {
-            setCompanyDraft({ name: "", booksStartedOn: todayIso(), industry: "retail" });
+            setCompanyDraft({ name: "", booksStartedOn: todayIso(), industry: "retail", pan: "" });
             setSetupAfterCreate(true);
             setShowCreateCompany(true);
           } : null}
@@ -2958,6 +2958,7 @@ const openVoucher = () => {
         run={run}
         token={token}
         setCompanyDraft={setCompanyDraft}
+        setError={setError}
         onCreated={() => {
           setOnboardingDismissed(false);
           setSetupAssistantRequested(false);

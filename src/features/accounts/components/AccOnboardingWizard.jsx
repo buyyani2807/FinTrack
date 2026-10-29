@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Select } from "../../../components/Select.jsx";
-import { INDIA_STATES } from "../model/accountingGst.js";
+import { INDIA_STATES, normalizePan, panFromGstin, panValidationMessage } from "../model/accountingGst.js";
 
 const STEPS = [
   { id: "welcome", title: "Welcome" },
@@ -87,6 +87,7 @@ export function AccOnboardingWizard({
   const [booksStartedOn, setBooksStartedOn] = useState(company?.booksStartedOn || "2026-04-01");
   const [gstRegistration, setGstRegistration] = useState(company?.gstRegistration || "unregistered");
   const [gstin, setGstin] = useState(company?.gstin || "");
+  const [pan, setPan] = useState(company?.pan || "");
   const [legalName, setLegalName] = useState(company?.legalName || company?.name || "");
   const [stateCode, setStateCode] = useState(company?.stateCode || "");
   const [partyName, setPartyName] = useState("");
@@ -126,13 +127,18 @@ export function AccOnboardingWizard({
     try {
       if (step.id === "company") {
         if (!String(companyName || "").trim()) throw new Error("Business name is required.");
+        const panMessage = panValidationMessage(pan);
+        if (panMessage) throw new Error(panMessage);
         saveIndustry(companyId, industry);
-        if (onSaveCompany) await onSaveCompany({ companyName: companyName.trim(), booksStartedOn, industry });
+        if (onSaveCompany) await onSaveCompany({ companyName: companyName.trim(), booksStartedOn, industry, pan });
       }
       if (step.id === "gst" && canAdmin && onSaveGst) {
+        const panMessage = panValidationMessage(pan);
+        if (panMessage) throw new Error(panMessage);
         await onSaveGst({
           gstRegistration,
           gstin: gstRegistration === "unregistered" ? "" : gstin,
+          pan,
           legalName: legalName || companyName,
           stateCode: gstRegistration === "unregistered" ? "" : stateCode,
         });
@@ -181,6 +187,16 @@ export function AccOnboardingWizard({
           <label className="accounts-filter-field"><span className="small">Business name</span>
             <input value={companyName} onChange={event => setCompanyName(event.target.value)} />
           </label>
+          <label className="accounts-filter-field"><span className="small">PAN</span>
+            <input
+              value={pan}
+              placeholder="e.g. ABCDE1234F"
+              maxLength={10}
+              autoComplete="off"
+              onChange={event => setPan(normalizePan(event.target.value))}
+            />
+            <span className="small">Optional. You can refine this on the GST step.</span>
+          </label>
           <label className="accounts-filter-field"><span className="small">Books start date</span>
             <input type="date" value={booksStartedOn} onChange={event => setBooksStartedOn(event.target.value)} />
           </label>
@@ -204,9 +220,24 @@ export function AccOnboardingWizard({
               <option value="composition">Composition</option>
             </Select>
           </label>
+          <label className="accounts-filter-field"><span className="small">PAN</span>
+            <input
+              value={pan}
+              disabled={!canAdmin}
+              placeholder="e.g. ABCDE1234F"
+              maxLength={10}
+              autoComplete="off"
+              onChange={event => setPan(normalizePan(event.target.value))}
+            />
+          </label>
           {gstRegistration !== "unregistered" && <>
             <label className="accounts-filter-field"><span className="small">GSTIN</span>
-              <input value={gstin} disabled={!canAdmin} placeholder="15-character GSTIN" onChange={event => setGstin(event.target.value.toUpperCase())} />
+              <input value={gstin} disabled={!canAdmin} placeholder="15-character GSTIN" onChange={event => {
+                const next = event.target.value.toUpperCase();
+                setGstin(next);
+                const fromGstin = panFromGstin(next);
+                if (fromGstin) setPan(fromGstin);
+              }} />
             </label>
             <label className="accounts-filter-field"><span className="small">Legal name</span>
               <input value={legalName} disabled={!canAdmin} onChange={event => setLegalName(event.target.value)} />

@@ -26,6 +26,7 @@ export function buildAccountsCompanyBackup({
       name: company.name,
       booksStartedOn: company.booksStartedOn,
       gstin: company.gstin || "",
+      pan: company.pan || "",
       stateCode: company.stateCode || "",
       gstRegistration: company.gstRegistration || "",
     },
