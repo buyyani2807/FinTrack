@@ -1022,9 +1022,26 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     }
   }, `${variances.length} stock adjustment${variances.length === 1 ? "" : "s"} posted from the physical count.`);
 
+  // Settings-only write — do not call run()/refresh(); reloading all books made the toggle feel stuck.
   const saveStockRules = async payload => {
-    const ok = await run(() => saveInventorySettings(token, payload), payload.allowNegativeStock ? "Negative stock allowed." : "Negative stock blocked.");
-    if (ok) setInventorySettings(current => ({ ...current, allowNegativeStock: Boolean(payload.allowNegativeStock) }));
+    const nextAllow = Boolean(payload.allowNegativeStock);
+    const previous = inventorySettings.allowNegativeStock;
+    const outcome = await submitLock.run(async () => {
+      setSaving(true);
+      setError("");
+      setNotice("");
+      setInventorySettings(current => ({ ...current, allowNegativeStock: nextAllow }));
+      try {
+        await saveInventorySettings(token, { allowNegativeStock: nextAllow });
+        setNotice(nextAllow ? "Negative stock allowed." : "Negative stock blocked.");
+      } catch (err) {
+        setInventorySettings(current => ({ ...current, allowNegativeStock: previous }));
+        setError(err.message || "Could not save stock rules.");
+      } finally {
+        setSaving(false);
+      }
+    });
+    return !outcome.skipped;
   };
 
   // Two stock RPCs cannot share a transaction, so undo the material
