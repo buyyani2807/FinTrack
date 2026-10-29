@@ -72,7 +72,6 @@ export function SecurityPage() {
     <Reveal>
       <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Security</p>
       <h1>Access, isolation, and review.</h1>
-      <p className="mkt-lead">This page describes controls that exist in the product. It is not a certification, a government approval, or a promise that data can never be mishandled.</p>
     </Reveal>
     <Reveal className="mkt-grid two">
       {SECURITY_POINTS.map(point => <article key={point.title} className="mkt-card">
