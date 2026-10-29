@@ -1318,7 +1318,47 @@ export const SOLUTIONS = [
   },
 ];
 
+/** Featured trust strip on the Security page — only controls that exist in the product today. */
+export const SECURITY_TRUST = [
+  {
+    title: "AES-256 Encryption",
+    text: "Aadhaar and PAN KYC values are encrypted at rest with AES-256 before they are stored.",
+    icon: "Lock",
+  },
+  {
+    title: "Rate-Limited AI APIs",
+    text: "Ask FinTrack, bill scan, and other AI calls share a per-user request limit so the workspace cannot be scraped or abused.",
+    icon: "ShieldCheck",
+  },
+  {
+    title: "TLS in Transit",
+    text: "Connections to FinTrack use HTTPS so data is encrypted on the wire between your browser and the service.",
+    icon: "Globe",
+  },
+  {
+    title: "Privacy First",
+    text: "We do not sell customer or member data. Records stay inside your organisation’s workspace.",
+    icon: "BadgeCheck",
+  },
+];
+
 export const SECURITY_POINTS = [
+  {
+    title: "AES-256 for KYC",
+    text: "Optional Aadhaar and PAN fields are encrypted server-side with AES-256 before storage. Plain values are not kept alongside the ciphertext.",
+  },
+  {
+    title: "Rate-limited AI calls",
+    text: "AI features take from a per-user quota. When the limit is reached, the call is refused with a clear retry window. Entry by hand still works.",
+  },
+  {
+    title: "HTTPS in transit",
+    text: "Production traffic uses HTTPS (TLS). Session cookies for owner and agent login are HttpOnly when FinTrack auth routes are deployed.",
+  },
+  {
+    title: "Privacy first",
+    text: "Data is used to run lending, chit, and accounts workflows for your organisation. We do not sell customer data.",
+  },
   {
     title: "Sign-in for each role",
     text: "Owner sign in uses email and opens the owner workspace. A collection agent uses an agent ID and PIN. A finance customer and a chit member use a portal ID and PIN. A staff login does not open the owner books.",

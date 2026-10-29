@@ -6,26 +6,30 @@ import { NAV_TREE, REPORT_TABS, navItemIsActive } from "../accountsNavigation.js
 
 // Accounts sections as horizontal tabs inside the page (like Daily Finance's Overview / Customers / Reports).
 // A section with sub-pages (Parties, Reports) shows them as a second row once it is selected.
-// Cashbook is left out: it is its own item in the workspace sidebar. "More" holds the remaining pages.
-// Reports lists every report (Day Book, Trial Balance … Stock Movement), opened through `openReport`.
+// Cashbook is left out: it is its own item in the workspace sidebar.
+// Reports lists every report (Day Book, Trial Balance … Customer Pipeline), opened through `openReport`.
 // AI Review follows Reports only when the AI plan is enabled.
+// Manufacturing appears after Inventory when the company industry is manufacturing.
 const BASE_TABS = NAV_TREE.filter(item => item.id !== "cashbook");
 const CA_TAB = { id: "ca", label: "For the CA" };
 const AI_TAB = { id: "ai", label: "AI Review", icon: Sparkles };
-const MORE_TAB = { id: "more", label: "More" };
+const MANUFACTURING_TAB = { id: "manufacturing", label: "Manufacturing" };
 const afterReports = (tabs, extra) => tabs.flatMap(item => (item.id === "reports" ? [item, ...extra] : [item]));
-const TAB_ITEMS = [...afterReports(BASE_TABS, [CA_TAB]), MORE_TAB];
-const TAB_ITEMS_WITH_AI = [...afterReports(BASE_TABS, [CA_TAB, AI_TAB]), MORE_TAB];
+const withManufacturing = (tabs, enabled) => (enabled
+  ? tabs.flatMap(item => (item.id === "inventory" ? [item, MANUFACTURING_TAB] : [item]))
+  : tabs);
 const STATEMENT_SECTIONS = ["trial", "pnl", "balance"];
-const MORE_SECTIONS = ["more", "crm", "manufacturing"];
-const tabIsActive = (item, section) => (item.id === "more" ? MORE_SECTIONS.includes(section) : navItemIsActive(item, section));
+const REPORT_OWN_SECTIONS = [...STATEMENT_SECTIONS, "crm"];
 
-export function AccSectionTabs({ section, reportTab, onNavigate, openReport, aiEnabled = false }) {
-  const tabs = aiEnabled ? TAB_ITEMS_WITH_AI : TAB_ITEMS;
-  const current = tabs.find(item => tabIsActive(item, section));
+export function AccSectionTabs({ section, reportTab, onNavigate, openReport, aiEnabled = false, manufacturingEnabled = false }) {
+  const afterAi = aiEnabled ? [CA_TAB, AI_TAB] : [CA_TAB];
+  const tabs = withManufacturing(afterReports(BASE_TABS, afterAi), manufacturingEnabled);
+  const current = tabs.find(item => navItemIsActive(item, section));
   const isReports = current?.id === "reports";
   const children = isReports ? REPORT_TABS : current?.children;
-  const childId = isReports ? (STATEMENT_SECTIONS.includes(section) ? section : section === "reports" ? reportTab : section) : section;
+  const childId = isReports
+    ? (REPORT_OWN_SECTIONS.includes(section) ? section : section === "reports" ? reportTab : section)
+    : section;
   const openChild = id => (isReports ? openReport(id) : onNavigate(id));
   const ref = useActiveTabInView([section, reportTab]);
   return <div className="acc-section-tabs" ref={ref}>

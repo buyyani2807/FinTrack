@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Reveal, RevealProvider } from "../../components/ui/Reveal.jsx";
-import { SECURITY_POINTS, SOLUTIONS, featureBySlug } from "./catalog.js";
+import { SECURITY_POINTS, SECURITY_TRUST, SOLUTIONS, featureBySlug } from "./catalog.js";
 import { featurePath, marketingPaths } from "./paths.js";
 import { InstallGuide } from "./InstallGuide.jsx";
 import { ProductCta } from "./ProductCta.jsx";
@@ -67,13 +67,24 @@ export function HowItWorksPage() {
 
 export function SecurityPage() {
   return <RevealProvider intent="content">
-  <section className="mkt-section">
+  <section className="mkt-section mkt-tint">
     <PageTitle title="FinTrack security" />
-    <Reveal>
-      <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Security</p>
-      <h1>Access, isolation, and review.</h1>
-      <p className="mkt-lead">This page describes controls that exist in the product. It is not a certification, a government approval, or a promise that data can never be mishandled.</p>
-    </Reveal>
+    <div className="mkt-wrap">
+      <Reveal>
+        <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Security &amp; trust</p>
+        <h1>Access, isolation, and review.</h1>
+        <p className="mkt-lead">This page describes controls that exist in the product. It is not a certification, a government approval, or a promise that data can never be mishandled.</p>
+      </Reveal>
+      <Reveal className="mkt-grid four mkt-security-trust">
+        {SECURITY_TRUST.map((point, index) => <article key={point.title} className="mkt-card" style={{ "--reveal-i": index }}>
+          <div className="mkt-icon"><FeatureIcon name={point.icon} /></div>
+          <h2>{point.title}</h2>
+          <p>{point.text}</p>
+        </article>)}
+      </Reveal>
+    </div>
+  </section>
+  <section className="mkt-section">
     <Reveal className="mkt-grid two">
       {SECURITY_POINTS.map(point => <article key={point.title} className="mkt-card">
         <h2>{point.title}</h2>

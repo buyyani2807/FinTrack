@@ -6598,25 +6598,31 @@
 }
 
 /* ===== Transactions list ===== */
+.accounts-dashboard .acc-tx {
+  width: min(100%, 52rem);
+  max-width: 100%;
+}
+
 .accounts-dashboard .acc-tx-toolbar {
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .accounts-dashboard .acc-tx-search {
-  min-width: min(280px, 100%);
+  width: 100%;
+  min-width: 0;
 }
 
 .accounts-dashboard .acc-tx-list {
   display: grid;
   gap: 0;
   border: 1px solid var(--ft-border);
-  border-radius: 14px;
+  border-radius: 12px;
   background: var(--ft-surface);
   overflow: hidden;
 }
 
 .accounts-dashboard .acc-tx-row {
-  padding: 14px 16px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--ft-border);
   background: var(--ft-surface);
 }
@@ -6641,7 +6647,7 @@
 .accounts-dashboard .acc-tx-main {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px 20px;
+  gap: 8px 16px;
   align-items: start;
 }
 
@@ -6771,13 +6777,13 @@
 .accounts-dashboard .acc-tx-side {
   display: grid;
   justify-items: end;
-  gap: 8px;
-  min-width: 7.5rem;
+  gap: 6px;
+  min-width: 6.5rem;
 }
 
 .accounts-dashboard .acc-tx-amount {
   color: var(--ft-text);
-  font: 700 var(--ft-type-card)/1 var(--ft-font);
+  font: 700 var(--ft-type-ui)/1 var(--ft-font);
   font-variant-numeric: tabular-nums;
   letter-spacing: var(--ft-tracking-tight);
   white-space: nowrap;
@@ -6827,6 +6833,20 @@
   border: 0 !important;
 }
 
+@media (max-width: 900px) {
+  .accounts-dashboard .acc-tx {
+    width: 100%;
+  }
+
+  .accounts-dashboard .acc-tx-row {
+    padding: 11px 12px;
+  }
+
+  .accounts-dashboard .acc-tx-main {
+    gap: 8px 12px;
+  }
+}
+
 @media (max-width: 720px) {
   .accounts-dashboard .acc-tx-main {
     grid-template-columns: 1fr;
@@ -6842,7 +6862,7 @@
 
   .accounts-dashboard .acc-tx-amount {
     justify-self: start;
-    font-size: var(--ft-type-ui);
+    font-size: var(--ft-type-body);
   }
 
   .accounts-dashboard .acc-tx-actions {
@@ -6852,10 +6872,5 @@
   .accounts-dashboard .acc-tx-toolbar {
     display: grid;
     gap: 10px;
-  }
-
-  .accounts-dashboard .acc-tx-search {
-    width: 100%;
-    min-width: 0;
   }
 }

@@ -151,7 +151,7 @@ import {
   emptySimpleForm,
   emptyCoaForm,
 } from "./accountsFormDefaults.js";
-import { REPORT_TABS, MORE_LINKS } from "./accountsNavigation.js";
+import { REPORT_TABS } from "./accountsNavigation.js";
 import { gstStatusLabel } from "./accountsFormat.js";
 import { AccSectionTabs, AccCompanyBar, AccPageHeader } from "./components/AccLayout.jsx";
 import { CustomerPipeline } from "./components/CustomerPipeline.jsx";
@@ -167,7 +167,6 @@ import { PartyProfileSection } from "./sections/PartyProfileSection.jsx";
 import { InventorySection } from "./sections/InventorySection.jsx";
 import { ExpensesSection } from "./sections/ExpensesSection.jsx";
 import { PayrollSection } from "./sections/PayrollSection.jsx";
-import { MoreSection } from "./sections/MoreSection.jsx";
 import { ReportsSection } from "./sections/ReportsSection.jsx";
 import { CaPackSection } from "./sections/CaPackSection.jsx";
 import { BankSection } from "./sections/BankSection.jsx";
@@ -842,6 +841,11 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
 
   const openSection = id => {
     if (id !== "documents") setDocumentPrefill(null);
+    if (id === "more") {
+      go({ section: "overview", reportTab: "daybook" });
+      window.scrollTo(0, 0);
+      return;
+    }
     if (id === "cashbook") {
       if (onOpenCashbook) onOpenCashbook();
       else close();
@@ -852,13 +856,18 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       window.scrollTo(0, 0);
       return;
     }
+    if (id === "crm") {
+      go({ section: "crm", reportTab: "crm" });
+      window.scrollTo(0, 0);
+      return;
+    }
     go({ section: id, reportTab: ["trial", "pnl", "balance"].includes(id) ? id : "daybook" });
     window.scrollTo(0, 0);
   };
 
-  // A report from the Reports sub-tabs: the three statements are their own sections, the rest are tabs of the Reports page.
+  // A report from the Reports sub-tabs: statements and Customer Pipeline are their own sections; the rest stay on Reports.
   const openReport = id => {
-    if (["trial", "pnl", "balance"].includes(id)) openSection(id);
+    if (["trial", "pnl", "balance", "crm"].includes(id)) openSection(id);
     else go({ section: "reports", reportTab: id });
   };
   const setReportTab = openReport;
@@ -2416,7 +2425,7 @@ const openVoucher = () => {
       <AccPageHeader
         title="Accounts"
         copy={`${activeCompany?.name || settings?.companyName || workspace.businessName || "Your business"} · ${fy.label} · ${range.from} to ${range.to}`}
-        tabs={<AccSectionTabs section={section} reportTab={reportTab} onNavigate={openSection} openReport={openReport} aiEnabled={aiEnabled} />}
+        tabs={<AccSectionTabs section={section} reportTab={reportTab} onNavigate={openSection} openReport={openReport} aiEnabled={aiEnabled} manufacturingEnabled={manufacturingEnabled} />}
         companyBar={<AccCompanyBar
           companies={companies}
           activeId={activeCompanyId}
@@ -2518,8 +2527,6 @@ const openVoucher = () => {
         {section === "vouchers" && <VouchersSection
           canWrite={canWrite}
           openSimple={openSimple}
-          openVoucher={openVoucher}
-          openBulkImport={canWrite && !migrationRequired ? openBulkImport : null}
           search={search}
           setSearch={setSearch}
           pagedVouchers={pagedVouchers}
@@ -2719,8 +2726,6 @@ const openVoucher = () => {
           costLines={costLines}
           onOpenItemProfit={() => openReport("item_profit")}
         />}
-
-        {section === "more" && <MoreSection manufacturingEnabled={manufacturingEnabled} openSection={openSection} moreLinks={MORE_LINKS} />}
 
         {section === "ca" && <CaPackSection
           token={token}

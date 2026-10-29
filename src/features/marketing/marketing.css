@@ -824,7 +824,7 @@ html[data-theme="dark"] .mkt-shot { border-color: #4a6274; background: #101820; 
 }
 
 @media (min-width: 700px) and (max-width: 980px) {
-  .mkt-grid.two, .mkt-grid.three, .mkt-grid.six { grid-template-columns: 1fr 1fr; }
+  .mkt-grid.two, .mkt-grid.three, .mkt-grid.four, .mkt-grid.six { grid-template-columns: 1fr 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

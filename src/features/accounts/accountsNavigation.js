@@ -37,6 +37,7 @@ export const NAV_TREE = [
       { id: "trial", label: "Trial Balance" },
       { id: "pnl", label: "Profit & Loss" },
       { id: "balance", label: "Balance Sheet" },
+      { id: "crm", label: "Customer Pipeline" },
     ],
   },
   { id: "bank", label: "Banking", glyph: "⬡" },
@@ -68,7 +69,8 @@ export function sectionTrail(section, reportTab) {
   if (section === "cashbook") return ["Cashbook"];
   if (section === "setup") return ["Setup"];
   if (section === "ca") return ["For the CA"];
-  if (section === "more") return ["More"];
+  if (section === "crm") return ["Reports", "Customer Pipeline"];
+  if (section === "manufacturing") return ["Manufacturing"];
   return [SECTIONS.find(item => item.id === section)?.label || "Accounts"];
 }
 export const SECTIONS = [
@@ -96,7 +98,6 @@ export const SECTIONS = [
   { id: "ca", label: "For the CA", group: "Reports" },
   { id: "ai", label: "AI Review", group: "Reports" },
   { id: "setup", label: "Setup", group: "Company" },
-  { id: "more", label: "More", group: "Company" },
 ];
 export const REPORT_TABS = [
   { id: "daybook", label: "Day Book" },
@@ -115,13 +116,14 @@ export const REPORT_TABS = [
   { id: "item_profit", label: "Item profit" },
   { id: "stock_moves", label: "Stock Movement" },
   { id: "purchase_match", label: "PO match" },
+  { id: "crm", label: "Customer Pipeline" },
 ];
 export const MOBILE_TABS = [
   { id: "overview", label: "Home" },
   { id: "vouchers", label: "Books" },
   { id: "parties", label: "Parties" },
   { id: "reports", label: "Reports" },
-  { id: "more", label: "More" },
+  { id: "setup", label: "Setup" },
 ];
 const REPORT_HUB_CARDS = [
   { id: "daybook", label: "Day Book", copy: "Every sale, purchase, receipt and payment in the period." },
@@ -132,21 +134,7 @@ const REPORT_HUB_CARDS = [
   { id: "trial", label: "Trial Balance", copy: "Check that debits still equal credits." },
   { id: "gst", label: "GST books", copy: "Calculated GST for review — not portal filing." },
   { id: "cashflow", label: "Cash Flow", copy: "Money in and out (simplified)." },
-];
-export const MORE_LINKS = [
-  ["ledger", "Ledger", "One account’s full movement"],
-  ["receivables", "Receivables", "Customer outstanding"],
-  ["payables", "Payables", "Supplier outstanding"],
-  ["bank", "Bank Reconciliation", "Match statement lines"],
-  ["trial", "Trial Balance", "Debit vs credit check"],
-  ["pnl", "Profit & Loss", "Income and expenses"],
-  ["expenses", "Expenses", "Spending by month and category"],
-  ["payroll", "Payroll", "Salary, attendance, and leave"],
-  ["balance", "Balance Sheet", "Assets and liabilities"],
-  ["cashbook", "Cashbook", "Operational cash"],
-  ["crm", "Customer Pipeline", "Follow up customer opportunities"],
-  ["gst", "GST", "Books preparation only"],
-  ["setup", "Setup", "Company, GST, locks, backup"],
+  { id: "crm", label: "Customer Pipeline", copy: "Follow up customer opportunities." },
 ];
 
 // ---- URLs (see app/AppRoutes.jsx) ----
@@ -162,6 +150,7 @@ const fromSlug = (map, slug) => Object.keys(map).find(key => map[key] === slug);
 export function accountsPath({ section = "overview", reportTab = "daybook", sub = null } = {}) {
   if (section === "party" && !sub) return "/accounting/parties/ledger";
   if (PARTY_SLUGS[section]) return `/accounting/parties/${PARTY_SLUGS[section]}${PARTY_SUB_SECTIONS.includes(section) && sub ? `/${encodeURIComponent(sub)}` : ""}`;
+  if (section === "crm" || (section === "reports" && reportTab === "crm")) return "/accounting/reports/crm";
   if (section === "reports" || section === "gst" || STATEMENTS.includes(section)) {
     const report = STATEMENTS.includes(section) || section === "gst" ? section : reportTab || "daybook";
     return `/accounting/reports/${report}`;
@@ -179,10 +168,12 @@ export function accountsViewFromPath(area, sub, subsub) {
   }
   if (area === "reports") {
     const report = REPORT_TABS.some(item => item.id === sub) ? sub : "daybook";
+    if (report === "crm") return { section: "crm", reportTab: "crm", sub: null };
     return { section: STATEMENTS.includes(report) ? report : "reports", reportTab: report, sub: null };
   }
+  if (area === "more") return { section: "overview", reportTab: "daybook", sub: null };
   const section = fromSlug(SECTION_SLUGS, area) || area;
-  const known = SECTIONS.some(item => item.id === section) && !PARTY_SLUGS[section] && section !== "cashbook";
+  const known = SECTIONS.some(item => item.id === section) && !PARTY_SLUGS[section] && section !== "cashbook" && section !== "more";
   if (!known) return { section: "overview", reportTab: "daybook", sub: null };
-  return { section, reportTab: "daybook", sub: section === "documents" || section === "inventory" ? sub || null : null };
+  return { section, reportTab: section === "crm" ? "crm" : "daybook", sub: section === "documents" || section === "inventory" ? sub || null : null };
 }
