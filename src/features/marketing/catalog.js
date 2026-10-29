@@ -1344,22 +1344,6 @@ export const SECURITY_TRUST = [
 
 export const SECURITY_POINTS = [
   {
-    title: "AES-256 for KYC",
-    text: "Optional Aadhaar and PAN fields are encrypted server-side with AES-256 before storage. Plain values are not kept alongside the ciphertext.",
-  },
-  {
-    title: "Rate-limited AI calls",
-    text: "AI features take from a per-user quota. When the limit is reached, the call is refused with a clear retry window. Entry by hand still works.",
-  },
-  {
-    title: "HTTPS in transit",
-    text: "Production traffic uses HTTPS (TLS). Session cookies for owner and agent login are HttpOnly when FinTrack auth routes are deployed.",
-  },
-  {
-    title: "Privacy first",
-    text: "Data is used to run lending, chit, and accounts workflows for your organisation. We do not sell customer data.",
-  },
-  {
     title: "Sign-in for each role",
     text: "Owner sign in uses email and opens the owner workspace. A collection agent uses an agent ID and PIN. A finance customer and a chit member use a portal ID and PIN. A staff login does not open the owner books.",
   },

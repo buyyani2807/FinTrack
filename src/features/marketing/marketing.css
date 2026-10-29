@@ -676,6 +676,51 @@ html[data-theme="dark"] .mkt-shot { border-color: #4a6274; background: #101820; 
 .mkt-plan .mkt-note { margin: 14px 0 0; }
 .mkt-cat { margin-bottom: 8px; align-items: start; }
 
+.mkt-security-trust {
+  margin-top: 8px;
+  padding: 48px 0 56px;
+  background: var(--mkt-navy);
+  color: #f7fbfa;
+}
+.mkt-security-trust-kicker {
+  margin: 0 0 18px;
+  color: color-mix(in srgb, #d5e4ea 72%, transparent);
+  font-size: var(--ft-type-label);
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.mkt-security-trust .mkt-grid {
+  margin-top: 0;
+}
+.mkt-security-trust-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, #d5e4ea 16%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, #fff 4%, transparent);
+}
+.mkt-security-trust-card .mkt-icon {
+  color: var(--mkt-accent);
+  background: color-mix(in srgb, var(--mkt-accent) 16%, transparent);
+}
+.mkt-security-trust-card h2 {
+  color: #f7fbfa;
+  font-size: var(--ft-type-card);
+  letter-spacing: -0.02em;
+}
+.mkt-security-trust-card p {
+  margin: 0;
+  color: #d5e4ea;
+  font-size: var(--mkt-type-copy);
+  line-height: 1.55;
+}
+html[data-theme="dark"] .mkt-security-trust {
+  background: color-mix(in srgb, var(--mkt-navy) 70%, #000);
+}
+
 .mkt-band {
   margin: 8px auto 36px;
   width: min(1160px, calc(100% - 48px));

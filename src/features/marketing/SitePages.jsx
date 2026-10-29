@@ -67,30 +67,31 @@ export function HowItWorksPage() {
 
 export function SecurityPage() {
   return <RevealProvider intent="content">
-  <section className="mkt-section mkt-tint">
-    <PageTitle title="FinTrack security" />
-    <div className="mkt-wrap">
-      <Reveal>
-        <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Security &amp; trust</p>
-        <h1>Access, isolation, and review.</h1>
-        <p className="mkt-lead">This page describes controls that exist in the product. It is not a certification, a government approval, or a promise that data can never be mishandled.</p>
-      </Reveal>
-      <Reveal className="mkt-grid four mkt-security-trust">
-        {SECURITY_TRUST.map((point, index) => <article key={point.title} className="mkt-card" style={{ "--reveal-i": index }}>
-          <div className="mkt-icon"><FeatureIcon name={point.icon} /></div>
-          <h2>{point.title}</h2>
-          <p>{point.text}</p>
-        </article>)}
-      </Reveal>
-    </div>
-  </section>
   <section className="mkt-section">
+    <PageTitle title="FinTrack security" />
+    <Reveal>
+      <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Security</p>
+      <h1>Access, isolation, and review.</h1>
+      <p className="mkt-lead">This page describes controls that exist in the product. It is not a certification, a government approval, or a promise that data can never be mishandled.</p>
+    </Reveal>
     <Reveal className="mkt-grid two">
       {SECURITY_POINTS.map(point => <article key={point.title} className="mkt-card">
         <h2>{point.title}</h2>
         <p>{point.text}</p>
       </article>)}
     </Reveal>
+  </section>
+  <section className="mkt-security-trust" aria-labelledby="mkt-security-trust-title">
+    <div className="mkt-wrap">
+      <Reveal as="p" className="mkt-security-trust-kicker" id="mkt-security-trust-title">Security &amp; trust</Reveal>
+      <Reveal className="mkt-grid four">
+        {SECURITY_TRUST.map((point, index) => <article key={point.title} className="mkt-security-trust-card" style={{ "--reveal-i": index }}>
+          <div className="mkt-icon"><FeatureIcon name={point.icon} /></div>
+          <h2>{point.title}</h2>
+          <p>{point.text}</p>
+        </article>)}
+      </Reveal>
+    </div>
   </section>
   <PageClose />
   </RevealProvider>;
