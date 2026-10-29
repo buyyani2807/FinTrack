@@ -674,40 +674,55 @@ input[type="month"]::-webkit-calendar-picker-indicator { margin: 0; padding: 0; 
 }
 
 /* sidebar contents */
-.ft-brand { color: #fff !important; font-weight: 500 !important; letter-spacing: .08em !important; }
+.ft-brand {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  white-space: nowrap;
+  color: #fff !important;
+  font-weight: 500 !important;
+  letter-spacing: .08em !important;
+}
 .ft-brand-strong { font-weight: 800; }
-/* FinTrackit: lowercase a stacked on the i stem = AI */
+/* FinTrackit: lowercase a under the i stem = AI, kept on one wordmark line */
 .ft-brand-ai {
   display: inline-flex;
   flex-direction: column;
+  flex-wrap: nowrap;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   vertical-align: baseline;
   margin: 0 .01em;
   line-height: 1;
+}
+.ft-brand-ai-i {
+  line-height: .85;
+  letter-spacing: 0;
 }
 .ft-brand-ai-a {
   color: var(--ft-primary);
   font-weight: 800;
   line-height: .9;
   letter-spacing: 0;
-  transform: translateY(.12em) scale(.46);
-  transform-origin: center bottom;
-}
-.ft-brand-ai-i {
-  line-height: .85;
-  letter-spacing: 0;
+  transform: translateY(-.06em) scale(.46);
+  transform-origin: center top;
 }
 .ft-brand-track,
 .ft-brand-end { letter-spacing: inherit; }
 .login > .brand.ft-login-brand .ft-brand-ai-a,
+.login > .brand.ft-login-brand .ft-brand-ai-i,
 .ft-auth-brandrow .ft-brand-ai-a,
-.accounts-dashboard .acc-sidebar-brand .ft-brand-ai-a {
+.ft-auth-brandrow .ft-brand-ai-i,
+.accounts-dashboard .acc-sidebar-brand .ft-brand-ai-a,
+.accounts-dashboard .acc-sidebar-brand .ft-brand-ai-i {
   color: var(--ft-primary);
 }
 .ft-auth-showcase-brand .ft-brand-ai-a,
+.ft-auth-showcase-brand .ft-brand-ai-i,
 .financier-nav .ft-brand-ai-a,
-.ft-mobile-brand .ft-brand-ai-a {
+.financier-nav .ft-brand-ai-i,
+.ft-mobile-brand .ft-brand-ai-a,
+.ft-mobile-brand .ft-brand-ai-i {
   color: var(--ft-brand);
 }
 .financier-nav .nav-label { display: flex; align-items: center; gap: 12px; }

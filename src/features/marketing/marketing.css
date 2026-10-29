@@ -167,7 +167,7 @@ html[data-theme="dark"] .mkt-trial-link:hover .mkt-trial-cta { background: #23b0
 .mkt-brand .ft-brand-strong { color: var(--mkt-ink) !important; }
 .mkt-brand .ft-brand-track,
 .mkt-brand .ft-brand-end,
-.mkt-brand .ft-brand-ai-i { color: var(--mkt-accent-ink) !important; }
+.mkt-brand .ft-brand-ai-i,
 .mkt-brand .ft-brand-ai-a { color: var(--mkt-accent-ink) !important; }
 .mkt-links { display: flex; align-items: center; gap: 2px; }
 .mkt-nav-item, .mkt-nav-label { display: inline-flex; align-items: center; gap: 6px; }

@@ -16,8 +16,8 @@ export function LoadingScreen() {
       <span className="ft-boot-fin">{["F", "I", "N"].map((letter, index) => <span key={letter} style={{ "--i": index }}>{letter}</span>)}</span>
       <span className="ft-boot-track">Track</span>
       <span className="ft-brand-ai" title="AI">
+        <span className="ft-brand-ai-i">i</span>
         <span className="ft-brand-ai-a">a</span>
-        <span className="ft-brand-ai-i">ı</span>
       </span>
       <span className="ft-brand-end">t</span>
     </div>
