@@ -30,7 +30,9 @@ const CASHIER_TABS = [COUNTER_TAB];
 
 export function AccSectionTabs({ section, reportTab, onNavigate, openReport, aiEnabled = false, manufacturingEnabled = false, counterEnabled = false, cashierMode = false }) {
   const afterAi = aiEnabled ? [CA_TAB, AI_TAB] : [CA_TAB];
-  const tabs = cashierMode && counterEnabled
+  // Cashier chrome must not depend on counterEnabled — that flag loads after the company
+  // and briefly false would flash the full Accounts tab strip.
+  const tabs = cashierMode
     ? CASHIER_TABS
     : withCounter(withManufacturing(afterReports(BASE_TABS, afterAi), manufacturingEnabled), counterEnabled);
   const current = tabs.find(item => navItemIsActive(item, section));

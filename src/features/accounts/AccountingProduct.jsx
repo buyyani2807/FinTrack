@@ -292,7 +292,18 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [bankImportMapping, setBankImportMapping] = useState({});
   const [matchChoice, setMatchChoice] = useState({});
   const [pendingBankMatch, setPendingBankMatch] = useState(null);
-  const [accountsAccessRole, setAccountsAccessRole] = useState(workspace?.role === "owner" ? "owner" : null);
+  const [accountsAccessRole, setAccountsAccessRole] = useState(() => {
+    if (workspace?.role === "owner") return "owner";
+    // Remember last Accounts-team role so cashier chrome is Counter-only on first paint
+    // (role RPC otherwise arrives a tick later and used to flash the full tab strip).
+    if (workspace?.role === "accounts" && workspace?.id && typeof sessionStorage !== "undefined") {
+      try {
+        const cachedRole = sessionStorage.getItem(`ft-acc-access-role:${workspace.id}`);
+        if (cachedRole === "cashier" || cachedRole === "accountant" || cachedRole === "viewer") return cachedRole;
+      } catch { /* ignore */ }
+    }
+    return null;
+  });
   const [recurringTemplates, setRecurringTemplates] = useState(cached?.recurringTemplates ?? []);
   const [recurringDraft, setRecurringDraft] = useState(() => emptyRecurringDraft());
   const [pendingRecurringId, setPendingRecurringId] = useState(null);
@@ -432,13 +443,17 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     let cancelled = false;
     loadAccountsAccessRole(token).then(role => {
       if (cancelled) return;
-      if (role) setAccountsAccessRole(role);
-      else if (workspace?.role === "owner") setAccountsAccessRole("owner");
+      if (role) {
+        setAccountsAccessRole(role);
+        if (workspace?.role === "accounts" && workspace?.id && typeof sessionStorage !== "undefined") {
+          try { sessionStorage.setItem(`ft-acc-access-role:${workspace.id}`, role); } catch { /* ignore */ }
+        }
+      } else if (workspace?.role === "owner") setAccountsAccessRole("owner");
     }).catch(() => {
       if (!cancelled && workspace?.role === "owner") setAccountsAccessRole("owner");
     });
     return () => { cancelled = true; };
-  }, [token, workspace?.role]);
+  }, [token, workspace?.role, workspace?.id]);
 
   // Accounts-team never gets owner admin; posting for accountant or cashier.
   // Role loads async — until then keep chrome Counter-only so cashiers never flash full Accounts.
@@ -468,12 +483,14 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     setCounterSettings(readCounterSettings(activeCompanyId));
   }, [activeCompanyId]);
   useEffect(() => {
-    if (!counterEnabled) {
-      if (section === "counter") go({ section: "overview", reportTab: "daybook" });
+    // Cashiers (and Accounts-team while role is loading) stay on Counter — never bounce
+    // through Overview while counterEnabled catches up from the active company.
+    if (cashierNav) {
+      if (section !== "counter") go({ section: "counter", reportTab: "daybook" });
       return;
     }
-    if (cashierNav && section !== "counter") {
-      go({ section: "counter", reportTab: "daybook" });
+    if (!counterEnabled && section === "counter") {
+      go({ section: "overview", reportTab: "daybook" });
     }
   }, [section, counterEnabled, cashierNav]);
   // Keep the wizard mounted across refresh()/loading so Continue does not
@@ -2477,8 +2494,10 @@ const openVoucher = () => {
       <AccPageHeader
         title="Accounts"
         copy={`${activeCompany?.name || settings?.companyName || workspace.businessName || "Your business"} · ${fy.label} · ${range.from} to ${range.to}`}
-        tabs={accountsRolePending && !counterEnabled ? null : <AccSectionTabs section={section} reportTab={reportTab} onNavigate={openSection} openReport={openReport} aiEnabled={aiEnabled} manufacturingEnabled={manufacturingEnabled} counterEnabled={counterEnabled} cashierMode={cashierNav} />}
-        companyBar={<AccCompanyBar
+        tabs={cashierNav
+          ? <AccSectionTabs section="counter" reportTab={reportTab} onNavigate={openSection} openReport={openReport} counterEnabled cashierMode />
+          : <AccSectionTabs section={section} reportTab={reportTab} onNavigate={openSection} openReport={openReport} aiEnabled={aiEnabled} manufacturingEnabled={manufacturingEnabled} counterEnabled={counterEnabled} />}
+        companyBar={cashierNav ? null : <AccCompanyBar
           companies={companies}
           activeId={activeCompanyId}
           onSelect={switchCompany}
@@ -2501,7 +2520,31 @@ const openVoucher = () => {
         </div>
       )}
       {migrationRequired && <div className="notice">Run <strong>052</strong> through <strong>076_fix_ambiguous_item_type.sql</strong> in the Supabase SQL editor (including <strong>059</strong>, <strong>064–067</strong>, <strong>070–076</strong>), then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
-      {loading && !settings ? <Spinner label="Loading Accounts" /> : accountsRolePending ? <Spinner label="Loading Accounts" /> : <>
+      {loading && !settings ? <Spinner label="Loading Accounts" /> : accountsRolePending ? <Spinner label="Loading Accounts" /> : cashierMode ? (
+        counterEnabled ? <CounterWorkspace
+          token={token}
+          canWrite={canWrite}
+          canManage={false}
+          cashierMode
+          saving={saving}
+          accounts={accountsForCounterPay(visibleAccounts, counterSettings.paymentMap)}
+          items={items}
+          stockByItem={stockByItem}
+          parties={parties}
+          priceLists={priceLists}
+          vouchers={vouchers}
+          activeCompany={activeCompany}
+          counterSettings={counterSettings}
+          onOpenInventory={null}
+          onReprint={voucherId => setPendingSalesInvoiceId(voucherId)}
+          askReason={askReason}
+          onRefresh={() => refresh()}
+          onPosted={voucherId => {
+            setPendingSalesInvoiceId(voucherId);
+            refresh();
+          }}
+        /> : <Spinner label="Opening Counter" />
+      ) : <>
         {section === "overview" && <OverviewSection
           settings={settings}
           setupForm={setupForm}
@@ -2689,7 +2732,6 @@ const openVoucher = () => {
           token={token}
           canWrite={canWrite}
           canManage={canManageCounter}
-          cashierMode={cashierMode}
           saving={saving}
           accounts={accountsForCounterPay(visibleAccounts, counterSettings.paymentMap)}
           items={items}
@@ -2699,7 +2741,7 @@ const openVoucher = () => {
           vouchers={vouchers}
           activeCompany={activeCompany}
           counterSettings={counterSettings}
-          onOpenInventory={cashierMode ? null : () => openSection("inventory")}
+          onOpenInventory={() => openSection("inventory")}
           onReprint={voucherId => setPendingSalesInvoiceId(voucherId)}
           askReason={askReason}
           onRefresh={() => refresh()}
@@ -2780,7 +2822,7 @@ const openVoucher = () => {
           onOpenSection={openSection}
         />}
 
-        {section === "inventory" && !cashierMode && <InventorySection
+        {section === "inventory" && <InventorySection
           tab={view.sub}
           onTabChange={next => go({ section: "inventory", sub: next })}
           items={items}
