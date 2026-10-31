@@ -99,7 +99,9 @@ async function replaceCompanyAccess(orgId, userId, companyIds, createdBy) {
 
 export default async function handler(req, res) {
   if (!supabaseUrl || !serviceKey || !anonKey) {
-    return json(res, 500, { error: "Accounts team login is not configured on the server." });
+    return json(res, 500, {
+      error: "Accounts team login is not configured on the server. On Vercel, set SUPABASE_SERVICE_ROLE_KEY (and VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY) for Production and Preview, then redeploy. Local vite proxies /api to staging, so staging needs the same key.",
+    });
   }
   const auth = String(req.headers.authorization || "");
   const accessToken = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
