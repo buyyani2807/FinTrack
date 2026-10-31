@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { Search, Trash2, Pause, Play, ShoppingCart } from "lucide-react";
+import { Search, Trash2, Pause, Play, Plus, ShoppingCart } from "lucide-react";
 import { Select } from "../../../components/Select.jsx";
 import { money } from "../accountsFormat.js";
 import { todayIso } from "../../../lib/dates.js";
@@ -356,11 +356,12 @@ export function CounterWorkspace({
                   tryAddFromQuery();
                 }
               }}
-              placeholder="Search name or scan SKU"
+              placeholder="Search name or scan SKU — Enter adds"
               aria-label="Search items or scan SKU"
               autoFocus
             />
           </label>
+          <p className="small counter-search-hint">Scan a SKU or press Enter to add. Tap Add on a result to avoid mistakes.</p>
           {!items.length ? (
             <p className="copy counter-empty">
               No items yet. Add products under Inventory, then return here to bill.
@@ -377,16 +378,24 @@ export function CounterWorkspace({
                 const stock = Number(stockByItem[item.id] ?? 0);
                 const low = item.itemType !== "service" && stock <= 0;
                 return (
-                  <li key={item.id}>
-                    <button type="button" className={`counter-item${low ? " is-low" : ""}`} onClick={() => addItem(item)}>
+                  <li key={item.id} className={`counter-item${low ? " is-low" : ""}`}>
+                    <div className="counter-item-copy">
                       <span className="counter-item-name">{item.name}</span>
                       <span className="small">{item.sku || "No SKU"}{item.itemType !== "service" ? ` · Stock ${stock}` : ""}</span>
-                      <strong>{money(item.sellingPrice || 0)}</strong>
+                    </div>
+                    <strong className="counter-item-price">{money(item.sellingPrice || 0)}</strong>
+                    <button
+                      type="button"
+                      className="btn counter-item-add"
+                      onClick={() => addItem(item)}
+                      aria-label={`Add ${item.name} to bill`}
+                    >
+                      <Plus size={16} aria-hidden="true" /> Add
                     </button>
                   </li>
                 );
               })}
-              {!catalog.length ? <li className="small">No matching items.</li> : null}
+              {!catalog.length ? <li className="small">No matching items. Type a name or scan a SKU, then press Enter.</li> : null}
             </ul>
           )}
         </section>

@@ -6,7 +6,14 @@ import { assemblePriceLists } from "../model/priceLists.js";
 
 export { assembleVouchers, mapVoucherItemLinesForRpc };
 
-const isMissing = err => /could not find|does not exist|schema cache|404|PGRST202/i.test(String(err?.message || err?.code || ""));
+// Only treat PostgREST / Postgres schema gaps as "run migrations" — not business errors
+// that happen to say "not found" / "does not exist" (those must stay visible).
+const isMissing = err => {
+  const code = String(err?.code || "");
+  const message = String(err?.message || "");
+  if (/^PGRST20[25]$/i.test(code) || code === "42P01" || code === "42703") return true;
+  return /could not find the (table|view|function|column|relationship)|relation ["'].+["'] does not exist|column ["'].+["'] does not exist|schema cache/i.test(message);
+};
 
 let activeCompanyId = null;
 

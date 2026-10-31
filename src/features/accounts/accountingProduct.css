@@ -6935,6 +6935,10 @@
   outline: none;
 }
 
+.accounts-dashboard .counter-search-hint {
+  margin: 0;
+}
+
 .accounts-dashboard .counter-item-list,
 .accounts-dashboard .counter-line-list {
   display: grid;
@@ -6948,42 +6952,41 @@
 
 .accounts-dashboard .counter-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-rows: auto auto;
-  column-gap: 10px;
-  width: 100%;
-  text-align: left;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
   padding: 10px 12px;
   border: 1px solid var(--ft-border);
   border-radius: 10px;
   background: var(--ft-surface);
   color: var(--ft-text);
-  cursor: pointer;
-}
-
-.accounts-dashboard .counter-item:hover {
-  border-color: color-mix(in srgb, var(--ft-primary) 45%, var(--ft-border));
 }
 
 .accounts-dashboard .counter-item.is-low {
   border-color: color-mix(in srgb, var(--ft-warning) 50%, var(--ft-border));
 }
 
+.accounts-dashboard .counter-item-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
 .accounts-dashboard .counter-item-name {
-  grid-column: 1;
   font-weight: 600;
   font-size: var(--ft-type-ui);
 }
 
-.accounts-dashboard .counter-item .small {
-  grid-column: 1;
+.accounts-dashboard .counter-item-price {
+  font-size: var(--ft-type-ui);
+  white-space: nowrap;
 }
 
-.accounts-dashboard .counter-item strong {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  align-self: center;
-  font-size: var(--ft-type-ui);
+.accounts-dashboard .counter-item-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
 }
 
 .accounts-dashboard .counter-cart-head {
@@ -7099,6 +7102,17 @@
   .accounts-dashboard .counter-line-list {
     max-height: 40vh;
   }
+
+  .accounts-dashboard .counter-item {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "copy add"
+      "price add";
+  }
+
+  .accounts-dashboard .counter-item-copy { grid-area: copy; }
+  .accounts-dashboard .counter-item-price { grid-area: price; }
+  .accounts-dashboard .counter-item-add { grid-area: add; align-self: center; }
 
   .accounts-dashboard .counter-line {
     grid-template-columns: minmax(0, 1fr) 52px 64px auto;
