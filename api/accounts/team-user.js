@@ -183,7 +183,7 @@ export default async function handler(req, res) {
         });
         if (!patched.ok) return json(res, 500, { error: "Could not update the login." });
       }
-      if (role === "accountant" || role === "viewer") {
+      if (role === "accountant" || role === "viewer" || role === "cashier") {
         const upserted = await fetch(`${supabaseUrl}/rest/v1/acc_user_roles`, {
           method: "POST",
           headers: { ...serviceHeaders(), Prefer: "resolution=merge-duplicates,return=minimal" },
@@ -219,7 +219,7 @@ export default async function handler(req, res) {
     const { fullName, email, role = "viewer", companyIds } = req.body || {};
     const emailAddress = contactEmail(email);
     const name = String(fullName || "").trim();
-    const accountsRole = role === "accountant" ? "accountant" : "viewer";
+    const accountsRole = role === "accountant" || role === "cashier" ? role : "viewer";
     if (!name) return json(res, 400, { error: "Enter the CA’s name." });
     if (!emailAddress) return json(res, 400, { error: "Enter a valid email address." });
 

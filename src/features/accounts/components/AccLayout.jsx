@@ -26,9 +26,13 @@ const withCounter = (tabs, enabled) => (enabled
 const STATEMENT_SECTIONS = ["trial", "pnl", "balance"];
 const REPORT_OWN_SECTIONS = [...STATEMENT_SECTIONS, "crm"];
 
-export function AccSectionTabs({ section, reportTab, onNavigate, openReport, aiEnabled = false, manufacturingEnabled = false, counterEnabled = false }) {
+const CASHIER_TABS = [COUNTER_TAB, { id: "inventory", label: "Inventory" }];
+
+export function AccSectionTabs({ section, reportTab, onNavigate, openReport, aiEnabled = false, manufacturingEnabled = false, counterEnabled = false, cashierMode = false }) {
   const afterAi = aiEnabled ? [CA_TAB, AI_TAB] : [CA_TAB];
-  const tabs = withCounter(withManufacturing(afterReports(BASE_TABS, afterAi), manufacturingEnabled), counterEnabled);
+  const tabs = cashierMode && counterEnabled
+    ? CASHIER_TABS
+    : withCounter(withManufacturing(afterReports(BASE_TABS, afterAi), manufacturingEnabled), counterEnabled);
   const current = tabs.find(item => navItemIsActive(item, section));
   const isReports = current?.id === "reports";
   const children = isReports ? REPORT_TABS : current?.children;

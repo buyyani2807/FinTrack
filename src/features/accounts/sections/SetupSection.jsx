@@ -80,6 +80,9 @@ export function SetupSection({
   setUpNewCompany = null,
   counterEnabled = false,
   onCounterEnabledChange = null,
+  counterSettings = null,
+  onCounterSettingsChange = null,
+  moneyAccounts = [],
 }) {
   return (
     <div className="acc-panel acc-setup">
@@ -107,6 +110,9 @@ export function SetupSection({
         setShowCreateCompany={setShowCreateCompany}
         counterEnabled={counterEnabled}
         onCounterEnabledChange={onCounterEnabledChange}
+        counterSettings={counterSettings}
+        onCounterSettingsChange={onCounterSettingsChange}
+        moneyAccounts={moneyAccounts}
       />
       <GstSetupPanel
         activeCompany={activeCompany}

@@ -7,6 +7,7 @@ import {
 } from "../../data/accountingRepository.js";
 import { Select } from "../../../../components/Select.jsx";
 import { Field, AccSetupSection, AccTable } from "../../components/AccUi.jsx";
+import { roleLabel } from "../../model/counterSettings.js";
 
 const emptyDraft = (activeCompanyId = "") => ({
   fullName: "",
@@ -161,7 +162,7 @@ export function AccessRolesPanel({
       <div className="accounts-collab-guide">
         <div>
           <strong>Recommended</strong>
-          <p className="small">Default is only the company you have open now — not every company, and not the primary unless that is the open one. Use <b>Viewer</b> so they cannot use New (sale, purchase, …). Use <b>Accountant</b> only if they should post.</p>
+          <p className="small">Default is only the company you have open now. Use <b>Cashier</b> for till staff (Counter only). Use <b>Viewer</b> for read-only. Use <b>Accountant</b> for full posting. Run migration <b>115</b> before creating cashiers.</p>
         </div>
         <span className="acc-chip ok">Per company</span>
       </div>
@@ -173,6 +174,7 @@ export function AccessRolesPanel({
         <Field label="Access">
           <Select value={draft.role} onChange={event => setDraft(current => ({ ...current, role: event.target.value }))}>
             <option value="viewer">Viewer (read only)</option>
+            <option value="cashier">Cashier (Counter only)</option>
             <option value="accountant">Accountant (can post)</option>
           </Select>
         </Field>
@@ -220,7 +222,7 @@ export function AccessRolesPanel({
             ) : (
               <p className="small">No new password — they already had a login. Ask them to use Forgot password if needed.</p>
             )}
-            <Field label="Access"><input readOnly value={createdLogin.role === "accountant" ? "Accountant (can post)" : "Viewer (read only)"} /></Field>
+            <Field label="Access"><input readOnly value={roleLabel(createdLogin.role)} /></Field>
             <Field label="Companies"><input readOnly value={(createdLogin.companyNames || []).join(", ") || "—"} /></Field>
           </div>
           <div className="acc-form-actions">
@@ -272,7 +274,7 @@ export function AccessRolesPanel({
           <tr key={row.userId}>
             <td>{row.fullName || "—"}{row.active === false ? " · inactive" : ""}</td>
             <td>{row.email || "—"}</td>
-            <td>{row.role === "accountant" ? "Accountant" : "Viewer"}</td>
+            <td>{roleLabel(row.role)}</td>
             <td>
               {(row.companyNames || []).length
                 ? row.companyNames.join(", ")
@@ -288,6 +290,7 @@ export function AccessRolesPanel({
                 }, "Access updated.")}
               >
                 <option value="viewer">Viewer</option>
+                <option value="cashier">Cashier</option>
                 <option value="accountant">Accountant</option>
               </Select>
               <button

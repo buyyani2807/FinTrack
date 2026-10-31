@@ -1,7 +1,9 @@
 import { saveAccountingSettings } from "../../data/accountingRepository.js";
 import { Field, AccSetupSection, AccReveal } from "../../components/AccUi.jsx";
+import { Select } from "../../../../components/Select.jsx";
 import { todayIso } from "../../../../lib/dates.js";
 import { gstStatusLabel } from "../../accountsFormat.js";
+import { emptyCounterSettings } from "../../model/counterSettings.js";
 
 function companyDetailsChanged(form, company) {
   if (!company?.id) return true;
@@ -35,7 +37,15 @@ export function CompanySetupPanel({
   setShowCreateCompany,
   counterEnabled = false,
   onCounterEnabledChange = null,
+  counterSettings = null,
+  onCounterSettingsChange = null,
+  moneyAccounts = [],
 }) {
+  const settings = counterSettings || emptyCounterSettings();
+  const cashAccounts = (moneyAccounts || []).filter(account => account.accountType === "cash");
+  const upiAccounts = (moneyAccounts || []).filter(account => account.accountType === "upi");
+  const bankAccounts = (moneyAccounts || []).filter(account => account.accountType === "bank");
+  const patchSettings = patch => onCounterSettingsChange?.({ ...settings, ...patch, paymentMap: { ...settings.paymentMap, ...(patch.paymentMap || {}) } });
   const companyChanged = companyDetailsChanged(setupForm, activeCompany);
   const activeCount = (companies || []).filter(company => company.status !== "archived").length;
   const listSummary = `${activeCount} ${activeCount === 1 ? "company" : "companies"}`;
@@ -79,9 +89,60 @@ export function CompanySetupPanel({
           />
           <span>
             <strong>Enable Counter (POS billing)</strong>
-            <span className="small">Shows a till under Accounts. Charged bills post as sales and update stock in this company. Retail industries default this on.</span>
+            <span className="small">Shows a till under Accounts. Charged bills post as sales and update stock in this company. Retail industries default this on. Add cashiers under Access roles for Counter-only logins.</span>
           </span>
         </label>
+      ) : null}
+      {counterEnabled && onCounterSettingsChange ? (
+        <div className="acc-counter-setup">
+          <p className="small"><strong>Till defaults</strong> — cashiers never pick ledgers; Charge uses these money accounts.</p>
+          <div className="form">
+            <Field label="Till label on this device">
+              <input
+                value={settings.tillLabel}
+                disabled={!canAdmin}
+                onChange={event => patchSettings({ tillLabel: event.target.value })}
+                placeholder="Till 1"
+              />
+            </Field>
+            <Field label="Cash ledger">
+              <Select
+                value={settings.paymentMap.cash || ""}
+                disabled={!canAdmin}
+                onChange={event => patchSettings({ paymentMap: { cash: event.target.value } })}
+              >
+                <option value="">Default cash account</option>
+                {cashAccounts.map(account => (
+                  <option key={account.id} value={account.id}>{account.code} · {account.name}</option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="UPI ledger">
+              <Select
+                value={settings.paymentMap.upi || ""}
+                disabled={!canAdmin}
+                onChange={event => patchSettings({ paymentMap: { upi: event.target.value } })}
+              >
+                <option value="">Default UPI account</option>
+                {upiAccounts.map(account => (
+                  <option key={account.id} value={account.id}>{account.code} · {account.name}</option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Bank / card terminal ledger">
+              <Select
+                value={settings.paymentMap.bank || ""}
+                disabled={!canAdmin}
+                onChange={event => patchSettings({ paymentMap: { bank: event.target.value } })}
+              >
+                <option value="">Default bank account</option>
+                {bankAccounts.map(account => (
+                  <option key={account.id} value={account.id}>{account.code} · {account.name}</option>
+                ))}
+              </Select>
+            </Field>
+          </div>
+        </div>
       ) : null}
       <p className="small">Backups are company-isolated. Restore only works into the same company when it has no vouchers yet. Cross-company overwrite is blocked.</p>
       <p className="small">Current company: <strong>{activeCompany?.name || "None"}</strong>{activeCompany ? ` · ${gstStatusLabel(activeCompany)}` : ""}</p>

@@ -6894,6 +6894,52 @@
   gap: 6px;
 }
 
+.accounts-dashboard .counter-today-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.accounts-dashboard .counter-void {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.accounts-dashboard .acc-counter-setup {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--ft-border);
+  border-radius: 10px;
+  background: var(--ft-surface);
+}
+
+.accounts-dashboard .counter-dayclose {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.accounts-dashboard .counter-dayclose-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 720px) {
+  .accounts-dashboard .counter-dayclose-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .accounts-dashboard .counter-item-add,
+  .accounts-dashboard .counter-charge,
+  .accounts-dashboard .counter-pay-actions .btn {
+    min-height: 44px;
+  }
+}
+
 .accounts-dashboard .counter-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(240px, 0.85fr);
