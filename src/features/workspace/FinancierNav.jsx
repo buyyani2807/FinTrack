@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from "react-router";
 import { useEffect, useState } from "react";
 import { BookOpenText, CalendarDays, CalendarRange, Coins, LayoutGrid, LogOut, Menu, MessageCircle, Settings, Users, Wallet, X } from "lucide-react";
+import { BrandWordmark } from "../../components/BrandWordmark.jsx";
 import { Button } from "../../components/ui.jsx";
 import { ThemeToggle } from "../../components/ThemeToggle.jsx";
 import { assertModuleEntitled } from "../commercial/entitlements.js";
@@ -49,11 +50,11 @@ export function FinancierNav({ access, orgSettings = {}, businessName = "", logo
   return <>
   <header className="ft-mobile-header">
     <button type="button" className="ft-icon-btn ft-mobile-menu-btn" aria-label="Open menu" aria-expanded={drawerOpen} aria-controls="workspace-nav" onClick={() => setDrawerKey(location.key)}><Menu size={22} aria-hidden="true" /></button>
-    <span className="ft-brand ft-mobile-brand"><span className="ft-brand-strong">FIN</span>Track</span>
+    <BrandWordmark className="ft-mobile-brand" />
   </header>
   {drawerOpen && <div className="ft-nav-backdrop" aria-hidden="true" onClick={closeDrawer} />}
   <aside className={`financier-nav${drawerOpen ? " is-open" : ""}`} id="workspace-nav" aria-label="Workspace">
-    <div className="nav-title ft-brand"><span className="ft-brand-strong">FIN</span>Track</div>
+    <BrandWordmark className="nav-title" />
     <button type="button" className="ft-icon-btn ft-nav-close" aria-label="Close menu" onClick={closeDrawer}><X size={20} aria-hidden="true" /></button>
     {!access.isAccountsUser && <Button className={itemClass(isActive(workspacePaths.dashboard))} onClick={() => go(workspacePaths.dashboard)}><NavLabel icon={LayoutGrid} long="Dashboard" short="Dash" /></Button>}
     {access.daily && <Button className={itemClass(isActive(workspacePaths.daily))} onClick={() => go(financeSectionPath("daily", "collections"))}><NavLabel icon={CalendarDays} long="Daily Finance" short="Daily" /></Button>}
