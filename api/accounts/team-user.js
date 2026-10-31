@@ -3,9 +3,18 @@
 // scoped to one or more Accounts companies.
 import { temporaryAuthPassword } from "../_lib/agentPortal.js";
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const anonKey = process.env.VITE_SUPABASE_ANON_KEY;
+const readEnv = (...keys) => {
+  for (const key of keys) {
+    const value = String(process.env[key] || "").trim();
+    if (value) return value;
+  }
+  return "";
+};
+
+// Prefer server names; keep VITE_* fallbacks used elsewhere in this repo.
+const supabaseUrl = readEnv("SUPABASE_URL", "VITE_SUPABASE_URL");
+const serviceKey = readEnv("SUPABASE_SERVICE_ROLE_KEY");
+const anonKey = readEnv("SUPABASE_ANON_KEY", "VITE_SUPABASE_ANON_KEY");
 
 const json = (res, status, body) => res.status(status).json(body);
 const serviceHeaders = () => ({
@@ -13,6 +22,11 @@ const serviceHeaders = () => ({
   Authorization: `Bearer ${serviceKey}`,
   "Content-Type": "application/json",
 });
+const missingConfigKeys = () => [
+  !supabaseUrl && "VITE_SUPABASE_URL (or SUPABASE_URL)",
+  !anonKey && "VITE_SUPABASE_ANON_KEY (or SUPABASE_ANON_KEY)",
+  !serviceKey && "SUPABASE_SERVICE_ROLE_KEY",
+].filter(Boolean);
 const isUuid = value => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || ""));
 const contactEmail = value => {
   const email = String(value || "").trim().toLowerCase();
@@ -98,9 +112,24 @@ async function replaceCompanyAccess(orgId, userId, companyIds, createdBy) {
 }
 
 export default async function handler(req, res) {
-  if (!supabaseUrl || !serviceKey || !anonKey) {
+  // Safe config probe: which keys this deployment actually sees (no secret values).
+  if (req.method === "GET" && (req.query?.config === "1" || String(req.url || "").includes("config=1"))) {
+    return json(res, 200, {
+      hasUrl: Boolean(supabaseUrl),
+      hasAnon: Boolean(anonKey),
+      hasServiceRole: Boolean(serviceKey),
+      missing: missingConfigKeys(),
+      vercelEnv: process.env.VERCEL_ENV || null,
+      vercelTarget: process.env.VERCEL_TARGET_ENV || null,
+    });
+  }
+
+  const missing = missingConfigKeys();
+  if (missing.length) {
     return json(res, 500, {
-      error: "Accounts team login is not configured on the server. On Vercel, set SUPABASE_SERVICE_ROLE_KEY (and VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY) for Production and Preview, then redeploy. Local vite proxies /api to staging, so staging needs the same key.",
+      error: `Accounts team login is not configured on this deployment. Missing: ${missing.join(", ")}. In Vercel → fin-track → Settings → Environment Variables, open SUPABASE_SERVICE_ROLE_KEY (yellow Needs Attention usually means empty or not applied). Assign it to Preview and the staging custom environment, save a real service_role JWT from Supabase, then Redeploy the staging deployment. Local Vite proxies /api to staging-fintrack.vercel.app.`,
+      missing,
+      vercelEnv: process.env.VERCEL_ENV || null,
     });
   }
   const auth = String(req.headers.authorization || "");
