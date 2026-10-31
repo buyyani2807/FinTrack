@@ -271,7 +271,9 @@ export function CounterWorkspace({
       clearBill();
       onPosted?.(voucherId);
     } catch (err) {
-      setError(err?.message || "Could not post this bill.");
+      const detail = err?.details || err?.cause?.message || err?.hint;
+      const main = err?.message || "Could not post this bill.";
+      setError(detail && detail !== main ? `${main} (${detail})` : main);
     } finally {
       setBusy(false);
     }

@@ -100,7 +100,12 @@ async function request(path, options = {}, accessToken, retried = false) {
     if (refreshedToken) return request(path, options, refreshedToken, true);
   }
   if (!response.ok) {
-    throw new Error(body?.msg || body?.message || body?.error_description || body?.hint || body?.code || "Supabase request failed");
+    const error = new Error(body?.msg || body?.message || body?.error_description || body?.hint || body?.code || "Supabase request failed");
+    error.status = response.status;
+    error.code = body?.code || body?.error || null;
+    error.details = body?.details || null;
+    error.hint = body?.hint || null;
+    throw error;
   }
   return body;
 }

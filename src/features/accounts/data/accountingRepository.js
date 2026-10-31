@@ -36,6 +36,9 @@ const wrap = promise => promise.catch(err => {
   if (isMissing(err)) {
     const error = new Error("Run migrations 052–076 in the Supabase SQL editor to enable FinTrack Accounts companies, GST, attachments, items, QA hardening, bill-wise settlements, team invites, and recurring templates.");
     error.code = "MIGRATION_REQUIRED";
+    error.cause = err;
+    error.details = err?.details || err?.message || null;
+    error.hint = err?.hint || null;
     throw error;
   }
   throw err;
@@ -447,9 +450,28 @@ export const setPartyActive = (token, id, isActive) =>
     input_active: isActive !== false,
   }, token));
 
+// PostgREST matches RPC by parameter *names* present in the JSON body. Null optional
+// keys still count, so older DBs (pre-072) reject calls that include input_item_lines /
+// input_client_request_id even when those values are null. Drop null/undefined keys.
+const rpcArgs = (args) => Object.fromEntries(
+  Object.entries(args).filter(([, value]) => value !== null && value !== undefined),
+);
+
+const isPostVoucherMissing = err => (
+  err?.code === "MIGRATION_REQUIRED"
+  || isMissing(err)
+  || /could not find the function public\.acc_post_voucher/i.test(String(err?.message || ""))
+);
+
 export const postVoucher = async (token, payload) => {
   const itemLines = mapVoucherItemLinesForRpc(payload.itemLines);
-  const args = {
+  const settlements = (payload.settlements || [])
+    .filter(link => Number(link.amount || 0) > 0 && (link.invoiceVoucherId || link.invoice_voucher_id))
+    .map(link => ({
+      invoice_voucher_id: link.invoiceVoucherId || link.invoice_voucher_id,
+      amount: Number(link.amount || 0),
+    }));
+  const baseArgs = {
     input_voucher_type: payload.voucherType,
     input_date: payload.date,
     input_narration: payload.narration || "",
@@ -466,23 +488,52 @@ export const postVoucher = async (token, payload) => {
     input_source_transaction_id: payload.sourceTransactionId || null,
     input_gst_lines: payload.gstLines?.length ? payload.gstLines : null,
     input_client_request_id: payload.clientRequestId || null,
-    input_item_lines: itemLines.length ? itemLines : null,
   };
-  if ((payload.settlements || []).length) {
-    args.input_settlements = payload.settlements.map(link => ({
-      invoice_voucher_id: link.invoiceVoucherId || link.invoice_voucher_id,
-      amount: Number(link.amount || 0),
-    }));
-  }
-  const id = await wrap(accRpc("acc_post_voucher", args, token)).catch(err => {
-    if (/only supported on sales and purchase/i.test(String(err?.message || ""))) {
-      throw new Error("Returned items need migration 079 (079_accounts_inventory_returns_discounts.sql) in the Supabase SQL editor. Use \"Amount only\" until it is applied.");
+
+  const attempt = async (args) => {
+    try {
+      return await accRpc("acc_post_voucher", rpcArgs(args), token);
+    } catch (err) {
+      if (/only supported on sales and purchase/i.test(String(err?.message || ""))) {
+        throw new Error("Returned items need migration 079 (079_accounts_inventory_returns_discounts.sql) in the Supabase SQL editor. Use \"Amount only\" until it is applied.");
+      }
+      if (isPostVoucherMissing(err)) return { missing: true, err };
+      throw err;
     }
-    throw err;
-  });
+  };
+
+  // Newest → oldest signatures. Prefer in-RPC item lines; fall back to a separate save.
+  const trials = [
+    { args: { ...baseArgs, input_item_lines: itemLines.length ? itemLines : null, input_settlements: settlements.length ? settlements : null }, separateItems: false },
+    { args: { ...baseArgs, input_item_lines: itemLines.length ? itemLines : null }, separateItems: false },
+    { args: { ...baseArgs }, separateItems: itemLines.length > 0 },
+    { args: { ...baseArgs, input_client_request_id: null }, separateItems: itemLines.length > 0 },
+  ];
+
+  let id = null;
+  let separateItems = Boolean(payload.forceSeparateItemSave && itemLines.length);
+  let lastMissing = null;
+  for (const trial of trials) {
+    const result = await attempt(trial.args);
+    if (result?.missing) {
+      lastMissing = result.err;
+      continue;
+    }
+    id = result;
+    separateItems = separateItems || trial.separateItems;
+    break;
+  }
+  if (!id) {
+    const error = new Error("Run migrations 052–076 in the Supabase SQL editor to enable FinTrack Accounts companies, GST, attachments, items, QA hardening, bill-wise settlements, team invites, and recurring templates.");
+    error.code = "MIGRATION_REQUIRED";
+    error.cause = lastMissing;
+    error.details = lastMissing?.details || lastMissing?.message || null;
+    error.hint = lastMissing?.hint || null;
+    throw error;
+  }
+
   if (payload.dueDate) await setVoucherDueDate(token, id, payload.dueDate);
-  // Legacy path: older DBs without input_item_lines still accept a follow-up save.
-  if (itemLines.length && payload.forceSeparateItemSave) {
+  if (separateItems && itemLines.length) {
     try {
       await saveVoucherItemLines(token, id, payload.itemLines);
     } catch (err) {
