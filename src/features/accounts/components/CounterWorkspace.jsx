@@ -89,6 +89,7 @@ export function CounterWorkspace({
   token,
   canWrite = false,
   canManage = false,
+  cashierMode = false,
   saving = false,
   accounts = [],
   items = [],
@@ -124,8 +125,14 @@ export function CounterWorkspace({
   const tillLabel = counterSettings?.tillLabel || "Till 1";
   const closed = companyId ? readDayClose(companyId, today) : null;
 
+  // Cashiers bill walk-in by default; named customers stay available for credit/named sales.
+  // Inventory / party master screens stay closed — this list is till-only.
   const customers = useMemo(
-    () => (parties || []).filter(party => party.partyType === "customer" && party.isActive !== false),
+    () => (parties || []).filter(party => (
+      party.partyType === "customer"
+      && party.isActive !== false
+      && !/^suspense(\s+account)?$/i.test(String(party.name || "").trim())
+    )),
     [parties],
   );
   const todayBills = useMemo(() => {
@@ -142,10 +149,11 @@ export function CounterWorkspace({
   }, [vouchers, today]);
   const catalog = useMemo(() => matchItems(items, query), [items, query]);
   const gstEnabled = activeCompany?.gstRegistration === "regular";
-  const selectedParty = partyId && partyId !== CASH_PARTY_ID
-    ? customers.find(party => party.id === partyId)
+  const billingPartyId = cashierMode ? CASH_PARTY_ID : partyId;
+  const selectedParty = billingPartyId && billingPartyId !== CASH_PARTY_ID
+    ? customers.find(party => party.id === billingPartyId)
     : null;
-  const partyState = partyId === CASH_PARTY_ID
+  const partyState = billingPartyId === CASH_PARTY_ID
     ? (activeCompany?.stateCode || "")
     : (selectedParty?.stateCode || gstStateFromGstin(selectedParty?.gstin));
   const intra = isIntraGst(activeCompany?.stateCode, partyState);
@@ -247,7 +255,7 @@ export function CounterWorkspace({
       ...emptyHold(),
       label: `Hold ${holds.length + 1} · ${lines.length} item${lines.length === 1 ? "" : "s"} · ${money(totals.total)}`,
       lines,
-      partyId,
+      partyId: billingPartyId,
       moneyMode,
       receivedCash,
       receivedUpi,
@@ -264,7 +272,7 @@ export function CounterWorkspace({
       return;
     }
     setLines(hold.lines);
-    setPartyId(hold.partyId || CASH_PARTY_ID);
+    setPartyId(cashierMode ? CASH_PARTY_ID : (hold.partyId || CASH_PARTY_ID));
     setMoneyMode(hold.moneyMode || "cash");
     setReceivedCash(hold.receivedCash || "");
     setReceivedUpi(hold.receivedUpi || "");
@@ -292,7 +300,7 @@ export function CounterWorkspace({
         kind: "sale",
         accounts,
         date: today,
-        partyId: entryPartyId(partyId),
+        partyId: entryPartyId(billingPartyId),
         moneyMode,
         moneyParts,
         settlement: "paid",
@@ -591,15 +599,16 @@ export function CounterWorkspace({
           <FieldBlock label="Customer">
             <Select
               aria-label="Customer"
-              value={partyId}
+              value={billingPartyId}
               onChange={event => setPartyId(event.target.value)}
-              disabled={busy}
+              disabled={busy || cashierMode}
             >
               <option value={CASH_PARTY_ID}>Cash (walk-in)</option>
-              {customers.map(party => (
+              {!cashierMode ? customers.map(party => (
                 <option key={party.id} value={party.id}>{party.name}</option>
-              ))}
+              )) : null}
             </Select>
+            {cashierMode ? <p className="small">Walk-in only for cashier. Ask an accountant to bill a named customer on credit.</p> : null}
           </FieldBlock>
           <FieldBlock label="Payment">
             <Select

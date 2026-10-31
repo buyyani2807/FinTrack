@@ -469,7 +469,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       if (section === "counter") go({ section: "overview", reportTab: "daybook" });
       return;
     }
-    if (cashierMode && section !== "counter" && section !== "inventory") {
+    if (cashierMode && section !== "counter") {
       go({ section: "counter", reportTab: "daybook" });
     }
   }, [section, counterEnabled, cashierMode]);
@@ -2687,6 +2687,7 @@ const openVoucher = () => {
           token={token}
           canWrite={canWrite}
           canManage={canManageCounter}
+          cashierMode={cashierMode}
           saving={saving}
           accounts={accountsForCounterPay(visibleAccounts, counterSettings.paymentMap)}
           items={items}
@@ -2696,7 +2697,7 @@ const openVoucher = () => {
           vouchers={vouchers}
           activeCompany={activeCompany}
           counterSettings={counterSettings}
-          onOpenInventory={() => openSection("inventory")}
+          onOpenInventory={cashierMode ? null : () => openSection("inventory")}
           onReprint={voucherId => setPendingSalesInvoiceId(voucherId)}
           askReason={askReason}
           onRefresh={() => refresh()}
@@ -2777,7 +2778,7 @@ const openVoucher = () => {
           onOpenSection={openSection}
         />}
 
-        {section === "inventory" && <InventorySection
+        {section === "inventory" && !cashierMode && <InventorySection
           tab={view.sub}
           onTabChange={next => go({ section: "inventory", sub: next })}
           items={items}

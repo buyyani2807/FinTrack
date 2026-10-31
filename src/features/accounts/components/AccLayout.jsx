@@ -26,7 +26,7 @@ const withCounter = (tabs, enabled) => (enabled
 const STATEMENT_SECTIONS = ["trial", "pnl", "balance"];
 const REPORT_OWN_SECTIONS = [...STATEMENT_SECTIONS, "crm"];
 
-const CASHIER_TABS = [COUNTER_TAB, { id: "inventory", label: "Inventory" }];
+const CASHIER_TABS = [COUNTER_TAB];
 
 export function AccSectionTabs({ section, reportTab, onNavigate, openReport, aiEnabled = false, manufacturingEnabled = false, counterEnabled = false, cashierMode = false }) {
   const afterAi = aiEnabled ? [CA_TAB, AI_TAB] : [CA_TAB];
