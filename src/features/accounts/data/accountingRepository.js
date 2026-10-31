@@ -8,11 +8,22 @@ export { assembleVouchers, mapVoucherItemLinesForRpc };
 
 // Only treat PostgREST / Postgres schema gaps as "run migrations" — not business errors
 // that happen to say "not found" / "does not exist" (those must stay visible).
+// Specific missing columns (e.g. discount_amount → 079) are handled separately so we do
+// not dump the broad "052–076" banner for a single later migration.
 const isMissing = err => {
   const code = String(err?.code || "");
   const message = String(err?.message || "");
-  if (/^PGRST20[25]$/i.test(code) || code === "42P01" || code === "42703") return true;
-  return /could not find the (table|view|function|column|relationship)|relation ["'].+["'] does not exist|column ["'].+["'] does not exist|schema cache/i.test(message);
+  if (/discount_amount/i.test(message) && /acc_voucher_item_lines/i.test(message)) return false;
+  if (/^PGRST20[25]$/i.test(code) || code === "42P01") return true;
+  return /could not find the (table|view|function|relationship)|relation ["'].+["'] does not exist|schema cache/i.test(message);
+};
+
+const migrationHintForSchemaError = err => {
+  const message = String(err?.message || err?.details || "");
+  if (/discount_amount/i.test(message) && /acc_voucher_item_lines/i.test(message)) {
+    return "Counter sales need migration 079. In the Supabase SQL editor, run supabase/079_accounts_inventory_returns_discounts.sql (or at least: alter table public.acc_voucher_item_lines add column if not exists discount_amount numeric(18,2) not null default 0;), then try Charge again.";
+  }
+  return null;
 };
 
 let activeCompanyId = null;
@@ -494,6 +505,14 @@ export const postVoucher = async (token, payload) => {
     try {
       return await accRpc("acc_post_voucher", rpcArgs(args), token);
     } catch (err) {
+      const schemaHint = migrationHintForSchemaError(err);
+      if (schemaHint) {
+        const error = new Error(schemaHint);
+        error.code = "MIGRATION_REQUIRED";
+        error.cause = err;
+        error.details = err?.message || null;
+        throw error;
+      }
       if (/only supported on sales and purchase/i.test(String(err?.message || ""))) {
         throw new Error("Returned items need migration 079 (079_accounts_inventory_returns_discounts.sql) in the Supabase SQL editor. Use \"Amount only\" until it is applied.");
       }
@@ -973,11 +992,31 @@ export const adjustStock = (token, { itemId, date, quantityDelta, reasonNote }) 
     input_reason_note: reasonNote,
   }, token));
 
-export const saveVoucherItemLines = (token, voucherId, lines) =>
-  wrap(accRpc("acc_save_voucher_item_lines", {
-    input_voucher_id: voucherId,
-    input_lines: mapVoucherItemLinesForRpc(lines),
-  }, token));
+export const saveVoucherItemLines = async (token, voucherId, lines) => {
+  try {
+    return await accRpc("acc_save_voucher_item_lines", {
+      input_voucher_id: voucherId,
+      input_lines: mapVoucherItemLinesForRpc(lines),
+    }, token);
+  } catch (err) {
+    const schemaHint = migrationHintForSchemaError(err);
+    if (schemaHint) {
+      const error = new Error(schemaHint);
+      error.code = "MIGRATION_REQUIRED";
+      error.cause = err;
+      error.details = err?.message || null;
+      throw error;
+    }
+    if (isMissing(err)) {
+      const error = new Error("Run migrations 052–076 in the Supabase SQL editor to enable FinTrack Accounts companies, GST, attachments, items, QA hardening, bill-wise settlements, team invites, and recurring templates.");
+      error.code = "MIGRATION_REQUIRED";
+      error.cause = err;
+      error.details = err?.details || err?.message || null;
+      throw error;
+    }
+    throw err;
+  }
+};
 
 export const claimTeamInvites = token =>
   ignoreMissing(supabase.rpc("acc_claim_team_invites", {}, token))
