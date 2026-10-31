@@ -10,20 +10,25 @@ import { NAV_TREE, REPORT_TABS, navItemIsActive } from "../accountsNavigation.js
 // Reports lists every report (Day Book, Trial Balance … Customer Pipeline), opened through `openReport`.
 // AI Review follows Reports only when the AI plan is enabled.
 // Manufacturing appears after Inventory when the company industry is manufacturing.
+// Counter (POS till) appears after Overview when enabled for the company.
 const BASE_TABS = NAV_TREE.filter(item => item.id !== "cashbook");
 const CA_TAB = { id: "ca", label: "For the CA" };
 const AI_TAB = { id: "ai", label: "AI Review", icon: Sparkles };
 const MANUFACTURING_TAB = { id: "manufacturing", label: "Manufacturing" };
+const COUNTER_TAB = { id: "counter", label: "Counter" };
 const afterReports = (tabs, extra) => tabs.flatMap(item => (item.id === "reports" ? [item, ...extra] : [item]));
 const withManufacturing = (tabs, enabled) => (enabled
   ? tabs.flatMap(item => (item.id === "inventory" ? [item, MANUFACTURING_TAB] : [item]))
   : tabs);
+const withCounter = (tabs, enabled) => (enabled
+  ? tabs.flatMap(item => (item.id === "overview" ? [item, COUNTER_TAB] : [item]))
+  : tabs);
 const STATEMENT_SECTIONS = ["trial", "pnl", "balance"];
 const REPORT_OWN_SECTIONS = [...STATEMENT_SECTIONS, "crm"];
 
-export function AccSectionTabs({ section, reportTab, onNavigate, openReport, aiEnabled = false, manufacturingEnabled = false }) {
+export function AccSectionTabs({ section, reportTab, onNavigate, openReport, aiEnabled = false, manufacturingEnabled = false, counterEnabled = false }) {
   const afterAi = aiEnabled ? [CA_TAB, AI_TAB] : [CA_TAB];
-  const tabs = withManufacturing(afterReports(BASE_TABS, afterAi), manufacturingEnabled);
+  const tabs = withCounter(withManufacturing(afterReports(BASE_TABS, afterAi), manufacturingEnabled), counterEnabled);
   const current = tabs.find(item => navItemIsActive(item, section));
   const isReports = current?.id === "reports";
   const children = isReports ? REPORT_TABS : current?.children;

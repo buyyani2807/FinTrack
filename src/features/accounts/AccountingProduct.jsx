@@ -156,6 +156,8 @@ import { gstStatusLabel } from "./accountsFormat.js";
 import { AccSectionTabs, AccCompanyBar, AccPageHeader } from "./components/AccLayout.jsx";
 import { CustomerPipeline } from "./components/CustomerPipeline.jsx";
 import { ManufacturingWorkspace } from "./components/ManufacturingWorkspace.jsx";
+import { CounterWorkspace } from "./components/CounterWorkspace.jsx";
+import { readCounterEnabled, saveCounterEnabled } from "./model/counterSettings.js";
 import { VoucherForm } from "./components/VoucherForm.jsx";
 import { SimpleEntryForm } from "./components/SimpleEntryForm.jsx";
 import { OverviewSection } from "./sections/OverviewSection.jsx";
@@ -438,6 +440,19 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     ? accountsAccessRole !== "accountant"
     : Boolean(accountsAccessRole) && !canWrite;
   const manufacturingEnabled = Boolean(activeCompanyId) && readIndustry(activeCompanyId) === "manufacturing";
+  const [counterEnabled, setCounterEnabled] = useState(() => (
+    Boolean(activeCompanyId) && readCounterEnabled(activeCompanyId, readIndustry(activeCompanyId))
+  ));
+  useEffect(() => {
+    if (!activeCompanyId) {
+      setCounterEnabled(false);
+      return;
+    }
+    setCounterEnabled(readCounterEnabled(activeCompanyId, readIndustry(activeCompanyId)));
+  }, [activeCompanyId]);
+  useEffect(() => {
+    if (section === "counter" && !counterEnabled) go({ section: "overview", reportTab: "daybook" });
+  }, [section, counterEnabled]);
   // Keep the wizard mounted across refresh()/loading so Continue does not
   // unmount mid-flow (that looked like “Step 1/6 finishes in 2 steps”).
   const showOnboarding = Boolean(
@@ -2439,7 +2454,7 @@ const openVoucher = () => {
       <AccPageHeader
         title="Accounts"
         copy={`${activeCompany?.name || settings?.companyName || workspace.businessName || "Your business"} · ${fy.label} · ${range.from} to ${range.to}`}
-        tabs={<AccSectionTabs section={section} reportTab={reportTab} onNavigate={openSection} openReport={openReport} aiEnabled={aiEnabled} manufacturingEnabled={manufacturingEnabled} />}
+        tabs={<AccSectionTabs section={section} reportTab={reportTab} onNavigate={openSection} openReport={openReport} aiEnabled={aiEnabled} manufacturingEnabled={manufacturingEnabled} counterEnabled={counterEnabled} />}
         companyBar={<AccCompanyBar
           companies={companies}
           activeId={activeCompanyId}
@@ -2646,6 +2661,25 @@ const openVoucher = () => {
         />}
 
         {section === "manufacturing" && manufacturingEnabled && <ManufacturingWorkspace items={items} stockMovements={stockMovements} saving={saving} onItems={() => openSection("inventory")} onTransactions={() => openSection("vouchers")} onProductionRun={recordProductionRun} />}
+
+        {section === "counter" && counterEnabled && <CounterWorkspace
+          token={token}
+          canWrite={canWrite}
+          saving={saving}
+          accounts={visibleAccounts}
+          items={items}
+          stockByItem={stockByItem}
+          parties={parties}
+          priceLists={priceLists}
+          vouchers={vouchers}
+          activeCompany={activeCompany}
+          onOpenInventory={() => openSection("inventory")}
+          onReprint={voucherId => setPendingSalesInvoiceId(voucherId)}
+          onPosted={voucherId => {
+            setPendingSalesInvoiceId(voucherId);
+            refresh();
+          }}
+        />}
         {section === "documents" && <div className="acc-panel">
           <AccDocumentsWorkspace
             documents={tradeDocuments}
@@ -2918,6 +2952,13 @@ const openVoucher = () => {
             setSetupAfterCreate(true);
             setShowCreateCompany(true);
           } : null}
+          counterEnabled={counterEnabled}
+          onCounterEnabledChange={enabled => {
+            if (!activeCompanyId) return;
+            saveCounterEnabled(activeCompanyId, enabled);
+            setCounterEnabled(enabled);
+            setNotice(enabled ? "Counter enabled. Open the Counter tab to bill." : "Counter hidden for this company.");
+          }}
           activeCompany={activeCompany}
           setupForm={setupForm}
           setSetupForm={setSetupForm}

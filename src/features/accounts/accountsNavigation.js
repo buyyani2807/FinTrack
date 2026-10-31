@@ -71,10 +71,12 @@ export function sectionTrail(section, reportTab) {
   if (section === "ca") return ["For the CA"];
   if (section === "crm") return ["Reports", "Customer Pipeline"];
   if (section === "manufacturing") return ["Manufacturing"];
+  if (section === "counter") return ["Counter"];
   return [SECTIONS.find(item => item.id === section)?.label || "Accounts"];
 }
 export const SECTIONS = [
   { id: "overview", label: "Overview", group: "Books" },
+  { id: "counter", label: "Counter", group: "Books" },
   { id: "manufacturing", label: "Manufacturing", group: "Industry" },
   { id: "ledger", label: "Ledger", group: "Books" },
   { id: "vouchers", label: "Transactions", group: "Books" },

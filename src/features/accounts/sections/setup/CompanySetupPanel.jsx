@@ -33,6 +33,8 @@ export function CompanySetupPanel({
   archiveCompany,
   setCompanyDraft,
   setShowCreateCompany,
+  counterEnabled = false,
+  onCounterEnabledChange = null,
 }) {
   const companyChanged = companyDetailsChanged(setupForm, activeCompany);
   const activeCount = (companies || []).filter(company => company.status !== "archived").length;
@@ -67,6 +69,20 @@ export function CompanySetupPanel({
         )}
       </div>
       {!canAdmin && <p className="small">Only the business owner can change company name / books start settings.</p>}
+      {onCounterEnabledChange ? (
+        <label className="acc-counter-enable">
+          <input
+            type="checkbox"
+            checked={Boolean(counterEnabled)}
+            disabled={!canAdmin}
+            onChange={event => onCounterEnabledChange(event.target.checked)}
+          />
+          <span>
+            <strong>Enable Counter (POS billing)</strong>
+            <span className="small">Shows a till under Accounts. Charged bills post as sales and update stock in this company. Retail industries default this on.</span>
+          </span>
+        </label>
+      ) : null}
       <p className="small">Backups are company-isolated. Restore only works into the same company when it has no vouchers yet. Cross-company overwrite is blocked.</p>
       <p className="small">Current company: <strong>{activeCompany?.name || "None"}</strong>{activeCompany ? ` · ${gstStatusLabel(activeCompany)}` : ""}</p>
       <AccReveal summary={listSummary}>

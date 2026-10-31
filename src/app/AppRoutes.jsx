@@ -79,7 +79,7 @@ export function AppRoutes() {
           <Route path="/cashbook/*" element={<Navigate to="/cashbook/cashbook" replace />} />
 
           <Route path="/accounting" element={<Navigate to="/accounting/overview" replace />} />
-          {/* :section = overview | transactions | documents | inventory | parties | reports | banking | setup | ledger | pipeline | manufacturing */}
+          {/* :section = overview | counter | transactions | documents | inventory | parties | reports | banking | setup | ledger | pipeline | manufacturing */}
           <Route path="/accounting/:section" element={<RequireModule module="accounts"><AccountsRoute /></RequireModule>} />
           <Route path="/accounting/documents/:docType" element={<RequireModule module="accounts"><AccountsRoute /></RequireModule>} />
           <Route path="/accounting/inventory/:inventoryTab" element={<RequireModule module="accounts"><AccountsRoute /></RequireModule>} />

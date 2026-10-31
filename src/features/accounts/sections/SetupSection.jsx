@@ -78,6 +78,8 @@ export function SetupSection({
   openBulkImport = null,
   openSetupAssistant = null,
   setUpNewCompany = null,
+  counterEnabled = false,
+  onCounterEnabledChange = null,
 }) {
   return (
     <div className="acc-panel acc-setup">
@@ -103,6 +105,8 @@ export function SetupSection({
         archiveCompany={archiveCompany}
         setCompanyDraft={setCompanyDraft}
         setShowCreateCompany={setShowCreateCompany}
+        counterEnabled={counterEnabled}
+        onCounterEnabledChange={onCounterEnabledChange}
       />
       <GstSetupPanel
         activeCompany={activeCompany}

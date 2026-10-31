@@ -6818,3 +6818,297 @@
     gap: 10px;
   }
 }
+
+/* Counter (POS till) */
+.accounts-dashboard .acc-counter-enable {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--ft-border);
+  border-radius: 10px;
+  background: var(--ft-surface-muted);
+  cursor: pointer;
+}
+
+.accounts-dashboard .acc-counter-enable input {
+  margin-top: 3px;
+}
+
+.accounts-dashboard .acc-counter-enable span {
+  display: grid;
+  gap: 4px;
+}
+
+.accounts-dashboard .acc-counter-enable strong {
+  font-size: var(--ft-type-ui);
+}
+
+.accounts-dashboard .counter-workspace {
+  display: grid;
+  gap: 14px;
+}
+
+.accounts-dashboard .counter-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.accounts-dashboard .counter-head .copy {
+  margin: 4px 0 0;
+  max-width: 46rem;
+}
+
+.accounts-dashboard .counter-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.accounts-dashboard .counter-holds,
+.accounts-dashboard .counter-today {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.accounts-dashboard .counter-today-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.accounts-dashboard .counter-hold-chip,
+.accounts-dashboard .counter-today-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.accounts-dashboard .counter-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(240px, 0.85fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.accounts-dashboard .counter-catalog,
+.accounts-dashboard .counter-cart,
+.accounts-dashboard .counter-pay {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  min-width: 0;
+}
+
+.accounts-dashboard .counter-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--ft-border);
+  border-radius: 10px;
+  background: var(--ft-surface);
+  color: var(--ft-muted);
+}
+
+.accounts-dashboard .counter-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 12px 0;
+  font-size: var(--ft-type-body);
+  color: var(--ft-text);
+}
+
+.accounts-dashboard .counter-search input:focus {
+  outline: none;
+}
+
+.accounts-dashboard .counter-item-list,
+.accounts-dashboard .counter-line-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: min(58vh, 560px);
+  overflow: auto;
+}
+
+.accounts-dashboard .counter-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid var(--ft-border);
+  border-radius: 10px;
+  background: var(--ft-surface);
+  color: var(--ft-text);
+  cursor: pointer;
+}
+
+.accounts-dashboard .counter-item:hover {
+  border-color: color-mix(in srgb, var(--ft-primary) 45%, var(--ft-border));
+}
+
+.accounts-dashboard .counter-item.is-low {
+  border-color: color-mix(in srgb, var(--ft-warning) 50%, var(--ft-border));
+}
+
+.accounts-dashboard .counter-item-name {
+  grid-column: 1;
+  font-weight: 600;
+  font-size: var(--ft-type-ui);
+}
+
+.accounts-dashboard .counter-item .small {
+  grid-column: 1;
+}
+
+.accounts-dashboard .counter-item strong {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  font-size: var(--ft-type-ui);
+}
+
+.accounts-dashboard .counter-cart-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.accounts-dashboard .counter-cart-head strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--ft-type-card);
+}
+
+.accounts-dashboard .counter-empty {
+  margin: 0;
+}
+
+.accounts-dashboard .counter-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 56px 72px 80px auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--ft-border);
+}
+
+.accounts-dashboard .counter-line-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.accounts-dashboard .counter-qty {
+  width: 100%;
+  text-align: center;
+  padding: 6px;
+  border: 1px solid var(--ft-border);
+  border-radius: 8px;
+  background: var(--ft-surface);
+  color: var(--ft-text);
+  font-size: var(--ft-type-ui);
+}
+
+.accounts-dashboard .counter-line-rate,
+.accounts-dashboard .counter-line-net {
+  text-align: right;
+  font-size: var(--ft-type-secondary);
+}
+
+.accounts-dashboard .counter-line-remove {
+  padding: 6px 8px;
+}
+
+.accounts-dashboard .counter-field {
+  display: grid;
+  gap: 4px;
+}
+
+.accounts-dashboard .counter-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.accounts-dashboard .counter-totals {
+  display: grid;
+  gap: 6px;
+  padding-top: 4px;
+  border-top: 1px solid var(--ft-border);
+}
+
+.accounts-dashboard .counter-totals > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: var(--ft-type-secondary);
+}
+
+.accounts-dashboard .counter-total-due {
+  font-size: var(--ft-type-card);
+  padding-top: 4px;
+}
+
+.accounts-dashboard .counter-pay-actions {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+}
+
+.accounts-dashboard .counter-charge {
+  font-size: var(--ft-type-ui);
+}
+
+@media (max-width: 1100px) {
+  .accounts-dashboard .counter-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .accounts-dashboard .counter-pay {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 720px) {
+  .accounts-dashboard .counter-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .accounts-dashboard .counter-item-list,
+  .accounts-dashboard .counter-line-list {
+    max-height: 40vh;
+  }
+
+  .accounts-dashboard .counter-line {
+    grid-template-columns: minmax(0, 1fr) 52px 64px auto;
+  }
+
+  .accounts-dashboard .counter-line-rate {
+    display: none;
+  }
+
+  .accounts-dashboard .counter-pay-actions {
+    grid-template-columns: 1fr;
+  }
+}
