@@ -441,11 +441,14 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   }, [token, workspace?.role]);
 
   // Accounts-team never gets owner admin; posting for accountant or cashier.
+  // Role loads async — until then keep chrome Counter-only so cashiers never flash full Accounts.
+  const accountsRolePending = workspace?.role === "accounts" && !accountsAccessRole;
   const canWrite = workspace?.role === "accounts"
     ? canCounterWrite(accountsAccessRole)
     : canCounterWrite(accountsAccessRole) || accountsAccessRole === "owner";
   const canAdmin = workspace?.role !== "accounts" && accountsAccessRole === "owner";
   const cashierMode = isCashierRole(accountsAccessRole);
+  const cashierNav = cashierMode || accountsRolePending;
   const canManageCounter = canCounterManage(accountsAccessRole) || (workspace?.role !== "accounts" && accountsAccessRole === "owner");
   const readOnly = workspace?.role === "accounts"
     ? !canCounterWrite(accountsAccessRole)
@@ -469,10 +472,10 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       if (section === "counter") go({ section: "overview", reportTab: "daybook" });
       return;
     }
-    if (cashierMode && section !== "counter") {
+    if (cashierNav && section !== "counter") {
       go({ section: "counter", reportTab: "daybook" });
     }
-  }, [section, counterEnabled, cashierMode]);
+  }, [section, counterEnabled, cashierNav]);
   // Keep the wizard mounted across refresh()/loading so Continue does not
   // unmount mid-flow (that looked like “Step 1/6 finishes in 2 steps”).
   const showOnboarding = Boolean(
@@ -2474,7 +2477,7 @@ const openVoucher = () => {
       <AccPageHeader
         title="Accounts"
         copy={`${activeCompany?.name || settings?.companyName || workspace.businessName || "Your business"} · ${fy.label} · ${range.from} to ${range.to}`}
-        tabs={<AccSectionTabs section={section} reportTab={reportTab} onNavigate={openSection} openReport={openReport} aiEnabled={aiEnabled} manufacturingEnabled={manufacturingEnabled} counterEnabled={counterEnabled} cashierMode={cashierMode} />}
+        tabs={accountsRolePending && !counterEnabled ? null : <AccSectionTabs section={section} reportTab={reportTab} onNavigate={openSection} openReport={openReport} aiEnabled={aiEnabled} manufacturingEnabled={manufacturingEnabled} counterEnabled={counterEnabled} cashierMode={cashierNav} />}
         companyBar={<AccCompanyBar
           companies={companies}
           activeId={activeCompanyId}
@@ -2488,18 +2491,17 @@ const openVoucher = () => {
           rangeTo={range.to}
           fallbackName={canAdmin ? (settings?.companyName || workspace.businessName || "") : ""}
         />}
-        extras={canWrite && !cashierMode ? <NewEntryActions openSimple={openSimple} openVoucher={openVoucher} openParty={openParty} openBookkeeper={settings ? () => setShowBookkeeper(true) : null} openBulkImport={!migrationRequired ? openBulkImport : null} /> : <span className="small">{cashierMode ? "Cashier · Counter" : `View-only · ${accountsAccessRole || "viewer"}`}</span>}
+        extras={accountsRolePending ? <span className="small">Loading access…</span> : canWrite && !cashierMode ? <NewEntryActions openSimple={openSimple} openVoucher={openVoucher} openParty={openParty} openBookkeeper={settings ? () => setShowBookkeeper(true) : null} openBulkImport={!migrationRequired ? openBulkImport : null} /> : <span className="small">{cashierMode ? "Cashier · Counter" : `View-only · ${accountsAccessRole || "viewer"}`}</span>}
       />
       <Toasts items={[{ id: "error", tone: "error", message: error, onClose: () => setError("") }, { id: "notice", message: notice, onClose: () => setNotice("") }]} />
-      {cashierMode && counterEnabled ? <div className="notice">Cashier access: Counter billing only. Ask the owner for accountant access to open full Accounts.</div> : null}
-      {readOnly && !cashierMode && <div className="notice">Accounts access: <strong>viewer</strong>. You can review books and reports, but posting and setup changes are blocked.</div>}
+      {readOnly && !cashierMode && !accountsRolePending && <div className="notice">Accounts access: <strong>viewer</strong>. You can review books and reports, but posting and setup changes are blocked.</div>}
       {!loading && workspace?.role === "accounts" && !companies.filter(row => row.status !== "archived").length && (
         <div className="notice" role="status">
           No Accounts company is assigned to this login. Ask the owner to open <strong>Setup → Add CA / Accounts login → Companies</strong> and tick the company you should access.
         </div>
       )}
       {migrationRequired && <div className="notice">Run <strong>052</strong> through <strong>076_fix_ambiguous_item_type.sql</strong> in the Supabase SQL editor (including <strong>059</strong>, <strong>064–067</strong>, <strong>070–076</strong>), then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
-      {loading && !settings ? <Spinner label="Loading Accounts" /> : <>
+      {loading && !settings ? <Spinner label="Loading Accounts" /> : accountsRolePending ? <Spinner label="Loading Accounts" /> : <>
         {section === "overview" && <OverviewSection
           settings={settings}
           setupForm={setupForm}
