@@ -5,6 +5,7 @@ import {
   filterItemProfit,
   grossMarginPercent,
   itemProfitability,
+  itemProfitReviewKey,
   itemProfitTotals,
   pageItemProfit,
 } from "../src/features/accounts/model/itemProfitability.js";
@@ -40,6 +41,28 @@ const reportFor = (extra = {}) => itemProfitability({
 test("gross margin is blank when revenue is zero", () => {
   assert.equal(grossMarginPercent(10, 0), null);
   assert.equal(grossMarginPercent(1575, 6300), 25);
+});
+
+test("a review mark key changes when the warning changes", () => {
+  const base = {
+    itemId: "i1",
+    from: "2026-04-01",
+    to: "2027-03-31",
+    warnings: [{ code: "backdated", message: "Sale is dated 2026-09-30 and was recorded on 2026-10-06." }],
+  };
+  const first = itemProfitReviewKey(base);
+  const same = itemProfitReviewKey({ ...base, warnings: [...base.warnings] });
+  const next = itemProfitReviewKey({
+    ...base,
+    warnings: [
+      ...base.warnings,
+      { code: "sales_gap", message: "Quantity on sales invoices does not match sale movements." },
+    ],
+  });
+  assert.equal(first, same);
+  assert.notEqual(first, next);
+  assert.match(first, /^ip:2026-04-01:2027-03-31:i1:/);
+  assert.ok(first.length <= 200);
 });
 
 test("one purchase and one sale use weighted-average cost", () => {

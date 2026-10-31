@@ -22,7 +22,7 @@ function NavIcon({ item, size = 15 }) {
 
 const MENU_MODULES = {
   accounts: ["accounts-overview", "payroll", "trade-documents", "inventory", "item-profit", "for-the-ca"],
-  intelligence: ["ask-fintrack", "ai-review", "forecasting", "month-end-readiness", "bank-matching", "gst-review"],
+  intelligence: ["bill-scanning", "ask-fintrack", "ai-review", "forecasting", "bank-matching", "gst-review"],
 };
 
 const COMPANY_LINKS = [
@@ -240,6 +240,7 @@ export function MarketingLayout() {
         <Link to="/features/daily-finance">Finance</Link>
         <Link to="/features/auction-chit">Chit Funds</Link>
         <Link to="/features/cashbook">Cashbook</Link>
+        <Link to="/features/bill-scanning">Bill scan</Link>
         <Link to="/features/ask-fintrack">Ask FinTrack</Link>
         <Link to="/features/ai-review">AI Review</Link>
       </div>

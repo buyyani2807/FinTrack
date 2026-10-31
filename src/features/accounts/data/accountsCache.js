@@ -1,6 +1,7 @@
 import {
   loadAccountingSettings,
   loadAccountsCompanies,
+  loadMyAccountsCompanyIds,
   loadChartOfAccounts,
   loadParties,
   loadPartyPipeline,
@@ -16,6 +17,7 @@ import {
   loadDocumentSettings,
   loadComplianceFilings,
   loadCollectionRoutes,
+  loadPriceLists,
 } from "./accountingRepository.js";
 
 export const COMPANY_STORAGE_KEY = "fintrack-accounts-company";
@@ -25,18 +27,41 @@ let accountsSnapshot = null;
 let accountsPrefetch = null;
 export const readAccountsSnapshot = token => (token && accountsSnapshot?.token === token ? accountsSnapshot : null);
 const orEmptyWhenMigrating = promise => promise.catch(err => { if (err.code === "MIGRATION_REQUIRED") return []; throw err; });
-export async function fetchAccountsBundle(token, { preferredCompanyId, wantRecurring = true } = {}) {
+export async function fetchAccountsBundle(token, {
+  preferredCompanyId,
+  wantRecurring = true,
+  workspaceRole = "",
+  userId = "",
+} = {}) {
+  const accountsTeam = workspaceRole === "accounts";
   let companies = [];
   try {
     companies = await loadAccountsCompanies(token);
   } catch (err) {
     if (err.code !== "MIGRATION_REQUIRED") throw err;
   }
+  // Defense in depth: CAs only see assigned companies (fail closed if ids are missing).
+  if (accountsTeam) {
+    if (!userId) {
+      companies = [];
+    } else {
+      const allowed = new Set(await loadMyAccountsCompanyIds(token, userId));
+      companies = companies.filter(company => allowed.has(company.id));
+    }
+  }
   let stored = "";
   try { stored = sessionStorage.getItem(COMPANY_STORAGE_KEY) || ""; } catch { stored = ""; }
   const activeCompanies = companies.filter(item => item.status !== "archived");
+  // Drop a stale company id (e.g. owner session on this browser, or a company the CA cannot open).
+  if (stored && !activeCompanies.some(item => item.id === stored)) {
+    try { sessionStorage.removeItem(COMPANY_STORAGE_KEY); } catch { /* ignore */ }
+    stored = "";
+  }
+  // CAs must not jump to the org primary — only preferred, stored, or first assigned company.
   const company = (preferredCompanyId && activeCompanies.find(item => item.id === preferredCompanyId))
     || activeCompanies.find(item => item.id === stored)
+    || (activeCompanies.length === 1 ? activeCompanies[0] : null)
+    || (accountsTeam ? activeCompanies[0] : null)
     || activeCompanies.find(item => item.isPrimary)
     || activeCompanies[0]
     || null;
@@ -44,7 +69,13 @@ export async function fetchAccountsBundle(token, { preferredCompanyId, wantRecur
   if (company) {
     try { sessionStorage.setItem(COMPANY_STORAGE_KEY, company.id); } catch { /* ignore */ }
   }
-  const [settings, accounts, parties, pipeline, vouchers, items, itemCategories, stockMovements, voucherItemLines, recurring, tradeDocuments, documentSettings, complianceFilings, collectionRoutes] = await Promise.all([
+  // CA top bar (and any listeners) show the Acc company, not the FinTrack org name.
+  try {
+    window.dispatchEvent(new CustomEvent("ft-accounts-company", {
+      detail: { id: company?.id || "", name: company?.name || "" },
+    }));
+  } catch { /* ignore */ }
+  const [settings, accounts, parties, pipeline, vouchers, items, itemCategories, stockMovements, voucherItemLines, recurring, tradeDocuments, documentSettings, complianceFilings, collectionRoutes, priceLists] = await Promise.all([
     loadAccountingSettings(token),
     loadChartOfAccounts(token),
     loadParties(token),
@@ -59,6 +90,7 @@ export async function fetchAccountsBundle(token, { preferredCompanyId, wantRecur
     loadDocumentSettings(token).catch(() => ({ ...DEFAULT_DOCUMENT_SETTINGS, available: false })),
     loadComplianceFilings(token).catch(() => null),
     loadCollectionRoutes(token).catch(() => null),
+    loadPriceLists(token).catch(() => []),
   ]);
   const mergedSettings = {
     ...(settings || {}),
@@ -75,6 +107,7 @@ export async function fetchAccountsBundle(token, { preferredCompanyId, wantRecur
     gstForm: company ? {
       gstRegistration: company.gstRegistration || "unregistered",
       gstin: company.gstin || "",
+      pan: company.pan || "",
       legalName: company.legalName || "",
       stateCode: company.stateCode || "",
     } : null,
@@ -93,19 +126,24 @@ export async function fetchAccountsBundle(token, { preferredCompanyId, wantRecur
     documentSettings,
     complianceFilings,
     collectionRoutes,
+    priceLists: priceLists || [],
   };
   accountsSnapshot = bundle;
   return bundle;
 }
 // Warm the Accounts books in the background (e.g. from the dashboard) so the
 // first open after login skips the loading placeholders.
-export function prefetchAccounts(token) {
+export function prefetchAccounts(token, options = {}) {
   if (!token || readAccountsSnapshot(token) || accountsPrefetch?.token === token) return;
-  const promise = fetchAccountsBundle(token);
-  accountsPrefetch = { token, promise };
+  const promise = fetchAccountsBundle(token, options);
+  accountsPrefetch = { token, promise, workspaceRole: options.workspaceRole || "" };
   promise.catch(() => {}).finally(() => {
     if (accountsPrefetch?.promise === promise) accountsPrefetch = null;
   });
 }
-export const inFlightAccountsPrefetch = token => (accountsPrefetch?.token === token ? accountsPrefetch.promise : null);
+export const inFlightAccountsPrefetch = (token, workspaceRole = "") => (
+  accountsPrefetch?.token === token && (accountsPrefetch.workspaceRole || "") === (workspaceRole || "")
+    ? accountsPrefetch.promise
+    : null
+);
 export const clearAccountsSnapshot = () => { accountsSnapshot = null; };

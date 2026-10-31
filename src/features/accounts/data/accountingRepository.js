@@ -2,6 +2,7 @@ import { supabase } from "../../../lib/supabase";
 import { groupByKey } from "../model/accountsList.js";
 import { assembleVouchers } from "../model/accountsVoucherAssembly.js";
 import { mapVoucherItemLinesForRpc } from "../model/inventoryModel.js";
+import { assemblePriceLists } from "../model/priceLists.js";
 
 export { assembleVouchers, mapVoucherItemLinesForRpc };
 
@@ -65,6 +66,7 @@ const mapParty = row => ({
   isActive: row.is_active,
   creditLimit: Number(row.credit_limit || 0),
   creditDays: row.credit_days === null || row.credit_days === undefined ? null : Number(row.credit_days),
+  priceListId: row.price_list_id || null,
 });
 
 const mapCompany = row => ({
@@ -78,6 +80,7 @@ const mapCompany = row => ({
   updatedAt: row.updatedAt || row.updated_at,
   gstRegistration: row.gstRegistration || row.gst_registration || "unregistered",
   gstin: row.gstin || "",
+  pan: row.pan || "",
   legalName: row.legalName || row.legal_name || "",
   stateCode: row.stateCode || row.state_code || "",
   stateName: row.stateName || row.state_name || "",
@@ -93,11 +96,24 @@ export const loadAccountsCompanies = token => wrap(
   }),
 );
 
+/** Company ids this Accounts-team user may open (empty for owners — they use the full company list). */
+export const loadMyAccountsCompanyIds = (token, userId) => {
+  if (!userId) return Promise.resolve([]);
+  return wrap(
+    accQuery(
+      `/rest/v1/acc_user_company_access?user_id=eq.${encodeURIComponent(userId)}&select=company_id`,
+      token,
+    ).then(rows => (Array.isArray(rows) ? rows.map(row => row.company_id).filter(Boolean) : []))
+      .catch(() => []),
+  );
+};
+
 export const createAccountsCompany = (token, payload) =>
   wrap(supabase.rpc("acc_create_company", {
     input_name: payload.name,
     input_books_started_on: payload.booksStartedOn || null,
     input_fy_start_month: payload.fyStartMonth || 4,
+    input_pan: payload.pan || null,
   }, token));
 
 export const archiveAccountsCompany = (token, id, reason) =>
@@ -124,8 +140,14 @@ const PARTY_COLUMNS = "id,party_type,name,phone,email,address,gstin,state_code,g
 const partiesPath = columns => `/rest/v1/acc_parties?select=${columns}&order=name.asc${companyEq()}`;
 
 export const loadParties = token => wrap(
-  accQuery(partiesPath(`${PARTY_COLUMNS},credit_limit,credit_days`), token)
+  accQuery(partiesPath(`${PARTY_COLUMNS},credit_limit,credit_days,price_list_id`), token)
     .catch(err => {
+      if (/price_list_id/i.test(String(err?.message || ""))) {
+        return accQuery(partiesPath(`${PARTY_COLUMNS},credit_limit,credit_days`), token).catch(inner => {
+          if (!/credit_limit|credit_days/i.test(String(inner?.message || ""))) throw inner;
+          return accQuery(partiesPath(PARTY_COLUMNS), token);
+        });
+      }
       if (!/credit_limit|credit_days/i.test(String(err?.message || ""))) throw err;
       return accQuery(partiesPath(PARTY_COLUMNS), token);
     })
@@ -145,6 +167,94 @@ export const setPartyCredit = (token, partyId, { creditLimit, creditDays }) =>
     input_credit_limit: Number(creditLimit || 0),
     input_credit_days: creditDays === "" || creditDays === null || creditDays === undefined ? null : Number(creditDays),
   }, token).catch(err => { throw migration081Error(err); });
+
+const migration107Error = err => {
+  if (!isMissing(err)) return err;
+  const error = new Error("Run migration 107_accounts_price_lists.sql in the Supabase SQL editor to enable price lists.");
+  error.code = "MIGRATION_REQUIRED";
+  return error;
+};
+
+const mapPriceList = row => ({
+  id: row.id,
+  name: row.name,
+  kind: row.kind,
+  isDefault: Boolean(row.is_default),
+  isActive: row.is_active !== false,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+const mapPriceListRate = row => ({
+  id: row.id,
+  priceListId: row.price_list_id,
+  itemId: row.item_id,
+  rate: Number(row.rate || 0),
+});
+
+/** Price lists with rates, or [] when migration 107 has not been run. */
+export const loadPriceLists = token => ignoreMissing(Promise.all([
+  accQuery(`/rest/v1/acc_price_lists?select=id,name,kind,is_default,is_active,created_at,updated_at&order=kind.asc,name.asc${companyEq()}`, token),
+  accQuery(`/rest/v1/acc_price_list_rates?select=id,price_list_id,item_id,rate&order=item_id.asc&limit=50000${companyEq()}`, token),
+]).then(([lists, rates]) => assemblePriceLists((lists || []).map(mapPriceList), (rates || []).map(mapPriceListRate))));
+
+export const upsertPriceList = (token, draft) =>
+  accRpc("acc_upsert_price_list", {
+    input_id: draft.id || null,
+    input_name: draft.name,
+    input_kind: draft.kind,
+    input_is_default: Boolean(draft.isDefault),
+    input_is_active: draft.isActive !== false,
+  }, token).catch(err => { throw migration107Error(err); });
+
+export const deletePriceList = (token, id) =>
+  accRpc("acc_delete_price_list", { input_id: id }, token).catch(err => { throw migration107Error(err); });
+
+export const savePriceListRates = (token, priceListId, rates) =>
+  accRpc("acc_save_price_list_rates", {
+    input_price_list_id: priceListId,
+    input_rates: rates,
+  }, token).catch(err => { throw migration107Error(err); });
+
+export const setPartyPriceList = (token, partyId, priceListId) =>
+  accRpc("acc_set_party_price_list", {
+    input_party_id: partyId,
+    input_price_list_id: priceListId || null,
+  }, token).catch(err => { throw migration107Error(err); });
+
+const migration112Error = err => {
+  if (!isMissing(err)) throw err;
+  const error = new Error("Run migration 112_accounts_bulk_party_maps.sql in the Supabase SQL editor to share bulk-import party mappings across the team.");
+  error.code = "MIGRATION_REQUIRED";
+  throw error;
+};
+
+/** Company-shared bulk import maps: { "customer|acme traders": partyId, ... } */
+export const loadBulkPartyMaps = token =>
+  accQuery(
+    `/rest/v1/acc_bulk_party_maps?select=party_type,name_key,party_id&limit=5000${companyEq()}`,
+    token,
+  )
+    .then(rows => {
+      const map = {};
+      for (const row of rows || []) {
+        const type = row.party_type === "supplier" ? "supplier" : "customer";
+        const key = String(row.name_key || "").trim();
+        if (key && row.party_id) map[`${type}|${key}`] = row.party_id;
+      }
+      return map;
+    })
+    .catch(err => {
+      if (isMissing(err)) return {};
+      throw err;
+    });
+
+export const upsertBulkPartyMap = (token, { partyName, partyId, partyType }) =>
+  accRpc("acc_upsert_bulk_party_map", {
+    input_party_name: partyName,
+    input_party_id: partyId,
+    input_party_type: partyType === "supplier" ? "supplier" : "customer",
+  }, token).catch(err => { throw migration112Error(err); });
 
 export const loadPartyPipeline = token => wrap(
   supabase.rpc("acc_list_party_pipeline", { input_company_id: activeCompanyId }, token).then(rows => (Array.isArray(rows) ? rows : []).map(row => ({ partyId: row.party_id, stage: row.stage }))),
@@ -244,6 +354,7 @@ export const saveGstSettings = (token, payload) =>
     input_legal_name: payload.legalName || null,
     input_state_code: payload.stateCode || null,
     input_state_name: payload.stateName || null,
+    input_pan: payload.pan || null,
   }, token));
 
 export const setAccountingIntegration = (token, enabled) =>
@@ -821,10 +932,50 @@ export const inviteTeamMember = (token, { email, role, note } = {}) =>
     input_note: note || null,
   }, token));
 
+/** Create a CA / Accounts-team login inside the owner's organization (API + service role). */
+export async function createAccountsTeamUser(token, { fullName, email, role, companyIds } = {}) {
+  const response = await fetch("/api/accounts/team-user", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ fullName, email, role, companyIds }),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || "Could not create the Accounts login.");
+  return body;
+}
+
+export async function listAccountsTeamUsers(token) {
+  const response = await fetch("/api/accounts/team-user", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || "Could not load Accounts logins.");
+  return Array.isArray(body.members) ? body.members : [];
+}
+
+export async function updateAccountsTeamUser(token, { userId, active, role, companyIds } = {}) {
+  const response = await fetch("/api/accounts/team-user", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ userId, active, role, companyIds }),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || "Could not update the Accounts login.");
+  return body;
+}
+
 export const listTeamInvites = token =>
   ignoreMissing(supabase.rpc("acc_list_team_invites", {}, token))
     .then(rows => {
       if (Array.isArray(rows)) return rows;
+      if (typeof rows === "string") {
+        try {
+          const parsed = JSON.parse(rows);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      }
       if (rows == null) return [];
       return [];
     });

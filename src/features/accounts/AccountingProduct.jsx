@@ -10,7 +10,6 @@ import {
   deleteChartAccount,
   deleteParty,
   deleteVoucherAttachment,
-  loadAccountsRoles,
   loadAccountsAccessRole,
   loadAuditLog,
   loadBankStatements,
@@ -29,7 +28,6 @@ import {
   upsertItemCategory,
   adjustStock,
   claimTeamInvites,
-  listTeamInvites,
   loadRecurringTemplates,
   markRecurringRun,
   setItemOpeningRate,
@@ -43,8 +41,11 @@ import {
   saveTradeDocument,
   setComplianceFiling,
   setPartyCredit,
+  setPartyPriceList,
   setRouteStops,
   setTradeDocumentStatus,
+  loadBulkPartyMaps,
+  upsertBulkPartyMap,
 } from "./data/accountingRepository.js";
 import { isAccountsOnboardingDone, readIndustry } from "./components/AccOnboardingWizard.jsx";
 import { parsePartyCsv, planPartyImport } from "./io/partyCsvImport.js";
@@ -61,6 +62,7 @@ import {
   CASH_PARTY_ID,
   PARTY_FORM_TYPES,
   SIMPLE_ENTRY_KINDS,
+  VOUCHER_TYPES,
   accountNormalSide,
   addDaysIso,
   entryPartyId,
@@ -112,6 +114,12 @@ import {
 import { pageSlice } from "./model/accountsList.js";
 import { previousComparisonRange } from "./model/accountsIntelligence.js";
 import { downloadAccountsCsv, downloadAccountsExcel, downloadAccountsPdf } from "./io/accountingExport.js";
+import {
+  balanceExportRows,
+  cashflowExportRows,
+  pnlExportRows,
+  trialExportRows,
+} from "./sections/reports/reportStatementRows.js";
 import { loadOrganizationSettings } from "../../lib/financeRepository.js";
 import { buildSalesInvoice, buildVoucherDocument, canOpenVoucherDocument } from "./model/salesInvoiceModel.js";
 import { SalesInvoiceSuccessModal, SalesInvoiceViewerModal } from "./components/SalesInvoiceActions.jsx";
@@ -124,6 +132,7 @@ import {
   itemSalesReport,
   itemizedEntryDraft,
   stockMovementReport,
+  stockReasonLabel,
   usesItemLines,
 } from "./model/inventoryModel.js";
 import {
@@ -142,7 +151,7 @@ import {
   emptySimpleForm,
   emptyCoaForm,
 } from "./accountsFormDefaults.js";
-import { REPORT_TABS, MORE_LINKS } from "./accountsNavigation.js";
+import { REPORT_TABS } from "./accountsNavigation.js";
 import { gstStatusLabel } from "./accountsFormat.js";
 import { AccSectionTabs, AccCompanyBar, AccPageHeader } from "./components/AccLayout.jsx";
 import { CustomerPipeline } from "./components/CustomerPipeline.jsx";
@@ -158,7 +167,6 @@ import { PartyProfileSection } from "./sections/PartyProfileSection.jsx";
 import { InventorySection } from "./sections/InventorySection.jsx";
 import { ExpensesSection } from "./sections/ExpensesSection.jsx";
 import { PayrollSection } from "./sections/PayrollSection.jsx";
-import { MoreSection } from "./sections/MoreSection.jsx";
 import { ReportsSection } from "./sections/ReportsSection.jsx";
 import { CaPackSection } from "./sections/CaPackSection.jsx";
 import { BankSection } from "./sections/BankSection.jsx";
@@ -166,7 +174,10 @@ import { SetupSection } from "./sections/SetupSection.jsx";
 import { NewEntryActions } from "./components/NewEntryActions.jsx";
 import { AccBookkeeper } from "./components/AccBookkeeper.jsx";
 import { AccMigrationAssistant } from "./components/AccMigrationAssistant.jsx";
+import { AccBulkImportWorkspace } from "./components/AccBulkImportWorkspace.jsx";
 import { runMigrationPlan } from "./model/migrationAssistant.js";
+import { runBulkVoucherPlan } from "./model/bulkVoucherImport.js";
+import { runBulkBillPost } from "./model/bulkBillImport.js";
 import { withNewLedger, withNewParty } from "./model/bookkeeper.js";
 import { CreateCompanyModal } from "./components/dialogs/CreateCompanyModal.jsx";
 import { PartyModal } from "./components/dialogs/PartyModal.jsx";
@@ -210,6 +221,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [stockMovements, setStockMovements] = useState(cached?.stockMovements ?? []);
   const [voucherItemLines, setVoucherItemLines] = useState(cached?.voucherItemLines ?? []);
   const [tradeDocuments, setTradeDocuments] = useState(cached?.tradeDocuments ?? null);
+  const [priceLists, setPriceLists] = useState(cached?.priceLists ?? []);
   const [documentSettings, setDocumentSettings] = useState(cached?.documentSettings ?? { ...DEFAULT_DOCUMENT_SETTINGS, available: false });
   const [complianceFilings, setComplianceFilings] = useState(cached?.complianceFilings ?? null);
   const [collectionRoutes, setCollectionRoutes] = useState(cached?.collectionRoutes ?? null);
@@ -241,6 +253,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [showVoucher, setShowVoucher] = useState(false);
   const [showBookkeeper, setShowBookkeeper] = useState(false);
   const [showMigration, setShowMigration] = useState(false);
+  const [showBulkImport, setShowBulkImport] = useState(false);
   const [showParty, setShowParty] = useState(false);
   const [showCoa, setShowCoa] = useState(false);
   const [voucherType, setVoucherType] = useState("receipt");
@@ -252,6 +265,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [partyTypeBaseline, setPartyTypeBaseline] = useState("");
   const [partyTypeConfirmed, setPartyTypeConfirmed] = useState(false);
   const [partyCreateTarget, setPartyCreateTarget] = useState("");
+  const [pipelineOnCreate, setPipelineOnCreate] = useState(false);
   const [partyImportStatus, setPartyImportStatus] = useState("");
   const [coaForm, setCoaForm] = useState(emptyCoaForm);
   const [setupForm, setSetupForm] = useState({ companyName: "", booksStartedOn: todayIso() });
@@ -267,12 +281,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [bankImportMapping, setBankImportMapping] = useState({});
   const [matchChoice, setMatchChoice] = useState({});
   const [pendingBankMatch, setPendingBankMatch] = useState(null);
-  const [accountsRoles, setAccountsRoles] = useState([]);
   const [accountsAccessRole, setAccountsAccessRole] = useState(workspace?.role === "owner" ? "owner" : null);
-  const [roleDraft, setRoleDraft] = useState({ userId: "", role: "accountant" });
-  const [inviteDraft, setInviteDraft] = useState({ email: "", role: "viewer", note: "" });
-  const [inviteEmailDraft, setInviteEmailDraft] = useState(null);
-  const [teamInvites, setTeamInvites] = useState([]);
   const [recurringTemplates, setRecurringTemplates] = useState(cached?.recurringTemplates ?? []);
   const [recurringDraft, setRecurringDraft] = useState(() => emptyRecurringDraft());
   const [pendingRecurringId, setPendingRecurringId] = useState(null);
@@ -299,8 +308,8 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [activeCompanyId, setActiveCompanyId] = useState(cached?.activeCompanyId ?? "");
   const [showCreateCompany, setShowCreateCompany] = useState(false);
   const [setupAfterCreate, setSetupAfterCreate] = useState(false);
-  const [companyDraft, setCompanyDraft] = useState({ name: "", booksStartedOn: todayIso(), industry: "retail" });
-  const [gstForm, setGstForm] = useState(cached?.gstForm ?? { gstRegistration: "unregistered", gstin: "", legalName: "", stateCode: "" });
+  const [companyDraft, setCompanyDraft] = useState({ name: "", booksStartedOn: todayIso(), industry: "retail", pan: "" });
+  const [gstForm, setGstForm] = useState(cached?.gstForm ?? { gstRegistration: "unregistered", gstin: "", pan: "", legalName: "", stateCode: "" });
   const [listPage, setListPage] = useState(1);
   const [expandedVoucherId, setExpandedVoucherId] = useState(null);
   const [voucherAttachments, setVoucherAttachments] = useState([]);
@@ -320,11 +329,14 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     if (!hasLoadedRef.current) setLoading(true);
     setError("");
     try {
-      const inFlight = !preferredCompanyId ? inFlightAccountsPrefetch(token) : null;
+      const workspaceRole = workspace?.role || "";
+      const inFlight = !preferredCompanyId ? inFlightAccountsPrefetch(token, workspaceRole) : null;
       const bundle = (inFlight && await inFlight.catch(() => null))
         || await fetchAccountsBundle(token, {
           preferredCompanyId,
           wantRecurring: sectionRef.current === "overview" || sectionRef.current === "bank",
+          workspaceRole,
+          userId: workspace?.id || "",
         });
       if (gen !== refreshGen.current) return;
       setCompanies(bundle.companies);
@@ -340,6 +352,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       setStockMovements(bundle.stockMovements);
       setVoucherItemLines(bundle.voucherItemLines);
       setTradeDocuments(bundle.tradeDocuments);
+      setPriceLists(bundle.priceLists || []);
       setDocumentSettings(bundle.documentSettings);
       setComplianceFilings(bundle.complianceFilings);
       setCollectionRoutes(bundle.collectionRoutes);
@@ -374,7 +387,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
         setLoading(false);
       }
     }
-  }, [token]);
+  }, [token, workspace?.role, workspace?.id]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -416,9 +429,14 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     return () => { cancelled = true; };
   }, [token, workspace?.role]);
 
-  const canWrite = accountsAccessRole === "owner" || accountsAccessRole === "accountant";
-  const canAdmin = accountsAccessRole === "owner";
-  const readOnly = Boolean(accountsAccessRole) && !canWrite;
+  // Accounts-team (CA) never gets owner admin; posting only when explicitly Accountant.
+  const canWrite = workspace?.role === "accounts"
+    ? accountsAccessRole === "accountant"
+    : accountsAccessRole === "owner" || accountsAccessRole === "accountant";
+  const canAdmin = workspace?.role !== "accounts" && accountsAccessRole === "owner";
+  const readOnly = workspace?.role === "accounts"
+    ? accountsAccessRole !== "accountant"
+    : Boolean(accountsAccessRole) && !canWrite;
   const manufacturingEnabled = Boolean(activeCompanyId) && readIndustry(activeCompanyId) === "manufacturing";
   // Keep the wizard mounted across refresh()/loading so Continue does not
   // unmount mid-flow (that looked like “Step 1/6 finishes in 2 steps”).
@@ -494,18 +512,14 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     const loadExtras = async () => {
       try {
         if (section === "setup") {
-          const [nextAudit, nextLocks, nextRoles, nextInvites, nextRecurring] = await Promise.all([
+          const [nextAudit, nextLocks, nextRecurring] = await Promise.all([
             loadAuditLog(token),
             loadPeriodLocks(token),
-            loadAccountsRoles(token).catch(() => []),
-            listTeamInvites(token).catch(() => []),
             loadRecurringTemplates(token).catch(() => []),
           ]);
           if (!cancelled) {
             setAudit(nextAudit);
             setLocks(nextLocks);
-            setAccountsRoles(nextRoles || []);
-            setTeamInvites(nextInvites || []);
             setRecurringTemplates(nextRecurring || []);
           }
           return;
@@ -802,19 +816,19 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     [wantLedger, accounts, vouchers, ledgerId, range],
   );
   const q = String(deferredSearch || "").trim().toLowerCase();
-  const shownVouchers = useMemo(() => vouchers.filter(voucher => {
-    if (!q) return true;
-    return `${voucher.voucherNumber} ${voucher.narration} ${voucher.voucherType}`.toLowerCase().includes(q);
-  }), [vouchers, q]);
-  const pagedVouchers = useMemo(() => pageSlice(shownVouchers, listPage), [shownVouchers, listPage]);
+  const shownVouchers = useMemo(() => {
+    if (!q) return vouchers;
+    const partyName = id => parties.find(party => party.id === id)?.name || "";
+    return vouchers.filter(voucher => (
+      `${voucher.voucherNumber} ${voucher.narration} ${voucher.voucherType} ${partyName(voucher.partyId)} ${VOUCHER_TYPES[voucher.voucherType]?.label || ""}`
+        .toLowerCase()
+        .includes(q)
+    ));
+  }, [vouchers, parties, q]);
   const pagedLedger = useMemo(() => pageSlice(ledger.rows, listPage), [ledger.rows, listPage]);
-  const pagedBooks = useMemo(() => pageSlice(books, listPage), [books, listPage]);
   const pagedAudit = useMemo(() => pageSlice(audit, listPage), [audit, listPage]);
-  const pagedArInvoices = useMemo(() => pageSlice(arInvoices, listPage), [arInvoices, listPage]);
-  const pagedApInvoices = useMemo(() => pageSlice(apInvoices, listPage), [apInvoices, listPage]);
   const pagedSetupParties = useMemo(() => pageSlice(setupParties, listPage), [setupParties, listPage]);
   const pagedPartyBook = useMemo(() => pageSlice(partyBook.rows, listPage), [partyBook.rows, listPage]);
-  const pagedGstOutput = useMemo(() => pageSlice(gstReport.output, listPage), [gstReport.output, listPage]);
   const bankAccounts = useMemo(() => accounts.filter(account => account.accountType === "bank" && account.isActive !== false), [accounts]);
   const matchedLineIds = useMemo(() => new Set(
     statements.flatMap(statement => statement.lines.map(line => line.matchedVoucherLineId).filter(Boolean)),
@@ -827,6 +841,11 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
 
   const openSection = id => {
     if (id !== "documents") setDocumentPrefill(null);
+    if (id === "more") {
+      go({ section: "overview", reportTab: "daybook" });
+      window.scrollTo(0, 0);
+      return;
+    }
     if (id === "cashbook") {
       if (onOpenCashbook) onOpenCashbook();
       else close();
@@ -837,13 +856,18 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       window.scrollTo(0, 0);
       return;
     }
+    if (id === "crm") {
+      go({ section: "crm", reportTab: "crm" });
+      window.scrollTo(0, 0);
+      return;
+    }
     go({ section: id, reportTab: ["trial", "pnl", "balance"].includes(id) ? id : "daybook" });
     window.scrollTo(0, 0);
   };
 
-  // A report from the Reports sub-tabs: the three statements are their own sections, the rest are tabs of the Reports page.
+  // A report from the Reports sub-tabs: statements and Customer Pipeline are their own sections; the rest stay on Reports.
   const openReport = id => {
-    if (["trial", "pnl", "balance"].includes(id)) openSection(id);
+    if (["trial", "pnl", "balance", "crm"].includes(id)) openSection(id);
     else go({ section: "reports", reportTab: id });
   };
   const setReportTab = openReport;
@@ -889,7 +913,6 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     setLocks([]);
     setLedgerId("");
     setMatchChoice({});
-    setTeamInvites([]);
     setRecurringTemplates([]);
     setTradeDocuments(null);
     setDocumentSettings({ ...DEFAULT_DOCUMENT_SETTINGS, available: false });
@@ -1002,21 +1025,62 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   };
 
   // Each variance is its own stock RPC; report how far a partial run got.
+  // Patch local movements immediately so Physical count book qty updates even if a soft refresh is slow.
   const applyPhysicalCount = ({ date, variances }) => run(async () => {
     let posted = 0;
+    const created = [];
     for (const row of variances) {
       try {
-        await adjustStock(token, { itemId: row.itemId, date, quantityDelta: row.quantityDelta, reasonNote: `Physical stock count ${date}` });
+        const id = await adjustStock(token, {
+          itemId: row.itemId,
+          date,
+          quantityDelta: row.quantityDelta,
+          reasonNote: `Physical stock count ${date}`,
+        });
         posted += 1;
+        created.push({
+          id: typeof id === "string" ? id : `count:${row.itemId}:${date}:${posted}`,
+          itemId: row.itemId,
+          movementDate: date,
+          quantityDelta: Number(row.quantityDelta),
+          reason: "adjustment",
+          note: `Physical stock count ${date}`,
+          voucherId: null,
+          voucherItemLineId: null,
+          voucherNumber: "",
+          documentId: null,
+          documentLineId: null,
+          createdAt: new Date().toISOString(),
+          createdBy: null,
+        });
       } catch (err) {
+        if (created.length) setStockMovements(current => [...created, ...current]);
         throw new Error(`${row.name}: ${err.message || "could not adjust"}${posted ? ` (${posted} of ${variances.length} adjustments already posted)` : ""}`);
       }
     }
+    if (created.length) setStockMovements(current => [...created, ...current]);
   }, `${variances.length} stock adjustment${variances.length === 1 ? "" : "s"} posted from the physical count.`);
 
+  // Settings-only write — do not call run()/refresh(); reloading all books made the toggle feel stuck.
   const saveStockRules = async payload => {
-    const ok = await run(() => saveInventorySettings(token, payload), payload.allowNegativeStock ? "Negative stock allowed." : "Negative stock blocked.");
-    if (ok) setInventorySettings(current => ({ ...current, allowNegativeStock: Boolean(payload.allowNegativeStock) }));
+    const nextAllow = Boolean(payload.allowNegativeStock);
+    const previous = inventorySettings.allowNegativeStock;
+    const outcome = await submitLock.run(async () => {
+      setSaving(true);
+      setError("");
+      setNotice("");
+      setInventorySettings(current => ({ ...current, allowNegativeStock: nextAllow }));
+      try {
+        await saveInventorySettings(token, { allowNegativeStock: nextAllow });
+        setNotice(nextAllow ? "Negative stock allowed." : "Negative stock blocked.");
+      } catch (err) {
+        setInventorySettings(current => ({ ...current, allowNegativeStock: previous }));
+        setError(err.message || "Could not save stock rules.");
+      } finally {
+        setSaving(false);
+      }
+    });
+    return !outcome.skipped;
   };
 
   // Two stock RPCs cannot share a transaction, so undo the material
@@ -1088,13 +1152,6 @@ const openVoucher = () => {
     setLines(copied.length >= 2 ? copied : [...copied, emptyLine(), emptyLine()].slice(0, Math.max(2, copied.length)));
     setVoucherRequestId(newClientRequestId());
     setShowVoucher(true);
-  };
-
-  const showAdjacentVoucher = (voucherId, delta) => {
-    const index = shownVouchers.findIndex(item => item.id === voucherId);
-    if (index < 0) return;
-    const next = shownVouchers[index + delta];
-    if (next) setExpandedVoucherId(next.id);
   };
 
   const reloadExpandedAttachments = async voucherId => {
@@ -1183,6 +1240,67 @@ const openVoucher = () => {
         postVoucher: payload => postVoucher(token, payload),
       }, options);
     }, () => (outcome?.failed?.length ? "" : "Import finished."));
+    return outcome;
+  };
+
+  const openBulkImport = () => {
+    if (!canWrite) {
+      setError("Your Accounts role is view-only. Ask the owner for accountant access to import.");
+      return;
+    }
+    setShowBulkImport(true);
+  };
+
+  const runBulkExcel = async (plan, options = {}) => {
+    let outcome = null;
+    await run(async () => {
+      outcome = await runBulkVoucherPlan(plan, {
+        createParty: party => createParty(token, { ...emptyPartyForm(), ...party }),
+        postVoucher: payload => postVoucher(token, payload),
+        rememberPartyMapping: ({ partyName, partyId, partyType }) =>
+          upsertBulkPartyMap(token, { partyName, partyId, partyType }),
+      }, {
+        accounts: visibleAccounts,
+        company: activeCompany,
+        today: todayIso(),
+        createMissingParties: options.createMissingParties !== false,
+        onProgress: options.onProgress,
+        shouldStop: options.shouldStop,
+      });
+      await refresh();
+    }, () => (outcome?.failed?.length ? "" : "Bulk import finished."));
+    return outcome;
+  };
+
+  const runBulkBills = async (sources, options = {}) => {
+    let outcome = null;
+    await run(async () => {
+      outcome = await runBulkBillPost(sources, {
+        postVoucher: payload => postVoucher(token, payload),
+        rememberPartyMapping: ({ partyName, partyId, partyType }) =>
+          upsertBulkPartyMap(token, { partyName, partyId, partyType }),
+        addAttachment: async ({ voucherId, fileName, contentType, contentBase64, byteSize }) => {
+          const meta = assertVoucherAttachmentMeta({
+            fileName,
+            contentType,
+            byteSize: byteSize || Math.ceil((contentBase64?.length || 0) * 0.75),
+          });
+          await addVoucherAttachment(token, {
+            voucherId,
+            fileName: meta.fileName,
+            contentType: meta.contentType,
+            contentBase64,
+          });
+        },
+      }, {
+        accounts: visibleAccounts,
+        company: activeCompany,
+        today: todayIso(),
+        onProgress: options.onProgress,
+        shouldStop: options.shouldStop,
+      });
+      await refresh();
+    }, () => (outcome?.failed?.length ? "" : "Bill import finished."));
     return outcome;
   };
 
@@ -1444,6 +1562,7 @@ const openVoucher = () => {
         gstRegistration: party.gstRegistration || "",
         notes: party.notes || "",
         creditLimit: party.creditLimit ? String(party.creditLimit) : "",
+        priceListId: party.priceListId || "",
         creditDays: party.creditDays == null ? "" : String(party.creditDays),
       });
     } else {
@@ -1451,6 +1570,7 @@ const openVoucher = () => {
       setPartyForm(emptyPartyForm());
     }
     setPartyCreateTarget("");
+    setPipelineOnCreate(false);
     setShowParty(true);
   };
 
@@ -1463,6 +1583,20 @@ const openVoucher = () => {
     setPartyTypeBaseline("");
     setPartyForm({ ...emptyPartyForm(), partyType: partyType === "supplier" ? "supplier" : "customer" });
     setPartyCreateTarget(partyType === "supplier" ? "supplier" : "customer");
+    setPipelineOnCreate(false);
+    setShowParty(true);
+  };
+
+  const openPartyForCrm = () => {
+    if (!canWrite) {
+      setError("Your Accounts role is view-only.");
+      return;
+    }
+    setPartyTypeConfirmed(false);
+    setPartyTypeBaseline("");
+    setPartyForm({ ...emptyPartyForm(), partyType: "customer" });
+    setPartyCreateTarget("customer");
+    setPipelineOnCreate(true);
     setShowParty(true);
   };
 
@@ -1472,6 +1606,7 @@ const openVoucher = () => {
     setPartyTypeBaseline("");
     setPartyTypeConfirmed(false);
     setPartyCreateTarget("");
+    setPipelineOnCreate(false);
     setPartyForm(emptyPartyForm());
   };
 
@@ -1552,6 +1687,19 @@ const openVoucher = () => {
         }
       }
       if (creditChanged && typeof partyId === "string") await setPartyCredit(token, partyId, { creditLimit, creditDays });
+      const nextPriceListId = (partyForm.partyType === "customer" || partyForm.partyType === "supplier")
+        ? (partyForm.priceListId || null)
+        : null;
+      const priceListChanged = existing
+        ? (existing.priceListId || null) !== nextPriceListId
+        : Boolean(nextPriceListId);
+      if (priceListChanged && typeof partyId === "string") {
+        try {
+          await setPartyPriceList(token, partyId, nextPriceListId);
+        } catch (err) {
+          if (err.code !== "MIGRATION_REQUIRED") throw err;
+        }
+      }
       if (!partyForm.id && partyCreateTarget && partyForm.partyType === partyCreateTarget && typeof partyId === "string") {
         setSimpleForm(current => ({
           ...current,
@@ -1559,12 +1707,17 @@ const openVoucher = () => {
           ...(creditDays != null ? { dueDate: addDaysIso(current.date, creditDays) } : {}),
         }));
       }
+      if (!partyForm.id && pipelineOnCreate && typeof partyId === "string") {
+        await setPartyPipelineStage(token, partyId, "Lead");
+        setPartyPipeline(current => ({ ...current, [partyId]: "Lead" }));
+      }
       setShowParty(false);
       setPartyTypeBaseline("");
       setPartyTypeConfirmed(false);
       setPartyCreateTarget("");
+      setPipelineOnCreate(false);
       setPartyForm(emptyPartyForm());
-    }, partyForm.id ? (typeChanged ? "Party type updated. Historical vouchers are unchanged." : "Party updated successfully") : createdLabel);
+    }, partyForm.id ? (typeChanged ? "Party type updated. Historical vouchers are unchanged." : "Party updated successfully") : (pipelineOnCreate ? "Lead added to pipeline." : createdLabel));
   };
 
   const importParties = async event => {
@@ -1794,7 +1947,7 @@ const openVoucher = () => {
       try {
         const meta = assertVoucherAttachmentMeta({
           fileName: simpleForm.billPhoto.fileName || "supplier-bill.jpg",
-          contentType: "image/jpeg",
+          contentType: simpleForm.billPhoto.contentType || "image/jpeg",
           byteSize: simpleForm.billPhoto.byteSize,
         });
         await addVoucherAttachment(token, {
@@ -1826,7 +1979,7 @@ const openVoucher = () => {
   }, result => {
     const label = SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry";
     return result?.billAttached === false
-      ? `${label} saved. The bill photo was not attached.`
+      ? `${label} saved. The bill was not attached.`
       : `${label} saved successfully`;
   });
 
@@ -2070,32 +2223,95 @@ const openVoucher = () => {
   const exportRows = () => {
     const active = ["receivables", "payables", "pnl", "balance", "trial"].includes(section) ? section : reportTab;
     const stamp = todayIso();
+    const companyName = activeCompany?.name || settings?.companyName || "FinTrack";
+    const exportMeta = { companyName, from: rangeFrom, to: rangeTo };
     if (active === "trial") {
-      return { filename: `fintrack-trial-balance-${stamp}`, rows: [["Code", "Account", "Debit", "Credit"], ...tb.rows.map(row => [row.code, row.name, row.debit, row.credit]), ["", "Total", tb.totalDebit, tb.totalCredit]] };
+      return { filename: `fintrack-trial-balance-${stamp}`, rows: trialExportRows(tb, exportMeta) };
     }
     if (active === "pnl") {
-      return { filename: `fintrack-profit-loss-${stamp}`, rows: [["Section", "Account", "Amount"], ...pnl.income.map(row => ["Income", row.name, row.amount]), ["Income", "Total income", pnl.totalIncome], ...pnl.expenses.map(row => ["Expense", row.name, row.amount]), ["Expense", "Total expenses", pnl.totalExpense], ...(pnl.openingStock || pnl.closingStock ? [["Stock", "Opening stock", -pnl.openingStock], ["Stock", "Closing stock", pnl.closingStock]] : []), ["", "Net profit", pnl.net]] };
+      return { filename: `fintrack-profit-loss-${stamp}`, rows: pnlExportRows(pnl, exportMeta) };
     }
     if (active === "balance") {
-      return { filename: `fintrack-balance-sheet-${stamp}`, rows: [["Section", "Code", "Account", "Amount"], ...sheet.assets.map(row => ["Asset", row.code, row.name, row.balance]), ...sheet.liabilities.map(row => ["Liability", row.code, row.name, row.balance]), ...sheet.equity.map(row => ["Equity", row.code, row.name, row.balance])] };
+      return { filename: `fintrack-balance-sheet-${stamp}`, rows: balanceExportRows(sheet, exportMeta) };
     }
     if (active === "daybook") {
-      return { filename: `fintrack-day-book-${stamp}`, rows: [["Date", "Number", "Type", "Narration", "Amount"], ...books.map(row => [row.date, row.voucherNumber, row.voucherType, row.narration, row.debit])] };
+      return {
+        filename: `fintrack-day-book-${stamp}`,
+        rows: [
+          ["Day Book"],
+          [companyName],
+          [`Period: ${rangeFrom} to ${rangeTo}`],
+          [],
+          ["Date", "Number", "Type", "Narration", "Amount (₹)"],
+          ...books.map(row => [row.date, row.voucherNumber, row.voucherType, row.narration, row.debit]),
+        ],
+      };
     }
     if (active === "receivables") {
-      return { filename: `fintrack-receivables-${stamp}`, rows: [["Customer", "Invoice", "Invoice date", "Due date", "Amount", "Paid", "Outstanding", "Days outstanding", "Days overdue", "Status"], ...arInvoices.map(row => [row.partyName, row.reference, row.invoiceDate, row.dueDate, row.amount, row.paid, row.outstanding, row.daysOutstanding, row.daysOverdue, row.status])] };
+      return {
+        filename: `fintrack-receivables-${stamp}`,
+        rows: [
+          ["Receivables"],
+          [companyName],
+          [`Period: ${rangeFrom} to ${rangeTo}`],
+          [],
+          ["Customer", "Invoice", "Invoice date", "Due date", "Amount", "Paid", "Outstanding", "Days outstanding", "Days overdue", "Status"],
+          ...arInvoices.map(row => [row.partyName, row.reference, row.invoiceDate, row.dueDate, row.amount, row.paid, row.outstanding, row.daysOutstanding, row.daysOverdue, row.status]),
+        ],
+      };
     }
     if (active === "payables") {
-      return { filename: `fintrack-payables-${stamp}`, rows: [["Supplier", "Invoice", "Invoice date", "Due date", "Amount", "Paid", "Outstanding", "Days overdue", "Status"], ...apInvoices.map(row => [row.partyName, row.reference, row.invoiceDate, row.dueDate, row.amount, row.paid, row.outstanding, row.daysOverdue, row.status])] };
+      return {
+        filename: `fintrack-payables-${stamp}`,
+        rows: [
+          ["Payables"],
+          [companyName],
+          [`Period: ${rangeFrom} to ${rangeTo}`],
+          [],
+          ["Supplier", "Invoice", "Invoice date", "Due date", "Amount", "Paid", "Outstanding", "Days overdue", "Status"],
+          ...apInvoices.map(row => [row.partyName, row.reference, row.invoiceDate, row.dueDate, row.amount, row.paid, row.outstanding, row.daysOverdue, row.status]),
+        ],
+      };
     }
     if (active === "sales") {
-      return { filename: `fintrack-sales-${stamp}`, rows: [["Date", "Number", "Narration", "Amount"], ...salesRows.map(row => [row.date, row.voucherNumber, row.narration, row.debit])] };
+      return {
+        filename: `fintrack-sales-${stamp}`,
+        rows: [
+          ["Sales register"],
+          [companyName],
+          [`Period: ${rangeFrom} to ${rangeTo}`],
+          [],
+          ["Date", "Number", "Narration", "Amount (₹)"],
+          ...salesRows.map(row => [row.date, row.voucherNumber, row.narration, row.debit]),
+        ],
+      };
     }
     if (active === "purchases") {
-      return { filename: `fintrack-purchases-${stamp}`, rows: [["Date", "Number", "Narration", "Amount"], ...purchaseRows.map(row => [row.date, row.voucherNumber, row.narration, row.debit])] };
+      return {
+        filename: `fintrack-purchases-${stamp}`,
+        rows: [
+          ["Purchase register"],
+          [companyName],
+          [`Period: ${rangeFrom} to ${rangeTo}`],
+          [],
+          ["Date", "Number", "Narration", "Amount (₹)"],
+          ...purchaseRows.map(row => [row.date, row.voucherNumber, row.narration, row.debit]),
+        ],
+      };
     }
     if (active === "ledger") {
-      return { filename: `fintrack-ledger-${stamp}`, rows: [["Date", "Voucher", "Narration", "Debit", "Credit", "Balance"], ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance])] };
+      return {
+        filename: `fintrack-ledger-${stamp}`,
+        rows: [
+          ["Account ledger"],
+          [companyName],
+          [`${ledger.account?.code || ""} ${ledger.account?.name || ""}`.trim() || "Ledger"],
+          [`Period: ${rangeFrom} to ${rangeTo}`],
+          [],
+          ["Date", "Voucher", "Narration", "Debit (₹)", "Credit (₹)", "Balance (₹)"],
+          ...ledger.rows.map(row => [row.date, row.voucherNumber, row.narration, row.debit, row.credit, row.balance]),
+        ],
+      };
     }
     if (active === "item_profit") {
       const built = itemProfitExportRef.current?.();
@@ -2106,15 +2322,70 @@ const openVoucher = () => {
       return {
         filename: `fintrack-gst-books-${stamp}`,
         rows: [
+          ["GST books (for review — not portal filing)"],
+          [companyName],
+          [`Period: ${rangeFrom} to ${rangeTo}`],
+          [],
           ["Date", "Voucher", "Type", "HSN / SAC", "Taxable", "Rate", "CGST", "SGST", "IGST", "Direction"],
           ...gstReport.rows.map(row => [row.date, row.voucherNumber, row.voucherType, row.hsnSac || "", row.taxable, row.rate, row.cgst, row.sgst, row.igst, row.direction]),
+          [],
           ["", "", "", "Output GST", "", "", "", "", gstReport.outputTax, ""],
           ["", "", "", "Eligible ITC", "", "", "", "", gstReport.inputTax, ""],
           ["", "", "", "Net GST payable", "", "", "", "", gstReport.netPayable, ""],
         ],
       };
     }
-    return { filename: `fintrack-cash-flow-${stamp}`, rows: [["Metric", "Amount"], ["Inflow", flow.inflow], ["Outflow", flow.outflow], ["Internal transfers (excluded)", flow.transfers || 0], ["Net", flow.net]] };
+    if (active === "item_sales") {
+      return {
+        filename: `fintrack-item-sales-${stamp}`,
+        rows: [
+          ["Item sales"],
+          [companyName],
+          [`Period: ${rangeFrom} to ${rangeTo}`],
+          [],
+          ["Item", "SKU", "Qty sold", "Sales amount (₹)"],
+          ...itemSalesRows.map(row => [row.name, row.sku || "", row.quantity, row.amount]),
+        ],
+      };
+    }
+    if (active === "item_purchases") {
+      return {
+        filename: `fintrack-item-purchases-${stamp}`,
+        rows: [
+          ["Item purchases"],
+          [companyName],
+          [`Period: ${rangeFrom} to ${rangeTo}`],
+          [],
+          ["Item", "SKU", "Qty bought", "Purchase amount (₹)"],
+          ...itemPurchaseRows.map(row => [row.name, row.sku || "", row.quantity, row.amount]),
+        ],
+      };
+    }
+    if (active === "stock_moves") {
+      const moveRows = stockMovementReport(stockMovements, items, range);
+      return {
+        filename: `fintrack-stock-movement-${stamp}`,
+        rows: [
+          ["Stock movement"],
+          [companyName],
+          [`Period: ${rangeFrom} to ${rangeTo}`],
+          [],
+          ["Date", "Item", "Direction", "Qty", "Reason", "Voucher"],
+          ...moveRows.map(row => [
+            row.movementDate,
+            row.itemName,
+            row.direction,
+            row.quantityDelta,
+            stockReasonLabel(row.reason),
+            row.voucherNumber || "",
+          ]),
+        ],
+      };
+    }
+    if (active === "cashflow") {
+      return { filename: `fintrack-cash-flow-${stamp}`, rows: cashflowExportRows(flow, exportMeta) };
+    }
+    throw new Error(`Export is not available for this report yet.`);
   };
 
   const exportReport = format => {
@@ -2124,9 +2395,17 @@ const openVoucher = () => {
         const { filename, rows } = exportRows();
         const active = ["receivables", "payables", "pnl", "balance", "trial"].includes(section) ? section : reportTab;
         const title = REPORT_TABS.find(item => item.id === active)?.label || "Accounts report";
-        const subtitle = `${settings?.companyName || "FinTrack"} · ${rangeFrom} to ${rangeTo}`;
+        const companyLabel = activeCompany?.name || settings?.companyName || "FinTrack";
+        // PDF Helvetica is ASCII-only — avoid middle dots that become "?".
+        const subtitle = `${companyLabel} - ${rangeFrom} to ${rangeTo}`;
+        // PDF already has title/subtitle; start the table at the column-header row.
+        const headerIdx = rows.findIndex(row => {
+          const first = String(row?.[0] || "").toLowerCase();
+          return ["particulars", "code", "date", "customer", "supplier", "section", "item", "metric"].includes(first);
+        });
+        const pdfRows = headerIdx >= 0 ? rows.slice(headerIdx) : rows;
         if (format === "xlsx") downloadAccountsExcel(`${filename}.xlsx`, rows);
-        else if (format === "pdf") downloadAccountsPdf(`${filename}.pdf`, { title, subtitle, rows });
+        else if (format === "pdf") downloadAccountsPdf(`${filename}.pdf`, { title, subtitle, rows: pdfRows });
         else downloadAccountsCsv(`${filename}.csv`, rows);
         setNotice("");
       } catch (err) {
@@ -2152,7 +2431,6 @@ const openVoucher = () => {
 
   const isInvoicePayables = section === "payables";
   const invoiceAging = invoiceAgingTotals(isInvoicePayables ? apInvoices : arInvoices);
-  const pagedInvoiceRows = isInvoicePayables ? pagedApInvoices : pagedArInvoices;
   const invoicePartyRows = partyTotalsFromInvoices(isInvoicePayables ? apInvoices : arInvoices);
 
 
@@ -2161,23 +2439,29 @@ const openVoucher = () => {
       <AccPageHeader
         title="Accounts"
         copy={`${activeCompany?.name || settings?.companyName || workspace.businessName || "Your business"} · ${fy.label} · ${range.from} to ${range.to}`}
-        tabs={<AccSectionTabs section={section} reportTab={reportTab} onNavigate={openSection} openReport={openReport} aiEnabled={aiEnabled} />}
+        tabs={<AccSectionTabs section={section} reportTab={reportTab} onNavigate={openSection} openReport={openReport} aiEnabled={aiEnabled} manufacturingEnabled={manufacturingEnabled} />}
         companyBar={<AccCompanyBar
           companies={companies}
           activeId={activeCompanyId}
           onSelect={switchCompany}
-          onCreate={() => { setCompanyDraft({ name: "", booksStartedOn: todayIso(), industry: "retail" }); setShowCreateCompany(true); }}
+          onCreate={() => { setCompanyDraft({ name: "", booksStartedOn: todayIso(), industry: "retail", pan: "" }); setShowCreateCompany(true); }}
+          canAdmin={canAdmin}
           gstLabel={gstStatusLabel(activeCompany)}
           fyLabel={fy?.label || ""}
           booksStartedOn={activeCompany?.booksStartedOn || settings?.booksStartedOn || ""}
           rangeFrom={range.from}
           rangeTo={range.to}
-          fallbackName={settings?.companyName || workspace.businessName || ""}
+          fallbackName={canAdmin ? (settings?.companyName || workspace.businessName || "") : ""}
         />}
-        extras={canWrite ? <NewEntryActions openSimple={openSimple} openVoucher={openVoucher} openParty={openParty} openBookkeeper={settings ? () => setShowBookkeeper(true) : null} /> : <span className="small">View-only · {accountsAccessRole || "viewer"}</span>}
+        extras={canWrite ? <NewEntryActions openSimple={openSimple} openVoucher={openVoucher} openParty={openParty} openBookkeeper={settings ? () => setShowBookkeeper(true) : null} openBulkImport={!migrationRequired ? openBulkImport : null} /> : <span className="small">View-only · {accountsAccessRole || "viewer"}</span>}
       />
       <Toasts items={[{ id: "error", tone: "error", message: error, onClose: () => setError("") }, { id: "notice", message: notice, onClose: () => setNotice("") }]} />
       {readOnly && <div className="notice">Accounts access: <strong>viewer</strong>. You can review books and reports, but posting and setup changes are blocked.</div>}
+      {!loading && workspace?.role === "accounts" && !companies.filter(row => row.status !== "archived").length && (
+        <div className="notice" role="status">
+          No Accounts company is assigned to this login. Ask the owner to open <strong>Setup → Add CA / Accounts login → Companies</strong> and tick the company you should access.
+        </div>
+      )}
       {migrationRequired && <div className="notice">Run <strong>052</strong> through <strong>076_fix_ambiguous_item_type.sql</strong> in the Supabase SQL editor (including <strong>059</strong>, <strong>064–067</strong>, <strong>070–076</strong>), then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
       {loading && !settings ? <Spinner label="Loading Accounts" /> : <>
         {section === "overview" && <OverviewSection
@@ -2257,10 +2541,9 @@ const openVoucher = () => {
         {section === "vouchers" && <VouchersSection
           canWrite={canWrite}
           openSimple={openSimple}
-          openVoucher={openVoucher}
           search={search}
           setSearch={setSearch}
-          pagedVouchers={pagedVouchers}
+          shownVouchers={shownVouchers}
           setExpandedVoucherId={setExpandedVoucherId}
           expandedVoucherId={expandedVoucherId}
           openSalesInvoice={openSalesInvoice}
@@ -2269,8 +2552,6 @@ const openVoucher = () => {
           askReason={askReason}
           run={run}
           token={token}
-          shownVouchers={shownVouchers}
-          showAdjacentVoucher={showAdjacentVoucher}
           parties={parties}
           accounts={accounts}
           activeCompany={activeCompany}
@@ -2281,6 +2562,7 @@ const openVoucher = () => {
           onAttachVoucherFile={onAttachVoucherFile}
           voucherAttachments={voucherAttachments}
           onDeleteAttachment={onDeleteAttachment}
+          listPage={listPage}
           setListPage={setListPage}
         />}
 
@@ -2295,7 +2577,8 @@ const openVoucher = () => {
           outstandingOnly={outstandingOnly}
           setOutstandingOnly={setOutstandingOnly}
           exportReport={exportReport}
-          pagedInvoiceRows={pagedInvoiceRows}
+          invoiceRows={isInvoicePayables ? apInvoices : arInvoices}
+          listPage={listPage}
           orgSettings={orgSettings}
           activeCompany={activeCompany}
           workspace={workspace}
@@ -2381,6 +2664,9 @@ const openVoucher = () => {
             onConvertToEntry={openSimpleFromDocument}
             onSaveSettings={saveDocSettings}
             prefill={documentPrefill}
+            vouchers={vouchers}
+            voucherItemLines={voucherItemLines}
+            priceLists={priceLists}
             tab={view.sub}
             onTabChange={next => go({ section: "documents", sub: next })}
           />
@@ -2454,8 +2740,6 @@ const openVoucher = () => {
           onOpenItemProfit={() => openReport("item_profit")}
         />}
 
-        {section === "more" && <MoreSection manufacturingEnabled={manufacturingEnabled} openSection={openSection} moreLinks={MORE_LINKS} />}
-
         {section === "ca" && <CaPackSection
           token={token}
           company={activeCompany}
@@ -2523,15 +2807,15 @@ const openVoucher = () => {
           tb={tb}
           pnl={pnl}
           sheet={sheet}
-          pagedBooks={pagedBooks}
           books={books}
           setListPage={setListPage}
+          listPage={listPage}
           flow={flow}
-          pagedArInvoices={pagedArInvoices}
+          arInvoices={arInvoices}
           orgSettings={orgSettings}
           activeCompany={activeCompany}
           workspace={workspace}
-          pagedApInvoices={pagedApInvoices}
+          apInvoices={apInvoices}
           salesRows={salesRows}
           purchaseRows={purchaseRows}
           onViewDocument={openVoucherDocument}
@@ -2540,7 +2824,6 @@ const openVoucher = () => {
           range={range}
           setNotice={setNotice}
           gstReport={gstReport}
-          pagedGstOutput={pagedGstOutput}
           ledgerId={ledgerId}
           setLedgerId={setLedgerId}
           visibleAccounts={visibleAccounts}
@@ -2566,6 +2849,13 @@ const openVoucher = () => {
           markGstFiled={markGstFiled}
           focusItemId={caItemId}
           onFocusHandled={() => setCaItemId("")}
+          token={token}
+          aiEnabled={aiEnabled}
+          tradeDocuments={tradeDocuments || []}
+          onOpenTradeDocument={id => {
+            setDocumentPrefill({ key: `view:${id}:${Date.now()}`, viewId: id });
+            go({ section: "documents", sub: "purchase_match" });
+          }}
         />}
 
         {section === "bank" && <BankSection
@@ -2594,20 +2884,37 @@ const openVoucher = () => {
           openSimpleFromBankLine={openSimpleFromBankLine}
         />}
 
-        {section === "crm" && <CustomerPipeline companyId={activeCompanyId} parties={parties} pipeline={partyPipeline} saving={saving} onStageChange={(partyId, stage) => run(async () => {
-          await setPartyPipelineStage(token, partyId, stage);
-          setPartyPipeline(current => ({ ...current, [partyId]: stage }));
-        }, "Pipeline stage saved.")} />}
+        {section === "crm" && <CustomerPipeline
+          parties={parties}
+          pipeline={partyPipeline}
+          saving={saving}
+          canWrite={canWrite}
+          onAddLead={openPartyForCrm}
+          onOpenParty={openParty}
+          onStageChange={(partyId, stage) => run(async () => {
+            await setPartyPipelineStage(token, partyId, stage);
+            setPartyPipeline(current => ({ ...current, [partyId]: stage }));
+          }, "Pipeline stage saved.")}
+          onAddMany={(partyIds, stage) => run(async () => {
+            for (const partyId of partyIds) await setPartyPipelineStage(token, partyId, stage);
+            setPartyPipeline(current => {
+              const next = { ...current };
+              for (const partyId of partyIds) next[partyId] = stage;
+              return next;
+            });
+          }, partyIds.length === 1 ? "Pipeline stage saved." : `${partyIds.length} customers added to ${stage}.`)}
+        />}
 
         {section === "setup" && <SetupSection
           openMigration={canAdmin && settings ? () => setShowMigration(true) : null}
+          openBulkImport={canWrite && settings && !migrationRequired ? openBulkImport : null}
           openSetupAssistant={canAdmin && settings && activeCompanyId && !migrationRequired ? () => {
             setOnboardingDismissed(false);
             setSetupAssistantRequested(true);
             openSection("overview");
           } : null}
           setUpNewCompany={canAdmin && !migrationRequired ? () => {
-            setCompanyDraft({ name: "", booksStartedOn: todayIso(), industry: "retail" });
+            setCompanyDraft({ name: "", booksStartedOn: todayIso(), industry: "retail", pan: "" });
             setSetupAfterCreate(true);
             setShowCreateCompany(true);
           } : null}
@@ -2659,23 +2966,16 @@ const openVoucher = () => {
           setLockForm={setLockForm}
           locks={locks}
           askReason={askReason}
-          accountsRoles={accountsRoles}
-          teamInvites={teamInvites}
-          inviteDraft={inviteDraft}
-          setInviteDraft={setInviteDraft}
-          setTeamInvites={setTeamInvites}
-          setAccountsRoles={setAccountsRoles}
-          setInviteEmailDraft={setInviteEmailDraft}
           setNotice={setNotice}
-          inviteEmailDraft={inviteEmailDraft}
-          roleDraft={roleDraft}
-          setRoleDraft={setRoleDraft}
           canWrite={canWrite}
           recurringTemplates={recurringTemplates}
           recurringDraft={recurringDraft}
           setRecurringDraft={setRecurringDraft}
           setRecurringTemplates={setRecurringTemplates}
           openSimpleFromRecurring={openSimpleFromRecurring}
+          priceLists={priceLists}
+          setPriceLists={setPriceLists}
+          items={items}
           audit={audit}
           pagedAudit={pagedAudit}
         />}
@@ -2698,6 +2998,20 @@ const openVoucher = () => {
         onRun={runMigration}
         onClose={() => setShowMigration(false)}
       />}
+      {showBulkImport && <AccBulkImportWorkspace
+        accounts={visibleAccounts}
+        parties={parties}
+        items={items}
+        vouchers={vouchers}
+        company={activeCompany}
+        today={todayIso()}
+        token={token}
+        canWrite={canWrite}
+        loadPartyMaps={() => loadBulkPartyMaps(token)}
+        onRunExcel={runBulkExcel}
+        onRunBills={runBulkBills}
+        onClose={() => setShowBulkImport(false)}
+      />}
       {showCreateCompany && <CreateCompanyModal
         saving={saving}
         setShowCreateCompany={open => {
@@ -2708,6 +3022,7 @@ const openVoucher = () => {
         run={run}
         token={token}
         setCompanyDraft={setCompanyDraft}
+        setError={setError}
         onCreated={() => {
           setOnboardingDismissed(false);
           setSetupAssistantRequested(false);
@@ -2715,10 +3030,11 @@ const openVoucher = () => {
         }}
       />}
       {showSimple && <Modal panelClassName="acc-entry-dialog" title={SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry"} close={closeSimple}>
-        <SimpleEntryForm kind={simpleKind} accounts={visibleAccounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} maxDate={todayIso()} gstCompany={activeCompany} onGstSetup={() => { setShowSimple(false); openSection("setup"); }} onCreateParty={openPartyForEntry} items={items} stockByItem={stockByItem} openInvoices={settlementOpenInvoices} creditInfo={saleCreditInfo} token={token} vouchers={vouchers} voucherItemLines={voucherItemLines} />
+        <SimpleEntryForm kind={simpleKind} accounts={visibleAccounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} maxDate={todayIso()} gstCompany={activeCompany} onGstSetup={() => { setShowSimple(false); openSection("setup"); }} onCreateParty={openPartyForEntry} items={items} stockByItem={stockByItem} openInvoices={settlementOpenInvoices} creditInfo={saleCreditInfo} token={token} vouchers={vouchers} voucherItemLines={voucherItemLines} priceLists={priceLists} />
       </Modal>}
       {showParty && <PartyModal
         partyForm={partyForm}
+        priceLists={priceLists}
         closeParty={closeParty}
         saving={saving}
         saveParty={saveParty}

@@ -40,6 +40,11 @@ async function fileToJpeg(file) {
   return blob;
 }
 
+function isPdfFile(file) {
+  const type = String(file?.type || "").toLowerCase();
+  return type === "application/pdf" || String(file?.name || "").toLowerCase().endsWith(".pdf");
+}
+
 function blobToBase64(blob) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -54,6 +59,7 @@ const PAYMENT_LABELS = { paid: "Paid", unpaid: "Unpaid", unknown: "Not read" };
 export function BillPhotoDraft({ token, parties, items, form, setForm, today, vouchers = [], accounts = [], companyState = "" }) {
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState("");
+  const [fileLabel, setFileLabel] = useState("");
   const [photo, setPhoto] = useState(null);
   const [review, setReview] = useState(null);
   const [keepPhoto, setKeepPhoto] = useState(false);
@@ -71,28 +77,48 @@ export function BillPhotoDraft({ token, parties, items, form, setForm, today, vo
     setBusy(true);
     setError("");
     setReview(null);
+    setPreview("");
+    setFileLabel("");
     setApplied(false);
     setKeepPhoto(false);
     setAcceptDuplicate(false);
     clearPhotoOnForm();
     try {
-      const jpeg = await fileToJpeg(file);
-      setPreview(await readFile(jpeg));
-      const data = await blobToBase64(jpeg);
-      setPhoto({ data, fileName: "supplier-bill.jpg", byteSize: jpeg.size });
+      const pdf = isPdfFile(file);
+      let data = "";
+      let mimeType = "image/jpeg";
+      if (pdf) {
+        const source = await readFile(file);
+        data = source.split(",")[1] || "";
+        if (!data.slice(0, 1400).includes("JVBERi")) throw new Error("Could not read that PDF.");
+        mimeType = "application/pdf";
+        const fileName = String(file.name || "supplier-bill.pdf").slice(0, 180);
+        setFileLabel(fileName);
+        setPhoto({ data, fileName, byteSize: file.size, contentType: mimeType });
+      } else {
+        const jpeg = await fileToJpeg(file);
+        setPreview(await readFile(jpeg));
+        data = await blobToBase64(jpeg);
+        setPhoto({ data, fileName: "supplier-bill.jpg", byteSize: jpeg.size, contentType: mimeType });
+      }
+      if (data.length > 2_000_000) {
+        throw new Error(pdf ? "That PDF is too large. Choose a smaller file." : "That photo is too large. Take it again, closer to the bill.");
+      }
       const response = await fetch("/api/accounts/bill-scan", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ mimeType: "image/jpeg", data }),
+        body: JSON.stringify({ mimeType, data }),
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error || "The bill could not be read.");
       setReview(reviewBillScan(body.bill, { parties, items, form, today, vouchers, accounts, companyState }));
     } catch (err) {
       setPhoto(null);
+      setPreview("");
+      setFileLabel("");
       setError(err.message || "The bill could not be read.");
     } finally {
       setBusy(false);
@@ -109,6 +135,7 @@ export function BillPhotoDraft({ token, parties, items, form, setForm, today, vo
   const discard = () => {
     setReview(null);
     setPreview("");
+    setFileLabel("");
     setPhoto(null);
     setKeepPhoto(false);
     setApplied(false);
@@ -119,12 +146,13 @@ export function BillPhotoDraft({ token, parties, items, form, setForm, today, vo
   return (
     <section className="acc-form-section acc-bill-scan">
       <h3 className="acc-form-section-title">Supplier bill</h3>
-      <p className="small">Photograph the bill. FinTrack shows what it read. The purchase form changes only after you use the draft, and nothing is posted until you save.</p>
+      <p className="small">Photograph the bill, or choose a PDF. FinTrack shows what it read. The purchase form changes only after you use the draft, and nothing is posted until you save.</p>
       <div className="acc-bill-scan-row">
-        {preview ? <img src={preview} alt="Scanned document" /> : null}
+        {preview ? <img src={preview} alt="Scanned bill" /> : null}
+        {fileLabel ? <p className="small">{fileLabel}</p> : null}
         <label className="btn">
           {busy ? "Reading the bill…" : "Scan bill"}
-          <input type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" disabled={busy} onChange={onFile} />
+          <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.jpg,.jpeg,.png,.webp,.pdf" disabled={busy} onChange={onFile} />
         </label>
       </div>
       {error ? <p className="small acc-bill-scan-error" role="alert">{error}</p> : null}
@@ -166,9 +194,9 @@ export function BillPhotoDraft({ token, parties, items, form, setForm, today, vo
               disabled={!photoFits || applied}
               onChange={event => setKeepPhoto(event.target.checked)}
             />
-            Keep this photo with the voucher after you save
+            Keep this file with the voucher after you save
           </label>
-          {!photoFits ? <p className="small">This photo is larger than 512 KB, so it stays on screen and is not stored with the voucher.</p> : null}
+          {!photoFits ? <p className="small">This file is larger than 512 KB, so it stays on screen and is not stored with the voucher.</p> : null}
           <div className="acc-bill-review-actions">
             {(review.duplicates || []).length ? (
               <label className="small acc-bill-keep">

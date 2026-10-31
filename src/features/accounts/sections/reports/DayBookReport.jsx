@@ -1,10 +1,21 @@
-import { AccPager } from "../../components/AccUi.jsx";
+import { AccPager, DateSortTh } from "../../components/AccUi.jsx";
 import { money } from "../../accountsFormat.js";
+import { pageSlice } from "../../model/accountsList.js";
+import { useDateSort } from "../../model/useDateSort.js";
 
-export function DayBookReport({ pagedBooks, books, setListPage }) {
+export function DayBookReport({ books, listPage = 1, setListPage }) {
+  const { sorted, direction, toggle } = useDateSort(books, "date");
+  const pagedBooks = pageSlice(sorted, listPage);
+  const onToggle = () => {
+    toggle();
+    setListPage?.(1);
+  };
   return (
     <>
-      <div className="table spacer acc-table-wrap acc-daybook-table"><table><thead><tr><th>Date</th><th>Number</th><th>Type</th><th>Narration</th><th className="acc-num">Amount</th></tr></thead><tbody>
+      <div className="table spacer acc-table-wrap acc-daybook-table"><table><thead><tr>
+        <th><DateSortTh label="Date" direction={direction} onToggle={onToggle} /></th>
+        <th>Number</th><th>Type</th><th>Narration</th><th className="acc-num">Amount</th>
+      </tr></thead><tbody>
       {pagedBooks.items.map(row => <tr key={row.id}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.voucherType}</td><td>{row.narration}</td><td className="acc-num">{money(row.debit)}</td></tr>)}
       {!books.length && <tr><td colSpan="5">No posted vouchers in this period. Change the date range or record a transaction.</td></tr>}
     </tbody></table></div>

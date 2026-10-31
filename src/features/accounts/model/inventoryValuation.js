@@ -25,16 +25,22 @@ const sortMovements = rows => [...rows].sort((a, b) => (
   || String(a.id || "").localeCompare(String(b.id || ""))
 ));
 
-/** Movements for one product; legacy items with opening stock but no movement rows get a synthetic opening. */
+/**
+ * Movements for one product. If opening_stock is set on the item and there is no
+ * reason=opening movement yet, keep a synthetic opening so adjustments / sales do
+ * not drop the opening qty from the book (same rule as acc_item_on_hand).
+ */
 function itemMovements(item, rows) {
-  if (rows.length || !(Number(item.openingStock || 0) > 0)) return sortMovements(rows);
+  const sorted = sortMovements(rows);
+  const openingQty = Number(item.openingStock || 0);
+  if (!(openingQty > 0) || sorted.some(row => row.reason === "opening")) return sorted;
   return [{
     id: `opening:${item.id}`,
     itemId: item.id,
     movementDate: item.openingStockDate || "0000-01-01",
-    quantityDelta: Number(item.openingStock),
+    quantityDelta: openingQty,
     reason: "opening",
-  }];
+  }, ...sorted];
 }
 
 /**

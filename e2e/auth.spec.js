@@ -6,7 +6,7 @@ test.describe("Login hub tabs", () => {
   });
 
   test("financier sign in shows business email and password", async ({ page }) => {
-    await page.getByRole("button", { name: "Financier sign in" }).click();
+    await page.getByRole("button", { name: "Owner sign in" }).click();
     await expect(page.getByText("Business email")).toBeVisible();
     await expect(page.getByText("Password").first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();

@@ -50,6 +50,7 @@ export async function restoreAccountsCompanyBackup(token, rawBackup, {
     await saveGstSettings(token, {
       gstRegistration: backup.company.gstRegistration,
       gstin: backup.company.gstin || "",
+      pan: backup.company.pan || "",
       legalName: backup.company.legalName || backup.company.name || "",
       stateCode: backup.company.stateCode || "",
     }).catch(() => {});

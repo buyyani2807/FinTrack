@@ -25,8 +25,9 @@ import { SaleSummaryCard } from "./simpleEntry/SaleSummaryCard.jsx";
 import { BillwiseSettlement } from "./simpleEntry/BillwiseSettlement.jsx";
 import { BillPhotoDraft } from "./simpleEntry/BillPhotoDraft.jsx";
 import { billNumberFromNarration, findPostedPurchaseDuplicates } from "../model/billScan.js";
+import { resolveItemRate } from "../model/priceLists.js";
 
-export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, saving, maxDate, gstCompany, onGstSetup, onCreateParty, items = [], stockByItem = {}, openInvoices = [], creditInfo = null, token, vouchers = [], voucherItemLines = [] }) {
+export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, saving, maxDate, gstCompany, onGstSetup, onCreateParty, items = [], stockByItem = {}, openInvoices = [], creditInfo = null, token, vouchers = [], voucherItemLines = [], priceLists = [] }) {
   const [allowedDuplicateKey, setAllowedDuplicateKey] = useState("");
   const customers = parties.filter(party => party.partyType === "customer" && (party.isActive !== false || party.id === form.partyId));
   const suppliers = parties.filter(party => party.partyType === "supplier" && (party.isActive !== false || party.id === form.partyId));
@@ -156,7 +157,9 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
       patchItemLine(index, { itemId: "", itemName: "", itemSku: "", itemType: "product", unit: "Nos" });
       return;
     }
-    const defaultRate = kind === "sale" || kind === "credit_note" ? item.sellingPrice : item.purchasePrice;
+    const rateKind = kind === "sale" || kind === "credit_note" ? "selling" : "purchase";
+    const resolved = resolveItemRate({ item, party: selectedParty, lists: priceLists, kind: rateKind });
+    const defaultRate = resolved.rate;
     patchItemLine(index, {
       itemId: item.id,
       itemName: item.name,
@@ -165,7 +168,7 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
       unit: item.unit,
       gstRate: String(item.gstRate ?? 0),
       hsnSac: item.hsnSac || "",
-      rate: form.itemLines?.[index]?.rateTouched ? form.itemLines[index].rate : String(defaultRate || ""),
+      rate: form.itemLines?.[index]?.rateTouched ? form.itemLines[index].rate : String(defaultRate ?? ""),
     });
   };
 

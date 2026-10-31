@@ -15,6 +15,7 @@ import {
   validateAnswer,
 } from "../model/setupAssistant.js";
 import { shortDate } from "../model/bookkeeper.js";
+import { normalizePan, panFromGstin } from "../model/accountingGst.js";
 import { INDUSTRY_TEMPLATES } from "./AccOnboardingWizard.jsx";
 import "../bookkeeper.css";
 
@@ -83,7 +84,6 @@ export function AccSetupAssistant({
   onApply,
   onDone,
   onSkip,
-  onClassic,
   onOpenMigration,
 }) {
   const companyId = company?.id || "";
@@ -106,6 +106,12 @@ export function AccSetupAssistant({
   const question = nextQuestion(answers, asking);
   const defaultStart = company?.booksStartedOn || financialYearStart(today);
   const spoken = keepCompany ? { ...answers, name: company?.name || "" } : answers;
+
+  useEffect(() => {
+    if (question?.id !== "pan") return;
+    const suggestedPan = panFromGstin(answers.gstin) || normalizePan(company?.pan) || "";
+    setInput(current => current || suggestedPan);
+  }, [question?.id, answers.gstin, company?.pan]);
 
   const plan = useMemo(
     () => (question ? null : buildSetupPlan(answers, { profile, accounts, categories, vouchers, company, keepCompany })),
@@ -140,13 +146,18 @@ export function AccSetupAssistant({
       const next = { ...current };
       delete next[last];
       if (last === "products") delete next.inventory;
-      if (last === "gst") delete next.gstin;
+      if (last === "gst") {
+        delete next.gstin;
+        delete next.pan;
+      }
       return next;
     });
     if (last === "business") setProfile(null);
     setInput(typeof answers[last] === "string" ? answers[last] : "");
     setError("");
-    setOrder(current => current.filter(id => id !== last && !(last === "products" && id === "inventory") && !(last === "gst" && id === "gstin")));
+    setOrder(current => current.filter(id => id !== last
+      && !(last === "products" && id === "inventory")
+      && !(last === "gst" && (id === "gstin" || id === "pan"))));
     setResult(null);
     setProgress([]);
   };
@@ -181,7 +192,6 @@ export function AccSetupAssistant({
             : "Answer a few questions in your own words. FinTrack sets up the ledgers, banks, GST and stock categories for you. Nothing is saved until you confirm."}</p>
         </div>
         <div className="acc-setup-head-actions">
-          {onClassic && <button type="button" className="acc-ov-link-btn" disabled={saving} onClick={onClassic}>Use the step-by-step form</button>}
           {onSkip && <button type="button" className="btn" disabled={saving} onClick={onSkip}>Skip for now</button>}
         </div>
       </header>
@@ -225,10 +235,14 @@ export function AccSetupAssistant({
                     <input
                       aria-label={question.placeholder}
                       value={input}
-                      maxLength={question.id === "gstin" ? 15 : 120}
+                      maxLength={question.id === "gstin" ? 15 : question.id === "pan" ? 10 : 120}
                       placeholder={question.placeholder}
                       autoFocus={order.length > 0}
-                      onChange={event => setInput(question.id === "gstin" ? event.target.value.toUpperCase() : event.target.value)}
+                      onChange={event => setInput(
+                        question.id === "gstin" || question.id === "pan"
+                          ? event.target.value.toUpperCase()
+                          : event.target.value,
+                      )}
                     />
                     <button type="submit" className="btn primary" disabled={thinking || !input.trim()}>
                       {thinking ? <LoaderCircle size={15} className="acc-setup-spin" aria-hidden="true" /> : <Send size={15} aria-hidden="true" />}

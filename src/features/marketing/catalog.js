@@ -3,10 +3,10 @@
 
 export const FEATURE_CATEGORIES = [
   { id: "accounts", label: "Accounts", blurb: "Company books, payroll, stock, and a page to hand the month to the accountant." },
-  { id: "intelligence", label: "AI", blurb: "Cash-flow outlook, expense and supplier price changes, collection priorities, unusual activity, GST review, month-end readiness, bank matching, stock forecasts, and chit scheme health. Each suggestion shows its reason and a link to the record. You decide what happens next." },
+  { id: "intelligence", label: "AI", blurb: "Scan a supplier bill from a photo or a PDF and review the purchase draft. Also cash-flow outlook, expense and supplier price changes, collection priorities, unusual activity, GST review, month-end readiness, bank matching, stock forecasts, and chit scheme health. Each suggestion shows its reason and a link to the record. You decide what happens next." },
   { id: "finance", label: "Finance", blurb: "Daily and monthly collections, with collection reports and a profit and loss view for the lending book." },
   { id: "chit", label: "Chit Fund", blurb: "Schemes, bidding, dividends, month statements, and commission income." },
-  { id: "portals", label: "Portals", blurb: "Financier sign in opens the owner workspace. Agents, customers, and members have their own login." },
+  { id: "portals", label: "Portals", blurb: "Owner sign in opens the owner workspace. Agents, customers, and members have their own login." },
 ];
 
 export const FEATURES = [
@@ -1054,10 +1054,10 @@ export const FEATURES = [
     slug: "bill-scanning",
     category: "intelligence",
     name: "Bill Scanning",
-    summary: "Photograph a supplier bill and review a draft before anything is posted.",
-    problem: "Typing a purchase from a paper bill is slow, and a second photo of the same bill is easy to save twice.",
-    how: ["Take or upload a photo.", "FinTrack fills a draft and can match a supplier.", "You review it. A possible duplicate must be confirmed. Save is what posts."],
-    capabilities: ["Photo to draft", "Supplier match by GSTIN or name", "Suggested expense ledger", "Duplicate warning before use"],
+    summary: "Photograph a supplier bill, or choose a PDF, and review a draft before anything is posted.",
+    problem: "Typing a purchase from a paper bill or a PDF is slow, and the same bill is easy to save twice.",
+    how: ["Take a photo or choose a PDF.", "FinTrack fills a draft and can match a supplier.", "You review it. A possible duplicate must be confirmed. Save is what posts."],
+    capabilities: ["Photo or PDF to draft", "Supplier match by GSTIN or name", "Suggested expense ledger", "Duplicate warning before use"],
     benefits: ["The draft is not a voucher yet", "You can see a possible duplicate", "Posting happens when you save"],
     related: ["vouchers", "payables", "bookkeeping-suggestions"],
     appPath: "/accounting/transactions",
@@ -1127,7 +1127,6 @@ export const FEATURES = [
       "Bank ledgers for each bank you name, and extra ledgers such as Freight Inward or Discount Allowed",
       "Suggested answers for common businesses, and a GSTIN check before it is saved",
       "Change your last answer at any time before setting up, and run it again later from Setup",
-      "The step-by-step form is still there if you prefer it",
     ],
     benefits: ["Ready to record the first entry in a few minutes", "Ledgers and categories fit the business", "You see the whole setup before anything is saved", "Ledgers already in the books are left as they are"],
     sections: [
@@ -1174,9 +1173,43 @@ export const FEATURES = [
         text: "Opening balances are posted as a balanced opening entry on the books start date. If the old balances do not agree, the difference goes to an Opening Balance Adjustment ledger so your CA can review it, instead of being hidden. Cancelled and optional Tally vouchers, and entries without a date or that do not balance, are listed and left out.",
       },
     ],
-    related: ["ai-setup", "chart-of-accounts", "vouchers"],
+    related: ["ai-setup", "chart-of-accounts", "vouchers", "bulk-import"],
     appPath: "/accounting/setup",
     icon: "FileSpreadsheet",
+  },
+  {
+    slug: "bulk-import",
+    category: "intelligence",
+    name: "Bulk import sales, purchases and bills",
+    summary: "Clear a month’s backlog from a spreadsheet or a folder of supplier bills — review, then post.",
+    problem: "Month-end and festival seasons leave a pile of invoices. Typing each sale or purchase by hand is slow, and photo bills arrive in batches.",
+    how: [
+      "Open Accounts → Setup → Open bulk import, or Transactions → More → Bulk import.",
+      "Excel tab: download the template, fill sales and purchases, upload CSV or Excel, review, then post.",
+      "Bill photos tab: upload JPEG/PNG/PDF files or a ZIP, let FinTrack read each bill, review, then post purchases.",
+    ],
+    capabilities: [
+      "CSV and Excel sales and purchase vouchers with amount-only or item lines",
+      "Create missing customers and suppliers when you choose",
+      "Batch supplier bill photos and PDFs with AI reading and a review grid",
+      "ZIP unpack for bill folders, progress bar and Stop while posting",
+      "Idempotent posting so a retry does not double the books",
+      "Party name mappings saved on the company so the whole team reuses them",
+    ],
+    benefits: ["Faster backlog clearance", "You approve before anything posts", "Same posting rules as a normal sale or purchase"],
+    sections: [
+      {
+        title: "Excel for day-to-day vouchers",
+        text: "Use the template columns Type, Date, Party, Invoice number and Amount — or Item, Qty and Rate for itemized rows. FinTrack groups lines that share an invoice number, matches parties, and shows warnings such as possible duplicates before you post.",
+      },
+      {
+        title: "Bill photos for supplier purchases",
+        text: "Upload many bills at once. Each file is read like the single bill scanner, then listed for review. Approved rows post as purchase vouchers; small files can be kept as attachments.",
+      },
+    ],
+    related: ["ai-migration", "vouchers", "ai-bookkeeper"],
+    appPath: "/accounting/setup",
+    icon: "FileUp",
   },
   {
     slug: "agent-portal",
@@ -1285,10 +1318,34 @@ export const SOLUTIONS = [
   },
 ];
 
+/** Featured trust strip on the Security page — only controls that exist in the product today. */
+export const SECURITY_TRUST = [
+  {
+    title: "AES-256 Encryption",
+    text: "Aadhaar and PAN KYC values are encrypted at rest with AES-256 before they are stored.",
+    icon: "Lock",
+  },
+  {
+    title: "Rate-Limited AI APIs",
+    text: "Ask FinTrack, bill scan, and other AI calls share a per-user request limit so the workspace cannot be scraped or abused.",
+    icon: "ShieldCheck",
+  },
+  {
+    title: "TLS in Transit",
+    text: "Connections to FinTrack use HTTPS so data is encrypted on the wire between your browser and the service.",
+    icon: "Globe",
+  },
+  {
+    title: "Privacy First",
+    text: "We do not sell customer or member data. Records stay inside your organisation’s workspace.",
+    icon: "BadgeCheck",
+  },
+];
+
 export const SECURITY_POINTS = [
   {
     title: "Sign-in for each role",
-    text: "Financier sign in uses email and opens the owner workspace. A collection agent uses an agent ID and PIN. A finance customer and a chit member use a portal ID and PIN. A staff login does not open the owner books.",
+    text: "Owner sign in uses email and opens the owner workspace. A collection agent uses an agent ID and PIN. A finance customer and a chit member use a portal ID and PIN. A staff login does not open the owner books.",
   },
   {
     title: "Workspace isolation",

@@ -60,7 +60,6 @@ const AI = [
   { slug: "stock-forecast", title: "Stock forecast", text: "Which items may run out, when, and how much to consider buying." },
   { slug: "chit-scheme-health", title: "Chit scheme health", text: "Collection rate, overdue members, and members paying later each month." },
   { slug: "ai-review", title: "AI Review", text: "Eight reviews in one Accounts tab, each with its reason, confidence, and a link to the record." },
-  { slug: "bill-scanning", title: "Bill draft", text: "A supplier photo becomes a draft. You review it, then save." },
   { slug: "credit-score", title: "Customer credit score", text: "A score from each customer’s own payment history, with the reasons." },
 ];
 
@@ -345,13 +344,13 @@ const FAQ = [
   { question: "Does it support chit funds?", answer: "Yes. Schemes, members, live bidding, payments, dividends, and reports." },
   { question: "Does it support GST?", answer: "It prepares GST summaries from posted vouchers. Filing stays outside FinTrack." },
   { question: "Can I send WhatsApp messages?", answer: "FinTrack opens WhatsApp with a reminder, receipt, or statement. You send the message." },
-  { question: "Does it have AI?", answer: "Yes, included in the plan. AI Review in Accounts gives a cash-flow forecast, expense and supplier price changes, collection priorities, unusual activity alerts, GST checks, month-end readiness, bank matching suggestions, and stock forecasts. Chit Fund has scheme health. Ask FinTrack answers questions from this workspace, bill photos become drafts, and Tell FinTrack turns a plain sentence into an entry. AI also sets up new books from a few questions and maps data brought in from Tally, Zoho Books, or Excel. Every suggestion shows its reason and waits for you to act." },
+  { question: "Does it have AI?", answer: "Yes, included in the plan. AI Review in Accounts gives a cash-flow forecast, expense and supplier price changes, collection priorities, unusual activity alerts, GST checks, month-end readiness, bank matching suggestions, and stock forecasts. Chit Fund has scheme health. Ask FinTrack answers questions from this workspace, and Tell FinTrack turns a plain sentence into an entry. AI also sets up new books from a few questions and maps data brought in from Tally, Zoho Books, or Excel. Every suggestion shows its reason and waits for you to act." },
   { question: "What is Ask FinTrack?", answer: "A question box on every screen. Ask “Who has not paid today?”, “Why did profit decrease?”, or “Which expenses increased this month?” and the answer comes from this workspace’s records, with the period and the report it used. It is read-only and does not guess figures it cannot find." },
   { question: "Does the AI change my books?", answer: "No. It does not post vouchers, file GST, lock a period, reverse an entry, create a purchase order, or send a message. A bank match is posted only when you approve it, a Tell FinTrack draft only when you choose Post, and imported data only when you choose Import. A locked period cannot be changed from a suggestion." },
   { question: "Can I move my books from Tally or Excel?", answer: "Yes. Upload a Tally XML export, or Excel and CSV files from Zoho Books, Book Keeper, or your own sheets. FinTrack shows how many customers, suppliers, ledgers, and transactions it found, how many accounts it mapped automatically, and the exceptions for you to review before anything is imported." },
   { question: "What reports are included?", answer: "Daily and Monthly Finance have a collection report for any date and a Daily or Monthly P&L for the lending book. Chit Fund has a month statement PDF, a commission Profit & Loss by scheme, and scheme health. Accounts has the Day Book, Trial Balance, Profit & Loss, Balance Sheet, Cash Flow, GST, item profit, receivables, payables, and stock reports, with CSV, Excel, and PDF export. For the CA gathers the month’s books, GST invoices to check, unmatched bank lines, and stock rows that need review." },
   { question: "Can I install it on my phone?", answer: "Yes. FinTrack is the mobile app: add it to the home screen from Safari on iPhone or iPad, or from Chrome on Android. It opens from its own icon. Sign in the same way you do in the browser." },
-  { question: "How is this different from Tally?", answer: "TallyPrime does not have a mobile app for recording the books. On a phone it is for viewing reports. FinTrack installs on the phone, and collections, vouchers, and chit work are done there." },
+  { question: "How is this different from Tally?", answer: "FinTrack keeps accounting, daily and monthly collections, and chit funds in one login, and it installs on the phone. You record the day’s work there." },
 ];
 
 export function HomePage() {
@@ -363,8 +362,8 @@ export function HomePage() {
       <div className="mkt-wrap mkt-hero-grid">
         <div className="mkt-hero-copy">
           <Reveal as="p" className="mkt-kicker">A mobile app for the books</Reveal>
-          <Reveal as="h1" index={1}>Your business, on the phone.</Reveal>
-          <Reveal as="p" index={2}>FinTrack installs on iPhone and Android and opens from its own icon. Collections, company accounts, and chit funds are in that app. TallyPrime does not have a mobile app for recording the books. On a phone it is for viewing reports.</Reveal>
+          <Reveal as="h1" index={1}>Your Tally on mobile.</Reveal>
+          <Reveal as="p" index={2}>FinTrack installs on iPhone and Android and opens from its own icon. Collections, company accounts, and chit funds are in that app.</Reveal>
           <Reveal className="mkt-cta-row" index={3}>
             {signedIn ? <ProductCta primary /> : null}
             <Link className="mkt-btn" to={`${marketingPaths.how}#install`}>Install on iPhone or Android</Link>
@@ -451,7 +450,7 @@ export function HomePage() {
 
     <section className="mkt-section">
       <div className="mkt-wrap">
-        <Reveal as="h2">The mobile app Tally does not have.</Reveal>
+        <Reveal as="h2">The books, on your phone.</Reveal>
         <Reveal as="p" className="mkt-lead" index={1}>Add FinTrack from the browser and record the day’s work on the phone. The owner signs in with email. A collection agent, a customer, or a chit member uses a portal ID and PIN.</Reveal>
         <Reveal className="mkt-cta-row" index={2}>
           <Link className="mkt-btn" to={`${marketingPaths.how}#install`}>Install on iPhone or Android</Link>

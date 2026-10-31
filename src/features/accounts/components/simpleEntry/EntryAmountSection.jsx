@@ -65,7 +65,15 @@ export function EntryAmountSection({
         {!itemMode && gstKinds && gstOn && <>
           <Field label="GST rate"><Select value={form.gstRate} onChange={event => set({ gstRate: event.target.value })}>{GST_RATES.map(rate => <option key={rate} value={String(rate)}>{rate}%</option>)}</Select></Field>
           <Field label="Price"><Select value={form.taxInclusive ? "incl" : "excl"} onChange={event => set({ taxInclusive: event.target.value === "incl" })}><option value="excl">Tax exclusive</option><option value="incl">Tax inclusive</option></Select></Field>
-          <Field label="HSN / SAC"><input value={form.hsnSac} placeholder="optional" onChange={event => set({ hsnSac: event.target.value })} /></Field>
+          <Field label="HSN / SAC">
+            <input
+              value={form.hsnSac || ""}
+              placeholder="e.g. 9983"
+              inputMode="text"
+              autoComplete="off"
+              onChange={event => set({ hsnSac: event.target.value.replace(/[^\dA-Za-z./-]/g, "").slice(0, 16) })}
+            />
+          </Field>
           <Field label="Supply">{intra ? "Intra-state (CGST + SGST)" : partyState ? "Inter-state (IGST)" : "Set party state for CGST/SGST vs IGST"}</Field>
         </>}
         {gstKinds && !gstOn && (

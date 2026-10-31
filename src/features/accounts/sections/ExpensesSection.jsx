@@ -2,7 +2,7 @@ import { useDeferredValue, useMemo, useState } from "react";
 import { CalendarDays, ChartPie, ExternalLink, Plus, ReceiptText, RotateCcw, Sparkles, Wallet } from "lucide-react";
 import { ExportGroup, FilterSelect, SearchInput } from "../../../components/ui.jsx";
 import { todayIso } from "../../../lib/dates.js";
-import { AccMoreMenu, AccPager } from "../components/AccUi.jsx";
+import { AccMoreMenu, AccPager, DateSortTh } from "../components/AccUi.jsx";
 import { ExpenseCategoryBars, ExpenseCategoryDonut, ExpenseChange, ExpenseTrendChart } from "../components/ExpenseCharts.jsx";
 import { downloadAccountsCsv, downloadAccountsExcel, downloadAccountsPdf } from "../io/accountingExport.js";
 import { formatOverviewDate, money, sharePercent } from "../accountsFormat.js";
@@ -170,7 +170,7 @@ export function ExpensesSection({
   const exports = [
     { id: "csv", label: "CSV", disabled: !tableRows.length, onClick: () => downloadAccountsCsv(exportName("csv"), exportRows()) },
     { id: "xlsx", label: "Excel", disabled: !tableRows.length, onClick: () => downloadAccountsExcel(exportName("xlsx"), exportRows()) },
-    { id: "pdf", label: "PDF", disabled: !tableRows.length, onClick: () => downloadAccountsPdf(exportName("pdf"), { title: "Expenses", subtitle: `${companyName ? `${companyName} · ` : ""}${period.label}${scopeName}`, rows: exportRows() }) },
+    { id: "pdf", label: "PDF", disabled: !tableRows.length, onClick: () => downloadAccountsPdf(exportName("pdf"), { title: "Expenses", subtitle: `${companyName ? `${companyName} - ` : ""}${period.label}${String(scopeName || "").replace(/·/g, "-")}`, rows: exportRows() }) },
   ];
 
   const hasInsights = Boolean(rise || repeats.length || aiInsights.length);
@@ -343,7 +343,20 @@ export function ExpensesSection({
 
         {tableRows.length ? <>
           <div className="table acc-table-wrap acc-exp-table"><table>
-            <thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Paid to</th><th>Voucher</th><th>Paid from</th><th>Status</th><th className="acc-num">Amount</th></tr></thead>
+            <thead><tr>
+              <th>
+                <DateSortTh
+                  label="Date"
+                  active={sort === "date_desc" || sort === "date_asc"}
+                  direction={sort === "date_asc" ? "asc" : "desc"}
+                  onToggle={() => {
+                    setSortState(current => (current === "date_desc" ? "date_asc" : "date_desc"));
+                    setPage(1);
+                  }}
+                />
+              </th>
+              <th>Category</th><th>Description</th><th>Paid to</th><th>Voucher</th><th>Paid from</th><th>Status</th><th className="acc-num">Amount</th>
+            </tr></thead>
             <tbody>
               {pageRows.items.map(row => <tr key={row.id}>
                 <td>{formatOverviewDate(row.date)}</td>

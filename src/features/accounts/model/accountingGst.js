@@ -31,6 +31,27 @@ export function normalizeGstin(gstin) {
   return String(gstin || "").trim().toUpperCase();
 }
 
+const PAN_PATTERN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+
+export function normalizePan(pan) {
+  return String(pan || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10);
+}
+
+/** PAN embedded in a GSTIN (characters 3–12 of the 15-character number). */
+export function panFromGstin(gstin) {
+  const raw = normalizeGstin(gstin);
+  if (raw.length < 12) return "";
+  const pan = raw.slice(2, 12);
+  return PAN_PATTERN.test(pan) ? pan : "";
+}
+
+export function panValidationMessage(pan) {
+  const raw = normalizePan(pan);
+  if (!raw) return "";
+  if (!PAN_PATTERN.test(raw)) return "Enter a valid 10-character PAN (e.g. ABCDE1234F).";
+  return "";
+}
+
 export function gstinChecksum(body14) {
   const body = normalizeGstin(body14);
   let factor = 1;
@@ -78,6 +99,8 @@ export function validateGstSettings(form) {
   } else if (normalizeGstin(form?.gstin)) {
     return gstinValidationMessage(form.gstin);
   }
+  const panMessage = panValidationMessage(form?.pan);
+  if (panMessage) return panMessage;
   return "";
 }
 

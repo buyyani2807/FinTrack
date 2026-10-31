@@ -371,6 +371,19 @@ export function pageItemProfit(rows = [], page = 1) {
   return pageSlice(rows, page);
 }
 
+/** Stable key for a mark-reviewed decision. A new warning reopens review. */
+export function itemProfitReviewKey(row) {
+  const from = row?.from || "";
+  const to = row?.to || "";
+  const itemId = row?.itemId || "";
+  const text = (row?.warnings || []).map(warning => `${warning.code}:${warning.message}`).sort().join("\n");
+  let digest = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    digest = ((digest << 5) - digest + text.charCodeAt(index)) | 0;
+  }
+  return `ip:${from}:${to}:${itemId}:${(digest >>> 0).toString(36)}`.slice(0, 200);
+}
+
 export function itemProfitHighlights(rows = []) {
   const sold = rows.filter(row => row.quantitySold > 0);
   const by = (list, pick) => [...list].sort((a, b) => pick(b) - pick(a) || a.name.localeCompare(b.name));

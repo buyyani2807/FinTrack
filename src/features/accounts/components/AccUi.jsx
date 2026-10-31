@@ -329,6 +329,37 @@ export function AccSetupSection({ icon, title, copy, actions, children, collapsi
     </section>
   );
 }
+
+/** Inline Show/Hide for a long list inside an otherwise open setup card. */
+export function AccReveal({ summary, children, defaultOpen = false, className = "" }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const panelId = useId();
+  const toggleId = useId();
+  return (
+    <div className={`acc-reveal${className ? ` ${className}` : ""}`.trim()}>
+      <button
+        type="button"
+        id={toggleId}
+        className="acc-setup-toggle"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen(current => !current)}
+      >
+        <span>{open ? `Hide ${summary}` : `Show ${summary}`}</span>
+        <ChevronDown className="acc-setup-chevron" size={18} aria-hidden="true" />
+      </button>
+      <div
+        id={panelId}
+        className="acc-reveal-body"
+        role="region"
+        aria-labelledby={toggleId}
+        hidden={!open}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
 export const AccSkeleton = () => (
   <div className="acc-skeleton" aria-hidden="true">
     {Array.from({ length: 8 }, (_, index) => <div key={index} className="acc-skel" />)}
@@ -358,15 +389,39 @@ export function ReasonModal({ title, label, value, onChange, onConfirm, onClose,
   </Modal>;
 }
 /**
+ * Date-column sort control (button only — wrap in <th> or pass as AccTable label).
+ * Click toggles newest ↔ oldest. Default from useDateSort is newest first.
+ */
+export function DateSortTh({ label = "Date", direction = "desc", onToggle, active = true }) {
+  const newestFirst = direction !== "asc";
+  return (
+    <button
+      type="button"
+      className={`acc-date-sort${active ? " is-active" : ""}`}
+      onClick={onToggle}
+      title={active
+        ? (newestFirst ? "Latest first. Click for oldest first." : "Oldest first. Click for latest first.")
+        : `Sort by ${label} (latest first)`}
+      aria-label={active
+        ? `${label}, sorted ${newestFirst ? "newest first" : "oldest first"}`
+        : `Sort by ${label}`}
+    >
+      <span>{label}</span>
+      <ChevronDown className={`acc-date-sort-icon${active && !newestFirst ? " is-asc" : ""}`} size={14} strokeWidth={2.25} aria-hidden />
+    </button>
+  );
+}
+
+/**
  * Standard Accounts table. columns: ["Label", { label, num: true }] (num right-aligns).
  * `empty` (truthy) renders a single full-width row, e.g. empty={!rows.length && "No rows yet."}.
  * `spaced={false}` drops the top margin for tables inside cards and dialogs.
  */
 export function AccTable({ columns, empty = null, spaced = true, children }) {
   return (
-    <div className={`table${spaced ? " spacer" : ""} acc-table-wrap`}><table><thead><tr>{columns.map(column => {
+    <div className={`table${spaced ? " spacer" : ""} acc-table-wrap`}><table><thead><tr>{columns.map((column, index) => {
       const { label, num } = typeof column === "string" ? { label: column } : column;
-      return <th key={typeof label === "string" ? label : undefined} className={num ? "acc-num" : undefined}>{label}</th>;
+      return <th key={typeof label === "string" ? label : index} className={num ? "acc-num" : undefined}>{label}</th>;
     })}</tr></thead><tbody>
       {children}
       {empty ? <tr><td colSpan={columns.length}>{empty}</td></tr> : null}

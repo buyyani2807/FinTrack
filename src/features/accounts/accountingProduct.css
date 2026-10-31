@@ -1496,6 +1496,14 @@
   }
 }
 
+.accounts-dashboard .acc-profit-review-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .accounts-dashboard .acc-profit-review ul {
   margin: 8px 0 0;
   padding-left: 18px;
@@ -1503,6 +1511,11 @@
 
 .accounts-dashboard .acc-profit-review li + li {
   margin-top: 4px;
+}
+
+.accounts-dashboard .acc-profit-review.is-done {
+  border-color: var(--ft-border);
+  background: color-mix(in srgb, var(--ft-surface) 88%, var(--ft-primary) 12%);
 }
 
 .accounts-dashboard .acc-profit-facts {
@@ -3171,6 +3184,18 @@
   color: var(--acc-gold);
   font-size: var(--ft-type-micro);
   line-height: 1;
+}
+
+.accounts-dashboard .acc-reveal {
+  margin-top: 4px;
+}
+
+.accounts-dashboard .acc-reveal-body {
+  padding-top: 10px;
+}
+
+.accounts-dashboard .acc-reveal-body[hidden] {
+  display: none;
 }
 
 .accounts-dashboard .acc-setup-body[hidden] {
@@ -4896,6 +4921,204 @@
   max-width: 62ch;
 }
 
+/* Financial statement presentation (P&L, Balance Sheet, Cash Flow). */
+.accounts-dashboard .acc-stmt {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 8px;
+}
+
+.accounts-dashboard .acc-stmt-head {
+  display: grid;
+  gap: 2px;
+}
+
+.accounts-dashboard .acc-stmt-title {
+  margin: 0;
+  font-size: var(--ft-type-section);
+  font-weight: 700;
+  letter-spacing: var(--ft-tracking-tight);
+  color: var(--acc-text);
+}
+
+.accounts-dashboard .acc-stmt-period {
+  margin: 0;
+  color: var(--acc-muted);
+  font-size: var(--ft-type-caption);
+}
+
+.accounts-dashboard .acc-stmt-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.accounts-dashboard .acc-stmt-table-wrap {
+  border: 1px solid var(--acc-line);
+  border-radius: var(--acc-radius);
+  background: var(--acc-card);
+  overflow: hidden;
+}
+
+.accounts-dashboard .acc-stmt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.accounts-dashboard .acc-stmt-table th,
+.accounts-dashboard .acc-stmt-table td {
+  padding: 9px 14px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid color-mix(in srgb, var(--acc-line) 80%, transparent);
+}
+
+.accounts-dashboard .acc-stmt-table th {
+  color: var(--acc-muted);
+  font-size: var(--ft-type-caption);
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  background: color-mix(in srgb, var(--acc-card) 92%, var(--acc-muted) 8%);
+}
+
+.accounts-dashboard .acc-stmt-table .acc-num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.accounts-dashboard .acc-stmt-section td {
+  padding-top: 14px;
+  color: var(--acc-text);
+  font-size: var(--ft-type-label);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom-color: transparent;
+}
+
+.accounts-dashboard .acc-stmt-section td.acc-num {
+  font-size: inherit;
+}
+
+.accounts-dashboard .acc-stmt-line td:first-child {
+  padding-left: 22px;
+  color: var(--acc-text);
+  font-size: var(--ft-type-ui);
+}
+
+.accounts-dashboard .acc-stmt-total td {
+  font-weight: 700;
+  border-top: 1px solid var(--acc-line);
+  border-bottom: 1px solid var(--acc-line);
+  background: color-mix(in srgb, var(--acc-card) 94%, var(--ft-primary) 6%);
+}
+
+.accounts-dashboard .acc-stmt-result td {
+  font-size: var(--ft-type-card);
+  font-weight: 750;
+  border-top: 2px solid var(--acc-text);
+  border-bottom: 0;
+  background: color-mix(in srgb, var(--acc-card) 90%, var(--ft-primary) 10%);
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+
+.accounts-dashboard .acc-stmt-blank td {
+  padding: 6px 14px;
+  border-bottom: 0;
+}
+
+.accounts-dashboard .acc-stmt-note td {
+  color: var(--acc-muted);
+  font-size: var(--ft-type-caption);
+  line-height: var(--ft-leading-body);
+  border-bottom: 0;
+  padding-top: 4px;
+  padding-bottom: 12px;
+}
+
+.accounts-dashboard .acc-stmt-total.is-good td.acc-num,
+.accounts-dashboard .acc-stmt-result.is-good td.acc-num,
+.accounts-dashboard .acc-stmt-line.is-good td.acc-num {
+  color: var(--ft-success);
+}
+
+.accounts-dashboard .acc-stmt-total.is-bad td.acc-num,
+.accounts-dashboard .acc-stmt-result.is-bad td.acc-num,
+.accounts-dashboard .acc-stmt-line.is-bad td.acc-num {
+  color: var(--ft-danger);
+}
+
+@media (max-width: 720px) {
+  .accounts-dashboard .acc-stmt-pair {
+    grid-template-columns: 1fr;
+  }
+
+  .accounts-dashboard .acc-stmt-line td:first-child {
+    padding-left: 14px;
+  }
+
+  .accounts-dashboard .acc-stmt-table th,
+  .accounts-dashboard .acc-stmt-table td {
+    padding: 8px 12px;
+  }
+}
+
+.accounts-dashboard .acc-report-plain {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--acc-line);
+  border-radius: var(--acc-radius);
+  background: color-mix(in srgb, var(--acc-card) 88%, var(--ft-primary) 12%);
+  max-width: 62ch;
+}
+
+.accounts-dashboard .acc-report-plain.is-ok {
+  background: color-mix(in srgb, var(--acc-card) 88%, var(--ft-success) 12%);
+}
+
+.accounts-dashboard .acc-report-plain.is-warn {
+  background: color-mix(in srgb, var(--acc-card) 85%, var(--ft-danger) 15%);
+}
+
+.accounts-dashboard .acc-report-plain-blurb {
+  margin: 0;
+  color: var(--acc-muted);
+  font-size: var(--ft-type-secondary);
+  line-height: var(--ft-leading-body);
+}
+
+.accounts-dashboard .acc-report-plain-insight {
+  margin: 0;
+  color: var(--acc-text);
+  font-size: var(--ft-type-ui);
+  font-weight: 600;
+  line-height: var(--ft-leading-body);
+}
+
+.accounts-dashboard .acc-report-plain-help {
+  margin: 2px 0 0;
+}
+
+.accounts-dashboard .acc-report-plain-help summary {
+  cursor: pointer;
+  color: var(--ft-primary);
+  font-size: var(--ft-type-label);
+  font-weight: 650;
+}
+
+.accounts-dashboard .acc-report-plain-help p {
+  margin: 6px 0 0;
+  color: var(--acc-muted);
+  font-size: var(--ft-type-secondary);
+  line-height: var(--ft-leading-body);
+}
+
 .accounts-dashboard .acc-landing-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -5760,7 +5983,131 @@
 .accounts-business-pulse{padding:1.15rem;border:1px solid color-mix(in srgb,var(--line) 78%,transparent);background:linear-gradient(145deg,color-mix(in srgb,var(--card) 94%,var(--accent) 6%),var(--card))}.accounts-business-pulse-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1rem}.accounts-business-pulse-head .acc-section-title{margin:.2rem 0 0}.accounts-business-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:.7rem}.accounts-business-kpis .acc-metric{min-height:84px}.accounts-business-actions{display:flex;align-items:center;flex-wrap:wrap;gap:.55rem;margin-top:1rem}.accounts-business-actions>.small{margin-right:.2rem}.accounts-business-action{display:inline-flex;align-items:center;gap:.5rem;border:1px solid var(--line);border-radius:999px;padding:.55rem .8rem;background:var(--surface);color:var(--text);cursor:pointer;font-weight:650}.accounts-business-action:hover{border-color:var(--accent);transform:translateY(-1px)}.accounts-business-action.green{border-color: color-mix(in srgb,var(--ft-success) 45%,var(--line))}.accounts-business-action.red{border-color: color-mix(in srgb,var(--ft-danger) 45%,var(--line))}.accounts-business-action.blue{border-color: color-mix(in srgb,var(--ft-info) 45%,var(--line))}.accounts-business-action.gold{border-color: color-mix(in srgb,var(--ft-primary) 45%,var(--line))}.accounts-business-action.purple{border-color: color-mix(in srgb,var(--ft-info) 45%,var(--line))}@media(max-width:1050px){.accounts-business-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:620px){.accounts-business-pulse-head{flex-direction:column;gap:.25rem}.accounts-business-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.accounts-business-actions{align-items:stretch}.accounts-business-actions>.small{width:100%}.accounts-business-action{justify-content:space-between;flex:1 1 calc(50% - .55rem)}}
 .accounts-business-alert{display:flex;align-items:center;gap:.7rem;margin-top:1rem;padding:.7rem .8rem;border: 1px solid color-mix(in srgb,var(--ft-primary) 45%,var(--line));border-radius:12px;background: color-mix(in srgb,var(--ft-primary) 8%,var(--card))}.accounts-business-alert>div{flex:1;min-width:0}.accounts-business-alert>div strong{display:block}.accounts-business-alert-icon{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background: var(--ft-primary);color: var(--ft-on-primary);font-weight:800}.accounts-business-alert .btn{white-space:nowrap}@media(max-width:620px){.accounts-business-alert{align-items:flex-start;flex-wrap:wrap}.accounts-business-alert .btn{margin-left:2.2rem}}
 .accounts-collab-guide{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin:0 0 1rem;padding:.85rem 1rem;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line));border-radius:12px;background:color-mix(in srgb,var(--accent) 7%,var(--card))}.accounts-collab-guide p{margin:.25rem 0 0;max-width:70ch}.accounts-collab-guide .acc-chip{white-space:nowrap}@media(max-width:620px){.accounts-collab-guide{align-items:flex-start;flex-direction:column}}
-.crm-pipeline-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.75rem;margin-top:1rem}.crm-stage{min-height:240px;padding:.85rem}.crm-stage-head{display:flex;justify-content:space-between;align-items:center;padding-bottom:.7rem;border-bottom:1px solid var(--line);margin-bottom:.7rem}.crm-stage-head span{display:grid;place-items:center;min-width:24px;height:24px;border-radius:999px;background:color-mix(in srgb,var(--accent) 16%,var(--card));font-size: var(--ft-type-caption)}.crm-customer-card{display:grid;gap:.3rem;padding:.7rem;margin-bottom:.6rem;border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,var(--surface) 65%,var(--card))}.crm-customer-card select{font-size: var(--ft-type-caption);padding:.3rem}.crm-customer-card strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}@media(max-width:1100px){.crm-pipeline-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:680px){.crm-pipeline-grid{grid-template-columns:1fr}.crm-stage{min-height:0}}
+.accounts-company-multi{position:relative;width:100%;min-width:0}
+.accounts-company-multi-trigger{width:100%}
+.accounts-company-multi-menu{
+  position:absolute;z-index:40;top:calc(100% + 4px);left:0;right:0;
+  max-height:14rem;overflow:auto;padding:6px;
+  border:1px solid var(--ft-border);border-radius:12px;
+  background:var(--ft-surface);box-shadow:var(--ft-shadow-lg);
+}
+.accounts-company-multi-option{
+  display:flex;align-items:flex-start;gap:.55rem;
+  margin:0;padding:8px 10px;border-radius:8px;
+  font-size:var(--ft-type-secondary);color:var(--ft-text);cursor:pointer;
+}
+.accounts-company-multi-option:hover{background:var(--ft-surface-hover)}
+.accounts-company-multi-option.is-selected{background:var(--ft-primary-soft);color:var(--ft-primary)}
+.accounts-company-multi-option input{margin-top:.15rem;flex:none}
+.accounts-dashboard .crm-toolbar {
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+.accounts-dashboard .crm-add-existing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: min(100%, 22rem);
+  flex: 1 1 18rem;
+}
+.accounts-dashboard .crm-add-select {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+.accounts-dashboard .crm-pipeline-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.accounts-dashboard .crm-stage {
+  min-height: 240px;
+  padding: 12px;
+}
+.accounts-dashboard .crm-stage-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--ft-border);
+  margin-bottom: 10px;
+}
+.accounts-dashboard .crm-stage-head span {
+  display: grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ft-primary) 14%, var(--ft-surface));
+  color: var(--ft-primary);
+  font-size: var(--ft-type-caption);
+  font-weight: 650;
+}
+.accounts-dashboard .crm-customer-card {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  margin-bottom: 8px;
+  border: 1px solid var(--ft-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--ft-surface-muted) 55%, var(--ft-surface));
+}
+.accounts-dashboard .crm-customer-name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ft-text);
+  font: 700 var(--ft-type-ui)/var(--ft-leading-tight) var(--ft-font);
+  text-align: left;
+  cursor: pointer;
+}
+.accounts-dashboard .crm-customer-name:hover {
+  color: var(--ft-primary);
+}
+.accounts-dashboard .crm-customer-card strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.accounts-dashboard .crm-customer-note {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--ft-muted);
+}
+.accounts-dashboard .crm-stage-empty {
+  margin: 8px 0 0;
+  color: var(--ft-muted);
+}
+.accounts-dashboard .crm-customer-card select,
+.accounts-dashboard .crm-customer-card .select {
+  font-size: var(--ft-type-caption);
+}
+@media (max-width: 1100px) {
+  .accounts-dashboard .crm-pipeline-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 720px) {
+  .accounts-dashboard .crm-pipeline-grid {
+    grid-template-columns: 1fr;
+  }
+  .accounts-dashboard .crm-stage {
+    min-height: 0;
+  }
+  .accounts-dashboard .crm-add-existing {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+}
 .production-readiness-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.75rem}.production-readiness-grid .card{padding:.85rem}.production-readiness-grid .card p{min-height:54px}@media(max-width:900px){.production-readiness-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:620px){.production-readiness-grid{grid-template-columns:1fr}}
 .commercial-status-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem}.commercial-status-grid .card{padding:.85rem}.commercial-status-grid strong{display:block;margin-top:.25rem;text-transform:capitalize}.commercial-status-grid p{margin:.35rem 0 0}@media(max-width:680px){.commercial-status-grid{grid-template-columns:1fr}}
 .accounts-invite-email{margin:1rem 0;padding:1rem}.accounts-invite-email p{max-width:70ch;margin:.4rem 0 .75rem}.accounts-invite-email .btn{margin-right:.5rem}
@@ -6304,6 +6651,38 @@
   }
 }
 
+/* Date column sort control (Receivables, Sales, Day book, etc.) */
+.accounts-dashboard .acc-date-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.accounts-dashboard .acc-date-sort-icon {
+  flex: none;
+  opacity: 0.4;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.accounts-dashboard .acc-date-sort.is-active .acc-date-sort-icon {
+  opacity: 0.95;
+  color: var(--ft-primary);
+}
+.accounts-dashboard .acc-date-sort-icon.is-asc {
+  transform: rotate(180deg);
+}
+.accounts-dashboard .acc-date-sort:hover .acc-date-sort-icon,
+.accounts-dashboard .acc-date-sort:focus-visible .acc-date-sort-icon {
+  opacity: 1;
+}
+
 .accounts-dashboard .ca-pack { display: grid; gap: 16px; }
 .accounts-dashboard .ca-pack-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; }
 .accounts-dashboard .ca-pack-kicker { margin: 0; color: var(--ft-primary); font-size: var(--ft-type-label); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
@@ -6324,4 +6703,118 @@
 @media (max-width: 720px) {
   .accounts-dashboard .ca-pack-actions { width: 100%; }
   .accounts-dashboard .ca-pack-pile .ca-pack-actions { width: auto; }
+}
+
+/* ===== Transactions list (Sales / Day Book style table) ===== */
+.accounts-dashboard .acc-tx-toolbar {
+  margin-bottom: 12px;
+}
+
+.accounts-dashboard .acc-tx-search {
+  width: min(100%, 28rem);
+  min-width: 0;
+}
+
+.accounts-dashboard .acc-tx-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: var(--ft-type-caption);
+  font-weight: 650;
+  line-height: 1;
+  text-transform: capitalize;
+}
+
+.accounts-dashboard .acc-tx-status.is-posted {
+  background: color-mix(in srgb, var(--ft-success) 10%, transparent);
+  color: var(--ft-success);
+}
+
+.accounts-dashboard .acc-tx-status.is-cancelled {
+  background: color-mix(in srgb, var(--ft-danger) 12%, transparent);
+  color: var(--ft-danger);
+}
+
+.accounts-dashboard .acc-tx-status.is-reversed {
+  background: color-mix(in srgb, var(--ft-warning) 14%, transparent);
+  color: var(--ft-warning);
+}
+
+.accounts-dashboard .acc-tx-status.is-draft {
+  background: var(--ft-surface-muted);
+  color: var(--ft-muted);
+}
+
+.accounts-dashboard .acc-tx-table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.accounts-dashboard .acc-tx-table tr.is-open {
+  background: color-mix(in srgb, var(--ft-primary) 4%, var(--ft-surface));
+}
+
+.accounts-dashboard .acc-tx-expand-row > td {
+  padding: 0 12px 14px;
+  background: color-mix(in srgb, var(--ft-primary) 3%, var(--ft-surface));
+}
+
+.accounts-dashboard .acc-tx-detail {
+  display: grid;
+  gap: 12px;
+  padding-top: 12px;
+}
+
+.accounts-dashboard .acc-tx-lines {
+  margin: 0;
+  border: 1px solid var(--ft-border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--ft-surface);
+}
+
+.accounts-dashboard .acc-tx-lines table {
+  margin: 0;
+}
+
+.accounts-dashboard .acc-tx-attach-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.accounts-dashboard .acc-tx-attach-head .btn.is-busy {
+  cursor: wait;
+}
+
+.accounts-dashboard .acc-tx .acc-empty {
+  margin: 24px auto;
+  border: 0 !important;
+}
+
+.accounts-dashboard .acc-tx-cards .acc-tx-detail {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--ft-border);
+}
+
+@media (max-width: 720px) {
+  .accounts-dashboard .acc-tx-table {
+    display: none;
+  }
+
+  .accounts-dashboard .acc-tx-search {
+    width: 100%;
+  }
+
+  .accounts-dashboard .acc-tx-toolbar {
+    display: grid;
+    gap: 10px;
+  }
 }

@@ -30,9 +30,12 @@ import { buildSalesInvoice } from "../model/salesInvoiceModel.js";
 import { downloadSalesInvoicePdf } from "../io/salesInvoicePdf.js";
 import { isValidUpiId, upiPayLink } from "../model/upiPay.js";
 import { QrSvg } from "../PayPage.jsx";
-import { AccMoreMenu, AccPager, Modal } from "./AccUi.jsx";
+import { AccMoreMenu, AccPager, DateSortTh, Modal } from "./AccUi.jsx";
 import { usePagedList } from "../model/usePagedList.js";
+import { useDateSort } from "../model/useDateSort.js";
 import { SearchInput, SegmentedControl } from "../../../components/ui.jsx";
+import { PurchaseMatchReport } from "../sections/reports/PurchaseMatchReport.jsx";
+import { resolveItemRate } from "../model/priceLists.js";
 
 const money = formatInr;
 const qty = (value, unit) => `${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 3 })}${unit ? ` ${unit}` : ""}`;
@@ -45,6 +48,7 @@ const TABS = [
   { id: "purchase_order", label: "Purchase orders" },
   { id: "goods_receipt", label: "Goods receipts" },
   { id: "pending", label: "Pending orders" },
+  { id: "purchase_match", label: "PO match" },
   { id: "settings", label: "Document settings" },
 ];
 
@@ -121,7 +125,7 @@ function readLogoFile(file) {
   });
 }
 
-function DocumentForm({ form, setForm, parties, items, stockByItem, gstCompany, fulfilment, documents, saving, onSave, onClose, error }) {
+function DocumentForm({ form, setForm, parties, items, stockByItem, gstCompany, fulfilment, documents, saving, onSave, onClose, error, priceLists = [] }) {
   const config = DOCUMENT_TYPES[form.docType];
   const partyList = parties.filter(party => party.partyType === config.partyType && (party.isActive !== false || party.id === form.partyId));
   const party = parties.find(row => row.id === form.partyId);
@@ -146,7 +150,12 @@ function DocumentForm({ form, setForm, parties, items, stockByItem, gstCompany, 
       patchLine(index, { itemId: "", itemName: "", itemSku: "", itemType: "product", unit: "Nos" });
       return;
     }
-    const rate = config.side === "sales" ? item.sellingPrice : item.purchasePrice;
+    const resolved = resolveItemRate({
+      item,
+      party,
+      lists: priceLists,
+      kind: config.side === "sales" ? "selling" : "purchase",
+    });
     patchLine(index, {
       itemId: item.id,
       itemName: item.name,
@@ -155,7 +164,7 @@ function DocumentForm({ form, setForm, parties, items, stockByItem, gstCompany, 
       unit: item.unit,
       gstRate: String(item.gstRate ?? 0),
       hsnSac: item.hsnSac || "",
-      rate: form.lines[index]?.rateTouched ? form.lines[index].rate : String(rate || ""),
+      rate: form.lines[index]?.rateTouched ? form.lines[index].rate : String(resolved.rate ?? ""),
     });
   };
 
@@ -556,6 +565,9 @@ export function AccDocumentsWorkspace({
   company = null,
   workspace = {},
   documentSettings = {},
+  vouchers = [],
+  voucherItemLines = [],
+  priceLists = [],
   canEdit = false,
   canAdmin = false,
   saving = false,
@@ -576,20 +588,24 @@ export function AccDocumentsWorkspace({
   const [form, setForm] = useState(null);
   const [formError, setFormError] = useState("");
   const [prefillKey, setPrefillKey] = useState(null);
-  if (prefill?.key && prefill.key !== prefillKey && canEdit) {
-    setPrefillKey(prefill.key);
-    setFormError("");
-    setForm({
-      ...emptyDocumentForm(prefill.docType, todayIso()),
-      partyId: prefill.partyId || "",
-      notes: prefill.notes || "",
-      lines: prefill.lines?.length ? prefill.lines : [emptyItemLine()],
-    });
-  }
   const [viewId, setViewId] = useState(null);
   const [cancelDoc, setCancelDoc] = useState(null);
   const [cancelReason, setCancelReason] = useState("");
   const [pendingSide, setPendingSide] = useState("sales");
+  if (prefill?.key && prefill.key !== prefillKey) {
+    setPrefillKey(prefill.key);
+    if (prefill.viewId) {
+      setViewId(prefill.viewId);
+    } else if (canEdit) {
+      setFormError("");
+      setForm({
+        ...emptyDocumentForm(prefill.docType, todayIso()),
+        partyId: prefill.partyId || "",
+        notes: prefill.notes || "",
+        lines: prefill.lines?.length ? prefill.lines : [emptyItemLine()],
+      });
+    }
+  }
   const today = todayIso();
   const available = Array.isArray(documents);
   const docs = useMemo(() => documents || [], [documents]);
@@ -616,7 +632,8 @@ export function AccDocumentsWorkspace({
     () => (tab === "pending" ? pendingOrderRows({ documents: docs, fulfilment, side: pendingSide, parties, today }) : []),
     [tab, docs, fulfilment, pendingSide, parties, today],
   );
-  const pagedDocs = usePagedList(rows, `${tab}|${search}|${showClosed}`);
+  const docDateSort = useDateSort(rows, item => item.doc?.docDate);
+  const pagedDocs = usePagedList(docDateSort.sorted, `${tab}|${search}|${showClosed}|${docDateSort.direction}`);
   const pagedPending = usePagedList(pendingRows, `${tab}|${pendingSide}`);
 
   const viewDoc = viewId ? docs.find(doc => doc.id === viewId) : null;
@@ -732,7 +749,13 @@ export function AccDocumentsWorkspace({
           {canEdit && <button type="button" className="btn primary acc-list-new" disabled={saving} onClick={() => openNew(tab)}>+ New {config.label.toLowerCase()}</button>}
         </div>
         <div className="table spacer acc-table-wrap"><table><thead><tr>
-          <th>Number</th><th>Date</th><th>{config.partyType === "supplier" ? "Supplier" : "Customer"}</th><th className="acc-num">Total</th><th>Status</th>{tab !== "quotation" && <th className="acc-num">Pending qty</th>}<th></th>
+          <th>Number</th>
+          <th><DateSortTh label="Date" direction={docDateSort.direction} onToggle={docDateSort.toggle} /></th>
+          <th>{config.partyType === "supplier" ? "Supplier" : "Customer"}</th>
+          <th className="acc-num">Total</th>
+          <th>Status</th>
+          {tab !== "quotation" && <th className="acc-num">Pending qty</th>}
+          <th></th>
         </tr></thead><tbody>
           {pagedDocs.items.map(({ doc, summary, status }) => (
             <tr key={doc.id}>
@@ -755,6 +778,16 @@ export function AccDocumentsWorkspace({
           {!rows.length && <tr><td colSpan={tab === "quotation" ? 6 : 7}>{showClosed ? `No ${config.plural.toLowerCase()} yet.` : `No open ${config.plural.toLowerCase()}. Choose "All, incl. closed" to see completed and cancelled ones.`}</td></tr>}
         </tbody></table><AccPager page={pagedDocs.page} pages={pagedDocs.pages} total={pagedDocs.total} from={pagedDocs.from} to={pagedDocs.to} onPage={pagedDocs.setPage} noun={config.plural.toLowerCase()} /></div>
       </>}
+
+      {available && tab === "purchase_match" && (
+        <PurchaseMatchReport
+          documents={docs}
+          voucherItemLines={voucherItemLines}
+          vouchers={vouchers}
+          parties={parties}
+          onOpenDocument={id => setViewId(id)}
+        />
+      )}
 
       {available && tab === "pending" && <>
         <p className="copy spacer">Order lines still waiting to be delivered or received. Quantity drops when you make a challan, goods receipt, invoice or bill from the order.</p>
@@ -807,6 +840,7 @@ export function AccDocumentsWorkspace({
           gstCompany={company}
           fulfilment={fulfilment}
           documents={docs}
+          priceLists={priceLists}
           saving={saving}
           error={formError}
           onSave={saveForm}

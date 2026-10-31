@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Reveal, RevealProvider } from "../../components/ui/Reveal.jsx";
-import { SECURITY_POINTS, SOLUTIONS, featureBySlug } from "./catalog.js";
+import { SECURITY_POINTS, SECURITY_TRUST, SOLUTIONS, featureBySlug } from "./catalog.js";
 import { featurePath, marketingPaths } from "./paths.js";
 import { InstallGuide } from "./InstallGuide.jsx";
 import { ProductCta } from "./ProductCta.jsx";
@@ -38,8 +38,8 @@ export function SolutionsPage() {
 }
 
 const STEPS = [
-  { title: "Open one workspace", text: "Financier sign in opens the owner workspace, or create the business account when signup is open. A collection agent, a customer, and a chit member each sign in on the same screen with their own ID and PIN." },
-  { title: "Record the work", text: "Add daily or monthly customers, enroll a chit scheme, or post a voucher on the company you have open." },
+  { title: "Open one workspace", text: "Owner sign-in opens the business workspace, or create the business account when signup is open. A CA uses the same Owner sign-in for assigned Accounts companies only. A collection agent, a customer, and a chit member each sign in on the same screen with their own ID and PIN." },
+  { title: "Record the work", text: "Add daily or monthly customers, enroll a chit scheme, or post a voucher on the company you have open. Scan a supplier bill from a photo or a PDF and review the draft before you save." },
   { title: "Review what FinTrack highlights", text: "Insights, unusual days, bill drafts, and bank suggestions are there to read. You record the payment, accept the match, or save the voucher." },
   { title: "Share only when you mean to", text: "Download a receipt or statement, or open WhatsApp with a draft. The message is sent when you send it. Portals show a customer or member their own records." },
 ];
@@ -72,7 +72,6 @@ export function SecurityPage() {
     <Reveal>
       <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Security</p>
       <h1>Access, isolation, and review.</h1>
-      <p className="mkt-lead">This page describes controls that exist in the product. It is not a certification, a government approval, or a promise that data can never be mishandled.</p>
     </Reveal>
     <Reveal className="mkt-grid two">
       {SECURITY_POINTS.map(point => <article key={point.title} className="mkt-card">
@@ -80,6 +79,18 @@ export function SecurityPage() {
         <p>{point.text}</p>
       </article>)}
     </Reveal>
+  </section>
+  <section className="mkt-security-trust" aria-labelledby="mkt-security-trust-title">
+    <div className="mkt-wrap">
+      <Reveal as="p" className="mkt-security-trust-kicker" id="mkt-security-trust-title">Security &amp; trust</Reveal>
+      <Reveal className="mkt-grid four">
+        {SECURITY_TRUST.map((point, index) => <article key={point.title} className="mkt-security-trust-card" style={{ "--reveal-i": index }}>
+          <div className="mkt-icon"><FeatureIcon name={point.icon} /></div>
+          <h2>{point.title}</h2>
+          <p>{point.text}</p>
+        </article>)}
+      </Reveal>
+    </div>
   </section>
   <PageClose />
   </RevealProvider>;
@@ -91,6 +102,7 @@ const PLAN_INCLUDES = [
   "Chit schemes and live bidding",
   "Collection agents, customer portals, and member portals",
   "Collection reports, Daily and Monthly P&L, chit statements, and company reports",
+  "Bill scan: a supplier photo or PDF becomes a purchase draft",
   "AI Review: cash-flow forecast, expense, GST, and month-end checks, bank matching, and stock forecasts",
   "Receipts, and Ask FinTrack when you confirm",
 ];

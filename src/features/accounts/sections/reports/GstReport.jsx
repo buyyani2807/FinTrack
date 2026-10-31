@@ -1,4 +1,4 @@
-import { AccMetric, AccPager } from "../../components/AccUi.jsx";
+import { AccMetric, AccPager, AccTable, DateSortTh } from "../../components/AccUi.jsx";
 import {
   buildGstr1Preparation,
   buildGstr3bPreparation,
@@ -10,7 +10,8 @@ import { trackProductEvent } from "../../../commercial/productAnalytics.js";
 import { todayIso } from "../../../../lib/dates.js";
 import { downloadAccountsCsv } from "../../io/accountingExport.js";
 import { money } from "../../accountsFormat.js";
-import { AccTable } from "../../components/AccUi.jsx";
+import { pageSlice } from "../../model/accountsList.js";
+import { useDateSort } from "../../model/useDateSort.js";
 import { AccGstPackCard } from "../../components/AccGstPackCard.jsx";
 
 export function GstReport({
@@ -19,7 +20,7 @@ export function GstReport({
   range,
   setNotice,
   gstReport,
-  pagedGstOutput,
+  listPage = 1,
   setListPage,
   activeCompany,
   workspace,
@@ -32,6 +33,13 @@ export function GstReport({
   saving,
   markGstFiled,
 }) {
+  const outputSort = useDateSort(gstReport.output, "date");
+  const inputSort = useDateSort(gstReport.input, "date");
+  const pagedGstOutput = pageSlice(outputSort.sorted, listPage);
+  const toggleOutput = () => {
+    outputSort.toggle();
+    setListPage?.(1);
+  };
   return (
     <div className="acc-gst-reports">
       <AccGstPackCard
@@ -104,13 +112,33 @@ export function GstReport({
         {gstReport.byHsn.map(row => <tr key={row.hsnSac}><td>{row.hsnSac}</td><td className="acc-num">{money(row.taxable)}</td><td className="acc-num">{money(row.cgst)}</td><td className="acc-num">{money(row.sgst)}</td><td className="acc-num">{money(row.igst)}</td></tr>)}
       </AccTable>
       <h3 className="acc-section-title">Output GST</h3>
-      <AccTable spaced={false} columns={["Date", "Voucher", "HSN", { label: "Taxable", num: true }, { label: "Tax", num: true }]} empty={!gstReport.output.length && "No output GST in this period."}>
+      <AccTable
+        spaced={false}
+        columns={[
+          { label: <DateSortTh label="Date" direction={outputSort.direction} onToggle={toggleOutput} /> },
+          "Voucher",
+          "HSN",
+          { label: "Taxable", num: true },
+          { label: "Tax", num: true },
+        ]}
+        empty={!gstReport.output.length && "No output GST in this period."}
+      >
         {pagedGstOutput.items.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.hsnSac || "—"}</td><td className="acc-num">{money(row.taxable)}</td><td className="acc-num">{money(row.cgst + row.sgst + row.igst)}</td></tr>)}
       </AccTable>
       <AccPager page={pagedGstOutput.page} pages={pagedGstOutput.pages} total={pagedGstOutput.total} onPage={setListPage} noun="output lines" />
       <h3 className="acc-section-title">Input GST / ITC</h3>
-      <AccTable spaced={false} columns={["Date", "Voucher", "HSN", { label: "Taxable", num: true }, { label: "ITC", num: true }]} empty={!gstReport.input.length && "No input GST in this period."}>
-        {gstReport.input.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.hsnSac || "—"}</td><td className="acc-num">{money(row.taxable)}</td><td className="acc-num">{money(row.itcEligible ? row.cgst + row.sgst + row.igst : 0)}</td></tr>)}
+      <AccTable
+        spaced={false}
+        columns={[
+          { label: <DateSortTh label="Date" direction={inputSort.direction} onToggle={inputSort.toggle} /> },
+          "Voucher",
+          "HSN",
+          { label: "Taxable", num: true },
+          { label: "ITC", num: true },
+        ]}
+        empty={!gstReport.input.length && "No input GST in this period."}
+      >
+        {inputSort.sorted.map((row, index) => <tr key={`${row.voucherNumber}-${index}`}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.hsnSac || "—"}</td><td className="acc-num">{money(row.taxable)}</td><td className="acc-num">{money(row.itcEligible ? row.cgst + row.sgst + row.igst : 0)}</td></tr>)}
       </AccTable>
     </div>
   );

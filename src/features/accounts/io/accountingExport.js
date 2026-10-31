@@ -90,7 +90,11 @@ const colLetter = index => {
   return label;
 };
 
-const isNumericCell = value => typeof value === "number" && Number.isFinite(value);
+const isNumericCell = value => {
+  if (typeof value === "number" && Number.isFinite(value)) return true;
+  const text = String(value ?? "").trim();
+  return text !== "" && /^-?\d+(\.\d+)?$/.test(text);
+};
 
 export function buildAccountsXlsx(rows = []) {
   const sheetRows = (rows || []).map((row, rowIndex) => {
@@ -132,19 +136,42 @@ export function buildAccountsXlsx(rows = []) {
   ]);
 }
 
-const PAGE = { width: 595, height: 842, left: 36, right: 559, top: 800, bottom: 48 };
-const ascii = text => String(text ?? "").replace(/₹/g, "Rs.").replace(/[^\x20-\x7E]/g, "?");
+const PORTRAIT = { width: 595, height: 842, left: 28, right: 567, top: 806, bottom: 40 };
+const LANDSCAPE = { width: 842, height: 595, left: 24, right: 818, top: 562, bottom: 28 };
+
+const HEADER_SHORT = {
+  "Invoice date": "Inv date",
+  "Due date": "Due",
+  "Days outstanding": "Days out",
+  "Days overdue": "Overdue",
+  "Sales amount (₹)": "Sales",
+  "Purchase amount (₹)": "Purchase",
+  "Amount (₹)": "Amount",
+  "Debit (₹)": "Debit",
+  "Credit (₹)": "Credit",
+  "Balance (₹)": "Balance",
+  "HSN / SAC": "HSN",
+  "Narration": "Narration",
+  "Direction": "Dir",
+  "Internal transfers (excluded from inflow/outflow)": "Transfers (excluded)",
+};
+
+const ascii = text => String(text ?? "")
+  .replace(/₹/g, "Rs.")
+  .replace(/[·•–—]/g, "-")
+  .replace(/[^\x20-\x7E]/g, "?");
 const escapePdf = text => ascii(text).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
 const clip = (value, max) => {
   const text = ascii(value);
   return text.length <= max ? text : `${text.slice(0, Math.max(1, max - 1))}.`;
 };
+const cellLen = value => Math.min(ascii(value).length || 1, 32);
 
 function pdfObject(id, body) {
   return `${id} 0 obj\n${body}\nendobj\n`;
 }
 
-function buildPdf(pages) {
+function buildPdf(pages, page) {
   const objs = {};
   const fontId = 1;
   const boldId = 2;
@@ -159,7 +186,7 @@ function buildPdf(pages) {
     const contentId = nextId++;
     objs[contentId] = `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`;
     const pageId = nextId++;
-    objs[pageId] = `<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${PAGE.width} ${PAGE.height}] /Resources << /Font << /F1 ${fontId} 0 R /F2 ${boldId} 0 R >> >> /Contents ${contentId} 0 R >>`;
+    objs[pageId] = `<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${page.width} ${page.height}] /Resources << /Font << /F1 ${fontId} 0 R /F2 ${boldId} 0 R >> >> /Contents ${contentId} 0 R >>`;
     pageIds.push(pageId);
   });
   objs[pagesId] = `<< /Type /Pages /Kids [${pageIds.map(id => `${id} 0 R`).join(" ")}] /Count ${pageIds.length} >>`;
@@ -180,52 +207,116 @@ function buildPdf(pages) {
   return body;
 }
 
-const text = (font, size, x, y, value) => `BT /${font} ${size} Tf ${x} ${y} Td (${escapePdf(value)}) Tj ET`;
+const text = (font, size, x, y, value) => `BT /${font} ${size} Tf ${x.toFixed(2)} ${y.toFixed(2)} Td (${escapePdf(value)}) Tj ET`;
 const line = (x1, y1, x2, y2) => `${x1} ${y1} m ${x2} ${y2} l S`;
 
+function choosePage(cols) {
+  return cols >= 6 ? LANDSCAPE : PORTRAIT;
+}
+
+function columnWidths(page, table, cols) {
+  const usable = page.right - page.left;
+  const sample = table.slice(0, Math.min(table.length, 50));
+  const weights = Array.from({ length: cols }, (_, col) => {
+    let weight = 4;
+    for (const row of sample) weight = Math.max(weight, cellLen(row?.[col]));
+    if (col === 0) weight = Math.max(weight, 10);
+    return weight;
+  });
+  const sum = weights.reduce((total, value) => total + value, 0) || cols;
+  const widths = weights.map(weight => Math.max(26, Math.floor((weight / sum) * usable)));
+  let used = widths.slice(0, -1).reduce((total, value) => total + value, 0);
+  widths[cols - 1] = Math.max(26, usable - used);
+  used = widths.reduce((total, value) => total + value, 0);
+  if (used > usable) {
+    const scale = usable / used;
+    for (let i = 0; i < cols - 1; i += 1) widths[i] = Math.max(22, Math.floor(widths[i] * scale));
+    widths[cols - 1] = usable - widths.slice(0, -1).reduce((total, value) => total + value, 0);
+  }
+  return widths;
+}
+
+function compactHeaderRow(header = []) {
+  return header.map(cell => HEADER_SHORT[String(cell ?? "")] || cell);
+}
+
+/** Shared table PDF used by Accounts reports, Expenses, Ledger, and GST packs. */
 export function renderAccountsPdf({ title = "FinTrack report", subtitle = "", rows = [] } = {}) {
-  const table = rows.length ? rows : [["No rows"]];
-  const cols = Math.max(1, ...table.map(row => row.length));
-  const usable = PAGE.right - PAGE.left;
-  const widths = Array.from({ length: cols }, (_, index) => (index === 0 ? Math.round(usable * 0.28) : Math.round(usable / cols)));
-  widths[widths.length - 1] = usable - widths.slice(0, -1).reduce((sum, width) => sum + width, 0);
-  const charBudget = widths.map(width => Math.max(6, Math.floor(width / 5.2)));
-  const pages = [];
-  const headerHeight = 56;
-  const rowHeight = 14;
-  const rowsPerPage = Math.max(8, Math.floor((PAGE.top - PAGE.bottom - headerHeight) / rowHeight) - 1);
+  const raw = rows.length ? rows : [["No rows"]];
+  const cols = Math.max(1, ...raw.map(row => row.length));
+  const page = choosePage(cols);
+  const fontSize = cols >= 9 ? 6.5 : cols >= 6 ? 7 : 8;
+  const charUnit = fontSize * 0.52;
+  const header = compactHeaderRow(raw[0] || []);
+  const body = raw.slice(1);
+  const table = [header, ...body];
+  const widths = columnWidths(page, table, cols);
+  const numericCols = Array.from({ length: cols }, (_, col) => {
+    const headerText = String(header[col] || "").toLowerCase();
+    if (/(amount|paid|outstanding|debit|credit|balance|qty|rate|cgst|sgst|igst|taxable|inflow|outflow|net|sales|purchase|overdue|days)/.test(headerText)) {
+      return true;
+    }
+    let numeric = 0;
+    let seen = 0;
+    for (const row of body.slice(0, 30)) {
+      const value = row?.[col];
+      if (value === "" || value == null) continue;
+      seen += 1;
+      if (isNumericCell(value)) numeric += 1;
+    }
+    return seen > 0 && numeric / seen >= 0.7;
+  });
+  const charBudget = widths.map(width => Math.max(4, Math.floor(width / charUnit)));
+  const headerHeight = 52;
+  const rowHeight = fontSize + 6;
+  const rowsPerPage = Math.max(6, Math.floor((page.top - page.bottom - headerHeight) / rowHeight) - 1);
   const chunks = [];
-  const body = table.slice(1);
-  const header = table[0] || [];
   for (let i = 0; i < body.length; i += rowsPerPage) chunks.push(body.slice(i, i + rowsPerPage));
   if (!chunks.length) chunks.push([]);
-  chunks.forEach((chunk, pageIndex) => {
+  const titleBudget = Math.floor((page.right - page.left) / (14 * 0.5));
+  const subtitleBudget = Math.floor((page.right - page.left) / (9 * 0.5));
+  const pages = chunks.map((chunk, pageIndex) => {
     const commands = [];
-    let y = PAGE.top;
-    commands.push(text("F2", 14, PAGE.left, y, clip(title, 70)));
-    y -= 16;
+    let y = page.top;
+    commands.push(text("F2", 13, page.left, y, clip(title, titleBudget)));
+    y -= 15;
     if (subtitle) {
-      commands.push(text("F1", 9, PAGE.left, y, clip(subtitle, 90)));
-      y -= 14;
+      commands.push(text("F1", 8, page.left, y, clip(ascii(subtitle), subtitleBudget)));
+      y -= 12;
     }
-    commands.push(text("F1", 8, PAGE.left, y, `Page ${pageIndex + 1} of ${chunks.length}`));
-    y -= 12;
-    commands.push(line(PAGE.left, y, PAGE.right, y));
-    y -= 16;
+    commands.push(text("F1", 7, page.left, y, `Page ${pageIndex + 1} of ${chunks.length}`));
+    y -= 10;
+    commands.push(line(page.left, y, page.right, y));
+    y -= 14;
     const paintRow = (row, bold) => {
-      let x = PAGE.left;
-      (row || []).forEach((cell, index) => {
-        commands.push(text(bold ? "F2" : "F1", 8, x, y, clip(cell, charBudget[index] || 10)));
-        x += widths[index] || 0;
-      });
+      let x = page.left;
+      for (let index = 0; index < cols; index += 1) {
+        const width = widths[index] || 0;
+        const rawCell = row?.[index];
+        const shown = clip(rawCell, charBudget[index] || 4);
+        const size = bold ? fontSize : fontSize;
+        if (numericCols[index] && shown) {
+          const approx = shown.length * charUnit;
+          const drawX = Math.max(x, x + width - approx - 2);
+          commands.push(text(bold ? "F2" : "F1", size, drawX, y, shown));
+        } else {
+          commands.push(text(bold ? "F2" : "F1", size, x, y, shown));
+        }
+        x += width;
+      }
       y -= rowHeight;
     };
     paintRow(header, true);
-    commands.push(line(PAGE.left, y + 8, PAGE.right, y + 8));
-    chunk.forEach(row => paintRow(row, false));
-    pages.push(commands);
+    commands.push(line(page.left, y + 6, page.right, y + 6));
+    chunk.forEach(row => {
+      const label = String(row?.[0] ?? "").toLowerCase();
+      const emphasize = /^(total|net |income|expenses|stock|assets|liabilit|equity|inflow|outflow|balanced|difference)/i.test(label)
+        || (row || []).filter(cell => cell !== "" && cell != null).length === 1;
+      paintRow(row, emphasize);
+    });
+    return commands;
   });
-  return buildPdf(pages);
+  return buildPdf(pages, page);
 }
 
 const triggerDownload = (filename, blob) => {

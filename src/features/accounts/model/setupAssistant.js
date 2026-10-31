@@ -1,4 +1,12 @@
-import { INDIA_STATES, gstStateFromGstin, gstinValidationMessage, normalizeGstin } from "./accountingGst.js";
+import {
+  INDIA_STATES,
+  gstStateFromGstin,
+  gstinValidationMessage,
+  normalizeGstin,
+  normalizePan,
+  panFromGstin,
+  panValidationMessage,
+} from "./accountingGst.js";
 import { ledgerHasPostedLines } from "./accountingModel.js";
 import { freeLedgerCode, shortDate } from "./bookkeeper.js";
 
@@ -240,6 +248,7 @@ export const SETUP_QUESTIONS = [
     ],
   },
   { id: "gstin", kind: "text", placeholder: "15-character GSTIN", skipLabel: "Add it later", when: answers => answers.gst && answers.gst !== "unregistered" },
+  { id: "pan", kind: "text", placeholder: "10-character PAN", skipLabel: "Add it later" },
   { id: "credit", kind: "choice", options: [yes, no] },
   { id: "banks", kind: "text", placeholder: "e.g. HDFC and SBI", suggestions: ["HDFC", "SBI", "ICICI", "Axis"], skipLabel: "Only cash and UPI" },
   { id: "start", kind: "date" },
@@ -251,7 +260,7 @@ export function keptBooksStart(company, vouchers = []) {
 }
 
 /** Asked only when setting up a new company; an existing company keeps its name, GST and start date. */
-export const COMPANY_QUESTIONS = new Set(["name", "gst", "gstin", "start"]);
+export const COMPANY_QUESTIONS = new Set(["name", "gst", "gstin", "pan", "start"]);
 
 export function nextQuestion(answers = {}, { keepStart = false, keepCompany = false } = {}) {
   return SETUP_QUESTIONS.find(question => !(question.id in answers)
@@ -271,6 +280,9 @@ export function questionText(question, answers = {}, profile = null) {
     case "inventory": return "Do you keep stock that you count and reorder?";
     case "gst": return "Are you GST registered?";
     case "gstin": return "What is your GSTIN? I use it to work out your state so CGST, SGST and IGST come out right.";
+    case "pan": return answers.gstin
+      ? `Confirm the PAN for ${name}. I filled it from your GSTIN — change it if needed.`
+      : `What is the PAN for ${name}? Optional for now; useful on invoices and filings.`;
     case "credit": return "Do customers buy on credit and pay you later?";
     case "banks": return `Which banks does ${name} use? I will add a ledger for each one.`;
     case "start": return kind === "business"
@@ -308,6 +320,7 @@ export function validateAnswer(question, value) {
   if (question.id === "name" && !String(value || "").trim()) return "Tell me the business name.";
   if (question.id === "business" && !String(value || "").trim()) return "Describe the business in a few words.";
   if (question.id === "gstin" && value) return gstinValidationMessage(value);
+  if (question.id === "pan" && value) return panValidationMessage(value);
   if (question.id === "start" && !/^\d{4}-\d{2}-\d{2}$/.test(String(value || ""))) return "Pick a date.";
   return "";
 }
@@ -325,6 +338,7 @@ export function buildSetupPlan(answers = {}, { profile = null, accounts = [], ca
   const asked = keepCompany ? {} : answers;
   const gstRegistration = asked.gst || company?.gstRegistration || "unregistered";
   const gstin = gstRegistration === "unregistered" ? "" : normalizeGstin(asked.gstin || company?.gstin || "");
+  const pan = normalizePan(asked.pan || panFromGstin(gstin) || company?.pan || "");
   const stateCode = gstStateFromGstin(gstin) || (gstRegistration === "unregistered" ? "" : company?.stateCode || "");
   const stateName = INDIA_STATES.find(state => state.code === stateCode)?.name || "";
   const currentName = String(company?.name || "").trim();
@@ -381,8 +395,11 @@ export function buildSetupPlan(answers = {}, { profile = null, accounts = [], ca
 
   const gstChanged = gstRegistration !== (company?.gstRegistration || "unregistered")
     || gstin !== normalizeGstin(company?.gstin || "")
+    || pan !== normalizePan(company?.pan || "")
     || stateCode !== (company?.stateCode || "");
-  const gst = gstChanged && !keepCompany ? { gstRegistration, gstin, legalName: companyName, stateCode, stateName } : null;
+  const gst = gstChanged && !keepCompany
+    ? { gstRegistration, gstin, pan, legalName: companyName, stateCode, stateName }
+    : null;
 
   const summary = [];
   if (keepCompany) {
@@ -405,8 +422,8 @@ export function buildSetupPlan(answers = {}, { profile = null, accounts = [], ca
     id: "gst",
     title: gstRegistration === "regular" ? "GST: regular" : gstRegistration === "composition" ? "GST: composition" : "No GST",
     detail: gstRegistration === "unregistered"
-      ? "Invoices go out without GST. You can register later in Setup."
-      : `${stateName ? `${stateName}. ` : ""}${gstin ? `GSTIN ${gstin}. ` : "Add your GSTIN in Setup before your first GST invoice. "}Tax ledgers are ready.`,
+      ? `Invoices go out without GST.${pan ? ` PAN ${pan}.` : ""} You can register later in Setup.`
+      : `${stateName ? `${stateName}. ` : ""}${gstin ? `GSTIN ${gstin}. ` : "Add your GSTIN in Setup before your first GST invoice. "}${pan ? `PAN ${pan}. ` : ""}Tax ledgers are ready.`,
   });
   if (banks.length) {
     summary.push({ id: "banks", title: `Bank: ${banks.join(", ")}`, detail: "Cash in Hand and UPI are already there." });
