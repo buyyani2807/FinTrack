@@ -155,16 +155,6 @@ export function CounterWorkspace({
   const tillLabel = tills.find(till => till.id === activeTillId)?.label || "Till 1";
   const closed = companyId ? readDayClose(companyId, today, activeTillId) : null;
 
-  // Cashiers bill walk-in by default; named customers stay available for credit/named sales.
-  // Inventory / party master screens stay closed — this list is till-only.
-  const customers = useMemo(
-    () => (parties || []).filter(party => (
-      party.partyType === "customer"
-      && party.isActive !== false
-      && !/^suspense(\s+account)?$/i.test(String(party.name || "").trim())
-    )),
-    [parties],
-  );
   const todayBills = useMemo(() => {
     const tillNeedle = `counter sale · ${String(tillLabel || "").toLowerCase()}`;
     return (vouchers || [])
@@ -181,10 +171,9 @@ export function CounterWorkspace({
   }, [vouchers, today, tillLabel]);
   const catalog = useMemo(() => matchItems(items, query), [items, query]);
   const gstEnabled = activeCompany?.gstRegistration === "regular";
-  const billingPartyId = cashierMode ? CASH_PARTY_ID : partyId;
-  const selectedParty = billingPartyId && billingPartyId !== CASH_PARTY_ID
-    ? customers.find(party => party.id === billingPartyId)
-    : null;
+  // Counter is walk-in only — named credit parties stay in Accounts sales.
+  const billingPartyId = CASH_PARTY_ID;
+  const selectedParty = null;
 
   useEffect(() => {
     if (!companyId) {
@@ -376,7 +365,7 @@ export function CounterWorkspace({
       return;
     }
     setLines(hold.lines);
-    setPartyId(cashierMode ? CASH_PARTY_ID : (hold.partyId || CASH_PARTY_ID));
+    setPartyId(CASH_PARTY_ID);
     setMoneyMode(hold.moneyMode || "cash");
     setReceivedCash(hold.receivedCash || "");
     setReceivedUpi(hold.receivedUpi || "");
@@ -552,13 +541,10 @@ export function CounterWorkspace({
               />
             </label>
             {lastBill ? (
-              <span className="counter-session-pill small counter-last-bill">
-                Last {money(lastBill.total)}
+              <span className="counter-session-pill counter-last-bill">
+                <span className="small">Last {money(lastBill.total)}</span>
                 {onReprint && lastBill.voucherId ? (
-                  <>
-                    {" · "}
-                    <button type="button" className="link-button" onClick={() => onReprint(lastBill.voucherId)}>Print</button>
-                  </>
+                  <button type="button" className="link-button counter-last-print" onClick={() => onReprint(lastBill.voucherId)}>Print</button>
                 ) : null}
               </span>
             ) : null}
@@ -802,22 +788,13 @@ export function CounterWorkspace({
             <span className="small counter-kbd">F9</span>
           </div>
           <FieldBlock label="Customer">
-            <Select
-              aria-label="Customer"
-              value={billingPartyId}
-              onChange={event => setPartyId(event.target.value)}
-              disabled={busy || cashierMode}
-            >
-              <option value={CASH_PARTY_ID}>Cash (walk-in)</option>
-              {!cashierMode ? customers.map(party => (
-                <option key={party.id} value={party.id}>{party.name}</option>
-              )) : null}
-            </Select>
-            {cashierMode ? <p className="small">Walk-in only for cashier.</p> : null}
+            <p className="counter-walkin" aria-label="Customer">Cash (walk-in)</p>
+            <p className="small">Walk-in only. Named credit parties stay in Accounts sales.</p>
           </FieldBlock>
           <FieldBlock label="Payment">
             <Select
               aria-label="Payment mode"
+              className="counter-pay-select"
               value={moneyMode}
               onChange={event => setMoneyMode(event.target.value)}
               disabled={busy}

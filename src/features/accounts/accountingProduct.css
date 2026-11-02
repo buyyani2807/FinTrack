@@ -6927,12 +6927,32 @@
 .accounts-dashboard .counter-session-pill {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 10px 12px;
+  gap: 8px;
+  padding: 8px 12px;
   border-radius: 12px;
   border: 1px solid var(--ft-border);
   background: var(--ft-surface-subtle);
   color: var(--ft-text-2);
+  line-height: 1.2;
+}
+
+.accounts-dashboard .counter-last-bill .small,
+.accounts-dashboard .counter-last-print {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: var(--ft-type-secondary);
+  line-height: 1.2;
+  vertical-align: middle;
+}
+
+.accounts-dashboard .counter-last-print {
+  color: var(--ft-primary);
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .accounts-dashboard .counter-holds,
@@ -7053,14 +7073,25 @@
 
 .accounts-dashboard .counter-panel.card {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
   gap: 12px;
   padding: 16px;
   min-width: 0;
+  align-content: start;
   border-radius: 16px;
   border-color: var(--ft-border);
   box-shadow: 0 1px 0 color-mix(in srgb, var(--ft-text) 4%, transparent);
   background: var(--ft-surface);
+}
+
+.accounts-dashboard .counter-catalog.counter-panel,
+.accounts-dashboard .counter-cart.counter-panel {
+  grid-template-rows: auto auto minmax(0, 1fr);
+  height: 100%;
+}
+
+.accounts-dashboard .counter-pay.counter-panel {
+  grid-template-rows: none;
+  align-content: stretch;
 }
 
 .accounts-dashboard .counter-panel-head {
@@ -7293,10 +7324,30 @@
 }
 
 .accounts-dashboard .counter-field input,
-.accounts-dashboard .counter-field select,
-.accounts-dashboard .counter-pay .ft-select {
+.accounts-dashboard .counter-field select {
   border-radius: 12px;
-  min-height: 2.6rem;
+  min-height: 2.4rem;
+}
+
+.accounts-dashboard .counter-pay .counter-pay-select,
+.accounts-dashboard .counter-pay .counter-pay-select.ft-select,
+.accounts-dashboard .counter-pay button.counter-pay-select {
+  width: 100%;
+  min-height: 2.4rem;
+  height: auto;
+  align-self: start;
+  border-radius: 12px;
+}
+
+.accounts-dashboard .counter-walkin {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--ft-border);
+  border-radius: 12px;
+  background: var(--ft-surface-subtle);
+  font-size: var(--ft-type-ui);
+  font-weight: 650;
+  color: var(--ft-text);
 }
 
 .accounts-dashboard .counter-split {
@@ -7318,16 +7369,25 @@
 .accounts-dashboard .counter-totals > div {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   gap: 10px;
   font-size: var(--ft-type-secondary);
   color: var(--ft-text-2);
+}
+
+.accounts-dashboard .counter-totals > div strong {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  font-weight: 650;
+  color: var(--ft-text);
 }
 
 .accounts-dashboard .counter-total-due {
   padding-top: 8px;
   margin-top: 2px;
   border-top: 1px solid var(--ft-border);
-  font-size: var(--ft-type-section);
+  font-size: var(--ft-type-ui);
   color: var(--ft-text);
 }
 
@@ -7335,6 +7395,8 @@
   font-size: var(--ft-type-section);
   font-weight: 750;
   letter-spacing: var(--ft-tracking-tight);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
   color: var(--ft-primary);
 }
 
