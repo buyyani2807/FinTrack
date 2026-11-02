@@ -518,12 +518,12 @@ export function CounterWorkspace({
   return (
     <div className="acc-panel counter-workspace">
       <div className="counter-head">
-        <div>
+        <div className="counter-head-main">
+          <p className="counter-eyebrow">Point of sale</p>
           <h1 className="accounts-panel-title">Counter</h1>
-          <p className="copy">Fast billing for the till. Charged bills post into Accounts sales and stock — same books as the rest of FinTrack.</p>
           <div className="counter-session">
             {tills.length > 1 || onCounterSettingsChange ? (
-              <label className="counter-field">
+              <label className="counter-session-chip">
                 <span className="small">Till</span>
                 <Select
                   aria-label="Active till"
@@ -537,13 +537,13 @@ export function CounterWorkspace({
                 </Select>
               </label>
             ) : (
-              <span className="small">Till · {tillLabel}</span>
+              <span className="counter-session-pill small">Till · {tillLabel}</span>
             )}
-            <label className="counter-field">
+            <label className="counter-session-chip">
               <span className="small">Cashier</span>
               <input
                 value={cashierName}
-                placeholder="Optional name"
+                placeholder="Name"
                 onChange={event => {
                   const value = event.target.value;
                   setCashierName(value);
@@ -551,6 +551,17 @@ export function CounterWorkspace({
                 }}
               />
             </label>
+            {lastBill ? (
+              <span className="counter-session-pill small counter-last-bill">
+                Last {money(lastBill.total)}
+                {onReprint && lastBill.voucherId ? (
+                  <>
+                    {" · "}
+                    <button type="button" className="link-button" onClick={() => onReprint(lastBill.voucherId)}>Print</button>
+                  </>
+                ) : null}
+              </span>
+            ) : null}
           </div>
         </div>
         <div className="counter-head-actions">
@@ -564,17 +575,6 @@ export function CounterWorkspace({
             <button type="button" className={`btn${panel === "close" ? " primary" : ""}`} onClick={() => setPanel(current => (current === "close" ? "bill" : "close"))}>
               <Landmark size={16} aria-hidden="true" /> {panel === "close" ? "Back to till" : "Day close"}
             </button>
-          ) : null}
-          {lastBill ? (
-            <span className="small counter-last-bill">
-              Last bill {money(lastBill.total)} · {lastBill.lines} item{lastBill.lines === 1 ? "" : "s"}
-              {onReprint && lastBill.voucherId ? (
-                <>
-                  {" · "}
-                  <button type="button" className="link-button" onClick={() => onReprint(lastBill.voucherId)}>Print</button>
-                </>
-              ) : null}
-            </span>
           ) : null}
         </div>
       </div>
@@ -649,9 +649,13 @@ export function CounterWorkspace({
 
       {panel === "bill" ? (
       <div className="counter-grid">
-        <section className="counter-catalog card">
+        <section className="counter-catalog card counter-panel">
+          <div className="counter-panel-head">
+            <h2 className="counter-panel-title">Find items</h2>
+            <span className="small counter-kbd">F2</span>
+          </div>
           <label className="counter-search">
-            <Search size={18} aria-hidden="true" />
+            <Search size={20} aria-hidden="true" />
             <input
               ref={searchRef}
               value={query}
@@ -662,33 +666,37 @@ export function CounterWorkspace({
                   tryAddFromQuery();
                 }
               }}
-              placeholder="Search name, brand, or scan SKU / barcode — Enter adds"
+              placeholder="Scan barcode or type name / SKU"
               aria-label="Search items or scan SKU or barcode"
               autoFocus
             />
           </label>
-          <p className="small counter-search-hint">Scan or type to find items — the catalog stays hidden until you search. Shortcuts: F2 search · F4 hold · F9 charge.</p>
           {!items.length ? (
-            <p className="copy counter-empty">
-              No items yet.
-              {canAddItems ? (
-                <>
-                  {" "}
-                  <button type="button" className="link-button" onClick={() => openCreateItem()}>Add item</button>
-                  {" "}or import a CSV under Inventory.
-                </>
-              ) : (
-                <> Ask an accountant to add products under Inventory, then return here to bill.</>
-              )}
-              {onOpenInventory ? (
-                <>
-                  {" "}
-                  <button type="button" className="link-button" onClick={onOpenInventory}>Open Inventory</button>
-                </>
-              ) : null}
-            </p>
+            <div className="counter-empty-stage">
+              <p className="counter-empty-title">No products yet</p>
+              <p className="small">
+                {canAddItems ? (
+                  <>
+                    <button type="button" className="link-button" onClick={() => openCreateItem()}>Add item</button>
+                    {" "}or import CSV under Inventory.
+                  </>
+                ) : (
+                  <>Ask an accountant to add products under Inventory.</>
+                )}
+                {onOpenInventory ? (
+                  <>
+                    {" "}
+                    <button type="button" className="link-button" onClick={onOpenInventory}>Open Inventory</button>
+                  </>
+                ) : null}
+              </p>
+            </div>
           ) : !String(query || "").trim() ? (
-            <p className="copy counter-empty">Scan a barcode or type a name / SKU to add items to the bill.</p>
+            <div className="counter-empty-stage">
+              <Search size={28} aria-hidden="true" className="counter-empty-icon" />
+              <p className="counter-empty-title">Scan or search to start</p>
+              <p className="small">Barcode, SKU, brand, or name — Enter adds. Hold F4 · Charge F9.</p>
+            </div>
           ) : (
             <ul className="counter-item-list">
               {catalog.map(item => {
@@ -737,13 +745,16 @@ export function CounterWorkspace({
           )}
         </section>
 
-        <section className="counter-cart card">
-          <div className="counter-cart-head">
-            <strong><ShoppingCart size={16} aria-hidden="true" /> Bill</strong>
+        <section className="counter-cart card counter-panel">
+          <div className="counter-panel-head">
+            <h2 className="counter-panel-title"><ShoppingCart size={18} aria-hidden="true" /> Bill{lines.length ? ` · ${lines.length}` : ""}</h2>
             <button type="button" className="btn" disabled={!lines.length || busy} onClick={clearBill}>Clear</button>
           </div>
           {!lines.length ? (
-            <p className="copy counter-empty">Tap or scan items to build the bill.</p>
+            <div className="counter-empty-stage is-compact">
+              <p className="counter-empty-title">Bill is empty</p>
+              <p className="small">Search or scan on the left to add lines.</p>
+            </div>
           ) : (
             <ul className="counter-line-list">
               {lines.map((line, index) => (
@@ -785,7 +796,11 @@ export function CounterWorkspace({
           )}
         </section>
 
-        <section className="counter-pay card">
+        <section className="counter-pay card counter-panel">
+          <div className="counter-panel-head">
+            <h2 className="counter-panel-title">Checkout</h2>
+            <span className="small counter-kbd">F9</span>
+          </div>
           <FieldBlock label="Customer">
             <Select
               aria-label="Customer"
@@ -798,7 +813,7 @@ export function CounterWorkspace({
                 <option key={party.id} value={party.id}>{party.name}</option>
               )) : null}
             </Select>
-            {cashierMode ? <p className="small">Walk-in only for cashier. Ask an accountant to bill a named customer on credit.</p> : null}
+            {cashierMode ? <p className="small">Walk-in only for cashier.</p> : null}
           </FieldBlock>
           <FieldBlock label="Payment">
             <Select
@@ -826,18 +841,18 @@ export function CounterWorkspace({
           <div className="counter-totals">
             <div><span>Taxable</span><strong>{money(totals.taxable)}</strong></div>
             {gstEnabled ? <div><span>{totals.taxLabel || "GST"}</span><strong>{money(totals.tax)}</strong></div> : null}
-            <div className="counter-total-due"><span>Total</span><strong>{money(totals.total)}</strong></div>
+            <div className="counter-total-due"><span>Total due</span><strong>{money(totals.total)}</strong></div>
           </div>
 
           <div className="counter-pay-actions">
-            <button type="button" className="btn" disabled={!lines.length || busy || Boolean(closed)} onClick={holdBill}>
+            <button type="button" className="btn counter-hold-btn" disabled={!lines.length || busy || Boolean(closed)} onClick={holdBill}>
               <Pause size={16} aria-hidden="true" /> Hold
             </button>
             <button type="button" className="btn primary counter-charge" disabled={!lines.length || busy || saving || Boolean(closed)} onClick={charge}>
               {busy ? "Posting…" : `Charge ${money(totals.total)}`}
             </button>
           </div>
-          <p className="small">Card machine or UPI app stays outside FinTrack — pick the mode after the customer pays. No payment gateway required.</p>
+          <p className="small counter-pay-note">Record how they paid after UPI/card outside FinTrack — no gateway needed.</p>
         </section>
       </div>
       ) : null}
