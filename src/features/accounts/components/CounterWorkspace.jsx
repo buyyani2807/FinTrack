@@ -14,10 +14,11 @@ import {
   voucherTotals,
 } from "../model/accountingModel.js";
 import { gstStateFromGstin, isIntraGst } from "../model/accountingGst.js";
-import { emptyItemLine, itemizedEntryDraft, wholeQuantity } from "../model/inventoryModel.js";
+import { emptyItemForm, emptyItemLine, itemizedEntryDraft, itemToForm, validateItemForm, wholeQuantity } from "../model/inventoryModel.js";
 import { resolveItemRate } from "../model/priceLists.js";
 import { cancelVoucher, postVoucher } from "../data/accountingRepository.js";
 import { readDayClose, saveDayClose } from "../model/counterSettings.js";
+import { ItemFormDialog } from "./items/ItemFormDialog.jsx";
 
 const PAY_MODES = MONEY_MODES.filter(mode => ["cash", "upi", "cash_upi", "bank"].includes(mode.id));
 
@@ -62,10 +63,22 @@ function matchItems(items, query) {
   const active = (items || []).filter(item => item.isActive !== false);
   if (!q) return active.slice(0, 40);
   return active.filter(item => (
-    `${item.name} ${item.sku || ""} ${item.hsnSac || ""} ${item.description || ""}`
+    `${item.name} ${item.sku || ""} ${item.barcode || ""} ${item.brand || ""} ${item.hsnSac || ""} ${item.description || ""}`
       .toLowerCase()
       .includes(q)
   )).slice(0, 40);
+}
+
+function findItemByCode(items, query) {
+  const q = String(query || "").trim().toLowerCase();
+  if (!q) return null;
+  return (items || []).find(item => (
+    item.isActive !== false
+    && (
+      String(item.sku || "").toLowerCase() === q
+      || String(item.barcode || "").toLowerCase() === q
+    )
+  )) || null;
 }
 
 function emptyHold() {
@@ -93,6 +106,7 @@ export function CounterWorkspace({
   saving = false,
   accounts = [],
   items = [],
+  itemCategories = [],
   stockByItem = {},
   parties = [],
   priceLists = [],
@@ -102,6 +116,7 @@ export function CounterWorkspace({
   onPosted = null,
   onReprint = null,
   onOpenInventory = null,
+  onSaveItem = null,
   onRefresh = null,
   askReason = null,
 }) {
@@ -119,6 +134,10 @@ export function CounterWorkspace({
   const [panel, setPanel] = useState("bill"); // bill | close
   const [openingFloat, setOpeningFloat] = useState("");
   const [countedCash, setCountedCash] = useState("");
+  const [itemForm, setItemForm] = useState(emptyItemForm);
+  const [showItemForm, setShowItemForm] = useState(false);
+  const [itemFormError, setItemFormError] = useState("");
+  const canAddItems = Boolean(onSaveItem) && !cashierMode;
   const [closeReason, setCloseReason] = useState("");
   const today = todayIso();
   const companyId = activeCompany?.id || null;
@@ -218,15 +237,46 @@ export function CounterWorkspace({
     searchRef.current?.focus();
   };
 
-  const tryAddFromQuery = () => {
-    const q = String(query || "").trim().toLowerCase();
-    if (!q) return;
-    const exactSku = (items || []).find(item => item.isActive !== false && String(item.sku || "").toLowerCase() === q);
-    if (exactSku) {
-      addItem(exactSku);
+  const openCreateItem = (prefill = {}) => {
+    if (!canAddItems) return;
+    const code = String(prefill.sku || prefill.barcode || query || "").trim();
+    setItemForm(itemToForm({}, {
+      sku: code,
+      barcode: code && /^\d{8,}$/.test(code) ? code : (prefill.barcode || ""),
+      name: prefill.name || "",
+    }));
+    setItemFormError("");
+    setShowItemForm(true);
+  };
+
+  const saveCounterItem = async () => {
+    if (!onSaveItem) return;
+    const message = validateItemForm(itemForm);
+    if (message) {
+      setItemFormError(message);
       return;
     }
-    if (catalog.length === 1) addItem(catalog[0]);
+    setItemFormError("");
+    await onSaveItem(itemForm);
+    setShowItemForm(false);
+    setItemForm(emptyItemForm());
+    setQuery("");
+    searchRef.current?.focus();
+  };
+
+  const tryAddFromQuery = () => {
+    const q = String(query || "").trim();
+    if (!q) return;
+    const exact = findItemByCode(items, q);
+    if (exact) {
+      addItem(exact);
+      return;
+    }
+    if (catalog.length === 1) {
+      addItem(catalog[0]);
+      return;
+    }
+    if (canAddItems && !catalog.length) openCreateItem({ sku: q, barcode: q });
   };
 
   const patchLine = (index, patch) => {
@@ -413,6 +463,9 @@ export function CounterWorkspace({
           <p className="copy">Fast billing for the till ({tillLabel}). Charged bills post into Accounts sales and stock — same books as the rest of FinTrack.</p>
         </div>
         <div className="counter-head-actions">
+          {canAddItems ? (
+            <button type="button" className="btn primary" onClick={() => openCreateItem()}>+ Item</button>
+          ) : null}
           {onOpenInventory ? (
             <button type="button" className="btn" onClick={onOpenInventory}>Items</button>
           ) : null}
@@ -518,15 +571,24 @@ export function CounterWorkspace({
                   tryAddFromQuery();
                 }
               }}
-              placeholder="Search name or scan SKU — Enter adds"
-              aria-label="Search items or scan SKU"
+              placeholder="Search name, brand, or scan SKU / barcode — Enter adds"
+              aria-label="Search items or scan SKU or barcode"
               autoFocus
             />
           </label>
-          <p className="small counter-search-hint">Scan a SKU or press Enter to add. Tap Add on a result. Shortcuts: F2 search · F4 hold · F9 charge.</p>
+          <p className="small counter-search-hint">Scan a SKU or barcode, or press Enter to add. Unknown code opens Add item when you can create products. Shortcuts: F2 search · F4 hold · F9 charge.</p>
           {!items.length ? (
             <p className="copy counter-empty">
-              No items yet. Add products under Inventory, then return here to bill.
+              No items yet.
+              {canAddItems ? (
+                <>
+                  {" "}
+                  <button type="button" className="link-button" onClick={() => openCreateItem()}>Add item</button>
+                  {" "}or import a CSV under Inventory.
+                </>
+              ) : (
+                <> Ask an accountant to add products under Inventory, then return here to bill.</>
+              )}
               {onOpenInventory ? (
                 <>
                   {" "}
@@ -543,7 +605,11 @@ export function CounterWorkspace({
                   <li key={item.id} className={`counter-item${low ? " is-low" : ""}`}>
                     <div className="counter-item-copy">
                       <span className="counter-item-name">{item.name}</span>
-                      <span className="small">{item.sku || "No SKU"}{item.itemType !== "service" ? ` · Stock ${stock}` : ""}</span>
+                      <span className="small">
+                        {[item.brand, item.sku || "No SKU", item.itemType !== "service" ? `Stock ${stock}` : ""]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
                     </div>
                     <strong className="counter-item-price">{money(item.sellingPrice || 0)}</strong>
                     <button
@@ -557,7 +623,19 @@ export function CounterWorkspace({
                   </li>
                 );
               })}
-              {!catalog.length ? <li className="small">No matching items. Type a name or scan a SKU, then press Enter.</li> : null}
+              {!catalog.length ? (
+                <li className="small">
+                  No matching items.
+                  {canAddItems ? (
+                    <>
+                      {" "}
+                      <button type="button" className="link-button" onClick={() => openCreateItem({ sku: query, barcode: query })}>Add “{String(query || "").trim() || "item"}”</button>
+                    </>
+                  ) : (
+                    <> Type a name or scan a SKU / barcode, then press Enter.</>
+                  )}
+                </li>
+              ) : null}
             </ul>
           )}
         </section>
@@ -650,6 +728,18 @@ export function CounterWorkspace({
           <p className="small">Card machine or UPI app stays outside FinTrack — pick the mode after the customer pays. No payment gateway required.</p>
         </section>
       </div>
+      ) : null}
+
+      {showItemForm && canAddItems ? (
+        <ItemFormDialog
+          form={itemForm}
+          setShowForm={setShowItemForm}
+          error={itemFormError}
+          setForm={setItemForm}
+          categories={itemCategories}
+          saving={saving}
+          saveItem={saveCounterItem}
+        />
       ) : null}
     </div>
   );

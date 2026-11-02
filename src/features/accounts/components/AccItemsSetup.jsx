@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { TriangleAlert } from "lucide-react";
 import { FilterSelect, SearchInput } from "../../../components/ui.jsx";
 import { todayIso } from "../../../lib/dates.js";
-import { currentStockForItem, emptyItemForm, stockMovementReport, stockStatus, validateItemForm } from "../model/inventoryModel.js";
+import { currentStockForItem, emptyItemForm, itemToForm, stockMovementReport, stockStatus, validateItemForm } from "../model/inventoryModel.js";
 import { costItemMovements } from "../model/inventoryValuation.js";
 import { AccPager } from "./AccUi.jsx";
 import { usePagedList } from "../model/usePagedList.js";
@@ -57,7 +57,7 @@ export function AccItemsSetup({
       if (activeFilter === "active" && item.isActive === false) return false;
       if (activeFilter === "inactive" && item.isActive !== false) return false;
       if (!q) return true;
-      return [item.name, item.sku, item.hsnSac, item.description].join(" ").toLowerCase().includes(q);
+      return [item.name, item.sku, item.barcode, item.brand, item.hsnSac, item.description].join(" ").toLowerCase().includes(q);
     });
   }, [items, search, typeFilter, activeFilter]);
   const pagedItems = usePagedList(filtered, `${search}|${typeFilter}|${activeFilter}`);
@@ -79,24 +79,7 @@ export function AccItemsSetup({
   };
 
   const openEdit = item => {
-    setForm({
-      id: item.id,
-      itemType: item.itemType,
-      name: item.name,
-      sku: item.sku,
-      categoryId: item.categoryId || "",
-      unit: item.unit || "Nos",
-      description: item.description || "",
-      sellingPrice: String(item.sellingPrice ?? ""),
-      purchasePrice: String(item.purchasePrice ?? ""),
-      gstRate: String(item.gstRate ?? "0"),
-      hsnSac: item.hsnSac || "",
-      openingStock: String(item.openingStock ?? "0"),
-      openingStockDate: item.openingStockDate || "",
-      openingRate: item.openingRate == null ? "" : String(item.openingRate),
-      reorderLevel: String(item.reorderLevel ?? "0"),
-      isActive: item.isActive !== false,
-    });
+    setForm(itemToForm(item));
     setShowForm(true);
     setError("");
   };

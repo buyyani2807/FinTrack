@@ -2735,6 +2735,7 @@ const openVoucher = () => {
           saving={saving}
           accounts={accountsForCounterPay(visibleAccounts, counterSettings.paymentMap)}
           items={items}
+          itemCategories={itemCategories}
           stockByItem={stockByItem}
           parties={parties}
           priceLists={priceLists}
@@ -2742,6 +2743,9 @@ const openVoucher = () => {
           activeCompany={activeCompany}
           counterSettings={counterSettings}
           onOpenInventory={() => openSection("inventory")}
+          onSaveItem={async form => {
+            await run(() => saveItemRecord(form), form.id ? "Item updated." : "Item created.");
+          }}
           onReprint={voucherId => setPendingSalesInvoiceId(voucherId)}
           askReason={askReason}
           onRefresh={() => refresh()}

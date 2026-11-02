@@ -692,6 +692,8 @@ const mapItem = row => ({
   itemType: row.item_type || "product",
   name: row.name,
   sku: row.sku,
+  barcode: row.barcode || "",
+  brand: row.brand || "",
   categoryId: row.category_id || null,
   unit: row.unit || "Nos",
   description: row.description || "",
@@ -756,13 +758,21 @@ export const loadItemCategories = token => wrap(
 );
 
 const ITEM_COLUMNS = "id,item_type,name,sku,category_id,unit,description,selling_price,purchase_price,gst_rate,hsn_sac,opening_stock,opening_stock_date,reorder_level,is_active";
+const ITEM_COLUMNS_FULL = `${ITEM_COLUMNS},opening_rate,brand,barcode`;
 const itemsPath = columns => `/rest/v1/acc_items?select=${columns}&order=name.asc${companyEq()}`;
 
 export const loadItems = token => wrap(
-  accQuery(itemsPath(`${ITEM_COLUMNS},opening_rate`), token)
+  accQuery(itemsPath(ITEM_COLUMNS_FULL), token)
     .catch(err => {
-      if (!/opening_rate/i.test(String(err?.message || ""))) throw err;
-      return accQuery(itemsPath(ITEM_COLUMNS), token);
+      const message = String(err?.message || "");
+      if (/brand|barcode/i.test(message)) {
+        return accQuery(itemsPath(`${ITEM_COLUMNS},opening_rate`), token).catch(inner => {
+          if (!/opening_rate/i.test(String(inner?.message || ""))) throw inner;
+          return accQuery(itemsPath(ITEM_COLUMNS), token);
+        });
+      }
+      if (/opening_rate/i.test(message)) return accQuery(itemsPath(ITEM_COLUMNS), token);
+      throw err;
     })
     .then(rows => (rows || []).map(mapItem)),
 );
@@ -976,6 +986,8 @@ export const upsertItem = (token, form) =>
     input_opening_stock_date: form.openingStockDate || null,
     input_reorder_level: Number(form.reorderLevel || 0),
     input_is_active: form.isActive !== false,
+    input_brand: form.brand || null,
+    input_barcode: form.barcode || null,
   }, token));
 
 export const setItemActive = (token, id, isActive) =>

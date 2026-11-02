@@ -113,6 +113,8 @@ export const emptyItemForm = () => ({
   itemType: "product",
   name: "",
   sku: "",
+  barcode: "",
+  brand: "",
   categoryId: "",
   unit: "Nos",
   description: "",
@@ -126,6 +128,32 @@ export const emptyItemForm = () => ({
   reorderLevel: "0",
   isActive: true,
 });
+
+/** Map a saved item into the shared Inventory / Counter create-edit form. */
+export function itemToForm(item = {}, patch = {}) {
+  return {
+    ...emptyItemForm(),
+    id: item.id || null,
+    itemType: item.itemType || "product",
+    name: item.name || "",
+    sku: item.sku || "",
+    barcode: item.barcode || "",
+    brand: item.brand || "",
+    categoryId: item.categoryId || "",
+    unit: item.unit || "Nos",
+    description: item.description || "",
+    sellingPrice: String(item.sellingPrice ?? ""),
+    purchasePrice: String(item.purchasePrice ?? ""),
+    gstRate: String(item.gstRate ?? "0"),
+    hsnSac: item.hsnSac || "",
+    openingStock: String(item.openingStock ?? "0"),
+    openingStockDate: item.openingStockDate || "",
+    openingRate: item.openingRate == null ? "" : String(item.openingRate),
+    reorderLevel: String(item.reorderLevel ?? "0"),
+    isActive: item.isActive !== false,
+    ...patch,
+  };
+}
 
 /** Item quantities are whole units. A typed decimal is dropped; a pasted 1.5 becomes 1. */
 export function wholeQuantity(value) {

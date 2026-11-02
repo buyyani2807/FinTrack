@@ -24,6 +24,8 @@ export function ItemFormDialog({ form, setShowForm, error, setForm, categories, 
         <Field label="Name"><input value={form.name} onChange={event => setForm(current => ({ ...current, name: event.target.value }))} /></Field>
         {suggestionDiffers ? <p className="small span">Suggested for {suggestion.label}: HSN {suggestion.hsn}, GST {suggestion.rate}%. {suggestion.note} <button type="button" className="btn" onClick={() => setForm(current => ({ ...current, hsnSac: suggestion.hsn, gstRate: String(suggestion.rate) }))}>Use this</button></p> : null}
         <Field label="SKU / Code"><input value={form.sku} onChange={event => setForm(current => ({ ...current, sku: event.target.value }))} /></Field>
+        <Field label="Barcode"><input value={form.barcode || ""} onChange={event => setForm(current => ({ ...current, barcode: event.target.value }))} placeholder="Optional — scan or type" /></Field>
+        <Field label="Brand"><input value={form.brand || ""} onChange={event => setForm(current => ({ ...current, brand: event.target.value }))} placeholder="Optional" /></Field>
         <Field label="Category">
           <Select value={form.categoryId} onChange={event => setForm(current => ({ ...current, categoryId: event.target.value }))}>
             <option value="">None</option>
