@@ -77,6 +77,40 @@ test("cash sale settlement label", () => {
   }), "Cash");
 });
 
+test("POS counter invoice shows sale time and omits due date", () => {
+  const invoice = buildSalesInvoice({
+    voucher: {
+      id: "pos-1",
+      voucherNumber: "SALE-000003",
+      date: "2026-11-02",
+      dueDate: null,
+      sourceType: "pos_counter",
+      postedAt: "2026-11-02T10:15:30.000Z",
+      createdAt: "2026-11-02T10:15:30.000Z",
+      narration: "Cash sale",
+      voucherType: "sales",
+      status: "posted",
+      lines: [
+        { coaId: "cash", debit: 500, credit: 0, code: "1000", name: "Cash" },
+        { coaId: "sales", debit: 0, credit: 500, code: "4100", name: "Sales" },
+      ],
+      gstLines: [],
+    },
+    party: null,
+    accounts,
+    company: { name: "Counter Shop" },
+  });
+  assert.equal(invoice.dueDate, "");
+  assert.equal(invoice.showSaleTime, true);
+  assert.equal(invoice.soldAt, "2026-11-02T10:15:30.000Z");
+  const sheet = salesInvoicePresentation(invoice);
+  assert.equal(sheet.meta.some(row => row.label === "Due"), false);
+  assert.match(sheet.meta.find(row => row.label === "Dated").value, /2026/);
+  assert.match(sheet.meta.find(row => row.label === "Dated").value, /:/);
+  const text = salesInvoiceDocumentText(invoice);
+  assert.doesNotMatch(text, /Due:/);
+});
+
 test("AR reminder template includes outstanding and overdue days", () => {
   const message = buildArReminderMessage({
     partyName: "Ravi",

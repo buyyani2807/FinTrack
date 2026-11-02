@@ -1,6 +1,6 @@
 import { formatInr } from "../../../lib/formatMoney.js";
 import { applyTemplate, resolveWhatsAppTemplate } from "../../receipts/model/templateEngine.js";
-import { formatReceiptDate } from "../../receipts/model/receiptModel.js";
+import { formatReceiptDate, formatReceiptDateTime } from "../../receipts/model/receiptModel.js";
 import { roundMoney, voucherTotals } from "./accountingModel.js";
 import { rupeesInWords } from "./payroll.js";
 import { browserOrigin, isValidUpiId, payPageUrl, upiPayLink } from "./upiPay.js";
@@ -135,6 +135,11 @@ export function buildSalesInvoice({
   const settlement = salesSettlementLabel(accounts, voucher);
   const payable = outstanding == null ? (settlement === "Credit" ? amount : 0) : due;
   const pay = voucher.status === "cancelled" ? null : companyPayLinks(branding, { amount: payable, note: voucher.voucherNumber || "" });
+  const sourceType = voucher.sourceType || null;
+  const showSaleTime = sourceType === "pos_counter";
+  const soldAt = voucher.postedAt || voucher.createdAt || "";
+  // Spot / cash sales (including Counter) have no credit terms — never invent a due date.
+  const dueDate = voucher.dueDate || "";
 
   return {
     kind: "sales_invoice",
@@ -142,10 +147,13 @@ export function buildSalesInvoice({
     upiLink: pay?.upiLink || "",
     payUrl: pay?.payUrl || "",
     source: "accounts_sales",
+    sourceType,
     voucherId: voucher.id,
     invoiceNumber: voucher.voucherNumber || "",
     invoiceDate: voucher.date || "",
-    dueDate: voucher.dueDate || voucher.date || "",
+    soldAt,
+    showSaleTime,
+    dueDate,
     narration: voucher.narration || "",
     settlement,
     payableAmount: pay ? payable : 0,
@@ -283,8 +291,15 @@ export function salesInvoicePresentation(invoice) {
     logoUrl: invoice.companyLogoUrl || "",
     meta: [
       { label: invoice.numberLabel || "Invoice No", value: invoice.invoiceNumber || "" },
-      { label: "Dated", value: formatReceiptDate(invoice.invoiceDate) },
-      invoice.kind === "receipt" || invoice.kind === "payment" ? null : { label: "Due", value: formatReceiptDate(invoice.dueDate) },
+      {
+        label: "Dated",
+        value: invoice.showSaleTime && invoice.soldAt
+          ? formatReceiptDateTime(invoice.soldAt)
+          : formatReceiptDate(invoice.invoiceDate),
+      },
+      invoice.kind === "receipt" || invoice.kind === "payment" || !invoice.dueDate
+        ? null
+        : { label: "Due", value: formatReceiptDate(invoice.dueDate) },
       { label: "Mode / Terms of payment", value: invoice.settlement || "" },
     ].filter(row => row?.value),
     partyHeading: invoice.partyHeading || "BILL TO",

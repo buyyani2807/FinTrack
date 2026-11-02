@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { formatReceiptDate } from "../../receipts/model/receiptModel.js";
+import { formatReceiptDate, formatReceiptDateTime } from "../../receipts/model/receiptModel.js";
 import { canWhatsAppShare, openManualWhatsAppShare, openWhatsAppWeb } from "../../receipts/io/receiptWhatsApp.js";
 import { buildArReminderMessage, buildOutstandingSummaryMessage, buildPartyStatementMessage, buildPaymentAdviceMessage, buildPurchaseDocumentMessage, salesInvoicePresentation } from "../model/salesInvoiceModel.js";
 import { downloadSalesInvoicePdf, invoicePdfShareOnThisDevice, salesInvoicePdfFile, salesInvoiceWhatsAppText } from "../io/salesInvoicePdf.js";
@@ -166,9 +166,19 @@ export function SalesInvoiceViewerModal({ invoice, close, onSettle }) {
           )}
           <div className="receipt-meta">
             <span>{invoice.numberLabel || "Invoice No"}: {invoice.invoiceNumber}</span>
-            <span>{formatReceiptDate(invoice.invoiceDate)}</span>
+            <span>
+              {invoice.showSaleTime && invoice.soldAt
+                ? formatReceiptDateTime(invoice.soldAt)
+                : formatReceiptDate(invoice.invoiceDate)}
+            </span>
           </div>
-          <p className="small">{moneyOnly ? (invoice.settlement || "") : `Due ${formatReceiptDate(invoice.dueDate)} · ${invoice.settlement || "Sale"}`}</p>
+          <p className="small">
+            {moneyOnly
+              ? (invoice.settlement || "")
+              : invoice.dueDate
+                ? `Due ${formatReceiptDate(invoice.dueDate)} · ${invoice.settlement || "Sale"}`
+                : (invoice.settlement || "Sale")}
+          </p>
           <hr />
           <section>
             <strong>{invoice.partyHeading || "BILL TO"}</strong>
@@ -271,7 +281,12 @@ export function SalesInvoiceSuccessModal({ invoice, settings = {}, close }) {
           <ModalScroll>
           <p className="copy">Invoice No: <strong className="gold">{invoice.invoiceNumber}</strong></p>
           <p className="copy">{invoice.companyName} → {invoice.customerName} · {m(invoice.amount)} · {invoice.settlement}</p>
-          <p className="small">Date: {formatReceiptDate(invoice.invoiceDate)} · Due: {formatReceiptDate(invoice.dueDate)}</p>
+          <p className="small">
+            {invoice.showSaleTime && invoice.soldAt
+              ? formatReceiptDateTime(invoice.soldAt)
+              : `Date: ${formatReceiptDate(invoice.invoiceDate)}`}
+            {invoice.dueDate ? ` · Due: ${formatReceiptDate(invoice.dueDate)}` : ""}
+          </p>
           <div className="tool-stack spacer">
             <button type="button" className="btn primary" onClick={() => setViewOpen(true)}>View invoice</button>
             <button type="button" className="btn" onClick={() => downloadSalesInvoicePdf(invoice)}>Download PDF</button>

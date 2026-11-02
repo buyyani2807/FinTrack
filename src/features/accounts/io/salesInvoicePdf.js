@@ -1,4 +1,4 @@
-import { formatReceiptDate } from "../../receipts/model/receiptModel.js";
+import { formatReceiptDate, formatReceiptDateTime } from "../../receipts/model/receiptModel.js";
 import { salesInvoicePresentation } from "../model/salesInvoiceModel.js";
 import { downloadPdf, pdfBinaryToBytes, renderDocumentPdf } from "./documentPdf.js";
 
@@ -39,8 +39,13 @@ export function salesInvoicePdfModel(invoice) {
     title: invoice.title || "SALES INVOICE",
     meta: [
       [invoice.numberLabel || "Invoice No", invoice.invoiceNumber],
-      ["Date", formatReceiptDate(invoice.invoiceDate)],
-      moneyOnly ? null : ["Due", formatReceiptDate(invoice.dueDate)],
+      [
+        "Date",
+        invoice.showSaleTime && invoice.soldAt
+          ? formatReceiptDateTime(invoice.soldAt)
+          : formatReceiptDate(invoice.invoiceDate),
+      ],
+      moneyOnly || !invoice.dueDate ? null : ["Due", formatReceiptDate(invoice.dueDate)],
       ["Settlement", invoice.settlement || "-"],
     ].filter(Boolean),
     seller: { name: invoice.companyName, lines: sellerLines(invoice), logoDataUrl: invoice.companyLogoUrl },

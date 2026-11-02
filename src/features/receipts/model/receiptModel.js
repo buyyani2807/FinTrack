@@ -214,6 +214,21 @@ export function formatReceiptDate(value = "") {
   return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Kolkata" });
 }
 
+export function formatReceiptDateTime(value = "") {
+  if (!value) return "";
+  const raw = String(value);
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return formatReceiptDate(raw);
+  return d.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Kolkata",
+  });
+}
+
 export function withReceiptBranding(receipt, settings = {}) {
   if (!receipt) return receipt;
   const branding = settings || {};
