@@ -202,7 +202,7 @@ export function InvoiceTable({
                       {row.possibleDuplicate ? <span className="small acc-bill-scan-error">Possible duplicate</span> : null}
                     </td>
                     <td>{row.invoiceDate}</td>
-                    <td>{row.dueDate}</td>
+                    <td>{row.dueDate || "—"}</td>
                     <td className="acc-num">{money(row.amount)}</td>
                     <td className="acc-num acc-invoice-paid">{money(row.paid)}</td>
                     <td className={`acc-num acc-invoice-out${row.status === "Overdue" ? " is-overdue" : row.outstanding > 0 ? "" : " is-clear"}`}>{money(row.outstanding)}</td>
@@ -233,7 +233,7 @@ export function InvoiceTable({
                     {row.reference}
                   </button>
                   {row.possibleDuplicate ? <span className="small acc-bill-scan-error"> · Possible duplicate</span> : null}
-                  {" · due "}{row.dueDate}
+                  {row.dueDate ? <>{" · due "}{row.dueDate}</> : null}
                 </p>
               </div>
               <span className={`acc-status-pill ${invoiceStatusTone(row.status)}`}>{row.status}</span>

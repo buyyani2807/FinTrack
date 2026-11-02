@@ -169,6 +169,9 @@ test("zero received stays unpaid; full cash sale stays paid with no AR", () => {
   const cashRows = invoiceRegister(accounts, [cashSale], [ravi], { kind: "receivable", today: "2026-04-02", from: "2026-04-01", to: "2026-04-30" });
   assert.equal(cashRows[0].status, "Paid");
   assert.equal(cashRows[0].outstanding, 0);
+  assert.equal(cashRows[0].onCredit, false);
+  assert.equal(cashRows[0].dueDate, "");
+  assert.equal(cashRows[0].daysOverdue, 0);
   assert.equal(partyBalances(accounts, [cashSale], [ravi], { kind: "receivable" }).length, 0);
 });
 

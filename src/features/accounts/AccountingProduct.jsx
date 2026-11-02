@@ -325,7 +325,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [partyTypeFilter, setPartyTypeFilter] = useState("all");
   const [partySearch, setPartySearch] = useState("");
   const [partyDeleteDialog, setPartyDeleteDialog] = useState(null);
-  const [outstandingOnly, setOutstandingOnly] = useState(false);
+  const [outstandingOnly, setOutstandingOnly] = useState(true);
   const [companies, setCompanies] = useState(cached?.companies ?? []);
   const [activeCompanyId, setActiveCompanyId] = useState(cached?.activeCompanyId ?? "");
   const [showCreateCompany, setShowCreateCompany] = useState(false);

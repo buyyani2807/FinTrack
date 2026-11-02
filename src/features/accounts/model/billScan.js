@@ -388,10 +388,12 @@ export function findPostedPurchaseDuplicates({ partyId = "", date = "", amount =
   return hits;
 }
 
-/** Payables or receivables that share a party, invoice date, and amount. */
+/** Credit AR/AP rows that share a party, invoice date, and amount. Cash / POS tills are excluded. */
 export function markDuplicateInvoices(rows = []) {
+  const isCreditBill = row => row?.onCredit !== false && row?.sourceType !== "pos_counter";
   const groups = new Map();
   for (const row of rows) {
+    if (!isCreditBill(row)) continue;
     const amount = roundMoney(row?.amount);
     const key = [row?.partyId || row?.partyName || "", row?.invoiceDate || "", amount].join("|");
     const list = groups.get(key) || [];

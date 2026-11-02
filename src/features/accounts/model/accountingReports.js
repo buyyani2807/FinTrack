@@ -609,12 +609,14 @@ export function invoiceRegister(accounts, vouchers, parties = [], { kind = "rece
         reference: voucher.voucherNumber,
         narration: voucher.narration || "",
         invoiceDate: voucher.date,
-        dueDate: voucher.dueDate || addDaysIso(voucher.date, 7),
+        // Cash / paid tills have no credit terms — never invent a due date.
+        dueDate: hitsLedger ? (voucher.dueDate || addDaysIso(voucher.date, 7)) : (voucher.dueDate || ""),
         amount,
         paid: hitsLedger ? 0 : amount,
         onCredit: hitsLedger,
         lastPaidOn: hitsLedger ? "" : voucher.date,
         voucherType: voucher.voucherType,
+        sourceType: voucher.sourceType || null,
         allocation: "open",
       });
       continue;
@@ -666,6 +668,7 @@ export function invoiceRegister(accounts, vouchers, parties = [], { kind = "rece
           onCredit: true,
           lastPaidOn: "",
           voucherType: voucher.voucherType,
+          sourceType: voucher.sourceType || null,
         });
       } else if (increase < 0 && (!to || voucher.date <= to)) {
         enqueue(linePartyId, -increase, voucher.date);
@@ -721,7 +724,9 @@ export function invoiceRegister(accounts, vouchers, parties = [], { kind = "rece
     invoice.settledOn = invoice.outstanding > 0 ? "" : invoice.lastPaidOn || invoice.invoiceDate;
     const asOf = today || invoice.invoiceDate;
     invoice.daysOutstanding = invoice.outstanding > 0 ? Math.max(0, daysBetween(invoice.invoiceDate, asOf)) : 0;
-    invoice.daysOverdue = invoice.outstanding > 0 ? Math.max(0, daysBetween(invoice.dueDate, asOf)) : 0;
+    invoice.daysOverdue = invoice.outstanding > 0 && invoice.dueDate
+      ? Math.max(0, daysBetween(invoice.dueDate, asOf))
+      : 0;
     invoice.status = invoiceStatus({
       outstanding: invoice.outstanding,
       paid: invoice.paid,
