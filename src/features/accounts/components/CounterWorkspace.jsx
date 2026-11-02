@@ -66,10 +66,11 @@ function estimateTotal(lines, { gstEnabled, intra }) {
 
 function matchItems(items, query) {
   const q = String(query || "").trim().toLowerCase();
-  const active = (items || []).filter(item => item.isActive !== false);
-  if (!q) return active.slice(0, 40);
-  return active.filter(item => (
-    `${item.name} ${item.sku || ""} ${item.barcode || ""} ${item.brand || ""} ${item.hsnSac || ""} ${item.description || ""}`
+  // Search/scan first — do not dump the catalog when the box is empty.
+  if (!q) return [];
+  return (items || []).filter(item => (
+    item.isActive !== false
+    && `${item.name} ${item.sku || ""} ${item.barcode || ""} ${item.brand || ""} ${item.hsnSac || ""} ${item.description || ""}`
       .toLowerCase()
       .includes(q)
   )).slice(0, 40);
@@ -666,7 +667,7 @@ export function CounterWorkspace({
               autoFocus
             />
           </label>
-          <p className="small counter-search-hint">Scan a SKU or barcode, or press Enter to add. Unknown code opens Add item when you can create products. Shortcuts: F2 search · F4 hold · F9 charge.</p>
+          <p className="small counter-search-hint">Scan or type to find items — the catalog stays hidden until you search. Shortcuts: F2 search · F4 hold · F9 charge.</p>
           {!items.length ? (
             <p className="copy counter-empty">
               No items yet.
@@ -686,6 +687,8 @@ export function CounterWorkspace({
                 </>
               ) : null}
             </p>
+          ) : !String(query || "").trim() ? (
+            <p className="copy counter-empty">Scan a barcode or type a name / SKU to add items to the bill.</p>
           ) : (
             <ul className="counter-item-list">
               {catalog.map(item => {
@@ -726,7 +729,7 @@ export function CounterWorkspace({
                       <button type="button" className="link-button" onClick={() => openCreateItem({ sku: query, barcode: query })}>Add “{String(query || "").trim() || "item"}”</button>
                     </>
                   ) : (
-                    <> Type a name or scan a SKU / barcode, then press Enter.</>
+                    <> Try another name, SKU, or barcode.</>
                   )}
                 </li>
               ) : null}
