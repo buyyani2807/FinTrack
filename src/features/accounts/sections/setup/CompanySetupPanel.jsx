@@ -95,15 +95,65 @@ export function CompanySetupPanel({
       ) : null}
       {counterEnabled && onCounterSettingsChange ? (
         <div className="acc-counter-setup">
-          <p className="small"><strong>Till defaults</strong> — cashiers never pick ledgers; Charge uses these money accounts.</p>
+          <p className="small"><strong>Tills & payment ledgers</strong> — each till has its own day-close. Cashiers never pick ledgers; Charge uses these money accounts.</p>
           <div className="form">
-            <Field label="Till label on this device">
-              <input
-                value={settings.tillLabel}
-                disabled={!canAdmin}
-                onChange={event => patchSettings({ tillLabel: event.target.value })}
-                placeholder="Till 1"
-              />
+            <Field className="span" label="Tills">
+              <div className="acc-counter-tills">
+                {(settings.tills || []).map(till => (
+                  <div key={till.id} className="acc-counter-till-row">
+                    <input
+                      value={till.label}
+                      disabled={!canAdmin}
+                      aria-label={`Label for ${till.label}`}
+                      onChange={event => {
+                        const label = event.target.value;
+                        patchSettings({
+                          tills: (settings.tills || []).map(row => (row.id === till.id ? { ...row, label } : row)),
+                        });
+                      }}
+                    />
+                    <label className="small">
+                      <input
+                        type="radio"
+                        name="active-till"
+                        checked={settings.activeTillId === till.id}
+                        disabled={!canAdmin}
+                        onChange={() => patchSettings({ activeTillId: till.id })}
+                      />
+                      {" "}This device
+                    </label>
+                    {canAdmin && (settings.tills || []).length > 1 ? (
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={() => patchSettings({
+                          tills: (settings.tills || []).filter(row => row.id !== till.id),
+                          activeTillId: settings.activeTillId === till.id
+                            ? (settings.tills || []).find(row => row.id !== till.id)?.id
+                            : settings.activeTillId,
+                        })}
+                      >
+                        Remove
+                      </button>
+                    ) : null}
+                  </div>
+                ))}
+                {canAdmin ? (
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => {
+                      const id = `till-${Date.now().toString(36)}`;
+                      patchSettings({
+                        tills: [...(settings.tills || []), { id, label: `Till ${(settings.tills || []).length + 1}` }],
+                        activeTillId: id,
+                      });
+                    }}
+                  >
+                    + Add till
+                  </button>
+                ) : null}
+              </div>
             </Field>
             <Field label="Cash ledger">
               <Select

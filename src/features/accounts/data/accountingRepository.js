@@ -694,6 +694,8 @@ const mapItem = row => ({
   sku: row.sku,
   barcode: row.barcode || "",
   brand: row.brand || "",
+  batchNo: row.batch_no || "",
+  expiryDate: row.expiry_date || null,
   categoryId: row.category_id || null,
   unit: row.unit || "Nos",
   description: row.description || "",
@@ -758,13 +760,25 @@ export const loadItemCategories = token => wrap(
 );
 
 const ITEM_COLUMNS = "id,item_type,name,sku,category_id,unit,description,selling_price,purchase_price,gst_rate,hsn_sac,opening_stock,opening_stock_date,reorder_level,is_active";
-const ITEM_COLUMNS_FULL = `${ITEM_COLUMNS},opening_rate,brand,barcode`;
+const ITEM_COLUMNS_FULL = `${ITEM_COLUMNS},opening_rate,brand,barcode,batch_no,expiry_date`;
 const itemsPath = columns => `/rest/v1/acc_items?select=${columns}&order=name.asc${companyEq()}`;
 
 export const loadItems = token => wrap(
   accQuery(itemsPath(ITEM_COLUMNS_FULL), token)
     .catch(err => {
       const message = String(err?.message || "");
+      if (/batch_no|expiry_date/i.test(message)) {
+        return accQuery(itemsPath(`${ITEM_COLUMNS},opening_rate,brand,barcode`), token).catch(inner => {
+          if (!/brand|barcode/i.test(String(inner?.message || ""))) {
+            if (/opening_rate/i.test(String(inner?.message || ""))) return accQuery(itemsPath(ITEM_COLUMNS), token);
+            throw inner;
+          }
+          return accQuery(itemsPath(`${ITEM_COLUMNS},opening_rate`), token).catch(older => {
+            if (!/opening_rate/i.test(String(older?.message || ""))) throw older;
+            return accQuery(itemsPath(ITEM_COLUMNS), token);
+          });
+        });
+      }
       if (/brand|barcode/i.test(message)) {
         return accQuery(itemsPath(`${ITEM_COLUMNS},opening_rate`), token).catch(inner => {
           if (!/opening_rate/i.test(String(inner?.message || ""))) throw inner;
@@ -988,6 +1002,8 @@ export const upsertItem = (token, form) =>
     input_is_active: form.isActive !== false,
     input_brand: form.brand || null,
     input_barcode: form.barcode || null,
+    input_batch_no: form.batchNo || null,
+    input_expiry_date: form.expiryDate || null,
   }, token));
 
 export const setItemActive = (token, id, isActive) =>

@@ -6916,6 +6916,42 @@
   background: var(--ft-surface);
 }
 
+.accounts-dashboard .acc-counter-tills {
+  display: grid;
+  gap: 8px;
+}
+
+.accounts-dashboard .acc-counter-till-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.accounts-dashboard .acc-counter-till-row input[type="text"],
+.accounts-dashboard .acc-counter-till-row > input:not([type]) {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.accounts-dashboard .counter-session {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.accounts-dashboard .counter-session .counter-field {
+  min-width: 10rem;
+}
+
+.accounts-dashboard .counter-line-rate-input {
+  width: 5.5rem;
+  text-align: right;
+  font: inherit;
+  font-size: var(--ft-type-secondary);
+}
+
 .accounts-dashboard .counter-dayclose {
   display: grid;
   gap: 12px;

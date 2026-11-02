@@ -38,6 +38,8 @@ export function ItemFormDialog({ form, setShowForm, error, setForm, categories, 
         <Field label="GST %"><input type="number" min="0" max="100" step="0.01" value={form.gstRate} onChange={event => setForm(current => ({ ...current, gstRate: event.target.value }))} /></Field>
         <Field label="HSN / SAC"><input value={form.hsnSac} onChange={event => setForm(current => ({ ...current, hsnSac: event.target.value }))} /></Field>
         {form.itemType === "product" && <>
+          <Field label="Batch no."><input value={form.batchNo || ""} onChange={event => setForm(current => ({ ...current, batchNo: event.target.value }))} placeholder="Optional" /></Field>
+          <Field label="Expiry date"><input type="date" value={form.expiryDate || ""} onChange={event => setForm(current => ({ ...current, expiryDate: event.target.value }))} /></Field>
           <Field label="Opening stock"><QtyInput value={form.openingStock} onValue={openingStock => setForm(current => ({ ...current, openingStock }))} /></Field>
           <Field label="Opening date"><input type="date" value={form.openingStockDate} onChange={event => setForm(current => ({ ...current, openingStockDate: event.target.value }))} /></Field>
           <Field label="Opening rate (cost / unit)"><input type="number" min="0" step="0.01" value={form.openingRate ?? ""} placeholder={form.purchasePrice ? `Uses purchase price ${form.purchasePrice}` : "Uses purchase price"} onChange={event => setForm(current => ({ ...current, openingRate: event.target.value }))} /></Field>

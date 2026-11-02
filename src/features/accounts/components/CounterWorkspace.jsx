@@ -17,7 +17,13 @@ import { gstStateFromGstin, isIntraGst } from "../model/accountingGst.js";
 import { emptyItemForm, emptyItemLine, itemizedEntryDraft, itemToForm, validateItemForm, wholeQuantity } from "../model/inventoryModel.js";
 import { resolveItemRate } from "../model/priceLists.js";
 import { cancelVoucher, postVoucher } from "../data/accountingRepository.js";
-import { readDayClose, saveDayClose } from "../model/counterSettings.js";
+import {
+  itemExpiryStatus,
+  readCounterSession,
+  readDayClose,
+  saveCounterSession,
+  saveDayClose,
+} from "../model/counterSettings.js";
 import { ItemFormDialog } from "./items/ItemFormDialog.jsx";
 
 const PAY_MODES = MONEY_MODES.filter(mode => ["cash", "upi", "cash_upi", "bank"].includes(mode.id));
@@ -113,6 +119,7 @@ export function CounterWorkspace({
   vouchers = [],
   activeCompany = null,
   counterSettings = null,
+  onCounterSettingsChange = null,
   onPosted = null,
   onReprint = null,
   onOpenInventory = null,
@@ -139,10 +146,13 @@ export function CounterWorkspace({
   const [itemFormError, setItemFormError] = useState("");
   const canAddItems = Boolean(onSaveItem) && !cashierMode;
   const [closeReason, setCloseReason] = useState("");
+  const [cashierName, setCashierName] = useState("");
   const today = todayIso();
   const companyId = activeCompany?.id || null;
-  const tillLabel = counterSettings?.tillLabel || "Till 1";
-  const closed = companyId ? readDayClose(companyId, today) : null;
+  const tills = counterSettings?.tills?.length ? counterSettings.tills : [{ id: "till-1", label: counterSettings?.tillLabel || "Till 1" }];
+  const activeTillId = tills.some(till => till.id === counterSettings?.activeTillId) ? counterSettings.activeTillId : tills[0].id;
+  const tillLabel = tills.find(till => till.id === activeTillId)?.label || "Till 1";
+  const closed = companyId ? readDayClose(companyId, today, activeTillId) : null;
 
   // Cashiers bill walk-in by default; named customers stay available for credit/named sales.
   // Inventory / party master screens stay closed — this list is till-only.
@@ -155,23 +165,52 @@ export function CounterWorkspace({
     [parties],
   );
   const todayBills = useMemo(() => {
+    const tillNeedle = `counter sale · ${String(tillLabel || "").toLowerCase()}`;
     return (vouchers || [])
       .filter(voucher => (
         voucher.sourceType === "pos_counter"
         && String(voucher.date || "").slice(0, 10) === today
         && !isReversed(voucher)
         && !isCancelled(voucher)
+        && String(voucher.narration || "").toLowerCase().includes(tillNeedle)
       ))
       .slice()
       .sort((a, b) => String(b.createdAt || b.date || "").localeCompare(String(a.createdAt || a.date || "")))
       .slice(0, 40);
-  }, [vouchers, today]);
+  }, [vouchers, today, tillLabel]);
   const catalog = useMemo(() => matchItems(items, query), [items, query]);
   const gstEnabled = activeCompany?.gstRegistration === "regular";
   const billingPartyId = cashierMode ? CASH_PARTY_ID : partyId;
   const selectedParty = billingPartyId && billingPartyId !== CASH_PARTY_ID
     ? customers.find(party => party.id === billingPartyId)
     : null;
+
+  useEffect(() => {
+    if (!companyId) {
+      setCashierName("");
+      return;
+    }
+    setCashierName(readCounterSession(companyId).cashierName || "");
+  }, [companyId]);
+
+  // When the customer changes, refresh list rates unless the cashier typed a custom rate.
+  useEffect(() => {
+    setLines(current => {
+      if (!current.length) return current;
+      let changed = false;
+      const next = current.map(line => {
+        if (line.rateTouched || !line.itemId) return line;
+        const item = (items || []).find(row => row.id === line.itemId);
+        if (!item) return line;
+        const resolved = resolveItemRate({ item, party: selectedParty, lists: priceLists, kind: "selling" });
+        const rate = String(resolved?.rate ?? item.sellingPrice ?? "");
+        if (rate === String(line.rate ?? "") && line._rateSource === resolved.source) return line;
+        changed = true;
+        return { ...line, rate, _rateSource: resolved.source, _rateList: resolved.listName || "" };
+      });
+      return changed ? next : current;
+    });
+  }, [billingPartyId, selectedParty, priceLists, items]);
   const partyState = billingPartyId === CASH_PARTY_ID
     ? (activeCompany?.stateCode || "")
     : (selectedParty?.stateCode || gstStateFromGstin(selectedParty?.gstin));
@@ -203,7 +242,12 @@ export function CounterWorkspace({
 
   const addItem = item => {
     if (!item?.id || !canWrite) return;
-    setError("");
+    const expiry = itemExpiryStatus(item.expiryDate, { today });
+    if (expiry.tone === "expired") {
+      setError(`${item.name} is past expiry (${item.expiryDate}). Choose another batch or update the item.`);
+      return;
+    }
+    setError(expiry.tone === "soon" ? `${item.name}: ${expiry.label}.` : "");
     const stock = Number(stockByItem[item.id] ?? 0);
     setLines(current => {
       const existing = current.findIndex(line => line.itemId === item.id);
@@ -230,6 +274,10 @@ export function CounterWorkspace({
           gstRate: String(item.gstRate ?? 18),
           hsnSac: item.hsnSac || "",
           _stock: stock,
+          _rateSource: resolved.source,
+          _rateList: resolved.listName || "",
+          _batchNo: item.batchNo || "",
+          _expiryDate: item.expiryDate || "",
         },
       ];
     });
@@ -280,7 +328,12 @@ export function CounterWorkspace({
   };
 
   const patchLine = (index, patch) => {
-    setLines(current => current.map((line, i) => (i === index ? { ...line, ...patch } : line)));
+    setLines(current => current.map((line, i) => {
+      if (i !== index) return line;
+      const next = { ...line, ...patch };
+      if (Object.prototype.hasOwnProperty.call(patch, "rate")) next.rateTouched = true;
+      return next;
+    }));
   };
 
   const removeLine = index => {
@@ -354,7 +407,11 @@ export function CounterWorkspace({
         moneyMode,
         moneyParts,
         settlement: "paid",
-        narration: `Counter sale · ${tillLabel} · ${PAY_MODES.find(mode => mode.id === moneyMode)?.label || moneyMode}`,
+        narration: [
+          `Counter sale · ${tillLabel}`,
+          cashierName ? `Cashier ${cashierName}` : "",
+          PAY_MODES.find(mode => mode.id === moneyMode)?.label || moneyMode,
+        ].filter(Boolean).join(" · "),
         itemLines: lines,
         intra,
         taxInclusive: false,
@@ -435,14 +492,16 @@ export function CounterWorkspace({
       return;
     }
     saveDayClose(companyId, today, {
+      tillId: activeTillId,
       tillLabel,
+      cashierName: cashierName || "",
       openingFloat: Number(openingFloat || 0),
       expectedCash,
       countedCash: Number(countedCash || 0),
       variance,
       reason: closeReason || "",
       billCount: todayBills.length,
-    });
+    }, activeTillId);
     setError("");
     setPanel("bill");
   };
@@ -460,7 +519,38 @@ export function CounterWorkspace({
       <div className="counter-head">
         <div>
           <h1 className="accounts-panel-title">Counter</h1>
-          <p className="copy">Fast billing for the till ({tillLabel}). Charged bills post into Accounts sales and stock — same books as the rest of FinTrack.</p>
+          <p className="copy">Fast billing for the till. Charged bills post into Accounts sales and stock — same books as the rest of FinTrack.</p>
+          <div className="counter-session">
+            {tills.length > 1 || onCounterSettingsChange ? (
+              <label className="counter-field">
+                <span className="small">Till</span>
+                <Select
+                  aria-label="Active till"
+                  value={activeTillId}
+                  onChange={event => onCounterSettingsChange?.({ ...counterSettings, activeTillId: event.target.value })}
+                  disabled={!onCounterSettingsChange || tills.length < 2}
+                >
+                  {tills.map(till => (
+                    <option key={till.id} value={till.id}>{till.label}</option>
+                  ))}
+                </Select>
+              </label>
+            ) : (
+              <span className="small">Till · {tillLabel}</span>
+            )}
+            <label className="counter-field">
+              <span className="small">Cashier</span>
+              <input
+                value={cashierName}
+                placeholder="Optional name"
+                onChange={event => {
+                  const value = event.target.value;
+                  setCashierName(value);
+                  if (companyId) saveCounterSession(companyId, { cashierName: value });
+                }}
+              />
+            </label>
+          </div>
         </div>
         <div className="counter-head-actions">
           {canAddItems ? (
@@ -606,9 +696,13 @@ export function CounterWorkspace({
                     <div className="counter-item-copy">
                       <span className="counter-item-name">{item.name}</span>
                       <span className="small">
-                        {[item.brand, item.sku || "No SKU", item.itemType !== "service" ? `Stock ${stock}` : ""]
-                          .filter(Boolean)
-                          .join(" · ")}
+                        {[
+                          item.brand,
+                          item.sku || "No SKU",
+                          item.batchNo ? `Batch ${item.batchNo}` : "",
+                          itemExpiryStatus(item.expiryDate, { today }).label,
+                          item.itemType !== "service" ? `Stock ${stock}` : "",
+                        ].filter(Boolean).join(" · ")}
                       </span>
                     </div>
                     <strong className="counter-item-price">{money(item.sellingPrice || 0)}</strong>
@@ -653,7 +747,14 @@ export function CounterWorkspace({
                 <li key={`${line.itemId}-${index}`} className="counter-line">
                   <div className="counter-line-main">
                     <strong>{line.itemName}</strong>
-                    <span className="small">{line.itemSku || ""}{line._stock != null ? ` · Stock ${line._stock}` : ""}</span>
+                    <span className="small">
+                      {[
+                        line.itemSku,
+                        line._batchNo ? `Batch ${line._batchNo}` : "",
+                        line._rateList ? line._rateList : line._rateSource === "party_list" ? "Party price" : "",
+                        line._stock != null ? `Stock ${line._stock}` : "",
+                      ].filter(Boolean).join(" · ")}
+                    </span>
                   </div>
                   <input
                     className="counter-qty"
@@ -662,7 +763,15 @@ export function CounterWorkspace({
                     value={line.quantity}
                     onChange={event => patchLine(index, { quantity: wholeQuantity(event.target.value) || "0" })}
                   />
-                  <span className="counter-line-rate">{money(line.rate)}</span>
+                  <input
+                    className="counter-line-rate-input"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    aria-label={`Rate for ${line.itemName}`}
+                    value={line.rate}
+                    onChange={event => patchLine(index, { rate: event.target.value })}
+                  />
                   <strong className="counter-line-net">{money(lineNet(line))}</strong>
                   <button type="button" className="btn counter-line-remove" aria-label={`Remove ${line.itemName}`} onClick={() => removeLine(index)}>
                     <Trash2 size={14} aria-hidden="true" />

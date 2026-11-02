@@ -11,8 +11,7 @@ import { ItemCards } from "./items/ItemCards.jsx";
 import { ItemsSidePanels } from "./items/ItemsSidePanels.jsx";
 import { ItemFormDialog } from "./items/ItemFormDialog.jsx";
 import { ItemDetailDialog } from "./items/ItemDetailDialog.jsx";
-
-
+import { printItemLabels } from "../model/barcodeLabelPrint.js";
 
 export function AccItemsSetup({
   items = [],
@@ -21,6 +20,7 @@ export function AccItemsSetup({
   voucherItemLines = [],
   vouchers = [],
   saving = false,
+  companyName = "",
   onSaveItem,
   onDeleteItem,
   onSetItemActive,
@@ -130,6 +130,20 @@ export function AccItemsSetup({
             <option value="all">All</option>
           </FilterSelect>
         </div>
+        <button
+          type="button"
+          className="btn"
+          disabled={!filtered.length}
+          onClick={() => {
+            try {
+              printItemLabels(filtered, { companyName });
+            } catch (err) {
+              setError(err?.message || "Could not print labels.");
+            }
+          }}
+        >
+          Print labels
+        </button>
         <button type="button" className="btn primary acc-list-new" onClick={openCreate}>+ Item</button>
       </div>
 

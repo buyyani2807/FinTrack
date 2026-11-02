@@ -2,9 +2,9 @@ import { parseDelimitedText } from "./bankStatementImport.js";
 import { ITEM_UNITS, validateItemForm } from "../model/inventoryModel.js";
 
 export const ITEM_CSV_TEMPLATE = [
-  "Name,SKU,Barcode,Brand,Type,Unit,Category,Selling price,Purchase price,GST %,HSN/SAC,Opening stock,Opening rate,Opening date,Reorder level",
-  "Cement 50kg,CEM-50,8901234567890,UltraTech,product,Bag,Construction,420,350,28,2523,100,340,2026-04-01,20",
-  "Delivery charge,DLV,,,service,Nos,,150,0,18,9965,,,,",
+  "Name,SKU,Barcode,Brand,Batch,Expiry,Type,Unit,Category,Selling price,Purchase price,GST %,HSN/SAC,Opening stock,Opening rate,Opening date,Reorder level",
+  "Cement 50kg,CEM-50,8901234567890,UltraTech,B1,,product,Bag,Construction,420,350,28,2523,100,340,2026-04-01,20",
+  "Delivery charge,DLV,,,,,service,Nos,,150,0,18,9965,,,,",
 ].join("\n");
 
 const headerKey = value => String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
@@ -44,6 +44,8 @@ export function parseItemCsv(text) {
     sku: column(["sku", "code", "itemcode"]),
     barcode: column(["barcode", "ean", "upc"]),
     brand: column(["brand", "make", "manufacturer"]),
+    batchNo: column(["batch", "batchno", "lot"]),
+    expiryDate: column(["expiry", "expirydate", "exp"]),
     itemType: column(["type", "itemtype"]),
     unit: column(["unit", "uom"]),
     category: column(["category", "group"]),
@@ -69,6 +71,8 @@ export function parseItemCsv(text) {
       sku: at(row, "sku").toUpperCase(),
       barcode: at(row, "barcode"),
       brand: at(row, "brand"),
+      batchNo: at(row, "batchNo"),
+      expiryDate: isoDate(at(row, "expiryDate")),
       unit: unitFor(at(row, "unit")),
       categoryName: at(row, "category"),
       sellingPrice: numberText(at(row, "sellingPrice")) || "0",

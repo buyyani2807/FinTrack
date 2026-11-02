@@ -2535,6 +2535,10 @@ const openVoucher = () => {
           vouchers={vouchers}
           activeCompany={activeCompany}
           counterSettings={counterSettings}
+          onCounterSettingsChange={next => {
+            if (!activeCompanyId) return;
+            setCounterSettings(saveCounterSettings(activeCompanyId, next));
+          }}
           onOpenInventory={null}
           onReprint={voucherId => setPendingSalesInvoiceId(voucherId)}
           askReason={askReason}
@@ -2742,6 +2746,10 @@ const openVoucher = () => {
           vouchers={vouchers}
           activeCompany={activeCompany}
           counterSettings={counterSettings}
+          onCounterSettingsChange={next => {
+            if (!activeCompanyId) return;
+            setCounterSettings(saveCounterSettings(activeCompanyId, next));
+          }}
           onOpenInventory={() => openSection("inventory")}
           onSaveItem={async form => {
             await run(() => saveItemRecord(form), form.id ? "Item updated." : "Item created.");
@@ -2845,6 +2853,7 @@ const openVoucher = () => {
           saveItemRecord={saveItemRecord}
           token={token}
           costLines={costLines}
+          companyName={activeCompany?.name || settings?.companyName || ""}
           onOpenItemProfit={() => openReport("item_profit")}
         />}
 

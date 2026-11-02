@@ -15,7 +15,7 @@ export function ItemDetailDialog({
 }) {
   return (
     <DialogModal className="acc-modal" title={detail.name} close={() => setDetailId(null)}>
-      <p className="copy">{[detail.brand, detail.sku, detail.barcode, detail.itemType, detail.unit].filter(Boolean).join(" · ")}</p>
+      <p className="copy">{[detail.brand, detail.sku, detail.barcode, detail.batchNo && `Batch ${detail.batchNo}`, detail.expiryDate && `Exp ${detail.expiryDate}`, detail.itemType, detail.unit].filter(Boolean).join(" · ")}</p>
       <div className="acc-metric-grid three">
         <article className="card acc-metric-card"><div className="metric-label">Current stock</div><div className="metric-value">{stockByItem[detail.id] == null ? "—" : `${stockByItem[detail.id]} ${detail.unit}`}</div></article>
         <article className="card acc-metric-card"><div className="metric-label">Selling</div><div className="metric-value">{money(detail.sellingPrice)}</div></article>
