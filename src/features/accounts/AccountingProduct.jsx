@@ -2529,7 +2529,6 @@ const openVoucher = () => {
           token={token}
           canWrite={canWrite}
           canManage={false}
-          cashierMode
           saving={saving}
           accounts={accountsForCounterPay(visibleAccounts, counterSettings.paymentMap)}
           items={items}
@@ -2544,7 +2543,6 @@ const openVoucher = () => {
             if (!activeCompanyId) return;
             setCounterSettings(saveCounterSettings(activeCompanyId, next));
           }}
-          onOpenInventory={null}
           onReprint={voucherId => setPendingSalesInvoiceId(voucherId)}
           askReason={askReason}
           onRefresh={() => refresh()}
@@ -2744,7 +2742,6 @@ const openVoucher = () => {
           saving={saving}
           accounts={accountsForCounterPay(visibleAccounts, counterSettings.paymentMap)}
           items={items}
-          itemCategories={itemCategories}
           stockByItem={stockByItem}
           stockMovements={stockMovements}
           parties={parties}
@@ -2755,10 +2752,6 @@ const openVoucher = () => {
           onCounterSettingsChange={next => {
             if (!activeCompanyId) return;
             setCounterSettings(saveCounterSettings(activeCompanyId, next));
-          }}
-          onOpenInventory={() => openSection("inventory")}
-          onSaveItem={async form => {
-            await run(() => saveItemRecord(form), form.id ? "Item updated." : "Item created.");
           }}
           onReprint={voucherId => setPendingSalesInvoiceId(voucherId)}
           askReason={askReason}

@@ -13,7 +13,7 @@ import {
   voucherTotals,
 } from "../model/accountingModel.js";
 import { gstStateFromGstin, isIntraGst } from "../model/accountingGst.js";
-import { emptyItemForm, emptyItemLine, itemizedEntryDraft, itemToForm, validateItemForm, wholeQuantity } from "../model/inventoryModel.js";
+import { emptyItemLine, itemizedEntryDraft, wholeQuantity } from "../model/inventoryModel.js";
 import { resolveItemRate } from "../model/priceLists.js";
 import { cancelVoucher, postVoucher } from "../data/accountingRepository.js";
 import {
@@ -35,7 +35,6 @@ import {
   counterSessionAdvisories,
 } from "../model/counterAi.js";
 import { formatReceiptDateTime } from "../../receipts/model/receiptModel.js";
-import { ItemFormDialog } from "./items/ItemFormDialog.jsx";
 
 const PAY_MODES = COUNTER_PAY_MODES;
 
@@ -115,11 +114,9 @@ export function CounterWorkspace({
   token,
   canWrite = false,
   canManage = false,
-  cashierMode = false,
   saving = false,
   accounts = [],
   items = [],
-  itemCategories = [],
   stockByItem = {},
   stockMovements = [],
   parties = [],
@@ -130,8 +127,6 @@ export function CounterWorkspace({
   onCounterSettingsChange = null,
   onPosted = null,
   onReprint = null,
-  onOpenInventory = null,
-  onSaveItem = null,
   onRefresh = null,
   askReason = null,
 }) {
@@ -149,10 +144,6 @@ export function CounterWorkspace({
   const [panel, setPanel] = useState("bill"); // bill | close | report
   const [openingFloat, setOpeningFloat] = useState("");
   const [countedCash, setCountedCash] = useState("");
-  const [itemForm, setItemForm] = useState(emptyItemForm);
-  const [showItemForm, setShowItemForm] = useState(false);
-  const [itemFormError, setItemFormError] = useState("");
-  const canAddItems = Boolean(onSaveItem) && !cashierMode;
   const [closeReason, setCloseReason] = useState("");
   const [cashierName, setCashierName] = useState("");
   const [reportDate, setReportDate] = useState(() => todayIso());
@@ -312,33 +303,6 @@ export function CounterWorkspace({
     searchRef.current?.focus();
   };
 
-  const openCreateItem = (prefill = {}) => {
-    if (!canAddItems) return;
-    const code = String(prefill.sku || prefill.barcode || query || "").trim();
-    setItemForm(itemToForm({}, {
-      sku: code,
-      barcode: code && /^\d{8,}$/.test(code) ? code : (prefill.barcode || ""),
-      name: prefill.name || "",
-    }));
-    setItemFormError("");
-    setShowItemForm(true);
-  };
-
-  const saveCounterItem = async () => {
-    if (!onSaveItem) return;
-    const message = validateItemForm(itemForm);
-    if (message) {
-      setItemFormError(message);
-      return;
-    }
-    setItemFormError("");
-    await onSaveItem(itemForm);
-    setShowItemForm(false);
-    setItemForm(emptyItemForm());
-    setQuery("");
-    searchRef.current?.focus();
-  };
-
   const tryAddFromQuery = () => {
     const q = String(query || "").trim();
     if (!q) return;
@@ -349,9 +313,7 @@ export function CounterWorkspace({
     }
     if (catalog.length === 1) {
       addItem(catalog[0]);
-      return;
     }
-    if (canAddItems && !catalog.length) openCreateItem({ sku: q, barcode: q });
   };
 
   const patchLine = (index, patch) => {
@@ -588,12 +550,6 @@ export function CounterWorkspace({
           </div>
         </div>
         <div className="counter-head-actions">
-          {canAddItems ? (
-            <button type="button" className="btn primary" onClick={() => openCreateItem()}>+ Item</button>
-          ) : null}
-          {onOpenInventory ? (
-            <button type="button" className="btn" onClick={onOpenInventory}>Items</button>
-          ) : null}
           <button
             type="button"
             className={`btn${panel === "report" ? " primary" : ""}`}
@@ -857,22 +813,7 @@ export function CounterWorkspace({
           {!items.length ? (
             <div className="counter-empty-stage">
               <p className="counter-empty-title">No products yet</p>
-              <p className="small">
-                {canAddItems ? (
-                  <>
-                    <button type="button" className="link-button" onClick={() => openCreateItem()}>Add item</button>
-                    {" "}or import CSV under Inventory.
-                  </>
-                ) : (
-                  <>Ask an accountant to add products under Inventory.</>
-                )}
-                {onOpenInventory ? (
-                  <>
-                    {" "}
-                    <button type="button" className="link-button" onClick={onOpenInventory}>Open Inventory</button>
-                  </>
-                ) : null}
-              </p>
+              <p className="small">Add products under Inventory, then return to Counter to sell.</p>
             </div>
           ) : !String(query || "").trim() ? (
             <div className="counter-empty-stage">
@@ -912,17 +853,7 @@ export function CounterWorkspace({
                 );
               })}
               {!catalog.length ? (
-                <li className="small">
-                  No matching items.
-                  {canAddItems ? (
-                    <>
-                      {" "}
-                      <button type="button" className="link-button" onClick={() => openCreateItem({ sku: query, barcode: query })}>Add “{String(query || "").trim() || "item"}”</button>
-                    </>
-                  ) : (
-                    <> Try another name, SKU, or barcode.</>
-                  )}
-                </li>
+                <li className="small">No matching items. Try another name, SKU, or barcode.</li>
               ) : null}
             </ul>
           )}
@@ -1029,18 +960,6 @@ export function CounterWorkspace({
           <p className="small counter-pay-note">Record how they paid after UPI/card outside FinTrack — no gateway needed.</p>
         </section>
       </div>
-      ) : null}
-
-      {showItemForm && canAddItems ? (
-        <ItemFormDialog
-          form={itemForm}
-          setShowForm={setShowItemForm}
-          error={itemFormError}
-          setForm={setItemForm}
-          categories={itemCategories}
-          saving={saving}
-          saveItem={saveCounterItem}
-        />
       ) : null}
     </div>
   );
