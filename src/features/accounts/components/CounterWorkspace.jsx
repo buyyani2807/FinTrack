@@ -17,6 +17,12 @@ import { emptyItemLine, itemizedEntryDraft, wholeQuantity } from "../model/inven
 import { resolveItemRate } from "../model/priceLists.js";
 import { cancelVoucher, postVoucher } from "../data/accountingRepository.js";
 import {
+  listOfflineBills,
+  loadCounterCatalogCache,
+  putOfflineBill,
+  saveCounterCatalogCache,
+} from "../data/counterOfflineStore.js";
+import {
   itemExpiryStatus,
   readCounterSession,
   readDayClose,
@@ -34,6 +40,16 @@ import {
   counterDayCloseCoach,
   counterSessionAdvisories,
 } from "../model/counterAi.js";
+import {
+  buildOfflineReceiptInvoice,
+  isBrowserOnline,
+  isLikelyNetworkError,
+  nextOfflineReference,
+  offlineChargeBlocked,
+  pendingOfflineBills,
+} from "../model/counterOffline.js";
+import { syncOfflineCounterBills } from "../model/counterOfflineSync.js";
+import { printSalesInvoicePdf } from "../io/salesInvoicePdf.js";
 import { formatReceiptDateTime } from "../../receipts/model/receiptModel.js";
 
 const PAY_MODES = COUNTER_PAY_MODES;
@@ -148,12 +164,21 @@ export function CounterWorkspace({
   const [cashierName, setCashierName] = useState("");
   const [reportDate, setReportDate] = useState(() => todayIso());
   const [reportTillScope, setReportTillScope] = useState("active"); // active | all
+  const [online, setOnline] = useState(() => isBrowserOnline());
+  const [offlineBills, setOfflineBills] = useState([]);
+  const [offlineSyncing, setOfflineSyncing] = useState(false);
+  const [cachedCatalog, setCachedCatalog] = useState(null);
   const today = todayIso();
   const companyId = activeCompany?.id || null;
   const tills = counterSettings?.tills?.length ? counterSettings.tills : [{ id: "till-1", label: counterSettings?.tillLabel || "Till 1" }];
   const activeTillId = tills.some(till => till.id === counterSettings?.activeTillId) ? counterSettings.activeTillId : tills[0].id;
   const tillLabel = tills.find(till => till.id === activeTillId)?.label || "Till 1";
   const closed = companyId ? readDayClose(companyId, today, activeTillId) : null;
+  const workingItems = items?.length ? items : (cachedCatalog?.items || []);
+  const workingAccounts = accounts?.length ? accounts : (cachedCatalog?.accounts || []);
+  const workingPriceLists = priceLists?.length ? priceLists : (cachedCatalog?.priceLists || []);
+  const pendingOffline = useMemo(() => pendingOfflineBills(offlineBills), [offlineBills]);
+  const offlineBlock = useMemo(() => offlineChargeBlocked(offlineBills), [offlineBills]);
 
   const todayBills = useMemo(() => {
     const needle = tillNeedle(tillLabel);
@@ -172,16 +197,16 @@ export function CounterWorkspace({
   const dayReport = useMemo(() => {
     const date = reportDate || today;
     if (reportTillScope === "all") {
-      return counterDayReportAll(accounts, vouchers, { date, tills });
+      return counterDayReportAll(workingAccounts, vouchers, { date, tills });
     }
-    return counterDayReport(accounts, vouchers, { date, tillLabel });
-  }, [accounts, vouchers, reportDate, today, tillLabel, reportTillScope, tills]);
+    return counterDayReport(workingAccounts, vouchers, { date, tillLabel });
+  }, [workingAccounts, vouchers, reportDate, today, tillLabel, reportTillScope, tills]);
   const todayCloseReport = useMemo(
-    () => counterDayReport(accounts, vouchers, { date: today, tillLabel }),
-    [accounts, vouchers, today, tillLabel],
+    () => counterDayReport(workingAccounts, vouchers, { date: today, tillLabel }),
+    [workingAccounts, vouchers, today, tillLabel],
   );
-  const catalog = useMemo(() => matchItems(items, query), [items, query]);
-  const gstEnabled = activeCompany?.gstRegistration === "regular";
+  const catalog = useMemo(() => matchItems(workingItems, query), [workingItems, query]);
+  const gstEnabled = (activeCompany || cachedCatalog?.company)?.gstRegistration === "regular";
   // Counter is walk-in only — named credit parties stay in Accounts sales.
   const billingPartyId = CASH_PARTY_ID;
   const selectedParty = null;
@@ -194,6 +219,55 @@ export function CounterWorkspace({
     setCashierName(readCounterSession(companyId).cashierName || "");
   }, [companyId]);
 
+  useEffect(() => {
+    const onOnline = () => setOnline(true);
+    const onOffline = () => {
+      setOnline(false);
+      setMoneyMode(current => (current === "bank" ? "cash" : current));
+      if (panel === "close") setPanel("bill");
+    };
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+    };
+  }, [panel]);
+
+  useEffect(() => {
+    if (!companyId) {
+      setOfflineBills([]);
+      setCachedCatalog(null);
+      return undefined;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const [bills, cache] = await Promise.all([
+          listOfflineBills(companyId),
+          loadCounterCatalogCache(companyId),
+        ]);
+        if (cancelled) return;
+        setOfflineBills(bills);
+        if (cache) setCachedCatalog(cache);
+      } catch {
+        if (!cancelled) setOfflineBills([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [companyId]);
+
+  useEffect(() => {
+    if (!companyId || !items?.length || !accounts?.length) return;
+    saveCounterCatalogCache(companyId, {
+      items,
+      accounts,
+      priceLists,
+      company: activeCompany,
+      counterSettings,
+    }).catch(() => {});
+  }, [companyId, items, accounts, priceLists, activeCompany, counterSettings]);
+
   // When the customer changes, refresh list rates unless the cashier typed a custom rate.
   useEffect(() => {
     setLines(current => {
@@ -201,9 +275,9 @@ export function CounterWorkspace({
       let changed = false;
       const next = current.map(line => {
         if (line.rateTouched || !line.itemId) return line;
-        const item = (items || []).find(row => row.id === line.itemId);
+        const item = (workingItems || []).find(row => row.id === line.itemId);
         if (!item) return line;
-        const resolved = resolveItemRate({ item, party: selectedParty, lists: priceLists, kind: "selling" });
+        const resolved = resolveItemRate({ item, party: selectedParty, lists: workingPriceLists, kind: "selling" });
         const rate = String(resolved?.rate ?? item.sellingPrice ?? "");
         if (rate === String(line.rate ?? "") && line._rateSource === resolved.source) return line;
         changed = true;
@@ -211,11 +285,11 @@ export function CounterWorkspace({
       });
       return changed ? next : current;
     });
-  }, [billingPartyId, selectedParty, priceLists, items]);
+  }, [billingPartyId, selectedParty, workingPriceLists, workingItems]);
   const partyState = billingPartyId === CASH_PARTY_ID
-    ? (activeCompany?.stateCode || "")
+    ? ((activeCompany || cachedCatalog?.company)?.stateCode || "")
     : (selectedParty?.stateCode || gstStateFromGstin(selectedParty?.gstin));
-  const intra = isIntraGst(activeCompany?.stateCode, partyState);
+  const intra = isIntraGst((activeCompany || cachedCatalog?.company)?.stateCode, partyState);
   const totals = useMemo(
     () => estimateTotal(lines, { gstEnabled, intra }),
     [lines, gstEnabled, intra],
@@ -228,7 +302,7 @@ export function CounterWorkspace({
   const variance = roundMoney(Number(countedCash || 0) - expectedCash);
   const sessionTips = useMemo(
     () => counterSessionAdvisories({
-      items,
+      items: workingItems,
       stockByItem,
       stockMovements,
       lines,
@@ -237,7 +311,7 @@ export function CounterWorkspace({
       today,
       cartTotal: totals.total,
     }),
-    [items, stockByItem, stockMovements, lines, vouchers, tillLabel, today, totals.total],
+    [workingItems, stockByItem, stockMovements, lines, vouchers, tillLabel, today, totals.total],
   );
   const closeTips = useMemo(
     () => counterDayCloseCoach({
@@ -276,7 +350,7 @@ export function CounterWorkspace({
           return { ...line, quantity: String(nextQty) };
         });
       }
-      const resolved = resolveItemRate({ item, party: selectedParty, lists: priceLists, kind: "selling" });
+      const resolved = resolveItemRate({ item, party: selectedParty, lists: workingPriceLists, kind: "selling" });
       const rate = resolved?.rate ?? item.sellingPrice ?? 0;
       return [
         ...current,
@@ -306,7 +380,7 @@ export function CounterWorkspace({
   const tryAddFromQuery = () => {
     const q = String(query || "").trim();
     if (!q) return;
-    const exact = findItemByCode(items, q);
+    const exact = findItemByCode(workingItems, q);
     if (exact) {
       addItem(exact);
       return;
@@ -372,6 +446,93 @@ export function CounterWorkspace({
     setError("");
   };
 
+  const refreshOfflineBills = async () => {
+    if (!companyId) return [];
+    const bills = await listOfflineBills(companyId);
+    setOfflineBills(bills);
+    return bills;
+  };
+
+  const printOfflineBill = bill => {
+    const company = activeCompany || cachedCatalog?.company || {};
+    const invoice = buildOfflineReceiptInvoice({
+      bill,
+      companyName: company.name || "FinTrack",
+      companyAddress: company.documentSettings?.businessAddress || "",
+      companyGstin: company.gstin || "",
+      companyPhone: company.documentSettings?.businessPhone || "",
+    });
+    if (invoice) printSalesInvoicePdf(invoice, { template: "thermal" });
+  };
+
+  const queueOfflineSale = async ({ draft, moneyParts, clientRequestId }) => {
+    if (!companyId) throw new Error("Choose a company before charging offline.");
+    if (offlineBlock.blocked) throw new Error(offlineBlock.reason);
+    const existing = await listOfflineBills(companyId);
+    const offlineRef = nextOfflineReference(today, existing.map(row => row.offlineRef));
+    const total = voucherTotals(draft.lines).debit;
+    const bill = {
+      id: clientRequestId,
+      companyId,
+      offlineRef,
+      tillId: activeTillId,
+      tillLabel,
+      cashierName: cashierName || "",
+      date: today,
+      createdAt: new Date().toISOString(),
+      moneyMode,
+      moneyParts,
+      amount: total,
+      syncStatus: "pending",
+      syncError: "",
+      voucherId: null,
+      payload: {
+        ...draft,
+        clientRequestId,
+        sourceModule: "accounts",
+        sourceType: "pos_counter",
+      },
+    };
+    await putOfflineBill(bill);
+    await refreshOfflineBills();
+    setLastBill({
+      voucherId: null,
+      offlineId: bill.id,
+      offlineRef,
+      total,
+      at: bill.createdAt,
+      lines: lines.length,
+      pendingSync: true,
+    });
+    clearBill();
+    printOfflineBill(bill);
+    return bill;
+  };
+
+  const runOfflineSync = async () => {
+    if (!token || !companyId || !online || offlineSyncing) return;
+    setOfflineSyncing(true);
+    try {
+      const result = await syncOfflineCounterBills({ token, companyId });
+      await refreshOfflineBills();
+      if (result.synced?.length) onRefresh?.();
+      if (result.failed?.length) {
+        setError(result.failed[0]?.error || "Could not sync an offline bill.");
+      }
+    } catch (err) {
+      setError(err?.message || "Could not sync offline bills.");
+    } finally {
+      setOfflineSyncing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!online || !token || !companyId || !pendingOffline.length) return undefined;
+    const timer = window.setTimeout(() => { runOfflineSync(); }, 600);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync when connectivity or queue changes
+  }, [online, token, companyId, pendingOffline.length]);
+
   const charge = async () => {
     if (!canWrite || busy || saving) return;
     setError("");
@@ -383,14 +544,27 @@ export function CounterWorkspace({
       setError("Today’s till is closed. Re-open day-close only if the owner needs a correction.");
       return;
     }
+    if (!workingAccounts.length) {
+      setError("Catalog is not ready. Connect once online to cache the till, then retry.");
+      return;
+    }
+    if (offlineBlock.blocked && (!online || pendingOffline.length)) {
+      setError(offlineBlock.reason);
+      return;
+    }
+    if (!online && moneyMode === "bank") {
+      setError("Card needs the network in Phase 1. Use cash or UPI offline.");
+      return;
+    }
     const moneyParts = moneyMode === "cash_upi"
       ? { cash: Number(receivedCash || 0), upi: Number(receivedUpi || 0) }
       : null;
+    const clientRequestId = newClientRequestId();
     setBusy(true);
     try {
       const draft = itemizedEntryDraft({
         kind: "sale",
-        accounts,
+        accounts: workingAccounts,
         date: today,
         partyId: entryPartyId(billingPartyId),
         moneyMode,
@@ -406,21 +580,34 @@ export function CounterWorkspace({
         taxInclusive: false,
         gstEnabled,
       });
-      const voucherId = await postVoucher(token, {
-        ...draft,
-        clientRequestId: newClientRequestId(),
-        sourceModule: "accounts",
-        sourceType: "pos_counter",
-      });
-      const total = voucherTotals(draft.lines).debit;
-      setLastBill({
-        voucherId,
-        total,
-        at: new Date().toISOString(),
-        lines: lines.length,
-      });
-      clearBill();
-      onPosted?.(voucherId);
+      if (!online) {
+        await queueOfflineSale({ draft, moneyParts, clientRequestId });
+        return;
+      }
+      try {
+        const voucherId = await postVoucher(token, {
+          ...draft,
+          clientRequestId,
+          sourceModule: "accounts",
+          sourceType: "pos_counter",
+        });
+        const total = voucherTotals(draft.lines).debit;
+        setLastBill({
+          voucherId,
+          total,
+          at: new Date().toISOString(),
+          lines: lines.length,
+        });
+        clearBill();
+        onPosted?.(voucherId);
+      } catch (err) {
+        if (isLikelyNetworkError(err)) {
+          setOnline(false);
+          await queueOfflineSale({ draft, moneyParts, clientRequestId });
+          return;
+        }
+        throw err;
+      }
     } catch (err) {
       const detail = err?.details || err?.cause?.message || err?.hint;
       const main = err?.message || "Could not post this bill.";
@@ -541,9 +728,24 @@ export function CounterWorkspace({
             </label>
             {lastBill ? (
               <span className="counter-session-pill counter-last-bill">
-                <span className="small">Last {money(lastBill.total)}</span>
-                {onReprint && lastBill.voucherId ? (
+                <span className="small">
+                  Last {money(lastBill.total)}
+                  {lastBill.offlineRef ? ` · ${lastBill.offlineRef}` : ""}
+                </span>
+                {lastBill.voucherId && onReprint ? (
                   <button type="button" className="link-button counter-last-print" onClick={() => onReprint(lastBill.voucherId)}>Print</button>
+                ) : null}
+                {lastBill.offlineId && !lastBill.voucherId ? (
+                  <button
+                    type="button"
+                    className="link-button counter-last-print"
+                    onClick={() => {
+                      const bill = offlineBills.find(row => row.id === lastBill.offlineId);
+                      if (bill) printOfflineBill(bill);
+                    }}
+                  >
+                    Print
+                  </button>
                 ) : null}
               </span>
             ) : null}
@@ -558,7 +760,13 @@ export function CounterWorkspace({
             <ScrollText size={16} aria-hidden="true" /> {panel === "report" ? "Back to till" : "Day report"}
           </button>
           {canManage ? (
-            <button type="button" className={`btn${panel === "close" ? " primary" : ""}`} onClick={() => setPanel(current => (current === "close" ? "bill" : "close"))}>
+            <button
+              type="button"
+              className={`btn${panel === "close" ? " primary" : ""}`}
+              disabled={!online}
+              title={!online ? "Day close needs internet after offline bills sync" : undefined}
+              onClick={() => setPanel(current => (current === "close" ? "bill" : "close"))}
+            >
               <Landmark size={16} aria-hidden="true" /> {panel === "close" ? "Back to till" : "Day close"}
             </button>
           ) : null}
@@ -566,6 +774,21 @@ export function CounterWorkspace({
       </div>
 
       {error ? <p className="acc-form-error" role="alert">{error}</p> : null}
+      {!online ? (
+        <p className="notice counter-offline-banner" role="status">
+          Offline · {pendingOffline.length} bill{pendingOffline.length === 1 ? "" : "s"} pending sync
+          {offlineBlock.blocked ? ` · ${offlineBlock.reason}` : " · cash/UPI charges save on this device (up to 2 days)"}
+        </p>
+      ) : null}
+      {online && pendingOffline.length ? (
+        <p className="notice" role="status">
+          {offlineSyncing ? "Syncing offline bills…" : `${pendingOffline.length} offline bill${pendingOffline.length === 1 ? "" : "s"} waiting to sync.`}
+          {" "}
+          <button type="button" className="link-button" disabled={offlineSyncing} onClick={() => runOfflineSync()}>
+            Sync now
+          </button>
+        </p>
+      ) : null}
       {closed ? <p className="notice" role="status">Till closed for today · expected {money(closed.expectedCash)} · counted {money(closed.countedCash)} · variance {money(closed.variance)}</p> : null}
       {panel === "bill" && sessionTips.length ? (
         <ul className="counter-ai-tips" aria-label="Counter advisories">
@@ -711,10 +934,35 @@ export function CounterWorkspace({
         </section>
       ) : null}
 
+      {panel === "bill" && pendingOffline.length ? (
+        <section className="counter-offline-queue card" aria-label="Offline bills pending sync">
+          <h2 className="acc-subsection-title">Pending offline bills</h2>
+          <p className="small">Day close runs after these sync. Provisional numbers until upload.</p>
+          <ul className="counter-offline-queue-list">
+            {pendingOffline.map(bill => (
+              <li key={bill.id} className="counter-offline-queue-row">
+                <span>
+                  <strong>{bill.offlineRef}</strong>
+                  <span className="small">
+                    {" · "}{money(bill.amount)}
+                    {" · "}{counterPayLabel(bill.moneyMode)}
+                    {" · "}{bill.syncStatus === "error" ? bill.syncError || "Sync error" : bill.syncStatus}
+                  </span>
+                </span>
+                <button type="button" className="btn" onClick={() => printOfflineBill(bill)}>Print</button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       {panel === "close" ? (
         <section className="counter-dayclose card">
           <h2 className="acc-subsection-title">Day close · {tillLabel}</h2>
-          <p className="copy">Compare drawer cash to Counter cash sales for {today}. Shortage/overage is recorded on this device for the owner — it does not auto-post a journal yet.</p>
+          <p className="copy">
+            Compare drawer cash to Counter cash sales for {today}. Shortage/overage is recorded on this device for the owner — it does not auto-post a journal yet.
+            {pendingOffline.length ? " Sync offline bills before relying on these totals." : ""}
+          </p>
           {closeTips.length ? (
             <ul className="counter-ai-tips" aria-label="Day-close coach">
               {closeTips.map(tip => (
@@ -810,10 +1058,14 @@ export function CounterWorkspace({
               autoFocus
             />
           </label>
-          {!items.length ? (
+          {!workingItems.length ? (
             <div className="counter-empty-stage">
               <p className="counter-empty-title">No products yet</p>
-              <p className="small">Add products under Inventory, then return to Counter to sell.</p>
+              <p className="small">
+                {online
+                  ? "Add products under Inventory, then return to Counter to sell."
+                  : "No cached catalog on this device. Connect once online to prepare offline billing."}
+              </p>
             </div>
           ) : !String(query || "").trim() ? (
             <div className="counter-empty-stage">
@@ -927,7 +1179,7 @@ export function CounterWorkspace({
               onChange={event => setMoneyMode(event.target.value)}
               disabled={busy}
             >
-              {PAY_MODES.map(mode => (
+              {PAY_MODES.filter(mode => online || mode.id !== "bank").map(mode => (
                 <option key={mode.id} value={mode.id}>{mode.label}</option>
               ))}
             </Select>
@@ -953,8 +1205,13 @@ export function CounterWorkspace({
             <button type="button" className="btn counter-hold-btn" disabled={!lines.length || busy || Boolean(closed)} onClick={holdBill}>
               <Pause size={16} aria-hidden="true" /> Hold
             </button>
-            <button type="button" className="btn primary counter-charge" disabled={!lines.length || busy || saving || Boolean(closed)} onClick={charge}>
-              {busy ? "Posting…" : `Charge ${money(totals.total)}`}
+            <button
+              type="button"
+              className="btn primary counter-charge"
+              disabled={!lines.length || busy || saving || Boolean(closed) || offlineBlock.blocked || !workingAccounts.length}
+              onClick={charge}
+            >
+              {busy ? (online ? "Posting…" : "Saving offline…") : `${online ? "Charge" : "Charge offline"} ${money(totals.total)}`}
             </button>
           </div>
           <p className="small counter-pay-note">Record how they paid after UPI/card outside FinTrack — no gateway needed.</p>

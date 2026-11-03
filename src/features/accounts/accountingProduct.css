@@ -7050,6 +7050,33 @@
   gap: 12px;
 }
 
+.accounts-dashboard .counter-offline-banner {
+  border-color: color-mix(in srgb, var(--ft-warning) 45%, var(--ft-border));
+  background: color-mix(in srgb, var(--ft-warning) 10%, var(--ft-surface));
+}
+
+.accounts-dashboard .counter-offline-queue {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 16px;
+}
+
+.accounts-dashboard .counter-offline-queue-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.accounts-dashboard .counter-offline-queue-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .accounts-dashboard .counter-ai-tips {
   list-style: none;
   margin: 0;
