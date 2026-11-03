@@ -7050,8 +7050,71 @@
   gap: 12px;
 }
 
+.accounts-dashboard .counter-dayreport {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 16px;
+}
+
+.accounts-dashboard .counter-dayreport-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.accounts-dashboard .counter-dayreport-date {
+  min-width: 160px;
+}
+
+.accounts-dashboard .counter-dayreport-kpis {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.accounts-dashboard .counter-dayreport-kpi {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--ft-border);
+  border-radius: 12px;
+  background: var(--ft-surface-subtle);
+}
+
+.accounts-dashboard .counter-dayreport-kpi span {
+  color: var(--ft-muted);
+  font-size: var(--ft-type-caption);
+}
+
+.accounts-dashboard .counter-dayreport-kpi strong {
+  font-size: var(--ft-type-card);
+  font-weight: 650;
+  color: var(--ft-text);
+}
+
+.accounts-dashboard .counter-dayreport-kpi.tone-sales strong {
+  color: var(--ft-primary);
+}
+
+.accounts-dashboard .counter-dayreport-table {
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .accounts-dashboard .counter-dayreport-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 720px) {
   .accounts-dashboard .counter-dayclose-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .accounts-dashboard .counter-dayreport-kpis {
     grid-template-columns: minmax(0, 1fr);
   }
 

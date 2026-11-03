@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, Trash2, Pause, Play, Plus, ShoppingCart, RotateCcw, Landmark } from "lucide-react";
+import { Search, Trash2, Pause, Play, Plus, ShoppingCart, RotateCcw, Landmark, ScrollText } from "lucide-react";
 import { Select } from "../../../components/Select.jsx";
 import { money } from "../accountsFormat.js";
 import { todayIso } from "../../../lib/dates.js";
 import {
   CASH_PARTY_ID,
-  MONEY_MODES,
   entryPartyId,
   isCancelled,
   isReversed,
@@ -24,9 +23,16 @@ import {
   saveCounterSession,
   saveDayClose,
 } from "../model/counterSettings.js";
+import {
+  COUNTER_PAY_MODES,
+  counterDayReport,
+  counterPayLabel,
+  tillNeedle,
+} from "../model/counterDayReport.js";
+import { formatReceiptDateTime } from "../../receipts/model/receiptModel.js";
 import { ItemFormDialog } from "./items/ItemFormDialog.jsx";
 
-const PAY_MODES = MONEY_MODES.filter(mode => ["cash", "upi", "cash_upi", "bank"].includes(mode.id));
+const PAY_MODES = COUNTER_PAY_MODES;
 
 function lineNet(line) {
   const qty = Math.max(0, Math.trunc(Number(line.quantity || 0)));
@@ -96,11 +102,6 @@ function billTotal(voucher) {
   return voucherTotals(voucher.lines || []).debit;
 }
 
-function isCashHeavy(voucher) {
-  const narration = String(voucher.narration || "").toLowerCase();
-  return /cash/.test(narration) || voucher.moneyMode === "cash";
-}
-
 /**
  * Retail Counter (POS) — Phase 2: holds, history/void, day-close, shortcuts.
  * Charge posts into the same Accounts sale vouchers + stock.
@@ -139,7 +140,7 @@ export function CounterWorkspace({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [lastBill, setLastBill] = useState(null);
-  const [panel, setPanel] = useState("bill"); // bill | close
+  const [panel, setPanel] = useState("bill"); // bill | close | report
   const [openingFloat, setOpeningFloat] = useState("");
   const [countedCash, setCountedCash] = useState("");
   const [itemForm, setItemForm] = useState(emptyItemForm);
@@ -148,6 +149,7 @@ export function CounterWorkspace({
   const canAddItems = Boolean(onSaveItem) && !cashierMode;
   const [closeReason, setCloseReason] = useState("");
   const [cashierName, setCashierName] = useState("");
+  const [reportDate, setReportDate] = useState(() => todayIso());
   const today = todayIso();
   const companyId = activeCompany?.id || null;
   const tills = counterSettings?.tills?.length ? counterSettings.tills : [{ id: "till-1", label: counterSettings?.tillLabel || "Till 1" }];
@@ -156,19 +158,23 @@ export function CounterWorkspace({
   const closed = companyId ? readDayClose(companyId, today, activeTillId) : null;
 
   const todayBills = useMemo(() => {
-    const tillNeedle = `counter sale · ${String(tillLabel || "").toLowerCase()}`;
+    const needle = tillNeedle(tillLabel);
     return (vouchers || [])
       .filter(voucher => (
         voucher.sourceType === "pos_counter"
         && String(voucher.date || "").slice(0, 10) === today
         && !isReversed(voucher)
         && !isCancelled(voucher)
-        && String(voucher.narration || "").toLowerCase().includes(tillNeedle)
+        && String(voucher.narration || "").toLowerCase().includes(needle)
       ))
       .slice()
       .sort((a, b) => String(b.createdAt || b.date || "").localeCompare(String(a.createdAt || a.date || "")))
       .slice(0, 40);
   }, [vouchers, today, tillLabel]);
+  const dayReport = useMemo(
+    () => counterDayReport(accounts, vouchers, { date: reportDate || today, tillLabel }),
+    [accounts, vouchers, reportDate, today, tillLabel],
+  );
   const catalog = useMemo(() => matchItems(items, query), [items, query]);
   const gstEnabled = activeCompany?.gstRegistration === "regular";
   // Counter is walk-in only — named credit parties stay in Accounts sales.
@@ -210,16 +216,10 @@ export function CounterWorkspace({
     [lines, gstEnabled, intra],
   );
   const expectedCash = useMemo(() => {
-    const sales = todayBills.reduce((sum, bill) => {
-      const total = billTotal(bill);
-      // Paid counter sales: treat cash / cash_upi cash side as drawer cash when narration marks cash.
-      if (isCashHeavy(bill) || /cash \+ upi|cash_upi/i.test(String(bill.narration || ""))) {
-        return roundMoney(sum + total);
-      }
-      return sum;
-    }, 0);
-    return roundMoney(Number(openingFloat || closed?.openingFloat || 0) + sales);
-  }, [todayBills, openingFloat, closed]);
+    // Drawer cash = opening float + cash portion of Counter tenders (not full Cash+UPI bills).
+    const cashSales = counterDayReport(accounts, vouchers, { date: today, tillLabel }).tender.cash;
+    return roundMoney(Number(openingFloat || closed?.openingFloat || 0) + cashSales);
+  }, [accounts, vouchers, today, tillLabel, openingFloat, closed]);
   const variance = roundMoney(Number(countedCash || 0) - expectedCash);
 
   useEffect(() => {
@@ -400,7 +400,7 @@ export function CounterWorkspace({
         narration: [
           `Counter sale · ${tillLabel}`,
           cashierName ? `Cashier ${cashierName}` : "",
-          PAY_MODES.find(mode => mode.id === moneyMode)?.label || moneyMode,
+          counterPayLabel(moneyMode),
         ].filter(Boolean).join(" · "),
         itemLines: lines,
         intra,
@@ -557,6 +557,13 @@ export function CounterWorkspace({
           {onOpenInventory ? (
             <button type="button" className="btn" onClick={onOpenInventory}>Items</button>
           ) : null}
+          <button
+            type="button"
+            className={`btn${panel === "report" ? " primary" : ""}`}
+            onClick={() => setPanel(current => (current === "report" ? "bill" : "report"))}
+          >
+            <ScrollText size={16} aria-hidden="true" /> {panel === "report" ? "Back to till" : "Day report"}
+          </button>
           {canManage ? (
             <button type="button" className={`btn${panel === "close" ? " primary" : ""}`} onClick={() => setPanel(current => (current === "close" ? "bill" : "close"))}>
               <Landmark size={16} aria-hidden="true" /> {panel === "close" ? "Back to till" : "Day close"}
@@ -567,6 +574,86 @@ export function CounterWorkspace({
 
       {error ? <p className="acc-form-error" role="alert">{error}</p> : null}
       {closed ? <p className="notice" role="status">Till closed for today · expected {money(closed.expectedCash)} · counted {money(closed.countedCash)} · variance {money(closed.variance)}</p> : null}
+
+      {panel === "report" ? (
+        <section className="counter-dayreport card" aria-label="Counter day report">
+          <div className="counter-dayreport-head">
+            <div>
+              <h2 className="acc-subsection-title">Day report · {tillLabel}</h2>
+              <p className="copy">Counter sales only for this till. Accounts credit sales stay on Receivables / Sales reports.</p>
+            </div>
+            <label className="counter-field counter-dayreport-date">
+              <span className="small">Date</span>
+              <input
+                type="date"
+                value={reportDate || today}
+                max={today}
+                onChange={event => setReportDate(event.target.value || today)}
+              />
+            </label>
+          </div>
+          <div className="counter-dayreport-kpis" aria-label="Sales summary">
+            <article className="counter-dayreport-kpi">
+              <span>Bills</span>
+              <strong>{dayReport.billCount}</strong>
+            </article>
+            <article className="counter-dayreport-kpi tone-sales">
+              <span>Total sales</span>
+              <strong>{money(dayReport.sales)}</strong>
+            </article>
+            <article className="counter-dayreport-kpi">
+              <span>Cash</span>
+              <strong>{money(dayReport.tender.cash)}</strong>
+            </article>
+            <article className="counter-dayreport-kpi">
+              <span>UPI</span>
+              <strong>{money(dayReport.tender.upi)}</strong>
+            </article>
+            <article className="counter-dayreport-kpi">
+              <span>Card</span>
+              <strong>{money(dayReport.tender.card)}</strong>
+            </article>
+          </div>
+          {dayReport.bills.length ? (
+            <div className="table spacer acc-table-wrap counter-dayreport-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>Invoice</th>
+                    <th>Mode</th>
+                    <th className="acc-num">Cash</th>
+                    <th className="acc-num">UPI</th>
+                    <th className="acc-num">Card</th>
+                    <th className="acc-num">Amount</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {dayReport.bills.map(bill => (
+                    <tr key={bill.id}>
+                      <td>{bill.soldAt ? formatReceiptDateTime(bill.soldAt) : bill.invoiceDate}</td>
+                      <td>{bill.reference || "Bill"}</td>
+                      <td>{bill.modeLabel}</td>
+                      <td className="acc-num">{bill.cash ? money(bill.cash) : "—"}</td>
+                      <td className="acc-num">{bill.upi ? money(bill.upi) : "—"}</td>
+                      <td className="acc-num">{bill.card ? money(bill.card) : "—"}</td>
+                      <td className="acc-num">{money(bill.amount)}</td>
+                      <td className="acc-num">
+                        {onReprint ? (
+                          <button type="button" className="btn" onClick={() => onReprint(bill.id)}>Print</button>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="small">No Counter bills for this till on {reportDate || today}.</p>
+          )}
+        </section>
+      ) : null}
 
       {panel === "close" ? (
         <section className="counter-dayclose card">
