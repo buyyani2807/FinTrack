@@ -29,6 +29,10 @@ import {
   counterPayLabel,
   tillNeedle,
 } from "../model/counterDayReport.js";
+import {
+  counterDayCloseCoach,
+  counterSessionAdvisories,
+} from "../model/counterAi.js";
 import { formatReceiptDateTime } from "../../receipts/model/receiptModel.js";
 import { ItemFormDialog } from "./items/ItemFormDialog.jsx";
 
@@ -116,6 +120,7 @@ export function CounterWorkspace({
   items = [],
   itemCategories = [],
   stockByItem = {},
+  stockMovements = [],
   parties = [],
   priceLists = [],
   vouchers = [],
@@ -175,6 +180,10 @@ export function CounterWorkspace({
     () => counterDayReport(accounts, vouchers, { date: reportDate || today, tillLabel }),
     [accounts, vouchers, reportDate, today, tillLabel],
   );
+  const todayCloseReport = useMemo(
+    () => counterDayReport(accounts, vouchers, { date: today, tillLabel }),
+    [accounts, vouchers, today, tillLabel],
+  );
   const catalog = useMemo(() => matchItems(items, query), [items, query]);
   const gstEnabled = activeCompany?.gstRegistration === "regular";
   // Counter is walk-in only — named credit parties stay in Accounts sales.
@@ -217,10 +226,33 @@ export function CounterWorkspace({
   );
   const expectedCash = useMemo(() => {
     // Drawer cash = opening float + cash portion of Counter tenders (not full Cash+UPI bills).
-    const cashSales = counterDayReport(accounts, vouchers, { date: today, tillLabel }).tender.cash;
+    const cashSales = todayCloseReport.tender.cash;
     return roundMoney(Number(openingFloat || closed?.openingFloat || 0) + cashSales);
-  }, [accounts, vouchers, today, tillLabel, openingFloat, closed]);
+  }, [todayCloseReport, openingFloat, closed]);
   const variance = roundMoney(Number(countedCash || 0) - expectedCash);
+  const sessionTips = useMemo(
+    () => counterSessionAdvisories({
+      items,
+      stockByItem,
+      stockMovements,
+      lines,
+      vouchers,
+      tillLabel,
+      today,
+      cartTotal: totals.total,
+    }),
+    [items, stockByItem, stockMovements, lines, vouchers, tillLabel, today, totals.total],
+  );
+  const closeTips = useMemo(
+    () => counterDayCloseCoach({
+      report: todayCloseReport,
+      openingFloat: Number(openingFloat || closed?.openingFloat || 0),
+      countedCash: Number(countedCash || 0),
+      expectedCash,
+      variance,
+    }),
+    [todayCloseReport, openingFloat, countedCash, expectedCash, variance, closed],
+  );
 
   useEffect(() => {
     if (closed) {
@@ -574,6 +606,16 @@ export function CounterWorkspace({
 
       {error ? <p className="acc-form-error" role="alert">{error}</p> : null}
       {closed ? <p className="notice" role="status">Till closed for today · expected {money(closed.expectedCash)} · counted {money(closed.countedCash)} · variance {money(closed.variance)}</p> : null}
+      {panel === "bill" && sessionTips.length ? (
+        <ul className="counter-ai-tips" aria-label="Counter advisories">
+          {sessionTips.map(tip => (
+            <li key={tip.id} className={`counter-ai-tip is-${tip.severity}`}>
+              <strong>{tip.title}</strong>
+              <span className="small">{tip.detail}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
 
       {panel === "report" ? (
         <section className="counter-dayreport card" aria-label="Counter day report">
@@ -659,6 +701,16 @@ export function CounterWorkspace({
         <section className="counter-dayclose card">
           <h2 className="acc-subsection-title">Day close · {tillLabel}</h2>
           <p className="copy">Compare drawer cash to Counter cash sales for {today}. Shortage/overage is recorded on this device for the owner — it does not auto-post a journal yet.</p>
+          {closeTips.length ? (
+            <ul className="counter-ai-tips" aria-label="Day-close coach">
+              {closeTips.map(tip => (
+                <li key={tip.id} className={`counter-ai-tip is-${tip.severity}`}>
+                  <strong>{tip.title}</strong>
+                  <span className="small">{tip.detail}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
           <div className="form counter-dayclose-form">
             <FieldBlock label="Opening float">
               <input type="number" min="0" step="0.01" value={openingFloat} onChange={event => setOpeningFloat(event.target.value)} disabled={Boolean(closed)} />

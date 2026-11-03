@@ -7050,6 +7050,43 @@
   gap: 12px;
 }
 
+.accounts-dashboard .counter-ai-tips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.accounts-dashboard .counter-ai-tip {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--ft-border);
+  background: var(--ft-surface-subtle);
+}
+
+.accounts-dashboard .counter-ai-tip strong {
+  font-size: var(--ft-type-secondary);
+  font-weight: 650;
+  color: var(--ft-text);
+}
+
+.accounts-dashboard .counter-ai-tip.is-high {
+  border-color: color-mix(in srgb, var(--ft-danger) 45%, var(--ft-border));
+  background: color-mix(in srgb, var(--ft-danger) 10%, var(--ft-surface));
+}
+
+.accounts-dashboard .counter-ai-tip.is-medium {
+  border-color: color-mix(in srgb, var(--ft-warning) 40%, var(--ft-border));
+  background: color-mix(in srgb, var(--ft-warning) 8%, var(--ft-surface));
+}
+
+.accounts-dashboard .counter-ai-tip.is-info {
+  border-color: var(--ft-border);
+}
+
 .accounts-dashboard .counter-dayreport {
   display: grid;
   gap: 16px;

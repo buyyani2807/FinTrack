@@ -2530,6 +2530,7 @@ const openVoucher = () => {
           accounts={accountsForCounterPay(visibleAccounts, counterSettings.paymentMap)}
           items={items}
           stockByItem={stockByItem}
+          stockMovements={stockMovements}
           parties={parties}
           priceLists={priceLists}
           vouchers={vouchers}
@@ -2741,6 +2742,7 @@ const openVoucher = () => {
           items={items}
           itemCategories={itemCategories}
           stockByItem={stockByItem}
+          stockMovements={stockMovements}
           parties={parties}
           priceLists={priceLists}
           vouchers={vouchers}
