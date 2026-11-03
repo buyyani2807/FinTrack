@@ -149,26 +149,19 @@ function TaxInvoiceSheet({ invoice }) {
   );
 }
 
-export function SalesInvoiceViewerModal({ invoice, close, onSettle, autoPrint = false }) {
+export function SalesInvoiceViewerModal({ invoice, close, onSettle }) {
   const layerRef = useDialogDismiss(close);
   const salesDocument = !invoice.kind || invoice.kind === "sales_invoice";
   const whatsAppAvailable = salesDocument && canWhatsAppShare(invoice?.customerPhone);
   const m = invoice.money;
   const moneyOnly = invoice.kind === "receipt" || invoice.kind === "payment";
-  const shouldAutoPrint = Boolean(autoPrint || invoice?.autoPrint);
-
-  useEffect(() => {
-    if (!shouldAutoPrint || !invoice) return undefined;
-    const timer = window.setTimeout(() => {
-      // Counter uses thermal PDF; Accounts viewer Print still uses on-screen layout.
-      if (invoice.documentTemplate === "thermal") {
-        printSalesInvoicePdf(invoice, { template: "thermal" });
-      } else {
-        printDocument();
-      }
-    }, 350);
-    return () => window.clearTimeout(timer);
-  }, [shouldAutoPrint, invoice?.voucherId, invoice?.invoiceNumber, invoice?.documentTemplate]);
+  const printInvoice = () => {
+    if (invoice?.documentTemplate === "thermal") {
+      printSalesInvoicePdf(invoice, { template: "thermal" });
+      return;
+    }
+    printDocument();
+  };
 
   return (
     <div className="modal-bg" ref={layerRef}>
@@ -246,7 +239,7 @@ export function SalesInvoiceViewerModal({ invoice, close, onSettle, autoPrint = 
           {onSettle && invoice.settleKind && Number(invoice.outstanding || 0) > 0 ? (
             <button type="button" className="btn primary" onClick={() => onSettle(invoice)}>{invoice.settleKind === "payment" ? "Pay" : "Receive payment"}</button>
           ) : null}
-          <button type="button" className="btn" onClick={printDocument}>Print</button>
+          <button type="button" className="btn" onClick={printInvoice}>Print</button>
           <button type="button" className="btn" onClick={() => downloadSalesInvoicePdf(invoice)}>Download PDF</button>
           {whatsAppAvailable && (
             <button
@@ -292,14 +285,21 @@ export function SalesInvoiceActions({ invoice, settings = {}, compact = false })
 
 export function SalesInvoiceSuccessModal({ invoice, settings = {}, close }) {
   const layerRef = useDialogDismiss(close);
-  const autoPrint = Boolean(invoice?.autoPrint);
-  const [viewOpen, setViewOpen] = useState(autoPrint);
+  // Counter / POS: one thermal PDF print only — do not also open the tax-invoice viewer.
+  const counterReceipt = Boolean(invoice?.autoPrint);
+  const [viewOpen, setViewOpen] = useState(false);
   const whatsAppAvailable = canWhatsAppShare(invoice?.customerPhone);
   const m = invoice.money;
 
   useEffect(() => {
-    if (autoPrint) setViewOpen(true);
-  }, [autoPrint, invoice?.voucherId, invoice?.invoiceNumber]);
+    if (!counterReceipt || !invoice) return undefined;
+    const timer = window.setTimeout(() => {
+      printSalesInvoicePdf(invoice, { template: "thermal" });
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [counterReceipt, invoice?.voucherId, invoice?.invoiceNumber]);
+
+  const printThermalAgain = () => printSalesInvoicePdf(invoice, { template: "thermal" });
 
   return (
     <>
@@ -316,11 +316,13 @@ export function SalesInvoiceSuccessModal({ invoice, settings = {}, close }) {
               : `Date: ${formatReceiptDate(invoice.invoiceDate)}`}
             {invoice.dueDate ? ` · Due: ${formatReceiptDate(invoice.dueDate)}` : ""}
           </p>
-          {autoPrint ? <p className="small">Opening thermal receipt print…</p> : null}
+          {counterReceipt ? <p className="small">Sending thermal receipt to the printer…</p> : null}
           <div className="tool-stack spacer">
-            <button type="button" className="btn primary" onClick={() => setViewOpen(true)}>
-              {autoPrint ? "Print again" : "View invoice"}
-            </button>
+            {counterReceipt ? (
+              <button type="button" className="btn primary" onClick={printThermalAgain}>Print again</button>
+            ) : (
+              <button type="button" className="btn primary" onClick={() => setViewOpen(true)}>View invoice</button>
+            )}
             <button type="button" className="btn" onClick={() => downloadSalesInvoicePdf(invoice)}>Download PDF</button>
             {whatsAppAvailable
               ? (
@@ -344,7 +346,6 @@ export function SalesInvoiceSuccessModal({ invoice, settings = {}, close }) {
         <SalesInvoiceViewerModal
           invoice={invoice}
           settings={settings}
-          autoPrint={autoPrint}
           close={() => setViewOpen(false)}
         />
       )}
