@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   counterDayReport,
+  counterDayReportAll,
   counterModeFromTender,
   counterTenderFromVoucher,
 } from "../src/features/accounts/model/counterDayReport.js";
@@ -127,4 +128,57 @@ test("Accounts credit sales never appear on the Counter day report", () => {
   ], { date: "2026-11-03", tillLabel: "Till 1" });
   assert.equal(report.billCount, 0);
   assert.equal(report.sales, 0);
+});
+
+test("all-tills day report totals every Counter till and breaks down per till", () => {
+  const vouchers = [
+    bill({
+      id: "c1",
+      n: 1,
+      date: "2026-11-03",
+      narration: "Counter sale · Till 1 · Cash",
+      postedAt: "2026-11-03T03:00:00.000Z",
+      lines: [
+        { coaId: "cash", debit: 100, credit: 0 },
+        { coaId: "sales", debit: 0, credit: 100 },
+      ],
+    }),
+    bill({
+      id: "c2",
+      n: 2,
+      date: "2026-11-03",
+      narration: "Counter sale · Till 2 · UPI",
+      postedAt: "2026-11-03T05:00:00.000Z",
+      lines: [
+        { coaId: "upi", debit: 80, credit: 0 },
+        { coaId: "sales", debit: 0, credit: 80 },
+      ],
+    }),
+    bill({
+      id: "a1",
+      n: 9,
+      date: "2026-11-03",
+      narration: "Credit sale",
+      sourceType: null,
+      lines: [
+        { coaId: "ar", debit: 999, credit: 0 },
+        { coaId: "sales", debit: 0, credit: 999 },
+      ],
+    }),
+  ];
+  const report = counterDayReportAll(accounts, vouchers, {
+    date: "2026-11-03",
+    tills: [
+      { id: "till-1", label: "Till 1" },
+      { id: "till-2", label: "Till 2" },
+    ],
+  });
+  assert.equal(report.scope, "all");
+  assert.equal(report.billCount, 2);
+  assert.equal(report.sales, 180);
+  assert.equal(report.tender.cash, 100);
+  assert.equal(report.tender.upi, 80);
+  assert.equal(report.byTill.length, 2);
+  assert.equal(report.byTill.find(row => row.tillLabel === "Till 1").sales, 100);
+  assert.equal(report.byTill.find(row => row.tillLabel === "Till 2").sales, 80);
 });

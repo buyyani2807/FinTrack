@@ -88,6 +88,40 @@ export function downloadSalesInvoicePdf(invoice, options = {}) {
   downloadPdf(renderSalesInvoicePdf(invoice, options), `${invoice.invoiceNumber || "sales-invoice"}.pdf`);
 }
 
+/** Open the browser print dialog for a rendered invoice PDF (thermal 80 mm for Counter). */
+export function printSalesInvoicePdf(invoice, options = {}) {
+  if (typeof document === "undefined" || typeof URL === "undefined") return false;
+  const binary = renderSalesInvoicePdf(invoice, options);
+  const blob = new Blob([pdfBinaryToBytes(binary)], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  const frame = document.createElement("iframe");
+  frame.setAttribute("aria-hidden", "true");
+  frame.style.position = "fixed";
+  frame.style.right = "0";
+  frame.style.bottom = "0";
+  frame.style.width = "0";
+  frame.style.height = "0";
+  frame.style.border = "0";
+  frame.src = url;
+  document.body.appendChild(frame);
+  const cleanup = () => {
+    window.setTimeout(() => {
+      try { URL.revokeObjectURL(url); } catch { /* ignore */ }
+      frame.remove();
+    }, 2000);
+  };
+  frame.onload = () => {
+    try {
+      frame.contentWindow?.focus();
+      frame.contentWindow?.print();
+    } catch {
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+    cleanup();
+  };
+  return true;
+}
+
 /** The invoice as plain text, matching the PDF, for WhatsApp when a file cannot be attached. */
 export function salesInvoiceDocumentText(invoice) {
   const model = salesInvoicePdfModel(invoice);

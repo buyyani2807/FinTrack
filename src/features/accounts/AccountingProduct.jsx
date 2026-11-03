@@ -122,7 +122,7 @@ import {
 } from "./sections/reports/reportStatementRows.js";
 import { loadOrganizationSettings } from "../../lib/financeRepository.js";
 import { buildSalesInvoice, buildVoucherDocument, canOpenVoucherDocument } from "./model/salesInvoiceModel.js";
-import { SalesInvoiceSuccessModal, SalesInvoiceViewerModal } from "./components/SalesInvoiceActions.jsx";
+import { SalesInvoiceSuccessModal, SalesInvoiceViewerModal, withCounterReceiptPrint } from "./components/SalesInvoiceActions.jsx";
 import { periodStockValues } from "./model/inventoryValuation.js";
 import { expenseBreakdown, monthlyIncomeExpense } from "./model/accountsCharts.js";
 import { isEmployeeParty, partyHasTradeProfile, partyProfile } from "./model/partyProfile.js";
@@ -524,14 +524,18 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     if (!voucher || voucher.voucherType !== "sales") return;
     const party = parties.find(item => item.id === voucher.partyId) || null;
     const company = companies.find(item => item.id === activeCompanyId) || companies[0] || null;
-    setSalesInvoiceSuccess(buildSalesInvoice({
+    const built = buildSalesInvoice({
       voucher,
       party,
       accounts,
       company: company ? { ...company, documentSettings } : null,
       workspace,
       itemLines: voucherItemLines.filter(line => line.voucherId === voucher.id),
-    }));
+    });
+    // Counter charges auto-open thermal 80 mm print; Accounts credit sales keep company template.
+    setSalesInvoiceSuccess(
+      voucher.sourceType === "pos_counter" ? withCounterReceiptPrint(built) : built,
+    );
     setPendingSalesInvoiceId(null);
   }, [pendingSalesInvoiceId, vouchers, parties, accounts, companies, activeCompanyId, workspace, voucherItemLines, documentSettings]);
 

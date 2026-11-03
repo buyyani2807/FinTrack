@@ -22,6 +22,12 @@ export function tillNeedle(tillLabel = "") {
   return `counter sale · ${String(tillLabel || "").toLowerCase()}`;
 }
 
+/** Pull till name from Counter narration (`Counter sale · Till 1 · Cash`). */
+export function tillLabelFromNarration(narration = "") {
+  const match = String(narration || "").match(/counter sale\s*·\s*([^·]+)/i);
+  return match ? String(match[1] || "").trim() : "";
+}
+
 export function isCounterTillVoucher(voucher, { date, tillLabel = "" } = {}) {
   if (!voucher || voucher.sourceType !== "pos_counter") return false;
   if (isReversed(voucher) || isCancelled(voucher)) return false;
@@ -100,6 +106,7 @@ export function counterDayReport(accounts = [], vouchers = [], { date, tillLabel
       cash: tender.cash,
       upi: tender.upi,
       card: tender.card,
+      tillLabel: tillLabel || tillLabelFromNarration(voucher.narration) || "",
       narration: voucher.narration || "",
     };
   });
@@ -107,10 +114,41 @@ export function counterDayReport(accounts = [], vouchers = [], { date, tillLabel
   return {
     date: day,
     tillLabel: tillLabel || "",
+    scope: tillLabel ? "till" : "all",
     billCount: rows.length,
     sales,
     netSales: sales,
     tender: { cash, upi, card, total: roundMoney(cash + upi + card) },
     bills: rows,
+    byTill: [],
+  };
+}
+
+/**
+ * Combined Counter day report: all tills total + per-till breakdown.
+ * `tills` is optional [{ id, label }]; unknown till labels from narration are included.
+ */
+export function counterDayReportAll(accounts = [], vouchers = [], { date, tills = [] } = {}) {
+  const overall = counterDayReport(accounts, vouchers, { date, tillLabel: "" });
+  const known = (tills || []).map(till => ({ id: till.id, label: till.label || till.id }));
+  const seen = new Set(known.map(till => String(till.label || "").toLowerCase()));
+  for (const bill of overall.bills) {
+    const label = bill.tillLabel || tillLabelFromNarration(bill.narration);
+    if (!label) continue;
+    const key = label.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    known.push({ id: `till-${key}`, label });
+  }
+  const byTill = known
+    .map(till => ({
+      tillId: till.id,
+      ...counterDayReport(accounts, vouchers, { date, tillLabel: till.label }),
+    }))
+    .filter(row => row.billCount > 0 || (tills || []).some(till => till.id === row.tillId));
+  return {
+    ...overall,
+    scope: "all",
+    byTill,
   };
 }

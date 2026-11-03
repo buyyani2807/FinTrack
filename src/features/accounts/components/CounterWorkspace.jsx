@@ -26,6 +26,7 @@ import {
 import {
   COUNTER_PAY_MODES,
   counterDayReport,
+  counterDayReportAll,
   counterPayLabel,
   tillNeedle,
 } from "../model/counterDayReport.js";
@@ -155,6 +156,7 @@ export function CounterWorkspace({
   const [closeReason, setCloseReason] = useState("");
   const [cashierName, setCashierName] = useState("");
   const [reportDate, setReportDate] = useState(() => todayIso());
+  const [reportTillScope, setReportTillScope] = useState("active"); // active | all
   const today = todayIso();
   const companyId = activeCompany?.id || null;
   const tills = counterSettings?.tills?.length ? counterSettings.tills : [{ id: "till-1", label: counterSettings?.tillLabel || "Till 1" }];
@@ -176,10 +178,13 @@ export function CounterWorkspace({
       .sort((a, b) => String(b.createdAt || b.date || "").localeCompare(String(a.createdAt || a.date || "")))
       .slice(0, 40);
   }, [vouchers, today, tillLabel]);
-  const dayReport = useMemo(
-    () => counterDayReport(accounts, vouchers, { date: reportDate || today, tillLabel }),
-    [accounts, vouchers, reportDate, today, tillLabel],
-  );
+  const dayReport = useMemo(() => {
+    const date = reportDate || today;
+    if (reportTillScope === "all") {
+      return counterDayReportAll(accounts, vouchers, { date, tills });
+    }
+    return counterDayReport(accounts, vouchers, { date, tillLabel });
+  }, [accounts, vouchers, reportDate, today, tillLabel, reportTillScope, tills]);
   const todayCloseReport = useMemo(
     () => counterDayReport(accounts, vouchers, { date: today, tillLabel }),
     [accounts, vouchers, today, tillLabel],
@@ -621,18 +626,37 @@ export function CounterWorkspace({
         <section className="counter-dayreport card" aria-label="Counter day report">
           <div className="counter-dayreport-head">
             <div>
-              <h2 className="acc-subsection-title">Day report · {tillLabel}</h2>
-              <p className="copy">Counter sales only for this till. Accounts credit sales stay on Receivables / Sales reports.</p>
+              <h2 className="acc-subsection-title">
+                Day report · {reportTillScope === "all" ? "All tills" : tillLabel}
+              </h2>
+              <p className="copy">
+                {reportTillScope === "all"
+                  ? "Combined Counter sales for every till. Accounts credit sales stay on Receivables / Sales reports."
+                  : "Counter sales only for this till. Accounts credit sales stay on Receivables / Sales reports."}
+              </p>
             </div>
-            <label className="counter-field counter-dayreport-date">
-              <span className="small">Date</span>
-              <input
-                type="date"
-                value={reportDate || today}
-                max={today}
-                onChange={event => setReportDate(event.target.value || today)}
-              />
-            </label>
+            <div className="counter-dayreport-filters">
+              <label className="counter-field">
+                <span className="small">Tills</span>
+                <Select
+                  aria-label="Report till scope"
+                  value={reportTillScope}
+                  onChange={event => setReportTillScope(event.target.value)}
+                >
+                  <option value="active">This till · {tillLabel}</option>
+                  <option value="all">All tills</option>
+                </Select>
+              </label>
+              <label className="counter-field counter-dayreport-date">
+                <span className="small">Date</span>
+                <input
+                  type="date"
+                  value={reportDate || today}
+                  max={today}
+                  onChange={event => setReportDate(event.target.value || today)}
+                />
+              </label>
+            </div>
           </div>
           <div className="counter-dayreport-kpis" aria-label="Sales summary">
             <article className="counter-dayreport-kpi">
@@ -656,12 +680,41 @@ export function CounterWorkspace({
               <strong>{money(dayReport.tender.card)}</strong>
             </article>
           </div>
+          {reportTillScope === "all" && dayReport.byTill?.length ? (
+            <div className="table spacer acc-table-wrap counter-dayreport-table" aria-label="Per-till totals">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Till</th>
+                    <th className="acc-num">Bills</th>
+                    <th className="acc-num">Cash</th>
+                    <th className="acc-num">UPI</th>
+                    <th className="acc-num">Card</th>
+                    <th className="acc-num">Sales</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dayReport.byTill.map(row => (
+                    <tr key={row.tillId || row.tillLabel}>
+                      <td>{row.tillLabel || "Till"}</td>
+                      <td className="acc-num">{row.billCount}</td>
+                      <td className="acc-num">{money(row.tender.cash)}</td>
+                      <td className="acc-num">{money(row.tender.upi)}</td>
+                      <td className="acc-num">{money(row.tender.card)}</td>
+                      <td className="acc-num">{money(row.sales)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
           {dayReport.bills.length ? (
             <div className="table spacer acc-table-wrap counter-dayreport-table">
               <table>
                 <thead>
                   <tr>
                     <th>Time</th>
+                    {reportTillScope === "all" ? <th>Till</th> : null}
                     <th>Invoice</th>
                     <th>Mode</th>
                     <th className="acc-num">Cash</th>
@@ -675,6 +728,7 @@ export function CounterWorkspace({
                   {dayReport.bills.map(bill => (
                     <tr key={bill.id}>
                       <td>{bill.soldAt ? formatReceiptDateTime(bill.soldAt) : bill.invoiceDate}</td>
+                      {reportTillScope === "all" ? <td>{bill.tillLabel || "—"}</td> : null}
                       <td>{bill.reference || "Bill"}</td>
                       <td>{bill.modeLabel}</td>
                       <td className="acc-num">{bill.cash ? money(bill.cash) : "—"}</td>
@@ -692,7 +746,11 @@ export function CounterWorkspace({
               </table>
             </div>
           ) : (
-            <p className="small">No Counter bills for this till on {reportDate || today}.</p>
+            <p className="small">
+              No Counter bills
+              {reportTillScope === "all" ? "" : ` for this till`}
+              {" "}on {reportDate || today}.
+            </p>
           )}
         </section>
       ) : null}

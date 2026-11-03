@@ -7102,6 +7102,13 @@
   gap: 12px;
 }
 
+.accounts-dashboard .counter-dayreport-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+
 .accounts-dashboard .counter-dayreport-date {
   min-width: 160px;
 }

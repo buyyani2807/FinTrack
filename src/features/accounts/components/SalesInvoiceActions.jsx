@@ -1,11 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { formatReceiptDate, formatReceiptDateTime } from "../../receipts/model/receiptModel.js";
 import { canWhatsAppShare, openManualWhatsAppShare, openWhatsAppWeb } from "../../receipts/io/receiptWhatsApp.js";
 import { buildArReminderMessage, buildOutstandingSummaryMessage, buildPartyStatementMessage, buildPaymentAdviceMessage, buildPurchaseDocumentMessage, salesInvoicePresentation } from "../model/salesInvoiceModel.js";
-import { downloadSalesInvoicePdf, invoicePdfShareOnThisDevice, salesInvoicePdfFile, salesInvoiceWhatsAppText } from "../io/salesInvoicePdf.js";
+import { downloadSalesInvoicePdf, invoicePdfShareOnThisDevice, printSalesInvoicePdf, salesInvoicePdfFile, salesInvoiceWhatsAppText } from "../io/salesInvoicePdf.js";
 import { downloadPartyStatementPdf } from "../io/partyStatementPdf.js";
 import { CloseButton, ModalScroll } from "../../../components/ui.jsx";
 import { useDialogDismiss } from "../../../components/useDialogDismiss.js";
+
+/** Counter / POS receipts use thermal 80 mm; Accounts credit invoices keep company template. */
+export function withCounterReceiptPrint(invoice) {
+  if (!invoice) return invoice;
+  return {
+    ...invoice,
+    documentTemplate: "thermal",
+    autoPrint: true,
+  };
+}
 
 function sendInvoiceMessage(invoice) {
   const message = salesInvoiceWhatsAppText(invoice);
@@ -139,12 +149,26 @@ function TaxInvoiceSheet({ invoice }) {
   );
 }
 
-export function SalesInvoiceViewerModal({ invoice, close, onSettle }) {
+export function SalesInvoiceViewerModal({ invoice, close, onSettle, autoPrint = false }) {
   const layerRef = useDialogDismiss(close);
   const salesDocument = !invoice.kind || invoice.kind === "sales_invoice";
   const whatsAppAvailable = salesDocument && canWhatsAppShare(invoice?.customerPhone);
   const m = invoice.money;
   const moneyOnly = invoice.kind === "receipt" || invoice.kind === "payment";
+  const shouldAutoPrint = Boolean(autoPrint || invoice?.autoPrint);
+
+  useEffect(() => {
+    if (!shouldAutoPrint || !invoice) return undefined;
+    const timer = window.setTimeout(() => {
+      // Counter uses thermal PDF; Accounts viewer Print still uses on-screen layout.
+      if (invoice.documentTemplate === "thermal") {
+        printSalesInvoicePdf(invoice, { template: "thermal" });
+      } else {
+        printDocument();
+      }
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [shouldAutoPrint, invoice?.voucherId, invoice?.invoiceNumber, invoice?.documentTemplate]);
 
   return (
     <div className="modal-bg" ref={layerRef}>
@@ -268,9 +292,14 @@ export function SalesInvoiceActions({ invoice, settings = {}, compact = false })
 
 export function SalesInvoiceSuccessModal({ invoice, settings = {}, close }) {
   const layerRef = useDialogDismiss(close);
-  const [viewOpen, setViewOpen] = useState(false);
+  const autoPrint = Boolean(invoice?.autoPrint);
+  const [viewOpen, setViewOpen] = useState(autoPrint);
   const whatsAppAvailable = canWhatsAppShare(invoice?.customerPhone);
   const m = invoice.money;
+
+  useEffect(() => {
+    if (autoPrint) setViewOpen(true);
+  }, [autoPrint, invoice?.voucherId, invoice?.invoiceNumber]);
 
   return (
     <>
@@ -287,8 +316,11 @@ export function SalesInvoiceSuccessModal({ invoice, settings = {}, close }) {
               : `Date: ${formatReceiptDate(invoice.invoiceDate)}`}
             {invoice.dueDate ? ` · Due: ${formatReceiptDate(invoice.dueDate)}` : ""}
           </p>
+          {autoPrint ? <p className="small">Opening thermal receipt print…</p> : null}
           <div className="tool-stack spacer">
-            <button type="button" className="btn primary" onClick={() => setViewOpen(true)}>View invoice</button>
+            <button type="button" className="btn primary" onClick={() => setViewOpen(true)}>
+              {autoPrint ? "Print again" : "View invoice"}
+            </button>
             <button type="button" className="btn" onClick={() => downloadSalesInvoicePdf(invoice)}>Download PDF</button>
             {whatsAppAvailable
               ? (
@@ -308,7 +340,14 @@ export function SalesInvoiceSuccessModal({ invoice, settings = {}, close }) {
           </div>
         </div>
       </div>
-      {viewOpen && <SalesInvoiceViewerModal invoice={invoice} settings={settings} close={() => setViewOpen(false)} />}
+      {viewOpen && (
+        <SalesInvoiceViewerModal
+          invoice={invoice}
+          settings={settings}
+          autoPrint={autoPrint}
+          close={() => setViewOpen(false)}
+        />
+      )}
     </>
   );
 }
