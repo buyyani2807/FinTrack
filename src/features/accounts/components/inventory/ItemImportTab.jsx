@@ -5,12 +5,17 @@ import { AccTable } from "../AccUi.jsx";
 export function ItemImportTab({ canEdit, saving, readImportFile, importPlan, setImportPlan, runImport, importStatus }) {
   return (
     <>
-      <p className="copy spacer">Upload a CSV of items. Name and SKU are required; type, unit, category, prices, GST, HSN/SAC, opening stock, opening rate, opening date and reorder level are optional. Existing SKUs are skipped.</p>
+      <p className="copy spacer">
+        Import a product list from FinTrack’s template or from another POS (Focus, Vyapar, Marg, Excel export, etc.).
+        Name is required. SKU is preferred; if missing, barcode is used, otherwise a code is generated from the name.
+        Prices, GST, HSN, unit, category, barcode, brand and stock columns are matched by common header names.
+        Existing SKUs are skipped.
+      </p>
       <div className="accounts-action-row spacer">
         <button type="button" className="btn" onClick={() => downloadAccountsCsv("fintrack-items-template.csv", ITEM_CSV_TEMPLATE.split("\n").map(line => line.split(",")))}>Download template</button>
         <label className={`btn primary ${!canEdit ? "disabled" : ""}`.trim()}>
-          Choose CSV
-          <input type="file" accept=".csv,text/csv" hidden disabled={!canEdit || saving} onChange={readImportFile} />
+          Choose CSV / Excel
+          <input type="file" accept=".csv,.tsv,.txt,.xlsx,text/csv,text/tab-separated-values,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden disabled={!canEdit || saving} onChange={readImportFile} />
         </label>
       </div>
       {importPlan && <div className="card spacer">

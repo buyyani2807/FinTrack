@@ -5,7 +5,7 @@ import { todayIso } from "../../../lib/dates.js";
 import { downloadAccountsCsv } from "../io/accountingExport.js";
 import { stockMovementReport } from "../model/inventoryModel.js";
 import { STOCK_AGE_BUCKETS, physicalCountVariances, stockAgeing, stockValuation } from "../model/inventoryValuation.js";
-import { parseItemCsv, planItemImport } from "../io/itemCsvImport.js";
+import { parseItemImportFile, planItemImport } from "../io/itemCsvImport.js";
 import { StockSummaryTab } from "./inventory/StockSummaryTab.jsx";
 import { InventoryProfitStrip } from "./inventory/InventoryProfitStrip.jsx";
 import { itemProfitability } from "../model/itemProfitability.js";
@@ -112,13 +112,18 @@ export function AccInventoryWorkspace({
     event.target.value = "";
     setImportStatus("");
     if (!file) return;
-    const rows = parseItemCsv(await file.text());
-    if (!rows.length) {
+    try {
+      const rows = await parseItemImportFile(file);
+      if (!rows.length) {
+        setImportPlan(null);
+        setImportStatus("No item rows found. Need at least a Name column (SKU optional — barcode or a generated code is used).");
+        return;
+      }
+      setImportPlan(planItemImport(rows, items));
+    } catch (err) {
       setImportPlan(null);
-      setImportStatus("No item rows found. Use the template: it needs at least Name and SKU columns.");
-      return;
+      setImportStatus(err?.message || "Could not read this file. Export CSV or Excel (.xlsx) from your POS and try again.");
     }
-    setImportPlan(planItemImport(rows, items));
   };
 
   const runImport = async () => {
