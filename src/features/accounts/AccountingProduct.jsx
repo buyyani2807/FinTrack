@@ -129,6 +129,7 @@ import { expenseBreakdown, monthlyIncomeExpense } from "./model/accountsCharts.j
 import { isEmployeeParty, partyHasTradeProfile, partyProfile } from "./model/partyProfile.js";
 import {
   currentStockForItem,
+  expiredStockReport,
   itemPurchasesReport,
   itemSalesReport,
   itemizedEntryDraft,
@@ -2457,6 +2458,28 @@ const openVoucher = () => {
             row.quantityDelta,
             stockReasonLabel(row.reason),
             row.voucherNumber || "",
+          ]),
+        ],
+      };
+    }
+    if (active === "expired_stock") {
+      const expiredRows = expiredStockReport(items, stockMovements, { asOf: rangeTo });
+      return {
+        filename: `fintrack-expired-stock-${stamp}`,
+        rows: [
+          ["Expired stock"],
+          [companyName],
+          [`As of: ${rangeTo}`],
+          [],
+          ["Status", "Item", "SKU", "Batch", "Expiry", "On hand", "Unit"],
+          ...expiredRows.map(row => [
+            row.statusLabel,
+            row.name,
+            row.sku || "",
+            row.batchNo || "",
+            row.expiryDate,
+            row.stock,
+            row.unit,
           ]),
         ],
       };

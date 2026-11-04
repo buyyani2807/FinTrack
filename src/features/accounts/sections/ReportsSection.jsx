@@ -1,5 +1,6 @@
+import { useMemo } from "react";
 import { AccTable, DateSortTh } from "../components/AccUi.jsx";
-import { stockReasonLabel } from "../model/inventoryModel.js";
+import { expiredStockReport, stockReasonLabel } from "../model/inventoryModel.js";
 import { money } from "../accountsFormat.js";
 import { useDateSort } from "../model/useDateSort.js";
 import { ReportRangeBar } from "../components/AccPeriodBars.jsx";
@@ -85,10 +86,22 @@ export function ReportsSection({
   onOpenTradeDocument,
 }) {
   const stockSort = useDateSort(stockMoveRows, "movementDate");
+  const expiredRows = useMemo(
+    () => expiredStockReport(items, stockMovements, { asOf: rangeTo || range?.to || "" }),
+    [items, stockMovements, rangeTo, range?.to],
+  );
   const companyName = activeCompany?.name || settings?.companyName || "";
   const showTrial = (section === "trial" || reportTab === "trial") && section !== "pnl" && section !== "balance";
   const showPnl = (section === "pnl" || reportTab === "pnl") && section !== "trial" && section !== "balance";
   const showBalance = (section === "balance" || reportTab === "balance") && section !== "trial" && section !== "pnl";
+  const expiredCount = expiredRows.filter(row => row.status === "expired").length;
+  const soonCount = expiredRows.filter(row => row.status === "soon").length;
+  const expiredInsight = !expiredRows.length
+    ? "No expired or near-expiry items with dates on file."
+    : [
+      expiredCount ? `${expiredCount} expired` : "",
+      soonCount ? `${soonCount} due within 30 days` : "",
+    ].filter(Boolean).join(" · ") + ".";
 
   return (
     <div className="acc-panel">
@@ -292,6 +305,36 @@ export function ReportsSection({
                 <td className="acc-num">{row.quantityDelta}</td>
                 <td>{stockReasonLabel(row.reason)}</td>
                 <td>{row.voucherNumber || "—"}</td>
+              </tr>
+            ))}
+          </AccTable>
+        </>
+      )}
+      {section === "reports" && reportTab === "expired_stock" && (
+        <>
+          <ReportPlainSpeak reportId="expired_stock" insight={expiredInsight} />
+          <p className="small">As of {rangeTo || "today"}. Near expiry means within 30 days. Set expiry on the item to appear here.</p>
+          <AccTable
+            columns={[
+              "Status",
+              "Item",
+              "SKU",
+              "Batch",
+              "Expiry",
+              { label: "On hand", num: true },
+              "Unit",
+            ]}
+            empty={!expiredRows.length && "No expired or near-expiry stock."}
+          >
+            {expiredRows.map(row => (
+              <tr key={row.itemId}>
+                <td>{row.statusLabel}</td>
+                <td>{row.name}</td>
+                <td>{row.sku || "—"}</td>
+                <td>{row.batchNo || "—"}</td>
+                <td>{row.expiryDate}</td>
+                <td className="acc-num">{row.stock}</td>
+                <td>{row.unit}</td>
               </tr>
             ))}
           </AccTable>

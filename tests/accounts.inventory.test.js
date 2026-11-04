@@ -25,6 +25,7 @@ import {
   lineForStockPosting,
   normalizeQuantityNumber,
   sellUnitChoices,
+  expiredStockReport,
 } from "../src/features/accounts/model/inventoryModel.js";
 import { CASH_PARTY_ID } from "../src/features/accounts/model/accountingModel.js";
 
@@ -222,6 +223,47 @@ test("bag pack contents let Counter sell loose kg/g from bag stock", () => {
     openingStock: "10", reorderLevel: "1", packContainsQty: "25", packContainsUnit: "",
   }), /both pack contents/i);
   assert.equal(sellUnitChoices("Bag"), null);
+});
+
+test("expired stock report lists expired and near-expiry items only", () => {
+  const items = [
+    { id: "a", name: "Syrup", sku: "S1", itemType: "product", unit: "Nos", expiryDate: "2026-10-01", openingStock: 5 },
+    { id: "b", name: "Cream", sku: "C1", itemType: "product", unit: "Nos", expiryDate: "2026-11-20", openingStock: 2 },
+    { id: "c", name: "Soap", sku: "X1", itemType: "product", unit: "Nos", expiryDate: "2027-06-01", openingStock: 10 },
+    { id: "d", name: "Consult", sku: "SVC", itemType: "service", unit: "Nos", expiryDate: "2026-10-01" },
+  ];
+  const rows = expiredStockReport(items, [], { asOf: "2026-11-04", soonDays: 30 });
+  assert.deepEqual(rows.map(row => row.sku), ["S1", "C1"]);
+  assert.equal(rows[0].status, "expired");
+  assert.equal(rows[1].status, "soon");
+  assert.equal(rows[0].stock, 5);
+});
+
+test("itemized sale accepts loose kg from a bag-priced item", () => {
+  const draft = itemizedEntryDraft({
+    kind: "sale",
+    accounts,
+    date: "2026-11-04",
+    partyId: CASH_PARTY_ID,
+    moneyMode: "cash",
+    settlement: "paid",
+    itemLines: [{
+      itemId: "rice",
+      itemName: "Rice",
+      itemSku: "7",
+      unit: "Bag",
+      sellUnit: "Kg",
+      quantity: "11",
+      rate: 2300,
+      gstRate: 0,
+      packContainsQty: 25,
+      packContainsUnit: "Kg",
+    }],
+    gstEnabled: false,
+  });
+  assert.equal(draft.itemLines[0].unit, "Bag");
+  assert.equal(draft.itemLines[0].quantity, 0.44);
+  assert.equal(draft.itemLines[0].amount, 1012);
 });
 
 test("rejects invalid item lines", () => {

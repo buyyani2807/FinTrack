@@ -355,20 +355,23 @@ Local uncommitted Counter pack/loose-kg work may exist on the working tree from 
 
 ---
 
-## 13. Business decisions needed from you
+## 13. Business decisions (defaults — owner asked to choose what is best)
 
-1. **Kirana pack model:** Is Counter “1 Bag = N Kg” + sell Kg/g enough, or do you need a separate Stock Conversion voucher like Marg?
-2. **Packing field:** Free-text packing for duplicate names (Marg toast), or keep SKU uniqueness + pack-contains only?
-3. **Multi-alias SKU:** Required for POS barcode variants?
-4. **Expired stock report:** Approve as P1 report (read-only) for medical/FMCG?
-5. **Which Phase 2–4 slice first on staging?** Recommend: (A) Reports hub IA + expired stock, or (B) Overview KPI polish, or (C) finish Counter pack PR.
+Recorded 2026-11-04 after “do what is best”:
+
+| # | Topic | Decision |
+|---|--------|----------|
+| 1 | Kirana pack model | **Counter “1 Bag = N Kg” + sell Kg/g only.** No Marg-style Stock Conversion voucher for now (high risk, not needed for loose rice). |
+| 2 | Packing field | **Keep SKU uniqueness + pack-contains.** No free-text Packing / duplicate-name toast unless a customer asks later. |
+| 3 | Multi-alias SKU | **Defer.** Single SKU + barcode is enough; revisit if POS needs multiple codes per item. |
+| 4 | Expired stock report | **Yes — P1 read-only report** (no posting/calc changes). |
+| 5 | First implementation slice | **(C) Finish Counter pack charge fix**, then **(A) Expired stock report**. Overview KPI polish and full AccUi redesign wait until these are stable on staging. |
 
 ---
 
-## 14. Recommended next step
+## 14. Next step (in progress on this branch)
 
-After you confirm §13:
-
-1. Open a **small staging PR** for Counter pack/loose-kg (calc-safe, already prototyped).
-2. Start **Phase 2 design-system consistency** (AccUi) with zero calculation changes.
-3. Pick one P1 surface (Overview **or** Reports) — not both in one PR.
+1. Commit Counter loose-kg charge validation fix.
+2. Add Accounts → Reports → Expired stock (read-only).
+3. Push staging after review; run migration `119` if not applied.
+4. Later: Overview KPI presentation + AccUi consistency (Phase 2–3), still no calc changes.

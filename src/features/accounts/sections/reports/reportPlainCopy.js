@@ -18,6 +18,7 @@ export const REPORT_BLURB = {
   item_purchases: "What you bought, by item, when line items were recorded.",
   item_profit: "Revenue, cost, and profit by item when item lines are recorded.",
   stock_moves: "Where inventory came from and where it went.",
+  expired_stock: "Items past expiry or due within 30 days — check before you sell.",
   purchase_match: "Compare purchase orders with what was billed or received.",
 };
 

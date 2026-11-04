@@ -18,7 +18,6 @@ import {
   emptyItemLine,
   itemizedEntryDraft,
   itemPackMeta,
-  lineForStockPosting,
   parseItemQuantity,
   quantityInBaseUnit,
   sellUnitChoices,
@@ -635,7 +634,8 @@ export function CounterWorkspace({
           cashierName ? `Cashier ${cashierName}` : "",
           counterPayLabel(moneyMode),
         ].filter(Boolean).join(" · "),
-        itemLines: billLines.map(lineForStockPosting),
+        // Keep sellUnit / pack size so validation allows 11 Kg → 0.44 Bag before posting.
+        itemLines: billLines,
         intra,
         taxInclusive: false,
         gstEnabled,

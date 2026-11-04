@@ -493,9 +493,15 @@ export function validateItemLines(lines = []) {
     const raw = lines[index] || {};
     const line = normalizeItemLine(raw);
     if (!line.itemId && !line.itemName) return `Choose an item on line ${index + 1}.`;
-    const qtyUnit = raw.sellUnit || line.unit;
-    if (!isValidQuantityInput(raw.quantity, qtyUnit) && !isValidQuantityInput(raw.quantity, line.unit)) {
-      return allowsFractionalQuantity(line.unit) || allowsFractionalQuantity(qtyUnit)
+    // Validate the qty the cashier typed (Kg/g), not the converted stock qty (fractional Bag).
+    const sellUnit = String(raw.sellUnit || "").trim();
+    const baseUnit = String(raw.unit || line.unit || "Nos").trim() || "Nos";
+    const qtyUnit = sellUnit || baseUnit;
+    const typedOk = isValidQuantityInput(raw.quantity, qtyUnit);
+    const packAlt = Boolean(sellUnit && sellUnit !== baseUnit && sellUnitChoices(baseUnit, raw));
+    const convertedOk = packAlt && /^\d+(\.\d{1,3})?$/.test(String(raw.quantity ?? "").trim().replace(/,/g, ""));
+    if (!typedOk && !convertedOk && !isValidQuantityInput(raw.quantity, baseUnit)) {
+      return allowsFractionalQuantity(baseUnit) || allowsFractionalQuantity(qtyUnit) || packAlt
         ? `Quantity must be greater than zero (up to 3 decimals) on line ${index + 1}.`
         : `Quantity must be a whole number on line ${index + 1}.`;
     }
@@ -657,6 +663,48 @@ export function stockStatus(current, reorderLevel) {
   if (current == null) return "service";
   if (Number(reorderLevel || 0) > 0 && Number(current) < Number(reorderLevel)) return "low";
   return "normal";
+}
+
+/**
+ * Items with an expiry date that are already expired or due within `soonDays`.
+ * Read-only operational list — does not change stock. Uses `asOf` (usually report end / today).
+ */
+export function expiredStockReport(items = [], movements = [], { asOf = "", soonDays = 30 } = {}) {
+  const today = String(asOf || new Date().toISOString().slice(0, 10)).slice(0, 10);
+  const horizon = Number(soonDays);
+  const daysAhead = Number.isFinite(horizon) && horizon >= 0 ? horizon : 30;
+  const rows = [];
+  for (const item of items || []) {
+    if (!item || item.itemType === "service") continue;
+    const expiry = String(item.expiryDate || "").slice(0, 10);
+    if (!expiry) continue;
+    const stock = currentStockForItem(item, movements);
+    if (stock == null) continue;
+    const dayMs = 86400000;
+    const days = Math.round((new Date(`${expiry}T00:00:00`) - new Date(`${today}T00:00:00`)) / dayMs);
+    let status = "ok";
+    if (days < 0) status = "expired";
+    else if (days <= daysAhead) status = "soon";
+    if (status === "ok") continue;
+    // Skip empty near-expiry shelves; keep expired rows even at zero so write-offs stay visible.
+    if (status === "soon" && !(Number(stock) > 0)) continue;
+    rows.push({
+      itemId: item.id,
+      name: item.name || "",
+      sku: item.sku || "",
+      batchNo: item.batchNo || "",
+      expiryDate: expiry,
+      stock: Number(stock),
+      unit: item.unit || "Nos",
+      status,
+      statusLabel: status === "expired" ? "Expired" : "Near expiry",
+      days,
+    });
+  }
+  return rows.sort((a, b) => {
+    if (a.status !== b.status) return a.status === "expired" ? -1 : 1;
+    return String(a.expiryDate).localeCompare(String(b.expiryDate)) || String(a.name).localeCompare(String(b.name));
+  });
 }
 
 function itemMovementValueReport(voucherItemLines, vouchers, { from, to }, forwardType, returnType) {
