@@ -56,7 +56,7 @@ create or replace function public.acc_create_company_from(
 declare
   org_id uuid;
   source public.acc_companies%rowtype;
-  company_id uuid;
+  new_company_id uuid;
   nm text;
   normalized_pan text;
   books_on date;
@@ -120,9 +120,9 @@ begin
   ) values (
     org_id, nm, coalesce(input_fy_start_month, source.fy_start_month, 4), books_on,
     false, 'active', normalized_pan, auth.uid()
-  ) returning id into company_id;
+  ) returning id into new_company_id;
 
-  perform public.acc_seed_coa_for_company(org_id, company_id);
+  perform public.acc_seed_coa_for_company(org_id, new_company_id);
 
   if coalesce(input_copy_coa, true) then
     for src in
@@ -136,14 +136,14 @@ begin
              is_active = src.is_active,
              opening_balance = 0,
              opening_side = 'debit'
-       where t.company_id = company_id and t.code = src.code;
+       where t.company_id = new_company_id and t.code = src.code;
 
       if not found then
         insert into public.acc_coa(
           organization_id, company_id, code, name, group_type, account_type,
           is_system, is_active, opening_balance, opening_side
         ) values (
-          org_id, company_id, src.code, src.name, src.group_type, src.account_type,
+          org_id, new_company_id, src.code, src.name, src.group_type, src.account_type,
           false, src.is_active, 0, 'debit'
         );
       end if;
@@ -158,10 +158,10 @@ begin
       update public.acc_coa t
          set parent_id = (
            select p.id from public.acc_coa p
-            where p.company_id = company_id and p.code = src.parent_code
+            where p.company_id = new_company_id and p.code = src.parent_code
             limit 1
          )
-       where t.company_id = company_id and t.code = src.child_code;
+       where t.company_id = new_company_id and t.code = src.child_code;
     end loop;
   end if;
 
@@ -176,7 +176,7 @@ begin
         gstin, state_code, gst_registration, notes, is_active,
         credit_limit, credit_days
       ) values (
-        org_id, company_id, src.party_type, src.name, src.phone, src.email, src.address,
+        org_id, new_company_id, src.party_type, src.name, src.phone, src.email, src.address,
         src.gstin, src.state_code, src.gst_registration, src.notes, src.is_active,
         src.credit_limit, src.credit_days
       );
@@ -190,7 +190,7 @@ begin
       order by lower(c.name)
     loop
       insert into public.acc_item_categories(organization_id, company_id, name, is_active)
-      values (org_id, company_id, src.name, src.is_active);
+      values (org_id, new_company_id, src.name, src.is_active);
     end loop;
 
     for src in
@@ -201,10 +201,10 @@ begin
        order by lower(child.name)
     loop
       select id into parent_new from public.acc_item_categories
-       where company_id = company_id and name = src.parent_name and parent_id is null
+       where company_id = new_company_id and name = src.parent_name and parent_id is null
        limit 1;
       insert into public.acc_item_categories(organization_id, company_id, name, is_active, parent_id)
-      values (org_id, company_id, src.name, src.is_active, parent_new);
+      values (org_id, new_company_id, src.name, src.is_active, parent_new);
     end loop;
 
     for src in
@@ -221,13 +221,13 @@ begin
           select child.id into parent_new
             from public.acc_item_categories child
             join public.acc_item_categories parent on parent.id = child.parent_id
-           where child.company_id = company_id
+           where child.company_id = new_company_id
              and child.name = src.category_name
              and parent.name = src.parent_category_name
            limit 1;
         else
           select id into parent_new from public.acc_item_categories
-           where company_id = company_id and name = src.category_name and parent_id is null
+           where company_id = new_company_id and name = src.category_name and parent_id is null
            limit 1;
         end if;
       end if;
@@ -260,7 +260,7 @@ begin
         opening_stock, opening_stock_date, opening_rate, reorder_level, is_active,
         brand, barcode, batch_no, expiry_date
       ) values (
-        org_id, company_id, src.item_type, src.name, src.sku, parent_new, src.unit, src.description,
+        org_id, new_company_id, src.item_type, src.name, src.sku, parent_new, src.unit, src.description,
         src.selling_price, src.purchase_price, src.gst_rate, src.hsn_sac,
         case when coalesce(input_copy_openings, true) then stock_qty else 0 end,
         case when coalesce(input_copy_openings, true) and stock_qty <> 0 then books_on else null end,
@@ -273,7 +273,7 @@ begin
         insert into public.acc_stock_movements(
           organization_id, company_id, item_id, movement_date, quantity_delta, reason, note, created_by
         ) values (
-          org_id, company_id, new_id, books_on, stock_qty, 'opening',
+          org_id, new_company_id, new_id, books_on, stock_qty, 'opening',
           'Opening stock copied from ' || source.name || ' as of ' || as_of::text, auth.uid()
         );
       end if;
@@ -287,7 +287,7 @@ begin
       invoice_terms, quotation_terms, credit_control, overdue_block_days, updated_at, updated_by
     )
     select
-      company_id, org_id, d.business_address, d.business_phone, d.business_email, d.logo_data_url,
+      new_company_id, org_id, d.business_address, d.business_phone, d.business_email, d.logo_data_url,
       d.upi_id, d.upi_payee_name, d.bank_name, d.bank_account_number, d.bank_ifsc, d.invoice_template, d.show_upi_qr,
       d.invoice_terms, d.quotation_terms, d.credit_control, d.overdue_block_days, now(), auth.uid()
     from public.acc_document_settings d
@@ -313,9 +313,9 @@ begin
   end if;
 
   if coalesce(input_copy_openings, true) and coalesce(input_copy_coa, true) then
-    select id into capital_id from public.acc_coa where company_id = company_id and code = '3000' limit 1;
-    select id into ar_id from public.acc_coa where company_id = company_id and code = '1100' limit 1;
-    select id into ap_id from public.acc_coa where company_id = company_id and code = '2000' limit 1;
+    select id into capital_id from public.acc_coa where company_id = new_company_id and code = '3000' limit 1;
+    select id into ar_id from public.acc_coa where company_id = new_company_id and code = '1100' limit 1;
+    select id into ap_id from public.acc_coa where company_id = new_company_id and code = '2000' limit 1;
 
     for src in
       select
@@ -345,7 +345,7 @@ begin
       if coalesce(input_copy_parties, true) and src.code in ('1100', '2000') then
         update public.acc_coa
            set opening_balance = 0, opening_side = 'debit'
-         where company_id = company_id and code = src.code;
+         where company_id = new_company_id and code = src.code;
         continue;
       end if;
 
@@ -367,7 +367,7 @@ begin
       amt := abs(signed_bal);
       update public.acc_coa
          set opening_balance = amt, opening_side = side
-       where company_id = company_id and code = src.code;
+       where company_id = new_company_id and code = src.code;
     end loop;
 
     -- Net profit/(loss) through as_of → Capital.
@@ -443,7 +443,7 @@ begin
           ), 0), 2) as supplier_bal
         from public.acc_parties sp
         join public.acc_parties tp
-          on tp.company_id = company_id
+          on tp.company_id = new_company_id
          and tp.party_type = sp.party_type
          and lower(tp.name) = lower(sp.name)
          and coalesce(tp.phone, '') = coalesce(sp.phone, '')
@@ -467,7 +467,7 @@ begin
         begin
           perform public.acc_post_voucher(
             'journal', books_on, narr, lines, src.target_party_id,
-            'accounts', 'party_opening', null, company_id, null, null, null
+            'accounts', 'party_opening', null, new_company_id, null, null, null
           );
         exception when others then
           null;
@@ -480,7 +480,7 @@ begin
       coalesce(sum(case when opening_side = 'credit' then opening_balance else 0 end), 0)
     into debit_open, credit_open
     from public.acc_coa
-    where company_id = company_id;
+    where company_id = new_company_id;
 
     imbalance := round(debit_open - credit_open, 2);
     if capital_id is not null and imbalance <> 0 then
@@ -509,7 +509,7 @@ begin
   end if;
 
   perform public.acc_write_audit(
-    org_id, 'company', company_id, 'create_from',
+    org_id, 'company', new_company_id, 'create_from',
     null,
     jsonb_build_object(
       'name', nm,
@@ -524,10 +524,10 @@ begin
       'copyOpenings', coalesce(input_copy_openings, true)
     ),
     'Company created by copy',
-    company_id
+    new_company_id
   );
 
-  return company_id;
+  return new_company_id;
 end;
 $$;
 
