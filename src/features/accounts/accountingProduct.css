@@ -7463,18 +7463,31 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-top: 4px;
+  margin-top: 6px;
   flex-wrap: wrap;
 }
 
+.accounts-dashboard .counter-pack-chip {
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: var(--ft-type-secondary);
+  font-weight: 650;
+}
+
+.accounts-dashboard .counter-pack-custom {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .accounts-dashboard .counter-pack-qty {
-  width: 3.5rem;
-  min-width: 3.5rem;
+  width: 3.75rem;
+  min-width: 3.75rem;
   text-align: center;
   padding: 4px 6px;
   border: 1px solid var(--ft-border);
   border-radius: 8px;
-  background: var(--ft-surface-subtle);
+  background: var(--ft-surface);
   color: var(--ft-text);
   font-size: var(--ft-type-secondary);
   font-weight: 650;

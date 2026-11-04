@@ -1217,18 +1217,30 @@ export function CounterWorkspace({
             <ul className="counter-line-list">
               {lines.map((line, index) => {
                 const catalogItem = (workingItems || []).find(row => row.id === line.itemId);
+                const packQty = line.packContainsQty ?? catalogItem?.packContainsQty ?? "";
+                const packUnit = line.packContainsUnit || catalogItem?.packContainsUnit || (Number(packQty) > 0 ? "Kg" : "");
                 const packLine = {
                   ...line,
-                  packContainsQty: itemPackMeta(line)?.qty ?? catalogItem?.packContainsQty ?? null,
-                  packContainsUnit: itemPackMeta(line)?.unit || catalogItem?.packContainsUnit || "",
+                  packContainsQty: packQty === "" ? null : packQty,
+                  packContainsUnit: packUnit,
                 };
                 const sellChoices = sellUnitChoices(packLine.unit, packLine);
                 const sellUnit = packLine.sellUnit || packLine.unit || "Nos";
                 const baseQty = quantityInBaseUnit(packLine.quantity, packLine.unit, sellUnit, packLine);
-                const packHint = itemPackMeta(packLine)
-                  ? `1 ${packLine.unit} = ${packLine.packContainsQty} ${packLine.packContainsUnit}`
+                const packMeta = itemPackMeta(packLine);
+                const packHint = packMeta
+                  ? `1 ${packLine.unit} = ${packMeta.qty} ${packMeta.unit}`
                   : "";
-                const needsPackSize = canSetPackContains(packLine.unit) && !itemPackMeta(packLine);
+                const needsPackSize = canSetPackContains(packLine.unit) && !packMeta;
+                const setBagKg = kg => {
+                  const qty = String(kg);
+                  patchLine(index, {
+                    packContainsQty: qty,
+                    packContainsUnit: "Kg",
+                    sellUnit: "Kg",
+                    quantity: parseItemQuantity(line.quantity === "1" || !line.quantity ? "1" : String(line.quantity), "Kg") || "1",
+                  });
+                };
                 return (
                   <li key={`${line.itemId}-${index}`} className="counter-line">
                     <div className="counter-line-main">
@@ -1245,24 +1257,34 @@ export function CounterWorkspace({
                         ].filter(Boolean).join(" · ")}
                       </span>
                       {needsPackSize ? (
-                        <label className="counter-pack-size">
-                          <span className="small">1 {line.unit || "Bag"} =</span>
-                          <input
-                            className="counter-pack-qty"
-                            inputMode="decimal"
-                            placeholder="25"
-                            aria-label={`Kg per ${line.unit || "Bag"} for ${line.itemName}`}
-                            value={line.packContainsQty ?? ""}
-                            onChange={event => {
-                              const qty = parseItemQuantity(event.target.value, "Kg");
-                              patchLine(index, {
-                                packContainsQty: qty,
-                                packContainsUnit: qty ? "Kg" : "",
-                              });
-                            }}
-                          />
-                          <span className="small">Kg to sell loose</span>
-                        </label>
+                        <div className="counter-pack-size">
+                          <span className="small">Sell loose — how many kg in one {line.unit || "Bag"}?</span>
+                          <button type="button" className="btn counter-pack-chip" onClick={() => setBagKg(25)}>25 kg</button>
+                          <button type="button" className="btn counter-pack-chip" onClick={() => setBagKg(26)}>26 kg</button>
+                          <label className="counter-pack-custom">
+                            <span className="small">Other</span>
+                            <input
+                              className="counter-pack-qty"
+                              inputMode="decimal"
+                              placeholder="e.g. 20"
+                              aria-label={`Custom kg per ${line.unit || "Bag"} for ${line.itemName}`}
+                              value={line.packContainsQty ?? ""}
+                              onChange={event => {
+                                const qty = parseItemQuantity(event.target.value, "Kg");
+                                patchLine(index, {
+                                  packContainsQty: qty,
+                                  packContainsUnit: qty ? "Kg" : "",
+                                });
+                              }}
+                              onBlur={event => {
+                                const qty = parseItemQuantity(event.target.value, "Kg");
+                                if (!(Number(qty) > 0)) return;
+                                setBagKg(qty);
+                              }}
+                            />
+                            <span className="small">kg</span>
+                          </label>
+                        </div>
                       ) : null}
                     </div>
                     <div className="counter-qty-wrap">
