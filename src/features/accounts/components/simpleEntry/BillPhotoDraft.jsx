@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { money } from "../../accountsFormat.js";
+import { upsertItem } from "../../data/accountingRepository.js";
 import { VOUCHER_ATTACHMENT_MAX_BYTES } from "../../data/voucherAttachments.js";
-import { reviewBillScan } from "../../model/billScan.js";
+import { linkBillLinesToItems, planMissingBillItems, reviewBillScan } from "../../model/billScan.js";
 
 function readFile(file) {
   return new Promise((resolve, reject) => {
@@ -56,13 +57,25 @@ function blobToBase64(blob) {
 
 const PAYMENT_LABELS = { paid: "Paid", unpaid: "Unpaid", unknown: "Not read" };
 
-export function BillPhotoDraft({ token, parties, items, form, setForm, today, vouchers = [], accounts = [], companyState = "" }) {
+export function BillPhotoDraft({
+  token,
+  parties,
+  items,
+  form,
+  setForm,
+  today,
+  vouchers = [],
+  accounts = [],
+  companyState = "",
+  onItemsCreated = null,
+}) {
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState("");
   const [fileLabel, setFileLabel] = useState("");
   const [photo, setPhoto] = useState(null);
   const [review, setReview] = useState(null);
   const [keepPhoto, setKeepPhoto] = useState(false);
+  const [createMissingItems, setCreateMissingItems] = useState(true);
   const [applied, setApplied] = useState(false);
   const [acceptDuplicate, setAcceptDuplicate] = useState(false);
   const [error, setError] = useState("");
@@ -114,7 +127,16 @@ export function BillPhotoDraft({ token, parties, items, form, setForm, today, vo
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error || "The bill could not be read.");
-      setReview(reviewBillScan(body.bill, { parties, items, form, today, vouchers, accounts, companyState }));
+      setReview(reviewBillScan(body.bill, {
+        parties,
+        items,
+        form,
+        today,
+        vouchers,
+        accounts,
+        companyState,
+        createMissingItems: true,
+      }));
     } catch (err) {
       setPhoto(null);
       setPreview("");
@@ -125,11 +147,50 @@ export function BillPhotoDraft({ token, parties, items, form, setForm, today, vo
     }
   };
 
-  const useDraft = () => {
+  const useDraft = async () => {
     if (!review) return;
-    const billPhoto = keepPhoto && photoFits && photo ? photo : null;
-    setForm(current => ({ ...current, ...review.draft.form, billPhoto }));
-    setApplied(true);
+    setBusy(true);
+    setError("");
+    try {
+      let formPatch = { ...review.draft.form };
+      let catalogue = items || [];
+      if (createMissingItems) {
+        const planned = planMissingBillItems(formPatch.itemLines, catalogue);
+        const created = [];
+        for (const row of planned) {
+          const savedId = await upsertItem(token, row);
+          const id = typeof savedId === "string" ? savedId : savedId?.id;
+          if (!id) throw new Error(`Could not create inventory item ${row.name}.`);
+          created.push({
+            id,
+            name: row.name,
+            sku: row.sku,
+            itemType: "product",
+            unit: row.unit,
+            gstRate: row.gstRate,
+            hsnSac: row.hsnSac,
+            purchasePrice: Number(row.purchasePrice || 0),
+            sellingPrice: 0,
+            isActive: true,
+          });
+        }
+        if (created.length) {
+          catalogue = [...catalogue, ...created];
+          formPatch = {
+            ...formPatch,
+            itemLines: linkBillLinesToItems(formPatch.itemLines || [], catalogue),
+          };
+          if (typeof onItemsCreated === "function") await onItemsCreated(created);
+        }
+      }
+      const billPhoto = keepPhoto && photoFits && photo ? photo : null;
+      setForm(current => ({ ...current, ...formPatch, billPhoto }));
+      setApplied(true);
+    } catch (err) {
+      setError(err.message || "Could not add items from this bill.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const discard = () => {
@@ -143,15 +204,17 @@ export function BillPhotoDraft({ token, parties, items, form, setForm, today, vo
     clearPhotoOnForm();
   };
 
+  const unmatchedCount = (review?.draft?.form?.itemLines || []).filter(line => !line.itemId).length;
+
   return (
     <section className="acc-form-section acc-bill-scan">
       <h3 className="acc-form-section-title">Supplier bill</h3>
-      <p className="small">Photograph the bill, or choose a PDF. FinTrack shows what it read. The purchase form changes only after you use the draft, and nothing is posted until you save.</p>
+      <p className="small">Photograph the bill, or choose a PDF. FinTrack shows what it read. The purchase form changes only after you use the draft, and nothing is posted until you save. New items are added to inventory when you use the draft; stock increases when you save the purchase.</p>
       <div className="acc-bill-scan-row">
         {preview ? <img src={preview} alt="Scanned bill" /> : null}
         {fileLabel ? <p className="small">{fileLabel}</p> : null}
         <label className="btn">
-          {busy ? "Reading the bill…" : "Scan bill"}
+          {busy ? "Working…" : "Scan bill"}
           <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.jpg,.jpeg,.png,.webp,.pdf" disabled={busy} onChange={onFile} />
         </label>
       </div>
@@ -187,6 +250,17 @@ export function BillPhotoDraft({ token, parties, items, form, setForm, today, vo
           {review.draft.warnings.length ? (
             <ul className="acc-bill-scan-notes">{review.draft.warnings.map(note => <li key={note}>{note}</li>)}</ul>
           ) : null}
+          {unmatchedCount > 0 ? (
+            <label className="small acc-bill-keep">
+              <input
+                type="checkbox"
+                checked={createMissingItems}
+                disabled={applied || busy}
+                onChange={event => setCreateMissingItems(event.target.checked)}
+              />
+              Add {unmatchedCount} new item{unmatchedCount === 1 ? "" : "s"} to inventory when I use this draft
+            </label>
+          ) : null}
           <label className="small acc-bill-keep">
             <input
               type="checkbox"
@@ -204,10 +278,10 @@ export function BillPhotoDraft({ token, parties, items, form, setForm, today, vo
                 Use this draft anyway. I have checked it is not the same bill as {(review.duplicates || []).map(voucher => voucher.voucherNumber).filter(Boolean).join(", ")}.
               </label>
             ) : null}
-            <button type="button" className="btn primary" disabled={applied || ((review.duplicates || []).length > 0 && !acceptDuplicate)} onClick={useDraft}>{applied ? "Draft in the form" : "Use this draft"}</button>
-            <button type="button" className="btn" onClick={discard}>Discard</button>
+            <button type="button" className="btn primary" disabled={applied || busy || ((review.duplicates || []).length > 0 && !acceptDuplicate)} onClick={useDraft}>{applied ? "Draft in the form" : "Use this draft"}</button>
+            <button type="button" className="btn" disabled={busy} onClick={discard}>Discard</button>
           </div>
-          {applied ? <p className="small">Draft is in the form. Check it, then save. Nothing is posted until you save.</p> : null}
+          {applied ? <p className="small">Draft is in the form. Check it, then save. Stock updates when you save the purchase.</p> : null}
         </div>
       ) : null}
     </section>

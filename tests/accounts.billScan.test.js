@@ -1,6 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { markDuplicateInvoices, normalizeBillScan, purchaseFormFromBill, reviewBillScan } from "../src/features/accounts/model/billScan.js";
+import {
+  linkBillLinesToItems,
+  markDuplicateInvoices,
+  normalizeBillScan,
+  planMissingBillItems,
+  purchaseFormFromBill,
+  reviewBillScan,
+} from "../src/features/accounts/model/billScan.js";
 import { aggregateItemizedGst } from "../src/features/accounts/model/inventoryModel.js";
 import { DEFAULT_CHART_OF_ACCOUNTS, buildVoucher, paymentLines } from "../src/features/accounts/model/accountingModel.js";
 import handler, { mimeOf, modelCandidates, readFailure } from "../api/accounts/bill-scan.js";
@@ -43,7 +50,7 @@ test("bill scan route requires a signed-in user", async () => {
   assert.equal(status, 401);
 });
 
-test("a supplier bill becomes a purchase draft and does not invent a party or item", () => {
+test("a supplier bill becomes a purchase draft and does not invent a party or item until draft apply", () => {
   const draft = purchaseFormFromBill({
     supplierName: "Unknown Paints",
     supplierGstin: "not-a-gstin",
@@ -68,7 +75,29 @@ test("a supplier bill becomes a purchase draft and does not invent a party or it
   assert.match(draft.form.narration, /Unknown Paints/);
   assert.equal(draft.form.voucherId, undefined);
   assert.ok(draft.warnings.some(line => /Unknown Paints/.test(line)));
-  assert.ok(draft.warnings.some(line => /Initial Coat/.test(line)));
+  assert.ok(draft.warnings.some(line => /New inventory items will be created for Initial Coat/.test(line)));
+
+  const planned = planMissingBillItems(draft.form.itemLines, items);
+  assert.equal(planned.length, 1);
+  assert.equal(planned[0].name, "Initial Coat");
+  assert.equal(planned[0].sku, "INITIAL-COAT");
+  assert.equal(planned[0].purchasePrice, "400");
+  assert.equal(planned[0].gstRate, "18");
+  assert.equal(planned[0].openingStock, "0");
+
+  const linked = linkBillLinesToItems(draft.form.itemLines, [
+    ...items,
+    { id: "i-new", name: "Initial Coat", sku: "INITIAL-COAT", itemType: "product", unit: "Nos", gstRate: "18", isActive: true },
+  ]);
+  assert.equal(linked[0].itemId, "i-new");
+  assert.equal(linked[0].itemSku, "INITIAL-COAT");
+
+  const manual = purchaseFormFromBill({
+    supplierName: "Unknown Paints",
+    billDate: "08/09/2026",
+    lines: [{ name: "Initial Coat", quantity: 2, rate: 400, gstRate: 18 }],
+  }, { parties, items, today: "2026-10-05", createMissingItems: false });
+  assert.ok(manual.warnings.some(line => /Select a catalogue item for Initial Coat/.test(line)));
 });
 
 test("gstin and item name fill the existing supplier and catalogue item", () => {

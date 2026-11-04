@@ -27,7 +27,7 @@ import { BillPhotoDraft } from "./simpleEntry/BillPhotoDraft.jsx";
 import { billNumberFromNarration, findPostedPurchaseDuplicates } from "../model/billScan.js";
 import { resolveItemRate } from "../model/priceLists.js";
 
-export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, saving, maxDate, gstCompany, onGstSetup, onCreateParty, items = [], stockByItem = {}, openInvoices = [], creditInfo = null, token, vouchers = [], voucherItemLines = [], priceLists = [] }) {
+export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubmit, saving, maxDate, gstCompany, onGstSetup, onCreateParty, items = [], stockByItem = {}, openInvoices = [], creditInfo = null, token, vouchers = [], voucherItemLines = [], priceLists = [], onBillItemsCreated = null }) {
   const [allowedDuplicateKey, setAllowedDuplicateKey] = useState("");
   const customers = parties.filter(party => party.partyType === "customer" && (party.isActive !== false || party.id === form.partyId));
   const suppliers = parties.filter(party => party.partyType === "supplier" && (party.isActive !== false || party.id === form.partyId));
@@ -175,7 +175,7 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
   return <>
     <p className="copy">{noteCopy}</p>
     {kind === "purchase" && (
-      <BillPhotoDraft token={token} parties={parties} items={items} form={form} setForm={setForm} today={maxDate} vouchers={vouchers} accounts={accounts} companyState={gstCompany?.stateCode || ""} />
+      <BillPhotoDraft token={token} parties={parties} items={items} form={form} setForm={setForm} today={maxDate} vouchers={vouchers} accounts={accounts} companyState={gstCompany?.stateCode || ""} onItemsCreated={onBillItemsCreated} />
     )}
     <section className="acc-form-section">
       <h3 className="acc-form-section-title">Details</h3>

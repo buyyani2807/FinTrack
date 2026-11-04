@@ -37,6 +37,7 @@ export function AccBulkImportWorkspace({
   const [stage, setStage] = useState("upload");
   const [plan, setPlan] = useState(null);
   const [createMissingParties, setCreateMissingParties] = useState(true);
+  const [createMissingItems, setCreateMissingItems] = useState(true);
   const [progress, setProgress] = useState(null);
   const [result, setResult] = useState(null);
   const [billSources, setBillSources] = useState([]);
@@ -203,6 +204,7 @@ export function AccBulkImportWorkspace({
     setStage("importing");
     setProgress({ step: 0, total: selectedBills.length, label: "Starting", done: {}, failed: 0 });
     const outcome = await onRunBills(billSources, {
+      createMissingItems,
       onProgress: setProgress,
       shouldStop: () => stopRef.current,
     });
@@ -387,6 +389,14 @@ export function AccBulkImportWorkspace({
                   <p className="acc-setup-ask">
                     {billSources.filter(source => source.status === "ready").length} ready · {billSources.filter(source => source.status === "error").length} failed · {selectedBills.length} selected
                   </p>
+                  <label className="small acc-bulk-check">
+                    <input
+                      type="checkbox"
+                      checked={createMissingItems}
+                      onChange={event => setCreateMissingItems(event.target.checked)}
+                    />
+                    Add new bill items to inventory when posting (stock updates with each purchase)
+                  </label>
                   <AccTable spaced={false} columns={["", "File", "Supplier", "Invoice", "Date", { label: "Total", num: true }, "Status"]}>
                     {billSources.map(source => {
                       const bill = source.review?.bill;
@@ -438,6 +448,7 @@ export function AccBulkImportWorkspace({
                 <div className="acc-mig-body">
                   <p className="acc-setup-ask">
                     Posted {result.done?.vouchers || 0} purchase{(result.done?.vouchers || 0) === 1 ? "" : "s"}
+                    {result.done?.items ? ` · created ${result.done.items} item${result.done.items === 1 ? "" : "s"}` : ""}
                     {result.done?.attachments ? ` · attached ${result.done.attachments} file${result.done.attachments === 1 ? "" : "s"}` : ""}
                     {result.stopped ? " · stopped early" : ""}.
                   </p>

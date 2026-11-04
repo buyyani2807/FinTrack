@@ -1,6 +1,7 @@
 import { addDaysIso, isPosted, roundMoney } from "./accountingModel.js";
 import { gstStateFromGstin, isIntraGst } from "./accountingGst.js";
 import { suggestExpense } from "./bookSuggestions.js";
+import { skuFromName } from "../io/itemCsvImport.js";
 import { aggregateItemizedGst, emptyItemLine, ITEM_UNITS, wholeQuantity } from "./inventoryModel.js";
 
 const GST_RATES = [0, 0.25, 3, 5, 12, 18, 28, 40];
@@ -276,8 +277,75 @@ function itemLineFromBill(line, items) {
   };
 }
 
+function uniqueSku(name, reserved) {
+  const base = skuFromName(name).slice(0, 20);
+  let sku = base;
+  let n = 2;
+  while (reserved.has(sku)) {
+    const suffix = `-${n}`;
+    sku = `${base.slice(0, Math.max(1, 24 - suffix.length))}${suffix}`;
+    n += 1;
+  }
+  reserved.add(sku);
+  return sku;
+}
+
+/**
+ * Catalogue rows to create for unmatched purchase-bill lines.
+ * Opening stock stays 0 — quantity comes from the purchase voucher after save.
+ */
+export function planMissingBillItems(itemLines = [], existingItems = []) {
+  const reserved = new Set(
+    (existingItems || []).map(item => String(item.sku || "").trim().toUpperCase()).filter(Boolean),
+  );
+  const planned = [];
+  const seenNames = new Set();
+  for (const line of itemLines || []) {
+    if (line?.itemId) continue;
+    const name = clip(line?.itemName || line?.name, 160);
+    if (!name) continue;
+    const key = normName(name);
+    if (!key || seenNames.has(key)) continue;
+    seenNames.add(key);
+    planned.push({
+      itemType: "product",
+      name,
+      sku: uniqueSku(name, reserved),
+      unit: unitFromBill(line.unit) || line.unit || "Nos",
+      sellingPrice: "0",
+      purchasePrice: line.rate != null && line.rate !== "" ? String(line.rate) : "0",
+      gstRate: line.gstRate != null && line.gstRate !== "" ? String(line.gstRate) : "0",
+      hsnSac: line.hsnSac || line.hsn || "",
+      openingStock: "0",
+      openingStockDate: "",
+      reorderLevel: "0",
+      isActive: true,
+    });
+  }
+  return planned;
+}
+
+/** Re-match draft lines to catalogue items after new products were created. */
+export function linkBillLinesToItems(itemLines = [], items = []) {
+  return (itemLines || []).map(line => {
+    if (line?.itemId) return line;
+    const item = matchItem(line?.itemName || line?.name, items);
+    if (!item) return line;
+    return {
+      ...line,
+      itemId: item.id,
+      itemName: item.name || line.itemName,
+      itemSku: item.sku || "",
+      itemType: item.itemType || "product",
+      unit: item.unit || line.unit || "Nos",
+      gstRate: item.gstRate != null && item.gstRate !== "" ? String(item.gstRate) : line.gstRate,
+      hsnSac: item.hsnSac || line.hsnSac || "",
+    };
+  });
+}
+
 /** Map a read bill onto the purchase form. The caller still has to save. */
-export function purchaseFormFromBill(scan, { parties = [], items = [], form = {}, today = "" } = {}) {
+export function purchaseFormFromBill(scan, { parties = [], items = [], form = {}, today = "", createMissingItems = true } = {}) {
   const bill = normalizeBillScan(scan);
   const warnings = [];
   const party = matchSupplier(bill, parties);
@@ -293,7 +361,13 @@ export function purchaseFormFromBill(scan, { parties = [], items = [], form = {}
   const after = itemLines.length ? aggregateItemizedGst(itemLines, { intra: billIsIntra(bill) }) : null;
   const unmatched = itemLines.filter(line => !line.itemId).map(line => line.itemName);
   if (!itemLines.length) warnings.push("No item lines could be read. Add them before saving.");
-  else if (unmatched.length) warnings.push(`Select a catalogue item for ${unmatched.join(", ")}.`);
+  else if (unmatched.length) {
+    warnings.push(
+      createMissingItems
+        ? `New inventory items will be created for ${unmatched.join(", ")} when you use this draft.`
+        : `Select a catalogue item for ${unmatched.join(", ")}.`,
+    );
+  }
   if (before && after && (before.total !== after.total || before.taxable !== after.taxable)) {
     const printed = bill.total != null ? roundMoney(bill.total) : after.total;
     warnings.push(`Printed bill total is ${printed.toFixed(2)}. Quantity times rate comes to ${before.total.toFixed(2)}, so the draft uses the printed total.`);
@@ -436,9 +510,9 @@ function gstSuggestion(bill, companyState) {
 }
 
 /** Review a scanned document. Nothing is written until the caller applies the draft and saves. */
-export function reviewBillScan(scan, { parties = [], items = [], form = {}, today = "", vouchers = [], accounts = [], companyState = "" } = {}) {
+export function reviewBillScan(scan, { parties = [], items = [], form = {}, today = "", vouchers = [], accounts = [], companyState = "", createMissingItems = true } = {}) {
   const bill = normalizeBillScan(scan);
-  const draft = purchaseFormFromBill(bill, { parties, items, form, today });
+  const draft = purchaseFormFromBill(bill, { parties, items, form, today, createMissingItems });
   const party = (parties || []).find(item => item.id === draft.form.partyId) || null;
   const duplicates = findPostedPurchaseDuplicates({
     partyId: party?.id || "",

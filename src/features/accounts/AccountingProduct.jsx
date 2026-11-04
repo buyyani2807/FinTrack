@@ -1357,6 +1357,7 @@ const openVoucher = () => {
     await run(async () => {
       outcome = await runBulkBillPost(sources, {
         postVoucher: payload => postVoucher(token, payload),
+        upsertItem: form => upsertItem(token, form),
         rememberPartyMapping: ({ partyName, partyId, partyType }) =>
           upsertBulkPartyMap(token, { partyName, partyId, partyType }),
         addAttachment: async ({ voucherId, fileName, contentType, contentBase64, byteSize }) => {
@@ -1376,6 +1377,8 @@ const openVoucher = () => {
         accounts: visibleAccounts,
         company: activeCompany,
         today: todayIso(),
+        items,
+        createMissingItems: options.createMissingItems !== false,
         onProgress: options.onProgress,
         shouldStop: options.shouldStop,
       });
@@ -3236,7 +3239,7 @@ const openVoucher = () => {
         }}
       />}
       {showSimple && <Modal panelClassName="acc-entry-dialog" title={SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry"} close={closeSimple}>
-        <SimpleEntryForm kind={simpleKind} accounts={visibleAccounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} maxDate={todayIso()} gstCompany={activeCompany} onGstSetup={() => { setShowSimple(false); openSection("setup"); }} onCreateParty={openPartyForEntry} items={items} stockByItem={stockByItem} openInvoices={settlementOpenInvoices} creditInfo={saleCreditInfo} token={token} vouchers={vouchers} voucherItemLines={voucherItemLines} priceLists={priceLists} />
+        <SimpleEntryForm kind={simpleKind} accounts={visibleAccounts} parties={parties} form={simpleForm} setForm={setSimpleForm} onSubmit={submitSimple} saving={saving} maxDate={todayIso()} gstCompany={activeCompany} onGstSetup={() => { setShowSimple(false); openSection("setup"); }} onCreateParty={openPartyForEntry} items={items} stockByItem={stockByItem} openInvoices={settlementOpenInvoices} creditInfo={saleCreditInfo} token={token} vouchers={vouchers} voucherItemLines={voucherItemLines} priceLists={priceLists} onBillItemsCreated={async created => { if (created?.length) { setItems(current => [...created, ...current.filter(item => !created.some(row => row.id === item.id))]); await refresh(); } }} />
       </Modal>}
       {showParty && <PartyModal
         partyForm={partyForm}

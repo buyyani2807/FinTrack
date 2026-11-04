@@ -1,5 +1,5 @@
 import { readZipEntries } from "./importReaders.js";
-import { normalizeBillScan, reviewBillScan } from "./billScan.js";
+import { linkBillLinesToItems, normalizeBillScan, planMissingBillItems, reviewBillScan } from "./billScan.js";
 import { stableUuid } from "./migrationAssistant.js";
 import { itemizedEntryDraft } from "./inventoryModel.js";
 import { simpleEntryDraft, roundMoney } from "./accountingModel.js";
@@ -248,12 +248,15 @@ export async function runBulkBillPost(sources, api, {
   accounts = [],
   company = null,
   today = "",
+  items = [],
+  createMissingItems = true,
   onProgress = () => {},
   shouldStop = () => false,
 } = {}) {
   const selected = (sources || []).filter(source => source.selected && source.status === "ready" && source.review);
   const failed = [];
-  const done = { vouchers: 0, attachments: 0 };
+  const done = { vouchers: 0, attachments: 0, items: 0 };
+  let catalogue = [...(items || [])];
   let step = 0;
   const total = selected.length;
   for (const source of selected) {
@@ -261,7 +264,41 @@ export async function runBulkBillPost(sources, api, {
     step += 1;
     onProgress({ step, total, label: source.fileName, done: { ...done }, failed: failed.length });
     try {
-      const built = buildPurchaseDraftFromBillReview(source.review, {
+      let review = source.review;
+      if (createMissingItems && typeof api.upsertItem === "function") {
+        const planned = planMissingBillItems(review?.draft?.form?.itemLines, catalogue);
+        const created = [];
+        for (const row of planned) {
+          const savedId = await api.upsertItem(row);
+          const id = typeof savedId === "string" ? savedId : savedId?.id;
+          if (!id) throw new Error(`Could not create inventory item ${row.name}.`);
+          created.push({
+            id,
+            name: row.name,
+            sku: row.sku,
+            itemType: "product",
+            unit: row.unit,
+            gstRate: row.gstRate,
+            hsnSac: row.hsnSac,
+            isActive: true,
+          });
+        }
+        if (created.length) {
+          catalogue = [...catalogue, ...created];
+          done.items += created.length;
+          review = {
+            ...review,
+            draft: {
+              ...review.draft,
+              form: {
+                ...review.draft.form,
+                itemLines: linkBillLinesToItems(review.draft.form.itemLines || [], catalogue),
+              },
+            },
+          };
+        }
+      }
+      const built = buildPurchaseDraftFromBillReview(review, {
         accounts,
         company,
         today,
