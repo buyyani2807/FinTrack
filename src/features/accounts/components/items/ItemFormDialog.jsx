@@ -5,13 +5,38 @@ import { QtyInput } from "../QtyInput.jsx";
 import { DialogModal } from "../../../../components/ui.jsx";
 import { suggestHsn } from "../../../intelligence/ai/hsnSuggest.js";
 
-export function ItemFormDialog({ form, setShowForm, error, setForm, categories, saving, saveItem, industry = "" }) {
+function normalizeSku(value) {
+  return String(value || "").trim().toUpperCase();
+}
+
+/** Another item in this company already uses this SKU (case-insensitive). */
+export function findSkuConflict(items = [], sku, excludeId = null) {
+  const needle = normalizeSku(sku);
+  if (!needle) return null;
+  return (items || []).find(item => (
+    normalizeSku(item.sku) === needle
+    && (!excludeId || item.id !== excludeId)
+  )) || null;
+}
+
+export function ItemFormDialog({
+  form,
+  setShowForm,
+  error,
+  setForm,
+  categories,
+  saving,
+  saveItem,
+  industry = "",
+  items = [],
+}) {
   const suggestion = suggestHsn(form.name);
   const suggestionDiffers = suggestion && (String(form.hsnSac || "") !== suggestion.hsn || Number(form.gstRate) !== suggestion.rate);
   const isService = form.itemType === "service";
   const baseUnits = unitsForItemType(form.itemType, industry);
   const unitOptions = !form.unit || baseUnits.includes(form.unit) ? baseUnits : [form.unit, ...baseUnits];
   const categoryOptions = itemCategoryChoices(categories);
+  const skuConflict = findSkuConflict(items, form.sku, form.id || null);
   return (
     <DialogModal className="acc-modal" title={form.id ? "Edit item" : "Create item"} close={() => setShowForm(false)}>
       {error && <p className="red small">{error}</p>}
@@ -28,7 +53,18 @@ export function ItemFormDialog({ form, setShowForm, error, setForm, categories, 
         }}>{ITEM_TYPES.map(type => <option key={type.id} value={type.id}>{type.label}</option>)}</Select></Field>
         <Field label="Name"><input value={form.name} onChange={event => setForm(current => ({ ...current, name: event.target.value }))} /></Field>
         {suggestionDiffers ? <p className="small span">Suggested for {suggestion.label}: HSN {suggestion.hsn}, GST {suggestion.rate}%. {suggestion.note} <button type="button" className="btn" onClick={() => setForm(current => ({ ...current, hsnSac: suggestion.hsn, gstRate: String(suggestion.rate) }))}>Use this</button></p> : null}
-        <Field label="SKU / Code"><input value={form.sku} onChange={event => setForm(current => ({ ...current, sku: event.target.value }))} /></Field>
+        <Field label="SKU / Code">
+          <input
+            value={form.sku}
+            aria-invalid={Boolean(skuConflict)}
+            onChange={event => setForm(current => ({ ...current, sku: event.target.value }))}
+          />
+          {skuConflict ? (
+            <span className="small red" role="status">
+              SKU {normalizeSku(form.sku)} is already used by {skuConflict.name}. Choose another code.
+            </span>
+          ) : null}
+        </Field>
         <Field label="Barcode"><input value={form.barcode || ""} onChange={event => setForm(current => ({ ...current, barcode: event.target.value }))} placeholder="Optional — scan or type" /></Field>
         <Field label="Brand"><input value={form.brand || ""} onChange={event => setForm(current => ({ ...current, brand: event.target.value }))} placeholder="Optional" /></Field>
         <Field label="Category">
@@ -53,8 +89,9 @@ export function ItemFormDialog({ form, setShowForm, error, setForm, categories, 
         <Field className="span" label="Description"><input value={form.description} onChange={event => setForm(current => ({ ...current, description: event.target.value }))} /></Field>
       </div>
       <div className="tabs spacer">
-        
-        <button type="button" className="btn primary" disabled={saving} onClick={saveItem}>{saving ? "Saving…" : "Save item"}</button>
+        <button type="button" className="btn primary" disabled={saving || Boolean(skuConflict)} onClick={saveItem}>
+          {saving ? "Saving…" : "Save item"}
+        </button>
       </div>
     </DialogModal>
   );

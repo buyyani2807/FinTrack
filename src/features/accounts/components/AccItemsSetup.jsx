@@ -3,6 +3,7 @@ import { TriangleAlert } from "lucide-react";
 import { FilterSelect, SearchInput } from "../../../components/ui.jsx";
 import { todayIso } from "../../../lib/dates.js";
 import { currentStockForItem, defaultUnitForIndustry, emptyItemForm, itemToForm, stockMovementReport, stockStatus, validateItemForm } from "../model/inventoryModel.js";
+import { findSkuConflict } from "./items/ItemFormDialog.jsx";
 import { costItemMovements } from "../model/inventoryValuation.js";
 import { AccPager } from "./AccUi.jsx";
 import { usePagedList } from "../model/usePagedList.js";
@@ -89,6 +90,11 @@ export function AccItemsSetup({
     const message = validateItemForm(form);
     if (message) {
       setError(message);
+      return;
+    }
+    const conflict = findSkuConflict(items, form.sku, form.id || null);
+    if (conflict) {
+      setError(`SKU ${String(form.sku || "").trim().toUpperCase()} is already used by ${conflict.name}.`);
       return;
     }
     setError("");
@@ -194,6 +200,7 @@ export function AccItemsSetup({
           saving={saving}
           saveItem={saveItem}
           industry={industry}
+          items={items}
         />
       )}
 
