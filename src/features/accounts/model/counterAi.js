@@ -4,14 +4,21 @@
  */
 import { isCancelled, roundMoney, voucherTotals } from "./accountingModel.js";
 import { isCounterTillVoucher } from "./counterDayReport.js";
+import { quantityInBaseUnit } from "./inventoryModel.js";
 
 const n = value => {
   const number = Number(value);
   return Number.isFinite(number) ? number : 0;
 };
 
+/** Bill qty in the item's stock unit (500 g → 0.5 Kg when sellUnit is Gram). */
+const lineStockQty = line => {
+  const baseUnit = line.unit || "Nos";
+  return Math.max(0, quantityInBaseUnit(line.quantity, baseUnit, line.sellUnit || baseUnit, line));
+};
+
 const lineGross = line => {
-  const qty = Math.max(0, Math.trunc(n(line.quantity)));
+  const qty = lineStockQty(line);
   return roundMoney(qty * n(line.rate));
 };
 
@@ -71,9 +78,9 @@ export function counterStockAlerts({
     const item = byId[line.itemId];
     if (!item || item.itemType === "service") continue;
     seen.add(line.itemId);
-    const qtyOnBill = (lines || [])
+    const qtyOnBill = roundMoney((lines || [])
       .filter(row => row.itemId === line.itemId)
-      .reduce((sum, row) => sum + Math.max(0, Math.trunc(n(row.quantity))), 0);
+      .reduce((sum, row) => sum + lineStockQty(row), 0));
     const stock = n(stockByItem[line.itemId]);
     const remaining = roundMoney(stock - qtyOnBill);
     const reorder = n(item.reorderLevel);

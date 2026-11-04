@@ -31,6 +31,25 @@ test("stock alerts warn when bill exceeds on-hand and when cover is short", () =
   assert.ok(alerts.some(row => row.id === "stock-cover-i2"));
 });
 
+test("stock alerts convert g↔kg sell units before comparing on-hand", () => {
+  const dal = { id: "dal", name: "Toor Dal", itemType: "product", unit: "Kg", sellingPrice: 125, reorderLevel: 0 };
+  const ok = counterStockAlerts({
+    items: [dal],
+    stockByItem: { dal: 100 },
+    lines: [{ itemId: "dal", itemName: "Toor Dal", unit: "Kg", sellUnit: "Gram", quantity: "500", rate: "125" }],
+    today: "2026-11-03",
+  });
+  assert.equal(ok.some(row => row.id === "stock-short-dal"), false);
+
+  const short = counterStockAlerts({
+    items: [dal],
+    stockByItem: { dal: 0.2 },
+    lines: [{ itemId: "dal", itemName: "Toor Dal", unit: "Kg", sellUnit: "Gram", quantity: "500", rate: "125" }],
+    today: "2026-11-03",
+  });
+  assert.ok(short.some(row => row.id === "stock-short-dal" && /0\.5/.test(row.detail)));
+});
+
 test("till anomalies flag low rate and same-amount repeat within minutes", () => {
   const now = Date.parse("2026-11-03T10:05:00.000Z");
   const alerts = counterTillAnomalies({
