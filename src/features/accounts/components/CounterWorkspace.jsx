@@ -59,6 +59,7 @@ import {
 import { syncOfflineCounterBills } from "../model/counterOfflineSync.js";
 import { printSalesInvoicePdf } from "../io/salesInvoicePdf.js";
 import { formatReceiptDateTime } from "../../receipts/model/receiptModel.js";
+import { AccShortcutsPanel } from "./AccShortcutsPanel.jsx";
 
 const PAY_MODES = COUNTER_PAY_MODES;
 
@@ -1131,7 +1132,10 @@ export function CounterWorkspace({
         <section className="counter-catalog card counter-panel">
           <div className="counter-panel-head">
             <h2 className="counter-panel-title">Find items</h2>
-            <span className="small counter-kbd">F2</span>
+            <div className="counter-panel-tools">
+              <span className="small counter-kbd">F2</span>
+              <AccShortcutsPanel variant="counter" />
+            </div>
           </div>
           <label className="counter-search">
             <Search size={20} aria-hidden="true" />
@@ -1248,12 +1252,10 @@ export function CounterWorkspace({
                       <span className="small">
                         {[
                           line.itemSku,
-                          line._batchNo ? `Batch ${line._batchNo}` : "",
-                          line._rateList ? line._rateList : line._rateSource === "party_list" ? "Party price" : "",
-                          line._stock != null ? `Stock ${line._stock} ${line.unit || ""}` : "",
-                          packHint,
+                          packHint || (line._stock != null ? `Stock ${line._stock} ${line.unit || ""}` : ""),
                           sellChoices && sellUnit !== line.unit && baseQty > 0 ? `= ${baseQty} ${line.unit}` : "",
-                          `₹${line.rate || 0} / ${line.unit || "unit"}`,
+                          `₹${line.rate || 0}/${line.unit || "u"}`,
+                          line._batchNo ? `B ${line._batchNo}` : "",
                         ].filter(Boolean).join(" · ")}
                       </span>
                       {needsPackSize ? (

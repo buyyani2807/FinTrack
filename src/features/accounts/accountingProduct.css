@@ -1615,6 +1615,150 @@
   gap: 16px;
 }
 
+.accounts-dashboard .acc-ov-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.accounts-dashboard .acc-ov-toolbar .acc-ov-context {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.accounts-dashboard .acc-owner-dash {
+  display: grid;
+  gap: 12px;
+}
+
+.accounts-dashboard .acc-owner-hero,
+.accounts-dashboard .acc-owner-today {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.accounts-dashboard .acc-owner-today {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.accounts-dashboard .acc-owner-kpi {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--ft-border);
+  border-radius: 12px;
+  background: var(--ft-surface);
+  color: var(--ft-text);
+  text-align: left;
+  font: inherit;
+}
+
+.accounts-dashboard .acc-owner-kpi.clickable {
+  cursor: pointer;
+}
+
+.accounts-dashboard .acc-owner-kpi.clickable:hover,
+.accounts-dashboard .acc-owner-kpi.clickable:focus-visible {
+  background: var(--ft-surface-subtle);
+  border-color: color-mix(in srgb, var(--ft-primary) 35%, var(--ft-border));
+}
+
+.accounts-dashboard .acc-owner-kpi-label {
+  color: var(--ft-text-2);
+  font-size: var(--ft-type-micro);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.accounts-dashboard .acc-owner-kpi-value {
+  font-size: var(--ft-type-section);
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  line-height: var(--ft-leading-tight);
+}
+
+.accounts-dashboard .acc-owner-kpi-value.green { color: var(--ft-success); }
+.accounts-dashboard .acc-owner-kpi-value.red { color: var(--ft-danger); }
+.accounts-dashboard .acc-owner-kpi-value.blue { color: var(--ft-info); }
+.accounts-dashboard .acc-owner-kpi-value.gold { color: var(--ft-warning); }
+
+.accounts-dashboard .acc-owner-kpi-hint {
+  color: var(--ft-text-2);
+  font-size: var(--ft-type-caption);
+}
+
+.accounts-dashboard .acc-owner-actions {
+  margin-top: 0;
+}
+
+.accounts-dashboard .acc-money-hint {
+  display: block;
+  margin-top: 2px;
+  color: var(--ft-text-2);
+  font-size: var(--ft-type-caption);
+  font-weight: 500;
+}
+
+.accounts-dashboard .acc-shortcuts {
+  position: relative;
+}
+
+.accounts-dashboard .acc-shortcuts-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: var(--ft-type-caption);
+}
+
+.accounts-dashboard .acc-shortcuts-panel {
+  position: absolute;
+  z-index: 5;
+  right: 0;
+  top: calc(100% + 6px);
+  width: min(18rem, 80vw);
+  padding: 10px 12px;
+}
+
+.accounts-dashboard .acc-shortcuts-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.accounts-dashboard .acc-shortcuts-list li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: var(--ft-type-secondary);
+}
+
+.accounts-dashboard .acc-shortcuts-list kbd {
+  flex: none;
+  padding: 2px 6px;
+  border: 1px solid var(--ft-border);
+  border-radius: 6px;
+  background: var(--ft-surface-subtle);
+  font-size: var(--ft-type-caption);
+  font-weight: 700;
+}
+
+.accounts-dashboard .counter-panel-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .accounts-dashboard .acc-ov-metrics {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
@@ -1623,6 +1767,22 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
+}
+
+@media (max-width: 1100px) {
+  .accounts-dashboard .acc-owner-hero {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .accounts-dashboard .acc-owner-today {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .accounts-dashboard .acc-owner-hero,
+  .accounts-dashboard .acc-owner-today {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 .accounts-dashboard .acc-money-tile {
@@ -7437,10 +7597,10 @@
 .accounts-dashboard .counter-line {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(7.5rem, 9.5rem) minmax(4.75rem, 5.5rem) minmax(4.25rem, 5.25rem) auto;
-  gap: 8px;
+  gap: 6px 8px;
   align-items: center;
   align-self: start;
-  padding: 10px 4px;
+  padding: 6px 4px;
   border-bottom: 1px solid var(--ft-divider);
 }
 

@@ -11,16 +11,16 @@ import {
 import { markAccountsOnboardingDone, saveIndustry } from "../components/AccOnboardingWizard.jsx";
 import { AccSetupAssistant } from "../components/AccSetupAssistant.jsx";
 import { applySetupPlan } from "../model/setupAssistant.js";
-import { Field, AccMetric } from "../components/AccUi.jsx";
+import { Field } from "../components/AccUi.jsx";
 import { AttentionCenterCard } from "../../intelligence/AttentionCenterCard.jsx";
 import { AnomalyReviewCard } from "../../intelligence/AnomalyReviewCard.jsx";
 import { trackProductEvent } from "../../commercial/productAnalytics.js";
 import { todayIso } from "../../../lib/dates.js";
 import { AccIntelligenceBrief } from "../components/AccIntelligenceBrief.jsx";
 import { AccAskBooks } from "../components/AccAskBooks.jsx";
-import { money, profitResult } from "../accountsFormat.js";
 import { AccOverviewContextBar } from "../components/AccPeriodBars.jsx";
-import { AccountsBusinessPulse, AccMoneyTiles, AccOverviewRecent } from "../components/AccOverviewWidgets.jsx";
+import { AccOwnerDashboard, AccOverviewRecent } from "../components/AccOverviewWidgets.jsx";
+import { AccShortcutsPanel } from "../components/AccShortcutsPanel.jsx";
 import { IndustryTemplateCard } from "../components/AccSetupWidgets.jsx";
 import { AccOwnerDailyBrief } from "../components/AccOwnerDailyBrief.jsx";
 import { AccArApAgingChart, AccMonthlyChart, AccSpendingDonut } from "../components/AccOverviewCharts.jsx";
@@ -79,10 +79,14 @@ export function OverviewSection({
   openMigration = null,
   setupKeepsCompany = false,
 }) {
-  const result = profitResult(metrics?.netProfit);
   const finishOnboarding = () => {
     markAccountsOnboardingDone(activeCompanyId);
     setOnboardingDismissed(true);
+  };
+  const navigateOverview = target => {
+    if (typeof target === "string") openSection(target);
+    else if (target?.reportTab) setReportTab(target.reportTab);
+    else if (target?.section) openSection(target.section);
   };
   return (
     <div className="acc-panel acc-overview">
@@ -138,14 +142,18 @@ export function OverviewSection({
         />
       )}
 
-      {settings && metrics && <AccMoneyTiles
-        metrics={metrics}
-        periodLabel={rangeFrom === fy.from && rangeTo === fy.to ? "This FY" : rangeFrom === lastFy.from && rangeTo === lastFy.to ? "Last FY" : "Period"}
-        onNavigate={target => {
-          if (typeof target === "string") openSection(target);
-          else if (target?.reportTab) setReportTab(target.reportTab);
-        }}
-      />}
+      {settings && metrics && (
+        <AccOwnerDashboard
+          metrics={metrics}
+          receivables={overviewArAging}
+          payables={overviewApAging}
+          items={items}
+          stockMovements={stockMovements}
+          periodLabel={rangeFrom === fy.from && rangeTo === fy.to ? "This FY" : rangeFrom === lastFy.from && rangeTo === lastFy.to ? "Last FY" : "Period"}
+          onNavigate={navigateOverview}
+          onOpenCollections={close}
+        />
+      )}
 
       {settings && bookkeeper}
 
@@ -165,15 +173,18 @@ export function OverviewSection({
         onLockPeriod={canAdmin ? lockMonth : null}
       />}
 
-      <AccOverviewContextBar
-        fy={fy}
-        lastFy={lastFy}
-        from={rangeFrom}
-        to={rangeTo}
-        onChange={setReportRange}
-        equationHolds={Boolean(metrics?.equationHolds)}
-        integrationEnabled={Boolean(settings?.integrationEnabled)}
-      />
+      <div className="acc-ov-toolbar">
+        <AccOverviewContextBar
+          fy={fy}
+          lastFy={lastFy}
+          from={rangeFrom}
+          to={rangeTo}
+          onChange={setReportRange}
+          equationHolds={Boolean(metrics?.equationHolds)}
+          integrationEnabled={Boolean(settings?.integrationEnabled)}
+        />
+        <AccShortcutsPanel variant="overview" />
+      </div>
 
       {settings && overviewCharts && <div className="acc-ov-charts">
         <AccMonthlyChart rows={overviewCharts.trend} onOpenPnl={() => openSection("pnl")} />
@@ -181,21 +192,6 @@ export function OverviewSection({
       </div>}
 
       <IndustryTemplateCard companyId={activeCompanyId} />
-
-      <AccountsBusinessPulse
-        metrics={metrics}
-        receivables={overviewArAging}
-        payables={overviewApAging}
-        items={items}
-        stockMovements={stockMovements}
-        attention={accountsAttention}
-        onOpenCollections={close}
-        onNavigate={target => {
-          if (typeof target === "string") openSection(target);
-          else if (target?.reportTab) setReportTab(target.reportTab);
-          else if (target?.section) openSection(target.section);
-        }}
-      />
 
       {accountsAttention?.count > 0 && <AttentionCenterCard attention={accountsAttention} onNavigate={href => {
         trackProductEvent("accounts_attention_navigate", { section: href?.section || "" });
@@ -252,19 +248,6 @@ export function OverviewSection({
         asOf={todayIso()}
         onNavigate={openSection}
       />}
-
-      <section className="acc-section">
-        <h2 className="acc-section-title">Metrics</h2>
-        <div className="acc-metric-grid acc-ov-metrics acc-metric-compact">
-          <AccMetric label="Income" value={money(metrics?.income)} tone="green" onClick={() => openSection("pnl")} />
-          <AccMetric label="Expenses" value={money(metrics?.expenses)} tone="red" onClick={() => openSection("pnl")} />
-          {(metrics?.openingStock || metrics?.closingStock) ? <>
-            <AccMetric label="Opening stock" value={money(metrics.openingStock)} onClick={() => openSection("pnl")} />
-            <AccMetric label="Closing stock" value={money(metrics.closingStock)} onClick={() => openSection("pnl")} />
-          </> : null}
-          <AccMetric label={result.label} value={money(result.amount)} tone={result.loss ? "red" : "green"} onClick={() => openSection("pnl")} />
-        </div>
-      </section>
 
       <AccOverviewRecent rows={recentVouchers} onViewAll={() => openSection("vouchers")} />
     </div>
