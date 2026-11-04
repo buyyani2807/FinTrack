@@ -2853,6 +2853,7 @@ const openVoucher = () => {
           token={token}
           costLines={costLines}
           companyName={activeCompany?.name || settings?.companyName || ""}
+          industry={activeCompanyId ? readIndustry(activeCompanyId) : ""}
           onOpenItemProfit={() => openReport("item_profit")}
         />}
 

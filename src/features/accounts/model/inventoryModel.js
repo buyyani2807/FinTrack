@@ -72,15 +72,49 @@ export const PRODUCT_UNITS = [
 
 export const SERVICE_UNITS = ["Nos", "Hour", "Day"];
 
+/** Grocery / kirana item form — skip industrial length/volume GST codes cashiers never use. */
+export const KIRANA_PRODUCT_UNITS = [
+  "Bag",
+  "Bottle",
+  "Box",
+  "Bundle",
+  "Can",
+  "Carton",
+  "Dozen",
+  "Gram",
+  "Kg",
+  "Litre",
+  "Millilitre",
+  "Nos",
+  "Pack",
+  "Piece",
+  "Quintal",
+  "Roll",
+  "Set",
+  "Tube",
+  "Unit",
+];
+
 export const ITEM_UNITS = [...PRODUCT_UNITS, ...SERVICE_UNITS.filter(unit => !PRODUCT_UNITS.includes(unit))];
 
-export function unitsForItemType(itemType) {
-  return itemType === "service" ? SERVICE_UNITS : PRODUCT_UNITS;
+export function unitsForItemType(itemType, industry = "") {
+  if (itemType === "service") return SERVICE_UNITS;
+  if (String(industry || "").toLowerCase() === "kirana") return KIRANA_PRODUCT_UNITS;
+  return PRODUCT_UNITS;
+}
+
+export function defaultUnitForIndustry(industry = "", itemType = "product") {
+  if (itemType === "service") return "Nos";
+  if (String(industry || "").toLowerCase() === "kirana") return "Kg";
+  return "Nos";
 }
 
 /** Every unit for a sale or purchase line, plus a saved unit that is not in the list. */
-export function unitChoices(current = "") {
-  const units = [...ITEM_UNITS].sort((a, b) => a.localeCompare(b, "en"));
+export function unitChoices(current = "", industry = "") {
+  const pool = String(industry || "").toLowerCase() === "kirana"
+    ? [...KIRANA_PRODUCT_UNITS, ...SERVICE_UNITS.filter(unit => !KIRANA_PRODUCT_UNITS.includes(unit))]
+    : ITEM_UNITS;
+  const units = [...pool].sort((a, b) => a.localeCompare(b, "en"));
   const extra = String(current || "").trim();
   if (extra && !units.includes(extra)) return [extra, ...units];
   return units;

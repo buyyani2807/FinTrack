@@ -23,6 +23,7 @@ export function InventorySection({
   onTabChange,
   onOpenItemProfit,
   companyName = "",
+  industry = "",
 }) {
   return (
     <div className="acc-panel">
@@ -50,6 +51,7 @@ export function InventorySection({
           vouchers={vouchers}
           saving={saving}
           companyName={companyName}
+          industry={industry}
           onSaveItem={form => run(() => saveItemRecord(form), form.id ? "Item updated." : "Item created.")}
           onDeleteItem={item => run(() => deleteItem(token, item.id), "Item deleted.")}
           onSetItemActive={(id, active) => run(() => setItemActive(token, id, active), active ? "Item reactivated." : "Item deactivated.")}

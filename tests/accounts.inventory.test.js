@@ -15,6 +15,8 @@ import {
   itemCategoryChoices,
   unitsForItemType,
   unitChoices,
+  defaultUnitForIndustry,
+  KIRANA_PRODUCT_UNITS,
   validateItemForm,
   validateItemLines,
   wholeQuantity,
@@ -65,6 +67,14 @@ test("product units include carton and quintal, and a service keeps only service
   for (const unit of ["Bottle", "Square meter", "Tonne", "Kg", "Hour", "US gallon", "M3"]) {
     assert.ok(productUnits.includes(unit), unit);
   }
+  const kiranaUnits = unitsForItemType("product", "kirana");
+  assert.deepEqual(kiranaUnits, KIRANA_PRODUCT_UNITS);
+  assert.ok(kiranaUnits.includes("Kg"));
+  assert.ok(kiranaUnits.includes("Gram"));
+  assert.equal(kiranaUnits.includes("Cubic meter"), false);
+  assert.equal(kiranaUnits.includes("Day"), false);
+  assert.equal(defaultUnitForIndustry("kirana"), "Kg");
+  assert.equal(defaultUnitForIndustry("retail"), "Nos");
   const choices = unitChoices("Reel");
   assert.equal(choices[0], "Reel");
   assert.ok(choices.includes("Nos"));

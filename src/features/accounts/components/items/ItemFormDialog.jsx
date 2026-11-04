@@ -1,15 +1,15 @@
 import { FilterField as Field } from "../AccUi.jsx";
 import { Select } from "../../../../components/Select.jsx";
-import { ITEM_TYPES, itemCategoryChoices, unitsForItemType } from "../../model/inventoryModel.js";
+import { ITEM_TYPES, defaultUnitForIndustry, itemCategoryChoices, unitsForItemType } from "../../model/inventoryModel.js";
 import { QtyInput } from "../QtyInput.jsx";
 import { DialogModal } from "../../../../components/ui.jsx";
 import { suggestHsn } from "../../../intelligence/ai/hsnSuggest.js";
 
-export function ItemFormDialog({ form, setShowForm, error, setForm, categories, saving, saveItem }) {
+export function ItemFormDialog({ form, setShowForm, error, setForm, categories, saving, saveItem, industry = "" }) {
   const suggestion = suggestHsn(form.name);
   const suggestionDiffers = suggestion && (String(form.hsnSac || "") !== suggestion.hsn || Number(form.gstRate) !== suggestion.rate);
   const isService = form.itemType === "service";
-  const baseUnits = unitsForItemType(form.itemType);
+  const baseUnits = unitsForItemType(form.itemType, industry);
   const unitOptions = !form.unit || baseUnits.includes(form.unit) ? baseUnits : [form.unit, ...baseUnits];
   const categoryOptions = itemCategoryChoices(categories);
   return (
@@ -18,8 +18,13 @@ export function ItemFormDialog({ form, setShowForm, error, setForm, categories, 
       <div className="form">
         <Field label="Type"><Select value={form.itemType} onChange={event => {
           const itemType = event.target.value;
-          const nextUnits = unitsForItemType(itemType);
-          setForm(current => ({ ...current, itemType, unit: nextUnits.includes(current.unit) ? current.unit : nextUnits[0] }));
+          const nextUnits = unitsForItemType(itemType, industry);
+          const fallback = defaultUnitForIndustry(industry, itemType);
+          setForm(current => ({
+            ...current,
+            itemType,
+            unit: nextUnits.includes(current.unit) ? current.unit : (nextUnits.includes(fallback) ? fallback : nextUnits[0]),
+          }));
         }}>{ITEM_TYPES.map(type => <option key={type.id} value={type.id}>{type.label}</option>)}</Select></Field>
         <Field label="Name"><input value={form.name} onChange={event => setForm(current => ({ ...current, name: event.target.value }))} /></Field>
         {suggestionDiffers ? <p className="small span">Suggested for {suggestion.label}: HSN {suggestion.hsn}, GST {suggestion.rate}%. {suggestion.note} <button type="button" className="btn" onClick={() => setForm(current => ({ ...current, hsnSac: suggestion.hsn, gstRate: String(suggestion.rate) }))}>Use this</button></p> : null}

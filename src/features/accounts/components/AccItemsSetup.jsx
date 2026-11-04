@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { TriangleAlert } from "lucide-react";
 import { FilterSelect, SearchInput } from "../../../components/ui.jsx";
 import { todayIso } from "../../../lib/dates.js";
-import { currentStockForItem, emptyItemForm, itemToForm, stockMovementReport, stockStatus, validateItemForm } from "../model/inventoryModel.js";
+import { currentStockForItem, defaultUnitForIndustry, emptyItemForm, itemToForm, stockMovementReport, stockStatus, validateItemForm } from "../model/inventoryModel.js";
 import { costItemMovements } from "../model/inventoryValuation.js";
 import { AccPager } from "./AccUi.jsx";
 import { usePagedList } from "../model/usePagedList.js";
@@ -21,6 +21,7 @@ export function AccItemsSetup({
   vouchers = [],
   saving = false,
   companyName = "",
+  industry = "",
   onSaveItem,
   onDeleteItem,
   onSetItemActive,
@@ -73,7 +74,7 @@ export function AccItemsSetup({
     : [];
 
   const openCreate = () => {
-    setForm(emptyItemForm());
+    setForm({ ...emptyItemForm(), unit: defaultUnitForIndustry(industry, "product") });
     setShowForm(true);
     setError("");
   };
@@ -192,6 +193,7 @@ export function AccItemsSetup({
           categories={categories}
           saving={saving}
           saveItem={saveItem}
+          industry={industry}
         />
       )}
 
