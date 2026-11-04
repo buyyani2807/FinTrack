@@ -21,6 +21,7 @@ import { AccAskBooks } from "../components/AccAskBooks.jsx";
 import { money, profitResult } from "../accountsFormat.js";
 import { AccOverviewContextBar } from "../components/AccPeriodBars.jsx";
 import { AccountsBusinessPulse, AccMoneyTiles, AccOverviewRecent } from "../components/AccOverviewWidgets.jsx";
+import { AccShortcutsPanel } from "../components/AccShortcutsPanel.jsx";
 import { IndustryTemplateCard } from "../components/AccSetupWidgets.jsx";
 import { AccOwnerDailyBrief } from "../components/AccOwnerDailyBrief.jsx";
 import { AccArApAgingChart, AccMonthlyChart, AccSpendingDonut } from "../components/AccOverviewCharts.jsx";
@@ -165,15 +166,18 @@ export function OverviewSection({
         onLockPeriod={canAdmin ? lockMonth : null}
       />}
 
-      <AccOverviewContextBar
-        fy={fy}
-        lastFy={lastFy}
-        from={rangeFrom}
-        to={rangeTo}
-        onChange={setReportRange}
-        equationHolds={Boolean(metrics?.equationHolds)}
-        integrationEnabled={Boolean(settings?.integrationEnabled)}
-      />
+      <div className="acc-ov-toolbar">
+        <AccOverviewContextBar
+          fy={fy}
+          lastFy={lastFy}
+          from={rangeFrom}
+          to={rangeTo}
+          onChange={setReportRange}
+          equationHolds={Boolean(metrics?.equationHolds)}
+          integrationEnabled={Boolean(settings?.integrationEnabled)}
+        />
+        <AccShortcutsPanel variant="overview" />
+      </div>
 
       {settings && overviewCharts && <div className="acc-ov-charts">
         <AccMonthlyChart rows={overviewCharts.trend} onOpenPnl={() => openSection("pnl")} />

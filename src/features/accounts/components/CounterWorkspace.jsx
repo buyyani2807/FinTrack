@@ -59,6 +59,7 @@ import {
 import { syncOfflineCounterBills } from "../model/counterOfflineSync.js";
 import { printSalesInvoicePdf } from "../io/salesInvoicePdf.js";
 import { formatReceiptDateTime } from "../../receipts/model/receiptModel.js";
+import { AccShortcutsPanel } from "./AccShortcutsPanel.jsx";
 
 const PAY_MODES = COUNTER_PAY_MODES;
 
@@ -1131,7 +1132,10 @@ export function CounterWorkspace({
         <section className="counter-catalog card counter-panel">
           <div className="counter-panel-head">
             <h2 className="counter-panel-title">Find items</h2>
-            <span className="small counter-kbd">F2</span>
+            <div className="counter-panel-tools">
+              <span className="small counter-kbd">F2</span>
+              <AccShortcutsPanel variant="counter" />
+            </div>
           </div>
           <label className="counter-search">
             <Search size={20} aria-hidden="true" />

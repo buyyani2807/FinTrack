@@ -1615,6 +1615,73 @@
   gap: 16px;
 }
 
+.accounts-dashboard .acc-ov-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.accounts-dashboard .acc-ov-toolbar .acc-ov-context {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.accounts-dashboard .acc-shortcuts {
+  position: relative;
+}
+
+.accounts-dashboard .acc-shortcuts-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: var(--ft-type-caption);
+}
+
+.accounts-dashboard .acc-shortcuts-panel {
+  position: absolute;
+  z-index: 5;
+  right: 0;
+  top: calc(100% + 6px);
+  width: min(18rem, 80vw);
+  padding: 10px 12px;
+}
+
+.accounts-dashboard .acc-shortcuts-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.accounts-dashboard .acc-shortcuts-list li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: var(--ft-type-secondary);
+}
+
+.accounts-dashboard .acc-shortcuts-list kbd {
+  flex: none;
+  padding: 2px 6px;
+  border: 1px solid var(--ft-border);
+  border-radius: 6px;
+  background: var(--ft-surface-subtle);
+  font-size: var(--ft-type-caption);
+  font-weight: 700;
+}
+
+.accounts-dashboard .counter-panel-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .accounts-dashboard .acc-ov-metrics {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
