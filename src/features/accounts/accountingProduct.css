@@ -4821,15 +4821,45 @@
   margin: 0;
 }
 
-.accounts-dashboard .acc-bill-keep {
+.accounts-dashboard .acc-bill-keep-list {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+}
+
+.accounts-dashboard .acc-bill-keep,
+.accounts-dashboard .acc-entry-dialog .acc-bill-keep {
   display: flex;
-  gap: 8px;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  cursor: pointer;
+  color: var(--ft-text-2);
+  font-size: var(--ft-type-secondary);
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.accounts-dashboard .acc-bill-keep > input[type="checkbox"],
+.accounts-dashboard .acc-entry-dialog .acc-bill-keep > input[type="checkbox"] {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 3px 0 0;
+}
+
+.accounts-dashboard .acc-bill-keep > span {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .accounts-dashboard .acc-bill-review-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
 }
 

@@ -337,9 +337,9 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
       <div className="acc-credit-alert spacer" role="alert">
         <strong>Possible duplicate</strong>
         <p className="small">{purchaseDuplicates.map(voucher => voucher.voucherNumber).filter(Boolean).join(", ")} {purchaseDuplicates.length === 1 ? "is" : "are"} already posted for this supplier on {form.date} for the same amount.</p>
-        <label className="small acc-bill-keep">
+        <label className="acc-bill-keep">
           <input type="checkbox" checked={duplicateConfirmed} onChange={event => setAllowedDuplicateKey(event.target.checked ? duplicateKey : "")} />
-          Post this purchase anyway
+          <span>Post this purchase anyway</span>
         </label>
       </div>
     ) : null}

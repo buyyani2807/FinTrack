@@ -250,34 +250,36 @@ export function BillPhotoDraft({
           {review.draft.warnings.length ? (
             <ul className="acc-bill-scan-notes">{review.draft.warnings.map(note => <li key={note}>{note}</li>)}</ul>
           ) : null}
-          {unmatchedCount > 0 ? (
-            <label className="small acc-bill-keep">
-              <input
-                type="checkbox"
-                checked={createMissingItems}
-                disabled={applied || busy}
-                onChange={event => setCreateMissingItems(event.target.checked)}
-              />
-              Add {unmatchedCount} new item{unmatchedCount === 1 ? "" : "s"} to inventory when I use this draft
-            </label>
-          ) : null}
-          <label className="small acc-bill-keep">
-            <input
-              type="checkbox"
-              checked={keepPhoto && photoFits}
-              disabled={!photoFits || applied}
-              onChange={event => setKeepPhoto(event.target.checked)}
-            />
-            Keep this file with the voucher after you save
-          </label>
-          {!photoFits ? <p className="small">This file is larger than 512 KB, so it stays on screen and is not stored with the voucher.</p> : null}
-          <div className="acc-bill-review-actions">
-            {(review.duplicates || []).length ? (
-              <label className="small acc-bill-keep">
-                <input type="checkbox" checked={acceptDuplicate} onChange={event => setAcceptDuplicate(event.target.checked)} />
-                Use this draft anyway. I have checked it is not the same bill as {(review.duplicates || []).map(voucher => voucher.voucherNumber).filter(Boolean).join(", ")}.
+          <div className="acc-bill-keep-list">
+            {unmatchedCount > 0 ? (
+              <label className="acc-bill-keep">
+                <input
+                  type="checkbox"
+                  checked={createMissingItems}
+                  disabled={applied || busy}
+                  onChange={event => setCreateMissingItems(event.target.checked)}
+                />
+                <span>Add {unmatchedCount} new item{unmatchedCount === 1 ? "" : "s"} to inventory when I use this draft</span>
               </label>
             ) : null}
+            <label className="acc-bill-keep">
+              <input
+                type="checkbox"
+                checked={keepPhoto && photoFits}
+                disabled={!photoFits || applied}
+                onChange={event => setKeepPhoto(event.target.checked)}
+              />
+              <span>Keep this file with the voucher after you save</span>
+            </label>
+            {(review.duplicates || []).length ? (
+              <label className="acc-bill-keep">
+                <input type="checkbox" checked={acceptDuplicate} onChange={event => setAcceptDuplicate(event.target.checked)} />
+                <span>Use this draft anyway. I have checked it is not the same bill as {(review.duplicates || []).map(voucher => voucher.voucherNumber).filter(Boolean).join(", ")}.</span>
+              </label>
+            ) : null}
+          </div>
+          {!photoFits ? <p className="small">This file is larger than 512 KB, so it stays on screen and is not stored with the voucher.</p> : null}
+          <div className="acc-bill-review-actions">
             <button type="button" className="btn primary" disabled={applied || busy || ((review.duplicates || []).length > 0 && !acceptDuplicate)} onClick={useDraft}>{applied ? "Draft in the form" : "Use this draft"}</button>
             <button type="button" className="btn" disabled={busy} onClick={discard}>Discard</button>
           </div>
