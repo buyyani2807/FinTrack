@@ -10,7 +10,7 @@ import {
 import { ledgerHasPostedLines } from "./accountingModel.js";
 import { freeLedgerCode, shortDate } from "./bookkeeper.js";
 
-export const SETUP_INDUSTRIES = ["retail", "wholesale", "hardware", "jewellery", "manufacturing", "services", "finance", "chit", "school", "medical"];
+export const SETUP_INDUSTRIES = ["retail", "kirana", "wholesale", "hardware", "jewellery", "manufacturing", "services", "finance", "chit", "school", "medical"];
 
 const WHOLESALE_RE = /\b(wholesale\w*|distribut\w*|dealers?|dealership|stockists?|traders?|trading|suppliers?|b2b|c&f|super stockist)\b/i;
 
@@ -38,9 +38,9 @@ const SECTORS = [
   },
   {
     id: "grocery",
-    label: "grocery",
+    label: "kirana grocery",
     match: /\b(kirana|grocer(?:y|ies)?|provisions?|supermarkets?|general stores?|fmcg|departmental stores?|mini ?mart)\b/i,
-    industry: "retail",
+    industry: "kirana",
     categories: ["Staples", "Oils & Ghee", "Snacks & Beverages", "Personal Care", "Household"],
   },
   {
@@ -115,6 +115,7 @@ const SECTORS = [
 const TRADE_LEDGERS = {
   wholesale: ["Freight Inward", "Loading & Unloading", "Discount Allowed"],
   retail: ["Carry Bags & Packing", "Discount Allowed"],
+  kirana: ["Carry Bags & Packing", "Discount Allowed"],
   hardware: ["Freight Inward", "Loading & Unloading"],
   medical: ["Expired Stock Written Off"],
   jewellery: ["Hallmarking Charges"],
@@ -134,7 +135,7 @@ export function profileBusiness(text) {
   const wholesale = WHOLESALE_RE.test(raw) && sector?.id !== "manufacturing";
   const services = Boolean(sector?.services);
   let industry = sector?.industry || (wholesale ? "wholesale" : "retail");
-  if (wholesale && !services && ["retail", "hardware"].includes(industry)) industry = "wholesale";
+  if (wholesale && !services && ["retail", "kirana", "hardware"].includes(industry)) industry = "wholesale";
   const label = sector
     ? `${sector.label}${wholesale && !services ? " wholesale" : ""}`
     : wholesale ? "wholesale trading" : raw.toLowerCase().slice(0, 60);

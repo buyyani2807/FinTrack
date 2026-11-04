@@ -13,6 +13,12 @@ const STEPS = [
 
 export const INDUSTRY_TEMPLATES = [
   { id: "retail", label: "Retail shop", hint: "Sales, stock, cash and customer balances", features: ["Sales invoices", "Fast stock lookup", "Cash and UPI receipts"] },
+  {
+    id: "kirana",
+    label: "Kirana grocery",
+    hint: "Counter billing, loose goods by kg/g, cash and UPI",
+    features: ["Counter (POS)", "Kg / gram & litre billing", "Cash and UPI", "Thermal receipts"],
+  },
   { id: "wholesale", label: "Wholesale / distribution", hint: "Credit sales, suppliers and inventory movement", features: ["Customer credit", "Supplier balances", "Bulk inventory"] },
   { id: "hardware", label: "Hardware store", hint: "Fast-moving inventory, suppliers and credit sales", features: ["Item categories", "Supplier purchases", "Receivables"] },
   { id: "jewellery", label: "Jewellery business", hint: "High-value items, customer balances and detailed sales", features: ["Item details", "Customer ledger", "High-value sales"] },

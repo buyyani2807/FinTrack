@@ -1,6 +1,6 @@
 /** Local per-company Counter (POS) settings: enable, payment ledgers, tills, day-close. */
 
-const COUNTER_INDUSTRIES = new Set(["retail", "medical", "hardware", "jewellery"]);
+const COUNTER_INDUSTRIES = new Set(["retail", "kirana", "medical", "hardware", "jewellery"]);
 
 const storageKey = companyId => `fintrack-accounts-counter-v1:${companyId || "none"}`;
 const settingsKey = companyId => `fintrack-accounts-counter-settings-v1:${companyId || "none"}`;
