@@ -33,6 +33,7 @@ export function CompanySetupPanel({
   activeCompanyId,
   switchCompany,
   archiveCompany,
+  reopenCompany,
   setCompanyDraft,
   setShowCreateCompany,
   counterEnabled = false,
@@ -213,18 +214,45 @@ export function CompanySetupPanel({
                 <strong>{company.name}</strong>
                 <span className="small">
                   {company.isPrimary ? "Primary" : "Company"}
-                  {company.status === "archived" ? " · archived" : ""}
+                  {company.status === "archived" ? " · closed" : ""}
                   {company.id === activeCompanyId ? " · current" : ""}
                   {` · ${gstStatusLabel(company)}`}
                 </span>
               </button>
               {canAdmin && company.status !== "archived" && !company.isPrimary && (
-                <button type="button" className="btn" disabled={saving} onClick={() => archiveCompany(company)}>Archive</button>
+                <button type="button" className="btn" disabled={saving} onClick={() => archiveCompany(company)}>Close</button>
+              )}
+              {canAdmin && company.status === "archived" && (
+                <button type="button" className="btn" disabled={saving} onClick={() => reopenCompany?.(company)}>Reopen</button>
               )}
             </div>
           ))}
-          {canAdmin && <button type="button" className="btn" onClick={() => { setCompanyDraft({ name: "", booksStartedOn: todayIso(), industry: "retail" }); setShowCreateCompany(true); }}>+ Create company</button>}
-          {!canAdmin && <p className="small">Only the owner can create or archive Accounts companies.</p>}
+          {canAdmin && (
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                setCompanyDraft({
+                  name: "",
+                  booksStartedOn: todayIso(),
+                  industry: "retail",
+                  pan: "",
+                  copyFromExisting: false,
+                  sourceCompanyId: "",
+                  asOf: "",
+                  copyCoa: true,
+                  copyParties: true,
+                  copyItems: true,
+                  copyDocumentSettings: true,
+                  copyOpenings: true,
+                });
+                setShowCreateCompany(true);
+              }}
+            >
+              + Create company
+            </button>
+          )}
+          {!canAdmin && <p className="small">Only the owner can create or close Accounts companies.</p>}
         </div>
       </AccReveal>
     </AccSetupSection>

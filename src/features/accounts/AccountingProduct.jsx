@@ -5,6 +5,7 @@ import {
   addBankStatement,
   addVoucherAttachment,
   archiveAccountsCompany,
+  unarchiveAccountsCompany,
   createChartAccount,
   createParty,
   deleteChartAccount,
@@ -330,7 +331,20 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [activeCompanyId, setActiveCompanyId] = useState(cached?.activeCompanyId ?? "");
   const [showCreateCompany, setShowCreateCompany] = useState(false);
   const [setupAfterCreate, setSetupAfterCreate] = useState(false);
-  const [companyDraft, setCompanyDraft] = useState({ name: "", booksStartedOn: todayIso(), industry: "retail", pan: "" });
+  const [companyDraft, setCompanyDraft] = useState({
+    name: "",
+    booksStartedOn: todayIso(),
+    industry: "retail",
+    pan: "",
+    copyFromExisting: false,
+    sourceCompanyId: "",
+    asOf: "",
+    copyCoa: true,
+    copyParties: true,
+    copyItems: true,
+    copyDocumentSettings: true,
+    copyOpenings: true,
+  });
   const [gstForm, setGstForm] = useState(cached?.gstForm ?? { gstRegistration: "unregistered", gstin: "", pan: "", legalName: "", stateCode: "" });
   const [listPage, setListPage] = useState(1);
   const [expandedVoucherId, setExpandedVoucherId] = useState(null);
@@ -985,10 +999,10 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
 
   const archiveCompany = company => {
     if (company?.isPrimary) {
-      setError("The primary company cannot be archived.");
+      setError("The primary company cannot be closed. Make another company primary first, or keep this one active.");
       return;
     }
-    askReason("Archive company", "Archive company", reason => run(async () => {
+    askReason("Close company", "Close company", reason => run(async () => {
       await archiveAccountsCompany(token, company.id, reason);
       if (company.id === activeCompanyId) {
         const fallback = companies.find(item => item.isPrimary)?.id
@@ -996,7 +1010,13 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
           || "";
         try { sessionStorage.setItem(COMPANY_STORAGE_KEY, fallback); } catch { /* ignore */ }
       }
-    }, "Company archived."));
+    }, "Company closed. Books are kept; reopen anytime from Setup."));
+  };
+
+  const reopenCompany = company => {
+    askReason("Reopen company", "Reopen company", reason => run(async () => {
+      await unarchiveAccountsCompany(token, company.id, reason);
+    }, "Company reopened."));
   };
 
   const confirmAccountsLogout = async () => {
@@ -2505,7 +2525,23 @@ const openVoucher = () => {
           companies={companies}
           activeId={activeCompanyId}
           onSelect={switchCompany}
-          onCreate={() => { setCompanyDraft({ name: "", booksStartedOn: todayIso(), industry: "retail", pan: "" }); setShowCreateCompany(true); }}
+          onCreate={() => {
+            setCompanyDraft({
+              name: "",
+              booksStartedOn: todayIso(),
+              industry: "retail",
+              pan: "",
+              copyFromExisting: false,
+              sourceCompanyId: "",
+              asOf: "",
+              copyCoa: true,
+              copyParties: true,
+              copyItems: true,
+              copyDocumentSettings: true,
+              copyOpenings: true,
+            });
+            setShowCreateCompany(true);
+          }}
           canAdmin={canAdmin}
           gstLabel={gstStatusLabel(activeCompany)}
           fyLabel={fy?.label || ""}
@@ -3031,7 +3067,20 @@ const openVoucher = () => {
             openSection("overview");
           } : null}
           setUpNewCompany={canAdmin && !migrationRequired ? () => {
-            setCompanyDraft({ name: "", booksStartedOn: todayIso(), industry: "retail", pan: "" });
+            setCompanyDraft({
+              name: "",
+              booksStartedOn: todayIso(),
+              industry: "retail",
+              pan: "",
+              copyFromExisting: false,
+              sourceCompanyId: "",
+              asOf: "",
+              copyCoa: true,
+              copyParties: true,
+              copyItems: true,
+              copyDocumentSettings: true,
+              copyOpenings: true,
+            });
             setSetupAfterCreate(true);
             setShowCreateCompany(true);
           } : null}
@@ -3068,6 +3117,7 @@ const openVoucher = () => {
           activeCompanyId={activeCompanyId}
           switchCompany={switchCompany}
           archiveCompany={archiveCompany}
+          reopenCompany={reopenCompany}
           setCompanyDraft={setCompanyDraft}
           setShowCreateCompany={setShowCreateCompany}
           gstForm={gstForm}
@@ -3155,6 +3205,7 @@ const openVoucher = () => {
         token={token}
         setCompanyDraft={setCompanyDraft}
         setError={setError}
+        companies={companies}
         onCreated={() => {
           setOnboardingDismissed(false);
           setSetupAssistantRequested(false);

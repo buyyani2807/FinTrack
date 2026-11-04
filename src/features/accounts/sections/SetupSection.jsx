@@ -32,6 +32,7 @@ export function SetupSection({
   activeCompanyId,
   switchCompany,
   archiveCompany,
+  reopenCompany,
   setCompanyDraft,
   setShowCreateCompany,
   gstForm,
@@ -106,6 +107,7 @@ export function SetupSection({
         activeCompanyId={activeCompanyId}
         switchCompany={switchCompany}
         archiveCompany={archiveCompany}
+        reopenCompany={reopenCompany}
         setCompanyDraft={setCompanyDraft}
         setShowCreateCompany={setShowCreateCompany}
         counterEnabled={counterEnabled}

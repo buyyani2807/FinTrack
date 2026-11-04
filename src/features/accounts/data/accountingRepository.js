@@ -137,8 +137,30 @@ export const createAccountsCompany = (token, payload) =>
     input_pan: payload.pan || null,
   }, token));
 
+/** Create a company and optionally copy masters + closing balances from another company. */
+export const createAccountsCompanyFrom = (token, payload) =>
+  wrap(supabase.rpc("acc_create_company_from", {
+    input_name: payload.name,
+    input_source_company_id: payload.sourceCompanyId,
+    input_books_started_on: payload.booksStartedOn || null,
+    input_as_of: payload.asOf || null,
+    input_fy_start_month: payload.fyStartMonth || 4,
+    input_pan: payload.pan || null,
+    input_copy_coa: payload.copyCoa !== false,
+    input_copy_parties: payload.copyParties !== false,
+    input_copy_items: payload.copyItems !== false,
+    input_copy_document_settings: payload.copyDocumentSettings !== false,
+    input_copy_openings: payload.copyOpenings !== false,
+  }, token));
+
 export const archiveAccountsCompany = (token, id, reason) =>
   wrap(supabase.rpc("acc_archive_company", {
+    input_company_id: id,
+    input_reason: reason || null,
+  }, token));
+
+export const unarchiveAccountsCompany = (token, id, reason) =>
+  wrap(supabase.rpc("acc_unarchive_company", {
     input_company_id: id,
     input_reason: reason || null,
   }, token));
