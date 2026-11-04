@@ -7062,6 +7062,20 @@
   border-radius: 16px;
 }
 
+.accounts-dashboard .counter-offline-queue-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.accounts-dashboard .counter-offline-queue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .accounts-dashboard .counter-offline-queue-list {
   list-style: none;
   margin: 0;
@@ -7075,6 +7089,28 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.accounts-dashboard .counter-qty-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.accounts-dashboard .counter-sell-unit,
+.accounts-dashboard .counter-qty-unit {
+  font-size: var(--ft-type-caption);
+  color: var(--ft-text-secondary);
+}
+
+.accounts-dashboard .counter-sell-unit {
+  max-width: 4.5rem;
+  border: 1px solid var(--ft-border);
+  border-radius: 8px;
+  background: var(--ft-surface);
+  color: var(--ft-text);
+  padding: 4px 6px;
 }
 
 .accounts-dashboard .counter-ai-tips {

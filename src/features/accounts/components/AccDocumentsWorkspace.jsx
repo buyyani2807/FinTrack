@@ -216,7 +216,7 @@ function DocumentForm({ form, setForm, parties, items, stockByItem, gstCompany, 
                     {stock != null ? `${pending != null ? " · " : ""}Stock ${qty(stock, line.unit)}` : ""}
                   </div>
                 </td>
-                <td><QtyInput aria-label="Quantity" value={line.quantity} onValue={quantity => patchLine(index, { quantity })} /></td>
+                <td><QtyInput aria-label="Quantity" unit={line.unit} value={line.quantity} onValue={quantity => patchLine(index, { quantity })} /></td>
                 <td><UnitSelect value={line.unit} onValue={unit => patchLine(index, { unit })} /></td>
                 <td><input type="number" min="0" step="0.01" value={line.rate} onChange={event => patchLine(index, { rate: event.target.value, rateTouched: true })} /></td>
                 <td><input inputMode="decimal" value={line.discount || ""} placeholder="₹ or %" aria-label="Discount (amount or percent)" onChange={event => patchLine(index, { discount: event.target.value })} /></td>
@@ -264,7 +264,7 @@ function DocumentForm({ form, setForm, parties, items, stockByItem, gstCompany, 
                 )}
                 <div className="acc-item-line-card-grid">
                   <label className="accounts-filter-field"><span className="small">Qty</span>
-                    <QtyInput value={line.quantity} onValue={quantity => patchLine(index, { quantity })} />
+                    <QtyInput unit={line.unit} value={line.quantity} onValue={quantity => patchLine(index, { quantity })} />
                   </label>
                   <label className="accounts-filter-field"><span className="small">Unit</span>
                     <UnitSelect value={line.unit} onValue={unit => patchLine(index, { unit })} />

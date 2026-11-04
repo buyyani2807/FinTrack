@@ -91,7 +91,7 @@ export function ItemLinesSection({
                 {suggestion ? <HsnSuggestion suggestion={suggestion} onUse={() => patchItemLine(index, { hsnSac: suggestion.hsn, gstRate: String(suggestion.rate) })} /> : null}
                 {lastSold ? <LastSoldHint last={lastSold} onUse={() => patchItemLine(index, { rate: String(lastSold.rate), rateTouched: true })} /> : null}
               </td>
-              <td><QtyInput aria-label="Quantity" value={line.quantity} onValue={quantity => patchItemLine(index, { quantity })} /></td>
+              <td><QtyInput aria-label="Quantity" unit={line.unit} value={line.quantity} onValue={quantity => patchItemLine(index, { quantity })} /></td>
               <td><UnitSelect value={line.unit} onValue={unit => patchItemLine(index, { unit })} /></td>
               <td><input type="number" min="0" step="0.01" value={line.rate} onChange={event => patchItemLine(index, { rate: event.target.value, rateTouched: true })} /></td>
               <td><input inputMode="decimal" value={line.discount || ""} placeholder="₹ or %" aria-label="Discount (amount or percent)" onChange={event => patchItemLine(index, { discount: event.target.value })} /></td>
@@ -143,7 +143,7 @@ export function ItemLinesSection({
               {lastSold ? <LastSoldHint last={lastSold} onUse={() => patchItemLine(index, { rate: String(lastSold.rate), rateTouched: true })} /> : null}
               <div className="acc-item-line-card-grid">
                 <label className="accounts-filter-field"><span className="small">Qty</span>
-                  <QtyInput value={line.quantity} onValue={quantity => patchItemLine(index, { quantity })} />
+                  <QtyInput unit={line.unit} value={line.quantity} onValue={quantity => patchItemLine(index, { quantity })} />
                 </label>
                 <label className="accounts-filter-field"><span className="small">Unit</span>
                   <UnitSelect value={line.unit} onValue={unit => patchItemLine(index, { unit })} />

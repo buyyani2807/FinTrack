@@ -18,6 +18,10 @@ import {
   validateItemForm,
   validateItemLines,
   wholeQuantity,
+  parseItemQuantity,
+  quantityInBaseUnit,
+  lineForStockPosting,
+  normalizeQuantityNumber,
 } from "../src/features/accounts/model/inventoryModel.js";
 import { CASH_PARTY_ID } from "../src/features/accounts/model/accountingModel.js";
 
@@ -124,15 +128,39 @@ test("itemized sale draft keeps double-entry balanced with GST", () => {
   assert.ok(draft.gstLines.length >= 1);
 });
 
-test("quantity is a whole number with no decimal", () => {
+test("count units stay whole; weight units allow decimals and g↔kg sell units", () => {
   assert.equal(wholeQuantity("1"), "1");
   assert.equal(wholeQuantity("1.041"), "1");
   assert.equal(wholeQuantity("12.9"), "12");
   assert.equal(wholeQuantity(""), "");
   assert.equal(wholeQuantity("1,500"), "1500");
-  assert.match(validateItemLines([{ itemId: "a", itemName: "A", quantity: "1.5", rate: 10 }]), /whole number/i);
+  assert.equal(parseItemQuantity("0.5", "Kg"), "0.5");
+  assert.equal(parseItemQuantity("500", "Gram"), "500");
+  assert.equal(parseItemQuantity("1.041", "Nos"), "1");
+  assert.equal(quantityInBaseUnit(500, "Kg", "Gram"), 0.5);
+  assert.equal(quantityInBaseUnit(5, "Kg", "Kg"), 5);
+  assert.equal(normalizeQuantityNumber(0.5004, "Kg"), 0.5);
+  const posted = lineForStockPosting({
+    itemId: "dal",
+    itemName: "Toor dal",
+    unit: "Kg",
+    sellUnit: "Gram",
+    quantity: "500",
+    rate: 120,
+  });
+  assert.equal(posted.unit, "Kg");
+  assert.equal(posted.quantity, 0.5);
+  assert.match(validateItemLines([{ itemId: "a", itemName: "A", unit: "Nos", quantity: "1.5", rate: 10 }]), /whole number/i);
+  assert.equal(validateItemLines([{ itemId: "a", itemName: "A", unit: "Kg", quantity: "0.5", rate: 10 }]), "");
+  assert.equal(validateItemLines([{
+    itemId: "a", itemName: "A", unit: "Kg", sellUnit: "Gram", quantity: "200", rate: 100,
+  }]), "");
+  assert.equal(normalizeItemLine({
+    itemId: "a", itemName: "A", unit: "Kg", sellUnit: "Gram", quantity: "500", rate: 100,
+  }).amount, 50);
   assert.equal(validateItemLines([{ itemId: "a", itemName: "A", quantity: "3", rate: 10 }]), "");
   assert.match(validateItemForm({ name: "Cement", sku: "C1", itemType: "product", unit: "Bag", openingStock: "1.5", reorderLevel: "0" }), /whole number/i);
+  assert.equal(validateItemForm({ name: "Toor dal", sku: "D1", itemType: "product", unit: "Kg", openingStock: "12.5", reorderLevel: "2.5" }), "");
 });
 
 test("rejects invalid item lines", () => {

@@ -40,10 +40,10 @@ export function ItemFormDialog({ form, setShowForm, error, setForm, categories, 
         {form.itemType === "product" && <>
           <Field label="Batch no."><input value={form.batchNo || ""} onChange={event => setForm(current => ({ ...current, batchNo: event.target.value }))} placeholder="Optional" /></Field>
           <Field label="Expiry date"><input type="date" value={form.expiryDate || ""} onChange={event => setForm(current => ({ ...current, expiryDate: event.target.value }))} /></Field>
-          <Field label="Opening stock"><QtyInput value={form.openingStock} onValue={openingStock => setForm(current => ({ ...current, openingStock }))} /></Field>
+          <Field label="Opening stock"><QtyInput unit={form.unit} value={form.openingStock} onValue={openingStock => setForm(current => ({ ...current, openingStock }))} /></Field>
           <Field label="Opening date"><input type="date" value={form.openingStockDate} onChange={event => setForm(current => ({ ...current, openingStockDate: event.target.value }))} /></Field>
           <Field label="Opening rate (cost / unit)"><input type="number" min="0" step="0.01" value={form.openingRate ?? ""} placeholder={form.purchasePrice ? `Uses purchase price ${form.purchasePrice}` : "Uses purchase price"} onChange={event => setForm(current => ({ ...current, openingRate: event.target.value }))} /></Field>
-          <Field label="Reorder level"><QtyInput value={form.reorderLevel} onValue={reorderLevel => setForm(current => ({ ...current, reorderLevel }))} /></Field>
+          <Field label="Reorder level"><QtyInput unit={form.unit} value={form.reorderLevel} onValue={reorderLevel => setForm(current => ({ ...current, reorderLevel }))} /></Field>
         </>}
         <Field className="span" label="Description"><input value={form.description} onChange={event => setForm(current => ({ ...current, description: event.target.value }))} /></Field>
       </div>

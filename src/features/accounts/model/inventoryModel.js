@@ -159,7 +159,56 @@ export function itemToForm(item = {}, patch = {}) {
   };
 }
 
-/** Item quantities are whole units. A typed decimal is dropped; a pasted 1.5 becomes 1. */
+/** Count/pack units stay whole. Weight/volume/length may use decimals (kirana kg/g, L/ml). */
+export const FRACTIONAL_ITEM_UNITS = new Set([
+  "Centimeter",
+  "Cubic centimeter",
+  "Cubic meter",
+  "Gram",
+  "Kg",
+  "Kilolitre",
+  "Kilometre",
+  "Litre",
+  "M3",
+  "Meter",
+  "Metric ton",
+  "Millilitre",
+  "Quintal",
+  "Square feet",
+  "Square meter",
+  "Square yard",
+  "Tonne",
+]);
+
+/** Sell-unit switches that still post in the item's stock unit (rate stays per base unit). */
+export const SELL_UNIT_ALTERNATES = {
+  Kg: [
+    { id: "Kg", label: "Kg", factorToBase: 1 },
+    { id: "Gram", label: "g", factorToBase: 0.001 },
+  ],
+  Gram: [
+    { id: "Gram", label: "g", factorToBase: 1 },
+    { id: "Kg", label: "Kg", factorToBase: 1000 },
+  ],
+  Litre: [
+    { id: "Litre", label: "L", factorToBase: 1 },
+    { id: "Millilitre", label: "ml", factorToBase: 0.001 },
+  ],
+  Millilitre: [
+    { id: "Millilitre", label: "ml", factorToBase: 1 },
+    { id: "Litre", label: "L", factorToBase: 1000 },
+  ],
+};
+
+export function allowsFractionalQuantity(unit = "Nos") {
+  return FRACTIONAL_ITEM_UNITS.has(String(unit || "").trim());
+}
+
+export function sellUnitChoices(baseUnit = "Nos") {
+  return SELL_UNIT_ALTERNATES[String(baseUnit || "").trim()] || null;
+}
+
+/** Item quantities for count units are whole. A typed decimal is dropped; a pasted 1.5 becomes 1. */
 export function wholeQuantity(value) {
   const text = String(value ?? "").trim();
   if (!text) return "";
@@ -168,6 +217,50 @@ export function wholeQuantity(value) {
     if (Number.isFinite(amount) && amount >= 0) return String(Math.trunc(amount));
   }
   return text.replace(/\D/g, "");
+}
+
+/** Parse a quantity string for the given unit (decimals allowed for weight/volume). */
+export function parseItemQuantity(value, unit = "Nos") {
+  const text = String(value ?? "").trim();
+  if (!text) return "";
+  if (!allowsFractionalQuantity(unit)) return wholeQuantity(text);
+  const cleaned = text.replace(/,/g, "").replace(/[^\d.]/g, "");
+  if (!cleaned) return "";
+  const firstDot = cleaned.indexOf(".");
+  const normalized = firstDot < 0
+    ? cleaned
+    : `${cleaned.slice(0, firstDot + 1)}${cleaned.slice(firstDot + 1).replace(/\./g, "")}`;
+  if (normalized === "." || normalized === "") return "";
+  const amount = Number(normalized);
+  if (!Number.isFinite(amount) || amount < 0) return "";
+  // Keep up to 3 decimals while typing (0.5 kg = 500 g).
+  if (normalized.includes(".")) {
+    const [whole, frac = ""] = normalized.split(".");
+    return `${whole || "0"}.${frac.slice(0, 3)}`;
+  }
+  return normalized;
+}
+
+export function normalizeQuantityNumber(value, unit = "Nos") {
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount < 0) return 0;
+  if (!allowsFractionalQuantity(unit)) return Math.trunc(amount);
+  return Math.round(amount * 1000) / 1000;
+}
+
+export function quantityInBaseUnit(quantity, baseUnit = "Nos", sellUnit = null) {
+  const base = String(baseUnit || "Nos").trim() || "Nos";
+  const sell = String(sellUnit || base).trim() || base;
+  const alts = sellUnitChoices(base);
+  const factor = alts?.find(row => row.id === sell)?.factorToBase ?? 1;
+  return normalizeQuantityNumber(Number(quantity || 0) * factor, base);
+}
+
+/** Map a Counter/UI line (optional sellUnit) onto the item's stock unit for posting. */
+export function lineForStockPosting(line = {}) {
+  const baseUnit = String(line.unit || "Nos").trim() || "Nos";
+  const quantity = quantityInBaseUnit(line.quantity, baseUnit, line.sellUnit || baseUnit);
+  return { ...line, unit: baseUnit, quantity, sellUnit: undefined };
 }
 
 export const emptyItemLine = () => ({
@@ -205,9 +298,17 @@ export function validateItemForm(form = {}) {
   if (!ITEM_UNITS.includes(form.unit) && !String(form.unit || "").trim()) return "Unit is required.";
   if (Number(form.sellingPrice || 0) < 0 || Number(form.purchasePrice || 0) < 0) return "Prices cannot be negative.";
   if (Number(form.gstRate || 0) < 0 || Number(form.gstRate || 0) > 100) return "GST rate must be between 0 and 100.";
-  if (form.itemType === "product" && !isWholeQuantity(form.openingStock)) return "Opening stock must be a whole number.";
+  if (form.itemType === "product" && !isValidQuantityInput(form.openingStock, form.unit)) {
+    return allowsFractionalQuantity(form.unit)
+      ? "Opening stock must be zero or more (up to 3 decimals)."
+      : "Opening stock must be a whole number.";
+  }
   if (form.itemType === "product" && Number(form.openingStock || 0) < 0) return "Opening stock cannot be negative.";
-  if (form.itemType === "product" && !isWholeQuantity(form.reorderLevel)) return "Reorder level must be a whole number.";
+  if (form.itemType === "product" && !isValidQuantityInput(form.reorderLevel, form.unit)) {
+    return allowsFractionalQuantity(form.unit)
+      ? "Reorder level must be zero or more (up to 3 decimals)."
+      : "Reorder level must be a whole number.";
+  }
   if (form.itemType === "product" && String(form.openingRate ?? "").trim() !== "" && !(Number(form.openingRate) >= 0)) {
     return "Opening rate must be zero or more.";
   }
@@ -219,8 +320,17 @@ const isWholeQuantity = value => {
   return text === "" || /^\d+$/.test(text);
 };
 
+const isValidQuantityInput = (value, unit = "Nos") => {
+  const text = String(value ?? "").trim();
+  if (text === "") return true;
+  if (!allowsFractionalQuantity(unit)) return isWholeQuantity(text);
+  return /^\d+(\.\d{1,3})?$/.test(text.replace(/,/g, ""));
+};
+
 export function normalizeItemLine(line = {}) {
-  const quantity = Math.trunc(Math.max(0, Number(line.quantity || 0) || 0));
+  const posted = lineForStockPosting(line);
+  const unit = String(posted.unit || "Nos").trim() || "Nos";
+  const quantity = normalizeQuantityNumber(posted.quantity, unit);
   const rate = Number(line.rate || 0);
   const computed = roundMoney(quantity * rate);
   // A scanned bill can print a taxable value a few paise away from quantity × rate.
@@ -234,7 +344,7 @@ export function normalizeItemLine(line = {}) {
     itemName: String(line.itemName || "").trim(),
     itemSku: String(line.itemSku || "").trim(),
     itemType: line.itemType === "service" ? "service" : "product",
-    unit: String(line.unit || "Nos").trim() || "Nos",
+    unit,
     quantity,
     rate,
     amount,
@@ -270,9 +380,15 @@ export function mapVoucherItemLinesForRpc(lines = []) {
 export function validateItemLines(lines = []) {
   if (!lines.length) return "Add at least one item.";
   for (let index = 0; index < lines.length; index += 1) {
-    const line = normalizeItemLine(lines[index]);
+    const raw = lines[index] || {};
+    const line = normalizeItemLine(raw);
     if (!line.itemId && !line.itemName) return `Choose an item on line ${index + 1}.`;
-    if (!isWholeQuantity(lines[index].quantity)) return `Quantity must be a whole number on line ${index + 1}.`;
+    const qtyUnit = raw.sellUnit || line.unit;
+    if (!isValidQuantityInput(raw.quantity, qtyUnit) && !isValidQuantityInput(raw.quantity, line.unit)) {
+      return allowsFractionalQuantity(line.unit) || allowsFractionalQuantity(qtyUnit)
+        ? `Quantity must be greater than zero (up to 3 decimals) on line ${index + 1}.`
+        : `Quantity must be a whole number on line ${index + 1}.`;
+    }
     if (!(line.quantity > 0)) return `Quantity must be greater than zero on line ${index + 1}.`;
     if (line.rate < 0) return `Rate cannot be negative on line ${index + 1}.`;
     if (!Number.isFinite(line.discountAmount)) return `Enter the discount as an amount or a percent (e.g. 10%) on line ${index + 1}.`;

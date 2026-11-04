@@ -13,7 +13,14 @@ import {
   voucherTotals,
 } from "../model/accountingModel.js";
 import { gstStateFromGstin, isIntraGst } from "../model/accountingGst.js";
-import { emptyItemLine, itemizedEntryDraft, wholeQuantity } from "../model/inventoryModel.js";
+import {
+  emptyItemLine,
+  itemizedEntryDraft,
+  lineForStockPosting,
+  parseItemQuantity,
+  quantityInBaseUnit,
+  sellUnitChoices,
+} from "../model/inventoryModel.js";
 import { resolveItemRate } from "../model/priceLists.js";
 import { cancelVoucher, postVoucher } from "../data/accountingRepository.js";
 import {
@@ -55,7 +62,8 @@ import { formatReceiptDateTime } from "../../receipts/model/receiptModel.js";
 const PAY_MODES = COUNTER_PAY_MODES;
 
 function lineNet(line) {
-  const qty = Math.max(0, Math.trunc(Number(line.quantity || 0)));
+  const baseUnit = line.unit || "Nos";
+  const qty = Math.max(0, quantityInBaseUnit(line.quantity, baseUnit, line.sellUnit || baseUnit));
   const rate = Number(line.rate || 0);
   const gross = roundMoney(qty * rate);
   const discText = String(line.discount || "").trim();
@@ -167,6 +175,7 @@ export function CounterWorkspace({
   const [online, setOnline] = useState(() => isBrowserOnline());
   const [offlineBills, setOfflineBills] = useState([]);
   const [offlineSyncing, setOfflineSyncing] = useState(false);
+  const [offlineQueueOpen, setOfflineQueueOpen] = useState(false);
   const [cachedCatalog, setCachedCatalog] = useState(null);
   const today = todayIso();
   const companyId = activeCompany?.id || null;
@@ -179,6 +188,14 @@ export function CounterWorkspace({
   const workingPriceLists = priceLists?.length ? priceLists : (cachedCatalog?.priceLists || []);
   const pendingOffline = useMemo(() => pendingOfflineBills(offlineBills), [offlineBills]);
   const offlineBlock = useMemo(() => offlineChargeBlocked(offlineBills), [offlineBills]);
+  const pendingOfflineTotal = useMemo(
+    () => roundMoney(pendingOffline.reduce((sum, bill) => sum + Number(bill.amount || 0), 0)),
+    [pendingOffline],
+  );
+  const pendingOfflinePreview = useMemo(
+    () => pendingOffline.slice(-8).reverse(),
+    [pendingOffline],
+  );
 
   const todayBills = useMemo(() => {
     const needle = tillNeedle(tillLabel);
@@ -346,12 +363,14 @@ export function CounterWorkspace({
       if (existing >= 0) {
         return current.map((line, index) => {
           if (index !== existing) return line;
-          const nextQty = Math.trunc(Number(line.quantity || 0)) + 1;
-          return { ...line, quantity: String(nextQty) };
+          const sellUnit = line.sellUnit || line.unit || "Nos";
+          const nextQty = parseItemQuantity(String(Number(line.quantity || 0) + 1), sellUnit);
+          return { ...line, quantity: nextQty || "1" };
         });
       }
       const resolved = resolveItemRate({ item, party: selectedParty, lists: workingPriceLists, kind: "selling" });
       const rate = resolved?.rate ?? item.sellingPrice ?? 0;
+      const unit = item.unit || "Nos";
       return [
         ...current,
         {
@@ -360,7 +379,8 @@ export function CounterWorkspace({
           itemName: item.name,
           itemSku: item.sku || "",
           itemType: item.itemType || "product",
-          unit: item.unit || "Nos",
+          unit,
+          sellUnit: unit,
           quantity: "1",
           rate: String(rate ?? ""),
           gstRate: String(item.gstRate ?? 18),
@@ -575,7 +595,7 @@ export function CounterWorkspace({
           cashierName ? `Cashier ${cashierName}` : "",
           counterPayLabel(moneyMode),
         ].filter(Boolean).join(" · "),
-        itemLines: lines,
+        itemLines: lines.map(lineForStockPosting),
         intra,
         taxInclusive: false,
         gstEnabled,
@@ -936,23 +956,55 @@ export function CounterWorkspace({
 
       {panel === "bill" && pendingOffline.length ? (
         <section className="counter-offline-queue card" aria-label="Offline bills pending sync">
-          <h2 className="acc-subsection-title">Pending offline bills</h2>
-          <p className="small">Day close runs after these sync. Provisional numbers until upload.</p>
-          <ul className="counter-offline-queue-list">
-            {pendingOffline.map(bill => (
-              <li key={bill.id} className="counter-offline-queue-row">
-                <span>
-                  <strong>{bill.offlineRef}</strong>
-                  <span className="small">
-                    {" · "}{money(bill.amount)}
-                    {" · "}{counterPayLabel(bill.moneyMode)}
-                    {" · "}{bill.syncStatus === "error" ? bill.syncError || "Sync error" : bill.syncStatus}
-                  </span>
-                </span>
-                <button type="button" className="btn" onClick={() => printOfflineBill(bill)}>Print</button>
-              </li>
-            ))}
-          </ul>
+          <div className="counter-offline-queue-head">
+            <div>
+              <h2 className="acc-subsection-title">
+                Offline queue · {pendingOffline.length} bill{pendingOffline.length === 1 ? "" : "s"} · {money(pendingOfflineTotal)}
+              </h2>
+              <p className="small">
+                Kept on this device until sync. Day close after upload.
+                {offlineBlock.blocked ? ` ${offlineBlock.reason}` : ""}
+              </p>
+            </div>
+            <div className="counter-offline-queue-actions">
+              {online ? (
+                <button type="button" className="btn primary" disabled={offlineSyncing} onClick={() => runOfflineSync()}>
+                  {offlineSyncing ? "Syncing…" : "Sync now"}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setOfflineQueueOpen(open => !open)}
+              >
+                {offlineQueueOpen ? "Hide recent" : "Show recent"}
+              </button>
+            </div>
+          </div>
+          {offlineQueueOpen ? (
+            <>
+              <ul className="counter-offline-queue-list">
+                {pendingOfflinePreview.map(bill => (
+                  <li key={bill.id} className="counter-offline-queue-row">
+                    <span>
+                      <strong>{bill.offlineRef}</strong>
+                      <span className="small">
+                        {" · "}{money(bill.amount)}
+                        {" · "}{counterPayLabel(bill.moneyMode)}
+                        {" · "}{bill.syncStatus === "error" ? bill.syncError || "Sync error" : bill.syncStatus}
+                      </span>
+                    </span>
+                    <button type="button" className="btn" onClick={() => printOfflineBill(bill)}>Print</button>
+                  </li>
+                ))}
+              </ul>
+              {pendingOffline.length > pendingOfflinePreview.length ? (
+                <p className="small">
+                  Showing latest {pendingOfflinePreview.length} of {pendingOffline.length}. Full queue stays on device until sync.
+                </p>
+              ) : null}
+            </>
+          ) : null}
         </section>
       ) : null}
 
@@ -1123,41 +1175,76 @@ export function CounterWorkspace({
             </div>
           ) : (
             <ul className="counter-line-list">
-              {lines.map((line, index) => (
-                <li key={`${line.itemId}-${index}`} className="counter-line">
-                  <div className="counter-line-main">
-                    <strong>{line.itemName}</strong>
-                    <span className="small">
-                      {[
-                        line.itemSku,
-                        line._batchNo ? `Batch ${line._batchNo}` : "",
-                        line._rateList ? line._rateList : line._rateSource === "party_list" ? "Party price" : "",
-                        line._stock != null ? `Stock ${line._stock}` : "",
-                      ].filter(Boolean).join(" · ")}
-                    </span>
-                  </div>
-                  <input
-                    className="counter-qty"
-                    inputMode="numeric"
-                    aria-label={`Quantity for ${line.itemName}`}
-                    value={line.quantity}
-                    onChange={event => patchLine(index, { quantity: wholeQuantity(event.target.value) || "0" })}
-                  />
-                  <input
-                    className="counter-line-rate-input"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    aria-label={`Rate for ${line.itemName}`}
-                    value={line.rate}
-                    onChange={event => patchLine(index, { rate: event.target.value })}
-                  />
-                  <strong className="counter-line-net">{money(lineNet(line))}</strong>
-                  <button type="button" className="btn counter-line-remove" aria-label={`Remove ${line.itemName}`} onClick={() => removeLine(index)}>
-                    <Trash2 size={14} aria-hidden="true" />
-                  </button>
-                </li>
-              ))}
+              {lines.map((line, index) => {
+                const sellChoices = sellUnitChoices(line.unit);
+                const sellUnit = line.sellUnit || line.unit || "Nos";
+                const baseQty = quantityInBaseUnit(line.quantity, line.unit, sellUnit);
+                return (
+                  <li key={`${line.itemId}-${index}`} className="counter-line">
+                    <div className="counter-line-main">
+                      <strong>{line.itemName}</strong>
+                      <span className="small">
+                        {[
+                          line.itemSku,
+                          line._batchNo ? `Batch ${line._batchNo}` : "",
+                          line._rateList ? line._rateList : line._rateSource === "party_list" ? "Party price" : "",
+                          line._stock != null ? `Stock ${line._stock} ${line.unit || ""}` : "",
+                          sellChoices && sellUnit !== line.unit ? `= ${baseQty} ${line.unit}` : "",
+                          `Rate / ${line.unit || "unit"}`,
+                        ].filter(Boolean).join(" · ")}
+                      </span>
+                    </div>
+                    <div className="counter-qty-wrap">
+                      <input
+                        className="counter-qty"
+                        inputMode="decimal"
+                        aria-label={`Quantity for ${line.itemName}`}
+                        value={line.quantity}
+                        onChange={event => patchLine(index, {
+                          quantity: parseItemQuantity(event.target.value, sellUnit) || "0",
+                        })}
+                      />
+                      {sellChoices ? (
+                        <select
+                          className="counter-sell-unit"
+                          aria-label={`Sell unit for ${line.itemName}`}
+                          value={sellUnit}
+                          onChange={event => {
+                            const nextSell = event.target.value;
+                            const asBase = quantityInBaseUnit(line.quantity, line.unit, sellUnit);
+                            const nextAlt = sellChoices.find(row => row.id === nextSell);
+                            const factor = nextAlt?.factorToBase || 1;
+                            const converted = factor ? asBase / factor : asBase;
+                            patchLine(index, {
+                              sellUnit: nextSell,
+                              quantity: parseItemQuantity(String(converted), nextSell) || "0",
+                            });
+                          }}
+                        >
+                          {sellChoices.map(choice => (
+                            <option key={choice.id} value={choice.id}>{choice.label}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="small counter-qty-unit">{line.unit || "Nos"}</span>
+                      )}
+                    </div>
+                    <input
+                      className="counter-line-rate-input"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      aria-label={`Rate for ${line.itemName} per ${line.unit || "unit"}`}
+                      value={line.rate}
+                      onChange={event => patchLine(index, { rate: event.target.value })}
+                    />
+                    <strong className="counter-line-net">{money(lineNet(line))}</strong>
+                    <button type="button" className="btn counter-line-remove" aria-label={`Remove ${line.itemName}`} onClick={() => removeLine(index)}>
+                      <Trash2 size={14} aria-hidden="true" />
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>
