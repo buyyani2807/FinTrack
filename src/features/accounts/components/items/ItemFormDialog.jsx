@@ -45,6 +45,10 @@ export function ItemFormDialog({
   const categoryOptions = itemCategoryChoices(categories);
   const skuConflict = findSkuConflict(items, form.sku, form.id || null);
   const showPackContains = !isService && canSetPackContains(form.unit);
+  const defaultPackUnit = ["Bag", "Pack", "Box", "Tin", "Carton", "Packet", "Bundle", "Case"].includes(form.unit)
+    ? "Kg"
+    : "";
+  const packUnitValue = form.packContainsUnit || defaultPackUnit;
   return (
     <DialogModal className="acc-modal" title={form.id ? "Edit item" : "Create item"} close={() => setShowForm(false)}>
       {error && <p className="red small">{error}</p>}
@@ -100,12 +104,18 @@ export function ItemFormDialog({
                 step="0.001"
                 value={form.packContainsQty || ""}
                 placeholder="e.g. 25"
-                onChange={event => setForm(current => ({ ...current, packContainsQty: event.target.value }))}
+                onChange={event => setForm(current => ({
+                  ...current,
+                  packContainsQty: event.target.value,
+                  packContainsUnit: event.target.value
+                    ? (current.packContainsUnit || defaultPackUnit || "Kg")
+                    : "",
+                }))}
               />
             </Field>
             <Field label="Contains unit">
               <Select
-                value={form.packContainsUnit || ""}
+                value={packUnitValue}
                 onChange={event => setForm(current => ({ ...current, packContainsUnit: event.target.value }))}
               >
                 <option value="">Not set</option>
@@ -114,13 +124,13 @@ export function ItemFormDialog({
                 ))}
               </Select>
             </Field>
-            {(form.packContainsQty && form.packContainsUnit) ? (
+            {(form.packContainsQty && packUnitValue) ? (
               <p className="small span">
-                Counter can sell in {form.packContainsUnit === "Gram" ? "g" : form.packContainsUnit === "Millilitre" ? "ml" : form.packContainsUnit}
+                Counter can sell in {packUnitValue === "Gram" ? "g" : packUnitValue === "Millilitre" ? "ml" : packUnitValue}
                 {" "}or {form.unit}. Price stays ₹{form.sellingPrice || "…"} / {form.unit}.
               </p>
             ) : (
-              <p className="small span">Optional — set this for rice bags so customers can buy loose kg from bag stock.</p>
+              <p className="small span">Enter kg per bag (25 or 26) so Counter can sell Rice in Kg or g.</p>
             )}
           </>
         ) : null}

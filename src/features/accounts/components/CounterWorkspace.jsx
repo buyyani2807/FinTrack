@@ -14,8 +14,10 @@ import {
 } from "../model/accountingModel.js";
 import { gstStateFromGstin, isIntraGst } from "../model/accountingGst.js";
 import {
+  canSetPackContains,
   emptyItemLine,
   itemizedEntryDraft,
+  itemPackMeta,
   lineForStockPosting,
   parseItemQuantity,
   quantityInBaseUnit,
@@ -60,6 +62,18 @@ import { printSalesInvoicePdf } from "../io/salesInvoicePdf.js";
 import { formatReceiptDateTime } from "../../receipts/model/receiptModel.js";
 
 const PAY_MODES = COUNTER_PAY_MODES;
+
+/** Prefer pack size typed on the bill line; else take it from the item master. */
+function withCatalogPack(line, items = []) {
+  if (itemPackMeta(line)) return line;
+  const item = (items || []).find(row => row.id === line.itemId);
+  if (!itemPackMeta(item)) return line;
+  return {
+    ...line,
+    packContainsQty: item.packContainsQty,
+    packContainsUnit: item.packContainsUnit || "",
+  };
+}
 
 function lineNet(line) {
   const baseUnit = line.unit || "Nos";
@@ -303,13 +317,37 @@ export function CounterWorkspace({
       return changed ? next : current;
     });
   }, [billingPartyId, selectedParty, workingPriceLists, workingItems]);
+
+  // Pull bag/pack size from the item master onto open bill lines (e.g. after editing Rice).
+  useEffect(() => {
+    setLines(current => {
+      if (!current.length || !(workingItems || []).length) return current;
+      let changed = false;
+      const next = current.map(line => {
+        if (!line.itemId || itemPackMeta(line)) return line;
+        const item = workingItems.find(row => row.id === line.itemId);
+        if (!itemPackMeta(item)) return line;
+        changed = true;
+        return {
+          ...line,
+          packContainsQty: item.packContainsQty,
+          packContainsUnit: item.packContainsUnit || "",
+        };
+      });
+      return changed ? next : current;
+    });
+  }, [workingItems]);
   const partyState = billingPartyId === CASH_PARTY_ID
     ? ((activeCompany || cachedCatalog?.company)?.stateCode || "")
     : (selectedParty?.stateCode || gstStateFromGstin(selectedParty?.gstin));
   const intra = isIntraGst((activeCompany || cachedCatalog?.company)?.stateCode, partyState);
+  const billLines = useMemo(
+    () => (lines || []).map(line => withCatalogPack(line, workingItems)),
+    [lines, workingItems],
+  );
   const totals = useMemo(
-    () => estimateTotal(lines, { gstEnabled, intra }),
-    [lines, gstEnabled, intra],
+    () => estimateTotal(billLines, { gstEnabled, intra }),
+    [billLines, gstEnabled, intra],
   );
   const expectedCash = useMemo(() => {
     // Drawer cash = opening float + cash portion of Counter tenders (not full Cash+UPI bills).
@@ -322,13 +360,13 @@ export function CounterWorkspace({
       items: workingItems,
       stockByItem,
       stockMovements,
-      lines,
+      lines: billLines,
       vouchers,
       tillLabel,
       today,
       cartTotal: totals.total,
     }),
-    [workingItems, stockByItem, stockMovements, lines, vouchers, tillLabel, today, totals.total],
+    [workingItems, stockByItem, stockMovements, billLines, vouchers, tillLabel, today, totals.total],
   );
   const closeTips = useMemo(
     () => counterDayCloseCoach({
@@ -597,7 +635,7 @@ export function CounterWorkspace({
           cashierName ? `Cashier ${cashierName}` : "",
           counterPayLabel(moneyMode),
         ].filter(Boolean).join(" · "),
-        itemLines: lines.map(lineForStockPosting),
+        itemLines: billLines.map(lineForStockPosting),
         intra,
         taxInclusive: false,
         gstEnabled,
@@ -1178,12 +1216,19 @@ export function CounterWorkspace({
           ) : (
             <ul className="counter-line-list">
               {lines.map((line, index) => {
-                const sellChoices = sellUnitChoices(line.unit, line);
-                const sellUnit = line.sellUnit || line.unit || "Nos";
-                const baseQty = quantityInBaseUnit(line.quantity, line.unit, sellUnit, line);
-                const packHint = line.packContainsQty && line.packContainsUnit
-                  ? `1 ${line.unit} = ${line.packContainsQty} ${line.packContainsUnit}`
+                const catalogItem = (workingItems || []).find(row => row.id === line.itemId);
+                const packLine = {
+                  ...line,
+                  packContainsQty: itemPackMeta(line)?.qty ?? catalogItem?.packContainsQty ?? null,
+                  packContainsUnit: itemPackMeta(line)?.unit || catalogItem?.packContainsUnit || "",
+                };
+                const sellChoices = sellUnitChoices(packLine.unit, packLine);
+                const sellUnit = packLine.sellUnit || packLine.unit || "Nos";
+                const baseQty = quantityInBaseUnit(packLine.quantity, packLine.unit, sellUnit, packLine);
+                const packHint = itemPackMeta(packLine)
+                  ? `1 ${packLine.unit} = ${packLine.packContainsQty} ${packLine.packContainsUnit}`
                   : "";
+                const needsPackSize = canSetPackContains(packLine.unit) && !itemPackMeta(packLine);
                 return (
                   <li key={`${line.itemId}-${index}`} className="counter-line">
                     <div className="counter-line-main">
@@ -1199,6 +1244,26 @@ export function CounterWorkspace({
                           `₹${line.rate || 0} / ${line.unit || "unit"}`,
                         ].filter(Boolean).join(" · ")}
                       </span>
+                      {needsPackSize ? (
+                        <label className="counter-pack-size">
+                          <span className="small">1 {line.unit || "Bag"} =</span>
+                          <input
+                            className="counter-pack-qty"
+                            inputMode="decimal"
+                            placeholder="25"
+                            aria-label={`Kg per ${line.unit || "Bag"} for ${line.itemName}`}
+                            value={line.packContainsQty ?? ""}
+                            onChange={event => {
+                              const qty = parseItemQuantity(event.target.value, "Kg");
+                              patchLine(index, {
+                                packContainsQty: qty,
+                                packContainsUnit: qty ? "Kg" : "",
+                              });
+                            }}
+                          />
+                          <span className="small">Kg to sell loose</span>
+                        </label>
+                      ) : null}
                     </div>
                     <div className="counter-qty-wrap">
                       <input
@@ -1216,12 +1281,12 @@ export function CounterWorkspace({
                           className="counter-sell-unit"
                           aria-label={`Sell unit for ${line.itemName}`}
                           title={packHint
-                            ? `Bill in ${line.packContainsUnit} or ${line.unit}; price stays per ${line.unit}`
+                            ? `Bill in ${packLine.packContainsUnit} or ${line.unit}; price stays per ${line.unit}`
                             : `Bill in alternate unit; price stays per ${line.unit || "unit"}`}
                           value={sellUnit}
                           onChange={event => {
                             const nextSell = event.target.value;
-                            const asBase = quantityInBaseUnit(line.quantity, line.unit, sellUnit, line);
+                            const asBase = quantityInBaseUnit(line.quantity, line.unit, sellUnit, packLine);
                             const nextAlt = sellChoices.find(row => row.id === nextSell);
                             const factor = nextAlt?.factorToBase || 1;
                             const converted = factor ? asBase / factor : asBase;
@@ -1248,7 +1313,7 @@ export function CounterWorkspace({
                       value={line.rate}
                       onChange={event => patchLine(index, { rate: event.target.value })}
                     />
-                    <strong className="counter-line-net">{money(lineNet(line))}</strong>
+                    <strong className="counter-line-net">{money(lineNet(packLine))}</strong>
                     <button type="button" className="btn counter-line-remove" aria-label={`Remove ${line.itemName}`} onClick={() => removeLine(index)}>
                       <Trash2 size={14} aria-hidden="true" />
                     </button>
