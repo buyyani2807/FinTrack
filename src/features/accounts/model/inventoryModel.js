@@ -162,6 +162,8 @@ export const emptyItemForm = () => ({
   openingStockDate: "",
   openingRate: "",
   reorderLevel: "0",
+  packContainsQty: "",
+  packContainsUnit: "",
   isActive: true,
 });
 
@@ -188,6 +190,8 @@ export function itemToForm(item = {}, patch = {}) {
     openingStockDate: item.openingStockDate || "",
     openingRate: item.openingRate == null ? "" : String(item.openingRate),
     reorderLevel: String(item.reorderLevel ?? "0"),
+    packContainsQty: item.packContainsQty == null || item.packContainsQty === "" ? "" : String(item.packContainsQty),
+    packContainsUnit: item.packContainsUnit || "",
     isActive: item.isActive !== false,
     ...patch,
   };
@@ -234,12 +238,59 @@ export const SELL_UNIT_ALTERNATES = {
   ],
 };
 
+/** Loose units you can declare inside a Bag / Pack / Box (1 Bag = 25 Kg). */
+export const PACK_CONTAINS_UNITS = ["Kg", "Gram", "Litre", "Millilitre"];
+
+function sellUnitLabel(unit = "") {
+  const id = String(unit || "").trim();
+  if (id === "Gram") return "g";
+  if (id === "Millilitre") return "ml";
+  if (id === "Litre") return "L";
+  return id;
+}
+
+/** 1 stock unit contains N of packContainsUnit (e.g. Bag → 25 Kg). */
+export function itemPackMeta(itemOrLine = null) {
+  const qty = Number(itemOrLine?.packContainsQty ?? 0);
+  const unit = String(itemOrLine?.packContainsUnit || "").trim();
+  if (!(qty > 0) || !unit) return null;
+  return { qty, unit };
+}
+
+/** Pack breakdown only when the stock unit is not already a weight/volume alternate. */
+export function canSetPackContains(unit = "Nos") {
+  const base = String(unit || "Nos").trim() || "Nos";
+  return !SELL_UNIT_ALTERNATES[base];
+}
+
 export function allowsFractionalQuantity(unit = "Nos") {
   return FRACTIONAL_ITEM_UNITS.has(String(unit || "").trim());
 }
 
-export function sellUnitChoices(baseUnit = "Nos") {
-  return SELL_UNIT_ALTERNATES[String(baseUnit || "").trim()] || null;
+/**
+ * Sell-unit dropdown for Counter. Rate stays per stock unit.
+ * With pack meta (1 Bag = 25 Kg), returns Bag / Kg / g so loose kg can be sold from bag stock.
+ */
+export function sellUnitChoices(baseUnit = "Nos", itemOrLine = null) {
+  const base = String(baseUnit || "Nos").trim() || "Nos";
+  const pack = itemPackMeta(itemOrLine);
+  if (pack && pack.unit !== base && canSetPackContains(base)) {
+    const choices = [
+      { id: base, label: sellUnitLabel(base) || base, factorToBase: 1 },
+      { id: pack.unit, label: sellUnitLabel(pack.unit), factorToBase: 1 / pack.qty },
+    ];
+    if (pack.unit === "Kg") {
+      choices.push({ id: "Gram", label: "g", factorToBase: 1 / (pack.qty * 1000) });
+    } else if (pack.unit === "Litre") {
+      choices.push({ id: "Millilitre", label: "ml", factorToBase: 1 / (pack.qty * 1000) });
+    } else if (pack.unit === "Gram") {
+      choices.push({ id: "Kg", label: "Kg", factorToBase: 1000 / pack.qty });
+    } else if (pack.unit === "Millilitre") {
+      choices.push({ id: "Litre", label: "L", factorToBase: 1000 / pack.qty });
+    }
+    return choices;
+  }
+  return SELL_UNIT_ALTERNATES[base] || null;
 }
 
 /** Item quantities for count units are whole. A typed decimal is dropped; a pasted 1.5 becomes 1. */
@@ -282,19 +333,30 @@ export function normalizeQuantityNumber(value, unit = "Nos") {
   return Math.round(amount * 1000) / 1000;
 }
 
-export function quantityInBaseUnit(quantity, baseUnit = "Nos", sellUnit = null) {
+export function quantityInBaseUnit(quantity, baseUnit = "Nos", sellUnit = null, itemOrLine = null) {
   const base = String(baseUnit || "Nos").trim() || "Nos";
   const sell = String(sellUnit || base).trim() || base;
-  const alts = sellUnitChoices(base);
+  const alts = sellUnitChoices(base, itemOrLine);
   const factor = alts?.find(row => row.id === sell)?.factorToBase ?? 1;
-  return normalizeQuantityNumber(Number(quantity || 0) * factor, base);
+  const raw = Number(quantity || 0) * factor;
+  if (!Number.isFinite(raw) || raw < 0) return 0;
+  // Loose sell from a pack (5 Kg out of a 25 Kg bag) needs fractional stock units.
+  if (alts && sell !== base) return Math.round(raw * 1000) / 1000;
+  return normalizeQuantityNumber(raw, base);
 }
 
 /** Map a Counter/UI line (optional sellUnit) onto the item's stock unit for posting. */
 export function lineForStockPosting(line = {}) {
   const baseUnit = String(line.unit || "Nos").trim() || "Nos";
-  const quantity = quantityInBaseUnit(line.quantity, baseUnit, line.sellUnit || baseUnit);
-  return { ...line, unit: baseUnit, quantity, sellUnit: undefined };
+  const quantity = quantityInBaseUnit(line.quantity, baseUnit, line.sellUnit || baseUnit, line);
+  return {
+    ...line,
+    unit: baseUnit,
+    quantity,
+    sellUnit: undefined,
+    packContainsQty: undefined,
+    packContainsUnit: undefined,
+  };
 }
 
 export const emptyItemLine = () => ({
@@ -346,6 +408,19 @@ export function validateItemForm(form = {}) {
   if (form.itemType === "product" && String(form.openingRate ?? "").trim() !== "" && !(Number(form.openingRate) >= 0)) {
     return "Opening rate must be zero or more.";
   }
+  if (form.itemType === "product" && canSetPackContains(form.unit)) {
+    const packQtyText = String(form.packContainsQty ?? "").trim();
+    const packUnit = String(form.packContainsUnit || "").trim();
+    if (packQtyText || packUnit) {
+      if (!packQtyText || !packUnit) return "Set both pack contents quantity and unit, or leave both blank.";
+      const packQty = Number(packQtyText);
+      if (!(packQty > 0) || !/^\d+(\.\d{1,3})?$/.test(packQtyText.replace(/,/g, ""))) {
+        return "Pack contents must be greater than zero (up to 3 decimals).";
+      }
+      if (!PACK_CONTAINS_UNITS.includes(packUnit)) return "Choose Kg, g, Litre, or ml for pack contents.";
+      if (packUnit === String(form.unit || "").trim()) return "Pack contents unit must differ from the item unit.";
+    }
+  }
   return "";
 }
 
@@ -364,7 +439,8 @@ const isValidQuantityInput = (value, unit = "Nos") => {
 export function normalizeItemLine(line = {}) {
   const posted = lineForStockPosting(line);
   const unit = String(posted.unit || "Nos").trim() || "Nos";
-  const quantity = normalizeQuantityNumber(posted.quantity, unit);
+  // quantityInBaseUnit already applied whole/fractional rules (incl. fractional bags from kg).
+  const quantity = Math.round(Number(posted.quantity || 0) * 1000) / 1000;
   const rate = Number(line.rate || 0);
   const computed = roundMoney(quantity * rate);
   // A scanned bill can print a taxable value a few paise away from quantity × rate.

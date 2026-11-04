@@ -125,6 +125,8 @@ export async function restoreAccountsCompanyBackup(token, rawBackup, {
       openingStock: item.openingStock || 0,
       openingStockDate: item.openingStockDate || null,
       reorderLevel: item.reorderLevel || 0,
+      packContainsQty: item.packContainsQty ?? "",
+      packContainsUnit: item.packContainsUnit || "",
       isActive: item.isActive !== false,
     });
     itemMap.set(item.id, id);

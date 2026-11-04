@@ -63,7 +63,7 @@ const PAY_MODES = COUNTER_PAY_MODES;
 
 function lineNet(line) {
   const baseUnit = line.unit || "Nos";
-  const qty = Math.max(0, quantityInBaseUnit(line.quantity, baseUnit, line.sellUnit || baseUnit));
+  const qty = Math.max(0, quantityInBaseUnit(line.quantity, baseUnit, line.sellUnit || baseUnit, line));
   const rate = Number(line.rate || 0);
   const gross = roundMoney(qty * rate);
   const discText = String(line.discount || "").trim();
@@ -381,6 +381,8 @@ export function CounterWorkspace({
           itemType: item.itemType || "product",
           unit,
           sellUnit: unit,
+          packContainsQty: item.packContainsQty ?? null,
+          packContainsUnit: item.packContainsUnit || "",
           quantity: "1",
           rate: String(rate ?? ""),
           gstRate: String(item.gstRate ?? 18),
@@ -1176,9 +1178,12 @@ export function CounterWorkspace({
           ) : (
             <ul className="counter-line-list">
               {lines.map((line, index) => {
-                const sellChoices = sellUnitChoices(line.unit);
+                const sellChoices = sellUnitChoices(line.unit, line);
                 const sellUnit = line.sellUnit || line.unit || "Nos";
-                const baseQty = quantityInBaseUnit(line.quantity, line.unit, sellUnit);
+                const baseQty = quantityInBaseUnit(line.quantity, line.unit, sellUnit, line);
+                const packHint = line.packContainsQty && line.packContainsUnit
+                  ? `1 ${line.unit} = ${line.packContainsQty} ${line.packContainsUnit}`
+                  : "";
                 return (
                   <li key={`${line.itemId}-${index}`} className="counter-line">
                     <div className="counter-line-main">
@@ -1189,6 +1194,7 @@ export function CounterWorkspace({
                           line._batchNo ? `Batch ${line._batchNo}` : "",
                           line._rateList ? line._rateList : line._rateSource === "party_list" ? "Party price" : "",
                           line._stock != null ? `Stock ${line._stock} ${line.unit || ""}` : "",
+                          packHint,
                           sellChoices && sellUnit !== line.unit && baseQty > 0 ? `= ${baseQty} ${line.unit}` : "",
                           `₹${line.rate || 0} / ${line.unit || "unit"}`,
                         ].filter(Boolean).join(" · ")}
@@ -1209,11 +1215,13 @@ export function CounterWorkspace({
                         <select
                           className="counter-sell-unit"
                           aria-label={`Sell unit for ${line.itemName}`}
-                          title="Bill in Kg or grams; price stays per Kg"
+                          title={packHint
+                            ? `Bill in ${line.packContainsUnit} or ${line.unit}; price stays per ${line.unit}`
+                            : `Bill in alternate unit; price stays per ${line.unit || "unit"}`}
                           value={sellUnit}
                           onChange={event => {
                             const nextSell = event.target.value;
-                            const asBase = quantityInBaseUnit(line.quantity, line.unit, sellUnit);
+                            const asBase = quantityInBaseUnit(line.quantity, line.unit, sellUnit, line);
                             const nextAlt = sellChoices.find(row => row.id === nextSell);
                             const factor = nextAlt?.factorToBase || 1;
                             const converted = factor ? asBase / factor : asBase;

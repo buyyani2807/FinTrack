@@ -729,6 +729,8 @@ const mapItem = row => ({
   openingStockDate: row.opening_stock_date || null,
   openingRate: row.opening_rate === null || row.opening_rate === undefined ? null : Number(row.opening_rate),
   reorderLevel: Number(row.reorder_level || 0),
+  packContainsQty: row.pack_contains_qty == null || row.pack_contains_qty === "" ? null : Number(row.pack_contains_qty),
+  packContainsUnit: row.pack_contains_unit || "",
   isActive: row.is_active !== false,
 });
 
@@ -782,13 +784,39 @@ export const loadItemCategories = token => wrap(
 );
 
 const ITEM_COLUMNS = "id,item_type,name,sku,category_id,unit,description,selling_price,purchase_price,gst_rate,hsn_sac,opening_stock,opening_stock_date,reorder_level,is_active";
-const ITEM_COLUMNS_FULL = `${ITEM_COLUMNS},opening_rate,brand,barcode,batch_no,expiry_date`;
+const ITEM_COLUMNS_CORE = `${ITEM_COLUMNS},opening_rate,brand,barcode,batch_no,expiry_date`;
+const ITEM_COLUMNS_FULL = `${ITEM_COLUMNS_CORE},pack_contains_qty,pack_contains_unit`;
 const itemsPath = columns => `/rest/v1/acc_items?select=${columns}&order=name.asc${companyEq()}`;
 
 export const loadItems = token => wrap(
   accQuery(itemsPath(ITEM_COLUMNS_FULL), token)
     .catch(err => {
       const message = String(err?.message || "");
+      if (/pack_contains/i.test(message)) {
+        return accQuery(itemsPath(ITEM_COLUMNS_CORE), token).catch(inner => {
+          const innerMessage = String(inner?.message || "");
+          if (/batch_no|expiry_date/i.test(innerMessage)) {
+            return accQuery(itemsPath(`${ITEM_COLUMNS},opening_rate,brand,barcode`), token).catch(older => {
+              if (!/brand|barcode/i.test(String(older?.message || ""))) {
+                if (/opening_rate/i.test(String(older?.message || ""))) return accQuery(itemsPath(ITEM_COLUMNS), token);
+                throw older;
+              }
+              return accQuery(itemsPath(`${ITEM_COLUMNS},opening_rate`), token).catch(legacy => {
+                if (!/opening_rate/i.test(String(legacy?.message || ""))) throw legacy;
+                return accQuery(itemsPath(ITEM_COLUMNS), token);
+              });
+            });
+          }
+          if (/brand|barcode/i.test(innerMessage)) {
+            return accQuery(itemsPath(`${ITEM_COLUMNS},opening_rate`), token).catch(older => {
+              if (!/opening_rate/i.test(String(older?.message || ""))) throw older;
+              return accQuery(itemsPath(ITEM_COLUMNS), token);
+            });
+          }
+          if (/opening_rate/i.test(innerMessage)) return accQuery(itemsPath(ITEM_COLUMNS), token);
+          throw inner;
+        });
+      }
       if (/batch_no|expiry_date/i.test(message)) {
         return accQuery(itemsPath(`${ITEM_COLUMNS},opening_rate,brand,barcode`), token).catch(inner => {
           if (!/brand|barcode/i.test(String(inner?.message || ""))) {
@@ -1005,8 +1033,11 @@ export const upsertItemCategory = (token, { id = null, name, parentId = null }) 
 export const deleteItemCategory = (token, id) =>
   wrap(accRpc("acc_delete_item_category", { input_id: id }, token));
 
-export const upsertItem = (token, form) =>
-  wrap(accRpc("acc_upsert_item", {
+export const upsertItem = (token, form) => {
+  const packQtyText = String(form.packContainsQty ?? "").trim();
+  const packUnit = String(form.packContainsUnit || "").trim();
+  const packEnabled = form.itemType !== "service" && packQtyText && packUnit;
+  const baseArgs = {
     input_id: form.id || null,
     input_item_type: form.itemType || "product",
     input_name: form.name,
@@ -1026,7 +1057,26 @@ export const upsertItem = (token, form) =>
     input_barcode: form.barcode || null,
     input_batch_no: form.batchNo || null,
     input_expiry_date: form.expiryDate || null,
-  }, token));
+  };
+  const withPack = {
+    ...baseArgs,
+    input_pack_contains_qty: packEnabled ? Number(packQtyText) : null,
+    input_pack_contains_unit: packEnabled ? packUnit : null,
+  };
+  const packMigrationError = err => {
+    const error = new Error("Run migration 119_accounts_item_pack_contains.sql in the Supabase SQL editor to enable bag ↔ kg pack contents.");
+    error.code = "MIGRATION_REQUIRED";
+    error.cause = err;
+    return error;
+  };
+  return wrap(accRpc("acc_upsert_item", withPack, token)).catch(err => {
+    const message = String(err?.message || err?.details || "");
+    if (!/pack_contains|input_pack_contains|Could not find the function.*acc_upsert_item/i.test(message)) throw err;
+    if (packEnabled) throw packMigrationError(err);
+    // DBs without 119 still accept the older signature when pack contents are unused.
+    return wrap(accRpc("acc_upsert_item", baseArgs, token));
+  });
+};
 
 export const setItemActive = (token, id, isActive) =>
   wrap(accRpc("acc_set_item_active", { input_id: id, input_active: isActive !== false }, token));

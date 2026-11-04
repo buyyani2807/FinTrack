@@ -24,6 +24,7 @@ import {
   quantityInBaseUnit,
   lineForStockPosting,
   normalizeQuantityNumber,
+  sellUnitChoices,
 } from "../src/features/accounts/model/inventoryModel.js";
 import { CASH_PARTY_ID } from "../src/features/accounts/model/accountingModel.js";
 
@@ -171,6 +172,56 @@ test("count units stay whole; weight units allow decimals and g↔kg sell units"
   assert.equal(validateItemLines([{ itemId: "a", itemName: "A", quantity: "3", rate: 10 }]), "");
   assert.match(validateItemForm({ name: "Cement", sku: "C1", itemType: "product", unit: "Bag", openingStock: "1.5", reorderLevel: "0" }), /whole number/i);
   assert.equal(validateItemForm({ name: "Toor dal", sku: "D1", itemType: "product", unit: "Kg", openingStock: "12.5", reorderLevel: "2.5" }), "");
+});
+
+test("bag pack contents let Counter sell loose kg/g from bag stock", () => {
+  const rice = { unit: "Bag", packContainsQty: 25, packContainsUnit: "Kg", rate: 2500 };
+  const choices = sellUnitChoices("Bag", rice);
+  assert.deepEqual(choices?.map(row => row.id), ["Bag", "Kg", "Gram"]);
+  assert.equal(quantityInBaseUnit(1, "Bag", "Bag", rice), 1);
+  assert.equal(quantityInBaseUnit(5, "Bag", "Kg", rice), 0.2);
+  assert.equal(quantityInBaseUnit(500, "Bag", "Gram", rice), 0.02);
+  const posted = lineForStockPosting({
+    itemId: "rice",
+    itemName: "Rice",
+    unit: "Bag",
+    sellUnit: "Kg",
+    quantity: "5",
+    rate: 2500,
+    packContainsQty: 25,
+    packContainsUnit: "Kg",
+  });
+  assert.equal(posted.unit, "Bag");
+  assert.equal(posted.quantity, 0.2);
+  assert.equal(normalizeItemLine({
+    itemId: "rice",
+    itemName: "Rice",
+    unit: "Bag",
+    sellUnit: "Kg",
+    quantity: "5",
+    rate: 2500,
+    packContainsQty: 25,
+    packContainsUnit: "Kg",
+  }).amount, 500);
+  assert.equal(validateItemLines([{
+    itemId: "rice",
+    itemName: "Rice",
+    unit: "Bag",
+    sellUnit: "Kg",
+    quantity: "5",
+    rate: 2500,
+    packContainsQty: 25,
+    packContainsUnit: "Kg",
+  }]), "");
+  assert.equal(validateItemForm({
+    name: "Rice", sku: "R1", itemType: "product", unit: "Bag",
+    openingStock: "10", reorderLevel: "1", packContainsQty: "26", packContainsUnit: "Kg",
+  }), "");
+  assert.match(validateItemForm({
+    name: "Rice", sku: "R1", itemType: "product", unit: "Bag",
+    openingStock: "10", reorderLevel: "1", packContainsQty: "25", packContainsUnit: "",
+  }), /both pack contents/i);
+  assert.equal(sellUnitChoices("Bag"), null);
 });
 
 test("rejects invalid item lines", () => {

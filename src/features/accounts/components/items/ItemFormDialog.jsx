@@ -1,6 +1,13 @@
 import { FilterField as Field } from "../AccUi.jsx";
 import { Select } from "../../../../components/Select.jsx";
-import { ITEM_TYPES, defaultUnitForIndustry, itemCategoryChoices, unitsForItemType } from "../../model/inventoryModel.js";
+import {
+  ITEM_TYPES,
+  PACK_CONTAINS_UNITS,
+  canSetPackContains,
+  defaultUnitForIndustry,
+  itemCategoryChoices,
+  unitsForItemType,
+} from "../../model/inventoryModel.js";
 import { QtyInput } from "../QtyInput.jsx";
 import { DialogModal } from "../../../../components/ui.jsx";
 import { suggestHsn } from "../../../intelligence/ai/hsnSuggest.js";
@@ -37,6 +44,7 @@ export function ItemFormDialog({
   const unitOptions = !form.unit || baseUnits.includes(form.unit) ? baseUnits : [form.unit, ...baseUnits];
   const categoryOptions = itemCategoryChoices(categories);
   const skuConflict = findSkuConflict(items, form.sku, form.id || null);
+  const showPackContains = !isService && canSetPackContains(form.unit);
   return (
     <DialogModal className="acc-modal" title={form.id ? "Edit item" : "Create item"} close={() => setShowForm(false)}>
       {error && <p className="red small">{error}</p>}
@@ -49,6 +57,8 @@ export function ItemFormDialog({
             ...current,
             itemType,
             unit: nextUnits.includes(current.unit) ? current.unit : (nextUnits.includes(fallback) ? fallback : nextUnits[0]),
+            packContainsQty: itemType === "service" ? "" : current.packContainsQty,
+            packContainsUnit: itemType === "service" ? "" : current.packContainsUnit,
           }));
         }}>{ITEM_TYPES.map(type => <option key={type.id} value={type.id}>{type.label}</option>)}</Select></Field>
         <Field label="Name"><input value={form.name} onChange={event => setForm(current => ({ ...current, name: event.target.value }))} /></Field>
@@ -73,7 +83,47 @@ export function ItemFormDialog({
             {categoryOptions.map(category => <option key={category.id} value={category.id}>{category.label}</option>)}
           </Select>
         </Field>
-        <Field label="Unit"><Select value={form.unit} onChange={event => setForm(current => ({ ...current, unit: event.target.value }))}>{unitOptions.map(unit => <option key={unit} value={unit}>{unit}</option>)}</Select></Field>
+        <Field label="Unit"><Select value={form.unit} onChange={event => {
+          const unit = event.target.value;
+          setForm(current => ({
+            ...current,
+            unit,
+            ...(canSetPackContains(unit) ? {} : { packContainsQty: "", packContainsUnit: "" }),
+          }));
+        }}>{unitOptions.map(unit => <option key={unit} value={unit}>{unit}</option>)}</Select></Field>
+        {showPackContains ? (
+          <>
+            <Field label={`1 ${form.unit || "unit"} contains`}>
+              <input
+                type="number"
+                min="0"
+                step="0.001"
+                value={form.packContainsQty || ""}
+                placeholder="e.g. 25"
+                onChange={event => setForm(current => ({ ...current, packContainsQty: event.target.value }))}
+              />
+            </Field>
+            <Field label="Contains unit">
+              <Select
+                value={form.packContainsUnit || ""}
+                onChange={event => setForm(current => ({ ...current, packContainsUnit: event.target.value }))}
+              >
+                <option value="">Not set</option>
+                {PACK_CONTAINS_UNITS.map(unit => (
+                  <option key={unit} value={unit}>{unit === "Gram" ? "g" : unit === "Millilitre" ? "ml" : unit}</option>
+                ))}
+              </Select>
+            </Field>
+            {(form.packContainsQty && form.packContainsUnit) ? (
+              <p className="small span">
+                Counter can sell in {form.packContainsUnit === "Gram" ? "g" : form.packContainsUnit === "Millilitre" ? "ml" : form.packContainsUnit}
+                {" "}or {form.unit}. Price stays ₹{form.sellingPrice || "…"} / {form.unit}.
+              </p>
+            ) : (
+              <p className="small span">Optional — set this for rice bags so customers can buy loose kg from bag stock.</p>
+            )}
+          </>
+        ) : null}
         <Field label="Selling price"><input type="number" min="0" step="0.01" value={form.sellingPrice} onChange={event => setForm(current => ({ ...current, sellingPrice: event.target.value }))} /></Field>
         {!isService && <Field label="Purchase price"><input type="number" min="0" step="0.01" value={form.purchasePrice} onChange={event => setForm(current => ({ ...current, purchasePrice: event.target.value }))} /></Field>}
         <Field label="GST %"><input type="number" min="0" max="100" step="0.01" value={form.gstRate} onChange={event => setForm(current => ({ ...current, gstRate: event.target.value }))} /></Field>
