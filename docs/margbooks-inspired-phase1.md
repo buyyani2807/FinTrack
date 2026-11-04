@@ -365,13 +365,15 @@ Recorded 2026-11-04 after “do what is best”:
 | 2 | Packing field | **Keep SKU uniqueness + pack-contains.** No free-text Packing / duplicate-name toast unless a customer asks later. |
 | 3 | Multi-alias SKU | **Defer.** Single SKU + barcode is enough; revisit if POS needs multiple codes per item. |
 | 4 | Expired stock report | **Yes — P1 read-only report** (no posting/calc changes). |
-| 5 | First implementation slice | **(C) Finish Counter pack charge fix**, then **(A) Expired stock report**. Overview KPI polish and full AccUi redesign wait until these are stable on staging. |
+| 5 | First implementation slice | Counter pack fix → Expired stock → **dense Overview dashboard + shortcuts** (this commit series). |
 
 ---
 
-## 14. Next step (in progress on this branch)
+## 14. Implemented on this branch
 
-1. Commit Counter loose-kg charge validation fix.
-2. Add Accounts → Reports → Expired stock (read-only).
-3. Push staging after review; run migration `119` if not applied.
-4. Later: Overview KPI presentation + AccUi consistency (Phase 2–3), still no calc changes.
+1. Counter loose-kg charge fix.
+2. Accounts → Reports → **Expired stock** (read-only).
+3. **Dense owner dashboard** on Accounts Overview (hero KPIs + money tiles + quick actions; no new calculations).
+4. **Shortcuts** help on Overview and Counter (documents F2/F4/F9).
+5. Denser Counter bill line meta.
+6. Still deferred: full AccUi redesign, Conversion voucher, multi-alias SKU.
