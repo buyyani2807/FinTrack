@@ -7370,10 +7370,12 @@
 .accounts-dashboard .counter-item-list,
 .accounts-dashboard .counter-line-list {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
+  align-content: start;
+  align-items: stretch;
   max-height: min(58vh, 560px);
   overflow: auto;
 }
@@ -7381,11 +7383,12 @@
 .accounts-dashboard .counter-item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 10px;
+  gap: 8px 10px;
   align-items: center;
-  padding: 12px 14px;
+  align-self: start;
+  padding: 8px 10px;
   border: 1px solid var(--ft-border);
-  border-radius: 14px;
+  border-radius: 10px;
   background: var(--ft-surface-subtle);
   color: var(--ft-text);
   transition: border-color 120ms ease, background 120ms ease;
