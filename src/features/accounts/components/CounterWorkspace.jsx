@@ -1189,8 +1189,8 @@ export function CounterWorkspace({
                           line._batchNo ? `Batch ${line._batchNo}` : "",
                           line._rateList ? line._rateList : line._rateSource === "party_list" ? "Party price" : "",
                           line._stock != null ? `Stock ${line._stock} ${line.unit || ""}` : "",
-                          sellChoices && sellUnit !== line.unit ? `= ${baseQty} ${line.unit}` : "",
-                          `Rate / ${line.unit || "unit"}`,
+                          sellChoices && sellUnit !== line.unit && baseQty > 0 ? `= ${baseQty} ${line.unit}` : "",
+                          `₹${line.rate || 0} / ${line.unit || "unit"}`,
                         ].filter(Boolean).join(" · ")}
                       </span>
                     </div>
@@ -1198,16 +1198,18 @@ export function CounterWorkspace({
                       <input
                         className="counter-qty"
                         inputMode="decimal"
-                        aria-label={`Quantity for ${line.itemName}`}
+                        placeholder={sellUnit === "Gram" || sellUnit === "Millilitre" ? "500" : "0.5"}
+                        aria-label={`Quantity for ${line.itemName} in ${sellUnit}`}
                         value={line.quantity}
                         onChange={event => patchLine(index, {
-                          quantity: parseItemQuantity(event.target.value, sellUnit) || "0",
+                          quantity: parseItemQuantity(event.target.value, sellUnit),
                         })}
                       />
                       {sellChoices ? (
                         <select
                           className="counter-sell-unit"
                           aria-label={`Sell unit for ${line.itemName}`}
+                          title="Bill in Kg or grams; price stays per Kg"
                           value={sellUnit}
                           onChange={event => {
                             const nextSell = event.target.value;
@@ -1217,7 +1219,7 @@ export function CounterWorkspace({
                             const converted = factor ? asBase / factor : asBase;
                             patchLine(index, {
                               sellUnit: nextSell,
-                              quantity: parseItemQuantity(String(converted), nextSell) || "0",
+                              quantity: parseItemQuantity(String(converted), nextSell) || "",
                             });
                           }}
                         >
