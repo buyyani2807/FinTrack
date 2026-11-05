@@ -558,7 +558,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     setPendingSalesInvoiceId(null);
   }, [pendingSalesInvoiceId, vouchers, parties, accounts, companies, activeCompanyId, workspace, voucherItemLines, documentSettings]);
 
-  // Counter: one thermal print after charge/reprint — no sale-recorded modal, no extra PDF tab.
+  // Counter reprint only — charge prints from the till so the browser print dialog stays tied to the click.
   useEffect(() => {
     if (!pendingCounterPrintId) return;
     const voucher = vouchers.find(item => item.id === pendingCounterPrintId);
@@ -576,6 +576,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     });
     if (!built) return;
     printSalesInvoicePdf(withCounterReceiptPrint(built), { template: "thermal" });
+    setNotice("Print dialog opened — choose your thermal printer, then Print.");
     setPendingCounterPrintId(null);
   }, [pendingCounterPrintId, vouchers, parties, accounts, companies, activeCompanyId, workspace, voucherItemLines, documentSettings]);
 
@@ -2636,10 +2637,7 @@ const openVoucher = () => {
           onReprint={voucherId => setPendingCounterPrintId(voucherId)}
           askReason={askReason}
           onRefresh={() => refresh()}
-          onPosted={voucherId => {
-            setPendingCounterPrintId(voucherId);
-            refresh();
-          }}
+          onPosted={() => { refresh(); }}
         /> : <Spinner label="Opening Counter" />
       ) : <>
         {section === "overview" && <OverviewSection
@@ -2849,10 +2847,7 @@ const openVoucher = () => {
           onReprint={voucherId => setPendingCounterPrintId(voucherId)}
           askReason={askReason}
           onRefresh={() => refresh()}
-          onPosted={voucherId => {
-            setPendingCounterPrintId(voucherId);
-            refresh();
-          }}
+          onPosted={() => { refresh(); }}
         />}
         {section === "documents" && <div className="acc-panel">
           <AccDocumentsWorkspace

@@ -94,7 +94,7 @@ export function buildOfflineReceiptInvoice({
     customerAddress: "",
     narration: [
       bill.payload?.narration || "",
-      "Offline bill · pending sync",
+      bill.syncStatus === "pending" ? "Offline bill · pending sync" : "",
     ].filter(Boolean).join(" · "),
     amount,
     taxable,

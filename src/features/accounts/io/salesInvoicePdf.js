@@ -96,11 +96,15 @@ export function printSalesInvoicePdf(invoice, options = {}) {
   const url = URL.createObjectURL(blob);
   const frame = document.createElement("iframe");
   frame.setAttribute("aria-hidden", "true");
+  frame.setAttribute("title", "Receipt print");
+  // Tiny but non-zero — some browsers skip print() on a 0×0 iframe.
   frame.style.position = "fixed";
   frame.style.right = "0";
   frame.style.bottom = "0";
-  frame.style.width = "0";
-  frame.style.height = "0";
+  frame.style.width = "1px";
+  frame.style.height = "1px";
+  frame.style.opacity = "0";
+  frame.style.pointerEvents = "none";
   frame.style.border = "0";
   frame.src = url;
   document.body.appendChild(frame);
@@ -108,16 +112,18 @@ export function printSalesInvoicePdf(invoice, options = {}) {
     window.setTimeout(() => {
       try { URL.revokeObjectURL(url); } catch { /* ignore */ }
       frame.remove();
-    }, 2000);
+    }, 60_000);
   };
   frame.onload = () => {
-    try {
-      frame.contentWindow?.focus();
-      frame.contentWindow?.print();
-    } catch {
-      // Stay on the till — do not open a second PDF tab when print is blocked.
-    }
-    cleanup();
+    window.setTimeout(() => {
+      try {
+        frame.contentWindow?.focus();
+        frame.contentWindow?.print();
+      } catch {
+        // Stay on the till — do not open a second PDF tab when print is blocked.
+      }
+      cleanup();
+    }, 250);
   };
   return true;
 }
