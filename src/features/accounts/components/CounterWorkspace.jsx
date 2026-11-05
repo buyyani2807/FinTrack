@@ -1463,53 +1463,55 @@ export function CounterWorkspace({
                         ].filter(Boolean).join(" · ")}
                       </span>
                     </div>
-                    <div className="counter-qty-wrap">
+                    <div className="counter-line-controls">
+                      <div className="counter-qty-wrap">
+                        <input
+                          className="counter-qty"
+                          inputMode="decimal"
+                          placeholder={sellUnit === "Gram" || sellUnit === "Millilitre" ? "500" : "0.5"}
+                          aria-label={`Quantity for ${line.itemName} in ${sellUnit}`}
+                          value={line.quantity}
+                          onChange={event => patchLine(index, {
+                            quantity: parseItemQuantity(event.target.value, sellUnit),
+                          })}
+                        />
+                        {sellChoices ? (
+                          <select
+                            className="counter-sell-unit"
+                            aria-label={`Sell unit for ${line.itemName}`}
+                            title={`Bill in alternate unit; price stays per ${line.unit || "unit"}`}
+                            value={sellUnit}
+                            onChange={event => {
+                              const nextSell = event.target.value;
+                              const asBase = quantityInBaseUnit(line.quantity, line.unit, sellUnit, line);
+                              const nextAlt = sellChoices.find(row => row.id === nextSell);
+                              const factor = nextAlt?.factorToBase || 1;
+                              const converted = factor ? asBase / factor : asBase;
+                              patchLine(index, {
+                                sellUnit: nextSell,
+                                quantity: parseItemQuantity(String(converted), nextSell) || "",
+                              });
+                            }}
+                          >
+                            {sellChoices.map(choice => (
+                              <option key={choice.id} value={choice.id}>{choice.label}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="small counter-qty-unit">{line.unit || "Nos"}</span>
+                        )}
+                      </div>
                       <input
-                        className="counter-qty"
-                        inputMode="decimal"
-                        placeholder={sellUnit === "Gram" || sellUnit === "Millilitre" ? "500" : "0.5"}
-                        aria-label={`Quantity for ${line.itemName} in ${sellUnit}`}
-                        value={line.quantity}
-                        onChange={event => patchLine(index, {
-                          quantity: parseItemQuantity(event.target.value, sellUnit),
-                        })}
+                        className="counter-line-rate-input"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        aria-label={`Rate for ${line.itemName} per ${line.unit || "unit"}`}
+                        value={line.rate}
+                        onChange={event => patchLine(index, { rate: event.target.value, rateTouched: true })}
                       />
-                      {sellChoices ? (
-                        <select
-                          className="counter-sell-unit"
-                          aria-label={`Sell unit for ${line.itemName}`}
-                          title={`Bill in alternate unit; price stays per ${line.unit || "unit"}`}
-                          value={sellUnit}
-                          onChange={event => {
-                            const nextSell = event.target.value;
-                            const asBase = quantityInBaseUnit(line.quantity, line.unit, sellUnit, line);
-                            const nextAlt = sellChoices.find(row => row.id === nextSell);
-                            const factor = nextAlt?.factorToBase || 1;
-                            const converted = factor ? asBase / factor : asBase;
-                            patchLine(index, {
-                              sellUnit: nextSell,
-                              quantity: parseItemQuantity(String(converted), nextSell) || "",
-                            });
-                          }}
-                        >
-                          {sellChoices.map(choice => (
-                            <option key={choice.id} value={choice.id}>{choice.label}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <span className="small counter-qty-unit">{line.unit || "Nos"}</span>
-                      )}
+                      <strong className="counter-line-net">{money(lineNet(line))}</strong>
                     </div>
-                    <input
-                      className="counter-line-rate-input"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      aria-label={`Rate for ${line.itemName} per ${line.unit || "unit"}`}
-                      value={line.rate}
-                      onChange={event => patchLine(index, { rate: event.target.value, rateTouched: true })}
-                    />
-                    <strong className="counter-line-net">{money(lineNet(line))}</strong>
                     <button type="button" className="btn counter-line-remove" aria-label={`Remove ${line.itemName}`} onClick={() => removeLine(index)}>
                       <Trash2 size={14} aria-hidden="true" />
                     </button>

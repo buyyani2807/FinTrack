@@ -1,0 +1,17 @@
+---
+description: All UI must stay usable on mobile, tablet, laptop, and desktop
+alwaysApply: true
+---
+
+# Responsive UI
+
+Any UI change or addition must work on **mobile, tablet, laptop, and desktop**.
+
+Do not ship layouts that only look correct on a large monitor.
+
+- Prefer stacking or wrapping over fixed multi-column rows when space is tight.
+- Size to the available panel when a viewport media query is not enough (container queries are fine).
+- Keep `min-width: 0` on flex/grid children that hold text or inputs so they can shrink.
+- Avoid rigid `min-width` on controls inside narrow panels (cart, side sheets, drawers).
+- Check at least a phone width (~360px), a laptop width (~1280px), and a wide desktop before finishing.
+- Do not hide essential inputs (qty, rate, amount) just to fit a row; reflow instead.

@@ -7239,7 +7239,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  min-width: 7.25rem;
+  min-width: 0;
   width: 100%;
 }
 
@@ -7404,6 +7404,38 @@
 .accounts-dashboard .counter-cart.counter-panel {
   grid-template-rows: auto auto minmax(0, 1fr);
   height: 100%;
+}
+
+.accounts-dashboard .counter-cart.counter-panel {
+  container-type: inline-size;
+  container-name: counter-cart;
+
+  /* Style by cart panel width so laptop 3-col and mobile all stay readable. */
+  @container (min-width: 26rem) {
+    & .counter-line {
+      grid-template-columns: minmax(0, 1fr) minmax(14rem, 18rem) auto;
+      grid-template-areas: "main controls remove";
+      align-items: center;
+    }
+
+    & .counter-line-remove {
+      align-self: center;
+    }
+
+    & .counter-line-controls {
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.9fr) auto;
+    }
+  }
+
+  @container (max-width: 17.5rem) {
+    & .counter-line-controls {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    & .counter-line-rate-input {
+      grid-column: 1 / -1;
+    }
+  }
 }
 
 .accounts-dashboard .counter-pay.counter-panel {
@@ -7579,16 +7611,16 @@
 
 .accounts-dashboard .counter-line {
   display: grid;
-  /* Name on its own row so laptop/narrow cart panels never crush the title. */
-  grid-template-columns: minmax(5.75rem, 8.5rem) minmax(4.25rem, 5.5rem) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas:
-    "main main main remove"
-    "qty rate net remove";
-  gap: 8px;
-  align-items: center;
+    "main remove"
+    "controls controls";
+  gap: 8px 10px;
+  align-items: start;
   align-self: start;
   padding: 10px 4px;
   border-bottom: 1px solid var(--ft-divider);
+  min-width: 0;
 }
 
 .accounts-dashboard .counter-line:last-child {
@@ -7603,54 +7635,41 @@
 }
 
 .accounts-dashboard .counter-line-main strong {
+  display: block;
   font-size: var(--ft-type-ui);
   font-weight: 650;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: break-word;
   line-height: var(--ft-leading-tight);
 }
 
 .accounts-dashboard .counter-line-main .small {
-  overflow-wrap: anywhere;
+  display: block;
+  overflow-wrap: break-word;
+  word-break: break-word;
   line-height: var(--ft-leading-body);
 }
 
-.accounts-dashboard .counter-line > .counter-qty-wrap {
-  grid-area: qty;
+.accounts-dashboard .counter-line-controls {
+  grid-area: controls;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
   min-width: 0;
 }
 
-.accounts-dashboard .counter-line > .counter-line-rate-input {
-  grid-area: rate;
-}
-
-.accounts-dashboard .counter-line > .counter-line-net {
-  grid-area: net;
-  justify-self: end;
-}
-
-.accounts-dashboard .counter-line > .counter-line-remove {
+.accounts-dashboard .counter-line-remove {
   grid-area: remove;
   align-self: start;
-}
-
-@media (min-width: 1500px) {
-  .accounts-dashboard .counter-line {
-    grid-template-columns: minmax(0, 1fr) minmax(7.5rem, 9.5rem) minmax(4.5rem, 5.25rem) minmax(4.25rem, 5.25rem) auto;
-    grid-template-areas: "main qty rate net remove";
-  }
-
-  .accounts-dashboard .counter-line > .counter-line-remove {
-    align-self: center;
-  }
-
-  .accounts-dashboard .counter-line-main strong {
-    overflow-wrap: break-word;
-  }
+  padding: 8px;
+  border-radius: 10px;
+  color: var(--ft-danger);
 }
 
 .accounts-dashboard .counter-qty {
-  flex: 1 1 3.25rem;
-  min-width: 3rem;
+  flex: 1 1 3rem;
+  min-width: 0;
   width: 100%;
   text-align: center;
   padding: 8px 6px;
@@ -7671,12 +7690,8 @@
 .accounts-dashboard .counter-line-net {
   font-size: var(--ft-type-ui);
   font-weight: 700;
-}
-
-.accounts-dashboard .counter-line-remove {
-  padding: 8px;
-  border-radius: 10px;
-  color: var(--ft-danger);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .accounts-dashboard .counter-field {
@@ -7830,22 +7845,6 @@
   .accounts-dashboard .counter-item-copy { grid-area: copy; }
   .accounts-dashboard .counter-item-price { grid-area: price; }
   .accounts-dashboard .counter-item-add { grid-area: add; align-self: center; }
-
-  .accounts-dashboard .counter-line {
-    grid-template-columns: minmax(0, 1fr) minmax(5.5rem, 1fr) minmax(4rem, auto) auto;
-    grid-template-areas:
-      "main main main remove"
-      "qty net net remove";
-  }
-
-  .accounts-dashboard .counter-line-rate,
-  .accounts-dashboard .counter-line-rate-input {
-    display: none;
-  }
-
-  .accounts-dashboard .counter-line > .counter-line-net {
-    justify-self: end;
-  }
 
   .accounts-dashboard .counter-fav-toggle {
     display: none;
