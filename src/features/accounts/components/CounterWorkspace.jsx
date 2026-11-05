@@ -807,9 +807,13 @@ export function CounterWorkspace({
           printBill,
         });
         clearBill();
-        setPrintNotice("Bill charged. Tap Print on the last bill for the receipt.");
-        window.setTimeout(() => setPrintNotice(""), 10000);
-        onPosted?.(voucherId);
+        setPrintNotice("Bill posted. Tap Print for the receipt — also on Reports → Sales / Day Book.");
+        window.setTimeout(() => setPrintNotice(""), 12000);
+        try {
+          await onPosted?.(voucherId);
+        } catch {
+          /* Post already succeeded — refresh can retry from Day Book. */
+        }
       } catch (err) {
         if (isLikelyNetworkError(err) && !useCredit && !isReturn) {
           setOnline(false);

@@ -52,6 +52,9 @@ export function InvoicesSection({
         <span><em>90+</em> {money(invoiceAging.d90 || 0)}</span>
       </div>
       <p className="small">New receipts and payments store bill-wise links against selected invoices. Older vouchers without links still use party-level FIFO for remaining allocation.</p>
+      {!isInvoicePayables ? (
+        <p className="small">Paid Counter (POS) cash bills are not listed here — open Reports → Sales or Day Book to review them.</p>
+      ) : null}
       <div className="acc-invoice-toolbar">
         <button
           type="button"

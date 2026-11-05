@@ -14,6 +14,7 @@ import {
 } from "../src/features/accounts/model/accountingModel.js";
 import {
   balanceSheet,
+  dayBook,
   invoiceRegister,
   invoiceStatus,
   partyBalances,
@@ -213,6 +214,11 @@ test("Receivables hide paid POS Counter cash sales but keep Accounts cash and Co
   assert.equal(rows.some(row => row.reference === accountsCash.voucherNumber), true);
   assert.equal(rows.some(row => row.reference === posKhata.voucherNumber && row.onCredit), true);
   assert.equal(rows.find(row => row.reference === posKhata.voucherNumber)?.outstanding, 300000);
+
+  // Paid POS cash must still appear on Sales / Day Book — only Receivables hides it.
+  const books = dayBook([accountsCash, posCash, posKhata], { from: "2026-04-01", to: "2026-04-30" });
+  assert.equal(books.filter(row => row.voucherType === "sales").length, 3);
+  assert.equal(books.some(row => row.id === posCash.id), true);
 });
 
 test("Cash + UPI split equals amount received", () => {

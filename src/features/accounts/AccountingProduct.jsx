@@ -2637,7 +2637,7 @@ const openVoucher = () => {
           onReprint={voucherId => setPendingCounterPrintId(voucherId)}
           askReason={askReason}
           onRefresh={() => refresh()}
-          onPosted={() => { refresh(); }}
+          onPosted={async () => { await refresh(); }}
         /> : <Spinner label="Opening Counter" />
       ) : <>
         {section === "overview" && <OverviewSection
@@ -2847,7 +2847,7 @@ const openVoucher = () => {
           onReprint={voucherId => setPendingCounterPrintId(voucherId)}
           askReason={askReason}
           onRefresh={() => refresh()}
-          onPosted={() => { refresh(); }}
+          onPosted={async () => { await refresh(); }}
         />}
         {section === "documents" && <div className="acc-panel">
           <AccDocumentsWorkspace
