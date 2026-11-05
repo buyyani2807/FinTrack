@@ -88,87 +88,38 @@ export function downloadSalesInvoicePdf(invoice, options = {}) {
   downloadPdf(renderSalesInvoicePdf(invoice, options), `${invoice.invoiceNumber || "sales-invoice"}.pdf`);
 }
 
-/** Open a blank receipt window during the Charge/Print click so later async work can still print. */
-export function prepareReceiptPrintPopup() {
-  if (typeof window === "undefined" || typeof window.open !== "function") return null;
-  try {
-    const popup = window.open("", "fintrack-receipt-print");
-    if (!popup) return null;
-    try {
-      popup.document.open();
-      popup.document.write("<!doctype html><title>Receipt</title><body style=\"font-family:sans-serif;padding:16px\">Preparing receipt…</body>");
-      popup.document.close();
-    } catch {
-      /* cross-origin after prior navigation — still usable via location assign */
-    }
-    return popup;
-  } catch {
-    return null;
-  }
-}
-
-function closePrintPopup(popup) {
-  if (!popup) return;
-  try { popup.close(); } catch { /* ignore */ }
-}
-
 /**
- * Open the browser print dialog for a thermal/A4 invoice PDF.
- * Pass `popup` from prepareReceiptPrintPopup() when printing after await (Counter charge).
+ * Open the receipt PDF in a new tab and trigger the system print dialog.
+ * Call only from a Print click — browsers block this after async Charge alone.
  */
 export function printSalesInvoicePdf(invoice, options = {}) {
-  if (typeof document === "undefined" || typeof URL === "undefined") return false;
+  if (typeof window === "undefined" || typeof URL === "undefined") return false;
   const binary = renderSalesInvoicePdf(invoice, options);
   const blob = new Blob([pdfBinaryToBytes(binary)], { type: "application/pdf" });
   const url = URL.createObjectURL(blob);
-  const popup = options.popup && !options.popup.closed ? options.popup : null;
 
-  const revokeLater = () => {
+  let win = null;
+  try {
+    win = window.open(url, "_blank");
+  } catch {
+    win = null;
+  }
+
+  if (win) {
+    window.setTimeout(() => {
+      try {
+        win.focus();
+        win.print();
+      } catch {
+        /* PDF tab is open — user can use the browser Print control */
+      }
+    }, 700);
     window.setTimeout(() => {
       try { URL.revokeObjectURL(url); } catch { /* ignore */ }
     }, 120_000);
-  };
-
-  if (popup) {
-    try {
-      popup.document.open();
-      popup.document.write(`<!doctype html>
-<html><head><title>Receipt</title>
-<style>html,body{margin:0;height:100%} embed{width:100%;height:100%;border:0}</style>
-</head><body>
-<embed src="${url}" type="application/pdf" />
-<script>
-  window.onload = function () {
-    setTimeout(function () {
-      try { window.focus(); window.print(); } catch (e) {}
-    }, 400);
-  };
-  window.onafterprint = function () {
-    setTimeout(function () { try { window.close(); } catch (e) {} }, 300);
-  };
-</script>
-</body></html>`);
-      popup.document.close();
-      revokeLater();
-      return true;
-    } catch {
-      try {
-        popup.location = url;
-        window.setTimeout(() => {
-          try {
-            popup.focus();
-            popup.print();
-          } catch { /* ignore */ }
-        }, 600);
-        revokeLater();
-        return true;
-      } catch {
-        closePrintPopup(popup);
-      }
-    }
+    return true;
   }
 
-  // Same-tab fallback when the Charge click could not open a window (popup blocker).
   const frame = document.createElement("iframe");
   frame.setAttribute("title", "Receipt print");
   frame.style.position = "fixed";
@@ -193,7 +144,7 @@ export function printSalesInvoicePdf(invoice, options = {}) {
       }, 120_000);
     }, 400);
   };
-  return true;
+  return false;
 }
 
 /** The invoice as plain text, matching the PDF, for WhatsApp when a file cannot be attached. */

@@ -225,7 +225,6 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [orgSettings, setOrgSettings] = useState(orgSettingsProp || {});
   const [pendingSalesInvoiceId, setPendingSalesInvoiceId] = useState(null);
   const [pendingCounterPrintId, setPendingCounterPrintId] = useState(null);
-  const counterPrintPopupRef = useRef(null);
   const [salesInvoiceSuccess, setSalesInvoiceSuccess] = useState(null);
   const [salesInvoiceView, setSalesInvoiceView] = useState(null);
   const [accounts, setAccounts] = useState(cached?.accounts ?? []);
@@ -559,7 +558,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     setPendingSalesInvoiceId(null);
   }, [pendingSalesInvoiceId, vouchers, parties, accounts, companies, activeCompanyId, workspace, voucherItemLines, documentSettings]);
 
-  // Counter reprint only — charge prints from the till so the browser print dialog stays tied to the click.
+  // Fallback Counter reprint when the till has no cached receipt snapshot.
   useEffect(() => {
     if (!pendingCounterPrintId) return;
     const voucher = vouchers.find(item => item.id === pendingCounterPrintId);
@@ -576,10 +575,8 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       itemLines: voucherItemLines.filter(line => line.voucherId === voucher.id),
     });
     if (!built) return;
-    const popup = counterPrintPopupRef.current;
-    counterPrintPopupRef.current = null;
-    printSalesInvoicePdf(withCounterReceiptPrint(built), { template: "thermal", popup });
-    setNotice("Print dialog opened — choose your thermal printer, then Print.");
+    printSalesInvoicePdf(withCounterReceiptPrint(built), { template: "thermal" });
+    setNotice("Receipt opened — use the browser print dialog if it appears.");
     setPendingCounterPrintId(null);
   }, [pendingCounterPrintId, vouchers, parties, accounts, companies, activeCompanyId, workspace, voucherItemLines, documentSettings]);
 
@@ -2637,10 +2634,7 @@ const openVoucher = () => {
             if (!activeCompanyId) return;
             setCounterSettings(saveCounterSettings(activeCompanyId, next));
           }}
-          onReprint={(voucherId, popup = null) => {
-            counterPrintPopupRef.current = popup;
-            setPendingCounterPrintId(voucherId);
-          }}
+          onReprint={voucherId => setPendingCounterPrintId(voucherId)}
           askReason={askReason}
           onRefresh={() => refresh()}
           onPosted={() => { refresh(); }}
@@ -2850,10 +2844,7 @@ const openVoucher = () => {
             if (!activeCompanyId) return;
             setCounterSettings(saveCounterSettings(activeCompanyId, next));
           }}
-          onReprint={(voucherId, popup = null) => {
-            counterPrintPopupRef.current = popup;
-            setPendingCounterPrintId(voucherId);
-          }}
+          onReprint={voucherId => setPendingCounterPrintId(voucherId)}
           askReason={askReason}
           onRefresh={() => refresh()}
           onPosted={() => { refresh(); }}

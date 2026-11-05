@@ -63,7 +63,7 @@ import {
   pendingOfflineBills,
 } from "../model/counterOffline.js";
 import { syncOfflineCounterBills } from "../model/counterOfflineSync.js";
-import { prepareReceiptPrintPopup, printSalesInvoicePdf } from "../io/salesInvoicePdf.js";
+import { printSalesInvoicePdf } from "../io/salesInvoicePdf.js";
 import { formatReceiptDateTime } from "../../receipts/model/receiptModel.js";
 import { accountsCompanyBranding } from "../model/salesInvoiceModel.js";
 import { isValidUpiId, upiPayLink } from "../model/upiPay.js";
@@ -605,14 +605,25 @@ export function CounterWorkspace({
     return bills;
   };
 
-  const announcePrint = ok => {
-    setPrintNotice(ok
-      ? "Print dialog opened — choose your thermal printer, then click Print."
-      : "Could not open the print dialog. Tap Print on the last bill (allow pop-ups for this site).");
-    window.setTimeout(() => setPrintNotice(""), 10000);
-  };
+  const buildTillBill = ({ draft, moneyParts, payMode, voucherId, total, isReturn, offlineRef }) => ({
+    id: voucherId || newClientRequestId(),
+    offlineRef: offlineRef || (voucherId ? `Till · ${String(voucherId).slice(0, 8)}` : "Counter"),
+    date: today,
+    createdAt: new Date().toISOString(),
+    moneyMode: payMode,
+    moneyParts,
+    amount: total,
+    syncStatus: voucherId ? "posted" : "pending",
+    payload: {
+      ...draft,
+      narration: [
+        draft?.narration || "",
+        isReturn ? "Return" : "Counter sale",
+      ].filter(Boolean).join(" · "),
+    },
+  });
 
-  const printOfflineBill = (bill, popup = null) => {
+  const printOfflineBill = bill => {
     const company = activeCompany || cachedCatalog?.company || {};
     const invoice = buildOfflineReceiptInvoice({
       bill,
@@ -622,41 +633,21 @@ export function CounterWorkspace({
       companyPhone: company.documentSettings?.businessPhone || branding?.companyPhone || "",
     });
     if (!invoice) {
-      try { popup?.close(); } catch { /* ignore */ }
-      announcePrint(false);
+      setPrintNotice("Could not build the receipt. Try Print again.");
       return false;
     }
-    const ok = printSalesInvoicePdf(invoice, { template: "thermal", popup });
-    announcePrint(ok);
+    const ok = printSalesInvoicePdf(invoice, { template: "thermal" });
+    setPrintNotice(ok
+      ? "Receipt opened — choose your thermal printer in the print dialog."
+      : "Allow pop-ups for FinTrack, then tap Print again.");
+    window.setTimeout(() => setPrintNotice(""), 10000);
     return ok;
-  };
-
-  const printOnlineBill = ({ draft, moneyParts, payMode, voucherId, total, isReturn, popup = null }) => {
-    const bill = {
-      id: voucherId || newClientRequestId(),
-      offlineRef: voucherId ? `Till · ${String(voucherId).slice(0, 8)}` : "Counter",
-      date: today,
-      createdAt: new Date().toISOString(),
-      moneyMode: payMode,
-      moneyParts,
-      amount: total,
-      syncStatus: "posted",
-      payload: {
-        ...draft,
-        narration: [
-          draft?.narration || "",
-          isReturn ? "Return" : "Counter sale",
-        ].filter(Boolean).join(" · "),
-      },
-    };
-    return printOfflineBill(bill, popup);
   };
 
   const queueOfflineSale = async ({
     draft,
     moneyParts,
     clientRequestId,
-    printPopup = null,
   }) => {
     if (!companyId) throw new Error("Choose a company before charging offline.");
     if (offlineBlock.blocked) throw new Error(offlineBlock.reason);
@@ -695,9 +686,11 @@ export function CounterWorkspace({
       at: bill.createdAt,
       lines: lines.length,
       pendingSync: true,
+      printBill: bill,
     });
     clearBill();
-    printOfflineBill(bill, printPopup);
+    setPrintNotice("Bill saved offline. Tap Print on the last bill for the receipt.");
+    window.setTimeout(() => setPrintNotice(""), 10000);
     return bill;
   };
 
@@ -771,8 +764,6 @@ export function CounterWorkspace({
       ? { cash: Number(receivedCash || 0), upi: Number(receivedUpi || 0) }
       : null;
     const clientRequestId = newClientRequestId();
-    // Must open during the Charge click — browsers block print() after await.
-    const printPopup = prepareReceiptPrintPopup();
     setBusy(true);
     try {
       const draft = itemizedEntryDraft({
@@ -795,7 +786,7 @@ export function CounterWorkspace({
         gstEnabled,
       });
       if (!online) {
-        await queueOfflineSale({ draft, moneyParts, clientRequestId, printPopup });
+        await queueOfflineSale({ draft, moneyParts, clientRequestId });
         return;
       }
       try {
@@ -806,27 +797,28 @@ export function CounterWorkspace({
           sourceType: "pos_counter",
         });
         const total = voucherTotals(draft.lines).debit;
+        const printBill = buildTillBill({ draft, moneyParts, payMode, voucherId, total, isReturn });
         setLastBill({
           voucherId,
           total,
           at: new Date().toISOString(),
           lines: lines.length,
           isReturn,
+          printBill,
         });
         clearBill();
-        printOnlineBill({ draft, moneyParts, payMode, voucherId, total, isReturn, popup: printPopup });
+        setPrintNotice("Bill charged. Tap Print on the last bill for the receipt.");
+        window.setTimeout(() => setPrintNotice(""), 10000);
         onPosted?.(voucherId);
       } catch (err) {
         if (isLikelyNetworkError(err) && !useCredit && !isReturn) {
           setOnline(false);
-          await queueOfflineSale({ draft, moneyParts, clientRequestId, printPopup });
+          await queueOfflineSale({ draft, moneyParts, clientRequestId });
           return;
         }
-        try { printPopup?.close(); } catch { /* ignore */ }
         throw err;
       }
     } catch (err) {
-      try { printPopup?.close(); } catch { /* ignore */ }
       const detail = err?.details || err?.cause?.message || err?.hint;
       const main = err?.message || "Could not post this bill.";
       setError(detail && detail !== main ? `${main} (${detail})` : main);
@@ -966,22 +958,21 @@ export function CounterWorkspace({
                   Last {money(lastBill.total)}
                   {lastBill.offlineRef ? ` · ${lastBill.offlineRef}` : ""}
                 </span>
-                {lastBill.voucherId && onReprint ? (
-                  <button
-                    type="button"
-                    className="link-button counter-last-print"
-                    onClick={() => onReprint(lastBill.voucherId, prepareReceiptPrintPopup())}
-                  >
-                    Print
-                  </button>
-                ) : null}
-                {lastBill.offlineId && !lastBill.voucherId ? (
+                {lastBill.printBill || lastBill.offlineId || lastBill.voucherId ? (
                   <button
                     type="button"
                     className="link-button counter-last-print"
                     onClick={() => {
-                      const bill = offlineBills.find(row => row.id === lastBill.offlineId);
-                      if (bill) printOfflineBill(bill, prepareReceiptPrintPopup());
+                      if (lastBill.printBill) {
+                        printOfflineBill(lastBill.printBill);
+                        return;
+                      }
+                      if (lastBill.offlineId) {
+                        const bill = offlineBills.find(row => row.id === lastBill.offlineId);
+                        if (bill) printOfflineBill(bill);
+                        return;
+                      }
+                      if (lastBill.voucherId && onReprint) onReprint(lastBill.voucherId);
                     }}
                   >
                     Print
