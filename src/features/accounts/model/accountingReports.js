@@ -16,10 +16,18 @@ import { suggestBankEntry, textHasPhrase } from "./bookSuggestions.js";
 
 const inRange = (date, from, to) => (!from || date >= from) && (!to || date <= to);
 
+const compareVoucherChronology = (a, b) => {
+  const dateCmp = String(a?.date || "").localeCompare(String(b?.date || ""));
+  if (dateCmp) return dateCmp;
+  const timeCmp = String(a?.postedAt || a?.createdAt || "").localeCompare(String(b?.postedAt || b?.createdAt || ""));
+  if (timeCmp) return timeCmp;
+  return String(a?.voucherNumber || "").localeCompare(String(b?.voucherNumber || ""));
+};
+
 export function dayBook(vouchers = [], { from, to } = {}) {
   return (vouchers || [])
     .filter(voucher => affectsLedgers(voucher) && inRange(voucher.date, from, to))
-    .sort((a, b) => `${a.date}${a.voucherNumber}`.localeCompare(`${b.date}${b.voucherNumber}`))
+    .sort(compareVoucherChronology)
     .map(voucher => ({
       ...voucher,
       debit: roundMoney(voucher.lines.reduce((sum, line) => sum + Number(line.debit || 0), 0)),

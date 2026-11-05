@@ -2,6 +2,8 @@ import { AccTable, DateSortTh } from "../../components/AccUi.jsx";
 import { money } from "../../accountsFormat.js";
 import { useDateSort } from "../../model/useDateSort.js";
 import { VoucherNumberLink } from "../../components/SalesInvoiceActions.jsx";
+import { formatIstTime } from "../../../../lib/dates.js";
+import { rowInstant } from "../../model/dateSort.js";
 
 /** Sales / Purchases report table with clickable date sort (latest first by default). */
 export function DateSortedVoucherTable({ rows, voucherType, empty, onViewDocument }) {
@@ -17,21 +19,24 @@ export function DateSortedVoucherTable({ rows, voucherType, empty, onViewDocumen
       ]}
       empty={!rows.length && empty}
     >
-      {sorted.map(row => (
-        <tr key={row.id}>
-          <td>{row.date}</td>
-          <td>
-            <VoucherNumberLink
-              number={row.voucherNumber}
-              voucherType={voucherType}
-              onView={onViewDocument ? () => onViewDocument(row) : null}
-            />
-          </td>
-          <td>{row.narration}</td>
-          <td className="acc-num">{money(row.debit)}</td>
-          <td>{onViewDocument ? <button type="button" className="btn" onClick={() => onViewDocument(row)}>View</button> : null}</td>
-        </tr>
-      ))}
+      {sorted.map(row => {
+        const time = formatIstTime(rowInstant(row));
+        return (
+          <tr key={row.id}>
+            <td>{time ? `${row.date} · ${time}` : row.date}</td>
+            <td>
+              <VoucherNumberLink
+                number={row.voucherNumber}
+                voucherType={voucherType}
+                onView={onViewDocument ? () => onViewDocument(row) : null}
+              />
+            </td>
+            <td>{row.narration}</td>
+            <td className="acc-num">{money(row.debit)}</td>
+            <td>{onViewDocument ? <button type="button" className="btn" onClick={() => onViewDocument(row)}>View</button> : null}</td>
+          </tr>
+        );
+      })}
     </AccTable>
   );
 }

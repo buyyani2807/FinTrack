@@ -2,6 +2,13 @@ import { AccPager, DateSortTh } from "../../components/AccUi.jsx";
 import { money } from "../../accountsFormat.js";
 import { pageSlice } from "../../model/accountsList.js";
 import { useDateSort } from "../../model/useDateSort.js";
+import { formatIstTime } from "../../../../lib/dates.js";
+import { rowInstant } from "../../model/dateSort.js";
+
+function voucherWhen(row) {
+  const time = formatIstTime(rowInstant(row));
+  return time ? `${row.date} · ${time}` : row.date;
+}
 
 export function DayBookReport({ books, listPage = 1, setListPage }) {
   const { sorted, direction, toggle } = useDateSort(books, "date");
@@ -16,7 +23,7 @@ export function DayBookReport({ books, listPage = 1, setListPage }) {
         <th><DateSortTh label="Date" direction={direction} onToggle={onToggle} /></th>
         <th>Number</th><th>Type</th><th>Narration</th><th className="acc-num">Amount</th>
       </tr></thead><tbody>
-      {pagedBooks.items.map(row => <tr key={row.id}><td>{row.date}</td><td>{row.voucherNumber}</td><td>{row.voucherType}</td><td>{row.narration}</td><td className="acc-num">{money(row.debit)}</td></tr>)}
+      {pagedBooks.items.map(row => <tr key={row.id}><td>{voucherWhen(row)}</td><td>{row.voucherNumber}</td><td>{row.voucherType}</td><td>{row.narration}</td><td className="acc-num">{money(row.debit)}</td></tr>)}
       {!books.length && <tr><td colSpan="5">No posted vouchers in this period. Change the date range or record a transaction.</td></tr>}
     </tbody></table></div>
       <div className="acc-ledger-cards spacer">
@@ -26,7 +33,7 @@ export function DayBookReport({ books, listPage = 1, setListPage }) {
               <strong>{row.voucherNumber}</strong>
               <span className="acc-voucher-chip">{row.voucherType}</span>
             </div>
-            <p className="small">{row.date}{row.narration ? ` · ${row.narration}` : ""}</p>
+            <p className="small">{voucherWhen(row)}{row.narration ? ` · ${row.narration}` : ""}</p>
             <p className="acc-ledger-card-amounts"><span>Amount <strong>{money(row.debit)}</strong></span></p>
           </article>
         ))}
