@@ -175,6 +175,46 @@ test("zero received stays unpaid; full cash sale stays paid with no AR", () => {
   assert.equal(partyBalances(accounts, [cashSale], [ravi], { kind: "receivable" }).length, 0);
 });
 
+test("Receivables hide paid POS Counter cash sales but keep Accounts cash and Counter khata", () => {
+  const accountsCash = {
+    ...posted(
+      "sales",
+      "2026-04-01",
+      saleLines({ accounts, amount: 100000, settlement: "paid", moneyMode: "cash" }),
+      { n: 1 },
+    ),
+    sourceType: null,
+  };
+  const posCash = {
+    ...posted(
+      "sales",
+      "2026-04-01",
+      saleLines({ accounts, amount: 200000, settlement: "paid", moneyMode: "cash" }),
+      { n: 2 },
+    ),
+    sourceType: "pos_counter",
+  };
+  const posKhata = {
+    ...posted(
+      "sales",
+      "2026-04-01",
+      saleLines({ accounts, amount: 300000, settlement: "credit", partyId: "ravi" }),
+      { n: 3, partyId: "ravi", dueDate: "2026-04-20" },
+    ),
+    sourceType: "pos_counter",
+  };
+  const rows = invoiceRegister(accounts, [accountsCash, posCash, posKhata], [ravi], {
+    kind: "receivable",
+    today: "2026-04-02",
+    from: "2026-04-01",
+    to: "2026-04-30",
+  });
+  assert.equal(rows.some(row => row.sourceType === "pos_counter" && !row.onCredit), false);
+  assert.equal(rows.some(row => row.reference === accountsCash.voucherNumber), true);
+  assert.equal(rows.some(row => row.reference === posKhata.voucherNumber && row.onCredit), true);
+  assert.equal(rows.find(row => row.reference === posKhata.voucherNumber)?.outstanding, 300000);
+});
+
 test("Cash + UPI split equals amount received", () => {
   assert.deepEqual(assertMoneyModeSplit("cash_upi", 200000, { cash: 50000, upi: 150000 }), {
     cash: 50000, upi: 150000, bank: 0,

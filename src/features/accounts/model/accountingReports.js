@@ -740,6 +740,9 @@ export function invoiceRegister(accounts, vouchers, parties = [], { kind = "rece
     if (partyId && row.partyId !== partyId) return false;
     if (!inRange(row.invoiceDate, from, to)) return false;
     if (outstandingOnly && row.outstanding <= 0) return false;
+    // Paid Counter till bills stay on Sales / day report — not Receivables noise.
+    // Accounts cash sales (no sourceType) and Counter khata (onCredit) still appear.
+    if (isAr && row.sourceType === "pos_counter" && !row.onCredit) return false;
     return true;
   });
 }
