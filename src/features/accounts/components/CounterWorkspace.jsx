@@ -237,8 +237,13 @@ export function CounterWorkspace({
   const catalog = useMemo(() => matchItems(workingItems, query), [workingItems, query]);
   const gstEnabled = (activeCompany || cachedCatalog?.company)?.gstRegistration === "regular";
   const billingPartyId = partyId || CASH_PARTY_ID;
+  // Named parties only for khata / credit — paid Counter stays walk-in.
   const customers = useMemo(
-    () => (parties || []).filter(party => party.partyType === "customer" && party.isActive !== false),
+    () => (parties || []).filter(party => (
+      party.partyType === "customer"
+      && party.isActive !== false
+      && !/^suspense(\s+account)?$/i.test(String(party.name || "").trim())
+    )),
     [parties],
   );
   const selectedParty = billingPartyId === CASH_PARTY_ID
@@ -1545,27 +1550,73 @@ export function CounterWorkspace({
           </div>
           <div className="counter-mode-toggle" role="group" aria-label="Sale or return">
             <button type="button" className={`btn${tillMode === "sale" ? " primary" : ""}`} disabled={busy} onClick={() => setTillMode("sale")}>Sale</button>
-            <button type="button" className={`btn${tillMode === "return" ? " primary" : ""}`} disabled={busy} onClick={() => { setTillMode("return"); setSettlement("paid"); }}>Return</button>
+            <button type="button" className={`btn${tillMode === "return" ? " primary" : ""}`} disabled={busy} onClick={() => { setTillMode("return"); setSettlement("paid"); setPartyId(CASH_PARTY_ID); }}>Return</button>
           </div>
+          {tillMode === "sale" ? (
+            <FieldBlock label="Settlement">
+              <Select
+                aria-label="Settlement"
+                className="counter-pay-select"
+                value={settlement}
+                onChange={event => {
+                  const next = event.target.value;
+                  setSettlement(next);
+                  if (next === "paid") setPartyId(CASH_PARTY_ID);
+                }}
+                disabled={busy}
+              >
+                <option value="paid">Paid now</option>
+                <option value="credit">Khata / credit</option>
+              </Select>
+              {creditAdvice?.level === "warn" ? <p className="small">{creditAdvice.messages[0]}</p> : null}
+            </FieldBlock>
+          ) : (
+            <FieldBlock label="Refund to">
+              <Select
+                aria-label="Refund settlement"
+                className="counter-pay-select"
+                value={settlement}
+                onChange={event => {
+                  const next = event.target.value;
+                  setSettlement(next);
+                  if (next === "paid") setPartyId(CASH_PARTY_ID);
+                }}
+                disabled={busy}
+              >
+                <option value="paid">Cash / UPI refund</option>
+                <option value="credit">Credit note on khata</option>
+              </Select>
+            </FieldBlock>
+          )}
           <FieldBlock label="Customer">
-            <Select
-              aria-label="Customer"
-              className="counter-pay-select"
-              value={billingPartyId}
-              onChange={event => {
-                const next = event.target.value || CASH_PARTY_ID;
-                setPartyId(next);
-                if (next === CASH_PARTY_ID && settlement === "credit") setSettlement("paid");
-                const party = customers.find(row => row.id === next);
-                if (party?.phone) setCustomerPhone(party.phone);
-              }}
-              disabled={busy}
-            >
-              <option value={CASH_PARTY_ID}>Cash (walk-in)</option>
-              {customers.map(party => (
-                <option key={party.id} value={party.id}>{party.name}</option>
-              ))}
-            </Select>
+            {settlement === "credit" ? (
+              <Select
+                aria-label="Customer"
+                className="counter-pay-select"
+                value={billingPartyId === CASH_PARTY_ID ? "" : billingPartyId}
+                onChange={event => {
+                  const next = event.target.value;
+                  if (!next) {
+                    setPartyId(CASH_PARTY_ID);
+                    return;
+                  }
+                  setPartyId(next);
+                  const party = customers.find(row => row.id === next);
+                  if (party?.phone) setCustomerPhone(party.phone);
+                }}
+                disabled={busy}
+              >
+                <option value="">Select customer</option>
+                {customers.map(party => (
+                  <option key={party.id} value={party.id}>{party.name}</option>
+                ))}
+              </Select>
+            ) : (
+              <>
+                <p className="counter-walkin" aria-label="Customer">Cash (walk-in)</p>
+                <p className="small">Walk-in only. Named credit parties use Khata / credit above.</p>
+              </>
+            )}
           </FieldBlock>
           <FieldBlock label="Phone (WhatsApp)">
             <input
@@ -1576,34 +1627,6 @@ export function CounterWorkspace({
               disabled={busy}
             />
           </FieldBlock>
-          {tillMode === "sale" ? (
-            <FieldBlock label="Settlement">
-              <Select
-                aria-label="Settlement"
-                className="counter-pay-select"
-                value={settlement}
-                onChange={event => setSettlement(event.target.value)}
-                disabled={busy || billingPartyId === CASH_PARTY_ID}
-              >
-                <option value="paid">Paid now</option>
-                <option value="credit" disabled={billingPartyId === CASH_PARTY_ID}>Khata / credit</option>
-              </Select>
-              {creditAdvice?.level === "warn" ? <p className="small">{creditAdvice.messages[0]}</p> : null}
-            </FieldBlock>
-          ) : (
-            <FieldBlock label="Refund to">
-              <Select
-                aria-label="Refund settlement"
-                className="counter-pay-select"
-                value={settlement}
-                onChange={event => setSettlement(event.target.value)}
-                disabled={busy}
-              >
-                <option value="paid">Cash / UPI refund</option>
-                <option value="credit" disabled={billingPartyId === CASH_PARTY_ID}>Credit note on khata</option>
-              </Select>
-            </FieldBlock>
-          )}
           <FieldBlock label="Bill discount">
             <input
               inputMode="decimal"
