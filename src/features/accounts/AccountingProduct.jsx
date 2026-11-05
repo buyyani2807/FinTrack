@@ -225,6 +225,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [orgSettings, setOrgSettings] = useState(orgSettingsProp || {});
   const [pendingSalesInvoiceId, setPendingSalesInvoiceId] = useState(null);
   const [pendingCounterPrintId, setPendingCounterPrintId] = useState(null);
+  const counterPrintPopupRef = useRef(null);
   const [salesInvoiceSuccess, setSalesInvoiceSuccess] = useState(null);
   const [salesInvoiceView, setSalesInvoiceView] = useState(null);
   const [accounts, setAccounts] = useState(cached?.accounts ?? []);
@@ -575,7 +576,9 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       itemLines: voucherItemLines.filter(line => line.voucherId === voucher.id),
     });
     if (!built) return;
-    printSalesInvoicePdf(withCounterReceiptPrint(built), { template: "thermal" });
+    const popup = counterPrintPopupRef.current;
+    counterPrintPopupRef.current = null;
+    printSalesInvoicePdf(withCounterReceiptPrint(built), { template: "thermal", popup });
     setNotice("Print dialog opened — choose your thermal printer, then Print.");
     setPendingCounterPrintId(null);
   }, [pendingCounterPrintId, vouchers, parties, accounts, companies, activeCompanyId, workspace, voucherItemLines, documentSettings]);
@@ -2634,7 +2637,10 @@ const openVoucher = () => {
             if (!activeCompanyId) return;
             setCounterSettings(saveCounterSettings(activeCompanyId, next));
           }}
-          onReprint={voucherId => setPendingCounterPrintId(voucherId)}
+          onReprint={(voucherId, popup = null) => {
+            counterPrintPopupRef.current = popup;
+            setPendingCounterPrintId(voucherId);
+          }}
           askReason={askReason}
           onRefresh={() => refresh()}
           onPosted={() => { refresh(); }}
@@ -2844,7 +2850,10 @@ const openVoucher = () => {
             if (!activeCompanyId) return;
             setCounterSettings(saveCounterSettings(activeCompanyId, next));
           }}
-          onReprint={voucherId => setPendingCounterPrintId(voucherId)}
+          onReprint={(voucherId, popup = null) => {
+            counterPrintPopupRef.current = popup;
+            setPendingCounterPrintId(voucherId);
+          }}
           askReason={askReason}
           onRefresh={() => refresh()}
           onPosted={() => { refresh(); }}
