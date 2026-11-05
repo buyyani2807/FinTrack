@@ -7579,7 +7579,11 @@
 
 .accounts-dashboard .counter-line {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(7.5rem, 9.5rem) minmax(4.5rem, 5.25rem) minmax(4.25rem, 5.25rem) auto;
+  /* Name on its own row so laptop/narrow cart panels never crush the title. */
+  grid-template-columns: minmax(5.75rem, 8.5rem) minmax(4.25rem, 5.5rem) minmax(0, 1fr) auto;
+  grid-template-areas:
+    "main main main remove"
+    "qty rate net remove";
   gap: 8px;
   align-items: center;
   align-self: start;
@@ -7592,6 +7596,7 @@
 }
 
 .accounts-dashboard .counter-line-main {
+  grid-area: main;
   display: grid;
   gap: 2px;
   min-width: 0;
@@ -7600,6 +7605,47 @@
 .accounts-dashboard .counter-line-main strong {
   font-size: var(--ft-type-ui);
   font-weight: 650;
+  overflow-wrap: anywhere;
+  line-height: var(--ft-leading-tight);
+}
+
+.accounts-dashboard .counter-line-main .small {
+  overflow-wrap: anywhere;
+  line-height: var(--ft-leading-body);
+}
+
+.accounts-dashboard .counter-line > .counter-qty-wrap {
+  grid-area: qty;
+  min-width: 0;
+}
+
+.accounts-dashboard .counter-line > .counter-line-rate-input {
+  grid-area: rate;
+}
+
+.accounts-dashboard .counter-line > .counter-line-net {
+  grid-area: net;
+  justify-self: end;
+}
+
+.accounts-dashboard .counter-line > .counter-line-remove {
+  grid-area: remove;
+  align-self: start;
+}
+
+@media (min-width: 1500px) {
+  .accounts-dashboard .counter-line {
+    grid-template-columns: minmax(0, 1fr) minmax(7.5rem, 9.5rem) minmax(4.5rem, 5.25rem) minmax(4.25rem, 5.25rem) auto;
+    grid-template-areas: "main qty rate net remove";
+  }
+
+  .accounts-dashboard .counter-line > .counter-line-remove {
+    align-self: center;
+  }
+
+  .accounts-dashboard .counter-line-main strong {
+    overflow-wrap: break-word;
+  }
 }
 
 .accounts-dashboard .counter-qty {
@@ -7786,12 +7832,19 @@
   .accounts-dashboard .counter-item-add { grid-area: add; align-self: center; }
 
   .accounts-dashboard .counter-line {
-    grid-template-columns: minmax(0, 1fr) minmax(7rem, 9rem) minmax(4rem, 5rem) auto;
+    grid-template-columns: minmax(0, 1fr) minmax(5.5rem, 1fr) minmax(4rem, auto) auto;
+    grid-template-areas:
+      "main main main remove"
+      "qty net net remove";
   }
 
   .accounts-dashboard .counter-line-rate,
   .accounts-dashboard .counter-line-rate-input {
     display: none;
+  }
+
+  .accounts-dashboard .counter-line > .counter-line-net {
+    justify-self: end;
   }
 
   .accounts-dashboard .counter-fav-toggle {
