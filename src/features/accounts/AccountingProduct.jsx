@@ -506,10 +506,13 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       if (section !== "counter") go({ section: "counter", reportTab: "daybook" });
       return;
     }
+    // Wait for the company id before deciding Counter is off — refresh used to briefly
+    // set counterEnabled=false and kick /counter → Overview, wiping the open bill.
+    if (!activeCompanyId) return;
     if (!counterEnabled && section === "counter") {
       go({ section: "overview", reportTab: "daybook" });
     }
-  }, [section, counterEnabled, cashierNav]);
+  }, [section, counterEnabled, cashierNav, activeCompanyId]);
   // Keep the wizard mounted across refresh()/loading so Continue does not
   // unmount mid-flow (that looked like “Step 1/6 finishes in 2 steps”).
   const showOnboarding = Boolean(

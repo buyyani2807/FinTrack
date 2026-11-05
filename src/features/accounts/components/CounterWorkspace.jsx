@@ -38,6 +38,7 @@ import {
   saveDayClose,
 } from "../model/counterSettings.js";
 import { readCounterHolds, saveCounterHolds } from "../model/counterHolds.js";
+import { clearCounterDraft, readCounterDraft, saveCounterDraft } from "../model/counterDraft.js";
 import {
   applyBillDiscountToLines,
   counterEstimateTotal,
@@ -172,6 +173,7 @@ export function CounterWorkspace({
   const [receivedUpi, setReceivedUpi] = useState("");
   const [holds, setHolds] = useState([]);
   const [holdsReady, setHoldsReady] = useState(false);
+  const [draftReady, setDraftReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [lastBill, setLastBill] = useState(null);
@@ -272,16 +274,71 @@ export function CounterWorkspace({
     if (!companyId) {
       setHolds([]);
       setHoldsReady(true);
+      setDraftReady(false);
       return;
     }
+    // Pause autosave while swapping company/till so we never write the old cart onto the new key.
+    setDraftReady(false);
+    setHoldsReady(false);
     setHolds(readCounterHolds(companyId, activeTillId));
     setHoldsReady(true);
+    const draft = readCounterDraft(companyId, activeTillId);
+    if (draft) {
+      setLines(draft.lines);
+      setPartyId(draft.partyId || CASH_PARTY_ID);
+      setMoneyMode(draft.moneyMode || "cash");
+      setSettlement(draft.settlement || "paid");
+      setBillDiscount(draft.billDiscount || "");
+      setTillMode(draft.tillMode === "return" ? "return" : "sale");
+      setReceivedCash(draft.receivedCash || "");
+      setReceivedUpi(draft.receivedUpi || "");
+    } else {
+      setLines([]);
+      setPartyId(CASH_PARTY_ID);
+      setMoneyMode("cash");
+      setSettlement("paid");
+      setBillDiscount("");
+      setTillMode("sale");
+      setReceivedCash("");
+      setReceivedUpi("");
+    }
+    setDraftReady(true);
   }, [companyId, activeTillId]);
 
   useEffect(() => {
     if (!companyId || !holdsReady) return;
     saveCounterHolds(companyId, activeTillId, holds);
   }, [companyId, activeTillId, holds, holdsReady]);
+
+  useEffect(() => {
+    if (!companyId || !draftReady) return;
+    if (!lines.length) {
+      clearCounterDraft(companyId, activeTillId);
+      return;
+    }
+    saveCounterDraft(companyId, activeTillId, {
+      lines,
+      partyId: billingPartyId,
+      moneyMode,
+      settlement,
+      tillMode,
+      billDiscount,
+      receivedCash,
+      receivedUpi,
+    });
+  }, [
+    companyId,
+    activeTillId,
+    draftReady,
+    lines,
+    billingPartyId,
+    moneyMode,
+    settlement,
+    tillMode,
+    billDiscount,
+    receivedCash,
+    receivedUpi,
+  ]);
 
   useEffect(() => {
     const onOnline = () => setOnline(true);
