@@ -645,6 +645,31 @@ export function CounterWorkspace({
     return ok;
   };
 
+  const canPrintLastBill = Boolean(
+    lastBill && (lastBill.printBill || lastBill.offlineId || lastBill.voucherId),
+  );
+
+  const printLastBill = () => {
+    if (!lastBill) return;
+    if (lastBill.printBill) {
+      printOfflineBill(lastBill.printBill);
+      return;
+    }
+    if (lastBill.offlineId) {
+      const bill = offlineBills.find(row => row.id === lastBill.offlineId);
+      if (bill) printOfflineBill(bill);
+      else setPrintNotice("Offline bill not found on this device. Open Today or Day report after sync.");
+      return;
+    }
+    if (lastBill.voucherId && onReprint) {
+      onReprint(lastBill.voucherId);
+      setPrintNotice("Receipt opened — choose your printer in the print dialog.");
+      window.setTimeout(() => setPrintNotice(""), 10000);
+      return;
+    }
+    setPrintNotice("Print is not ready for this bill yet. Try Today → Print.");
+  };
+
   const queueOfflineSale = async ({
     draft,
     moneyParts,
@@ -690,8 +715,8 @@ export function CounterWorkspace({
       printBill: bill,
     });
     clearBill();
-    setPrintNotice("Bill saved offline. Tap Print on the last bill for the receipt.");
-    window.setTimeout(() => setPrintNotice(""), 10000);
+    setPrintNotice("Bill saved offline. Use Print receipt below for the thermal slip.");
+    window.setTimeout(() => setPrintNotice(""), 20000);
     return bill;
   };
 
@@ -808,8 +833,8 @@ export function CounterWorkspace({
           printBill,
         });
         clearBill();
-        setPrintNotice("Bill posted. Tap Print for the receipt — also on Reports → Sales / Day Book.");
-        window.setTimeout(() => setPrintNotice(""), 12000);
+        setPrintNotice("Bill posted. Use Print receipt below for the thermal slip.");
+        window.setTimeout(() => setPrintNotice(""), 20000);
         try {
           await onPosted?.(voucherId);
         } catch {
@@ -963,23 +988,8 @@ export function CounterWorkspace({
                   Last {money(lastBill.total)}
                   {lastBill.offlineRef ? ` · ${lastBill.offlineRef}` : ""}
                 </span>
-                {lastBill.printBill || lastBill.offlineId || lastBill.voucherId ? (
-                  <button
-                    type="button"
-                    className="link-button counter-last-print"
-                    onClick={() => {
-                      if (lastBill.printBill) {
-                        printOfflineBill(lastBill.printBill);
-                        return;
-                      }
-                      if (lastBill.offlineId) {
-                        const bill = offlineBills.find(row => row.id === lastBill.offlineId);
-                        if (bill) printOfflineBill(bill);
-                        return;
-                      }
-                      if (lastBill.voucherId && onReprint) onReprint(lastBill.voucherId);
-                    }}
-                  >
+                {canPrintLastBill ? (
+                  <button type="button" className="btn counter-last-print" onClick={printLastBill}>
                     Print
                   </button>
                 ) : null}
@@ -1019,7 +1029,19 @@ export function CounterWorkspace({
       </div>
 
       {error ? <p className="acc-form-error" role="alert">{error}</p> : null}
-      {printNotice ? <p className="notice" role="status">{printNotice}</p> : null}
+      {printNotice || (panel === "bill" && canPrintLastBill) ? (
+        <div className={`notice counter-print-bar${printNotice ? " is-active" : ""}`} role="status">
+          <p>
+            {printNotice
+              || `Last bill ${money(lastBill.total)}${lastBill.offlineRef ? ` · ${lastBill.offlineRef}` : ""} — print when needed.`}
+          </p>
+          {canPrintLastBill ? (
+            <button type="button" className="btn primary counter-print-cta" onClick={printLastBill}>
+              Print receipt
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       {!online ? (
         <p className="notice counter-offline-banner" role="status">
           Offline · {pendingOffline.length} bill{pendingOffline.length === 1 ? "" : "s"} pending sync

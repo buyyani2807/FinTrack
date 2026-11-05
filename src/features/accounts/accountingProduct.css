@@ -7033,23 +7033,43 @@
   line-height: 1.2;
 }
 
-.accounts-dashboard .counter-last-bill .small,
-.accounts-dashboard .counter-last-print {
+.accounts-dashboard .counter-last-bill {
+  gap: 10px;
+}
+
+.accounts-dashboard .counter-last-bill .small {
   display: inline-flex;
   align-items: center;
   margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  font-size: var(--ft-type-secondary);
   line-height: 1.2;
   vertical-align: middle;
 }
 
 .accounts-dashboard .counter-last-print {
-  color: var(--ft-primary);
-  font-weight: 600;
-  cursor: pointer;
+  min-height: 2rem;
+  padding: 4px 10px;
+  border-radius: 10px;
+}
+
+.accounts-dashboard .counter-print-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 14px;
+  margin: 0 0 12px;
+}
+
+.accounts-dashboard .counter-print-bar p {
+  margin: 0;
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.accounts-dashboard .counter-print-cta {
+  flex: 0 0 auto;
+  min-height: 2.75rem;
+  padding-inline: 16px;
 }
 
 .accounts-dashboard .counter-holds {
