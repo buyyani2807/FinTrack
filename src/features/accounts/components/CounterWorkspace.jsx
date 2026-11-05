@@ -1603,46 +1603,38 @@ export function CounterWorkspace({
           </div>
           {tillMode === "sale" ? (
             <FieldBlock label="Settlement">
-              <div className="counter-mode-toggle" role="group" aria-label="Settlement">
-                <button
-                  type="button"
-                  className={`btn${settlement === "paid" ? " primary" : ""}`}
-                  disabled={busy}
-                  onClick={() => { setSettlement("paid"); setPartyId(CASH_PARTY_ID); }}
-                >
-                  Paid now
-                </button>
-                <button
-                  type="button"
-                  className={`btn${settlement === "credit" ? " primary" : ""}`}
-                  disabled={busy}
-                  onClick={() => setSettlement("credit")}
-                >
-                  Khata
-                </button>
-              </div>
+              <Select
+                aria-label="Settlement"
+                className="counter-pay-select"
+                value={settlement}
+                onChange={event => {
+                  const next = event.target.value;
+                  setSettlement(next);
+                  if (next === "paid") setPartyId(CASH_PARTY_ID);
+                }}
+                disabled={busy}
+              >
+                <option value="paid">Paid now</option>
+                <option value="credit">Khata / credit</option>
+              </Select>
               {creditAdvice?.level === "warn" ? <p className="small">{creditAdvice.messages[0]}</p> : null}
             </FieldBlock>
           ) : (
             <FieldBlock label="Refund to">
-              <div className="counter-mode-toggle" role="group" aria-label="Refund settlement">
-                <button
-                  type="button"
-                  className={`btn${settlement === "paid" ? " primary" : ""}`}
-                  disabled={busy}
-                  onClick={() => { setSettlement("paid"); setPartyId(CASH_PARTY_ID); }}
-                >
-                  Cash / UPI
-                </button>
-                <button
-                  type="button"
-                  className={`btn${settlement === "credit" ? " primary" : ""}`}
-                  disabled={busy}
-                  onClick={() => setSettlement("credit")}
-                >
-                  Khata note
-                </button>
-              </div>
+              <Select
+                aria-label="Refund settlement"
+                className="counter-pay-select"
+                value={settlement}
+                onChange={event => {
+                  const next = event.target.value;
+                  setSettlement(next);
+                  if (next === "paid") setPartyId(CASH_PARTY_ID);
+                }}
+                disabled={busy}
+              >
+                <option value="paid">Cash / UPI refund</option>
+                <option value="credit">Credit note on khata</option>
+              </Select>
             </FieldBlock>
           )}
           <FieldBlock label="Customer">
@@ -1671,7 +1663,7 @@ export function CounterWorkspace({
             ) : (
               <>
                 <p className="counter-walkin" aria-label="Customer">Cash (walk-in)</p>
-                <p className="small">Walk-in cash sale. Tap Khata above to bill a named customer on credit.</p>
+                <p className="small">Walk-in only. Choose Khata / credit above for a named customer.</p>
               </>
             )}
           </FieldBlock>
