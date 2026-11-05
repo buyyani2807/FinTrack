@@ -115,7 +115,7 @@ export function printSalesInvoicePdf(invoice, options = {}) {
       frame.contentWindow?.focus();
       frame.contentWindow?.print();
     } catch {
-      window.open(url, "_blank", "noopener,noreferrer");
+      // Stay on the till — do not open a second PDF tab when print is blocked.
     }
     cleanup();
   };

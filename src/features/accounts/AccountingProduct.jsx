@@ -124,6 +124,7 @@ import {
 import { loadOrganizationSettings } from "../../lib/financeRepository.js";
 import { buildSalesInvoice, buildVoucherDocument, canOpenVoucherDocument } from "./model/salesInvoiceModel.js";
 import { SalesInvoiceSuccessModal, SalesInvoiceViewerModal, withCounterReceiptPrint } from "./components/SalesInvoiceActions.jsx";
+import { printSalesInvoicePdf } from "./io/salesInvoicePdf.js";
 import { periodStockValues } from "./model/inventoryValuation.js";
 import { expenseBreakdown, monthlyIncomeExpense } from "./model/accountsCharts.js";
 import { isEmployeeParty, partyHasTradeProfile, partyProfile } from "./model/partyProfile.js";
@@ -223,6 +224,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [settings, setSettings] = useState(cached?.settings ?? null);
   const [orgSettings, setOrgSettings] = useState(orgSettingsProp || {});
   const [pendingSalesInvoiceId, setPendingSalesInvoiceId] = useState(null);
+  const [pendingCounterPrintId, setPendingCounterPrintId] = useState(null);
   const [salesInvoiceSuccess, setSalesInvoiceSuccess] = useState(null);
   const [salesInvoiceView, setSalesInvoiceView] = useState(null);
   const [accounts, setAccounts] = useState(cached?.accounts ?? []);
@@ -537,6 +539,11 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     if (!pendingSalesInvoiceId) return;
     const voucher = vouchers.find(item => item.id === pendingSalesInvoiceId);
     if (!voucher || voucher.voucherType !== "sales") return;
+    // Counter uses silent thermal print — keep the success modal for Accounts sales only.
+    if (voucher.sourceType === "pos_counter") {
+      setPendingSalesInvoiceId(null);
+      return;
+    }
     const party = parties.find(item => item.id === voucher.partyId) || null;
     const company = companies.find(item => item.id === activeCompanyId) || companies[0] || null;
     const built = buildSalesInvoice({
@@ -547,12 +554,30 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       workspace,
       itemLines: voucherItemLines.filter(line => line.voucherId === voucher.id),
     });
-    // Counter charges auto-open thermal 80 mm print; Accounts credit sales keep company template.
-    setSalesInvoiceSuccess(
-      voucher.sourceType === "pos_counter" ? withCounterReceiptPrint(built) : built,
-    );
+    setSalesInvoiceSuccess(built);
     setPendingSalesInvoiceId(null);
   }, [pendingSalesInvoiceId, vouchers, parties, accounts, companies, activeCompanyId, workspace, voucherItemLines, documentSettings]);
+
+  // Counter: one thermal print after charge/reprint — no sale-recorded modal, no extra PDF tab.
+  useEffect(() => {
+    if (!pendingCounterPrintId) return;
+    const voucher = vouchers.find(item => item.id === pendingCounterPrintId);
+    if (!voucher || voucher.sourceType !== "pos_counter") return;
+    if (voucher.voucherType !== "sales" && voucher.voucherType !== "credit_note") return;
+    const party = parties.find(item => item.id === voucher.partyId) || null;
+    const company = companies.find(item => item.id === activeCompanyId) || companies[0] || null;
+    const built = buildSalesInvoice({
+      voucher,
+      party,
+      accounts,
+      company: company ? { ...company, documentSettings } : null,
+      workspace,
+      itemLines: voucherItemLines.filter(line => line.voucherId === voucher.id),
+    });
+    if (!built) return;
+    printSalesInvoicePdf(withCounterReceiptPrint(built), { template: "thermal" });
+    setPendingCounterPrintId(null);
+  }, [pendingCounterPrintId, vouchers, parties, accounts, companies, activeCompanyId, workspace, voucherItemLines, documentSettings]);
 
   useEffect(() => {
     if (!token || !expandedVoucherId || migrationRequired) {
@@ -2608,11 +2633,11 @@ const openVoucher = () => {
             if (!activeCompanyId) return;
             setCounterSettings(saveCounterSettings(activeCompanyId, next));
           }}
-          onReprint={voucherId => setPendingSalesInvoiceId(voucherId)}
+          onReprint={voucherId => setPendingCounterPrintId(voucherId)}
           askReason={askReason}
           onRefresh={() => refresh()}
           onPosted={voucherId => {
-            setPendingSalesInvoiceId(voucherId);
+            setPendingCounterPrintId(voucherId);
             refresh();
           }}
         /> : <Spinner label="Opening Counter" />
@@ -2821,11 +2846,11 @@ const openVoucher = () => {
             if (!activeCompanyId) return;
             setCounterSettings(saveCounterSettings(activeCompanyId, next));
           }}
-          onReprint={voucherId => setPendingSalesInvoiceId(voucherId)}
+          onReprint={voucherId => setPendingCounterPrintId(voucherId)}
           askReason={askReason}
           onRefresh={() => refresh()}
           onPosted={voucherId => {
-            setPendingSalesInvoiceId(voucherId);
+            setPendingCounterPrintId(voucherId);
             refresh();
           }}
         />}

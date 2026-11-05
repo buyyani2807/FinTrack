@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, Trash2, Pause, Play, Plus, ShoppingCart, RotateCcw, Landmark, ScrollText, Star, MessageCircle } from "lucide-react";
+import { Search, Trash2, Pause, Play, Plus, ShoppingCart, RotateCcw, Landmark, ScrollText, Star } from "lucide-react";
 import { Select } from "../../../components/Select.jsx";
 import { money } from "../accountsFormat.js";
 import { todayIso } from "../../../lib/dates.js";
@@ -69,7 +69,7 @@ import { formatReceiptDateTime } from "../../receipts/model/receiptModel.js";
 import { accountsCompanyBranding } from "../model/salesInvoiceModel.js";
 import { isValidUpiId, upiPayLink } from "../model/upiPay.js";
 import { creditCheck } from "../model/tradeDocumentModel.js";
-import { canWhatsAppShare, openManualWhatsAppShare, prepareWhatsAppPopup } from "../../receipts/io/receiptWhatsApp.js";
+import { canWhatsAppShare, openManualWhatsAppShare } from "../../receipts/io/receiptWhatsApp.js";
 import { QrSvg } from "../PayPage.jsx";
 import { AccShortcutsPanel } from "./AccShortcutsPanel.jsx";
 
@@ -629,7 +629,6 @@ export function CounterWorkspace({
     clientRequestId,
     phone = "",
     whatsAppMessage = "",
-    whatsAppPopup = null,
   }) => {
     if (!companyId) throw new Error("Choose a company before charging offline.");
     if (offlineBlock.blocked) throw new Error(offlineBlock.reason);
@@ -673,16 +672,6 @@ export function CounterWorkspace({
     });
     clearBill();
     printOfflineBill(bill);
-    if (canWhatsAppShare(phone) && whatsAppMessage) {
-      openManualWhatsAppShare({
-        phone,
-        message: whatsAppMessage,
-        popup: whatsAppPopup,
-        note: "WhatsApp opened with the bill receipt. Tap Send in WhatsApp.",
-      });
-    } else {
-      try { whatsAppPopup?.close(); } catch { /* ignore */ }
-    }
     return bill;
   };
 
@@ -757,9 +746,7 @@ export function CounterWorkspace({
       : null;
     const clientRequestId = newClientRequestId();
     const phone = String(customerPhone || selectedParty?.phone || "").trim();
-    const shareWhatsApp = canWhatsAppShare(phone);
-    const whatsAppPopup = shareWhatsApp ? prepareWhatsAppPopup() : null;
-    const receiptMessage = shareWhatsApp
+    const receiptMessage = canWhatsAppShare(phone)
       ? buildCounterWhatsAppReceipt({
         companyName: branding?.companyName || "",
         tillLabel,
@@ -797,7 +784,7 @@ export function CounterWorkspace({
         gstEnabled,
       });
       if (!online) {
-        await queueOfflineSale({ draft, moneyParts, clientRequestId, phone, whatsAppMessage: receiptMessage, whatsAppPopup });
+        await queueOfflineSale({ draft, moneyParts, clientRequestId, phone, whatsAppMessage: receiptMessage });
         return;
       }
       try {
@@ -818,26 +805,17 @@ export function CounterWorkspace({
           isReturn,
         });
         clearBill();
+        // Parent silently thermal-prints. WhatsApp stays one tap on last bill — no extra windows.
         onPosted?.(voucherId);
-        if (shareWhatsApp) {
-          openManualWhatsAppShare({
-            phone,
-            message: receiptMessage,
-            popup: whatsAppPopup,
-            note: "WhatsApp opened with the bill receipt. Tap Send in WhatsApp.",
-          });
-        }
       } catch (err) {
         if (isLikelyNetworkError(err) && !useCredit && !isReturn) {
           setOnline(false);
-          await queueOfflineSale({ draft, moneyParts, clientRequestId, phone, whatsAppMessage: receiptMessage, whatsAppPopup });
+          await queueOfflineSale({ draft, moneyParts, clientRequestId, phone, whatsAppMessage: receiptMessage });
           return;
         }
-        try { whatsAppPopup?.close(); } catch { /* ignore */ }
         throw err;
       }
     } catch (err) {
-      try { whatsAppPopup?.close(); } catch { /* ignore */ }
       const detail = err?.details || err?.cause?.message || err?.hint;
       const main = err?.message || "Could not post this bill.";
       setError(detail && detail !== main ? `${main} (${detail})` : main);
@@ -990,6 +968,24 @@ export function CounterWorkspace({
                     }}
                   >
                     Print
+                  </button>
+                ) : null}
+                {lastBill.phone && canWhatsAppShare(lastBill.phone) ? (
+                  <button
+                    type="button"
+                    className="link-button counter-last-print"
+                    onClick={() => openManualWhatsAppShare({
+                      phone: lastBill.phone,
+                      message: lastBill.whatsAppMessage || buildCounterWhatsAppReceipt({
+                        companyName: branding?.companyName || "",
+                        tillLabel,
+                        isReturn: lastBill.isReturn,
+                        total: lastBill.total,
+                      }),
+                      note: "WhatsApp opened with the bill receipt. Tap Send in WhatsApp.",
+                    })}
+                  >
+                    WhatsApp
                   </button>
                 ) : null}
               </span>
@@ -1615,7 +1611,7 @@ export function CounterWorkspace({
             {customerPhone && !canWhatsAppShare(customerPhone) ? (
               <p className="small">Enter a valid 10-digit Indian mobile for WhatsApp.</p>
             ) : (
-              <p className="small">Receipt opens in WhatsApp after Charge when a phone is entered.</p>
+              <p className="small">Optional. After Charge, tap WhatsApp on the last bill to send the receipt.</p>
             )}
           </FieldBlock>
           <FieldBlock label="Bill discount">
@@ -1685,26 +1681,6 @@ export function CounterWorkspace({
                 : `${tillMode === "return" ? "Refund" : settlement === "credit" ? "Post khata" : online ? "Charge" : "Charge offline"} ${money(totals.total)}`}
             </button>
           </div>
-          {lastBill?.phone && canWhatsAppShare(lastBill.phone) ? (
-            <button
-              type="button"
-              className="btn whatsapp"
-              onClick={() => openManualWhatsAppShare({
-                phone: lastBill.phone,
-                message: lastBill.whatsAppMessage || buildCounterWhatsAppReceipt({
-                  companyName: branding?.companyName || "",
-                  tillLabel,
-                  isReturn: lastBill.isReturn,
-                  total: lastBill.total,
-                }),
-                note: "WhatsApp opened with the bill receipt. Tap Send in WhatsApp.",
-              })}
-            >
-              <MessageCircle size={14} aria-hidden="true" /> WhatsApp last bill
-            </button>
-          ) : lastBill ? (
-            <p className="small">Add a phone on the next bill to WhatsApp the receipt.</p>
-          ) : null}
           <p className="small counter-pay-note">
             {settlement === "credit"
               ? "Khata posts to the customer ledger."
