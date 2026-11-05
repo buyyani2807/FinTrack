@@ -14,7 +14,6 @@ import {
 } from "../model/accountingModel.js";
 import { gstStateFromGstin, isIntraGst } from "../model/accountingGst.js";
 import {
-  canSetPackContains,
   emptyItemLine,
   itemizedEntryDraft,
   itemPackMeta,
@@ -1454,31 +1453,10 @@ export function CounterWorkspace({
           ) : (
             <ul className="counter-line-list">
               {lines.map((line, index) => {
-                const catalogItem = (workingItems || []).find(row => row.id === line.itemId);
-                const packQty = line.packContainsQty ?? catalogItem?.packContainsQty ?? "";
-                const packUnit = line.packContainsUnit || catalogItem?.packContainsUnit || (Number(packQty) > 0 ? "Kg" : "");
-                const packLine = {
-                  ...line,
-                  packContainsQty: packQty === "" ? null : packQty,
-                  packContainsUnit: packUnit,
-                };
-                const sellChoices = sellUnitChoices(packLine.unit, packLine);
-                const sellUnit = packLine.sellUnit || packLine.unit || "Nos";
-                const baseQty = quantityInBaseUnit(packLine.quantity, packLine.unit, sellUnit, packLine);
-                const packMeta = itemPackMeta(packLine);
-                const packHint = packMeta
-                  ? `1 ${packLine.unit} = ${packMeta.qty} ${packMeta.unit}`
-                  : "";
-                const needsPackSize = canSetPackContains(packLine.unit) && !packMeta;
-                const setBagKg = kg => {
-                  const qty = String(kg);
-                  patchLine(index, {
-                    packContainsQty: qty,
-                    packContainsUnit: "Kg",
-                    sellUnit: "Kg",
-                    quantity: parseItemQuantity(line.quantity === "1" || !line.quantity ? "1" : String(line.quantity), "Kg") || "1",
-                  });
-                };
+                // Pack→loose conversion stays off the till — use a separate loose SKU instead.
+                const sellChoices = sellUnitChoices(line.unit);
+                const sellUnit = line.sellUnit || line.unit || "Nos";
+                const baseQty = quantityInBaseUnit(line.quantity, line.unit, sellUnit, line);
                 return (
                   <li key={`${line.itemId}-${index}`} className="counter-line">
                     <div className="counter-line-main">
@@ -1489,41 +1467,10 @@ export function CounterWorkspace({
                           line._batchNo ? `Batch ${line._batchNo}` : "",
                           line._rateList ? line._rateList : line._rateSource === "party_list" ? "Party price" : "",
                           line._stock != null ? `Stock ${line._stock} ${line.unit || ""}` : "",
-                          packHint,
                           sellChoices && sellUnit !== line.unit && baseQty > 0 ? `= ${baseQty} ${line.unit}` : "",
                           `₹${line.rate || 0} / ${line.unit || "unit"}`,
                         ].filter(Boolean).join(" · ")}
                       </span>
-                      {needsPackSize ? (
-                        <div className="counter-pack-size">
-                          <span className="small">Sell loose — how many kg in one {line.unit || "Bag"}?</span>
-                          <button type="button" className="btn counter-pack-chip" onClick={() => setBagKg(25)}>25 kg</button>
-                          <button type="button" className="btn counter-pack-chip" onClick={() => setBagKg(26)}>26 kg</button>
-                          <label className="counter-pack-custom">
-                            <span className="small">Other</span>
-                            <input
-                              className="counter-pack-qty"
-                              inputMode="decimal"
-                              placeholder="e.g. 20"
-                              aria-label={`Custom kg per ${line.unit || "Bag"} for ${line.itemName}`}
-                              value={line.packContainsQty ?? ""}
-                              onChange={event => {
-                                const qty = parseItemQuantity(event.target.value, "Kg");
-                                patchLine(index, {
-                                  packContainsQty: qty,
-                                  packContainsUnit: qty ? "Kg" : "",
-                                });
-                              }}
-                              onBlur={event => {
-                                const qty = parseItemQuantity(event.target.value, "Kg");
-                                if (!(Number(qty) > 0)) return;
-                                setBagKg(qty);
-                              }}
-                            />
-                            <span className="small">kg</span>
-                          </label>
-                        </div>
-                      ) : null}
                     </div>
                     <div className="counter-qty-wrap">
                       <input
@@ -1540,13 +1487,11 @@ export function CounterWorkspace({
                         <select
                           className="counter-sell-unit"
                           aria-label={`Sell unit for ${line.itemName}`}
-                          title={packHint
-                            ? `Bill in ${packLine.packContainsUnit} or ${line.unit}; price stays per ${line.unit}`
-                            : `Bill in alternate unit; price stays per ${line.unit || "unit"}`}
+                          title={`Bill in alternate unit; price stays per ${line.unit || "unit"}`}
                           value={sellUnit}
                           onChange={event => {
                             const nextSell = event.target.value;
-                            const asBase = quantityInBaseUnit(line.quantity, line.unit, sellUnit, packLine);
+                            const asBase = quantityInBaseUnit(line.quantity, line.unit, sellUnit, line);
                             const nextAlt = sellChoices.find(row => row.id === nextSell);
                             const factor = nextAlt?.factorToBase || 1;
                             const converted = factor ? asBase / factor : asBase;
@@ -1573,15 +1518,7 @@ export function CounterWorkspace({
                       value={line.rate}
                       onChange={event => patchLine(index, { rate: event.target.value, rateTouched: true })}
                     />
-                    <input
-                      className="counter-line-disc-input"
-                      inputMode="decimal"
-                      placeholder="Disc ₹/%"
-                      aria-label={`Discount for ${line.itemName}`}
-                      value={line.discount || ""}
-                      onChange={event => patchLine(index, { discount: event.target.value })}
-                    />
-                    <strong className="counter-line-net">{money(lineNet(packLine))}</strong>
+                    <strong className="counter-line-net">{money(lineNet(line))}</strong>
                     <button type="button" className="btn counter-line-remove" aria-label={`Remove ${line.itemName}`} onClick={() => removeLine(index)}>
                       <Trash2 size={14} aria-hidden="true" />
                     </button>
