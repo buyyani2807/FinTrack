@@ -40,6 +40,7 @@ import {
 import { readCounterHolds, saveCounterHolds } from "../model/counterHolds.js";
 import {
   applyBillDiscountToLines,
+  buildCounterWhatsAppReceipt,
   counterEstimateTotal,
   counterLineNet,
   fefoLotsForItem,
@@ -69,7 +70,7 @@ import { formatReceiptDateTime } from "../../receipts/model/receiptModel.js";
 import { accountsCompanyBranding } from "../model/salesInvoiceModel.js";
 import { isValidUpiId, upiPayLink } from "../model/upiPay.js";
 import { creditCheck } from "../model/tradeDocumentModel.js";
-import { canWhatsAppShare, openManualWhatsAppShare } from "../../receipts/io/receiptWhatsApp.js";
+import { canWhatsAppShare, openManualWhatsAppShare, prepareWhatsAppPopup } from "../../receipts/io/receiptWhatsApp.js";
 import { QrSvg } from "../PayPage.jsx";
 import { AccShortcutsPanel } from "./AccShortcutsPanel.jsx";
 
@@ -623,7 +624,14 @@ export function CounterWorkspace({
     if (invoice) printSalesInvoicePdf(invoice, { template: "thermal" });
   };
 
-  const queueOfflineSale = async ({ draft, moneyParts, clientRequestId }) => {
+  const queueOfflineSale = async ({
+    draft,
+    moneyParts,
+    clientRequestId,
+    phone = "",
+    whatsAppMessage = "",
+    whatsAppPopup = null,
+  }) => {
     if (!companyId) throw new Error("Choose a company before charging offline.");
     if (offlineBlock.blocked) throw new Error(offlineBlock.reason);
     const existing = await listOfflineBills(companyId);
@@ -660,10 +668,22 @@ export function CounterWorkspace({
       total,
       at: bill.createdAt,
       lines: lines.length,
+      phone,
+      whatsAppMessage,
       pendingSync: true,
     });
     clearBill();
     printOfflineBill(bill);
+    if (canWhatsAppShare(phone) && whatsAppMessage) {
+      openManualWhatsAppShare({
+        phone,
+        message: whatsAppMessage,
+        popup: whatsAppPopup,
+        note: "WhatsApp opened with the bill receipt. Tap Send in WhatsApp.",
+      });
+    } else {
+      try { whatsAppPopup?.close(); } catch { /* ignore */ }
+    }
     return bill;
   };
 
@@ -737,6 +757,25 @@ export function CounterWorkspace({
       ? { cash: Number(receivedCash || 0), upi: Number(receivedUpi || 0) }
       : null;
     const clientRequestId = newClientRequestId();
+    const phone = String(customerPhone || selectedParty?.phone || "").trim();
+    const shareWhatsApp = canWhatsAppShare(phone);
+    const whatsAppPopup = shareWhatsApp ? prepareWhatsAppPopup() : null;
+    const receiptMessage = shareWhatsApp
+      ? buildCounterWhatsAppReceipt({
+        companyName: branding?.companyName || "",
+        tillLabel,
+        isReturn,
+        isCredit: useCredit || (isReturn && settlement === "credit"),
+        payLabel: useCredit ? "Khata" : counterPayLabel(payMode),
+        customerName: selectedParty?.name || "",
+        lines: chargeLines,
+        taxable: totals.taxable,
+        tax: totals.tax,
+        taxLabel: totals.taxLabel,
+        total: totals.total,
+        date: today,
+      })
+      : "";
     setBusy(true);
     try {
       const draft = itemizedEntryDraft({
@@ -751,7 +790,7 @@ export function CounterWorkspace({
           isReturn ? `Counter return · ${tillLabel}` : `Counter sale · ${tillLabel}`,
           cashierName ? `Cashier ${cashierName}` : "",
           useCredit ? "Khata" : counterPayLabel(payMode),
-          customerPhone ? `Ph ${customerPhone}` : "",
+          phone ? `Ph ${phone}` : "",
         ].filter(Boolean).join(" · "),
         itemLines: chargeLines,
         intra,
@@ -759,7 +798,7 @@ export function CounterWorkspace({
         gstEnabled,
       });
       if (!online) {
-        await queueOfflineSale({ draft, moneyParts, clientRequestId });
+        await queueOfflineSale({ draft, moneyParts, clientRequestId, phone, whatsAppMessage: receiptMessage, whatsAppPopup });
         return;
       }
       try {
@@ -770,26 +809,36 @@ export function CounterWorkspace({
           sourceType: "pos_counter",
         });
         const total = voucherTotals(draft.lines).debit;
-        const phone = customerPhone || selectedParty?.phone || "";
         setLastBill({
           voucherId,
           total,
           at: new Date().toISOString(),
           lines: lines.length,
           phone,
+          whatsAppMessage: receiptMessage,
           isReturn,
         });
         clearBill();
         onPosted?.(voucherId);
+        if (shareWhatsApp) {
+          openManualWhatsAppShare({
+            phone,
+            message: receiptMessage,
+            popup: whatsAppPopup,
+            note: "WhatsApp opened with the bill receipt. Tap Send in WhatsApp.",
+          });
+        }
       } catch (err) {
         if (isLikelyNetworkError(err) && !useCredit && !isReturn) {
           setOnline(false);
-          await queueOfflineSale({ draft, moneyParts, clientRequestId });
+          await queueOfflineSale({ draft, moneyParts, clientRequestId, phone, whatsAppMessage: receiptMessage, whatsAppPopup });
           return;
         }
+        try { whatsAppPopup?.close(); } catch { /* ignore */ }
         throw err;
       }
     } catch (err) {
+      try { whatsAppPopup?.close(); } catch { /* ignore */ }
       const detail = err?.details || err?.cause?.message || err?.hint;
       const main = err?.message || "Could not post this bill.";
       setError(detail && detail !== main ? `${main} (${detail})` : main);
@@ -1554,38 +1603,46 @@ export function CounterWorkspace({
           </div>
           {tillMode === "sale" ? (
             <FieldBlock label="Settlement">
-              <Select
-                aria-label="Settlement"
-                className="counter-pay-select"
-                value={settlement}
-                onChange={event => {
-                  const next = event.target.value;
-                  setSettlement(next);
-                  if (next === "paid") setPartyId(CASH_PARTY_ID);
-                }}
-                disabled={busy}
-              >
-                <option value="paid">Paid now</option>
-                <option value="credit">Khata / credit</option>
-              </Select>
+              <div className="counter-mode-toggle" role="group" aria-label="Settlement">
+                <button
+                  type="button"
+                  className={`btn${settlement === "paid" ? " primary" : ""}`}
+                  disabled={busy}
+                  onClick={() => { setSettlement("paid"); setPartyId(CASH_PARTY_ID); }}
+                >
+                  Paid now
+                </button>
+                <button
+                  type="button"
+                  className={`btn${settlement === "credit" ? " primary" : ""}`}
+                  disabled={busy}
+                  onClick={() => setSettlement("credit")}
+                >
+                  Khata
+                </button>
+              </div>
               {creditAdvice?.level === "warn" ? <p className="small">{creditAdvice.messages[0]}</p> : null}
             </FieldBlock>
           ) : (
             <FieldBlock label="Refund to">
-              <Select
-                aria-label="Refund settlement"
-                className="counter-pay-select"
-                value={settlement}
-                onChange={event => {
-                  const next = event.target.value;
-                  setSettlement(next);
-                  if (next === "paid") setPartyId(CASH_PARTY_ID);
-                }}
-                disabled={busy}
-              >
-                <option value="paid">Cash / UPI refund</option>
-                <option value="credit">Credit note on khata</option>
-              </Select>
+              <div className="counter-mode-toggle" role="group" aria-label="Refund settlement">
+                <button
+                  type="button"
+                  className={`btn${settlement === "paid" ? " primary" : ""}`}
+                  disabled={busy}
+                  onClick={() => { setSettlement("paid"); setPartyId(CASH_PARTY_ID); }}
+                >
+                  Cash / UPI
+                </button>
+                <button
+                  type="button"
+                  className={`btn${settlement === "credit" ? " primary" : ""}`}
+                  disabled={busy}
+                  onClick={() => setSettlement("credit")}
+                >
+                  Khata note
+                </button>
+              </div>
             </FieldBlock>
           )}
           <FieldBlock label="Customer">
@@ -1614,7 +1671,7 @@ export function CounterWorkspace({
             ) : (
               <>
                 <p className="counter-walkin" aria-label="Customer">Cash (walk-in)</p>
-                <p className="small">Walk-in only. Named credit parties use Khata / credit above.</p>
+                <p className="small">Walk-in cash sale. Tap Khata above to bill a named customer on credit.</p>
               </>
             )}
           </FieldBlock>
@@ -1623,9 +1680,14 @@ export function CounterWorkspace({
               type="tel"
               value={customerPhone}
               onChange={event => setCustomerPhone(event.target.value)}
-              placeholder="Optional mobile"
+              placeholder="10-digit mobile to send receipt"
               disabled={busy}
             />
+            {customerPhone && !canWhatsAppShare(customerPhone) ? (
+              <p className="small">Enter a valid 10-digit Indian mobile for WhatsApp.</p>
+            ) : (
+              <p className="small">Receipt opens in WhatsApp after Charge when a phone is entered.</p>
+            )}
           </FieldBlock>
           <FieldBlock label="Bill discount">
             <input
@@ -1697,14 +1759,22 @@ export function CounterWorkspace({
           {lastBill?.phone && canWhatsAppShare(lastBill.phone) ? (
             <button
               type="button"
-              className="btn"
+              className="btn whatsapp"
               onClick={() => openManualWhatsAppShare({
                 phone: lastBill.phone,
-                message: `Thanks for shopping at ${branding?.companyName || "our store"}. Bill total ${money(lastBill.total)}.`,
+                message: lastBill.whatsAppMessage || buildCounterWhatsAppReceipt({
+                  companyName: branding?.companyName || "",
+                  tillLabel,
+                  isReturn: lastBill.isReturn,
+                  total: lastBill.total,
+                }),
+                note: "WhatsApp opened with the bill receipt. Tap Send in WhatsApp.",
               })}
             >
               <MessageCircle size={14} aria-hidden="true" /> WhatsApp last bill
             </button>
+          ) : lastBill ? (
+            <p className="small">Add a phone on the next bill to WhatsApp the receipt.</p>
           ) : null}
           <p className="small counter-pay-note">
             {settlement === "credit"

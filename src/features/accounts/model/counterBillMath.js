@@ -1,3 +1,4 @@
+import { formatInr } from "../../../lib/formatMoney.js";
 import { roundMoney } from "./accountingModel.js";
 import { quantityInBaseUnit } from "./inventoryModel.js";
 
@@ -87,6 +88,56 @@ export function applyBillDiscountToLines(lines = [], billDiscount = "") {
     }
     return { ...line, discount: String(roundMoney(existingAmount + share)) };
   });
+}
+
+/** Plain-text Counter receipt for WhatsApp (wa.me). */
+export function buildCounterWhatsAppReceipt({
+  companyName = "",
+  tillLabel = "",
+  isReturn = false,
+  isCredit = false,
+  payLabel = "",
+  customerName = "",
+  lines = [],
+  taxable = 0,
+  tax = 0,
+  taxLabel = "",
+  total = 0,
+  date = "",
+} = {}) {
+  const title = isReturn ? "Return receipt" : isCredit ? "Khata bill" : "Sale receipt";
+  const header = [
+    `*${String(companyName || "Store").trim()}*`,
+    title,
+    tillLabel ? `Till: ${tillLabel}` : "",
+    date ? `Date: ${date}` : "",
+    customerName ? `Customer: ${customerName}` : "",
+    payLabel ? `Payment: ${payLabel}` : "",
+  ].filter(Boolean);
+
+  const itemLines = (lines || [])
+    .filter(line => line?.itemId || String(line?.itemName || "").trim())
+    .map(line => {
+      const name = String(line.itemName || "Item").trim();
+      const unit = line.sellUnit || line.unit || "";
+      const qty = `${line.quantity || 0}${unit ? ` ${unit}` : ""}`;
+      return `• ${name} × ${qty} = ${formatInr(counterLineNet(line))}`;
+    });
+
+  const totals = [
+    taxable ? `Taxable: ${formatInr(taxable)}` : "",
+    tax && taxLabel ? `${taxLabel}: ${formatInr(tax)}` : "",
+    `*Total: ${formatInr(total)}*`,
+  ].filter(Boolean);
+
+  return [
+    ...header,
+    "",
+    ...(itemLines.length ? ["Items", ...itemLines, ""] : []),
+    ...totals,
+    "",
+    "Thank you.",
+  ].join("\n");
 }
 
 /** Active lots that share name or barcode with the item, FEFO-sorted (earliest expiry first). */

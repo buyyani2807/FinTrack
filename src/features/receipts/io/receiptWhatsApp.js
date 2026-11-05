@@ -56,6 +56,33 @@ function launchWhatsAppUrl(url) {
   return { opened: true };
 }
 
+/** Open a blank tab in the user click so a later async charge can still reach WhatsApp. */
+export function prepareWhatsAppPopup() {
+  if (typeof window === "undefined" || typeof window.open !== "function") return null;
+  try {
+    return window.open("about:blank", "_blank");
+  } catch {
+    return null;
+  }
+}
+
+function closePreparedPopup(popup) {
+  if (!popup) return;
+  try { popup.close(); } catch { /* already closed / blocked */ }
+}
+
+function navigatePreparedPopup(popup, url) {
+  if (!popup || !url) return false;
+  try {
+    if (popup.closed) return false;
+    popup.location = url;
+    return true;
+  } catch {
+    closePreparedPopup(popup);
+    return false;
+  }
+}
+
 const HANDOFF_ID = "fintrack-whatsapp-handoff";
 
 function ensureHandoffStyles() {
@@ -175,9 +202,16 @@ export function openWhatsAppWeb({ phone, message = "", note = "" }) {
 }
 
 /** Manual wa.me handoff. Does not require saved WhatsApp settings. */
-export function openManualWhatsAppShare({ phone, message, note = "" }) {
+export function openManualWhatsAppShare({ phone, message, note = "", popup = null } = {}) {
   const url = whatsAppShareUrl(phone, message);
-  if (!url) return { opened: false, reason: "no_phone" };
+  if (!url) {
+    closePreparedPopup(popup);
+    return { opened: false, reason: "no_phone" };
+  }
+  if (navigatePreparedPopup(popup, url)) {
+    showWhatsAppHandoff({ opened: true, note });
+    return { opened: true, reason: "opened" };
+  }
   const launched = launchWhatsAppUrl(url);
   if (launched.opened) {
     showWhatsAppHandoff({ opened: true, note });
