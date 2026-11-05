@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, Trash2, Pause, Play, Plus, ShoppingCart, RotateCcw, Landmark, ScrollText, Star } from "lucide-react";
+import { Search, Trash2, Pause, Play, Plus, ShoppingCart, RotateCcw, Landmark, ScrollText, Star, History } from "lucide-react";
 import { Select } from "../../../components/Select.jsx";
 import { money } from "../accountsFormat.js";
-import { todayIso } from "../../../lib/dates.js";
+import { formatIstTime, todayIso } from "../../../lib/dates.js";
+import { rowInstant } from "../model/dateSort.js";
 import {
   CASH_PARTY_ID,
   entryPartyId,
@@ -174,7 +175,7 @@ export function CounterWorkspace({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [lastBill, setLastBill] = useState(null);
-  const [panel, setPanel] = useState("bill"); // bill | close | report
+  const [panel, setPanel] = useState("bill"); // bill | today | close | report
   const [openingFloat, setOpeningFloat] = useState("");
   const [countedCash, setCountedCash] = useState("");
   const [closeReason, setCloseReason] = useState("");
@@ -989,6 +990,15 @@ export function CounterWorkspace({
         <div className="counter-head-actions">
           <button
             type="button"
+            className={`btn${panel === "today" ? " primary" : ""}`}
+            onClick={() => setPanel(current => (current === "today" ? "bill" : "today"))}
+          >
+            <History size={16} aria-hidden="true" />
+            {" "}
+            {panel === "today" ? "Back to till" : `Today${todayBills.length ? ` · ${todayBills.length}` : ""}`}
+          </button>
+          <button
+            type="button"
             className={`btn${panel === "report" ? " primary" : ""}`}
             onClick={() => setPanel(current => (current === "report" ? "bill" : "report"))}
           >
@@ -1267,29 +1277,62 @@ export function CounterWorkspace({
         </section>
       ) : null}
 
-      {panel === "bill" && todayBills.length > 0 ? (
-        <div className="counter-today" aria-label="Today's counter bills">
-          <span className="small">Today</span>
-          <ul className="counter-today-list">
-            {todayBills.map(bill => (
-              <li key={bill.id} className="counter-today-row">
-                <button
-                  type="button"
-                  className="btn counter-today-chip"
-                  disabled={!onReprint}
-                  onClick={() => onReprint?.(bill.id)}
-                >
-                  {bill.reference || bill.voucherNumber || "Bill"} · {money(billTotal(bill))}
-                </button>
-                {canManage ? (
-                  <button type="button" className="btn counter-void" disabled={busy} onClick={() => voidBill(bill)} title="Void bill">
-                    <RotateCcw size={14} aria-hidden="true" /> Void
-                  </button>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </div>
+      {panel === "today" ? (
+        <section className="counter-today-panel card" aria-label="Today's counter bills">
+          <div className="counter-today-panel-head">
+            <div>
+              <h2 className="acc-subsection-title">Today · {tillLabel}</h2>
+              <p className="small">
+                Reprint a receipt{canManage ? " or void a mistake" : ""}. Day totals stay on Day report.
+              </p>
+            </div>
+            <button type="button" className="btn" onClick={() => setPanel("bill")}>Back to till</button>
+          </div>
+          {todayBills.length ? (
+            <ul className="counter-today-panel-list">
+              {todayBills.map(bill => {
+                const time = formatIstTime(rowInstant(bill));
+                return (
+                  <li key={bill.id} className="counter-today-panel-row">
+                    <div className="counter-today-panel-copy">
+                      <strong>{bill.reference || bill.voucherNumber || "Bill"}</strong>
+                      <span className="small">
+                        {time ? `${time} · ` : ""}
+                        {money(billTotal(bill))}
+                      </span>
+                    </div>
+                    <div className="counter-today-panel-actions">
+                      <button
+                        type="button"
+                        className="btn"
+                        disabled={!onReprint}
+                        onClick={() => onReprint?.(bill.id)}
+                      >
+                        Print
+                      </button>
+                      {canManage ? (
+                        <button
+                          type="button"
+                          className="btn counter-void"
+                          disabled={busy}
+                          onClick={() => voidBill(bill)}
+                          title="Void bill"
+                        >
+                          <RotateCcw size={14} aria-hidden="true" /> Void
+                        </button>
+                      ) : null}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="small">No Counter bills for this till today yet.</p>
+          )}
+          {todayBills.length >= 40 ? (
+            <p className="small">Showing the latest 40. Older bills are on Day report.</p>
+          ) : null}
+        </section>
       ) : null}
 
       {panel === "bill" && holds.length > 0 ? (
