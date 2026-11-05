@@ -486,14 +486,17 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     ? !canCounterWrite(accountsAccessRole)
     : Boolean(accountsAccessRole) && !canWrite;
   const manufacturingEnabled = Boolean(activeCompanyId) && readIndustry(activeCompanyId) === "manufacturing";
+  // Optimistic true while company id is still loading so /accounting/counter does not
+  // flash "Counter off" and bounce owners to Overview on refresh.
   const [counterEnabled, setCounterEnabled] = useState(() => (
-    Boolean(activeCompanyId) && readCounterEnabled(activeCompanyId, readIndustry(activeCompanyId))
+    activeCompanyId
+      ? readCounterEnabled(activeCompanyId, readIndustry(activeCompanyId))
+      : true
   ));
   const [counterSettings, setCounterSettings] = useState(() => readCounterSettings(activeCompanyId));
   useEffect(() => {
     if (!activeCompanyId) {
-      setCounterEnabled(false);
-      setCounterSettings(readCounterSettings(null));
+      // Keep prior flag — do not force false during bundle reload (that raced Overview).
       return;
     }
     setCounterEnabled(readCounterEnabled(activeCompanyId, readIndustry(activeCompanyId)));
@@ -506,13 +509,14 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       if (section !== "counter") go({ section: "counter", reportTab: "daybook" });
       return;
     }
-    // Wait for the company id before deciding Counter is off — refresh used to briefly
-    // set counterEnabled=false and kick /counter → Overview, wiping the open bill.
+    // Read Counter enablement synchronously. Depending on counterEnabled state raced:
+    // company id arrived one tick before setCounterEnabled(true), and owners were sent to Overview.
     if (!activeCompanyId) return;
-    if (!counterEnabled && section === "counter") {
+    const enabled = readCounterEnabled(activeCompanyId, readIndustry(activeCompanyId));
+    if (!enabled && section === "counter") {
       go({ section: "overview", reportTab: "daybook" });
     }
-  }, [section, counterEnabled, cashierNav, activeCompanyId]);
+  }, [section, cashierNav, activeCompanyId]);
   // Keep the wizard mounted across refresh()/loading so Continue does not
   // unmount mid-flow (that looked like “Step 1/6 finishes in 2 steps”).
   const showOnboarding = Boolean(
