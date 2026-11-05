@@ -1429,3 +1429,38 @@ export const savePayrollRun = (token, run) =>
     input_lines: run.lines || [],
     input_status: run.status || "draft",
   }, token));
+
+const dayCloseMigrationError = err => {
+  const message = String(err?.message || err?.details || "");
+  if (/acc_upsert_counter_day_close|acc_list_counter_day_closes|acc_counter_day_closes/i.test(message)) {
+    const error = new Error("Run migration 120_accounts_counter_day_close.sql in the Supabase SQL editor to save day-close on the server.");
+    error.code = "MIGRATION_REQUIRED";
+    error.cause = err;
+    return error;
+  }
+  return err;
+};
+
+/** Persist Counter day-close / Z snapshot for a company till. Falls back to caller local save if migration missing. */
+export const upsertCounterDayClose = (token, payload = {}) =>
+  wrap(accRpc("acc_upsert_counter_day_close", {
+    input_company_id: payload.companyId || activeCompanyId,
+    input_close_date: payload.date,
+    input_till_id: payload.tillId || "till-1",
+    input_till_label: payload.tillLabel || "Till 1",
+    input_cashier_name: payload.cashierName || "",
+    input_opening_float: Number(payload.openingFloat || 0),
+    input_expected_cash: Number(payload.expectedCash || 0),
+    input_counted_cash: Number(payload.countedCash || 0),
+    input_variance: Number(payload.variance || 0),
+    input_reason: payload.reason || "",
+    input_bill_count: Number(payload.billCount || 0),
+    input_report_json: payload.reportJson || {},
+  }, token)).catch(err => { throw dayCloseMigrationError(err); });
+
+export const listCounterDayCloses = (token, { companyId = null, from = null, to = null } = {}) =>
+  wrap(accRpc("acc_list_counter_day_closes", {
+    input_company_id: companyId || activeCompanyId,
+    input_from: from,
+    input_to: to,
+  }, token)).catch(err => { throw dayCloseMigrationError(err); });

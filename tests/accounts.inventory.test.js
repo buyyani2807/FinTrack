@@ -367,6 +367,28 @@ test("itemized debit note (purchase return) reverses purchase against the suppli
   assert.equal(draft.lines.find(line => line.code === "2100").debit, 150);
 });
 
+test("cash refund credit note does not require a party", () => {
+  const draft = itemizedEntryDraft({
+    kind: "credit_note",
+    accounts,
+    date: "2026-11-05",
+    settlement: "paid",
+    moneyMode: "cash",
+    itemLines: [{
+      itemId: "rice",
+      itemName: "Rice",
+      unit: "Nos",
+      quantity: 1,
+      rate: 100,
+      gstRate: 0,
+    }],
+    gstEnabled: false,
+  });
+  assert.equal(draft.partyId, null);
+  assert.ok(draft.lines.some(line => Number(line.debit) === 100));
+  assert.ok(draft.lines.some(line => Number(line.credit) === 100));
+});
+
 test("itemized returns require the party", () => {
   assert.throws(() => itemizedEntryDraft({
     kind: "credit_note",

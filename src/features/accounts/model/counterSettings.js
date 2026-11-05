@@ -43,6 +43,7 @@ export function emptyCounterSettings() {
     activeTillId: till.id,
     tillLabel: till.label,
     paymentMap: { cash: "", upi: "", bank: "" },
+    favouriteItemIds: [],
   };
 }
 
@@ -72,6 +73,9 @@ export function readCounterSettings(companyId) {
       ? parsed.activeTillId
       : tills[0].id;
     const active = tills.find(till => till.id === activeTillId) || tills[0];
+    const favouriteItemIds = Array.isArray(parsed?.favouriteItemIds)
+      ? parsed.favouriteItemIds.map(id => String(id || "").trim()).filter(Boolean).slice(0, 48)
+      : [];
     return {
       tills,
       activeTillId: active.id,
@@ -81,6 +85,7 @@ export function readCounterSettings(companyId) {
         upi: parsed?.paymentMap?.upi || "",
         bank: parsed?.paymentMap?.bank || "",
       },
+      favouriteItemIds,
     };
   } catch {
     return fallback;
@@ -100,6 +105,9 @@ export function saveCounterSettings(companyId, next) {
       ? (next?.activeTillId ?? current.activeTillId)
       : tills[0].id;
     const active = tills.find(till => till.id === activeTillId) || tills[0];
+    const favouriteItemIds = Array.isArray(next?.favouriteItemIds)
+      ? next.favouriteItemIds.map(id => String(id || "").trim()).filter(Boolean).slice(0, 48)
+      : (current.favouriteItemIds || []);
     const merged = {
       tills,
       activeTillId: active.id,
@@ -109,6 +117,7 @@ export function saveCounterSettings(companyId, next) {
         upi: next?.paymentMap?.upi ?? current.paymentMap.upi ?? "",
         bank: next?.paymentMap?.bank ?? current.paymentMap.bank ?? "",
       },
+      favouriteItemIds,
     };
     localStorage.setItem(settingsKey(companyId), JSON.stringify(merged));
     return merged;

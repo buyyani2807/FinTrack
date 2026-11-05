@@ -2599,6 +2599,9 @@ const openVoucher = () => {
           parties={parties}
           priceLists={priceLists}
           vouchers={vouchers}
+          voucherItemLines={voucherItemLines}
+          documentSettings={documentSettings}
+          workspace={workspace}
           activeCompany={activeCompany}
           counterSettings={counterSettings}
           onCounterSettingsChange={next => {
@@ -2809,6 +2812,9 @@ const openVoucher = () => {
           parties={parties}
           priceLists={priceLists}
           vouchers={vouchers}
+          voucherItemLines={voucherItemLines}
+          documentSettings={documentSettings}
+          workspace={workspace}
           activeCompany={activeCompany}
           counterSettings={counterSettings}
           onCounterSettingsChange={next => {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, Trash2, Pause, Play, Plus, ShoppingCart, RotateCcw, Landmark, ScrollText } from "lucide-react";
+import { Search, Trash2, Pause, Play, Plus, ShoppingCart, RotateCcw, Landmark, ScrollText, Star, MessageCircle } from "lucide-react";
 import { Select } from "../../../components/Select.jsx";
 import { money } from "../accountsFormat.js";
 import { todayIso } from "../../../lib/dates.js";
@@ -23,7 +23,7 @@ import {
   sellUnitChoices,
 } from "../model/inventoryModel.js";
 import { resolveItemRate } from "../model/priceLists.js";
-import { cancelVoucher, postVoucher } from "../data/accountingRepository.js";
+import { cancelVoucher, postVoucher, upsertCounterDayClose } from "../data/accountingRepository.js";
 import {
   listOfflineBills,
   loadCounterCatalogCache,
@@ -37,6 +37,13 @@ import {
   saveCounterSession,
   saveDayClose,
 } from "../model/counterSettings.js";
+import { readCounterHolds, saveCounterHolds } from "../model/counterHolds.js";
+import {
+  applyBillDiscountToLines,
+  counterEstimateTotal,
+  counterLineNet,
+  fefoLotsForItem,
+} from "../model/counterBillMath.js";
 import {
   COUNTER_PAY_MODES,
   counterDayReport,
@@ -59,9 +66,16 @@ import {
 import { syncOfflineCounterBills } from "../model/counterOfflineSync.js";
 import { printSalesInvoicePdf } from "../io/salesInvoicePdf.js";
 import { formatReceiptDateTime } from "../../receipts/model/receiptModel.js";
+import { accountsCompanyBranding } from "../model/salesInvoiceModel.js";
+import { isValidUpiId, upiPayLink } from "../model/upiPay.js";
+import { creditCheck } from "../model/tradeDocumentModel.js";
+import { canWhatsAppShare, openManualWhatsAppShare } from "../../receipts/io/receiptWhatsApp.js";
+import { QrSvg } from "../PayPage.jsx";
 import { AccShortcutsPanel } from "./AccShortcutsPanel.jsx";
 
 const PAY_MODES = COUNTER_PAY_MODES;
+const lineNet = counterLineNet;
+const estimateTotal = counterEstimateTotal;
 
 /** Prefer pack size typed on the bill line; else take it from the item master. */
 function withCatalogPack(line, items = []) {
@@ -72,43 +86,6 @@ function withCatalogPack(line, items = []) {
     ...line,
     packContainsQty: item.packContainsQty,
     packContainsUnit: item.packContainsUnit || "",
-  };
-}
-
-function lineNet(line) {
-  const baseUnit = line.unit || "Nos";
-  const qty = Math.max(0, quantityInBaseUnit(line.quantity, baseUnit, line.sellUnit || baseUnit, line));
-  const rate = Number(line.rate || 0);
-  const gross = roundMoney(qty * rate);
-  const discText = String(line.discount || "").trim();
-  let discount = 0;
-  if (discText.endsWith("%")) {
-    const pct = Number(discText.slice(0, -1));
-    if (Number.isFinite(pct)) discount = roundMoney((gross * pct) / 100);
-  } else if (discText) {
-    const value = Number(discText);
-    if (Number.isFinite(value)) discount = roundMoney(value);
-  }
-  return Math.max(0, roundMoney(gross - discount));
-}
-
-function estimateTotal(lines, { gstEnabled, intra }) {
-  let taxable = 0;
-  let tax = 0;
-  for (const line of lines) {
-    if (!line.itemId && !String(line.itemName || "").trim()) continue;
-    const net = lineNet(line);
-    taxable = roundMoney(taxable + net);
-    if (gstEnabled) {
-      const rate = Number(line.gstRate || 0);
-      tax = roundMoney(tax + (net * rate) / 100);
-    }
-  }
-  return {
-    taxable,
-    tax,
-    total: roundMoney(taxable + tax),
-    taxLabel: !gstEnabled ? "" : intra ? "GST (CGST+SGST)" : "GST (IGST)",
   };
 }
 
@@ -137,7 +114,19 @@ function findItemByCode(items, query) {
 }
 
 function emptyHold() {
-  return { id: newClientRequestId(), label: "", lines: [], partyId: CASH_PARTY_ID, moneyMode: "cash", receivedCash: "", receivedUpi: "" };
+  return {
+    id: newClientRequestId(),
+    label: "",
+    lines: [],
+    partyId: CASH_PARTY_ID,
+    moneyMode: "cash",
+    settlement: "paid",
+    billDiscount: "",
+    customerPhone: "",
+    tillMode: "sale",
+    receivedCash: "",
+    receivedUpi: "",
+  };
 }
 
 function billTotal(voucher) {
@@ -167,15 +156,24 @@ export function CounterWorkspace({
   onReprint = null,
   onRefresh = null,
   askReason = null,
+  documentSettings = null,
+  voucherItemLines = [],
+  workspace = null,
 }) {
   const searchRef = useRef(null);
   const [query, setQuery] = useState("");
   const [lines, setLines] = useState([]);
   const [partyId, setPartyId] = useState(CASH_PARTY_ID);
   const [moneyMode, setMoneyMode] = useState("cash");
+  const [settlement, setSettlement] = useState("paid");
+  const [tillMode, setTillMode] = useState("sale"); // sale | return
+  const [billDiscount, setBillDiscount] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [lotPicker, setLotPicker] = useState(null);
   const [receivedCash, setReceivedCash] = useState("");
   const [receivedUpi, setReceivedUpi] = useState("");
   const [holds, setHolds] = useState([]);
+  const [holdsReady, setHoldsReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [lastBill, setLastBill] = useState(null);
@@ -238,9 +236,26 @@ export function CounterWorkspace({
   );
   const catalog = useMemo(() => matchItems(workingItems, query), [workingItems, query]);
   const gstEnabled = (activeCompany || cachedCatalog?.company)?.gstRegistration === "regular";
-  // Counter is walk-in only — named credit parties stay in Accounts sales.
-  const billingPartyId = CASH_PARTY_ID;
-  const selectedParty = null;
+  const billingPartyId = partyId || CASH_PARTY_ID;
+  const customers = useMemo(
+    () => (parties || []).filter(party => party.partyType === "customer" && party.isActive !== false),
+    [parties],
+  );
+  const selectedParty = billingPartyId === CASH_PARTY_ID
+    ? null
+    : (customers.find(party => party.id === billingPartyId) || null);
+  const favouriteIds = counterSettings?.favouriteItemIds || [];
+  const favouriteItems = useMemo(
+    () => favouriteIds
+      .map(id => (workingItems || []).find(item => item.id === id && item.isActive !== false))
+      .filter(Boolean)
+      .slice(0, 24),
+    [favouriteIds, workingItems],
+  );
+  const branding = useMemo(
+    () => accountsCompanyBranding(activeCompany || cachedCatalog?.company, workspace),
+    [activeCompany, cachedCatalog, workspace],
+  );
 
   useEffect(() => {
     if (!companyId) {
@@ -249,6 +264,21 @@ export function CounterWorkspace({
     }
     setCashierName(readCounterSession(companyId).cashierName || "");
   }, [companyId]);
+
+  useEffect(() => {
+    if (!companyId) {
+      setHolds([]);
+      setHoldsReady(true);
+      return;
+    }
+    setHolds(readCounterHolds(companyId, activeTillId));
+    setHoldsReady(true);
+  }, [companyId, activeTillId]);
+
+  useEffect(() => {
+    if (!companyId || !holdsReady) return;
+    saveCounterHolds(companyId, activeTillId, holds);
+  }, [companyId, activeTillId, holds, holdsReady]);
 
   useEffect(() => {
     const onOnline = () => setOnline(true);
@@ -345,10 +375,36 @@ export function CounterWorkspace({
     () => (lines || []).map(line => withCatalogPack(line, workingItems)),
     [lines, workingItems],
   );
-  const totals = useMemo(
-    () => estimateTotal(billLines, { gstEnabled, intra }),
-    [billLines, gstEnabled, intra],
+  const chargeLines = useMemo(
+    () => applyBillDiscountToLines(billLines, billDiscount),
+    [billLines, billDiscount],
   );
+  const totals = useMemo(
+    () => estimateTotal(chargeLines, { gstEnabled, intra }),
+    [chargeLines, gstEnabled, intra],
+  );
+  const upiLink = useMemo(() => {
+    if (tillMode === "return") return "";
+    if (settlement !== "paid" || (moneyMode !== "upi" && moneyMode !== "cash_upi")) return "";
+    if (!isValidUpiId(branding?.upiId) || branding?.showUpiQr === false) return "";
+    if (!(totals.total > 0)) return "";
+    return upiPayLink({
+      upiId: branding.upiId,
+      payeeName: branding.upiPayeeName || branding.companyName || "",
+      amount: totals.total,
+      note: `Counter ${tillLabel}`,
+    });
+  }, [tillMode, settlement, moneyMode, branding, totals.total, tillLabel]);
+  const creditAdvice = useMemo(() => {
+    if (settlement !== "credit" || !selectedParty) return null;
+    return creditCheck({
+      party: selectedParty,
+      outstanding: 0,
+      invoiceTotal: totals.total,
+      overdueDays: 0,
+      settings: documentSettings || {},
+    });
+  }, [settlement, selectedParty, totals.total, documentSettings]);
   const expectedCash = useMemo(() => {
     // Drawer cash = opening float + cash portion of Counter tenders (not full Cash+UPI bills).
     const cashSales = todayCloseReport.tender.cash;
@@ -387,7 +443,7 @@ export function CounterWorkspace({
     }
   }, [closed?.closedAt]);
 
-  const addItem = item => {
+  const pushItemLine = item => {
     if (!item?.id || !canWrite) return;
     const expiry = itemExpiryStatus(item.expiryDate, { today });
     if (expiry.tone === "expired") {
@@ -433,8 +489,26 @@ export function CounterWorkspace({
         },
       ];
     });
+    setLotPicker(null);
     setQuery("");
     searchRef.current?.focus();
+  };
+
+  const addItem = (item, { skipLotPick = false } = {}) => {
+    if (!item?.id || !canWrite) return;
+    if (!skipLotPick) {
+      const lots = fefoLotsForItem(item, workingItems, { today });
+      if (lots.length > 1) {
+        setLotPicker({ seed: item, lots });
+        setQuery("");
+        return;
+      }
+      if (lots.length === 1) {
+        pushItemLine(lots[0]);
+        return;
+      }
+    }
+    pushItemLine(item);
   };
 
   const tryAddFromQuery = () => {
@@ -467,9 +541,20 @@ export function CounterWorkspace({
     setLines([]);
     setPartyId(CASH_PARTY_ID);
     setMoneyMode("cash");
+    setSettlement("paid");
+    setBillDiscount("");
+    setCustomerPhone("");
     setReceivedCash("");
     setReceivedUpi("");
     setError("");
+  };
+
+  const toggleFavourite = itemId => {
+    if (!onCounterSettingsChange || !itemId) return;
+    const current = favouriteIds.includes(itemId)
+      ? favouriteIds.filter(id => id !== itemId)
+      : [...favouriteIds.filter(id => id !== itemId), itemId].slice(0, 48);
+    onCounterSettingsChange({ ...counterSettings, favouriteItemIds: current });
   };
 
   const holdBill = () => {
@@ -483,6 +568,10 @@ export function CounterWorkspace({
       lines,
       partyId: billingPartyId,
       moneyMode,
+      settlement,
+      billDiscount,
+      customerPhone,
+      tillMode,
       receivedCash,
       receivedUpi,
     };
@@ -498,8 +587,12 @@ export function CounterWorkspace({
       return;
     }
     setLines(hold.lines);
-    setPartyId(CASH_PARTY_ID);
+    setPartyId(hold.partyId || CASH_PARTY_ID);
     setMoneyMode(hold.moneyMode || "cash");
+    setSettlement(hold.settlement || "paid");
+    setBillDiscount(hold.billDiscount || "");
+    setCustomerPhone(hold.customerPhone || "");
+    setTillMode(hold.tillMode === "return" ? "return" : "sale");
     setReceivedCash(hold.receivedCash || "");
     setReceivedUpi(hold.receivedUpi || "");
     setHolds(current => current.filter(row => row.id !== holdId));
@@ -608,35 +701,54 @@ export function CounterWorkspace({
       setError("Catalog is not ready. Connect once online to cache the till, then retry.");
       return;
     }
+    const isReturn = tillMode === "return";
+    const useCredit = !isReturn && settlement === "credit";
+    if (useCredit && billingPartyId === CASH_PARTY_ID) {
+      setError("Choose a customer for khata / credit.");
+      return;
+    }
+    if (useCredit && creditAdvice?.level === "block") {
+      setError(creditAdvice.messages[0] || "Credit is blocked for this customer.");
+      return;
+    }
+    if (isReturn && settlement === "credit" && billingPartyId === CASH_PARTY_ID) {
+      setError("Choose the customer for a credit return, or refund as cash/UPI.");
+      return;
+    }
     if (offlineBlock.blocked && (!online || pendingOffline.length)) {
       setError(offlineBlock.reason);
       return;
     }
-    if (!online && moneyMode === "bank") {
-      setError("Card needs the network in Phase 1. Use cash or UPI offline.");
+    if (!online && (useCredit || moneyMode === "bank" || isReturn)) {
+      setError(isReturn
+        ? "Returns need the network."
+        : useCredit
+          ? "Khata / credit needs the network."
+          : "Card needs the network. Use cash or UPI offline.");
       return;
     }
-    const moneyParts = moneyMode === "cash_upi"
+    const payMode = useCredit ? "cash" : moneyMode;
+    const moneyParts = !useCredit && payMode === "cash_upi"
       ? { cash: Number(receivedCash || 0), upi: Number(receivedUpi || 0) }
       : null;
     const clientRequestId = newClientRequestId();
     setBusy(true);
     try {
       const draft = itemizedEntryDraft({
-        kind: "sale",
+        kind: isReturn ? "credit_note" : "sale",
         accounts: workingAccounts,
         date: today,
         partyId: entryPartyId(billingPartyId),
-        moneyMode,
+        moneyMode: payMode,
         moneyParts,
-        settlement: "paid",
+        settlement: useCredit || (isReturn && settlement === "credit") ? "credit" : "paid",
         narration: [
-          `Counter sale · ${tillLabel}`,
+          isReturn ? `Counter return · ${tillLabel}` : `Counter sale · ${tillLabel}`,
           cashierName ? `Cashier ${cashierName}` : "",
-          counterPayLabel(moneyMode),
+          useCredit ? "Khata" : counterPayLabel(payMode),
+          customerPhone ? `Ph ${customerPhone}` : "",
         ].filter(Boolean).join(" · "),
-        // Keep sellUnit / pack size so validation allows 11 Kg → 0.44 Bag before posting.
-        itemLines: billLines,
+        itemLines: chargeLines,
         intra,
         taxInclusive: false,
         gstEnabled,
@@ -653,16 +765,19 @@ export function CounterWorkspace({
           sourceType: "pos_counter",
         });
         const total = voucherTotals(draft.lines).debit;
+        const phone = customerPhone || selectedParty?.phone || "";
         setLastBill({
           voucherId,
           total,
           at: new Date().toISOString(),
           lines: lines.length,
+          phone,
+          isReturn,
         });
         clearBill();
         onPosted?.(voucherId);
       } catch (err) {
-        if (isLikelyNetworkError(err)) {
+        if (isLikelyNetworkError(err) && !useCredit && !isReturn) {
           setOnline(false);
           await queueOfflineSale({ draft, moneyParts, clientRequestId });
           return;
@@ -718,7 +833,7 @@ export function CounterWorkspace({
     })());
   };
 
-  const saveClose = () => {
+  const saveClose = async () => {
     if (!canManage || !companyId) return;
     if (!String(countedCash).trim()) {
       setError("Enter counted cash in the drawer.");
@@ -728,7 +843,7 @@ export function CounterWorkspace({
       setError("Enter a reason when counted cash differs from expected.");
       return;
     }
-    saveDayClose(companyId, today, {
+    const payload = {
       tillId: activeTillId,
       tillLabel,
       cashierName: cashierName || "",
@@ -737,10 +852,26 @@ export function CounterWorkspace({
       countedCash: Number(countedCash || 0),
       variance,
       reason: closeReason || "",
-      billCount: todayBills.length,
-    }, activeTillId);
+      billCount: todayCloseReport.billCount || 0,
+      reportJson: {
+        tender: todayCloseReport.tender,
+        billCount: todayCloseReport.billCount,
+        salesTotal: todayCloseReport.tender?.total || 0,
+      },
+    };
+    saveDayClose(companyId, today, payload, activeTillId);
+    if (online && token) {
+      try {
+        await upsertCounterDayClose(token, { companyId, date: today, ...payload });
+      } catch (err) {
+        if (err?.code !== "MIGRATION_REQUIRED") {
+          setError(err?.message || "Day close saved on this device; server sync failed.");
+          return;
+        }
+      }
+    }
+    setPanel("report");
     setError("");
-    setPanel("bill");
   };
 
   if (!canWrite) {
@@ -1168,12 +1299,30 @@ export function CounterWorkspace({
               <Search size={28} aria-hidden="true" className="counter-empty-icon" />
               <p className="counter-empty-title">Scan or search to start</p>
               <p className="small">Barcode, SKU, brand, or name — Enter adds. Hold F4 · Charge F9.</p>
+              {favouriteItems.length ? (
+                <div className="counter-fav-grid" role="list">
+                  {favouriteItems.map(item => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      role="listitem"
+                      className="btn counter-fav-chip"
+                      onClick={() => addItem(item)}
+                    >
+                      {item.name}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="small">Star items in search results to pin quick keys here.</p>
+              )}
             </div>
           ) : (
             <ul className="counter-item-list">
               {catalog.map(item => {
                 const stock = Number(stockByItem[item.id] ?? 0);
                 const low = item.itemType !== "service" && stock <= 0;
+                const fav = favouriteIds.includes(item.id);
                 return (
                   <li key={item.id} className={`counter-item${low ? " is-low" : ""}`}>
                     <div className="counter-item-copy">
@@ -1191,6 +1340,14 @@ export function CounterWorkspace({
                     <strong className="counter-item-price">{money(item.sellingPrice || 0)}</strong>
                     <button
                       type="button"
+                      className={`btn counter-fav-toggle${fav ? " is-on" : ""}`}
+                      aria-label={fav ? `Unpin ${item.name}` : `Pin ${item.name}`}
+                      onClick={() => toggleFavourite(item.id)}
+                    >
+                      <Star size={14} aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
                       className="btn counter-item-add"
                       onClick={() => addItem(item)}
                       aria-label={`Add ${item.name} to bill`}
@@ -1205,6 +1362,29 @@ export function CounterWorkspace({
               ) : null}
             </ul>
           )}
+          {lotPicker?.lots?.length ? (
+            <div className="counter-lot-picker" role="dialog" aria-label="Choose batch">
+              <p className="small"><strong>Pick batch (FEFO)</strong> — earliest expiry first for {lotPicker.seed?.name}.</p>
+              <ul className="counter-item-list">
+                {lotPicker.lots.map(lot => (
+                  <li key={lot.id} className="counter-item">
+                    <div className="counter-item-copy">
+                      <span className="counter-item-name">{lot.sku || lot.name}</span>
+                      <span className="small">
+                        {[
+                          lot.batchNo ? `Batch ${lot.batchNo}` : "No batch",
+                          lot.expiryDate ? `Exp ${lot.expiryDate}` : "",
+                          `Stock ${Number(stockByItem[lot.id] ?? 0)}`,
+                        ].filter(Boolean).join(" · ")}
+                      </span>
+                    </div>
+                    <button type="button" className="btn primary" onClick={() => pushItemLine(lot)}>Use</button>
+                  </li>
+                ))}
+              </ul>
+              <button type="button" className="btn" onClick={() => setLotPicker(null)}>Cancel</button>
+            </div>
+          ) : null}
         </section>
 
         <section className="counter-cart card counter-panel">
@@ -1337,7 +1517,15 @@ export function CounterWorkspace({
                       step="0.01"
                       aria-label={`Rate for ${line.itemName} per ${line.unit || "unit"}`}
                       value={line.rate}
-                      onChange={event => patchLine(index, { rate: event.target.value })}
+                      onChange={event => patchLine(index, { rate: event.target.value, rateTouched: true })}
+                    />
+                    <input
+                      className="counter-line-disc-input"
+                      inputMode="decimal"
+                      placeholder="Disc ₹/%"
+                      aria-label={`Discount for ${line.itemName}`}
+                      value={line.discount || ""}
+                      onChange={event => patchLine(index, { discount: event.target.value })}
                     />
                     <strong className="counter-line-net">{money(lineNet(packLine))}</strong>
                     <button type="button" className="btn counter-line-remove" aria-label={`Remove ${line.itemName}`} onClick={() => removeLine(index)}>
@@ -1355,38 +1543,117 @@ export function CounterWorkspace({
             <h2 className="counter-panel-title">Checkout</h2>
             <span className="small counter-kbd">F9</span>
           </div>
+          <div className="counter-mode-toggle" role="group" aria-label="Sale or return">
+            <button type="button" className={`btn${tillMode === "sale" ? " primary" : ""}`} disabled={busy} onClick={() => setTillMode("sale")}>Sale</button>
+            <button type="button" className={`btn${tillMode === "return" ? " primary" : ""}`} disabled={busy} onClick={() => { setTillMode("return"); setSettlement("paid"); }}>Return</button>
+          </div>
           <FieldBlock label="Customer">
-            <p className="counter-walkin" aria-label="Customer">Cash (walk-in)</p>
-            <p className="small">Walk-in only. Named credit parties stay in Accounts sales.</p>
-          </FieldBlock>
-          <FieldBlock label="Payment">
             <Select
-              aria-label="Payment mode"
+              aria-label="Customer"
               className="counter-pay-select"
-              value={moneyMode}
-              onChange={event => setMoneyMode(event.target.value)}
+              value={billingPartyId}
+              onChange={event => {
+                const next = event.target.value || CASH_PARTY_ID;
+                setPartyId(next);
+                if (next === CASH_PARTY_ID && settlement === "credit") setSettlement("paid");
+                const party = customers.find(row => row.id === next);
+                if (party?.phone) setCustomerPhone(party.phone);
+              }}
               disabled={busy}
             >
-              {PAY_MODES.filter(mode => online || mode.id !== "bank").map(mode => (
-                <option key={mode.id} value={mode.id}>{mode.label}</option>
+              <option value={CASH_PARTY_ID}>Cash (walk-in)</option>
+              {customers.map(party => (
+                <option key={party.id} value={party.id}>{party.name}</option>
               ))}
             </Select>
           </FieldBlock>
-          {moneyMode === "cash_upi" ? (
-            <div className="counter-split">
-              <FieldBlock label="Cash">
-                <input type="number" min="0" step="0.01" value={receivedCash} onChange={event => setReceivedCash(event.target.value)} />
+          <FieldBlock label="Phone (WhatsApp)">
+            <input
+              type="tel"
+              value={customerPhone}
+              onChange={event => setCustomerPhone(event.target.value)}
+              placeholder="Optional mobile"
+              disabled={busy}
+            />
+          </FieldBlock>
+          {tillMode === "sale" ? (
+            <FieldBlock label="Settlement">
+              <Select
+                aria-label="Settlement"
+                className="counter-pay-select"
+                value={settlement}
+                onChange={event => setSettlement(event.target.value)}
+                disabled={busy || billingPartyId === CASH_PARTY_ID}
+              >
+                <option value="paid">Paid now</option>
+                <option value="credit" disabled={billingPartyId === CASH_PARTY_ID}>Khata / credit</option>
+              </Select>
+              {creditAdvice?.level === "warn" ? <p className="small">{creditAdvice.messages[0]}</p> : null}
+            </FieldBlock>
+          ) : (
+            <FieldBlock label="Refund to">
+              <Select
+                aria-label="Refund settlement"
+                className="counter-pay-select"
+                value={settlement}
+                onChange={event => setSettlement(event.target.value)}
+                disabled={busy}
+              >
+                <option value="paid">Cash / UPI refund</option>
+                <option value="credit" disabled={billingPartyId === CASH_PARTY_ID}>Credit note on khata</option>
+              </Select>
+            </FieldBlock>
+          )}
+          <FieldBlock label="Bill discount">
+            <input
+              inputMode="decimal"
+              placeholder="₹ or % e.g. 50 or 5%"
+              value={billDiscount}
+              onChange={event => setBillDiscount(event.target.value)}
+              disabled={busy || !lines.length}
+              aria-label="Bill discount"
+            />
+          </FieldBlock>
+          {settlement === "paid" ? (
+            <>
+              <FieldBlock label="Payment">
+                <Select
+                  aria-label="Payment mode"
+                  className="counter-pay-select"
+                  value={moneyMode}
+                  onChange={event => setMoneyMode(event.target.value)}
+                  disabled={busy}
+                >
+                  {PAY_MODES.filter(mode => online || mode.id !== "bank").map(mode => (
+                    <option key={mode.id} value={mode.id}>{mode.label}</option>
+                  ))}
+                </Select>
               </FieldBlock>
-              <FieldBlock label="UPI">
-                <input type="number" min="0" step="0.01" value={receivedUpi} onChange={event => setReceivedUpi(event.target.value)} />
-              </FieldBlock>
-            </div>
-          ) : null}
+              {moneyMode === "cash_upi" ? (
+                <div className="counter-split">
+                  <FieldBlock label="Cash">
+                    <input type="number" min="0" step="0.01" value={receivedCash} onChange={event => setReceivedCash(event.target.value)} />
+                  </FieldBlock>
+                  <FieldBlock label="UPI">
+                    <input type="number" min="0" step="0.01" value={receivedUpi} onChange={event => setReceivedUpi(event.target.value)} />
+                  </FieldBlock>
+                </div>
+              ) : null}
+              {upiLink ? (
+                <div className="counter-upi-qr">
+                  <QrSvg text={upiLink} size={120} label="UPI QR for this bill" />
+                  <p className="small">Scan to pay {money(totals.total)} via UPI</p>
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <p className="small">Khata bill — no tender. Collect later from Accounts.</p>
+          )}
 
           <div className="counter-totals">
             <div><span>Taxable</span><strong>{money(totals.taxable)}</strong></div>
             {gstEnabled ? <div><span>{totals.taxLabel || "GST"}</span><strong>{money(totals.tax)}</strong></div> : null}
-            <div className="counter-total-due"><span>Total due</span><strong>{money(totals.total)}</strong></div>
+            <div className="counter-total-due"><span>{tillMode === "return" ? "Refund" : "Total due"}</span><strong>{money(totals.total)}</strong></div>
           </div>
 
           <div className="counter-pay-actions">
@@ -1396,13 +1663,31 @@ export function CounterWorkspace({
             <button
               type="button"
               className="btn primary counter-charge"
-              disabled={!lines.length || busy || saving || Boolean(closed) || offlineBlock.blocked || !workingAccounts.length}
+              disabled={!lines.length || busy || saving || Boolean(closed) || offlineBlock.blocked || !workingAccounts.length || creditAdvice?.level === "block"}
               onClick={charge}
             >
-              {busy ? (online ? "Posting…" : "Saving offline…") : `${online ? "Charge" : "Charge offline"} ${money(totals.total)}`}
+              {busy
+                ? (online ? "Posting…" : "Saving offline…")
+                : `${tillMode === "return" ? "Refund" : settlement === "credit" ? "Post khata" : online ? "Charge" : "Charge offline"} ${money(totals.total)}`}
             </button>
           </div>
-          <p className="small counter-pay-note">Record how they paid after UPI/card outside FinTrack — no gateway needed.</p>
+          {lastBill?.phone && canWhatsAppShare(lastBill.phone) ? (
+            <button
+              type="button"
+              className="btn"
+              onClick={() => openManualWhatsAppShare({
+                phone: lastBill.phone,
+                message: `Thanks for shopping at ${branding?.companyName || "our store"}. Bill total ${money(lastBill.total)}.`,
+              })}
+            >
+              <MessageCircle size={14} aria-hidden="true" /> WhatsApp last bill
+            </button>
+          ) : null}
+          <p className="small counter-pay-note">
+            {settlement === "credit"
+              ? "Khata posts to the customer ledger."
+              : "UPI/card confirmation is outside FinTrack unless you scan the QR above."}
+          </p>
         </section>
       </div>
       ) : null}

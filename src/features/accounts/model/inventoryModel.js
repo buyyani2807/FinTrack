@@ -591,7 +591,11 @@ export function itemizedEntryDraft({
   if (!config) throw new Error("Itemized entry supports sale, purchase, credit note and debit note only");
   const lineError = validateItemLines(itemLines);
   if (lineError) throw new Error(lineError);
-  if ((config.returnKind || settlement === "credit") && !partyId) {
+  const cashRefundReturn = kind === "credit_note" && settlement === "paid";
+  if (config.returnKind && !cashRefundReturn && !partyId) {
+    throw new Error(`Choose the ${config.partyLabel}`);
+  }
+  if (!config.returnKind && settlement === "credit" && !partyId) {
     throw new Error(`Choose the ${config.partyLabel}`);
   }
   const aggregate = aggregateItemizedGst(itemLines, { intra, taxInclusive: gstEnabled ? taxInclusive : false });
@@ -604,7 +608,26 @@ export function itemizedEntryDraft({
   // Pass taxable as amount with preparedOverride so COA matches summed item GST.
   const amount = aggregate.taxable;
   let lines;
-  if (kind === "credit_note") {
+  if (kind === "credit_note" && cashRefundReturn) {
+    // Walk-in cash/UPI refund: reverse a paid sale (Debit Sales, Credit Cash).
+    const totalForMoney = gstEnabled ? roundMoney(aggregate.prepared?.total ?? aggregate.total) : aggregate.taxable;
+    const split = moneyParts ? assertMoneyModeSplit(moneyMode, totalForMoney, moneyParts) : null;
+    const forward = saleLines({
+      accounts,
+      amount,
+      settlement: "paid",
+      moneyMode,
+      moneyParts: split,
+      partyId: null,
+      description,
+      gst: gstForLines,
+    });
+    lines = forward.map(line => ({
+      ...line,
+      debit: Number(line.credit || 0),
+      credit: Number(line.debit || 0),
+    }));
+  } else if (kind === "credit_note") {
     lines = creditNoteLines({ accounts, amount, partyId, description, gst: gstForLines });
   } else if (kind === "debit_note") {
     lines = debitNoteLines({ accounts, amount, partyId, description, gst: gstForLines });
