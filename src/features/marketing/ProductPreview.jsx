@@ -37,6 +37,9 @@ const SHOTS = {
   "accounts-balance": "Balance sheet with assets, liabilities, capital, and retained earnings in balance",
   "accounts-cashflow": "Cash flow report with inflow, outflow, and net cash for the financial year",
   "accounts-inventory": "Inventory stock summary with quantity, weighted-average cost, value, and a low-stock item",
+  "accounts-counter": "Counter POS till with item search, bill lines, cash tendered, change due, Charge, Print receipt, and Share",
+  "accounts-documents": "Accounts Documents quotations list with open quotes ready to convert to orders or invoices",
+  "accounts-payroll": "Accounts Pay with employee payroll totals and payslip rows for the month",
   "accounts-gst": "Monthly GST pack for the CA with output tax, eligible ITC, net payable, and an invalid GSTIN flagged",
   "accounts-audit": "Audit trail listing owner actions with before and after values and the reason",
   "accounts-locks": "Period locking with locked months and a Reopen action for each",
@@ -77,14 +80,17 @@ const FEATURE_SCENE = {
   dividends: "chit-dividends",
   "chit-statements": "chit-member",
   "chit-reports": "chit-reports",
-  "accounts-overview": "accounts-arap",
+  "accounts-overview": "accounts-overview",
+  "counter-pos": "accounts-counter",
   "chart-of-accounts": "accounts-setup",
   ledger: "accounts-ledger",
   vouchers: "accounts",
+  "trade-documents": "accounts-documents",
   receivables: "accounts-receivables",
   "party-profiles": "accounts-party",
   payables: "accounts-payables",
   expenses: "accounts-expenses",
+  payroll: "accounts-payroll",
   cashbook: "cashbook",
   "bank-reconciliation": "accounts-banking",
   "trial-balance": "accounts-trial",
@@ -92,11 +98,13 @@ const FEATURE_SCENE = {
   "balance-sheet": "accounts-balance",
   "cash-flow": "accounts-cashflow",
   inventory: "accounts-inventory",
+  "item-profit": "accounts-inventory",
   "gst-preparation": "accounts-gst",
   "audit-trail": "accounts-audit",
   "period-locking": "accounts-locks",
+  "for-the-ca": "accounts-gst",
   "ask-fintrack": "intelligence",
-  "ai-review": "ai-collections",
+  "ai-review": "ai-overview",
   forecasting: "ai-cashflow",
   "expense-insights": "ai-expenses",
   "gst-review": "ai-gst",
@@ -105,7 +113,7 @@ const FEATURE_SCENE = {
   "stock-forecast": "ai-inventory",
   "chit-scheme-health": "chit-health",
   "business-insights": "ai-overview",
-  "attention-center": "dashboard",
+  "attention-center": "ai-overview",
   "collection-priorities": "collect-first",
   "anomaly-detection": "ai-anomalies",
   "bill-scanning": "bill-scan",
@@ -113,9 +121,14 @@ const FEATURE_SCENE = {
   "ai-bookkeeper": "ai-bookkeeper",
   "ai-setup": "ai-setup",
   "ai-migration": "ai-migration",
-  "item-profit": "accounts-inventory",
-  "for-the-ca": "accounts-pnl",
+  "bulk-import": "ai-migration",
+  "agent-portal": "portals",
+  "customer-portals": "portals",
+  "member-portals": "portals",
 };
+
+/** New captures ship as PNG until converted to webp beside the older library. */
+const PNG_SCENES = new Set(["accounts-counter", "accounts-documents", "accounts-payroll"]);
 
 const CATEGORY_FALLBACK = {
   finance: "finance",
@@ -132,9 +145,10 @@ export function sceneForFeature(feature) {
 
 export function ProductPreview({ scene = "dashboard" }) {
   const name = SHOTS[scene] ? scene : "dashboard";
+  const ext = PNG_SCENES.has(name) ? "png" : "webp";
   return (
     <figure className="mkt-shot">
-      <img src={`/product/${name}.webp`} alt={SHOTS[name]} width="2720" height="1720" loading="lazy" decoding="async" />
+      <img src={`/product/${name}.${ext}`} alt={SHOTS[name]} width="2720" height="1720" loading="lazy" decoding="async" />
     </figure>
   );
 }
