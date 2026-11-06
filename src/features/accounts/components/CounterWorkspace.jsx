@@ -1578,13 +1578,29 @@ export function CounterWorkspace({
           ) : null}
           <div className="form counter-dayclose-form">
             <FieldBlock label="Opening float">
-              <input type="number" min="0" step="0.01" value={openingFloat} onChange={event => setOpeningFloat(event.target.value)} disabled={Boolean(closed)} />
+              <input
+                inputMode="decimal"
+                autoComplete="off"
+                value={openingFloat}
+                onChange={event => setOpeningFloat(event.target.value)}
+                disabled={Boolean(closed)}
+                aria-label="Opening float"
+                placeholder="0.00"
+              />
             </FieldBlock>
             <FieldBlock label="Expected cash (float + cash bills)">
               <input readOnly value={expectedCash} />
             </FieldBlock>
             <FieldBlock label="Counted cash">
-              <input type="number" min="0" step="0.01" value={countedCash} onChange={event => setCountedCash(event.target.value)} disabled={Boolean(closed)} />
+              <input
+                inputMode="decimal"
+                autoComplete="off"
+                value={countedCash}
+                onChange={event => setCountedCash(event.target.value)}
+                disabled={Boolean(closed)}
+                aria-label="Counted cash"
+                placeholder="0.00"
+              />
             </FieldBlock>
             <FieldBlock label="Variance">
               <input readOnly value={variance} />
@@ -1916,9 +1932,8 @@ export function CounterWorkspace({
                       </div>
                       <input
                         className="counter-line-rate-input"
-                        type="number"
-                        min="0"
-                        step="0.01"
+                        inputMode="decimal"
+                        autoComplete="off"
                         aria-label={`Rate for ${line.itemName} per ${line.unit || "unit"}`}
                         value={line.rate}
                         onChange={event => patchLine(index, { rate: event.target.value, rateTouched: true })}
@@ -2073,10 +2088,24 @@ export function CounterWorkspace({
               {moneyMode === "cash_upi" ? (
                 <div className="counter-split">
                   <FieldBlock label="Cash">
-                    <input type="number" min="0" step="0.01" value={receivedCash} onChange={event => setReceivedCash(event.target.value)} />
+                    <input
+                      inputMode="decimal"
+                      autoComplete="off"
+                      value={receivedCash}
+                      onChange={event => setReceivedCash(event.target.value)}
+                      aria-label="Cash amount"
+                      placeholder="0.00"
+                    />
                   </FieldBlock>
                   <FieldBlock label="UPI">
-                    <input type="number" min="0" step="0.01" value={receivedUpi} onChange={event => setReceivedUpi(event.target.value)} />
+                    <input
+                      inputMode="decimal"
+                      autoComplete="off"
+                      value={receivedUpi}
+                      onChange={event => setReceivedUpi(event.target.value)}
+                      aria-label="UPI amount"
+                      placeholder="0.00"
+                    />
                   </FieldBlock>
                 </div>
               ) : null}

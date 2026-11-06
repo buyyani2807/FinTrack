@@ -4203,24 +4203,27 @@
 }
 
 /* Table number boxes were shrinking to the spinner, so the typed quantity
-   sat outside the visible area. Keep them wide enough to show the digits. */
+   sat outside the visible area. Keep them wide enough to show the digits.
+   Steppers are hidden app-wide in app.css; keep Accounts widths/colors here. */
 .accounts-dashboard input[type="number"] {
   color: var(--acc-text);
   -webkit-text-fill-color: var(--acc-text);
   caret-color: var(--acc-text);
   color-scheme: light;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.accounts-dashboard input[type="number"]::-webkit-inner-spin-button,
+.accounts-dashboard input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
 }
 
 .accounts-dashboard td input[type="number"] {
   min-width: 4.75rem;
   padding-inline: 8px;
-  appearance: textfield;
-}
-
-.accounts-dashboard td input[type="number"]::-webkit-inner-spin-button,
-.accounts-dashboard td input[type="number"]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
 }
 
 .accounts-dashboard .acc-party-create {

@@ -16,6 +16,19 @@ button, input, select {
   font: inherit;
 }
 
+/* Money and qty fields are typed by hand — hide browser number steppers app-wide. */
+input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+
 button {
   cursor: pointer;
 }
