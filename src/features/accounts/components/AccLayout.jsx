@@ -64,9 +64,7 @@ const niceDate = iso => {
   return date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : iso;
 };
 
-// The books context under the page title: the company switcher with a link to add a company, then one quiet line
-// of FY · report period · books start · GST status. The native select covers the switcher, so the
-// system list and keyboard support are kept.
+// The books context under the page title: company switcher, New company, then FY · period · books · GST.
 export function AccCompanyBar({ companies, activeId, onSelect, onCreate, canAdmin = true, gstLabel, fyLabel = "", booksStartedOn = "", rangeFrom = "", rangeTo = "", fallbackName = "" }) {
   const active = companies.find(company => company.id === activeId);
   const started = booksStartedOn || active?.booksStartedOn;
@@ -113,8 +111,8 @@ export function AccCompanyBar({ companies, activeId, onSelect, onCreate, canAdmi
       <div className="acc-company-meta-wrap"><ul className="acc-company-meta">
         {fyLabel ? <li>{fyLabel}</li> : null}
         {rangeFrom && rangeTo ? <li><span className="acc-company-meta-key">Period</span> {niceDate(rangeFrom)} – {niceDate(rangeTo)}</li> : null}
-        {started ? <li><span className="acc-company-meta-key">Books from</span> {niceDate(started)}</li> : null}
-        {gstLabel ? <li><span className={`acc-company-gst${registered ? " is-registered" : ""}`}>{gstLabel}</span></li> : null}
+        {started ? <li className="acc-company-meta-extra"><span className="acc-company-meta-key">Books from</span> {niceDate(started)}</li> : null}
+        {gstLabel ? <li className="acc-company-meta-extra"><span className={`acc-company-gst${registered ? " is-registered" : ""}`}>{gstLabel}</span></li> : null}
       </ul></div>
     </div>
   );

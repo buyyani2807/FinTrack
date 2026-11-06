@@ -27,5 +27,6 @@ alwaysApply: true
 - Draft persists across refresh
 - Owners stay on Counter (no Overview bounce)
 - Cash tendered is manually typed (not locked to total / number steppers)
+- Company switcher: period/FY meta must not clip; picker menu stays readable; `acc-company-meta-extra` hides books/GST on tablet/phone
 
 Before finishing any Counter/Accounts UI change, re-check the list above still holds.
