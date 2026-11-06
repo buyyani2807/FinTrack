@@ -1929,12 +1929,12 @@ export function CounterWorkspace({
               {moneyMode === "cash" ? (
                 <FieldBlock label="Cash tendered">
                   <input
-                    type="number"
-                    min="0"
-                    step="0.01"
+                    inputMode="decimal"
+                    autoComplete="off"
                     value={tenderedCash}
                     onChange={event => setTenderedCash(event.target.value)}
-                    placeholder={String(totals.total || "")}
+                    placeholder="Amount received"
+                    disabled={busy || !lines.length}
                     aria-label="Cash tendered"
                   />
                 </FieldBlock>
