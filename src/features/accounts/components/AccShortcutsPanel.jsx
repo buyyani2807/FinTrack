@@ -4,6 +4,7 @@ import { Keyboard } from "lucide-react";
 const COUNTER_SHORTCUTS = [
   { keys: "F2", action: "Focus item search" },
   { keys: "Enter", action: "Add scanned / matched item" },
+  { keys: "Esc", action: "Clear search" },
   { keys: "F4", action: "Hold current bill" },
   { keys: "F9", action: "Charge bill" },
 ];

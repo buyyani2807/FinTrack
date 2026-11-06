@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, Trash2, Pause, Play, Plus, ShoppingCart, RotateCcw, Landmark, ScrollText, Star, History } from "lucide-react";
+import { Search, Trash2, Pause, Play, Plus, ShoppingCart, RotateCcw, Landmark, ScrollText, Star, History, Share2 } from "lucide-react";
 import { Select } from "../../../components/Select.jsx";
 import { money } from "../accountsFormat.js";
 import { formatIstTime, todayIso } from "../../../lib/dates.js";
@@ -13,6 +13,7 @@ import {
   roundMoney,
   voucherTotals,
 } from "../model/accountingModel.js";
+import { partyBalances } from "../model/accountingReports.js";
 import { gstStateFromGstin, isIntraGst } from "../model/accountingGst.js";
 import {
   emptyItemLine,
@@ -41,8 +42,11 @@ import { readCounterHolds, saveCounterHolds } from "../model/counterHolds.js";
 import { clearCounterDraft, readCounterDraft, saveCounterDraft } from "../model/counterDraft.js";
 import {
   applyBillDiscountToLines,
+  buildCounterWhatsAppReceipt,
+  cashChangeDue,
   counterEstimateTotal,
   counterLineNet,
+  counterOversellLines,
   fefoLotsForItem,
 } from "../model/counterBillMath.js";
 import {
@@ -125,6 +129,8 @@ function emptyHold() {
     tillMode: "sale",
     receivedCash: "",
     receivedUpi: "",
+    tenderedCash: "",
+    paymentRef: "",
   };
 }
 
@@ -143,6 +149,7 @@ export function CounterWorkspace({
   saving = false,
   accounts = [],
   items = [],
+  itemCategories = [],
   stockByItem = {},
   stockMovements = [],
   parties = [],
@@ -171,6 +178,9 @@ export function CounterWorkspace({
   const [printNotice, setPrintNotice] = useState("");
   const [receivedCash, setReceivedCash] = useState("");
   const [receivedUpi, setReceivedUpi] = useState("");
+  const [tenderedCash, setTenderedCash] = useState("");
+  const [paymentRef, setPaymentRef] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [holds, setHolds] = useState([]);
   const [holdsReady, setHoldsReady] = useState(false);
   const [draftReady, setDraftReady] = useState(false);
@@ -292,6 +302,8 @@ export function CounterWorkspace({
       setTillMode(draft.tillMode === "return" ? "return" : "sale");
       setReceivedCash(draft.receivedCash || "");
       setReceivedUpi(draft.receivedUpi || "");
+      setTenderedCash(draft.tenderedCash || "");
+      setPaymentRef(draft.paymentRef || "");
     } else {
       setLines([]);
       setPartyId(CASH_PARTY_ID);
@@ -301,7 +313,10 @@ export function CounterWorkspace({
       setTillMode("sale");
       setReceivedCash("");
       setReceivedUpi("");
+      setTenderedCash("");
+      setPaymentRef("");
     }
+    setCategoryFilter("");
     setDraftReady(true);
   }, [companyId, activeTillId]);
 
@@ -325,6 +340,8 @@ export function CounterWorkspace({
       billDiscount,
       receivedCash,
       receivedUpi,
+      tenderedCash,
+      paymentRef,
     });
   }, [
     companyId,
@@ -338,6 +355,8 @@ export function CounterWorkspace({
     billDiscount,
     receivedCash,
     receivedUpi,
+    tenderedCash,
+    paymentRef,
   ]);
 
   useEffect(() => {
@@ -455,16 +474,66 @@ export function CounterWorkspace({
       note: `Counter ${tillLabel}`,
     });
   }, [tillMode, settlement, moneyMode, branding, totals.total, tillLabel]);
+  const partyOutstanding = useMemo(() => {
+    if (!selectedParty) return 0;
+    const row = partyBalances(workingAccounts, vouchers, [selectedParty], { kind: "receivable" })
+      .find(item => item.id === selectedParty.id);
+    return Number(row?.balance || 0);
+  }, [selectedParty, workingAccounts, vouchers]);
   const creditAdvice = useMemo(() => {
     if (settlement !== "credit" || !selectedParty) return null;
     return creditCheck({
       party: selectedParty,
-      outstanding: 0,
+      outstanding: partyOutstanding,
       invoiceTotal: totals.total,
       overdueDays: 0,
       settings: documentSettings || {},
     });
-  }, [settlement, selectedParty, totals.total, documentSettings]);
+  }, [settlement, selectedParty, partyOutstanding, totals.total, documentSettings]);
+  const changeDue = useMemo(() => {
+    if (tillMode === "return" || settlement !== "paid" || moneyMode !== "cash") return null;
+    return cashChangeDue(tenderedCash, totals.total);
+  }, [tillMode, settlement, moneyMode, tenderedCash, totals.total]);
+  const oversellLines = useMemo(
+    () => (tillMode === "return" ? [] : counterOversellLines(chargeLines, stockByItem, workingItems)),
+    [tillMode, chargeLines, stockByItem, workingItems],
+  );
+  const blockOversell = counterSettings?.blockOversell !== false;
+  const categoryNameById = useMemo(
+    () => Object.fromEntries((itemCategories || []).map(row => [row.id, row.name])),
+    [itemCategories],
+  );
+  const categoryChips = useMemo(() => {
+    const counts = new Map();
+    for (const item of workingItems || []) {
+      if (item.isActive === false) continue;
+      const label = String(
+        (item.categoryId && categoryNameById[item.categoryId])
+        || item.brand
+        || "",
+      ).trim();
+      if (!label) continue;
+      counts.set(label, (counts.get(label) || 0) + 1);
+    }
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, 16)
+      .map(([label]) => label);
+  }, [workingItems, categoryNameById]);
+  const categoryItems = useMemo(() => {
+    if (!categoryFilter) return [];
+    const needle = categoryFilter.toLowerCase();
+    return (workingItems || [])
+      .filter(item => {
+        if (item.isActive === false) return false;
+        const catName = String(
+          (item.categoryId && categoryNameById[item.categoryId]) || "",
+        ).trim().toLowerCase();
+        const brand = String(item.brand || "").trim().toLowerCase();
+        return catName === needle || brand === needle;
+      })
+      .slice(0, 40);
+  }, [workingItems, categoryFilter, categoryNameById]);
   const expectedCash = useMemo(() => {
     // Drawer cash = opening float + cash portion of Counter tenders (not full Cash+UPI bills).
     const cashSales = todayCloseReport.tender.cash;
@@ -605,6 +674,8 @@ export function CounterWorkspace({
     setBillDiscount("");
     setReceivedCash("");
     setReceivedUpi("");
+    setTenderedCash("");
+    setPaymentRef("");
     setError("");
   };
 
@@ -770,6 +841,10 @@ export function CounterWorkspace({
       lines: lines.length,
       pendingSync: true,
       printBill: bill,
+      receiptLines: chargeLines,
+      receiptTotals: totals,
+      payLabel: counterPayLabel(moneyMode),
+      customerName: selectedParty?.name || "",
     });
     clearBill();
     setPrintNotice("Bill saved offline. Use Print receipt below for the thermal slip.");
@@ -842,6 +917,24 @@ export function CounterWorkspace({
           : "Card needs the network. Use cash or UPI offline.");
       return;
     }
+    if (!isReturn && blockOversell && oversellLines.length) {
+      const first = oversellLines[0];
+      setError(
+        `${first.name}: bill needs ${first.need}, stock is ${first.stock}. Reduce qty or turn off “Block Charge when stock is short” in Setup.`,
+      );
+      return;
+    }
+    if (
+      !isReturn
+      && !useCredit
+      && moneyMode === "cash"
+      && String(tenderedCash).trim()
+      && changeDue != null
+      && changeDue < 0
+    ) {
+      setError(`Cash tendered is short by ${money(Math.abs(changeDue))}.`);
+      return;
+    }
     const payMode = useCredit ? "cash" : moneyMode;
     const moneyParts = !useCredit && payMode === "cash_upi"
       ? { cash: Number(receivedCash || 0), upi: Number(receivedUpi || 0) }
@@ -862,6 +955,7 @@ export function CounterWorkspace({
           cashierName ? `Cashier ${cashierName}` : "",
           useCredit ? "Khata" : counterPayLabel(payMode),
           selectedParty?.name ? selectedParty.name : "",
+          String(paymentRef || "").trim() ? `Ref ${String(paymentRef).trim()}` : "",
         ].filter(Boolean).join(" · "),
         itemLines: chargeLines,
         intra,
@@ -888,6 +982,10 @@ export function CounterWorkspace({
           lines: lines.length,
           isReturn,
           printBill,
+          receiptLines: chargeLines,
+          receiptTotals: totals,
+          payLabel: useCredit ? "Khata" : counterPayLabel(payMode),
+          customerName: selectedParty?.name || "",
         });
         clearBill();
         setPrintNotice("Bill posted. Use Print receipt below for the thermal slip.");
@@ -914,6 +1012,32 @@ export function CounterWorkspace({
     }
   };
 
+  const shareLastReceipt = () => {
+    if (!lastBill) {
+      setPrintNotice("Charge a bill first, then share from Print receipt.");
+      return;
+    }
+    const receiptTotals = lastBill.receiptTotals || { taxable: lastBill.total, tax: 0, taxLabel: "", total: lastBill.total };
+    const text = buildCounterWhatsAppReceipt({
+      companyName: branding?.companyName || activeCompany?.name || "Store",
+      tillLabel,
+      isReturn: Boolean(lastBill.isReturn),
+      isCredit: Boolean(lastBill.payLabel === "Khata"),
+      payLabel: lastBill.payLabel || "",
+      customerName: lastBill.customerName || "",
+      lines: lastBill.receiptLines || [],
+      taxable: receiptTotals.taxable,
+      tax: receiptTotals.tax,
+      taxLabel: receiptTotals.taxLabel,
+      total: receiptTotals.total || lastBill.total,
+      date: lastBill.printBill?.date || today,
+    });
+    if (!window.confirm("Open WhatsApp with this receipt text? Nothing is sent until you tap send in WhatsApp.")) {
+      return;
+    }
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+  };
+
   const actionsRef = useRef({ charge, holdBill });
   actionsRef.current = { charge, holdBill };
   useEffect(() => {
@@ -922,6 +1046,15 @@ export function CounterWorkspace({
       if (event.key === "F2") {
         event.preventDefault();
         searchRef.current?.focus();
+        return;
+      }
+      if (event.key === "Escape") {
+        if (document.activeElement === searchRef.current || String(query || "").trim()) {
+          event.preventDefault();
+          setQuery("");
+          setCategoryFilter("");
+          searchRef.current?.focus();
+        }
         return;
       }
       if (event.key === "F4" && !inField) {
@@ -936,7 +1069,7 @@ export function CounterWorkspace({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [query]);
 
   const voidBill = bill => {
     if (!canManage || !askReason || !bill?.id) return;
@@ -1093,9 +1226,14 @@ export function CounterWorkspace({
               || `Last bill ${money(lastBill.total)}${lastBill.offlineRef ? ` · ${lastBill.offlineRef}` : ""} — print when needed.`}
           </p>
           {canPrintLastBill ? (
-            <button type="button" className="btn primary counter-print-cta" onClick={printLastBill}>
-              Print receipt
-            </button>
+            <div className="counter-print-actions">
+              <button type="button" className="btn primary counter-print-cta" onClick={printLastBill}>
+                Print receipt
+              </button>
+              <button type="button" className="btn counter-print-cta" onClick={shareLastReceipt}>
+                <Share2 size={16} aria-hidden="true" /> Share
+              </button>
+            </div>
           ) : null}
         </div>
       ) : null}
@@ -1425,6 +1563,7 @@ export function CounterWorkspace({
       ) : null}
 
       {panel === "bill" ? (
+      <>
       <div className="counter-grid">
         <section className="counter-catalog card counter-panel">
           <div className="counter-panel-head">
@@ -1464,9 +1603,46 @@ export function CounterWorkspace({
             <div className="counter-empty-stage">
               <Search size={28} aria-hidden="true" className="counter-empty-icon" />
               <p className="counter-empty-title">Scan or search to start</p>
-              <p className="small">Barcode, SKU, brand, or name — Enter adds. Hold F4 · Charge F9.</p>
+              <p className="small">Barcode, SKU, brand, or name — Enter adds. Esc clears · Hold F4 · Charge F9.</p>
+              {categoryChips.length ? (
+                <div className="counter-category-chips" role="list" aria-label="Categories">
+                  {categoryChips.map(label => (
+                    <button
+                      key={label}
+                      type="button"
+                      role="listitem"
+                      className={`btn counter-category-chip${categoryFilter === label ? " primary" : ""}`}
+                      onClick={() => setCategoryFilter(current => (current === label ? "" : label))}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              {categoryFilter && categoryItems.length ? (
+                <ul className="counter-item-list counter-category-list">
+                  {categoryItems.map(item => {
+                    const stock = Number(stockByItem[item.id] ?? 0);
+                    const low = item.itemType !== "service" && stock <= 0;
+                    return (
+                      <li key={item.id} className={`counter-item${low ? " is-low" : ""}`}>
+                        <div className="counter-item-copy">
+                          <span className="counter-item-name">{item.name}</span>
+                          <span className="small">
+                            {[item.sku || "No SKU", item.itemType !== "service" ? `Stock ${stock}` : ""].filter(Boolean).join(" · ")}
+                          </span>
+                        </div>
+                        <strong className="counter-item-price">{money(item.sellingPrice || 0)}</strong>
+                        <button type="button" className="btn counter-item-add" onClick={() => addItem(item)}>
+                          <Plus size={16} aria-hidden="true" /> Add
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : null}
               {favouriteItems.length ? (
-                <div className="counter-fav-grid" role="list">
+                <div className="counter-fav-grid" role="list" aria-label="Favourites">
                   {favouriteItems.map(item => (
                     <button
                       key={item.id}
@@ -1632,6 +1808,14 @@ export function CounterWorkspace({
                         value={line.rate}
                         onChange={event => patchLine(index, { rate: event.target.value, rateTouched: true })}
                       />
+                      <input
+                        className="counter-line-discount-input"
+                        inputMode="decimal"
+                        placeholder="Disc ₹/%"
+                        aria-label={`Discount for ${line.itemName}`}
+                        value={line.discount || ""}
+                        onChange={event => patchLine(index, { discount: event.target.value })}
+                      />
                       <strong className="counter-line-net">{money(lineNet(line))}</strong>
                     </div>
                     <button type="button" className="btn counter-line-remove" aria-label={`Remove ${line.itemName}`} onClick={() => removeLine(index)}>
@@ -1691,25 +1875,33 @@ export function CounterWorkspace({
           )}
           <FieldBlock label="Customer">
             {settlement === "credit" ? (
-              <Select
-                aria-label="Customer"
-                className="counter-pay-select"
-                value={billingPartyId === CASH_PARTY_ID ? "" : billingPartyId}
-                onChange={event => {
-                  const next = event.target.value;
-                  if (!next) {
-                    setPartyId(CASH_PARTY_ID);
-                    return;
-                  }
-                  setPartyId(next);
-                }}
-                disabled={busy}
-              >
-                <option value="">Select customer</option>
-                {customers.map(party => (
-                  <option key={party.id} value={party.id}>{party.name}</option>
-                ))}
-              </Select>
+              <>
+                <Select
+                  aria-label="Customer"
+                  className="counter-pay-select"
+                  value={billingPartyId === CASH_PARTY_ID ? "" : billingPartyId}
+                  onChange={event => {
+                    const next = event.target.value;
+                    if (!next) {
+                      setPartyId(CASH_PARTY_ID);
+                      return;
+                    }
+                    setPartyId(next);
+                  }}
+                  disabled={busy}
+                >
+                  <option value="">Select customer</option>
+                  {customers.map(party => (
+                    <option key={party.id} value={party.id}>{party.name}</option>
+                  ))}
+                </Select>
+                {selectedParty ? (
+                  <p className={`small counter-outstanding${partyOutstanding > 0 ? " is-due" : ""}`}>
+                    Outstanding {money(partyOutstanding)}
+                    {selectedParty.creditLimit ? ` · Limit ${money(selectedParty.creditLimit)}` : ""}
+                  </p>
+                ) : null}
+              </>
             ) : (
               <>
                 <p className="counter-walkin" aria-label="Customer">Cash (walk-in)</p>
@@ -1742,6 +1934,19 @@ export function CounterWorkspace({
                   ))}
                 </Select>
               </FieldBlock>
+              {moneyMode === "cash" ? (
+                <FieldBlock label="Cash tendered">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={tenderedCash}
+                    onChange={event => setTenderedCash(event.target.value)}
+                    placeholder={String(totals.total || "")}
+                    aria-label="Cash tendered"
+                  />
+                </FieldBlock>
+              ) : null}
               {moneyMode === "cash_upi" ? (
                 <div className="counter-split">
                   <FieldBlock label="Cash">
@@ -1751,6 +1956,17 @@ export function CounterWorkspace({
                     <input type="number" min="0" step="0.01" value={receivedUpi} onChange={event => setReceivedUpi(event.target.value)} />
                   </FieldBlock>
                 </div>
+              ) : null}
+              {moneyMode === "upi" || moneyMode === "bank" || moneyMode === "cash_upi" ? (
+                <FieldBlock label="Payment ref (optional)">
+                  <input
+                    value={paymentRef}
+                    onChange={event => setPaymentRef(event.target.value)}
+                    placeholder="UTR / txn id"
+                    aria-label="Payment reference"
+                    disabled={busy}
+                  />
+                </FieldBlock>
               ) : null}
               {upiLink ? (
                 <div className="counter-upi-qr">
@@ -1763,10 +1979,22 @@ export function CounterWorkspace({
             <p className="small">Khata bill — no tender. Collect later from Accounts.</p>
           )}
 
+          {blockOversell && oversellLines.length ? (
+            <p className="acc-form-error" role="alert">
+              Short stock: {oversellLines.map(row => `${row.name} (need ${row.need}, have ${row.stock})`).join("; ")}.
+            </p>
+          ) : null}
+
           <div className="counter-totals">
             <div><span>Taxable</span><strong>{money(totals.taxable)}</strong></div>
             {gstEnabled ? <div><span>{totals.taxLabel || "GST"}</span><strong>{money(totals.tax)}</strong></div> : null}
             <div className="counter-total-due"><span>{tillMode === "return" ? "Refund" : "Total due"}</span><strong>{money(totals.total)}</strong></div>
+            {changeDue != null ? (
+              <div className={changeDue < 0 ? "counter-change is-short" : "counter-change"}>
+                <span>{changeDue < 0 ? "Short" : "Change"}</span>
+                <strong>{money(Math.abs(changeDue))}</strong>
+              </div>
+            ) : null}
           </div>
 
           <div className="counter-pay-actions">
@@ -1776,7 +2004,16 @@ export function CounterWorkspace({
             <button
               type="button"
               className="btn primary counter-charge"
-              disabled={!lines.length || busy || saving || Boolean(closed) || offlineBlock.blocked || !workingAccounts.length || creditAdvice?.level === "block"}
+              disabled={
+                !lines.length
+                || busy
+                || saving
+                || Boolean(closed)
+                || offlineBlock.blocked
+                || !workingAccounts.length
+                || creditAdvice?.level === "block"
+                || (blockOversell && oversellLines.length > 0)
+              }
               onClick={charge}
             >
               {busy
@@ -1791,6 +2028,33 @@ export function CounterWorkspace({
           </p>
         </section>
       </div>
+
+      {lines.length ? (
+        <div className="counter-mobile-paybar" aria-label="Charge bar">
+          <div className="counter-mobile-paybar-total">
+            <span className="small">{tillMode === "return" ? "Refund" : "Due"}</span>
+            <strong>{money(totals.total)}</strong>
+          </div>
+          <button
+            type="button"
+            className="btn primary"
+            disabled={
+              !lines.length
+              || busy
+              || saving
+              || Boolean(closed)
+              || offlineBlock.blocked
+              || !workingAccounts.length
+              || creditAdvice?.level === "block"
+              || (blockOversell && oversellLines.length > 0)
+            }
+            onClick={charge}
+          >
+            {busy ? "…" : tillMode === "return" ? "Refund" : settlement === "credit" ? "Khata" : "Charge"}
+          </button>
+        </div>
+      ) : null}
+      </>
       ) : null}
     </div>
   );

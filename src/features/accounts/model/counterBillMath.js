@@ -2,6 +2,45 @@ import { formatInr } from "../../../lib/formatMoney.js";
 import { roundMoney } from "./accountingModel.js";
 import { quantityInBaseUnit } from "./inventoryModel.js";
 
+/** Cash change when tendered ≥ bill total; null when tendered is empty/invalid. */
+export function cashChangeDue(tendered, total) {
+  const paid = Number(tendered);
+  const due = Number(total);
+  if (!Number.isFinite(paid) || paid <= 0 || !Number.isFinite(due)) return null;
+  return roundMoney(paid - due);
+}
+
+/**
+ * Lines whose billed base qty exceeds on-hand stock (services skipped).
+ * Used for optional hard-block on Charge.
+ */
+export function counterOversellLines(lines = [], stockByItem = {}, items = []) {
+  const byId = Object.fromEntries((items || []).map(item => [item.id, item]));
+  const needed = new Map();
+  for (const line of lines || []) {
+    if (!line?.itemId) continue;
+    const item = byId[line.itemId];
+    if (item?.itemType === "service") continue;
+    const baseUnit = line.unit || item?.unit || "Nos";
+    const qty = Math.max(0, quantityInBaseUnit(line.quantity, baseUnit, line.sellUnit || baseUnit, line));
+    if (!(qty > 0)) continue;
+    needed.set(line.itemId, roundMoney((needed.get(line.itemId) || 0) + qty));
+  }
+  const bad = [];
+  for (const [itemId, need] of needed) {
+    const stock = Number(stockByItem[itemId] ?? 0);
+    if (need > stock + 1e-9) {
+      bad.push({
+        itemId,
+        name: byId[itemId]?.name || itemId,
+        need,
+        stock: Number.isFinite(stock) ? stock : 0,
+      });
+    }
+  }
+  return bad;
+}
+
 /** Line taxable after quantity × rate and line discount (₹ or %). */
 export function counterLineNet(line) {
   const baseUnit = line.unit || "Nos";

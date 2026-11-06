@@ -7072,6 +7072,68 @@
   padding-inline: 16px;
 }
 
+.accounts-dashboard .counter-print-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.accounts-dashboard .counter-category-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  max-width: 36rem;
+  margin-top: 4px;
+}
+
+.accounts-dashboard .counter-category-chip {
+  max-width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accounts-dashboard .counter-category-list {
+  width: 100%;
+  max-width: 36rem;
+  margin-top: 8px;
+  max-height: min(32vh, 280px);
+}
+
+.accounts-dashboard .counter-outstanding {
+  margin: 4px 0 0;
+  color: var(--ft-text-3);
+}
+
+.accounts-dashboard .counter-outstanding.is-due {
+  color: var(--ft-warning);
+  font-weight: 650;
+}
+
+.accounts-dashboard .counter-change {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  font-size: var(--ft-type-ui);
+  color: var(--ft-text);
+}
+
+.accounts-dashboard .counter-change strong {
+  font-variant-numeric: tabular-nums;
+  color: var(--ft-primary);
+}
+
+.accounts-dashboard .counter-change.is-short strong {
+  color: var(--ft-danger);
+}
+
+.accounts-dashboard .counter-mobile-paybar {
+  display: none;
+}
+
 .accounts-dashboard .counter-holds {
   display: flex;
   flex-wrap: wrap;
@@ -7196,7 +7258,7 @@
   gap: 8px;
   justify-content: center;
   margin-top: 12px;
-  max-width: 28rem;
+  max-width: 36rem;
 }
 
 .accounts-dashboard .counter-fav-chip {
@@ -7478,7 +7540,7 @@
     }
 
     & .counter-line-controls {
-      grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.9fr) auto;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.85fr) minmax(0, 0.7fr) auto;
     }
   }
 
@@ -7487,7 +7549,8 @@
       grid-template-columns: minmax(0, 1fr) auto;
     }
 
-    & .counter-line-rate-input {
+    & .counter-line-rate-input,
+    & .counter-line-discount-input {
       grid-column: 1 / -1;
     }
   }
@@ -7708,10 +7771,24 @@
 .accounts-dashboard .counter-line-controls {
   grid-area: controls;
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr) minmax(0, 0.75fr) auto;
   gap: 8px;
   align-items: center;
   min-width: 0;
+}
+
+.accounts-dashboard .counter-line-discount-input {
+  width: 100%;
+  min-width: 0;
+  text-align: right;
+  font: inherit;
+  font-size: var(--ft-type-secondary);
+  font-weight: 600;
+  border: 1px solid var(--ft-border);
+  border-radius: 10px;
+  padding: 8px 6px;
+  background: var(--ft-surface-subtle);
+  color: var(--ft-text);
 }
 
 .accounts-dashboard .counter-line-remove {
@@ -7803,6 +7880,9 @@
   border-radius: 14px;
   background: var(--ft-surface-subtle);
   border: 1px solid var(--ft-border);
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
 }
 
 .accounts-dashboard .counter-totals > div {
@@ -7911,5 +7991,43 @@
 
   .accounts-dashboard .counter-pay-actions {
     grid-template-columns: 1fr;
+  }
+
+  .accounts-dashboard .counter-mobile-paybar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    margin-top: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--ft-border);
+    border-radius: 16px 16px 0 0;
+    background: var(--ft-surface);
+  }
+
+  .accounts-dashboard .counter-mobile-paybar-total {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .accounts-dashboard .counter-mobile-paybar-total strong {
+    font-size: var(--ft-type-section);
+    font-weight: 750;
+    letter-spacing: var(--ft-tracking-tight);
+    color: var(--ft-primary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .accounts-dashboard .counter-mobile-paybar .btn {
+    min-height: 2.75rem;
+    padding-inline: 18px;
+  }
+
+  .accounts-dashboard .counter-workspace {
+    padding-bottom: 4px;
   }
 }

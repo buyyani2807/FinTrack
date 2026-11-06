@@ -44,6 +44,8 @@ export function emptyCounterSettings() {
     tillLabel: till.label,
     paymentMap: { cash: "", upi: "", bank: "" },
     favouriteItemIds: [],
+    /** When true, Charge blocks product lines that exceed on-hand stock. */
+    blockOversell: true,
   };
 }
 
@@ -86,6 +88,7 @@ export function readCounterSettings(companyId) {
         bank: parsed?.paymentMap?.bank || "",
       },
       favouriteItemIds,
+      blockOversell: parsed?.blockOversell !== false,
     };
   } catch {
     return fallback;
@@ -118,6 +121,7 @@ export function saveCounterSettings(companyId, next) {
         bank: next?.paymentMap?.bank ?? current.paymentMap.bank ?? "",
       },
       favouriteItemIds,
+      blockOversell: next?.blockOversell != null ? Boolean(next.blockOversell) : current.blockOversell !== false,
     };
     localStorage.setItem(settingsKey(companyId), JSON.stringify(merged));
     return merged;

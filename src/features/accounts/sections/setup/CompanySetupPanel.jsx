@@ -192,6 +192,18 @@ export function CompanySetupPanel({
                 ))}
               </Select>
             </Field>
+            <label className="acc-counter-enable span">
+              <input
+                type="checkbox"
+                checked={settings.blockOversell !== false}
+                disabled={!canAdmin}
+                onChange={event => patchSettings({ blockOversell: event.target.checked })}
+              />
+              <span>
+                <strong>Block Charge when stock is short</strong>
+                <span className="small">Stops overselling products. Turn off only if you allow negative stock at this till.</span>
+              </span>
+            </label>
           </div>
         </div>
       ) : null}
