@@ -1808,14 +1808,6 @@ export function CounterWorkspace({
                         value={line.rate}
                         onChange={event => patchLine(index, { rate: event.target.value, rateTouched: true })}
                       />
-                      <input
-                        className="counter-line-discount-input"
-                        inputMode="decimal"
-                        placeholder="Disc ₹/%"
-                        aria-label={`Discount for ${line.itemName}`}
-                        value={line.discount || ""}
-                        onChange={event => patchLine(index, { discount: event.target.value })}
-                      />
                       <strong className="counter-line-net">{money(lineNet(line))}</strong>
                     </div>
                     <button type="button" className="btn counter-line-remove" aria-label={`Remove ${line.itemName}`} onClick={() => removeLine(index)}>

@@ -1,0 +1,15 @@
+---
+description: Do not reintroduce fixed issues or expand beyond the requested change
+alwaysApply: true
+---
+
+# No regressions / stay in scope
+
+When a bug or UI issue has already been fixed once, **do not bring it back** while implementing a different feature or fix.
+
+- Only implement what the user asked for in the current request.
+- Do not revive previously removed Counter/Accounts UI (for example: line discount on the bill cart, pack→loose chips) unless the user explicitly asks again.
+- Do not “improve” adjacent working flows unless required for the asked change.
+- New fields on crowded rows (cart lines, toolbars) must keep existing controls fully visible on mobile, tablet, laptop, and desktop—or the new field belongs elsewhere (checkout panel, menu, settings).
+- Before finishing, check that earlier Counter fixes still hold: stacked bill lines, Today panel (not chip strip), Print receipt CTA, draft-on-refresh, no Overview bounce for owners.
+- Prefer bill-level discount on Checkout over per-line discount on the cart unless the user asks for line discount again.
