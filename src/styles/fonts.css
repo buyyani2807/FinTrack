@@ -5,6 +5,8 @@
 :root {
   --ft-font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --ft-font-brand: "Poppins", var(--ft-font);
+  /* Italic serif used only for the FinTrackit aⁱ AI ligature */
+  --ft-font-ai: "Libre Baskerville", Georgia, "Times New Roman", Times, serif;
   --ft-type-hero: clamp(36px, 4.4vw, 52px);
   --ft-type-page: clamp(28px, 3vw, 36px);
   --ft-type-title: clamp(20px, 1.2vw + 16px, 24px);

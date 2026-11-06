@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate, useOutletContext } from "react-router";
 import { ArrowRight, BookOpen, Building2, ChevronDown, Gift, House, LayoutGrid, Menu, ShieldCheck, Tag, X } from "lucide-react";
+import { BrandWordmark } from "../../components/BrandWordmark.jsx";
 import { ThemeToggle } from "../../components/ThemeToggle.jsx";
 import { FEATURE_CATEGORIES, featureBySlug } from "./catalog.js";
 import marketingStyles from "./marketing.css?inline";
@@ -66,7 +67,7 @@ function TrialBar() {
 }
 
 function Brand({ onClick }) {
-  return <Link to={marketingPaths.home} className="mkt-brand" aria-label="FinTrack home" onClick={onClick}>FIN<span>Track</span></Link>;
+  return <BrandWordmark as={Link} to={marketingPaths.home} className="mkt-brand" onClick={onClick} />;
 }
 
 export function MarketingLayout() {

@@ -1,11 +1,11 @@
 {
-  "name": "FinTrack Collections",
-  "short_name": "FinTrack",
-  "description": "Daily and monthly finance collections",
+  "name": "FinTrackit",
+  "short_name": "FinTrackit",
+  "description": "Finance, chit funds, accounts — with AI",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0e1118",
-  "theme_color": "#0e1118",
+  "background_color": "#191919",
+  "theme_color": "#217d73",
   "icons": [
     {
       "src": "/icons/fintrack-icon.svg",

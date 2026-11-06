@@ -153,17 +153,21 @@ html[data-theme="dark"] .mkt-trial-link:hover .mkt-trial-cta { background: #23b0
   margin: 0 auto;
   padding: 0 28px;
 }
-.mkt-brand {
-  display: flex;
+.mkt-brand,
+.app .mkt .ft-brand.mkt-brand {
+  display: inline-flex;
   align-items: baseline;
   margin-right: 12px;
-  color: var(--mkt-ink);
+  color: var(--mkt-ink) !important;
   font-family: Poppins, var(--ft-font-brand, sans-serif);
   font-weight: 700;
   font-size: var(--ft-type-section);
-  letter-spacing: -0.04em;
+  letter-spacing: -0.04em !important;
 }
-.mkt-brand span { color: var(--mkt-accent-ink); }
+.mkt-brand .ft-brand-strong { color: var(--mkt-ink) !important; }
+.mkt-brand .ft-brand-track,
+.mkt-brand .ft-brand-end { color: var(--mkt-accent-ink) !important; }
+.mkt-brand .ft-brand-ai { color: var(--mkt-accent-ink) !important; }
 .mkt-links { display: flex; align-items: center; gap: 2px; }
 .mkt-nav-item, .mkt-nav-label { display: inline-flex; align-items: center; gap: 6px; }
 .mkt-nav-item svg, .mkt-nav-label svg { flex: none; }
