@@ -11,7 +11,12 @@ Do not ship layouts that only look correct on a large monitor.
 
 - Prefer stacking or wrapping over fixed multi-column rows when space is tight.
 - Size to the available panel when a viewport media query is not enough (container queries are fine).
-- Keep `min-width: 0` on flex/grid children that hold text or inputs so they can shrink.
-- Avoid rigid `min-width` on controls inside narrow panels (cart, side sheets, drawers).
-- Check at least a phone width (~360px), a laptop width (~1280px), and a wide desktop before finishing.
-- Do not hide essential inputs (qty, rate, amount) just to fit a row; reflow instead.
+- Check at least a phone width (~360px), a tablet width (~768px), a laptop width (~1280px), and a wide desktop before finishing.
+- Do not hide essential inputs (qty, rate, amount, cash tendered) just to fit a row; reflow instead.
+
+## Shrinking vs essential controls
+
+- `min-width: 0` is fine on **text/label** flex/grid children so long names can wrap.
+- Do **not** apply `min-width: 0` to essential numeric inputs (qty, rate, cash tendered) or their wraps if that clips typed digits.
+- Essential inputs need a small floor width so 3-digit (or typical money) values stay fully visible on every device.
+- Avoid *oversized* rigid widths that force horizontal overflow on a ~360px phone; prefer reflow + a modest floor.

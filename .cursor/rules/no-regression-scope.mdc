@@ -1,15 +1,31 @@
 ---
-description: Do not reintroduce fixed issues or expand beyond the requested change
+description: Do not reintroduce fixed issues; only change what was asked
 alwaysApply: true
 ---
 
 # No regressions / stay in scope
 
-When a bug or UI issue has already been fixed once, **do not bring it back** while implementing a different feature or fix.
+**Hard rules (every change):**
 
-- Only implement what the user asked for in the current request.
-- Do not revive previously removed Counter/Accounts UI (for example: line discount on the bill cart, pack→loose chips) unless the user explicitly asks again.
-- Do not “improve” adjacent working flows unless required for the asked change.
-- New fields on crowded rows (cart lines, toolbars) must keep existing controls fully visible on mobile, tablet, laptop, and desktop—or the new field belongs elsewhere (checkout panel, menu, settings).
-- Before finishing, check that earlier Counter fixes still hold: stacked bill lines, Today panel (not chip strip), Print receipt CTA, draft-on-refresh, no Overview bounce for owners.
-- Prefer bill-level discount on Checkout over per-line discount on the cart unless the user asks for line discount again.
+1. **Do not reintroduce fixed issues.** If a bug or UI fix already shipped, do not undo it while doing something else.
+2. **Only change what was asked.** Do not refactor, restyle, or “improve” adjacent working code.
+3. **Do not touch an already-working app surface** except to apply the requested fix/feature.
+
+## How to apply
+
+- Read the current request narrowly. Ship the smallest diff that satisfies it.
+- Before editing shared CSS/layout (especially Counter cart lines), check git history / prior fixes for that selector so you do not wipe an earlier floor (`min-width`, stacking, visibility).
+- Do not revive previously removed Counter/Accounts UI (line Disc on the cart, pack→loose chips, etc.) unless the user explicitly asks again.
+- Prefer bill-level discount on Checkout over per-line discount on the cart unless asked again.
+
+## Known Counter fixes — must not regress
+
+- Bill lines stack by cart panel width; item names stay readable
+- Qty field keeps a usable width for 3-digit amounts (do not set `.counter-qty` / `.counter-qty-wrap` back to `min-width: 0`)
+- Today panel (not a chip strip)
+- Print receipt CTA after charge
+- Draft persists across refresh
+- Owners stay on Counter (no Overview bounce)
+- Cash tendered is manually typed (not locked to total / number steppers)
+
+Before finishing any Counter/Accounts UI change, re-check the list above still holds.
