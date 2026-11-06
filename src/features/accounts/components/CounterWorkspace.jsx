@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, Trash2, Pause, Play, Plus, ShoppingCart, RotateCcw, Landmark, ScrollText, Star, History, Share2 } from "lucide-react";
+import { Search, Trash2, Pause, Play, Plus, ShoppingCart, RotateCcw, Landmark, ScrollText, Star, History, Share2, MessageCircleQuestion } from "lucide-react";
 import { Select } from "../../../components/Select.jsx";
 import { money } from "../accountsFormat.js";
 import { formatIstTime, todayIso } from "../../../lib/dates.js";
@@ -13,7 +13,6 @@ import {
   roundMoney,
   voucherTotals,
 } from "../model/accountingModel.js";
-import { partyBalances } from "../model/accountingReports.js";
 import { gstStateFromGstin, isIntraGst } from "../model/accountingGst.js";
 import {
   emptyItemLine,
@@ -57,9 +56,17 @@ import {
   tillNeedle,
 } from "../model/counterDayReport.js";
 import {
+  counterDayCloseBrief,
   counterDayCloseCoach,
+  counterDayTopItems,
+  counterKhataRisk,
   counterSessionAdvisories,
 } from "../model/counterAi.js";
+import { askCounter, COUNTER_ASK_PROMPTS } from "../model/counterAsk.js";
+import {
+  findCounterItemByCode,
+  matchCounterItems,
+} from "../model/counterSearch.js";
 import {
   buildOfflineReceiptInvoice,
   isBrowserOnline,
@@ -73,7 +80,6 @@ import { printSalesInvoicePdf } from "../io/salesInvoicePdf.js";
 import { formatReceiptDateTime } from "../../receipts/model/receiptModel.js";
 import { accountsCompanyBranding } from "../model/salesInvoiceModel.js";
 import { isValidUpiId, upiPayLink } from "../model/upiPay.js";
-import { creditCheck } from "../model/tradeDocumentModel.js";
 import { QrSvg } from "../PayPage.jsx";
 import { AccShortcutsPanel } from "./AccShortcutsPanel.jsx";
 
@@ -91,30 +97,6 @@ function withCatalogPack(line, items = []) {
     packContainsQty: item.packContainsQty,
     packContainsUnit: item.packContainsUnit || "",
   };
-}
-
-function matchItems(items, query) {
-  const q = String(query || "").trim().toLowerCase();
-  // Search/scan first — do not dump the catalog when the box is empty.
-  if (!q) return [];
-  return (items || []).filter(item => (
-    item.isActive !== false
-    && `${item.name} ${item.sku || ""} ${item.barcode || ""} ${item.brand || ""} ${item.hsnSac || ""} ${item.description || ""}`
-      .toLowerCase()
-      .includes(q)
-  )).slice(0, 40);
-}
-
-function findItemByCode(items, query) {
-  const q = String(query || "").trim().toLowerCase();
-  if (!q) return null;
-  return (items || []).find(item => (
-    item.isActive !== false
-    && (
-      String(item.sku || "").toLowerCase() === q
-      || String(item.barcode || "").toLowerCase() === q
-    )
-  )) || null;
 }
 
 function emptyHold() {
@@ -176,6 +158,9 @@ export function CounterWorkspace({
   const [billDiscount, setBillDiscount] = useState("");
   const [lotPicker, setLotPicker] = useState(null);
   const [printNotice, setPrintNotice] = useState("");
+  const [askOpen, setAskOpen] = useState(false);
+  const [askQuery, setAskQuery] = useState("");
+  const [askAnswer, setAskAnswer] = useState(null);
   const [receivedCash, setReceivedCash] = useState("");
   const [receivedUpi, setReceivedUpi] = useState("");
   const [tenderedCash, setTenderedCash] = useState("");
@@ -244,7 +229,7 @@ export function CounterWorkspace({
     () => counterDayReport(workingAccounts, vouchers, { date: today, tillLabel }),
     [workingAccounts, vouchers, today, tillLabel],
   );
-  const catalog = useMemo(() => matchItems(workingItems, query), [workingItems, query]);
+  const catalog = useMemo(() => matchCounterItems(workingItems, query), [workingItems, query]);
   const gstEnabled = (activeCompany || cachedCatalog?.company)?.gstRegistration === "regular";
   const billingPartyId = partyId || CASH_PARTY_ID;
   // Named parties only for khata / credit — paid Counter stays walk-in.
@@ -474,22 +459,19 @@ export function CounterWorkspace({
       note: `Counter ${tillLabel}`,
     });
   }, [tillMode, settlement, moneyMode, branding, totals.total, tillLabel]);
-  const partyOutstanding = useMemo(() => {
-    if (!selectedParty) return 0;
-    const row = partyBalances(workingAccounts, vouchers, [selectedParty], { kind: "receivable" })
-      .find(item => item.id === selectedParty.id);
-    return Number(row?.balance || 0);
-  }, [selectedParty, workingAccounts, vouchers]);
-  const creditAdvice = useMemo(() => {
+  const khataRisk = useMemo(() => {
     if (settlement !== "credit" || !selectedParty) return null;
-    return creditCheck({
+    return counterKhataRisk({
+      accounts: workingAccounts,
+      vouchers,
+      parties,
       party: selectedParty,
-      outstanding: partyOutstanding,
       invoiceTotal: totals.total,
-      overdueDays: 0,
+      today,
       settings: documentSettings || {},
     });
-  }, [settlement, selectedParty, partyOutstanding, totals.total, documentSettings]);
+  }, [settlement, selectedParty, workingAccounts, vouchers, parties, totals.total, today, documentSettings]);
+  const creditAdvice = khataRisk?.advice || null;
   const changeDue = useMemo(() => {
     if (tillMode === "return" || settlement !== "paid" || moneyMode !== "cash") return null;
     return cashChangeDue(tenderedCash, totals.total);
@@ -563,6 +545,60 @@ export function CounterWorkspace({
     }),
     [todayCloseReport, openingFloat, countedCash, expectedCash, variance, closed],
   );
+  const dayCloseTopItems = useMemo(
+    () => counterDayTopItems({ vouchers, voucherItemLines, today, tillLabel }),
+    [vouchers, voucherItemLines, today, tillLabel],
+  );
+  const dayCloseBrief = useMemo(
+    () => counterDayCloseBrief({
+      companyName: branding?.companyName || activeCompany?.name || "",
+      tillLabel,
+      report: todayCloseReport,
+      openingFloat: Number(openingFloat || closed?.openingFloat || 0),
+      countedCash: Number(countedCash || 0),
+      expectedCash,
+      variance,
+      reason: closeReason,
+      topItems: dayCloseTopItems,
+      cashierName,
+    }),
+    [
+      branding,
+      activeCompany,
+      tillLabel,
+      todayCloseReport,
+      openingFloat,
+      closed,
+      countedCash,
+      expectedCash,
+      variance,
+      closeReason,
+      dayCloseTopItems,
+      cashierName,
+    ],
+  );
+
+  const runAskCounter = question => {
+    const text = String(question || "").trim();
+    setAskQuery(text);
+    setAskAnswer(askCounter(text, {
+      accounts: workingAccounts,
+      vouchers,
+      items: workingItems,
+      stockByItem,
+      stockMovements,
+      voucherItemLines,
+      tillLabel,
+      today,
+    }));
+  };
+
+  const shareDayCloseBrief = () => {
+    if (!window.confirm("Open WhatsApp with this day-close brief? Nothing is sent until you tap send in WhatsApp.")) {
+      return;
+    }
+    window.open(`https://wa.me/?text=${encodeURIComponent(dayCloseBrief)}`, "_blank", "noopener,noreferrer");
+  };
 
   useEffect(() => {
     if (closed) {
@@ -643,7 +679,7 @@ export function CounterWorkspace({
   const tryAddFromQuery = () => {
     const q = String(query || "").trim();
     if (!q) return;
-    const exact = findItemByCode(workingItems, q);
+    const exact = findCounterItemByCode(workingItems, q);
     if (exact) {
       addItem(exact);
       return;
@@ -1193,6 +1229,16 @@ export function CounterWorkspace({
         <div className="counter-head-actions">
           <button
             type="button"
+            className={`btn${askOpen ? " primary" : ""}`}
+            aria-expanded={askOpen}
+            onClick={() => setAskOpen(open => !open)}
+          >
+            <MessageCircleQuestion size={16} aria-hidden="true" />
+            {" "}
+            Ask
+          </button>
+          <button
+            type="button"
             className={`btn${panel === "today" ? " primary" : ""}`}
             onClick={() => setPanel(current => (current === "today" ? "bill" : "today"))}
           >
@@ -1256,6 +1302,65 @@ export function CounterWorkspace({
         </p>
       ) : null}
       {closed ? <p className="notice" role="status">Till closed for today · expected {money(closed.expectedCash)} · counted {money(closed.countedCash)} · variance {money(closed.variance)}</p> : null}
+      {askOpen ? (
+        <section className="card counter-ask" aria-label="Ask Counter">
+          <header className="counter-ask-head">
+            <div>
+              <p className="acc-intel-kicker">Ask Counter</p>
+              <p className="small">Read-only answers for this till and stock. Nothing is posted or sent.</p>
+            </div>
+            <button type="button" className="btn" onClick={() => setAskOpen(false)}>Close</button>
+          </header>
+          <form
+            className="counter-ask-form"
+            onSubmit={event => {
+              event.preventDefault();
+              runAskCounter(askQuery);
+            }}
+          >
+            <input
+              aria-label="Ask Counter question"
+              value={askQuery}
+              placeholder="Cash sales today, how much toor left…"
+              onChange={event => setAskQuery(event.target.value)}
+            />
+            <button type="submit" className="btn primary">Ask</button>
+          </form>
+          <div className="counter-ask-prompts">
+            {COUNTER_ASK_PROMPTS.map(prompt => (
+              <button
+                key={prompt.id}
+                type="button"
+                className="btn counter-ask-prompt"
+                onClick={() => runAskCounter(prompt.question)}
+              >
+                {prompt.label}
+              </button>
+            ))}
+          </div>
+          {askAnswer ? (
+            <div className="counter-ask-answer">
+              <strong>{askAnswer.title}</strong>
+              <p>{askAnswer.summary}</p>
+              {askAnswer.lines?.length ? (
+                <ul className="counter-ask-lines">
+                  {askAnswer.lines.map(line => (
+                    <li key={`${line.label}-${line.detail}-${line.amount}`}>
+                      <span>
+                        <strong>{line.label}</strong>
+                        {line.detail ? <em>{line.detail}</em> : null}
+                      </span>
+                      {line.amount == null ? null : <span>{money(line.amount)}</span>}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {askAnswer.source ? <p className="small">{askAnswer.source}</p> : null}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
       {panel === "bill" && sessionTips.length ? (
         <ul className="counter-ai-tips" aria-label="Counter advisories">
           {sessionTips.map(tip => (
@@ -1489,6 +1594,13 @@ export function CounterWorkspace({
             </FieldBlock>
           </div>
           <p className="small">{todayBills.length} counter bill{todayBills.length === 1 ? "" : "s"} today.</p>
+          <div className="counter-dayclose-brief">
+            <h3 className="acc-subsection-title">Owner brief</h3>
+            <pre className="counter-dayclose-brief-text">{dayCloseBrief}</pre>
+            <button type="button" className="btn" onClick={shareDayCloseBrief}>
+              <Share2 size={16} aria-hidden="true" /> Share on WhatsApp
+            </button>
+          </div>
           {!closed ? (
             <button type="button" className="btn primary" onClick={saveClose}>Close till for today</button>
           ) : (
@@ -1588,7 +1700,7 @@ export function CounterWorkspace({
                   tryAddFromQuery();
                 }
               }}
-              placeholder="Scan barcode or type name / SKU"
+              placeholder="Scan barcode or type name / SKU (tur ≈ toor)"
               aria-label="Search items or scan SKU or barcode"
               autoFocus
             />
@@ -1848,7 +1960,6 @@ export function CounterWorkspace({
                 <option value="paid">Paid now</option>
                 <option value="credit">Khata / credit</option>
               </Select>
-              {creditAdvice?.level === "warn" ? <p className="small">{creditAdvice.messages[0]}</p> : null}
             </FieldBlock>
           ) : (
             <FieldBlock label="Refund to">
@@ -1890,11 +2001,28 @@ export function CounterWorkspace({
                     <option key={party.id} value={party.id}>{party.name}</option>
                   ))}
                 </Select>
-                {selectedParty ? (
-                  <p className={`small counter-outstanding${partyOutstanding > 0 ? " is-due" : ""}`}>
-                    Outstanding {money(partyOutstanding)}
-                    {selectedParty.creditLimit ? ` · Limit ${money(selectedParty.creditLimit)}` : ""}
-                  </p>
+                {selectedParty && khataRisk ? (
+                  <div
+                    className={`counter-khata-risk is-${khataRisk.severity}${creditAdvice?.level === "block" ? " is-block" : ""}`}
+                    role="status"
+                    aria-label="Khata risk"
+                  >
+                    <div className="counter-khata-chips">
+                      {khataRisk.chips.map(chip => (
+                        <span key={chip.id} className="counter-khata-chip">
+                          <em>{chip.label}</em>
+                          <strong>{chip.value}</strong>
+                        </span>
+                      ))}
+                    </div>
+                    {khataRisk.messages?.length ? (
+                      <p className={`small counter-outstanding${khataRisk.severity !== "info" ? " is-due" : ""}`}>
+                        {khataRisk.messages[0]}
+                      </p>
+                    ) : (
+                      <p className="small">Internal FinTrack credit score from this customer’s invoices — not a bureau score.</p>
+                    )}
+                  </div>
                 ) : null}
               </>
             ) : (

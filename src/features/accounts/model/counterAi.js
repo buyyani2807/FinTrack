@@ -1,10 +1,15 @@
 /**
- * Counter (POS) AI advisories — stock, till anomalies, day-close coach.
+ * Counter (POS) AI advisories — stock, till anomalies, day-close coach,
+ * khata risk chip, and day-close WhatsApp brief.
  * Advisory only: never posts, voids, or changes Accounts ledgers.
  */
+import { formatInr } from "../../../lib/formatMoney.js";
+import { compactCreditScore } from "../../creditScore/creditScoreModel.js";
 import { isCancelled, roundMoney, voucherTotals } from "./accountingModel.js";
 import { isCounterTillVoucher } from "./counterDayReport.js";
 import { quantityInBaseUnit } from "./inventoryModel.js";
+import { partyProfile } from "./partyProfile.js";
+import { creditCheck } from "./tradeDocumentModel.js";
 
 const n = value => {
   const number = Number(value);
@@ -301,4 +306,138 @@ export function counterSessionAdvisories(input = {}) {
   const stock = counterStockAlerts(input);
   const anomalies = counterTillAnomalies(input);
   return [...stock, ...anomalies];
+}
+
+/**
+ * Khata risk before credit charge — outstanding, overdue, limit, credit score.
+ * Feeds creditCheck with real overdue days (Counter previously passed 0).
+ */
+export function counterKhataRisk({
+  accounts = [],
+  vouchers = [],
+  parties = [],
+  party = null,
+  invoiceTotal = 0,
+  today = "",
+  settings = {},
+} = {}) {
+  if (!party) return null;
+  const profile = partyProfile({ accounts, vouchers, parties, party, today });
+  const receivable = profile?.receivable || profile?.primary;
+  const outstanding = Number(receivable?.outstanding || 0);
+  const overdue = Number(receivable?.overdue || 0);
+  const overdueDays = Number(receivable?.maxDaysOverdue || 0);
+  const creditLimit = Number(party.creditLimit || 0);
+  const exposure = roundMoney(outstanding + Number(invoiceTotal || 0));
+  const limitUsedPct = creditLimit > 0
+    ? Math.round((Math.max(0, exposure) / creditLimit) * 100)
+    : null;
+  const advice = creditCheck({
+    party,
+    outstanding,
+    invoiceTotal,
+    overdueDays,
+    settings,
+  });
+  const score = compactCreditScore({
+    invoices: receivable?.creditInvoices || [],
+    asOf: today,
+  });
+
+  let severity = "info";
+  if (advice.level === "block") severity = "high";
+  else if (advice.level === "warn" || overdue > 0 || (limitUsedPct != null && limitUsedPct >= 90)) severity = "medium";
+  else if (score.available && (score.band === "attention" || score.band === "high_risk")) severity = "medium";
+
+  const chips = [
+    { id: "outstanding", label: "Outstanding", value: formatInr(outstanding) },
+    overdue > 0
+      ? { id: "overdue", label: "Overdue", value: `${formatInr(overdue)}${overdueDays ? ` · ${overdueDays}d` : ""}` }
+      : null,
+    creditLimit > 0
+      ? { id: "limit", label: "After this bill", value: `${formatInr(exposure)} / ${formatInr(creditLimit)}${limitUsedPct != null ? ` (${limitUsedPct}%)` : ""}` }
+      : { id: "this-bill", label: "This bill", value: formatInr(invoiceTotal) },
+    score.available
+      ? { id: "score", label: "Credit score", value: score.label }
+      : { id: "score", label: "Credit score", value: "Not enough history" },
+  ].filter(Boolean);
+
+  return {
+    outstanding,
+    overdue,
+    overdueDays,
+    creditLimit,
+    exposure,
+    limitUsedPct,
+    advice,
+    score,
+    severity,
+    chips,
+    messages: advice.messages || [],
+  };
+}
+
+/**
+ * Plain-language day-close brief for the owner (WhatsApp-ready).
+ */
+export function counterDayCloseBrief({
+  companyName = "",
+  tillLabel = "",
+  report = null,
+  openingFloat = 0,
+  countedCash = 0,
+  expectedCash = 0,
+  variance = 0,
+  reason = "",
+  topItems = [],
+  cashierName = "",
+} = {}) {
+  const day = report?.date || "";
+  const tender = report?.tender || {};
+  const lines = [
+    `*${companyName || "FinTrack"} — Day close*`,
+    tillLabel ? `Till: ${tillLabel}` : null,
+    day ? `Date: ${day}` : null,
+    cashierName ? `Cashier: ${cashierName}` : null,
+    "",
+    `Bills: ${report?.billCount || 0}`,
+    `Sales: ${formatInr(report?.sales || 0)}`,
+    `Cash: ${formatInr(tender.cash || 0)} · UPI: ${formatInr(tender.upi || 0)} · Card: ${formatInr(tender.card || 0)}`,
+    "",
+    `Opening float: ${formatInr(openingFloat)}`,
+    `Expected cash: ${formatInr(expectedCash)}`,
+    `Counted cash: ${formatInr(countedCash)}`,
+    `Variance: ${formatInr(variance)}${Number(variance) < 0 ? " (short)" : Number(variance) > 0 ? " (over)" : ""}`,
+    String(reason || "").trim() ? `Note: ${String(reason).trim()}` : null,
+  ].filter(row => row != null);
+
+  if (topItems?.length) {
+    lines.push("", "*Top items*");
+    for (const item of topItems.slice(0, 5)) {
+      lines.push(`• ${item.name}: qty ${item.qty}${item.amount != null ? ` · ${formatInr(item.amount)}` : ""}`);
+    }
+  }
+
+  lines.push("", "_Advisory brief from Counter. Does not post a journal._");
+  return lines.join("\n");
+}
+
+/** Aggregate Counter bill lines for day-close top items. */
+export function counterDayTopItems({ vouchers = [], voucherItemLines = [], today = "", tillLabel = "" } = {}) {
+  const billIds = new Set(
+    (vouchers || [])
+      .filter(voucher => isCounterTillVoucher(voucher, { date: today, tillLabel }))
+      .map(voucher => voucher.id),
+  );
+  const byItem = new Map();
+  for (const line of voucherItemLines || []) {
+    if (!billIds.has(line.voucherId)) continue;
+    const key = line.itemId || line.itemName || "";
+    if (!key) continue;
+    const prev = byItem.get(key) || { name: line.itemName || key, qty: 0, amount: 0 };
+    prev.qty = roundMoney(prev.qty + Number(line.quantity || 0));
+    prev.amount = roundMoney(prev.amount + Number(line.taxableAmount ?? line.lineTotal ?? line.amount ?? 0));
+    byItem.set(key, prev);
+  }
+  return [...byItem.values()].sort((a, b) => b.amount - a.amount || b.qty - a.qty).slice(0, 8);
 }
