@@ -1020,6 +1020,9 @@ export function CounterWorkspace({
     const receiptTotals = lastBill.receiptTotals || { taxable: lastBill.total, tax: 0, taxLabel: "", total: lastBill.total };
     const text = buildCounterWhatsAppReceipt({
       companyName: branding?.companyName || activeCompany?.name || "Store",
+      companyPhone: branding?.companyPhone || "",
+      companyGstin: branding?.companyGstin || "",
+      companyAddress: branding?.companyAddress || "",
       tillLabel,
       isReturn: Boolean(lastBill.isReturn),
       isCredit: Boolean(lastBill.payLabel === "Khata"),

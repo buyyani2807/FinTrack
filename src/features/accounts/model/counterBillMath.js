@@ -1,6 +1,9 @@
 import { formatInr } from "../../../lib/formatMoney.js";
+import { formatReceiptDate } from "../../receipts/model/receiptModel.js";
 import { roundMoney } from "./accountingModel.js";
 import { quantityInBaseUnit } from "./inventoryModel.js";
+
+const WA_RULE = "────────────────";
 
 /** Cash change when tendered ≥ bill total; null when tendered is empty/invalid. */
 export function cashChangeDue(tendered, total) {
@@ -129,9 +132,12 @@ export function applyBillDiscountToLines(lines = [], billDiscount = "") {
   });
 }
 
-/** Plain-text Counter receipt for WhatsApp (wa.me). */
+/** WhatsApp-formatted Counter receipt (wa.me) — bold/separators for a clear bill layout. */
 export function buildCounterWhatsAppReceipt({
   companyName = "",
+  companyPhone = "",
+  companyGstin = "",
+  companyAddress = "",
   tillLabel = "",
   isReturn = false,
   isCredit = false,
@@ -144,38 +150,58 @@ export function buildCounterWhatsAppReceipt({
   total = 0,
   date = "",
 } = {}) {
+  const store = String(companyName || "Store").trim();
   const title = isReturn ? "Return receipt" : isCredit ? "Khata bill" : "Sale receipt";
+  const dateLabel = formatReceiptDate(date) || String(date || "").trim();
+  const metaBits = [
+    companyGstin ? `GSTIN ${String(companyGstin).trim()}` : "",
+    companyPhone ? `Ph ${String(companyPhone).trim()}` : "",
+  ].filter(Boolean);
+
   const header = [
-    `*${String(companyName || "Store").trim()}*`,
-    title,
+    `*${store}*`,
+    companyAddress ? String(companyAddress).trim() : "",
+    metaBits.length ? metaBits.join(" · ") : "",
+    WA_RULE,
+    `*${title}*`,
+    WA_RULE,
     tillLabel ? `Till: ${tillLabel}` : "",
-    date ? `Date: ${date}` : "",
+    dateLabel ? `Date: ${dateLabel}` : "",
     customerName ? `Customer: ${customerName}` : "",
     payLabel ? `Payment: ${payLabel}` : "",
+    isCredit ? "_Amount added to customer khata_" : "",
   ].filter(Boolean);
 
   const itemLines = (lines || [])
     .filter(line => line?.itemId || String(line?.itemName || "").trim())
-    .map(line => {
+    .flatMap(line => {
       const name = String(line.itemName || "Item").trim();
       const unit = line.sellUnit || line.unit || "";
       const qty = `${line.quantity || 0}${unit ? ` ${unit}` : ""}`;
-      return `• ${name} × ${qty} = ${formatInr(counterLineNet(line))}`;
+      const rate = Number(line.rate);
+      const amount = formatInr(counterLineNet(line));
+      const detail = Number.isFinite(rate) && rate > 0
+        ? `${qty} × ${formatInr(rate)} = ${amount}`
+        : `${qty} = ${amount}`;
+      return [`• *${name}*`, `  ${detail}`];
     });
 
   const totals = [
+    WA_RULE,
     taxable ? `Taxable: ${formatInr(taxable)}` : "",
     tax && taxLabel ? `${taxLabel}: ${formatInr(tax)}` : "",
-    `*Total: ${formatInr(total)}*`,
+    `*TOTAL: ${formatInr(total)}*`,
+    WA_RULE,
   ].filter(Boolean);
 
   return [
     ...header,
     "",
-    ...(itemLines.length ? ["Items", ...itemLines, ""] : []),
+    ...(itemLines.length ? ["*Items*", ...itemLines, ""] : []),
     ...totals,
     "",
-    "Thank you.",
+    "_Thank you for your business._",
+    `_${store}_`,
   ].join("\n");
 }
 

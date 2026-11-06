@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   applyBillDiscountToLines,
+  buildCounterWhatsAppReceipt,
   cashChangeDue,
   counterEstimateTotal,
   counterLineNet,
@@ -67,4 +68,25 @@ test("estimate total includes GST after discounts", () => {
   assert.equal(totals.taxable, 100);
   assert.equal(totals.tax, 18);
   assert.equal(totals.total, 118);
+});
+
+test("WhatsApp receipt uses bold store header, line detail, and TOTAL", () => {
+  const text = buildCounterWhatsAppReceipt({
+    companyName: "Shiva Traders",
+    companyGstin: "29AAAAA0000A1Z5",
+    companyPhone: "9876543210",
+    tillLabel: "Till 1",
+    date: "2026-11-06",
+    payLabel: "Cash",
+    lines: [{ itemId: "1", itemName: "Toor Dal", quantity: 9, rate: 125, unit: "Kg", sellUnit: "Kg" }],
+    taxable: 1125,
+    total: 1125,
+  });
+  assert.match(text, /\*Shiva Traders\*/);
+  assert.match(text, /GSTIN 29AAAAA0000A1Z5/);
+  assert.match(text, /\*Sale receipt\*/);
+  assert.match(text, /\*Toor Dal\*/);
+  assert.match(text, /9 Kg × ₹125 = ₹1,125/);
+  assert.match(text, /\*TOTAL: ₹1,125\*/);
+  assert.match(text, /Thank you for your business/);
 });
