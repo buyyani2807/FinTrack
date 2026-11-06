@@ -7356,7 +7356,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  min-width: 0;
+  min-width: 7.5rem;
   width: 100%;
 }
 
@@ -7530,7 +7530,7 @@
   /* Style by cart panel width so laptop 3-col and mobile all stay readable. */
   @container (min-width: 26rem) {
     & .counter-line {
-      grid-template-columns: minmax(0, 1fr) minmax(14rem, 18rem) auto;
+      grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem) auto;
       grid-template-areas: "main controls remove";
       align-items: center;
     }
@@ -7540,13 +7540,13 @@
     }
 
     & .counter-line-controls {
-      grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.9fr) auto;
+      grid-template-columns: minmax(7.5rem, 1.15fr) minmax(4.5rem, 0.9fr) auto;
     }
   }
 
   @container (max-width: 17.5rem) {
     & .counter-line-controls {
-      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-columns: minmax(7.5rem, 1fr) auto;
     }
 
     & .counter-line-rate-input {
@@ -7770,7 +7770,7 @@
 .accounts-dashboard .counter-line-controls {
   grid-area: controls;
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(7.5rem, 1.2fr) minmax(4.5rem, 1fr) auto;
   gap: 8px;
   align-items: center;
   min-width: 0;
@@ -7785,17 +7785,19 @@
 }
 
 .accounts-dashboard .counter-qty {
-  flex: 1 1 3rem;
-  min-width: 0;
+  flex: 1 1 4.25rem;
+  min-width: 4.25rem;
   width: 100%;
+  box-sizing: border-box;
   text-align: center;
-  padding: 8px 6px;
+  padding: 8px 10px;
   border: 1px solid var(--ft-border);
   border-radius: 10px;
   background: var(--ft-surface-subtle);
   color: var(--ft-text);
   font-size: var(--ft-type-ui);
   font-weight: 650;
+  font-variant-numeric: tabular-nums;
 }
 
 .accounts-dashboard .counter-line-rate,
