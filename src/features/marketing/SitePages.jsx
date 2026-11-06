@@ -97,7 +97,7 @@ export function SecurityPage() {
 }
 
 const PLAN_INCLUDES = [
-  "Accounts, cashbook, payroll, and GST preparation",
+  "Accounts, Counter POS, cashbook, payroll, and GST preparation",
   "Daily and monthly finance",
   "Chit schemes and live bidding",
   "Collection agents, customer portals, and member portals",

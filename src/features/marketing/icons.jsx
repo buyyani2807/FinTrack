@@ -3,7 +3,7 @@ import {
   FileBarChart, FileSearch, FileSpreadsheet, FileText, Gauge, Gavel, GitCompareArrows, Globe, HandCoins, HeartPulse,
   Landmark, LayoutDashboard, Lightbulb, LineChart, ListChecks, ListTree, Lock, MessageCircle, Package,
   PackageSearch, PieChart, Radio, Receipt, ReceiptText, Route, Scale, ScanLine, ScrollText, ShieldAlert, ShieldCheck,
-  Sparkles, Sun, TableProperties, Ticket, TrendingUp, UserRound, Users, Wallet, WalletCards, Waves,
+  ShoppingCart, Sparkles, Sun, TableProperties, Ticket, TrendingUp, UserRound, Users, Wallet, WalletCards, Waves,
 } from "lucide-react";
 
 const ICONS = {
@@ -11,7 +11,7 @@ const ICONS = {
   FileBarChart, FileSearch, FileSpreadsheet, FileText, Gauge, Gavel, GitCompareArrows, Globe, HandCoins, HeartPulse,
   Landmark, LayoutDashboard, Lightbulb, LineChart, ListChecks, ListTree, Lock, MessageCircle, Package,
   PackageSearch, PieChart, Radio, Receipt, ReceiptText, Route, Scale, ScanLine, ScrollText, ShieldAlert, ShieldCheck,
-  Sparkles, Sun, TableProperties, Ticket, TrendingUp, UserRound, Users, Wallet, WalletCards, Waves,
+  ShoppingCart, Sparkles, Sun, TableProperties, Ticket, TrendingUp, UserRound, Users, Wallet, WalletCards, Waves,
 };
 
 export function FeatureIcon({ name, size = 20 }) {

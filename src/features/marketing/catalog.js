@@ -2,7 +2,7 @@
 // `appPath` is where a signed-in owner opens that work. Login is required first.
 
 export const FEATURE_CATEGORIES = [
-  { id: "accounts", label: "Accounts", blurb: "Company books, payroll, stock, and a page to hand the month to the accountant." },
+  { id: "accounts", label: "Accounts", blurb: "Company books, Counter POS billing, payroll, stock, and a page to hand the month to the accountant." },
   { id: "intelligence", label: "AI", blurb: "Scan a supplier bill from a photo or a PDF and review the purchase draft. Also cash-flow outlook, expense and supplier price changes, collection priorities, unusual activity, GST review, month-end readiness, bank matching, stock forecasts, and chit scheme health. Each suggestion shows its reason and a link to the record. You decide what happens next." },
   { id: "finance", label: "Finance", blurb: "Daily and monthly collections, with collection reports and a profit and loss view for the lending book." },
   { id: "chit", label: "Chit Fund", blurb: "Schemes, bidding, dividends, month statements, and commission income." },
@@ -306,6 +306,7 @@ export const FEATURES = [
       "An Expenses page with monthly trends, categories, and every expense entry",
       "Receivables and payables side by side in bars by age, from not yet due to 90+ days",
       "Chart of accounts, vouchers, and ledgers",
+      "Counter POS till for walk-in and khata sales that post into the same books and stock",
       "Receivables, payables, and inventory",
       "Payroll, with attendance, leave, and a payslip",
       "Quotations, orders, delivery challans, and goods receipts",
@@ -322,20 +323,68 @@ export const FEATURES = [
       },
       {
         title: "Who Accounts is for",
-        text: "Accounts is for a small or medium business: a shop, a trading firm, a service business, or a finance company that also keeps formal books. The owner opens a company, posts the day’s vouchers, and reads the statements. A second company stays separate until you switch to it.",
+        text: "Accounts is for a small or medium business: a shop, a trading firm, a service business, or a finance company that also keeps formal books. The owner opens a company, posts the day’s vouchers, and reads the statements. A second company stays separate until you switch to it. Shops can also bill from Counter, the POS till inside Accounts.",
       },
       {
         title: "The books a growing business needs",
-        text: "Start from a chart of accounts. Record receipts, payments, journals, sales, and purchases. Quote and take orders before the invoice. See what customers still owe and what you owe suppliers. Keep items, stock, and the profit on each item with those sales and purchases. Pay staff from the same books. Prepare GST from the vouchers you posted, then file the return in your own process. Hand the month to your accountant from For the CA. Import a bank statement and accept the matches you agree with. Read the trial balance, profit and loss, balance sheet, and cash flow for the company you have open.",
+        text: "Start from a chart of accounts. Record receipts, payments, journals, sales, and purchases. Quote and take orders before the invoice. Bill walk-in customers from Counter when you need a till. See what customers still owe and what you owe suppliers. Keep items, stock, and the profit on each item with those sales and purchases. Pay staff from the same books. Prepare GST from the vouchers you posted, then file the return in your own process. Hand the month to your accountant from For the CA. Import a bank statement and accept the matches you agree with. Read the trial balance, profit and loss, balance sheet, and cash flow for the company you have open.",
       },
       {
         title: "Review stays with you",
         text: "A bill photograph, a bank suggestion, and Ask FinTrack can offer a draft. You post the voucher. Debit has to equal credit. A locked month stays locked until you reopen it. The cashbook can stand on its own; its lines enter the finance company only when integration is on and you sync.",
       },
     ],
-    related: ["vouchers", "ai-bookkeeper", "ai-migration", "gst-preparation"],
+    related: ["counter-pos", "vouchers", "ai-bookkeeper", "ai-migration", "gst-preparation"],
     appPath: "/accounting/overview",
     icon: "Building2",
+  },
+  {
+    slug: "counter-pos",
+    category: "accounts",
+    name: "Counter (POS)",
+    summary: "A till inside Accounts for walk-in and khata sales. Charge posts the sale, updates stock, and can print or share the receipt.",
+    audience: "Shops, kiranas, and traders",
+    problem: "A separate POS and the company books drift apart: the till says one total, stock and GST say another.",
+    how: [
+      "Open Accounts → Counter. Search or tap an item, set quantity and rate, and keep the open bill if you refresh.",
+      "Choose cash, UPI, split tender, or khata. Enter cash tendered to see change due when the customer pays cash.",
+      "Charge. The sale posts into Accounts and stock. Print a thermal receipt or share a WhatsApp receipt when you choose.",
+    ],
+    capabilities: [
+      "Item search, favourites, and categories on one till screen",
+      "Walk-in cash sales and named khata (credit) customers",
+      "Cash, UPI, bank, and cash+UPI split, with optional payment reference",
+      "Cash tendered and change due on cash bills",
+      "Bill discount on checkout",
+      "Hold bills, returns, and day-close by till",
+      "Thermal print receipt and WhatsApp share after charge",
+      "Optional block when stock is short",
+      "Cashier logins that open Counter only",
+      "Offline queue for paid till bills when the line drops, then sync when you are back online",
+    ],
+    benefits: [
+      "The till and the books stay the same company",
+      "Stock moves with the sale",
+      "Cashiers stay on the counter without the full Accounts chrome",
+      "You print or share the receipt when you are ready",
+    ],
+    sections: [
+      {
+        title: "One till, the same books",
+        text: "Counter is the POS screen inside Accounts. A charged bill is a posted sale for the company you have open, with stock and GST following the same rules as a sales voucher. Paid cash POS bills stay on Sales and Day Book rather than cluttering Receivables.",
+      },
+      {
+        title: "Built for the counter",
+        text: "Search items, sell in pack or loose units when bag weight is set, apply a bill discount, and take cash or UPI. Enter cash tendered to show change. Hold a cart, take a return, and close the till for the day. A cashier role can open Counter without the rest of Accounts.",
+      },
+      {
+        title: "Receipts you control",
+        text: "After Charge, print an 80 mm thermal slip from the browser print dialog, or open WhatsApp with a clear shop-bill message. Nothing is sent until you confirm in WhatsApp or the print dialog.",
+      },
+    ],
+    related: ["accounts-overview", "inventory", "vouchers", "digital-receipts", "whatsapp-reminders"],
+    appPath: "/accounting/counter",
+    icon: "ShoppingCart",
   },
   {
     slug: "chart-of-accounts",
@@ -621,7 +670,7 @@ export const FEATURES = [
     how: [      "Add items for the company.", "Use them on sales and purchases.", "Review stock and a physical count when you do one.", "When the item name is recognised, FinTrack suggests an HSN and GST rate. It is filled in only when you choose Use this, and saved only when you save the item."],
     capabilities: ["Items and categories", "Stock movement", "Item sales and item profit", "Physical count", "A suggested HSN and GST rate from the item name, applied only when you confirm"],
     benefits: ["A sale can carry the item", "Stock stays with the company", "You confirm a count rather than trusting a guess"],
-    related: ["item-profit", "trade-documents", "stock-forecast"],
+    related: ["counter-pos", "item-profit", "trade-documents", "stock-forecast"],
     appPath: "/accounting/inventory",
     icon: "Package",
   },
@@ -1280,7 +1329,7 @@ export const PILLARS = [
     slug: "accounts-overview",
     eyebrow: "Books",
     title: "Accounts for small and medium businesses",
-    text: "Shops, trading firms, service businesses, and finance companies keep a company book here: balanced vouchers, stock, payroll, GST preparation, bank matches, and a page to hand the month to the accountant. You open the company, and you confirm the voucher.",
+    text: "Shops, trading firms, service businesses, and finance companies keep a company book here: Counter POS billing, balanced vouchers, stock, payroll, GST preparation, bank matches, and a page to hand the month to the accountant. You open the company, and you confirm the voucher.",
   },
   {
     slug: "live-bidding",
@@ -1303,8 +1352,8 @@ export const SOLUTIONS = [
   },
   {
     title: "Shops and traders",
-    text: "Post sales and purchases, keep stock and item profit, and read receivables and payables for the company you have open.",
-    features: ["vouchers", "inventory", "item-profit"],
+    text: "Bill from Counter POS, keep stock and item profit, and read receivables and payables for the company you have open.",
+    features: ["counter-pos", "inventory", "item-profit"],
   },
   {
     title: "Service businesses",

@@ -11,7 +11,7 @@ import { ProductCta } from "./ProductCta.jsx";
 import { ProductPreview } from "./ProductPreview.jsx";
 
 const VALUES = [
-  { icon: "Landmark", title: "Accounting", text: "Vouchers, stock, GST preparation, and statements for the company you open." },
+  { icon: "Landmark", title: "Accounting", text: "Counter POS, vouchers, stock, GST preparation, and statements for the company you open." },
   { icon: "HandCoins", title: "Collections", text: "See who is due and record what was received." },
   { icon: "CalendarDays", title: "Finance", text: "Daily collections and monthly repayments on the customer account." },
   { icon: "Gavel", title: "Chit Funds", text: "Schemes, members, auctions, and dividends." },
@@ -24,7 +24,7 @@ const PILLARS = [
     id: "accounts",
     title: "Accounting",
     text: "The company book for a shop, a trader, a service business, or a finance company.",
-    items: ["Chart of accounts and ledgers", "Sales, purchases, receipts, and payments", "Contra, journal, and credit and debit notes", "Quotations, orders, delivery challans, and goods receipts", "Inventory, item profit, and GST preparation", "Payroll, attendance, leave, and payslips", "Receivables, payables, and bank reconciliation", "Customer profiles with a FinTrack credit score", "Expenses by month and category, with every entry", "Day book, trial balance, profit and loss, balance sheet, and cash flow", "For the CA: the month’s books, GST checks, unmatched bank lines, and stock to review", "Move in from Tally, Zoho Books, Book Keeper, or Excel"],
+    items: ["Counter POS till for walk-in and khata sales", "Chart of accounts and ledgers", "Sales, purchases, receipts, and payments", "Contra, journal, and credit and debit notes", "Quotations, orders, delivery challans, and goods receipts", "Inventory, item profit, and GST preparation", "Payroll, attendance, leave, and payslips", "Receivables, payables, and bank reconciliation", "Customer profiles with a FinTrack credit score", "Expenses by month and category, with every entry", "Day book, trial balance, profit and loss, balance sheet, and cash flow", "For the CA: the month’s books, GST checks, unmatched bank lines, and stock to review", "Move in from Tally, Zoho Books, Book Keeper, or Excel"],
     to: "accounts-overview",
     link: "Explore Accounting",
   },
@@ -332,14 +332,15 @@ function AskGrid() {
 const AUDIENCES = [
   { title: "Finance businesses", text: "Customers, financing, collections, and agents.", to: "daily-finance" },
   { title: "Chit fund operators", text: "Schemes, auctions, members, and dividends.", to: "auction-chit" },
-  { title: "Shops and traders", text: "Sales, purchases, stock, and customer balances.", to: "inventory" },
+  { title: "Shops and traders", text: "Counter POS, stock, and customer balances.", to: "counter-pos" },
   { title: "Service businesses", text: "Invoices, expenses, payments, and profit.", to: "vouchers" },
   { title: "Small and medium businesses", text: "Accounting, GST preparation, banking, and payables.", to: "accounts-overview" },
 ];
 
 const FAQ = [
   { question: "What is FinTrack?", answer: "One login for accounting, daily and monthly finance, collections, chit funds, payments, and AI suggestions from those records." },
-  { question: "Can I use it only for accounting?", answer: "Yes. Accounts can stand on its own: vouchers, inventory, payroll, GST preparation, banking, receivables, payables, and the statements, including a page to hand the month to your accountant." },
+  { question: "Can I use it only for accounting?", answer: "Yes. Accounts can stand on its own: Counter POS billing, vouchers, inventory, payroll, GST preparation, banking, receivables, payables, and the statements, including a page to hand the month to your accountant." },
+  { question: "Does it have a POS / billing counter?", answer: "Yes. Counter inside Accounts is the till for walk-in and khata sales. Charge posts the sale into the company books and stock. You can print a thermal receipt or share a WhatsApp receipt when you choose. Cashiers can open Counter without the rest of Accounts." },
   { question: "Can a finance business use it?", answer: "Yes. Daily Finance and Monthly Finance keep customer accounts, repayments, and collections." },
   { question: "Does it support chit funds?", answer: "Yes. Schemes, members, live bidding, payments, dividends, and reports." },
   { question: "Does it support GST?", answer: "It prepares GST summaries from posted vouchers. Filing stays outside FinTrack." },
