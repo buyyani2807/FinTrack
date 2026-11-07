@@ -3,7 +3,7 @@ import { useSyncExternalStore } from "react";
 // Light/dark theme: an explicit choice is remembered per browser; otherwise the system setting is followed.
 // index.html applies the same rule before first paint, so there is no flash of the wrong theme.
 const STORAGE_KEY = "fintrack-theme";
-const THEME_COLORS = { light: "#f4f5f7", dark: "#111315" };
+const THEME_COLORS = { light: "#eef4f4", dark: "#111315" };
 const listeners = new Set();
 
 const systemQuery = () => (typeof window !== "undefined" && window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null);

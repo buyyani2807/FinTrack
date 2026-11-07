@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from "react";
 import { Link, NavLink, Outlet, useOutletContext } from "react-router";
-import { ArrowRight, BookOpenText, CalendarDays, CalendarRange, Coins, Gift, House, Menu, Wallet, X } from "lucide-react";
+import { BookOpenText, CalendarDays, CalendarRange, Coins, House, Menu, Wallet, X } from "lucide-react";
 import { ThemeToggle } from "../../components/ThemeToggle.jsx";
 import { APP_MODULES } from "./catalog.js";
 import marketingStyles from "./marketing.css?inline";
@@ -30,39 +30,6 @@ const COMPANY_LINKS = [
   { to: marketingPaths.founder, label: "Founder" },
   { to: marketingPaths.contact, label: "Contact" },
 ];
-
-const TRIAL_BAR_KEY = "fintrack-trial-bar-dismissed";
-
-function trialBarDismissed() {
-  try {
-    return localStorage.getItem(TRIAL_BAR_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
-function TrialBar() {
-  const [dismissed, setDismissed] = useState(trialBarDismissed);
-  if (dismissed) return null;
-  const dismiss = () => {
-    setDismissed(true);
-    try { localStorage.setItem(TRIAL_BAR_KEY, "1"); } catch { /* private mode: hide for this visit */ }
-  };
-  return <div className="mkt-trial-bar" role="region" aria-label="Free trial">
-    <Link className="mkt-trial-link" to={marketingPaths.signup}>
-      <span className="mkt-trial-icon" aria-hidden="true"><Gift size={14} /></span>
-      <span className="mkt-trial-text">
-        <strong>14-day free trial</strong>
-        <span className="mkt-trial-detail">Every module included, no payment to start</span>
-        <span className="mkt-trial-price">Then ₹499 a month</span>
-      </span>
-      <span className="mkt-trial-cta">Start free <ArrowRight size={14} aria-hidden="true" /></span>
-    </Link>
-    <button type="button" className="mkt-trial-close" aria-label="Dismiss the free trial message" onClick={dismiss}>
-      <X size={16} aria-hidden="true" />
-    </button>
-  </div>;
-}
 
 function Brand({ onClick }) {
   return <Link to={marketingPaths.home} className="mkt-brand" aria-label="FinTrack home" onClick={onClick}>FIN<span>Track</span></Link>;
@@ -104,14 +71,13 @@ export function MarketingLayout() {
       </nav>
       <div className="mkt-nav-end">
         <ThemeToggle compact />
-        {login}
-        {signedIn ? start : null}
+        {signedIn ? null : login}
+        {start}
         <button type="button" className="mkt-burger" aria-label="Open menu" aria-expanded={open} aria-controls={menuId} onClick={() => setOpen(true)}>
           <Menu size={22} aria-hidden="true" />
         </button>
       </div>
     </header>
-    {!signedIn && <TrialBar />}
     </div>
     {open && <div className="mkt-drawer" onClick={close}>
       <div id={menuId} className="mkt-drawer-panel" role="dialog" aria-modal="true" aria-label="Menu" onClick={event => event.stopPropagation()}>
@@ -140,9 +106,10 @@ export function MarketingLayout() {
     </main>
     <footer className="mkt-footer">
       <div className="mkt-wrap mkt-footer-grid">
-      <div>
+      <div className="mkt-footer-brand">
         <Brand />
         <p>Accounting, finance, collections, chit funds, and AI in one login. Suggestions wait until you confirm.</p>
+        <p className="mkt-footer-badges"><span>Web</span><span>iPhone</span><span>Android</span></p>
       </div>
       <div>
         <h2>Product</h2>
@@ -165,6 +132,9 @@ export function MarketingLayout() {
         <Link to="/?view=privacy">Privacy</Link>
         <Link to="/?view=terms">Terms</Link>
       </div>
+      </div>
+      <div className="mkt-wrap mkt-footer-bottom">
+        <p>© {new Date().getFullYear()} FinTrack. Built for finance businesses, chit fund operators, and traders in India.</p>
       </div>
     </footer>
   </div>;

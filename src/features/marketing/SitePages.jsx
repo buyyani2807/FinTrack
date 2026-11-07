@@ -157,7 +157,7 @@ const ABOUT_SIGN_INS = [
 export function AboutPage() {
   return <RevealProvider intent="landing">
   <PageTitle title="About FinTrack" />
-  <section className="mkt-hero">
+  <section className="mkt-hero mkt-tint">
     <div className="mkt-wrap mkt-hero-copy">
       <Reveal as="p" className="mkt-kicker">About FinTrack</Reveal>
       <Reveal as="h1" index={1}>One login for the books, the collections, and the chit.</Reveal>
