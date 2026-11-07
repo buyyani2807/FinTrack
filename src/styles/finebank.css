@@ -224,7 +224,7 @@ td:has(> .btn + .btn) { line-height: 2.6; }
    Every size inside .ft-auth-cluster is a multiple of --u, which comes from the space the stage has
    (container query units), so the cards keep the same relationships on every screen width. */
 /* exactly one screen tall and sticky, so the stage height is definite for container-query units */
-.ft-auth-showcase { position: sticky; top: 0; align-self: start; display: flex; flex-direction: column; height: 100svh; padding: clamp(28px, 4.5cqw, 64px) clamp(28px, 6cqw, 72px) clamp(20px, 3cqw, 40px); overflow: hidden; background: var(--ft-sidebar-bg); color: #fff; container-type: inline-size; isolation: isolate; }
+.ft-auth-showcase { position: sticky; top: 0; align-self: start; display: flex; flex-direction: column; height: 100svh; padding: clamp(28px, 4.5cqw, 64px) clamp(28px, 6cqw, 72px) clamp(20px, 3cqw, 40px); overflow: hidden; background: var(--ft-showcase-bg); color: #fff; container-type: inline-size; isolation: isolate; }
 .ft-auth-showcase::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(55% 40% at 85% 8%, rgba(41, 157, 145, .40), transparent 70%), radial-gradient(60% 45% at 30% 75%, rgba(41, 157, 145, .26), transparent 70%); }
 .ft-auth-showcase::after { content: ""; position: absolute; inset: 0; z-index: -1; background-image: radial-gradient(rgba(255, 255, 255, .07) 1px, transparent 1px); background-size: 28px 28px; mask-image: radial-gradient(ellipse at 50% 65%, #000 25%, transparent 75%); }
 .ft-auth-showcase-brand { color: #fff !important; font-size: var(--ft-type-hero); letter-spacing: .08em; }

@@ -47,6 +47,8 @@
   --ft-sidebar-hover: rgba(255, 255, 255, .06);
   --ft-sidebar-chip: rgba(255, 255, 255, .08);
   --ft-sidebar-line: rgba(255, 255, 255, .08);
+  /* Sign-in showcase panel: the same dark backdrop in both themes. */
+  --ft-showcase-bg: #0b0c0d;
   --ft-chart-1: var(--ft-brand);
   --ft-chart-2: #d5e2e2;
   --ft-chart-grid: #e5eded;
