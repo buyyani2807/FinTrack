@@ -131,49 +131,62 @@ const MONTHLY_ROWS = [
   const before = rows.length ? rows[rows.length - 1].balance : MONTHLY_OPENING;
   return [...rows, { ...row, total: row.interest + row.principal + row.penalty, balance: before - row.principal }];
 }, []);
-const lakh = value => `₹${(value / 100000).toFixed(2)}L`;
+const RING = 2 * Math.PI * 92;
 
 function MonthlyModule() {
   const [ref, live, reduced] = useLive();
-  const step = useLoop(live, MONTHLY_ROWS.length, 1600, 1600);
-  const pick = reduced ? MONTHLY_ROWS.length - 1 : step;
+  const [chosen, setChosen] = useState(null);
+  const auto = useLoop(live && chosen === null, MONTHLY_ROWS.length, 1800, 1800);
+  const pick = chosen ?? (reduced ? MONTHLY_ROWS.length - 1 : auto);
   const row = MONTHLY_ROWS[pick];
+  const repaid = (MONTHLY_OPENING - row.balance) / MONTHLY_OPENING;
   const earned = MONTHLY_ROWS.slice(0, pick + 1).reduce((sum, item) => sum + item.interest + item.penalty, 0);
+  const parts = [
+    { key: "interest", label: "Interest", value: row.interest },
+    { key: "principal", label: "Principal", value: row.principal },
+    { key: "penalty", label: "Penalty", value: row.penalty },
+  ];
   return <Section id="monthly-finance" flip><article ref={ref} className="hm-module hm-monthly" data-mod="monthly" data-live={live || reduced}>
-    <div className="hm-monthly-copy">
-      <div>
-        <Tag icon={CalendarRange}>Monthly Finance</Tag>
-        <h3>Interest, principal, and penalty never mix.</h3>
-      </div>
-      <div>
-        <p className="hm-module-lead">Every receipt on a monthly account records what it covered, so the balance and the interest you earned are always clear.</p>
-        <Points items={["Each receipt split into interest, principal, and penalty", "Monthly P&L from interest and penalty received", "Upcoming payment reminders"]} />
-        <More to={featurePath("monthly-finance")}>Explore Monthly Finance</More>
-      </div>
-    </div>
-    <div className="hm-ledger" aria-hidden="true">
-      <div className="hm-ledger-side">
-        <p className="hm-ledger-account">Srinivas Motors · Monthly account</p>
-        <div className="hm-ledger-stat"><small>Balance after {row.month}</small><strong key={`b-${pick}`}>{rupees(row.balance)}</strong></div>
-        <div className="hm-ledger-stat"><small>Interest and penalty earned</small><strong key={`e-${pick}`}>{rupees(earned)}</strong></div>
-        <div className="hm-ledger-receipt" key={`r-${pick}`}>
-          <p><span>{row.month} receipt</span><strong>{rupees(row.total)}</strong></p>
-          <p><i className="is-interest" />Interest<span>{rupees(row.interest)}</span></p>
-          <p><i className="is-principal" />Principal<span>{rupees(row.principal)}</span></p>
-          <p><i className="is-penalty" />Penalty<span>{row.penalty ? rupees(row.penalty) : "—"}</span></p>
+    <div className="hm-loan">
+      <header className="hm-loan-head">
+        <div><small>Monthly account</small><strong>Srinivas Motors</strong></div>
+        <span>{rupees(MONTHLY_OPENING)} at 2% a month</span>
+      </header>
+      <div className="hm-loan-body">
+        <div className="hm-donut" aria-hidden="true">
+          <svg viewBox="0 0 220 220">
+            <circle className="hm-donut-track" cx="110" cy="110" r="92" />
+            <circle className="hm-donut-arc" cx="110" cy="110" r="92" style={{ strokeDasharray: RING, strokeDashoffset: live || reduced ? RING * (1 - repaid) : RING }} />
+          </svg>
+          <div className="hm-donut-center">
+            <small>Balance</small>
+            <strong key={`b-${pick}`}>{rupees(row.balance)}</strong>
+            <span>{Math.round(repaid * 100)}% repaid</span>
+          </div>
         </div>
-      </div>
-      <div className="hm-ledger-chart">
-        <p className="hm-ledger-chart-title">Balance after each receipt</p>
-        <div className="hm-ledger-cols">
-          {MONTHLY_ROWS.map((item, index) => <div key={item.month} className="hm-col" data-active={index === pick} data-done={index <= pick} style={{ "--i": index }}>
-            {item.penalty ? <em>+ penalty</em> : null}
-            <b>{lakh(item.balance)}</b>
-            <div className="hm-col-bar" style={{ "--h": `${(item.balance / MONTHLY_OPENING) * 100}%` }} />
-            <span>{item.month}</span>
+        <div className="hm-receipt-split" aria-live="polite">
+          <p className="hm-split-title"><span>{row.month} receipt</span><strong>{rupees(row.total)}</strong></p>
+          {parts.map(part => <div key={part.key} className={`hm-split-row is-${part.key}`}>
+            <p><span>{part.label}</span><strong>{part.value ? rupees(part.value) : "—"}</strong></p>
+            <div className="hm-split-track"><i style={{ width: `${(part.value / row.total) * 100}%` }} /></div>
           </div>)}
+          <p className="hm-split-earned"><span>Interest and penalty earned so far</span><strong>{rupees(earned)}</strong></p>
         </div>
       </div>
+      <ol className="hm-steps" aria-label="Receipts by month">
+        {MONTHLY_ROWS.map((item, index) => <li key={item.month} data-state={index < pick ? "done" : index === pick ? "now" : "next"}>
+          <button type="button" aria-pressed={index === pick} onClick={() => setChosen(index)}>
+            <i aria-hidden="true" />{item.month}{item.penalty ? <em aria-label="with penalty">+P</em> : null}
+          </button>
+        </li>)}
+      </ol>
+    </div>
+    <div className="hm-module-copy">
+      <Tag icon={CalendarRange}>Monthly Finance</Tag>
+      <h3>Interest, principal, and penalty never mix.</h3>
+      <p className="hm-module-lead">Every receipt on a monthly account records what it covered, so the balance and the interest you earned are always clear.</p>
+      <Points items={["Monthly interest accounts with due amounts", "Each receipt split into interest, principal, and penalty", "Monthly P&L from interest and penalty received", "Upcoming payment reminders"]} />
+      <More to={featurePath("monthly-finance")}>Explore Monthly Finance</More>
     </div>
   </article></Section>;
 }

@@ -331,52 +331,69 @@ const FAQ_TOPICS = [
 ];
 
 function HomeFaq() {
-  const baseId = useId();
   const [topic, setTopic] = useState("all");
+  const [thread, setThread] = useState(() => [FAQ[0]]);
+  const [typing, setTyping] = useState(null);
+  const bodyRef = useRef(null);
+  const chatRef = useRef(null);
+  const timerRef = useRef(0);
   const items = FAQ.filter(item => topic === "all" || item.topic === topic);
-  const [open, setOpen] = useState(FAQ[0].question);
-  const current = items.find(item => item.question === open) || items[0];
-  const chooseTopic = id => {
-    setTopic(id);
-    const first = FAQ.find(item => id === "all" || item.topic === id);
-    if (first) setOpen(first.question);
+  const asked = new Set(thread.map(item => item.question));
+
+  useEffect(() => () => clearTimeout(timerRef.current), []);
+  useEffect(() => {
+    const body = bodyRef.current;
+    if (body) body.scrollTo({ top: body.scrollHeight, behavior: "smooth" });
+  }, [thread, typing]);
+
+  const ask = item => {
+    if (typing) return;
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    setTyping(item);
+    // On phones the chat sits below the questions, so bring it into view.
+    if (window.matchMedia?.("(max-width: 980px)").matches) chatRef.current?.scrollIntoView({ block: "nearest", behavior: reduced ? "auto" : "smooth" });
+    timerRef.current = setTimeout(() => {
+      setThread(current => [...current.filter(entry => entry.question !== item.question), item].slice(-3));
+      setTyping(null);
+    }, reduced ? 0 : 700);
   };
+
   return <section className="hm-faq" id="faq">
-    <div className="mkt-wrap">
-      <header className="hm-head">
+    <div className="mkt-wrap hm-faq-grid">
+      <div className="hm-faq-side">
         <Reveal as="p" className="hm-eyebrow">FAQ</Reveal>
         <Reveal as="h2" index={1}>Questions, answered.</Reveal>
-        <Reveal as="p" className="hm-head-lead" index={2}>Short answers about what is in the product today.</Reveal>
-      </header>
-      <div className="hm-faq-topics" role="group" aria-label="Question topics">
-        {FAQ_TOPICS.map(item => <button key={item.id} type="button" aria-pressed={topic === item.id} onClick={() => chooseTopic(item.id)}>{item.label}</button>)}
+        <Reveal as="p" className="hm-faq-lead" index={2}>Tap a question. The answer describes what is in the product today.</Reveal>
+        <div className="hm-faq-topics" role="group" aria-label="Question topics">
+          {FAQ_TOPICS.map(item => <button key={item.id} type="button" aria-pressed={topic === item.id} onClick={() => setTopic(item.id)}>{item.label}</button>)}
+        </div>
+        <ul className="hm-faq-chips">
+          {items.map(item => <li key={item.question}>
+            <button type="button" data-asked={asked.has(item.question)} disabled={Boolean(typing)} onClick={() => ask(item)}>
+              {asked.has(item.question) ? <Check size={14} strokeWidth={3} aria-hidden="true" /> : null}{item.question}
+            </button>
+          </li>)}
+        </ul>
       </div>
-      <div className="hm-faq-body">
-        <ol className="hm-faq-list">
-          {items.map((item, index) => {
-            const selected = item.question === current.question;
-            const answerId = `${baseId}-a-${FAQ.indexOf(item)}`;
-            return <li key={item.question} data-selected={selected}>
-              <button type="button" aria-expanded={selected} aria-controls={answerId} onClick={() => setOpen(item.question)}>
-                <span className="hm-faq-num">{String(index + 1).padStart(2, "0")}</span>
-                <span className="hm-faq-q">{item.question}</span>
-                <ArrowRight size={18} aria-hidden="true" />
-              </button>
-              {selected ? <p id={answerId} className="hm-faq-inline">{item.answer}</p> : null}
-            </li>;
-          })}
-        </ol>
-        <aside className="hm-faq-answer" aria-live="polite">
-          <div key={current.question} className="hm-faq-answer-inner">
-            <span className="hm-faq-answer-icon" aria-hidden="true"><MessageCircle size={22} /></span>
-            <h3>{current.question}</h3>
-            <p>{current.answer}</p>
-          </div>
-          <div className="hm-faq-contact">
-            <span>Still have a question?</span>
-            <Link className="mkt-btn primary" to={marketingPaths.contact}>Contact us</Link>
-          </div>
-        </aside>
+      <div ref={chatRef} className="hm-chat">
+        <header className="hm-chat-head">
+          <span className="hm-chat-avatar" aria-hidden="true"><MessageCircle size={20} /></span>
+          <span><strong>FinTrack</strong><small>Answers about the product</small></span>
+        </header>
+        <div ref={bodyRef} className="hm-chat-body" aria-live="polite">
+          {thread.map(item => <div key={item.question} className="hm-chat-pair">
+            <p className="hm-bubble is-you">{item.question}</p>
+            <p className="hm-bubble is-bot">{item.answer}</p>
+          </div>)}
+          {typing ? <div className="hm-chat-pair">
+            <p className="hm-bubble is-you">{typing.question}</p>
+            <p className="hm-bubble is-bot is-typing" aria-label="FinTrack is typing"><i /><i /><i /></p>
+          </div> : null}
+        </div>
+        <footer className="hm-chat-foot">
+          <span>Still have a question?</span>
+          <Link className="mkt-btn primary" to={marketingPaths.contact}>Contact us</Link>
+        </footer>
       </div>
     </div>
   </section>;

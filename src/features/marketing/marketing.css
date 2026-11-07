@@ -809,10 +809,10 @@ html[data-theme="dark"] .mkt-security-trust {
    alternate sections use a second dark, panels a third, and highlights use the dark-theme teal. */
 html[data-theme="dark"] .mkt { --hm-ink: #f4f7f8; --hm-paper: #10161d; }
 html[data-theme="dark"] .mkt .hm-flip { --hm-ink: #f4f7f8; --hm-paper: #18222c; }
-html[data-theme="dark"] .mkt :is(.hm-stage, .hm-daily-stage, .hm-ledger, .hm-chit-stage, .hm-cash-tile.is-cash, .hm-cash-feed, .hm-faq-answer, .hm-cta-card, .hm-pos-printer, .hm-report:nth-child(2), .hm-chips li:nth-child(odd), .hm-faq-list li[data-selected="true"]) { --hm-ink: #223140; --hm-paper: #f4f7f8; }
-html[data-theme="dark"] .mkt :is(.hm-phone, .hm-ledger-receipt) { --hm-ink: #f4f7f8; --hm-paper: #10161d; }
-html[data-theme="dark"] .mkt :is(.hm-col[data-active="true"], .hm-bids li.is-top, .hm-live[data-closed="true"], .hm-faq-contact .mkt-btn.primary, .hm-cta-card .mkt-btn.primary, .hm-faq-answer-icon) { --hm-ink: #10161d; --hm-paper: #5ccbb3; }
-html[data-theme="dark"] .mkt :is(.hm-phone-list li.is-paid, .hm-progress, .hm-hero h1 span) { --hm-ink: #5ccbb3; --hm-paper: #10161d; }
+html[data-theme="dark"] .mkt :is(.hm-stage, .hm-daily-stage, .hm-chit-stage, .hm-cash-tile.is-cash, .hm-cash-feed, .hm-cta-card, .hm-pos-printer, .hm-report:nth-child(2), .hm-chips li:nth-child(odd), .hm-chat-head, .hm-split-earned) { --hm-ink: #223140; --hm-paper: #f4f7f8; }
+html[data-theme="dark"] .mkt :is(.hm-phone) { --hm-ink: #f4f7f8; --hm-paper: #10161d; }
+html[data-theme="dark"] .mkt :is(.hm-bids li.is-top, .hm-live[data-closed="true"], .hm-cta-card .mkt-btn.primary, .hm-chat-avatar) { --hm-ink: #10161d; --hm-paper: #5ccbb3; }
+html[data-theme="dark"] .mkt :is(.hm-phone-list li.is-paid, .hm-progress, .hm-hero h1 span, .hm-donut, .hm-steps li[data-state="now"], .hm-steps li[data-state="done"], .hm-bubble.is-you) { --hm-ink: #5ccbb3; --hm-paper: #10161d; }
 
 .hm-home, .hm-flip {
   --mkt-bg: var(--hm-paper);
@@ -952,40 +952,47 @@ html[data-theme="dark"] .hm-home .mkt-btn:not(.primary):not(.light) { border-col
 .hm-toast { position: absolute; right: 24px; bottom: 20px; display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border: 2px solid var(--hm-paper); border-radius: 999px; background: var(--hm-ink); color: var(--hm-paper); font-size: var(--ft-type-label); font-weight: 700; opacity: 0; transform: translateY(10px); transition: opacity 0.3s ease, transform 0.3s ease; }
 .hm-toast[data-show="true"] { opacity: 1; transform: translateY(0); }
 
-/* 2. Monthly Finance: copy on top, repayment chart across the full width */
-.hm-monthly-copy { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 64px; align-items: end; margin-bottom: 48px; }
-.hm-monthly-copy .hm-points { margin-top: 20px; }
-.hm-monthly-copy .hm-module-link { margin-top: 22px; }
-.hm-ledger { display: grid; grid-template-columns: minmax(260px, 0.8fr) minmax(0, 2fr); gap: 40px; padding: 40px; border-radius: 32px; background: var(--hm-ink); color: var(--hm-paper); }
-.mkt .hm-ledger-account { margin: 0 0 20px; font-size: var(--ft-type-label); font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
-.hm-ledger-stat { padding: 14px 0; border-top: 2px solid var(--hm-paper); }
-.hm-ledger-stat small { display: block; font-size: var(--ft-type-label); font-weight: 600; }
-.hm-ledger-stat strong { display: block; margin-top: 4px; font-size: clamp(26px, 2.6vw, 34px); font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; animation: hm-pop 0.4s cubic-bezier(.2, .7, .2, 1.4); }
-.hm-ledger-receipt { margin-top: 8px; padding: 16px; border-radius: 18px; background: var(--hm-paper); color: var(--hm-ink); animation: hm-print 0.35s ease; }
-.mkt .hm-ledger-receipt p { display: flex; align-items: center; gap: 8px; margin: 0; padding: 4px 0; font-size: var(--ft-type-secondary); font-variant-numeric: tabular-nums; }
-.mkt .hm-ledger-receipt p:first-child { justify-content: space-between; margin-bottom: 6px; padding-bottom: 8px; border-bottom: 2px dashed var(--hm-ink); font-weight: 800; }
-.hm-ledger-receipt p span { margin-left: auto; font-weight: 700; }
-.hm-ledger-receipt p:first-child span { margin-left: 0; }
-.hm-ledger-receipt i { width: 16px; height: 12px; border: 2px solid var(--hm-ink); border-radius: 3px; }
-.hm-ledger-receipt i.is-interest { background: var(--hm-ink); }
-.hm-ledger-receipt i.is-penalty { border-style: dashed; }
-.hm-ledger-chart { display: flex; flex-direction: column; min-height: 380px; }
-.mkt .hm-ledger-chart-title { margin: 0 0 20px; font-size: var(--ft-type-label); font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
-.hm-ledger-cols { display: grid; flex: 1; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; align-items: end; }
-.hm-col { display: flex; flex-direction: column; align-items: stretch; gap: 8px; height: 100%; text-align: center; }
-.hm-col em { align-self: center; margin-top: auto; padding: 2px 8px; border: 2px dashed var(--hm-paper); border-radius: 999px; font-size: var(--ft-type-caption); font-style: normal; font-weight: 700; white-space: nowrap; }
-.hm-col b { margin-top: auto; font-size: var(--ft-type-secondary); font-weight: 800; font-variant-numeric: tabular-nums; }
-.hm-col em + b { margin-top: 0; }
-.hm-col-bar { height: var(--h); border: 2px solid var(--hm-paper); border-radius: 14px; transform: scaleY(0); transform-origin: bottom; transition: transform 0.7s cubic-bezier(.2, .7, .2, 1) calc(var(--i) * 0.12s), background 0.3s ease; }
-.hm-monthly[data-live="true"] .hm-col-bar { transform: scaleY(1); }
-.hm-col[data-done="false"] .hm-col-bar { border-style: dashed; }
-.hm-col[data-active="true"] .hm-col-bar { background: var(--hm-paper); }
-.hm-col span { padding: 4px 0; border-radius: 999px; font-size: var(--ft-type-secondary); font-weight: 800; transition: background 0.3s ease, color 0.3s ease; }
-.hm-col[data-active="true"] span { background: var(--hm-paper); color: var(--hm-ink); }
+/* 2. Monthly Finance: loan panel left (ring, receipt split, month timeline), copy right */
+.hm-monthly { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); gap: 64px; align-items: center; }
+.hm-loan { padding: 32px; border: 2px solid var(--hm-ink); border-radius: 32px; background: var(--hm-paper); box-shadow: 8px 8px 0 var(--hm-ink); }
+.hm-loan-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 20px; border-bottom: 2px dashed var(--hm-ink); }
+.hm-loan-head small { display: block; font-size: var(--ft-type-caption); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.hm-loan-head strong { display: block; font-size: var(--ft-type-card); font-weight: 800; }
+.hm-loan-head > span { padding: 6px 12px; border-radius: 999px; background: var(--hm-ink); color: var(--hm-paper); font-size: var(--ft-type-label); font-weight: 700; }
+.hm-loan-body { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 32px; align-items: center; padding: 28px 0; }
+.hm-donut { position: relative; width: 220px; height: 220px; }
+.hm-donut svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.hm-donut circle { fill: none; stroke: var(--hm-ink); }
+.hm-donut-track { stroke-width: 3; stroke-dasharray: 3 8; }
+.hm-donut-arc { stroke-width: 18; stroke-linecap: round; transition: stroke-dashoffset 0.9s cubic-bezier(.2, .7, .2, 1); }
+.hm-donut-center { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.hm-donut-center small { font-size: var(--ft-type-caption); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.hm-donut-center strong { font-size: 26px; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; animation: hm-pop 0.4s cubic-bezier(.2, .7, .2, 1.4); }
+.hm-donut-center span { justify-self: center; margin-top: 6px; padding: 2px 10px; border-radius: 999px; background: var(--hm-ink); color: var(--hm-paper); font-size: var(--ft-type-caption); font-weight: 800; }
+.hm-receipt-split { display: grid; gap: 14px; }
+.mkt .hm-split-title, .mkt .hm-split-row p, .mkt .hm-split-earned { display: flex; justify-content: space-between; gap: 12px; margin: 0; font-variant-numeric: tabular-nums; }
+.mkt .hm-split-title { padding-bottom: 10px; border-bottom: 2px solid var(--hm-ink); font-size: var(--ft-type-ui); font-weight: 800; }
+.hm-split-row p { font-size: var(--ft-type-secondary); font-weight: 600; }
+.hm-split-row strong { font-weight: 800; }
+.hm-split-track { height: 14px; margin-top: 6px; padding: 2px; border: 2px solid var(--hm-ink); border-radius: 999px; }
+.hm-split-track i { display: block; height: 100%; min-width: 0; border-radius: 999px; background: var(--hm-ink); transition: width 0.7s cubic-bezier(.2, .7, .2, 1); }
+.hm-split-row.is-penalty .hm-split-track { border-style: dashed; }
+.mkt .hm-split-earned { padding: 10px 12px; border-radius: 12px; background: var(--hm-ink); color: var(--hm-paper); font-size: var(--ft-type-label); font-weight: 700; }
+.hm-steps { position: relative; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); margin: 0; padding: 20px 0 0; border-top: 2px dashed var(--hm-ink); list-style: none; }
+.hm-steps li { position: relative; display: flex; justify-content: center; }
+.hm-steps li + li::before { content: ""; position: absolute; top: 15px; right: 50%; left: -50%; height: 2px; background: var(--hm-ink); }
+.hm-steps li[data-state="next"]::before { background: transparent; border-top: 2px dashed var(--hm-ink); height: 0; }
+.hm-steps button { position: relative; z-index: 1; display: grid; justify-items: center; gap: 8px; padding: 0; border: 0; background: none; color: inherit; font: 700 var(--ft-type-label)/1 var(--ft-font); cursor: pointer; }
+.hm-steps button i { width: 32px; height: 32px; border: 2px solid var(--hm-ink); border-radius: 999px; background: var(--hm-paper); transition: background 0.3s ease, transform 0.3s ease; }
+.hm-steps li[data-state="next"] button i { border-style: dashed; }
+.hm-steps li[data-state="done"] button i { background: var(--hm-ink); }
+.hm-steps li[data-state="now"] button i { background: var(--hm-ink); box-shadow: 0 0 0 4px var(--hm-paper), 0 0 0 6px var(--hm-ink); transform: scale(1.1); }
+.hm-steps em { position: absolute; top: -8px; right: -14px; padding: 1px 5px; border-radius: 999px; background: var(--hm-paper); border: 2px dashed var(--hm-ink); font-size: 10px; font-style: normal; font-weight: 800; }
+.hm-steps button:focus-visible { outline: 3px solid var(--hm-ink); outline-offset: 4px; border-radius: 8px; }
 
 /* 3. Chit Fund: live auction panel left, copy right */
 .hm-chit { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 64px; align-items: center; }
-.hm-chit-stage { display: flex; flex-direction: column; gap: 22px; padding: 40px; border-radius: 32px; background: var(--hm-ink); color: var(--hm-paper); }
+.hm-chit-stage { order: 2; display: flex; flex-direction: column; gap: 22px; padding: 40px; border-radius: 32px; background: var(--hm-ink); color: var(--hm-paper); }
 .hm-chit-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: var(--ft-type-secondary); font-weight: 700; }
 .hm-live { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border: 2px solid var(--hm-paper); border-radius: 999px; font-size: var(--ft-type-label); font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
 .hm-live i { width: 10px; height: 10px; border-radius: 999px; background: var(--hm-paper); animation: hm-pulse 1s ease-in-out infinite; }
@@ -1078,30 +1085,35 @@ html[data-theme="dark"] .hm-home .mkt-btn:not(.primary):not(.light) { border-col
 .hm-ask .mkt-kicker { border: 2px solid var(--hm-ink); }
 .hm-ask .mkt-ask-tile { box-shadow: 6px 6px 0 var(--hm-ink); }
 
-/* FAQ: topic filter, numbered questions, answer card */
+/* FAQ: questions as chips on the left, answered in a chat window on the right */
 .hm-faq { padding: 104px 0; background: var(--hm-paper); color: var(--hm-ink); }
-.hm-faq-topics { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: -16px 0 40px; }
-.hm-faq-topics button { padding: 9px 18px; border: 2px solid var(--hm-ink); border-radius: 999px; background: var(--hm-paper); color: var(--hm-ink); font: 700 var(--ft-type-secondary)/1 var(--ft-font); cursor: pointer; transition: background 0.2s ease, color 0.2s ease; }
+.hm-faq-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 64px; align-items: start; }
+.mkt .hm-faq h2 { color: var(--hm-ink); font-size: clamp(32px, 4vw, 52px); font-weight: 800; line-height: 1.06; letter-spacing: -0.04em !important; }
+.mkt .hm-faq-lead { margin: 14px 0 0; font-size: var(--ft-type-lead); line-height: 1.6; }
+.hm-faq-topics { display: flex; flex-wrap: wrap; gap: 8px; margin: 28px 0 20px; }
+.hm-faq-topics button { padding: 8px 16px; border: 2px solid var(--hm-ink); border-radius: 999px; background: var(--hm-paper); color: var(--hm-ink); font: 700 var(--ft-type-label)/1 var(--ft-font); cursor: pointer; transition: background 0.2s ease, color 0.2s ease; }
 .hm-faq-topics button:hover, .hm-faq-topics button[aria-pressed="true"] { background: var(--hm-ink); color: var(--hm-paper); }
-.hm-faq-body { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr); gap: 40px; align-items: start; }
-.hm-faq-list { margin: 0; padding: 0; border-top: 2px solid var(--hm-ink); list-style: none; }
-.hm-faq-list li { border-bottom: 2px solid var(--hm-ink); transition: background 0.25s ease, color 0.25s ease; }
-.hm-faq-list li[data-selected="true"] { background: var(--hm-ink); color: var(--hm-paper); }
-.hm-faq-list button { display: flex; align-items: center; gap: 16px; width: 100%; padding: 18px 16px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
-.hm-faq-list li:not([data-selected="true"]) button:hover .hm-faq-q { text-decoration: underline; text-underline-offset: 4px; }
-.hm-faq-num { flex: none; font-size: var(--ft-type-label); font-weight: 800; font-variant-numeric: tabular-nums; }
-.hm-faq-q { flex: 1; font-size: var(--ft-type-body); font-weight: 700; line-height: 1.4; }
-.hm-faq-list button svg { flex: none; transition: transform 0.25s ease; }
-.hm-faq-list li[data-selected="true"] button svg { transform: rotate(90deg); }
-.hm-faq-inline { display: none; margin: 0; padding: 0 16px 20px 52px; font-size: var(--ft-type-ui); line-height: 1.65; }
-.hm-faq-answer { position: sticky; top: 140px; padding: 40px; border-radius: 28px; background: var(--hm-ink); color: var(--hm-paper); box-shadow: 8px 8px 0 color-mix(in srgb, var(--hm-ink) 100%, transparent); }
-.hm-faq-answer-inner { animation: hm-print 0.35s ease; }
-.hm-faq-answer-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; background: var(--hm-paper); color: var(--hm-ink); }
-.mkt .hm-faq-answer h3 { margin-top: 20px; color: var(--hm-paper); font-size: clamp(24px, 2.4vw, 30px); font-weight: 800; letter-spacing: -0.03em !important; }
-.hm-faq-answer p { margin: 14px 0 0; font-size: var(--ft-type-lead); line-height: 1.7; }
-.hm-faq-contact { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 32px; padding-top: 24px; border-top: 2px dashed var(--hm-paper); font-weight: 700; }
-.hm-faq-contact .mkt-btn.primary, html[data-theme="dark"] .hm-faq-contact .mkt-btn.primary { border-color: var(--hm-paper); background: var(--hm-paper); color: var(--hm-ink); }
-.hm-faq-contact .mkt-btn.primary:hover, html[data-theme="dark"] .hm-faq-contact .mkt-btn.primary:hover { background: var(--hm-ink); color: var(--hm-paper); }
+.hm-faq-chips { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.hm-faq-chips button { display: inline-flex; align-items: center; gap: 8px; padding: 12px 16px; border: 2px solid var(--hm-ink); border-radius: 16px 16px 16px 4px; background: var(--hm-paper); color: var(--hm-ink); font: 600 var(--ft-type-secondary)/1.3 var(--ft-font); text-align: left; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease; }
+.hm-faq-chips button:hover:not(:disabled) { box-shadow: 4px 4px 0 var(--hm-ink); transform: translate(-2px, -2px); }
+.hm-faq-chips button[data-asked="true"] { border-style: dashed; }
+.hm-faq-chips button:disabled { cursor: wait; }
+.hm-chat { position: sticky; top: 100px; display: flex; flex-direction: column; overflow: hidden; border: 2px solid var(--hm-ink); border-radius: 28px; background: var(--hm-paper); box-shadow: 8px 8px 0 var(--hm-ink); }
+.hm-chat-head { display: flex; align-items: center; gap: 12px; padding: 16px 20px; background: var(--hm-ink); color: var(--hm-paper); }
+.hm-chat-head strong, .hm-chat-head small { display: block; }
+.hm-chat-head small { font-size: var(--ft-type-caption); }
+.hm-chat-avatar { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 999px; background: var(--hm-paper); color: var(--hm-ink); }
+.hm-chat-body { display: flex; flex-direction: column; gap: 18px; height: 440px; overflow-y: auto; overscroll-behavior: contain; padding: 22px 20px; }
+.hm-chat-pair { display: grid; gap: 10px; animation: hm-print 0.35s ease; }
+.mkt .hm-bubble { max-width: 86%; margin: 0; padding: 12px 16px; font-size: var(--ft-type-secondary); line-height: 1.6; }
+.mkt .hm-bubble.is-you { justify-self: end; border-radius: 18px 18px 4px 18px; background: var(--hm-ink); color: var(--hm-paper); font-weight: 700; }
+.mkt .hm-bubble.is-bot { justify-self: start; border: 2px solid var(--hm-ink); border-radius: 18px 18px 18px 4px; }
+.hm-bubble.is-typing { display: inline-flex; gap: 5px; padding: 16px 18px; }
+.hm-bubble.is-typing i { width: 8px; height: 8px; border-radius: 999px; background: var(--hm-ink); animation: hm-dot 1s ease-in-out infinite; }
+.hm-bubble.is-typing i:nth-child(2) { animation-delay: 0.15s; }
+.hm-bubble.is-typing i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes hm-dot { 50% { transform: translateY(-5px); } }
+.hm-chat-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 20px; border-top: 2px solid var(--hm-ink); font-weight: 700; }
 
 /* Closing call to action */
 .hm-cta { padding: 96px 0; background: var(--hm-paper); }
@@ -1143,9 +1155,12 @@ html[data-theme="dark"] .hm-home .mkt-btn:not(.primary):not(.light) { border-col
   .hm-hero-grid { grid-template-columns: 1fr; gap: 40px; }
   .hm-proof { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 40px; }
   .hm-sec, .hm-ask, .hm-faq, .hm-cta { padding: 72px 0; }
-  .hm-daily, .hm-chit, .hm-monthly-copy, .hm-ledger { grid-template-columns: 1fr; }
-  .hm-monthly-copy { gap: 16px; }
-  .hm-ledger-chart { min-height: 300px; }
+  .hm-daily, .hm-chit, .hm-monthly, .hm-faq-grid { grid-template-columns: 1fr; }
+  .hm-monthly { gap: 40px; }
+  .hm-monthly .hm-module-copy { order: -1; }
+  .hm-chit-stage { order: 0; }
+  .hm-faq-grid { gap: 40px; }
+  .hm-chat { position: static; }
   .hm-daily, .hm-chit { gap: 32px; }
   .hm-daily-stage { min-height: 0; }
   .hm-cash-copy { padding: 0 0 8px; }
@@ -1154,9 +1169,6 @@ html[data-theme="dark"] .hm-home .mkt-btn:not(.primary):not(.light) { border-col
   .hm-chips { display: flex; flex-wrap: wrap; justify-content: center; }
   .hm-reports { width: 100%; max-width: 320px; }
   .hm-accounts-foot .hm-points { grid-auto-flow: row; }
-  .hm-faq-body { grid-template-columns: 1fr; }
-  .hm-faq-answer { display: none; }
-  .hm-faq-inline { display: block; }
   .hm-cta-card { flex-direction: column; align-items: flex-start; padding: 40px 32px; }
   .mkt-footer-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; }
   .mkt-footer-brand { grid-column: 1 / -1; }
@@ -1176,27 +1188,26 @@ html[data-theme="dark"] .hm-home .mkt-btn:not(.primary):not(.light) { border-col
   .hm-sec, .hm-ask, .hm-faq, .hm-cta { padding: 56px 0; }
   .hm-head { margin-bottom: 32px; }
   .hm-daily-stage { padding: 28px 16px; border-radius: 24px; }
-  .hm-ledger { gap: 24px; padding: 24px 18px; border-radius: 24px; }
-  .hm-ledger-chart { min-height: 260px; }
-  .hm-ledger-cols { gap: 6px; }
-  .hm-col-bar { border-radius: 8px; }
-  .hm-col b { font-size: 10px; }
-  .hm-col em { padding: 1px 4px; font-size: 9px; }
-  .hm-col span { font-size: var(--ft-type-caption); }
-  .hm-monthly-copy { margin-bottom: 28px; }
+  .hm-loan { padding: 20px 16px; border-radius: 24px; box-shadow: 5px 5px 0 var(--hm-ink); }
+  .hm-loan-body { grid-template-columns: 1fr; justify-items: center; gap: 24px; }
+  .hm-receipt-split { width: 100%; }
+  .hm-donut { width: 190px; height: 190px; }
+  .hm-steps button i { width: 26px; height: 26px; }
+  .hm-steps li + li::before { top: 12px; }
+  .hm-chat-body { height: 380px; padding: 18px 14px; }
   .hm-chit-stage { padding: 24px 20px; border-radius: 24px; }
   .hm-ring { width: 88px; height: 88px; }
   .hm-cashbook { grid-template-columns: 1fr; grid-template-areas: "copy" "cash" "bank" "upi" "feed"; }
   .hm-accounts-stage { padding: 32px 0; }
   .hm-pos { width: 100%; max-width: 300px; }
-  .hm-faq-inline { padding-left: 16px; }
   .hm-cta-card { padding: 32px 22px; border-radius: 24px; }
   .hm-cta-actions, .hm-cta-actions .mkt-btn { width: 100%; }
   .mkt-footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hm-float, .hm-live i, .hm-cash-sync i, .hm-report, .hm-chit-bid strong, .hm-bids li, .hm-pos-paper li, .hm-faq-answer-inner, .hm-ledger-stat strong, .hm-ledger-receipt, .hm-hero h1 span::after { animation: none !important; }
+  .hm-float, .hm-live i, .hm-cash-sync i, .hm-report, .hm-chit-bid strong, .hm-bids li, .hm-pos-paper li, .hm-chat-pair, .hm-bubble.is-typing i, .hm-donut-center strong, .hm-hero h1 span::after { animation: none !important; }
+  .hm-donut-arc, .hm-split-track i { transition: none !important; }
   .hm-cashbook .hm-cash-window ul { animation: none !important; }
   .hm-module-link svg { transition: none; }
   .mkt-card, .mkt-btn, .mkt-ask-tile { transition: none; transform: none; }
