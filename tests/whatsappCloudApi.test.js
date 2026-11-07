@@ -8,8 +8,8 @@ import {
 } from "../src/features/receipts/model/whatsappCloudTemplates.js";
 import { whatsappApiSendsPerMonth } from "../src/features/commercial/featurePacks.js";
 import { resolveEntitlements } from "../src/features/commercial/entitlements.js";
-import { idempotencyKey, resolveWhatsAppMonthlyCap } from "../api/whatsapp/send.js";
-import webhookHandler from "../api/whatsapp/webhook.js";
+import { idempotencyKey, resolveWhatsAppMonthlyCap } from "../api/_lib/whatsappHelpers.js";
+import webhookHandler from "../api/whatsapp.js";
 import { openManualWhatsAppShare, whatsAppShareUrl } from "../src/features/receipts/io/receiptWhatsApp.js";
 
 test("normalizes WhatsApp destination phones for Graph API", () => {
@@ -93,6 +93,7 @@ test("webhook verify challenge succeeds with the configured token", async () => 
     await webhookHandler({
       method: "GET",
       query: {
+        route: "webhook",
         "hub.mode": "subscribe",
         "hub.verify_token": "verify-me",
         "hub.challenge": "12345",
@@ -104,6 +105,7 @@ test("webhook verify challenge succeeds with the configured token", async () => 
     await webhookHandler({
       method: "GET",
       query: {
+        route: "webhook",
         "hub.mode": "subscribe",
         "hub.verify_token": "wrong",
         "hub.challenge": "12345",
@@ -126,14 +128,19 @@ test("wa.me manual share still builds a click-to-chat URL", () => {
 });
 
 test("send route requires a signed-in session", async () => {
-  const { default: sendHandler } = await import("../api/whatsapp/send.js");
+  const { default: sendHandler } = await import("../api/whatsapp.js");
   let status = 0;
   let body = null;
   const res = {
     status(code) { status = code; return this; },
     json(value) { body = value; return this; },
   };
-  await sendHandler({ method: "POST", headers: {}, body: { to: "9876543210", message: "hi" } }, res);
+  await sendHandler({
+    method: "POST",
+    headers: {},
+    query: { route: "send" },
+    body: { to: "9876543210", message: "hi" },
+  }, res);
   assert.equal(status, 401);
   assert.match(String(body?.error || ""), /sign in/i);
 });

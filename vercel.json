@@ -15,6 +15,9 @@
     }
   ],
   "rewrites": [
+    { "source": "/api/whatsapp/connect", "destination": "/api/whatsapp?route=connect" },
+    { "source": "/api/whatsapp/send", "destination": "/api/whatsapp?route=send" },
+    { "source": "/api/whatsapp/webhook", "destination": "/api/whatsapp?route=webhook" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
