@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { Link, useOutletContext } from "react-router";
+import { Link } from "react-router";
 import { FrequentlyAskedQuestions } from "../../components/ui/FrequentlyAskedQuestions.jsx";
 import { Reveal, RevealProvider } from "../../components/ui/Reveal.jsx";
 import { TypewriterText } from "../../components/ui/TypewriterText.jsx";
@@ -9,59 +9,6 @@ import { FeatureIcon } from "./icons.jsx";
 import { featurePath, marketingPaths } from "./paths.js";
 import { ProductCta } from "./ProductCta.jsx";
 import { ProductPreview } from "./ProductPreview.jsx";
-
-const VALUES = [
-  { icon: "Landmark", title: "Accounting", text: "Counter POS, vouchers, stock, GST preparation, and statements for the company you open." },
-  { icon: "HandCoins", title: "Collections", text: "See who is due and record what was received." },
-  { icon: "CalendarDays", title: "Finance", text: "Daily collections and monthly repayments on the customer account." },
-  { icon: "Gavel", title: "Chit Funds", text: "Schemes, members, auctions, and dividends." },
-  { icon: "Receipt", title: "Payments", text: "Receipts, a cash and UPI split, and a WhatsApp draft you send." },
-  { icon: "Sparkles", title: "AI review", text: "Cash-flow outlook, expense and GST checks, month-end readiness, bank matching, and stock forecasts from your own records." },
-];
-
-const PILLARS = [
-  {
-    id: "accounts",
-    title: "Accounting",
-    text: "The company book for a shop, a trader, a service business, or a finance company.",
-    items: ["Counter POS till for walk-in and khata sales", "Chart of accounts and ledgers", "Sales, purchases, receipts, and payments", "Contra, journal, and credit and debit notes", "Quotations, orders, delivery challans, and goods receipts", "Inventory, item profit, and GST preparation", "Payroll, attendance, leave, and payslips", "Receivables, payables, and bank reconciliation", "Customer profiles with a FinTrack credit score", "Expenses by month and category, with every entry", "Day book, trial balance, profit and loss, balance sheet, and cash flow", "For the CA: the month’s books, GST checks, unmatched bank lines, and stock to review", "Move in from Tally, Zoho Books, Book Keeper, or Excel"],
-    to: "accounts-overview",
-    link: "Explore Accounting",
-  },
-  {
-    id: "finance",
-    title: "Daily and monthly finance",
-    text: "Customer finance and the collections that follow it.",
-    items: ["Customer accounts", "Daily collections and monthly repayments", "Interest and overdue follow-up", "Collection report and Daily and Monthly P&L", "Statements and payment history", "Collection staff and their assignments"],
-    to: "daily-finance",
-    link: "Explore Finance",
-  },
-  {
-    id: "chit",
-    title: "Chit funds",
-    text: "Schemes, members, and the auction you open and close.",
-    items: ["Schemes and members", "Installments and payments", "Live bidding and winning bids", "Dividends and statements", "Month statement PDF and commission Profit & Loss", "Scheme health: collection rate and members falling behind"],
-    to: "auction-chit",
-    link: "Explore Chit Funds",
-  },
-];
-
-const AI = [
-  { slug: "ai-bookkeeper", title: "Tell FinTrack", text: "“I bought a laptop for ₹85,000 using HDFC” becomes a balanced draft, explained in plain words. You post it." },
-  { slug: "ai-setup", title: "AI setup", text: "Say what kind of business you run and answer a few questions. FinTrack sets up ledgers, banks, GST, and stock categories." },
-  { slug: "ai-migration", title: "Move from Tally or Excel", text: "Upload your old books. FinTrack maps the accounts, finds duplicate parties, and asks only about the exceptions." },
-  { slug: "forecasting", title: "Cash-flow forecast", text: "Where cash may stand today, in 7, 30, and 60 days, with the invoices and bills that drive it." },
-  { slug: "expense-insights", title: "Expense and supplier prices", text: "Which costs rose against last month, the 3-month average, and last year, and which supplier raised a price." },
-  { slug: "collection-priorities", title: "Who to collect first", text: "Ranked customers with the risk, the reason, and a reminder draft in five languages that you confirm." },
-  { slug: "anomaly-detection", title: "Unusual activity", text: "Possible duplicates, bills above a supplier’s average, backdated entries, and odd collection days." },
-  { slug: "gst-review", title: "GST review", text: "GSTIN errors, missing HSN codes, and tax that does not match the rate, before you prepare the return." },
-  { slug: "month-end-readiness", title: "Month-end readiness", text: "A readiness score and a checklist of what is left before you lock the month." },
-  { slug: "bank-matching", title: "Bank matching", text: "Party, invoice, and ledger suggested for each bank line, with a confidence score. You approve." },
-  { slug: "stock-forecast", title: "Stock forecast", text: "Which items may run out, when, and how much to consider buying." },
-  { slug: "chit-scheme-health", title: "Chit scheme health", text: "Collection rate, overdue members, and members paying later each month." },
-  { slug: "ai-review", title: "AI Review", text: "Eight reviews in one Accounts tab, each with its reason, confidence, and a link to the record." },
-  { slug: "credit-score", title: "Customer credit score", text: "A score from each customer’s own payment history, with the reasons." },
-];
 
 const FY = "FY 2026–27";
 
@@ -329,14 +276,6 @@ function AskGrid() {
   </div>;
 }
 
-const AUDIENCES = [
-  { title: "Finance businesses", text: "Customers, financing, collections, and agents.", to: "daily-finance" },
-  { title: "Chit fund operators", text: "Schemes, auctions, members, and dividends.", to: "auction-chit" },
-  { title: "Shops and traders", text: "Counter POS, stock, and customer balances.", to: "counter-pos" },
-  { title: "Service businesses", text: "Invoices, expenses, payments, and profit.", to: "vouchers" },
-  { title: "Small and medium businesses", text: "Accounting, GST preparation, banking, and payables.", to: "accounts-overview" },
-];
-
 const FAQ = [
   { question: "What is FinTrack?", answer: "One login for accounting, daily and monthly finance, collections, chit funds, payments, and AI suggestions from those records." },
   { question: "Can I use it only for accounting?", answer: "Yes. Accounts can stand on its own: Counter POS billing, vouchers, inventory, payroll, GST preparation, banking, receivables, payables, and the statements, including a page to hand the month to your accountant." },
@@ -355,59 +294,134 @@ const FAQ = [
 ];
 
 export function HomePage() {
-  const { signedIn = false } = useOutletContext() || {};
   useEffect(() => { document.title = "FinTrack — Accounting and collections on your phone"; }, []);
 
   return <RevealProvider intent="landing">
     <section className="mkt-hero">
       <div className="mkt-wrap mkt-hero-grid">
         <div className="mkt-hero-copy">
-          <Reveal as="p" className="mkt-kicker">A mobile app for the books</Reveal>
-          <Reveal as="h1" index={1}>Your Tally on mobile.</Reveal>
-          <Reveal as="p" index={2}>FinTrack installs on iPhone and Android and opens from its own icon. Collections, company accounts, and chit funds are in that app.</Reveal>
+          <Reveal as="p" className="mkt-kicker">One login for the day’s work</Reveal>
+          <Reveal as="h1" index={1}>Daily finance, chit funds, and the company books.</Reveal>
+          <Reveal as="p" index={2}>Collections, auctions, the cashbook, and accounts stay in FinTrack. It installs on iPhone and Android. Start with a 14-day trial, then ₹499 a month or ₹5,000 a year.</Reveal>
           <Reveal className="mkt-cta-row" index={3}>
-            {signedIn ? <ProductCta primary /> : null}
-            <Link className="mkt-btn" to={`${marketingPaths.how}#install`}>Install on iPhone or Android</Link>
+            <ProductCta primary />
             <Link className="mkt-btn ghost" to={marketingPaths.contact}>Request a demo</Link>
           </Reveal>
         </div>
         <Reveal index={2} duration={1.1} style={{ minWidth: 0 }}><ProductPreview scene="accounts-overview" /></Reveal>
       </div>
     </section>
-
-    <section className="mkt-section">
-      <div className="mkt-wrap">
-        <div className="mkt-section-head">
-          <Reveal as="h2">One platform. Several kinds of work.</Reveal>
+    <section className="home-mod home-daily" id="daily-finance">
+      <div className="mkt-wrap home-daily-grid">
+        <div>
+          <Reveal as="p" className="mkt-kicker">Daily Finance</Reveal>
+          <Reveal as="h2" index={1}>Today’s collections, on one list.</Reveal>
+          <Reveal as="p" className="mkt-lead" index={2}>A 100-day style account stays with the customer. You record what came in today and see what is still outstanding.</Reveal>
+          <ol className="home-steps">
+            <li><strong>Open the account</strong><span>Add the customer with the amount and the term you agree.</span></li>
+            <li><strong>Record the collection</strong><span>Each receipt sits on that account, not in a separate notebook.</span></li>
+            <li><strong>Read the day</strong><span>The collection report and Daily P&amp;L come from the entries you recorded.</span></li>
+          </ol>
+          <Reveal index={3}><Link className="mkt-text-link" to={featurePath("daily-finance")}>Read Daily Finance</Link></Reveal>
         </div>
-        <div className="mkt-grid six">
-          {VALUES.map((item, index) => <Reveal as="article" key={item.title} className="mkt-card" index={index % 3}>
-            <div className="mkt-icon"><FeatureIcon name={item.icon} /></div>
-            <h3>{item.title}</h3>
-            <p>{item.text}</p>
-          </Reveal>)}
+        <Reveal as="article" className="home-daylist" index={1}>
+          <header><span>Today</span><span>Due and received</span></header>
+          <ul>
+            <li><span>Daily customer accounts</span><em>Balance and paid amount</em></li>
+            <li><span>Today’s collection list</span><em>Who is still due</em></li>
+            <li><span>Customer history</span><em>Every receipt on the account</em></li>
+            <li><span>Who to collect first</span><em>A reminder draft you confirm</em></li>
+          </ul>
+        </Reveal>
+      </div>
+    </section>
+
+    <section className="home-mod home-monthly" id="monthly-finance">
+      <div className="mkt-wrap">
+        <Reveal as="p" className="mkt-kicker">Monthly Finance</Reveal>
+        <Reveal as="h2" index={1}>Interest, principal, and penalty stay apart.</Reveal>
+        <Reveal as="p" className="mkt-lead" index={2}>A monthly account records what a receipt covered, and the Monthly P&amp;L uses the interest and penalty actually received.</Reveal>
+        <div className="home-slips">
+          <article>
+            <p>01</p>
+            <h3>Interest</h3>
+            <span>Earned on the account, and across the book.</span>
+          </article>
+          <article>
+            <p>02</p>
+            <h3>Principal</h3>
+            <span>What remains after the collection is recorded.</span>
+          </article>
+          <article>
+            <p>03</p>
+            <h3>Penalty</h3>
+            <span>Shown on its own, then included in the Monthly P&amp;L.</span>
+          </article>
+        </div>
+        <Reveal index={3}><Link className="mkt-text-link" to={featurePath("monthly-finance")}>Read Monthly Finance</Link></Reveal>
+      </div>
+    </section>
+
+    <section className="home-mod home-chit" id="chit-fund">
+      <div className="mkt-wrap">
+        <Reveal as="p" className="home-chit-kicker">Chit Fund</Reveal>
+        <Reveal as="h2" index={1}>The scheme, the bid, and the dividend.</Reveal>
+        <Reveal as="p" className="home-chit-lead" index={2}>Auction and fixed schemes live here. You enroll members, open the month, and confirm the close. A member who already won is not offered another bid.</Reveal>
+        <div className="home-chit-rail">
+          <article><span>Members</span><strong>Tickets for the scheme value and installment you set.</strong></article>
+          <article><span>Auction</span><strong>Live bidding for the open month, or a fixed lift schedule.</strong></article>
+          <article><span>Dividend</span><strong>Commission and dividend follow the scheme rules.</strong></article>
+          <article><span>Statement</span><strong>A month PDF, plus commission income for the year.</strong></article>
+        </div>
+        <Reveal index={3}><Link className="home-chit-link" to={featurePath("auction-chit")}>Read Chit Fund</Link></Reveal>
+      </div>
+    </section>
+
+    <section className="home-mod home-cash" id="cashbook">
+      <div className="mkt-wrap home-cash-grid">
+        <Reveal as="article" className="home-ledger" index={1}>
+          <header><span>Particulars</span><span>Where it stays</span></header>
+          <div><strong>Cash</strong><span>In the cashbook until you sync</span></div>
+          <div><strong>Expense</strong><span>Recorded on its own line</span></div>
+          <div><strong>Bank</strong><span>Kept with the cashbook movement</span></div>
+          <div><strong>Transfer</strong><span>Between cash and bank</span></div>
+          <div><strong>Closing</strong><span>The day closes in the cashbook</span></div>
+        </Reveal>
+        <div>
+          <Reveal as="p" className="mkt-kicker">Cashbook</Reveal>
+          <Reveal as="h2" index={1}>The daily cashbook can stand alone.</Reveal>
+          <Reveal as="p" className="mkt-lead" index={2}>Enter cash, expense, bank, transfer, and closing lines here. They move into the finance company only when integration is on and you choose Sync.</Reveal>
+          <Reveal index={3}><Link className="mkt-text-link" to={featurePath("cashbook")}>Read Cashbook</Link></Reveal>
         </div>
       </div>
     </section>
 
-    <section className="mkt-section mkt-tint">
-      <div className="mkt-wrap">
-        <div className="mkt-section-head">
-          <Reveal as="h2">The books, the collections, and the chit.</Reveal>
-          <Reveal as="p" className="mkt-lead" index={1}>Accounting in one app, collections in another, and customers in a spreadsheet is the work FinTrack puts in one login.</Reveal>
+    <section className="home-mod home-daily" id="accounts">
+      <div className="mkt-wrap home-daily-grid">
+        <div>
+          <Reveal as="p" className="mkt-kicker">Accounts</Reveal>
+          <Reveal as="h2" index={1}>The company book, for the company you open.</Reveal>
+          <Reveal as="p" className="mkt-lead" index={2}>Counter sales, vouchers, stock, payroll, and GST preparation stay on that company. You post when debit equals credit.</Reveal>
+          <ol className="home-steps">
+            <li><strong>Open the company</strong><span>Reports and vouchers follow the company you have selected.</span></li>
+            <li><strong>Post the voucher</strong><span>Receipts, payments, journals, sales, and purchases wait until debit equals credit.</span></li>
+            <li><strong>Read the statements</strong><span>Day book, trial balance, profit and loss, balance sheet, and cash flow.</span></li>
+          </ol>
+          <Reveal index={3}><Link className="mkt-text-link" to={featurePath("accounts-overview")}>Read Accounts</Link></Reveal>
         </div>
-        <div className="mkt-grid three">
-          {PILLARS.map((pillar, index) => <Reveal as="article" key={pillar.id} id={pillar.id} className="mkt-card" index={index % 3}>
-            <h3>{pillar.title}</h3>
-            <p>{pillar.text}</p>
-            <ul className="mkt-ticks">{pillar.items.map(item => <li key={item}>{item}</li>)}</ul>
-            <Link className="mkt-text-link" to={featurePath(pillar.to)}>{pillar.link}</Link>
-          </Reveal>)}
-        </div>
+        <Reveal as="article" className="home-daylist" index={1}>
+          <header><span>Company</span><span>On the books</span></header>
+          <ul>
+            <li><span>Counter and vouchers</span><em>Till sales and balanced entries</em></li>
+            <li><span>GST preparation</span><em>From posted vouchers</em></li>
+            <li><span>Payroll</span><em>Attendance, leave, and payslips</em></li>
+            <li><span>Who is owed</span><em>Receivables and payables</em></li>
+          </ul>
+        </Reveal>
       </div>
     </section>
 
-    <section className="mkt-section mkt-tint" id="ask-fintrack">
+    <section className="home-mod" id="ask-fintrack">
       <div className="mkt-wrap">
         <div className="mkt-section-head">
           <Reveal as="p" className="mkt-kicker"><FeatureIcon name="MessageCircle" size={16} /> Ask FinTrack</Reveal>
@@ -419,63 +433,10 @@ export function HomePage() {
       </div>
     </section>
 
-    <section className="mkt-section" id="intelligence">
-      <div className="mkt-wrap">
-        <div className="mkt-section-head">
-          <Reveal as="h2">AI that reviews the books with you.</Reveal>
-          <Reveal as="p" className="mkt-lead" index={1}>FinTrack reads your own records and points out what needs a look: cash that may run short, costs that rose, GST details to fix, bank lines to match, and stock to reorder. Every suggestion shows its reason, its confidence, and a link to the record. You post the voucher, approve the match, and send the message.</Reveal>
-        </div>
-        <div className="mkt-grid three">
-          {AI.map((item, index) => <Reveal as={Link} key={item.slug} to={featurePath(item.slug)} className="mkt-card mkt-card-link" index={index % 3}>
-            <h3>{item.title}</h3>
-            <p>{item.text}</p>
-          </Reveal>)}
-        </div>
-        <Reveal as="p" className="mkt-lead">AI Review is a tab in Accounts, included in the plan. A forecast is shown apart from actual figures and is never posted into the books. Nothing is filed, locked, reversed, or sent by itself. <Link className="mkt-text-link" to={featurePath("ai-review")}>Read about AI Review</Link></Reveal>
-      </div>
-    </section>
-
-    <section className="mkt-section mkt-tint">
-      <div className="mkt-wrap">
-        <div className="mkt-section-head">
-          <Reveal as="h2">Built around the business you run.</Reveal>
-        </div>
-        <div className="mkt-grid three">
-          {AUDIENCES.map((item, index) => <Reveal as={Link} key={item.title} to={featurePath(item.to)} className="mkt-card mkt-card-link" index={index % 3}>
-            <h3>{item.title}</h3>
-            <p>{item.text}</p>
-          </Reveal>)}
-        </div>
-      </div>
-    </section>
-
-    <section className="mkt-section">
-      <div className="mkt-wrap">
-        <Reveal as="h2">The books, on your phone.</Reveal>
-        <Reveal as="p" className="mkt-lead" index={1}>Add FinTrack from the browser and record the day’s work on the phone. The owner signs in with email. A collection agent, a customer, or a chit member uses a portal ID and PIN.</Reveal>
-        <Reveal className="mkt-cta-row" index={2}>
-          <Link className="mkt-btn" to={`${marketingPaths.how}#install`}>Install on iPhone or Android</Link>
-        </Reveal>
-      </div>
-    </section>
-
     <FrequentlyAskedQuestions
-      className="mkt-tint"
       description="Short answers about what is in the product today. If you don't find what you need,"
       contact={<Link to={marketingPaths.contact}>contact us</Link>}
       data={FAQ}
     />
-
-    <section className="mkt-band">
-      <div className="mkt-wrap">
-        <Reveal as="h2">Bring the books and the collections together.</Reveal>
-        <Reveal as="p" index={1}>Start free opens signup for a 14-day trial. No payment is required to start. Request a demo if you want a walkthrough first.</Reveal>
-        <Reveal className="mkt-cta-row" index={2}>
-          <ProductCta primary />
-          <Link className="mkt-btn light" to={marketingPaths.contact}>Request a demo</Link>
-          {signedIn ? <Link className="mkt-btn light" to="/dashboard">Open FinTrack</Link> : null}
-        </Reveal>
-      </div>
-    </section>
   </RevealProvider>;
 }

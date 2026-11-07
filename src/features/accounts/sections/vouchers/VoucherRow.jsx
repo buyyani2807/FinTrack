@@ -1,5 +1,4 @@
 import { cancelVoucher, queueEinvoicePayload, reverseVoucher } from "../../data/accountingRepository.js";
-import { AccMoreMenu } from "../../components/AccUi.jsx";
 import { buildEinvoiceOutboundPayload } from "../../io/gstPrepExport.js";
 import { attachmentDownloadHref, VOUCHER_ATTACHMENT_MAX_BYTES } from "../../data/voucherAttachments.js";
 import { VOUCHER_TYPES, voucherTotals } from "../../model/accountingModel.js";
@@ -171,8 +170,4 @@ export function VoucherExpandPanel({
       </div>
     </div>
   );
-}
-
-export function VoucherActionsMenu(props) {
-  return <AccMoreMenu label="More" items={voucherMoreItems(props)} />;
 }

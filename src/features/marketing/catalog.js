@@ -316,24 +316,6 @@ export const FEATURES = [
       "Setup by answering a few questions, and migration from Tally, Zoho Books, Book Keeper, or Excel",
     ],
     benefits: ["One company book for a small or medium business", "The numbers that matter are on the first screen", "You always see the company you opened", "A voucher, a bank match, and a period lock wait for you"],
-    sections: [
-      {
-        title: "Your numbers on the first screen",
-        text: "The overview opens with sales and purchase for today, this month, or the financial year, what customers owe and what you owe suppliers, and the cash, bank, and UPI balances. Below that, a monthly chart shows income against expenses for the last six months with the net profit line, and a spending chart shows where the money went by expense ledger. A receivables and payables chart puts what customers owe next to what you owe suppliers, grouped by how long each amount has been unpaid. Expenses in the monthly chart allow for the change in stock, so they agree with the profit and loss report. Tap a figure to open the report behind it.",
-      },
-      {
-        title: "Who Accounts is for",
-        text: "Accounts is for a small or medium business: a shop, a trading firm, a service business, or a finance company that also keeps formal books. The owner opens a company, posts the day’s vouchers, and reads the statements. A second company stays separate until you switch to it. Shops can also bill from Counter, the POS till inside Accounts.",
-      },
-      {
-        title: "The books a growing business needs",
-        text: "Start from a chart of accounts. Record receipts, payments, journals, sales, and purchases. Quote and take orders before the invoice. Bill walk-in customers from Counter when you need a till. See what customers still owe and what you owe suppliers. Keep items, stock, and the profit on each item with those sales and purchases. Pay staff from the same books. Prepare GST from the vouchers you posted, then file the return in your own process. Hand the month to your accountant from For the CA. Import a bank statement and accept the matches you agree with. Read the trial balance, profit and loss, balance sheet, and cash flow for the company you have open.",
-      },
-      {
-        title: "Review stays with you",
-        text: "A bill photograph, a bank suggestion, and Ask FinTrack can offer a draft. You post the voucher. Debit has to equal credit. A locked month stays locked until you reopen it. The cashbook can stand on its own; its lines enter the finance company only when integration is on and you sync.",
-      },
-    ],
     related: ["counter-pos", "vouchers", "ai-bookkeeper", "ai-migration", "gst-preparation"],
     appPath: "/accounting/overview",
     icon: "Building2",
@@ -1301,6 +1283,16 @@ export const FEATURES = [
   },
 ];
 
+// Public nav. Home is the site root. The other items are the modules a visitor can read about.
+export const APP_MODULES = [
+  { slug: "home", label: "Home", to: "/", end: true },
+  { slug: "daily-finance", label: "Daily Finance" },
+  { slug: "monthly-finance", label: "Monthly Finance" },
+  { slug: "auction-chit", label: "Chit Fund" },
+  { slug: "cashbook", label: "Cashbook" },
+  { slug: "accounts-overview", label: "Accounts" },
+];
+
 export function featuresInCategory(categoryId) {
   return FEATURES.filter(feature => feature.category === categoryId);
 }
@@ -1317,27 +1309,6 @@ export function relatedFeatures(feature) {
   if (!feature) return [];
   return feature.related.map(slug => featureBySlug(slug)).filter(Boolean);
 }
-
-export const PILLARS = [
-  {
-    slug: "daily-finance",
-    eyebrow: "Collections",
-    title: "Finance and collection workflow",
-    text: "Daily and monthly accounts, today’s list, receipts, and the staff who collect — with the customer’s own portal when you enable it.",
-  },
-  {
-    slug: "accounts-overview",
-    eyebrow: "Books",
-    title: "Accounts for small and medium businesses",
-    text: "Shops, trading firms, service businesses, and finance companies keep a company book here: Counter POS billing, balanced vouchers, stock, payroll, GST preparation, bank matches, and a page to hand the month to the accountant. You open the company, and you confirm the voucher.",
-  },
-  {
-    slug: "live-bidding",
-    eyebrow: "Chit Fund",
-    title: "Chit Fund workflow",
-    text: "Schemes, members, live bidding, dividends, and statements. The owner starts the month. Members bid from their portal. You confirm the close.",
-  },
-];
 
 export const SOLUTIONS = [
   {

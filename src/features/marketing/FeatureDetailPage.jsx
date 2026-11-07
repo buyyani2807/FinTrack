@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Link, Navigate, useParams } from "react-router";
 import { Reveal, RevealProvider } from "../../components/ui/Reveal.jsx";
-import { featureBySlug, featuresInCategory, relatedFeatures } from "./catalog.js";
+import { APP_MODULES, featureBySlug, featuresInCategory, relatedFeatures } from "./catalog.js";
 import { FeatureIcon } from "./icons.jsx";
 import { featurePath, marketingPaths } from "./paths.js";
 import { ProductCta } from "./ProductCta.jsx";
@@ -10,7 +10,8 @@ import { ProductPreview, sceneForFeature } from "./ProductPreview.jsx";
 export function FeatureDetailPage() {
   const { slug } = useParams();
   const feature = featureBySlug(slug);
-  useEffect(() => { document.title = feature ? `${feature.name} — FinTrack` : "Feature — FinTrack"; }, [feature]);
+  const moduleLabel = APP_MODULES.find(item => item.slug === feature?.slug)?.label || feature?.name;
+  useEffect(() => { document.title = feature ? `${moduleLabel} — FinTrack` : "Feature — FinTrack"; }, [feature, moduleLabel]);
   if (!feature) {
     return <Reveal intent="content" className="mkt-empty">
       <h1>That feature is not on this site.</h1>
@@ -23,7 +24,7 @@ export function FeatureDetailPage() {
   return <RevealProvider intent="landing">
     <header className="mkt-page-hero">
       <div className="mkt-wrap">
-        <Reveal as="p" className="mkt-kicker"><FeatureIcon name={feature.icon} size={16} /> {feature.name}</Reveal>
+        <Reveal as="p" className="mkt-kicker"><FeatureIcon name={feature.icon} size={16} /> {moduleLabel}</Reveal>
         <Reveal as="h1" index={1}>{feature.summary}</Reveal>
         {feature.advisory && <Reveal as="p" className="mkt-note" index={2}>Advisory. A forecast is an estimate shown with its assumptions. It is not a guarantee, and it is never written into the books.</Reveal>}
       </div>
