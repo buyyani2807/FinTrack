@@ -3,6 +3,13 @@ import { TabScroller } from "../../components/TabScroller.jsx";
 import { Bell, Building2, CalendarDays, CalendarRange, Check, ChevronDown, Coins, MessageCircle, Plus, ReceiptText, RotateCcw } from "lucide-react";
 import { DEFAULT_WHATSAPP_TEMPLATES } from "./model/templateEngine.js";
 import { defaultConfirmationSettings } from "./io/transactionConfirmations.js";
+import {
+  completeWhatsAppConnect,
+  disconnectWhatsApp,
+  fetchWhatsAppConnection,
+  metaTemplateSetupGuide,
+  startWhatsAppConnect,
+} from "./io/whatsappCloudApi.js";
 import { loadOrganizationSettings, saveOrganizationSettings } from "../../lib/financeRepository.js";
 import { LabeledField as Field } from "../../components/ui.jsx";
 
@@ -70,12 +77,33 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved, tab: routeT
   const [saved, setSaved] = useState(false);
   // A logo URL that failed to load shows the initials instead (until the URL changes).
   const [logoFailed, setLogoFailed] = useState("");
+  const [cloudStatus, setCloudStatus] = useState(null);
+  const [cloudBusy, setCloudBusy] = useState(false);
+  const [cloudError, setCloudError] = useState("");
+  const [cloudForm, setCloudForm] = useState({ accessToken: "", phoneNumberId: "", wabaId: "", displayPhone: "" });
   const tab = SETTINGS_TABS.some(item => item.id === routeTab) ? routeTab : "company";
   const setTab = next => onTabChange?.(next);
   // The settings as last loaded or saved, to show when there are unsaved changes.
   const [baseline, setBaseline] = useState(null);
   // The template being edited, so a variable chip is inserted at its cursor.
   const lastTemplate = useRef(null);
+  const metaGuide = metaTemplateSetupGuide();
+
+  const refreshCloudStatus = async () => {
+    if (!token) return;
+    try {
+      const status = await fetchWhatsAppConnection(token);
+      setCloudStatus(status);
+      setCloudError("");
+    } catch (err) {
+      setCloudStatus(null);
+      setCloudError(err.message || "Could not load WhatsApp Business status.");
+    }
+  };
+
+  useEffect(() => {
+    refreshCloudStatus();
+  }, [token]);
 
   useEffect(() => {
     loadOrganizationSettings(token).then(settings => {
@@ -133,6 +161,59 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved, tab: routeT
       },
     },
   }));
+
+  const connectCloudManual = async event => {
+    event.preventDefault();
+    setCloudBusy(true);
+    setCloudError("");
+    try {
+      const status = await completeWhatsAppConnect(token, {
+        accessToken: cloudForm.accessToken,
+        phoneNumberId: cloudForm.phoneNumberId,
+        wabaId: cloudForm.wabaId,
+        displayPhone: cloudForm.displayPhone,
+      });
+      setCloudStatus(current => ({ ...(current || {}), ...status, platform: current?.platform }));
+      setCloudForm({ accessToken: "", phoneNumberId: "", wabaId: "", displayPhone: "" });
+      await refreshCloudStatus();
+    } catch (err) {
+      setCloudError(err.message || "Could not connect WhatsApp Business.");
+    } finally {
+      setCloudBusy(false);
+    }
+  };
+
+  const connectCloudEmbedded = async () => {
+    setCloudBusy(true);
+    setCloudError("");
+    try {
+      const start = await startWhatsAppConnect(token);
+      if (start.mode !== "embedded_signup") {
+        setCloudError(start.message || "Embedded Signup is not available. Use the token form below.");
+        return;
+      }
+      setCloudError("Open Meta Embedded Signup with your App ID / Config ID from the server, then paste the resulting code or token below to finish.");
+      await refreshCloudStatus();
+    } catch (err) {
+      setCloudError(err.message || "Could not start WhatsApp connect.");
+    } finally {
+      setCloudBusy(false);
+    }
+  };
+
+  const disconnectCloud = async () => {
+    if (!window.confirm("Disconnect WhatsApp Business for this workspace? Receipts can still open wa.me.")) return;
+    setCloudBusy(true);
+    setCloudError("");
+    try {
+      await disconnectWhatsApp(token);
+      await refreshCloudStatus();
+    } catch (err) {
+      setCloudError(err.message || "Could not disconnect.");
+    } finally {
+      setCloudBusy(false);
+    }
+  };
 
   const submit = async event => {
     event.preventDefault();
@@ -218,7 +299,86 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved, tab: routeT
       </div>}
 
       {tab === "whatsapp" && <>
-        <SettingsSection icon={MessageCircle} title="WhatsApp messages" copy="Optional. WhatsApp buttons work without saving these and without an API key or provider account. A saved template's wording is used; otherwise FinTrack sends the built-in message. View/PDF still shows the full receipt.">
+        <SettingsSection
+          icon={MessageCircle}
+          title="WhatsApp Business (Cloud API)"
+          copy="Connect your own WhatsApp Business number so FinTrack can send receipts and reminders for you. When disconnected, buttons still open wa.me for you to tap Send."
+        >
+          {cloudError ? <p className="copy" role="alert">{cloudError}</p> : null}
+          {cloudStatus?.connected ? (
+            <div className="settings-list">
+              <div className="settings-list-row">
+                <div className="settings-list-text">
+                  <strong>Connected · {cloudStatus.displayPhone || "Business number"}</strong>
+                  <span className="small">
+                    Cloud API sends this month: {cloudStatus.sendsThisMonth ?? 0}
+                    {cloudStatus.detail ? ` · ${cloudStatus.detail}` : ""}
+                  </span>
+                </div>
+                <button type="button" className="btn" disabled={cloudBusy} onClick={disconnectCloud}>Disconnect</button>
+              </div>
+            </div>
+          ) : (
+            <div className="form spacer">
+              <p className="small">
+                Platform ready: Meta app {cloudStatus?.platform?.metaAppConfigured ? "yes" : "no"} ·
+                Embedded Signup {cloudStatus?.platform?.embeddedSignupConfigured ? "yes" : "no"} ·
+                Token encryption {cloudStatus?.platform?.cryptoConfigured ? "yes" : "no"}
+              </p>
+              {cloudStatus?.platform?.embeddedSignupConfigured ? (
+                <button type="button" className="btn primary" disabled={cloudBusy} onClick={connectCloudEmbedded}>
+                  {cloudBusy ? "Working…" : "Start Embedded Signup"}
+                </button>
+              ) : null}
+              <Field label="Permanent Cloud API token">
+                <input
+                  type="password"
+                  autoComplete="off"
+                  value={cloudForm.accessToken}
+                  onChange={event => setCloudForm(current => ({ ...current, accessToken: event.target.value }))}
+                  placeholder="EAAG…"
+                />
+              </Field>
+              <Field label="Phone number id">
+                <input
+                  value={cloudForm.phoneNumberId}
+                  onChange={event => setCloudForm(current => ({ ...current, phoneNumberId: event.target.value }))}
+                  placeholder="From Meta WhatsApp → API Setup"
+                />
+              </Field>
+              <Field label="WABA id (optional)">
+                <input
+                  value={cloudForm.wabaId}
+                  onChange={event => setCloudForm(current => ({ ...current, wabaId: event.target.value }))}
+                />
+              </Field>
+              <Field label="Display phone (optional)">
+                <input
+                  value={cloudForm.displayPhone}
+                  onChange={event => setCloudForm(current => ({ ...current, displayPhone: event.target.value }))}
+                  placeholder="+91…"
+                />
+              </Field>
+              <button type="button" className="btn primary" disabled={cloudBusy || !cloudForm.accessToken || !cloudForm.phoneNumberId} onClick={connectCloudManual}>
+                {cloudBusy ? "Connecting…" : "Connect with token"}
+              </button>
+            </div>
+          )}
+          <div className="settings-variables" style={{ marginTop: 12 }}>
+            <span className="small">Meta-approved templates to create in Business Manager (for Cloud API business-initiated sends):</span>
+            <ul className="settings-list">
+              {metaGuide.slice(0, 3).map(item => (
+                <li key={item.fintrackKey} className="settings-list-row">
+                  <div className="settings-list-text">
+                    <strong>{item.metaName}</strong>
+                    <span className="small">{item.category} · {item.language} · {item.bodyParams.length} body variables</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </SettingsSection>
+        <SettingsSection icon={MessageCircle} title="WhatsApp message drafts" copy="Optional wording for wa.me and in-session replies. Cloud API business-initiated sends use Meta-approved templates above. WhatsApp buttons work without connecting Cloud API.">
           <div className="settings-variables">
             <span className="small">Tap a variable to insert it where your cursor is in the open template.</span>
             <div className="settings-variable-chips">
@@ -272,7 +432,7 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved, tab: routeT
             })}
           </ul>
         </SettingsSection>
-        <SettingsSection icon={MessageCircle} title="Automatic WhatsApp confirmations" copy="After a successful save, FinTrack opens WhatsApp with the confirmation message, the same way as receipts. The save still succeeds if WhatsApp cannot open.">
+        <SettingsSection icon={MessageCircle} title="Automatic WhatsApp confirmations" copy="After a successful save, FinTrack sends via Cloud API when connected, otherwise opens WhatsApp with the confirmation message. The save still succeeds if WhatsApp cannot send or open.">
           <div className="settings-switches">
             <SwitchRow icon={CalendarDays} title="Daily Finance" copy="New account confirmation" checked={confirmations.daily_account !== false} onChange={() => toggleConfirmation("daily_account")} />
             <SwitchRow icon={CalendarRange} title="Monthly Finance" copy="New account confirmation" checked={confirmations.monthly_account !== false} onChange={() => toggleConfirmation("monthly_account")} />

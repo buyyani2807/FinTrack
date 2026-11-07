@@ -154,6 +154,7 @@ export function ReportsSection({
             orgSettings={orgSettings}
             activeCompany={activeCompany}
             workspace={workspace}
+            token={token}
             voucherItemLines={voucherItemLines}
             stockMovements={stockMovements}
             items={items}
@@ -172,6 +173,7 @@ export function ReportsSection({
             orgSettings={orgSettings}
             activeCompany={activeCompany}
             workspace={workspace}
+            token={token}
             voucherItemLines={voucherItemLines}
             stockMovements={stockMovements}
             items={items}

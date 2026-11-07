@@ -1,6 +1,6 @@
 import { downloadReceiptPdf } from "../io/receiptPdf.js";
-import { buildWhatsAppMessage, canWhatsAppShare, openManualWhatsAppShare } from "../io/receiptWhatsApp.js";
-import { formatReceiptDate, withReceiptBranding } from "../model/receiptModel.js";
+import { buildWhatsAppMessage, canWhatsAppShare, sendFintrackWhatsApp } from "../io/receiptWhatsApp.js";
+import { formatReceiptDate, receiptWhatsAppVariables, withReceiptBranding } from "../model/receiptModel.js";
 import { CloseButton, ModalScroll } from "../../../components/ui.jsx";
 import { useDialogDismiss } from "../../../components/useDialogDismiss.js";
 
@@ -13,6 +13,21 @@ export function ReceiptViewerModal({ receipt, settings, token, onLogAction, clos
     if (token && receipt?.paymentId && onLogAction) {
       try { await onLogAction(token, receipt.source, receipt.paymentId, action); } catch { /* non-blocking */ }
     }
+  };
+
+  const shareWhatsApp = async () => {
+    if (!whatsAppAvailable) return;
+    const result = await sendFintrackWhatsApp({
+      token,
+      phone: receipt.customerPhone,
+      message: buildWhatsAppMessage(brandedReceipt, settings),
+      templateKey: "payment_receipt",
+      variables: receiptWhatsAppVariables(brandedReceipt),
+      sourceType: receipt.source || "receipt",
+      sourceId: receipt.paymentId || receipt.receiptNumber || "",
+      kind: "receipt",
+    });
+    await log(result.mode === "sent" ? "whatsapp_sent" : "whatsapp_clicked");
   };
 
   const layerRef = useDialogDismiss(close);
@@ -54,7 +69,7 @@ export function ReceiptViewerModal({ receipt, settings, token, onLogAction, clos
     </ModalScroll>
     <div className="row spacer modal-foot">
       <button type="button" className="btn" onClick={async () => { await log("downloaded"); downloadReceiptPdf(receipt); }}>Download PDF</button>
-      {whatsAppAvailable && <button type="button" className="btn whatsapp" onClick={() => { openManualWhatsAppShare({ phone: receipt.customerPhone, message: buildWhatsAppMessage(brandedReceipt, settings) }); log("whatsapp_clicked"); }}>WhatsApp</button>}
+      {whatsAppAvailable && <button type="button" className="btn whatsapp" onClick={shareWhatsApp}>WhatsApp</button>}
     </div>
   </div></div>;
 }

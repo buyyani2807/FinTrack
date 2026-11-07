@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { downloadReceiptPdf } from "../io/receiptPdf.js";
-import { buildWhatsAppMessage, canWhatsAppShare, openManualWhatsAppShare } from "../io/receiptWhatsApp.js";
-import { formatReceiptDate, withReceiptBranding } from "../model/receiptModel.js";
+import { buildWhatsAppMessage, canWhatsAppShare, sendFintrackWhatsApp } from "../io/receiptWhatsApp.js";
+import { formatReceiptDate, receiptWhatsAppVariables, withReceiptBranding } from "../model/receiptModel.js";
 import { ReceiptViewerModal } from "./ReceiptViewerModal.jsx";
 import { CloseButton, ModalScroll } from "../../../components/ui.jsx";
 import { useDialogDismiss } from "../../../components/useDialogDismiss.js";
@@ -27,13 +27,20 @@ export function ReceiptActions({ receipt, settings, token, onLogAction, compact 
     downloadReceiptPdf(brandedReceipt);
   };
 
-  const shareWhatsApp = () => {
+  const shareWhatsApp = async () => {
     if (!whatsAppAvailable) return;
-    openManualWhatsAppShare({
+    const message = buildWhatsAppMessage(brandedReceipt, settings);
+    const result = await sendFintrackWhatsApp({
+      token,
       phone: receipt.customerPhone,
-      message: buildWhatsAppMessage(brandedReceipt, settings),
+      message,
+      templateKey: "payment_receipt",
+      variables: receiptWhatsAppVariables(brandedReceipt),
+      sourceType: receipt.source || "receipt",
+      sourceId: receipt.paymentId || receipt.receiptNumber || "",
+      kind: "receipt",
     });
-    log("whatsapp_clicked");
+    log(result.mode === "sent" ? "whatsapp_sent" : "whatsapp_clicked");
   };
 
   if (!receipt?.receiptNumber) return <span className="small">—</span>;
@@ -64,10 +71,20 @@ export function ReceiptSuccessModal({ receipt, settings, token, onLogAction, clo
 
   const viewReceipt = async () => { await log("viewed"); setViewOpen(true); };
   const downloadPdf = async () => { await log("downloaded"); downloadReceiptPdf(brandedReceipt); };
-  const shareWhatsApp = () => {
+  const shareWhatsApp = async () => {
     if (!whatsAppAvailable) return;
-    openManualWhatsAppShare({ phone: receipt.customerPhone, message: buildWhatsAppMessage(brandedReceipt, settings) });
-    log("whatsapp_clicked");
+    const message = buildWhatsAppMessage(brandedReceipt, settings);
+    const result = await sendFintrackWhatsApp({
+      token,
+      phone: receipt.customerPhone,
+      message,
+      templateKey: "payment_receipt",
+      variables: receiptWhatsAppVariables(brandedReceipt),
+      sourceType: receipt.source || "receipt",
+      sourceId: receipt.paymentId || receipt.receiptNumber || "",
+      kind: "receipt",
+    });
+    log(result.mode === "sent" ? "whatsapp_sent" : "whatsapp_clicked");
   };
 
   return <>

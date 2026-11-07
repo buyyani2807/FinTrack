@@ -87,6 +87,7 @@ export function VoucherExpandPanel({
               itemLines: voucherItemLines.filter(line => line.voucherId === voucher.id),
             })}
             settings={orgSettings}
+            token={token}
             compact
           />
           {canWrite && activeCompany?.gstRegistration === "regular" && (
@@ -124,6 +125,7 @@ export function VoucherExpandPanel({
             settings={orgSettings}
             company={activeCompany}
             workspace={workspace}
+            token={token}
             compact
           />
         </div>

@@ -20,6 +20,7 @@ export function InvoicesSection({
   orgSettings,
   activeCompany,
   workspace,
+  token = "",
   setListPage,
   invoicePartyRows,
   voucherItemLines,
@@ -86,6 +87,7 @@ export function InvoicesSection({
         orgSettings={orgSettings}
         activeCompany={activeCompany}
         workspace={workspace}
+        token={token}
         voucherItemLines={voucherItemLines}
         stockMovements={stockMovements}
         items={items}

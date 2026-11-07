@@ -5,7 +5,7 @@ import { TabScroller } from "../../../components/TabScroller.jsx";
 import { useActiveTabInView } from "./useActiveTabInView.js";
 import { formatInr } from "../../../lib/formatMoney.js";
 import { formatReceiptDate } from "../../receipts/model/receiptModel.js";
-import { canWhatsAppShare, openManualWhatsAppShare } from "../../receipts/io/receiptWhatsApp.js";
+import { canWhatsAppShare, sendFintrackWhatsApp } from "../../receipts/io/receiptWhatsApp.js";
 import { todayIso } from "../../cashbook/cashbookModel.js";
 import { gstStateFromGstin, isIntraGst } from "../model/accountingGst.js";
 import { emptyItemLine, normalizeItemLine } from "../model/inventoryModel.js";
@@ -308,7 +308,7 @@ function DocumentForm({ form, setForm, parties, items, stockByItem, gstCompany, 
   );
 }
 
-function DocumentViewer({ doc, view, settings, onClose, onEdit, actions }) {
+function DocumentViewer({ doc, view, settings, token = "", onClose, onEdit, actions }) {
   const [template, setTemplate] = useState(settings.invoiceTemplate || "a4");
   const m = view.money;
   const canShare = canWhatsAppShare(view.partyPhone);
@@ -403,7 +403,14 @@ function DocumentViewer({ doc, view, settings, onClose, onEdit, actions }) {
           className={canShare ? "btn whatsapp" : "btn"}
           disabled={!canShare}
           title={canShare ? "Share on WhatsApp" : "Add a party phone to share on WhatsApp"}
-          onClick={() => canShare && openManualWhatsAppShare({ phone: view.partyPhone, message: buildTradeDocumentMessage(view) })}
+          onClick={() => canShare && sendFintrackWhatsApp({
+            token,
+            phone: view.partyPhone,
+            message: buildTradeDocumentMessage(view),
+            sourceType: "trade_document",
+            sourceId: String(doc?.id || view?.docNumber || ""),
+            kind: "trade_document",
+          })}
         >WhatsApp</button>
         <button type="button" className="btn" disabled={!onEdit} onClick={onEdit || undefined}>Edit</button>
         {actions.length
@@ -564,6 +571,7 @@ export function AccDocumentsWorkspace({
   stockByItem = {},
   company = null,
   workspace = {},
+  token = "",
   documentSettings = {},
   vouchers = [],
   voucherItemLines = [],
@@ -853,6 +861,7 @@ export function AccDocumentsWorkspace({
           doc={viewDoc}
           view={view}
           settings={documentSettings}
+          token={token}
           onClose={() => setViewId(null)}
           onEdit={canEdit && isEditable(viewDoc, fulfilment.get(viewDoc.id)) ? () => { setViewId(null); setFormError(""); setForm(formFromDocument(viewDoc)); } : null}
           actions={actionsFor(viewDoc, fulfilment.get(viewDoc.id))}

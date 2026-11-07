@@ -25,6 +25,7 @@ export function AccOwnerDailyBrief({
   settings = {},
   company = null,
   workspace = {},
+  token = "",
   canWrite = false,
   saving = false,
   onOpenSection,
@@ -72,7 +73,7 @@ export function AccOwnerDailyBrief({
               <span className={`small ${row.overdue > 0 ? "red" : ""}`}>{row.overdue > 0 ? `${row.maxDaysOverdue}d late · ${row.invoices} bill${row.invoices === 1 ? "" : "s"}` : "Due today"}</span>
             </div>
             <span className="acc-num">{money(row.due)}</span>
-            <OutstandingWhatsAppButton party={partyById.get(row.partyId)} outstanding={row.outstanding} kind="receivable" settings={settings} company={company} workspace={workspace} compact />
+            <OutstandingWhatsAppButton party={partyById.get(row.partyId)} outstanding={row.outstanding} kind="receivable" settings={settings} company={company} workspace={workspace} token={token} compact />
           </li>)}
         </ul> : null}
       </Column>

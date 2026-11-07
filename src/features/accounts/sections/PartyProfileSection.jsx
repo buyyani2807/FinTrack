@@ -28,7 +28,7 @@ function HabitRow({ label, value, note }) {
 
 // What is open on one side of the party and how it gets paid: sales to them (with the credit score, owner only)
 // or purchases from them.
-function PartySide({ side, party, both, canAdmin, today, orgSettings, activeCompany, workspace, voucherItemLines, stockMovements, items, onViewDocument }) {
+function PartySide({ side, party, both, canAdmin, today, orgSettings, activeCompany, workspace, token = "", voucherItemLines, stockMovements, items, onViewDocument }) {
   const isPayable = side.kind === "payable";
   const showScore = !isPayable && canAdmin;
   const agingMax = Math.max(1, ...AGING_BUCKETS.map(bucket => side.aging[bucket.id] || 0));
@@ -94,7 +94,7 @@ function PartySide({ side, party, both, canAdmin, today, orgSettings, activeComp
       <section className="acc-party-profile-block">
         <h3>{isPayable ? "Open purchase bills" : "Open invoices"}</h3>
         {side.open.length
-          ? <InvoiceTable rows={side.open} kind={side.kind} orgSettings={orgSettings} activeCompany={activeCompany} workspace={workspace} voucherItemLines={voucherItemLines} stockMovements={stockMovements} items={items} onViewDocument={onViewDocument} />
+          ? <InvoiceTable rows={side.open} kind={side.kind} orgSettings={orgSettings} activeCompany={activeCompany} workspace={workspace} token={token} voucherItemLines={voucherItemLines} stockMovements={stockMovements} items={items} onViewDocument={onViewDocument} />
           : <p className="copy">Nothing open. Every {isPayable ? "purchase bill" : "invoice"} is settled.</p>}
       </section>
 
@@ -132,6 +132,7 @@ export function PartyProfileSection({
   orgSettings,
   activeCompany,
   workspace,
+  token = "",
   voucherItemLines = [],
   stockMovements = [],
   items = [],
@@ -144,7 +145,7 @@ export function PartyProfileSection({
   }
   const { primary, both } = profile;
   const isSupplier = profile.kind === "payable";
-  const sideProps = { party, both, canAdmin, today, orgSettings, activeCompany, workspace, voucherItemLines, stockMovements, items, onViewDocument };
+  const sideProps = { party, both, canAdmin, today, orgSettings, activeCompany, workspace, token, voucherItemLines, stockMovements, items, onViewDocument };
 
   return (
     <div className="acc-panel acc-party-profile">
@@ -179,6 +180,7 @@ export function PartyProfileSection({
               settings={orgSettings}
               company={activeCompany}
               workspace={workspace}
+              token={token}
               money={money}
             />
             <OutstandingWhatsAppButton
@@ -188,6 +190,7 @@ export function PartyProfileSection({
               settings={orgSettings}
               company={activeCompany}
               workspace={workspace}
+              token={token}
             />
           </div>
         </div>

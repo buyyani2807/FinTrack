@@ -157,6 +157,7 @@ export function OverviewSection({
         settings={orgSettings}
         company={activeCompany}
         workspace={workspace}
+        token={token}
         canWrite={canWrite}
         saving={saving}
         onOpenSection={openSection}

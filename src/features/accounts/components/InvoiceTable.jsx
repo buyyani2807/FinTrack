@@ -108,6 +108,7 @@ export function InvoiceTable({
   orgSettings,
   activeCompany,
   workspace,
+  token = "",
   voucherItemLines = [],
   stockMovements = [],
   items = [],
@@ -211,8 +212,8 @@ export function InvoiceTable({
                     <td className="acc-invoice-remind">
                       {onViewDocument ? <button type="button" className="btn" onClick={() => onViewDocument(row)}>View</button> : null}
                       {kind === "payable"
-                        ? <PaymentAdviceButton row={row} settings={orgSettings} company={activeCompany} workspace={workspace} compact />
-                        : <ArReminderButton row={row} settings={orgSettings} company={activeCompany} workspace={workspace} compact />}
+                        ? <PaymentAdviceButton row={row} settings={orgSettings} company={activeCompany} workspace={workspace} token={token} compact />
+                        : <ArReminderButton row={row} settings={orgSettings} company={activeCompany} workspace={workspace} token={token} compact />}
                     </td>
                   </tr>
                   {!onViewDocument && open ? <tr className="acc-goods-row"><td colSpan={10}>{goods}</td></tr> : null}
@@ -246,8 +247,8 @@ export function InvoiceTable({
             <div className="acc-invoice-remind">
               {onViewDocument ? <button type="button" className="btn" onClick={() => onViewDocument(row)}>View</button> : null}
               {kind === "payable"
-                ? <PaymentAdviceButton row={row} settings={orgSettings} company={activeCompany} workspace={workspace} compact />
-                : <ArReminderButton row={row} settings={orgSettings} company={activeCompany} workspace={workspace} compact />}
+                ? <PaymentAdviceButton row={row} settings={orgSettings} company={activeCompany} workspace={workspace} token={token} compact />
+                : <ArReminderButton row={row} settings={orgSettings} company={activeCompany} workspace={workspace} token={token} compact />}
             </div>
             {!onViewDocument && openId === row.id && (
               <GoodsLines

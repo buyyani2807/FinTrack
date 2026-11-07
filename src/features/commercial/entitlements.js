@@ -8,16 +8,21 @@ import {
   FEATURE_PACKS,
   isModuleEnabled,
   resolveEnabledModules,
+  whatsappApiSendsPerMonth,
 } from "./featurePacks.js";
 
 export function resolveEntitlements(settings = {}) {
   const packs = settings.featurePacks?.length ? settings.featurePacks : DEFAULT_ENTITLEMENTS.packs;
+  const overlay = settings.entitlementLimits && typeof settings.entitlementLimits === "object"
+    ? settings.entitlementLimits
+    : {};
   const limits = {
     ...DEFAULT_ENTITLEMENTS.limits,
-    ...(settings.entitlementLimits && typeof settings.entitlementLimits === "object"
-      ? settings.entitlementLimits
-      : {}),
+    ...overlay,
   };
+  // Prefer explicit sends alias when present; otherwise keep opens key as the Cloud API cap.
+  const apiCap = whatsappApiSendsPerMonth({ ...settings, entitlementLimits: overlay });
+  if (apiCap != null) limits.whatsappOpensPerMonth = apiCap;
   return {
     plan: settings.plan || DEFAULT_ENTITLEMENTS.plan,
     packs,
@@ -91,4 +96,4 @@ export function assertBackupAllowed(settings, companyId) {
   return { ok: true, used, limit: Number(max) };
 }
 
-export { isModuleEnabled, resolveEnabledModules, DEFAULT_ENTITLEMENTS, FEATURE_PACKS };
+export { isModuleEnabled, resolveEnabledModules, DEFAULT_ENTITLEMENTS, FEATURE_PACKS, whatsappApiSendsPerMonth };

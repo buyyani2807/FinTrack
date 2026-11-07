@@ -2766,6 +2766,7 @@ const openVoucher = () => {
           orgSettings={orgSettings}
           activeCompany={activeCompany}
           workspace={workspace}
+          token={token}
           setListPage={setListPage}
           invoicePartyRows={invoicePartyRows}
           voucherItemLines={voucherItemLines}
@@ -2797,6 +2798,7 @@ const openVoucher = () => {
           orgSettings={orgSettings}
           activeCompany={activeCompany}
           workspace={workspace}
+          token={token}
           voucherItemLines={voucherItemLines}
           stockMovements={stockMovements}
           items={items}
@@ -2821,6 +2823,7 @@ const openVoucher = () => {
           orgSettings={orgSettings}
           activeCompany={activeCompany}
           workspace={workspace}
+          token={token}
           pagedPartyBook={pagedPartyBook}
           setListPage={setListPage}
           vouchers={vouchers}
@@ -2867,6 +2870,7 @@ const openVoucher = () => {
             stockByItem={stockByItem}
             company={activeCompany}
             workspace={workspace}
+            token={token}
             documentSettings={documentSettings}
             canEdit={canWrite}
             canAdmin={canAdmin}
@@ -3323,6 +3327,7 @@ const openVoucher = () => {
         <SalesInvoiceSuccessModal
           invoice={salesInvoiceSuccess}
           settings={orgSettings}
+          token={token}
           close={() => setSalesInvoiceSuccess(null)}
         />
       )}
@@ -3330,6 +3335,7 @@ const openVoucher = () => {
         <SalesInvoiceViewerModal
           invoice={salesInvoiceView}
           settings={orgSettings}
+          token={token}
           close={() => setSalesInvoiceView(null)}
           onSettle={canWrite ? openSettleInvoice : null}
         />

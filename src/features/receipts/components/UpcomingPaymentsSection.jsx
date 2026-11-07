@@ -2,17 +2,28 @@ import { useEffect, useId, useMemo, useState } from "react";
 import { BellRing, ChevronDown, MessageCircle, RefreshCw } from "lucide-react";
 import { SegmentedControl, Spinner } from "../../../components/ui.jsx";
 import { buildChitUpcomingRows, buildMonthlyUpcoming, buildReminderReceipt, filterUpcomingPayments, formatDueDate, formatDueLabel } from "../model/upcomingPayments.js";
-import { buildReminderMessage, canWhatsAppShare, openManualWhatsAppShare } from "../io/receiptWhatsApp.js";
+import { buildReminderMessage, canWhatsAppShare, sendFintrackWhatsApp } from "../io/receiptWhatsApp.js";
+import { receiptWhatsAppVariables } from "../model/receiptModel.js";
 import { loadPaymentReminderLog, loadUpcomingChitPayments, markPaymentReminderSent } from "../../../lib/financeRepository.js";
 import { formatInr } from "../../../lib/formatMoney.js";
 
 const money = formatInr;
 const reminderKey = item => `${item.type}-${item.sourceId}-${item.cycleKey}-${item.daysRemaining}`;
 
-const openReminderWhatsApp = (item, settings) => {
+const openReminderWhatsApp = async (item, settings, token) => {
   const templateKey = item.type === "monthly" ? "monthly_reminder" : "chit_reminder";
   const receipt = buildReminderReceipt(item, settings);
-  return openManualWhatsAppShare({ phone: item.phone, message: buildReminderMessage(receipt, settings, templateKey) });
+  const message = buildReminderMessage(receipt, settings, templateKey);
+  return sendFintrackWhatsApp({
+    token,
+    phone: item.phone,
+    message,
+    templateKey,
+    variables: receiptWhatsAppVariables(receipt),
+    sourceType: item.type === "monthly" ? "monthly_reminder" : "chit_reminder",
+    sourceId: `${item.sourceId}:${item.cycleKey}:${item.daysRemaining}`,
+    kind: "reminder",
+  });
 };
 
 const MONTHLY_FILTERS = [["7days", "7 days"], ["3days", "3 days"], ["today", "Due today"], ["all", "All"]];
@@ -82,10 +93,14 @@ export function UpcomingPaymentsSection({ loans = [], token, settings, workspace
   const visibleItems = allItems.slice(0, 50);
   const showList = !collapsible || expanded;
 
-  const sendReminder = item => {
+  const sendReminder = async item => {
     if (!canWhatsAppShare(item.phone)) return;
-    const opened = openReminderWhatsApp(item, settings);
-    if (!opened?.opened) return;
+    const result = await openReminderWhatsApp(item, settings, token);
+    if (result?.mode === "sent") {
+      await confirmReminderSent(item);
+      return;
+    }
+    if (!result?.opened) return;
     setOpenedKeys(current => ({ ...current, [reminderKey(item)]: true }));
   };
 
@@ -179,10 +194,14 @@ export function UpcomingPaymentsSection({ loans = [], token, settings, workspace
 
 export function UpcomingPaymentCard({ item, settings, token, reminderLog = [], onReminderSent }) {
   const [opened, setOpened] = useState(false);
-  const sendReminder = () => {
+  const sendReminder = async () => {
     if (!canWhatsAppShare(item.phone)) return;
-    const opened = openReminderWhatsApp(item, settings);
-    if (opened?.opened) setOpened(true);
+    const result = await openReminderWhatsApp(item, settings, token);
+    if (result?.mode === "sent") {
+      await confirmSent();
+      return;
+    }
+    if (result?.opened) setOpened(true);
   };
   const confirmSent = async () => {
     await markPaymentReminderSent(token, item.type === "monthly" ? "monthly_finance" : "chit_fund", item.sourceId, item.cycleKey, item.daysRemaining);

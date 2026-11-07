@@ -1,6 +1,7 @@
 import { applyTemplate, resolveWhatsAppTemplate } from "../model/templateEngine.js";
 import { hasWhatsAppPhone, normalizeWhatsAppPhone } from "../model/phoneNormalize.js";
 import { receiptWhatsAppVariables, withReceiptBranding } from "../model/receiptModel.js";
+import { requestWhatsAppCloudSend } from "./whatsappCloudApi.js";
 
 export function buildWhatsAppMessage(receipt, settings = {}, templateKey = "payment_receipt") {
   const brandedReceipt = withReceiptBranding(receipt, settings);
@@ -223,4 +224,76 @@ export function openManualWhatsAppShare({ phone, message, note = "", popup = nul
 
 export function canWhatsAppShare(phone) {
   return hasWhatsAppPhone(phone);
+}
+
+/**
+ * Prefer Cloud API when the workspace is connected; otherwise open wa.me.
+ * @returns {{ mode: "sent"|"manual"|"blocked"|"skipped", opened?: boolean, reason?: string, error?: string, messageId?: string }}
+ */
+export async function sendFintrackWhatsApp({
+  token,
+  phone,
+  message,
+  templateKey = "",
+  variables = {},
+  sourceType = "",
+  sourceId = "",
+  kind = "send",
+  note = "",
+  popup = null,
+  preferManual = false,
+} = {}) {
+  if (!hasWhatsAppPhone(phone)) {
+    closePreparedPopup(popup);
+    return { mode: "skipped", reason: "no_phone", opened: false };
+  }
+
+  if (!token) {
+    const manual = openManualWhatsAppShare({ phone, message, note, popup });
+    return { mode: "manual", reason: "no_token", opened: manual.opened, error: manual.reason };
+  }
+
+  let result;
+  try {
+    result = await requestWhatsAppCloudSend(token, {
+      phone,
+      message,
+      templateKey,
+      variables,
+      sourceType,
+      sourceId,
+      kind,
+      preferManual,
+    });
+  } catch (error) {
+    const manual = openManualWhatsAppShare({ phone, message, note, popup });
+    return { mode: "manual", reason: "request_failed", opened: manual.opened, error: error.message };
+  }
+
+  if (result.mode === "sent") {
+    closePreparedPopup(popup);
+    showWhatsAppHandoff({
+      opened: true,
+      note: note || "WhatsApp message sent from your Business number.",
+    });
+    return { mode: "sent", opened: true, messageId: result.messageId || "" };
+  }
+
+  if (result.mode === "blocked") {
+    closePreparedPopup(popup);
+    return { mode: "blocked", opened: false, error: result.error || "Opted out" };
+  }
+
+  const url = result.waUrl || whatsAppShareUrl(phone, message);
+  if (url && navigatePreparedPopup(popup, url)) {
+    showWhatsAppHandoff({ opened: true, note });
+    return { mode: "manual", reason: result.reason || "fallback", opened: true, error: result.error };
+  }
+  const manual = openManualWhatsAppShare({ phone, message, note, popup });
+  return {
+    mode: "manual",
+    reason: result.reason || "fallback",
+    opened: manual.opened,
+    error: result.error || manual.reason,
+  };
 }

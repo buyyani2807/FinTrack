@@ -30,12 +30,28 @@ export const DEFAULT_ENTITLEMENTS = {
     companies: 5,
     users: 10,
     vouchersPerMonth: null,
+    // Caps WhatsApp Cloud API sends per org per month (wa.me handoff stays unlimited).
+    // Alias: entitlementLimits.whatsappSendsPerMonth is accepted by resolveEntitlements.
     whatsappOpensPerMonth: null,
     aiRefreshesPerDay: null,
     inventoryItems: null,
     backupsPerMonth: 30,
   },
 };
+
+/** Monthly Cloud API send cap from org settings (null = unlimited). */
+export function whatsappApiSendsPerMonth(settings = {}) {
+  const raw = settings?.entitlementLimits && typeof settings.entitlementLimits === "object"
+    ? settings.entitlementLimits
+    : {};
+  const value = raw.whatsappSendsPerMonth ?? raw.whatsappOpensPerMonth
+    ?? settings?.whatsappSendsPerMonth
+    ?? settings?.whatsappOpensPerMonth
+    ?? null;
+  if (value == null || value === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
 
 export function resolveEnabledModules(settings = {}) {
   const packs = settings.featurePacks?.length ? settings.featurePacks : ["full"];

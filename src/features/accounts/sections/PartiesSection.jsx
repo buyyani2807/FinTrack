@@ -30,6 +30,7 @@ export function PartiesSection({
   orgSettings,
   activeCompany,
   workspace,
+  token = "",
   pagedPartyBook,
   setListPage,
   vouchers = [],
@@ -104,6 +105,7 @@ export function PartiesSection({
                   settings={orgSettings}
                   company={activeCompany}
                   workspace={workspace}
+                  token={token}
                   money={money}
                 />
                 <OutstandingWhatsAppButton
@@ -113,6 +115,7 @@ export function PartiesSection({
                   settings={orgSettings}
                   company={activeCompany}
                   workspace={workspace}
+                  token={token}
                 />
               </> : null}
             </div>
