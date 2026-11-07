@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { formatReceiptDate, formatReceiptDateTime } from "../../receipts/model/receiptModel.js";
-import { canWhatsAppShare, openManualWhatsAppShare, openWhatsAppWeb } from "../../receipts/io/receiptWhatsApp.js";
+import { canWhatsAppShare, openWhatsAppWeb, sendFintrackWhatsApp } from "../../receipts/io/receiptWhatsApp.js";
 import { buildArReminderMessage, buildOutstandingSummaryMessage, buildPartyStatementMessage, buildPaymentAdviceMessage, buildPurchaseDocumentMessage, salesInvoicePresentation } from "../model/salesInvoiceModel.js";
 import { downloadSalesInvoicePdf, invoicePdfShareOnThisDevice, printSalesInvoicePdf, salesInvoicePdfFile, salesInvoiceWhatsAppText } from "../io/salesInvoicePdf.js";
 import { downloadPartyStatementPdf } from "../io/partyStatementPdf.js";
@@ -10,23 +10,47 @@ import { useDialogDismiss } from "../../../components/useDialogDismiss.js";
 /** Counter / POS receipts use thermal 80 mm; Accounts credit invoices keep company template. */
 export function withCounterReceiptPrint(invoice) {
   if (!invoice) return invoice;
+  const isReturn = /return/i.test(String(invoice.narration || "")) || /return/i.test(String(invoice.title || ""));
   return {
     ...invoice,
     documentTemplate: "thermal",
     autoPrint: true,
+    posSlip: true,
+    title: isReturn ? "RETURN BILL" : (invoice.tax > 0 && invoice.companyGstin ? "TAX INVOICE" : "BILL"),
+    receiptFooter: invoice.receiptFooter && !/offline receipt/i.test(invoice.receiptFooter)
+      ? invoice.receiptFooter
+      : "Thank You & Visit Again..!",
   };
 }
 
-function sendInvoiceMessage(invoice) {
+async function sendInvoiceMessage(invoice, token = "") {
   const message = salesInvoiceWhatsAppText(invoice);
-  if (invoicePdfShareOnThisDevice(navigator.userAgent, navigator.maxTouchPoints)) {
-    openManualWhatsAppShare({ phone: invoice.customerPhone, message });
-    return;
+  const result = await sendFintrackWhatsApp({
+    token,
+    phone: invoice.customerPhone,
+    message,
+    templateKey: "sales_invoice",
+    variables: {
+      customer_name: invoice.customerName || "",
+      invoice_number: invoice.invoiceNumber || "",
+      invoice_date: invoice.invoiceDate || "",
+      amount: String(invoice.total ?? invoice.grandTotal ?? ""),
+      due_date: invoice.dueDate || "",
+      company_name: invoice.companyName || "",
+    },
+    sourceType: "sales_invoice",
+    sourceId: invoice.voucherId || invoice.invoiceNumber || "",
+    kind: "sales_invoice",
+  });
+  if (result.mode === "sent" || result.mode === "blocked") return result;
+  // Cloud fallback already opened wa.me; on devices that prefer WhatsApp Web, open that instead when manual.
+  if (result.mode === "manual" && !result.opened && invoicePdfShareOnThisDevice(navigator.userAgent, navigator.maxTouchPoints) === false) {
+    openWhatsAppWeb({ phone: invoice.customerPhone, message });
   }
-  openWhatsAppWeb({ phone: invoice.customerPhone, message });
+  return result;
 }
 
-function sendSalesInvoiceOnWhatsApp(invoice) {
+async function sendSalesInvoiceOnWhatsApp(invoice, token = "") {
   const file = salesInvoicePdfFile(invoice);
   const canGivePdfToWhatsApp = Boolean(
     file
@@ -35,13 +59,14 @@ function sendSalesInvoiceOnWhatsApp(invoice) {
     && navigator.canShare({ files: [file] }),
   );
   if (canGivePdfToWhatsApp) {
-    navigator.share({ files: [file], title: file.name }).catch(error => {
+    try {
+      await navigator.share({ files: [file], title: file.name });
+      return;
+    } catch (error) {
       if (error?.name === "AbortError") return;
-      sendInvoiceMessage(invoice);
-    });
-    return;
+    }
   }
-  sendInvoiceMessage(invoice);
+  await sendInvoiceMessage(invoice, token);
 }
 
 function printDocument() {
@@ -149,7 +174,7 @@ function TaxInvoiceSheet({ invoice }) {
   );
 }
 
-export function SalesInvoiceViewerModal({ invoice, close, onSettle }) {
+export function SalesInvoiceViewerModal({ invoice, token = "", close, onSettle }) {
   const layerRef = useDialogDismiss(close);
   const salesDocument = !invoice.kind || invoice.kind === "sales_invoice";
   const whatsAppAvailable = salesDocument && canWhatsAppShare(invoice?.customerPhone);
@@ -245,7 +270,7 @@ export function SalesInvoiceViewerModal({ invoice, close, onSettle }) {
             <button
               type="button"
               className="btn whatsapp"
-              onClick={() => sendSalesInvoiceOnWhatsApp(invoice)}
+              onClick={() => sendSalesInvoiceOnWhatsApp(invoice, token)}
             >
               WhatsApp
             </button>
@@ -256,7 +281,7 @@ export function SalesInvoiceViewerModal({ invoice, close, onSettle }) {
   );
 }
 
-export function SalesInvoiceActions({ invoice, settings = {}, compact = false }) {
+export function SalesInvoiceActions({ invoice, settings = {}, token = "", compact = false }) {
   const [viewOpen, setViewOpen] = useState(false);
   if (!invoice?.invoiceNumber) return null;
   const whatsAppAvailable = canWhatsAppShare(invoice.customerPhone);
@@ -271,19 +296,19 @@ export function SalesInvoiceActions({ invoice, settings = {}, compact = false })
             <button
               type="button"
               className="btn whatsapp"
-              onClick={() => sendSalesInvoiceOnWhatsApp(invoice)}
+              onClick={() => sendSalesInvoiceOnWhatsApp(invoice, token)}
             >
               WhatsApp
             </button>
           )
           : (!compact && <span className="small muted">Add party phone for WhatsApp</span>)}
       </div>
-      {viewOpen && <SalesInvoiceViewerModal invoice={invoice} settings={settings} close={() => setViewOpen(false)} />}
+      {viewOpen && <SalesInvoiceViewerModal invoice={invoice} token={token} settings={settings} close={() => setViewOpen(false)} />}
     </>
   );
 }
 
-export function SalesInvoiceSuccessModal({ invoice, settings = {}, close }) {
+export function SalesInvoiceSuccessModal({ invoice, settings = {}, token = "", close }) {
   const layerRef = useDialogDismiss(close);
   // Counter / POS: one thermal PDF print only — do not also open the tax-invoice viewer.
   const counterReceipt = Boolean(invoice?.autoPrint);
@@ -329,7 +354,7 @@ export function SalesInvoiceSuccessModal({ invoice, settings = {}, close }) {
                 <button
                   type="button"
                   className="btn whatsapp"
-                  onClick={() => sendSalesInvoiceOnWhatsApp(invoice)}
+                  onClick={() => sendSalesInvoiceOnWhatsApp(invoice, token)}
                 >
                   Send via WhatsApp
                 </button>
@@ -346,6 +371,7 @@ export function SalesInvoiceSuccessModal({ invoice, settings = {}, close }) {
         <SalesInvoiceViewerModal
           invoice={invoice}
           settings={settings}
+          token={token}
           close={() => setViewOpen(false)}
         />
       )}
@@ -353,20 +379,35 @@ export function SalesInvoiceSuccessModal({ invoice, settings = {}, close }) {
   );
 }
 
-export function ArReminderButton({ row, settings = {}, company = {}, workspace = {}, compact = false }) {
+export function ArReminderButton({ row, settings = {}, company = {}, workspace = {}, token = "", compact = false }) {
   if (!row || Number(row.outstanding || 0) <= 0) return null;
   const phone = row.partyPhone || "";
   if (!canWhatsAppShare(phone)) {
     return compact ? null : <span className="small muted">No WhatsApp phone</span>;
   }
+  const message = buildArReminderMessage(row, settings, company, workspace);
   return (
     <button
       type="button"
       className="btn whatsapp"
-      title="Open WhatsApp payment reminder"
-      onClick={() => openManualWhatsAppShare({
+      title="Send WhatsApp payment reminder"
+      onClick={() => sendFintrackWhatsApp({
+        token,
         phone,
-        message: buildArReminderMessage(row, settings, company, workspace),
+        message,
+        templateKey: "ar_reminder",
+        variables: {
+          customer_name: row.partyName || "",
+          invoice_number: row.invoiceNumber || row.reference || "",
+          amount: String(row.outstanding || ""),
+          due_date: row.dueDate || "",
+          outstanding: String(row.outstanding || ""),
+          days_overdue: String(row.daysOverdue ?? row.maxDaysOverdue ?? ""),
+          company_name: company?.name || workspace?.companyName || settings?.companyName || "",
+        },
+        sourceType: "ar_reminder",
+        sourceId: String(row.voucherId || row.id || row.invoiceNumber || ""),
+        kind: "ar_reminder",
       })}
     >
       Remind
@@ -374,20 +415,25 @@ export function ArReminderButton({ row, settings = {}, company = {}, workspace =
   );
 }
 
-export function PaymentAdviceButton({ row, settings = {}, company = {}, workspace = {}, compact = false }) {
+export function PaymentAdviceButton({ row, settings = {}, company = {}, workspace = {}, token = "", compact = false }) {
   if (!row || Number(row.outstanding || 0) <= 0) return null;
   const phone = row.partyPhone || "";
   if (!canWhatsAppShare(phone)) {
     return compact ? null : <span className="small muted">No WhatsApp phone</span>;
   }
+  const message = buildPaymentAdviceMessage(row, settings, company, workspace);
   return (
     <button
       type="button"
       className="btn whatsapp"
-      title="Open WhatsApp payment advice"
-      onClick={() => openManualWhatsAppShare({
+      title="Send WhatsApp payment advice"
+      onClick={() => sendFintrackWhatsApp({
+        token,
         phone,
-        message: buildPaymentAdviceMessage(row, settings, company, workspace),
+        message,
+        sourceType: "payment_advice",
+        sourceId: String(row.voucherId || row.id || ""),
+        kind: "payment_advice",
       })}
     >
       {compact ? "Advice" : "Payment advice"}
@@ -395,20 +441,25 @@ export function PaymentAdviceButton({ row, settings = {}, company = {}, workspac
   );
 }
 
-export function PurchaseDocumentButton({ voucher, party, settings = {}, company = {}, workspace = {}, compact = false }) {
+export function PurchaseDocumentButton({ voucher, party, settings = {}, company = {}, workspace = {}, token = "", compact = false }) {
   if (!voucher || voucher.voucherType !== "purchase") return null;
   const phone = party?.phone || "";
   if (!canWhatsAppShare(phone)) {
     return compact ? null : <span className="small muted">No WhatsApp phone</span>;
   }
+  const message = buildPurchaseDocumentMessage(voucher, party, settings, company, workspace);
   return (
     <button
       type="button"
       className="btn whatsapp"
       title="Share purchase document on WhatsApp"
-      onClick={() => openManualWhatsAppShare({
+      onClick={() => sendFintrackWhatsApp({
+        token,
         phone,
-        message: buildPurchaseDocumentMessage(voucher, party, settings, company, workspace),
+        message,
+        sourceType: "purchase_document",
+        sourceId: String(voucher.id || ""),
+        kind: "purchase_document",
       })}
     >
       {compact ? "WhatsApp" : "Share purchase"}
@@ -424,6 +475,7 @@ export function PartyStatementButton({
   settings = {},
   company = {},
   workspace = {},
+  token = "",
   compact = false,
   money,
 }) {
@@ -452,7 +504,8 @@ export function PartyStatementButton({
           type="button"
           className="btn whatsapp"
           title="Send party statement on WhatsApp"
-          onClick={() => openManualWhatsAppShare({
+          onClick={() => sendFintrackWhatsApp({
+            token,
             phone,
             message: buildPartyStatementMessage({
               party,
@@ -463,6 +516,9 @@ export function PartyStatementButton({
               company,
               workspace,
             }),
+            sourceType: "party_statement",
+            sourceId: `${party.id}:${periodFrom || ""}:${periodTo || ""}`,
+            kind: "party_statement",
           })}
         >
           {compact ? "WhatsApp" : "WhatsApp statement"}
@@ -479,26 +535,39 @@ export function OutstandingWhatsAppButton({
   settings = {},
   company = {},
   workspace = {},
+  token = "",
   compact = false,
 }) {
   if (!party || Number(outstanding || 0) <= 0) return null;
   const phone = party.phone || "";
   if (!canWhatsAppShare(phone)) return compact ? null : <span className="small muted">No WhatsApp phone</span>;
+  const message = buildOutstandingSummaryMessage({
+    party,
+    outstanding,
+    kind,
+    settings,
+    company,
+    workspace,
+  });
   return (
     <button
       type="button"
       className="btn whatsapp"
       title={kind === "payable" ? "WhatsApp outstanding payable" : "WhatsApp outstanding receivable"}
-      onClick={() => openManualWhatsAppShare({
+      onClick={() => sendFintrackWhatsApp({
+        token,
         phone,
-        message: buildOutstandingSummaryMessage({
-          party,
-          outstanding,
-          kind,
-          settings,
-          company,
-          workspace,
-        }),
+        message,
+        templateKey: kind === "receivable" ? "ar_reminder" : "",
+        variables: {
+          customer_name: party.name || "",
+          amount: String(outstanding),
+          outstanding: String(outstanding),
+          company_name: company?.name || workspace?.companyName || settings?.companyName || "",
+        },
+        sourceType: "outstanding",
+        sourceId: `${party.id}:${kind}`,
+        kind: "outstanding",
       })}
     >
       {compact ? "Outstanding" : "WhatsApp outstanding"}

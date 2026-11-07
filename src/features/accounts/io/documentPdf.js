@@ -569,6 +569,16 @@ function drawThermal(model, surface, logo, qr) {
   const { spec } = surface;
   const base = spec.base;
   const center = spec.width / 2;
+  const pos = Boolean(model.posSlip);
+  const col = {
+    qty: 28,
+    price: 44,
+    amount: 48,
+  };
+  const itemWidth = Math.max(48, surface.width - (col.qty + col.price + col.amount) - 4);
+  const xQty = surface.left + itemWidth;
+  const xPrice = xQty + col.qty;
+  const xAmount = xPrice + col.price;
   const centered = (value, { size = base, bold = false, gray = 0 } = {}) => {
     for (const line of wrapText(value, size, surface.width, bold)) {
       surface.text(line, center, surface.y, { size, bold, gray, align: "center" });
@@ -588,37 +598,88 @@ function drawThermal(model, surface, logo, qr) {
     surface.rule(surface.y + 2, { weight: 0.4, gray: 0.5 });
     surface.y += 7;
   };
+  const itemHeader = () => {
+    const size = base - 1;
+    surface.text("Item", surface.left, surface.y, { size, bold: true });
+    surface.text("Qty", xQty + col.qty, surface.y, { size, bold: true, align: "right" });
+    surface.text("Price", xPrice + col.price, surface.y, { size, bold: true, align: "right" });
+    surface.text("Amount", xAmount + col.amount, surface.y, { size, bold: true, align: "right" });
+    surface.y += size * 1.4;
+  };
+  const itemRow = item => {
+    const size = base - 0.5;
+    const nameLines = wrapText(item.name || "Item", size, itemWidth - 2, true);
+    nameLines.forEach((line, index) => {
+      surface.text(line, surface.left, surface.y, { size, bold: true });
+      if (index === 0) {
+        surface.text(String(item.quantity || ""), xQty + col.qty, surface.y, { size, align: "right" });
+        surface.text(String(item.rate || ""), xPrice + col.price, surface.y, { size, align: "right" });
+        surface.text(String(item.amount || ""), xAmount + col.amount, surface.y, { size, align: "right" });
+      }
+      surface.y += size * 1.3;
+    });
+    if (item.discount) surface.paragraph(`Disc ${item.discount}`, surface.left, surface.width, { size: base - 1.5, gray: 0.4 });
+    if (item.detail) surface.paragraph(item.detail, surface.left, surface.width, { size: base - 1.5, gray: 0.4 });
+    surface.y += 1;
+  };
 
   if (logo) {
     const scale = Math.min(spec.logo / logo.width, spec.logo / logo.height);
     surface.image(center - (logo.width * scale) / 2, surface.y, logo.width * scale, logo.height * scale);
     surface.y += logo.height * scale + 4;
   }
+  if (pos) centered(model.title, { size: base, bold: true });
   centered(model.seller.name, { size: base + 3, bold: true });
   for (const line of model.seller.lines) centered(line, { size: base - 1 });
   dashed();
-  centered(model.title, { size: base + 1, bold: true });
-  for (const [label, value] of model.meta) pair(`${label}:`, value, { size: base - 0.5 });
-  dashed();
-  surface.text(`${model.partyHeading}:`, surface.left, surface.y, { size: base - 1, bold: true });
-  surface.y += (base - 1) * 1.35;
-  surface.paragraph(model.party.name, surface.left, surface.width, { size: base, bold: true });
-  for (const line of model.party.lines) surface.paragraph(line, surface.left, surface.width, { size: base - 1 });
+  if (!pos) centered(model.title, { size: base + 1, bold: true });
+  if (pos) {
+    surface.paragraph(`${model.partyHeading}: ${model.party.name}`, surface.left, surface.width, { size: base, bold: true });
+    for (const line of model.party.lines) surface.paragraph(line, surface.left, surface.width, { size: base - 1 });
+    for (const [label, value] of model.meta) pair(`${label}:`, value, { size: base - 0.5 });
+  } else {
+    for (const [label, value] of model.meta) pair(`${label}:`, value, { size: base - 0.5 });
+    dashed();
+    surface.text(`${model.partyHeading}:`, surface.left, surface.y, { size: base - 1, bold: true });
+    surface.y += (base - 1) * 1.35;
+    surface.paragraph(model.party.name, surface.left, surface.width, { size: base, bold: true });
+    for (const line of model.party.lines) surface.paragraph(line, surface.left, surface.width, { size: base - 1 });
+  }
   dashed();
   if (model.items.length) {
+    if (pos) itemHeader();
     for (const item of model.items) {
-      surface.paragraph(item.name, surface.left, surface.width, { size: base, bold: true });
-      const detail = [`${item.quantity} x ${item.rate}`, item.discount ? `disc ${item.discount}` : "", item.gst].filter(Boolean).join("  ");
-      pair(detail, item.amount, { size: base - 0.5 });
-      if (item.detail) surface.paragraph(item.detail, surface.left, surface.width, { size: base - 1.5, gray: 0.4 });
-      surface.y += 2;
+      if (pos) {
+        itemRow(item);
+      } else {
+        surface.paragraph(item.name, surface.left, surface.width, { size: base, bold: true });
+        const detail = [`${item.quantity} x ${item.rate}`, item.discount ? `disc ${item.discount}` : "", item.gst].filter(Boolean).join("  ");
+        pair(detail, item.amount, { size: base - 0.5 });
+        if (item.detail) surface.paragraph(item.detail, surface.left, surface.width, { size: base - 1.5, gray: 0.4 });
+        surface.y += 2;
+      }
     }
   } else if (model.description) {
     surface.paragraph(model.description, surface.left, surface.width, { size: base });
   }
   dashed();
-  for (const total of model.totals) pair(total.label, total.value, { size: total.bold ? base + 1.5 : base, bold: total.bold });
+  if (pos && model.totalQty) {
+    const sub = model.totals.find(row => String(row.label).toLowerCase().includes("sub"));
+    if (sub) pair(`Total Qty: ${model.totalQty}`, `Sub Total: ${sub.value}`, { size: base - 0.5 });
+    else pair("Total Qty", model.totalQty, { size: base - 0.5 });
+  }
+  for (const total of model.totals) {
+    if (pos && model.totalQty && String(total.label).toLowerCase().includes("sub")) continue;
+    pair(total.label, total.value, { size: total.bold ? base + 1.5 : base, bold: total.bold });
+  }
   if (model.amountNote) surface.paragraph(model.amountNote, surface.left, surface.width, { size: base - 1, gray: 0.35 });
+  if (pos && model.payment) {
+    dashed();
+    surface.text(model.payment.when || "", surface.left, surface.y, { size: base - 1 });
+    surface.text(model.payment.method || "", center, surface.y, { size: base - 1, bold: true, align: "center" });
+    surface.text(model.payment.amount || "", surface.right, surface.y, { size: base - 1, bold: true, align: "right" });
+    surface.y += (base - 1) * 1.4;
+  }
   if (qr) {
     dashed();
     surface.qr(qr.matrix, center - spec.qr / 2, surface.y, spec.qr);
@@ -636,8 +697,8 @@ function drawThermal(model, surface, logo, qr) {
     for (const line of model.bankLines) surface.paragraph(line, surface.left, surface.width, { size: base - 1.5 });
   }
   dashed();
-  centered(model.footer, { size: base - 1 });
-  centered("Powered by FinTrack", { size: base - 2, gray: 0.5 });
+  centered(model.footer, { size: base - 1, bold: pos });
+  if (!pos) centered("Powered by FinTrack", { size: base - 2, gray: 0.5 });
   surface.page.height = Math.ceil(surface.y + spec.margin);
 }
 
@@ -661,6 +722,7 @@ export function renderDocumentPdf(model, { template = "a4" } = {}) {
   }
   const normalized = {
     title: model.title || "DOCUMENT",
+    posSlip: Boolean(model.posSlip),
     meta: model.meta || [],
     seller: { name: model.seller?.name || "FinTrack", lines: (model.seller?.lines || []).filter(Boolean) },
     partyHeading: model.partyHeading || "BILL TO",
@@ -668,6 +730,8 @@ export function renderDocumentPdf(model, { template = "a4" } = {}) {
     items: model.items || [],
     description: model.description || "",
     totals: model.totals || [],
+    totalQty: model.totalQty || "",
+    payment: model.payment || null,
     amountNote: model.amountNote || "",
     notes: (model.notes || []).filter(block => block?.lines?.some(Boolean)).map(block => ({ heading: block.heading, lines: block.lines.filter(Boolean) })),
     bankLines: (model.bankLines || []).filter(Boolean),

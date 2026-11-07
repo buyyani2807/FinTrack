@@ -136,14 +136,17 @@ export function buildSalesInvoice({
   const payable = outstanding == null ? (settlement === "Credit" ? amount : 0) : due;
   const pay = voucher.status === "cancelled" ? null : companyPayLinks(branding, { amount: payable, note: voucher.voucherNumber || "" });
   const sourceType = voucher.sourceType || null;
-  const showSaleTime = sourceType === "pos_counter";
+  const isPos = sourceType === "pos_counter";
+  const showSaleTime = isPos;
   const soldAt = voucher.postedAt || voucher.createdAt || "";
   // Spot / cash sales (including Counter) have no credit terms — never invent a due date.
   const dueDate = voucher.dueDate || "";
+  const cashierMatch = String(voucher.narration || "").match(/Cashier\s+([^·]+)/i);
+  const tillMatch = String(voucher.narration || "").match(/Counter (?:sale|return)\s*·\s*([^·]+)/i);
 
   return {
     kind: "sales_invoice",
-    title: branding.companyGstin && tax > 0 ? "TAX INVOICE" : "SALES INVOICE",
+    title: branding.companyGstin && tax > 0 ? "TAX INVOICE" : (isPos ? "BILL" : "SALES INVOICE"),
     upiLink: pay?.upiLink || "",
     payUrl: pay?.payUrl || "",
     source: "accounts_sales",
@@ -155,6 +158,8 @@ export function buildSalesInvoice({
     showSaleTime,
     dueDate,
     narration: voucher.narration || "",
+    cashier: cashierMatch ? cashierMatch[1].trim() : "",
+    tillLabel: tillMatch ? tillMatch[1].trim() : "",
     settlement,
     payableAmount: pay ? payable : 0,
     status: voucher.status || "posted",

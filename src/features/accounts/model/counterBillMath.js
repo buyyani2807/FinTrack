@@ -74,9 +74,16 @@ export function counterEstimateTotal(lines, { gstEnabled, intra }) {
       tax = roundMoney(tax + (net * rate) / 100);
     }
   }
+  const half = gstEnabled && intra ? roundMoney(tax / 2) : 0;
+  const cgst = half;
+  const sgst = gstEnabled && intra ? roundMoney(tax - half) : 0;
+  const igst = gstEnabled && !intra ? tax : 0;
   return {
     taxable,
     tax,
+    cgst,
+    sgst,
+    igst,
     total: roundMoney(taxable + tax),
     taxLabel: !gstEnabled ? "" : intra ? "GST (CGST+SGST)" : "GST (IGST)",
   };
@@ -132,76 +139,92 @@ export function applyBillDiscountToLines(lines = [], billDiscount = "") {
   });
 }
 
-/** WhatsApp-formatted Counter receipt (wa.me) — bold/separators for a clear bill layout. */
+/** WhatsApp-formatted Counter receipt — retail slip layout (no bakery-only fields). */
 export function buildCounterWhatsAppReceipt({
   companyName = "",
   companyPhone = "",
   companyGstin = "",
   companyAddress = "",
   tillLabel = "",
+  cashierName = "",
+  billNo = "",
   isReturn = false,
   isCredit = false,
   payLabel = "",
   customerName = "",
+  customerPhone = "",
   lines = [],
   taxable = 0,
   tax = 0,
+  cgst = 0,
+  sgst = 0,
+  igst = 0,
   taxLabel = "",
   total = 0,
   date = "",
 } = {}) {
   const store = String(companyName || "Store").trim();
-  const title = isReturn ? "Return receipt" : isCredit ? "Khata bill" : "Sale receipt";
+  const title = isReturn
+    ? "RETURN BILL"
+    : (Number(tax) > 0 && companyGstin ? "TAX INVOICE" : "BILL");
   const dateLabel = formatReceiptDate(date) || String(date || "").trim();
-  const metaBits = [
-    companyGstin ? `GSTIN ${String(companyGstin).trim()}` : "",
-    companyPhone ? `Ph ${String(companyPhone).trim()}` : "",
-  ].filter(Boolean);
+  const phone = String(customerPhone || "").trim();
+  const name = String(customerName || "").trim();
+  const nameLine = name
+    ? (phone ? `Name: ${name} (M: ${phone})` : `Name: ${name}`)
+    : (phone ? `Name: Customer (M: ${phone})` : "");
+
+  const usableLines = (lines || []).filter(line => line?.itemId || String(line?.itemName || line?.name || "").trim());
+  const totalQty = usableLines.reduce((sum, line) => sum + Number(line.quantity || 0), 0);
 
   const header = [
+    `*${title}*`,
     `*${store}*`,
     companyAddress ? String(companyAddress).trim() : "",
-    metaBits.length ? metaBits.join(" · ") : "",
+    companyPhone ? `Mobile No: ${String(companyPhone).trim()}` : "",
+    companyGstin ? `GSTIN: ${String(companyGstin).trim()}` : "",
     WA_RULE,
-    `*${title}*`,
-    WA_RULE,
-    tillLabel ? `Till: ${tillLabel}` : "",
+    nameLine,
     dateLabel ? `Date: ${dateLabel}` : "",
-    customerName ? `Customer: ${customerName}` : "",
-    payLabel ? `Payment: ${payLabel}` : "",
-    isCredit ? "_Amount added to customer khata_" : "",
+    cashierName ? `Cashier: ${cashierName}` : "",
+    tillLabel ? `Till: ${tillLabel}` : "",
+    billNo ? `Bill No.: ${billNo}` : "",
+    WA_RULE,
   ].filter(Boolean);
 
-  const itemLines = (lines || [])
-    .filter(line => line?.itemId || String(line?.itemName || "").trim())
-    .flatMap(line => {
-      const name = String(line.itemName || "Item").trim();
-      const unit = line.sellUnit || line.unit || "";
-      const qty = `${line.quantity || 0}${unit ? ` ${unit}` : ""}`;
-      const rate = Number(line.rate);
-      const amount = formatInr(counterLineNet(line));
-      const detail = Number.isFinite(rate) && rate > 0
-        ? `${qty} × ${formatInr(rate)} = ${amount}`
-        : `${qty} = ${amount}`;
-      return [`• *${name}*`, `  ${detail}`];
-    });
+  const itemLines = usableLines.flatMap(line => {
+    const itemName = String(line.itemName || line.name || "Item").trim();
+    const qty = Number(line.quantity || 0);
+    const rate = Number(line.rate);
+    const amount = formatInr(counterLineNet(line));
+    const rateText = Number.isFinite(rate) && rate > 0 ? formatInr(rate) : "";
+    return [
+      `*${itemName}*`,
+      `  ${qty}${rateText ? `  ${rateText}` : ""}  ${amount}`,
+    ];
+  });
 
+  const hasGstBreakup = Number(cgst) > 0 || Number(sgst) > 0 || Number(igst) > 0;
   const totals = [
     WA_RULE,
-    taxable ? `Taxable: ${formatInr(taxable)}` : "",
-    tax && taxLabel ? `${taxLabel}: ${formatInr(tax)}` : "",
-    `*TOTAL: ${formatInr(total)}*`,
+    totalQty > 0 ? `Total Qty: ${totalQty}` : "",
+    Number(tax) > 0 || Number(taxable) > 0 ? `Sub Total: ${formatInr(taxable || total)}` : "",
+    hasGstBreakup && Number(cgst) > 0 ? `CGST: ${formatInr(cgst)}` : "",
+    hasGstBreakup && Number(sgst) > 0 ? `SGST: ${formatInr(sgst)}` : "",
+    hasGstBreakup && Number(igst) > 0 ? `IGST: ${formatInr(igst)}` : "",
+    !hasGstBreakup && Number(tax) > 0 && taxLabel ? `${taxLabel}: ${formatInr(tax)}` : "",
+    `*Grand Total ${formatInr(total)}*`,
+    WA_RULE,
+    payLabel ? `${dateLabel ? `${dateLabel}  ` : ""}${payLabel}  ${isCredit ? formatInr(0) : formatInr(total)}` : "",
+    isCredit ? "_Amount added to customer khata_" : "",
     WA_RULE,
   ].filter(Boolean);
 
   return [
     ...header,
-    "",
-    ...(itemLines.length ? ["*Items*", ...itemLines, ""] : []),
+    ...(itemLines.length ? ["Item  Qty  Price  Amount", ...itemLines, ""] : []),
     ...totals,
-    "",
-    "_Thank you for your business._",
-    `_${store}_`,
+    "*Thank You & Visit Again..!*",
   ].join("\n");
 }
 
