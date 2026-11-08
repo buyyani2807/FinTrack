@@ -4,7 +4,15 @@ import { downloadPdf, pdfBinaryToBytes, renderDocumentPdf } from "./documentPdf.
 
 const quantityText = (quantity, unit) => `${Number(quantity || 0).toLocaleString("en-IN", { maximumFractionDigits: 3 })}${unit ? ` ${unit}` : ""}`;
 
-export function sellerLines(source) {
+export function sellerLines(source, { posSlip = false } = {}) {
+  if (posSlip) {
+    return [
+      source.companyAddress,
+      source.companyPhone ? `Mobile No: ${source.companyPhone}` : "",
+      source.companyEmail || "",
+      source.companyGstin ? `GSTIN: ${source.companyGstin}` : "",
+    ];
+  }
   return [
     source.companyLegalName ? `Legal name: ${source.companyLegalName}` : "",
     source.companyAddress,
@@ -13,70 +21,123 @@ export function sellerLines(source) {
   ];
 }
 
+function totalItemQty(itemLines = []) {
+  return (itemLines || []).reduce((sum, line) => sum + Number(line.quantity || 0), 0);
+}
+
 export function upiCaption(source, amount, money) {
   return [`Scan to pay ${money(amount)}`, `UPI: ${source.upiId}`];
 }
 
 export function salesInvoicePdfModel(invoice) {
   const m = invoice.money;
+  const isPos = Boolean(invoice.posSlip || invoice.autoPrint);
+  const hasGst = Number(invoice.tax || 0) > 0;
   const totals = [];
-  if (invoice.tax > 0) {
-    totals.push({ label: "Taxable value", value: m(invoice.taxable) });
+  if (isPos) {
+    if (hasGst) totals.push({ label: "Sub Total", value: m(invoice.taxable) });
     if (invoice.cgst) totals.push({ label: "CGST", value: m(invoice.cgst) });
     if (invoice.sgst) totals.push({ label: "SGST", value: m(invoice.sgst) });
     if (invoice.igst) totals.push({ label: "IGST", value: m(invoice.igst) });
+    if (!hasGst && Number(invoice.taxable || 0) > 0 && Number(invoice.taxable) !== Number(invoice.amount)) {
+      totals.push({ label: "Sub Total", value: m(invoice.taxable) });
+    }
+    totals.push({ label: "Grand Total", value: m(invoice.amount), bold: true });
+  } else {
+    if (hasGst) {
+      totals.push({ label: "Taxable value", value: m(invoice.taxable) });
+      if (invoice.cgst) totals.push({ label: "CGST", value: m(invoice.cgst) });
+      if (invoice.sgst) totals.push({ label: "SGST", value: m(invoice.sgst) });
+      if (invoice.igst) totals.push({ label: "IGST", value: m(invoice.igst) });
+    }
+    totals.push({ label: invoice.amountLabel || "Invoice total", value: m(invoice.amount), bold: true });
   }
-  totals.push({ label: invoice.amountLabel || "Invoice total", value: m(invoice.amount), bold: true });
   if (invoice.outstanding != null && invoice.outstanding !== invoice.amount) {
     totals.push({ label: "Balance due", value: m(invoice.outstanding) });
   }
   const moneyOnly = invoice.kind === "receipt" || invoice.kind === "payment";
   const showQr = invoice.showUpiQr !== false && invoice.upiLink && Number(invoice.payableAmount || 0) > 0;
-  const taxSheet = !invoice.kind || invoice.kind === "sales_invoice" ? salesInvoicePresentation(invoice) : null;
+  const taxSheet = !isPos && (!invoice.kind || invoice.kind === "sales_invoice")
+    ? salesInvoicePresentation(invoice)
+    : null;
+  const dateValue = invoice.showSaleTime && invoice.soldAt
+    ? formatReceiptDateTime(invoice.soldAt)
+    : formatReceiptDate(invoice.invoiceDate);
+  const customerName = invoice.customerName || "Customer";
+  const customerPhone = String(invoice.customerPhone || "").trim();
+  const partyName = isPos && customerPhone
+    ? `${customerName} (M: ${customerPhone})`
+    : customerName;
+  const qtyTotal = totalItemQty(invoice.itemLines);
   return {
     layout: taxSheet ? "tax" : "",
     taxSheet,
-    title: invoice.title || "SALES INVOICE",
-    meta: [
-      [invoice.numberLabel || "Invoice No", invoice.invoiceNumber],
-      [
-        "Date",
-        invoice.showSaleTime && invoice.soldAt
-          ? formatReceiptDateTime(invoice.soldAt)
-          : formatReceiptDate(invoice.invoiceDate),
-      ],
-      moneyOnly || !invoice.dueDate ? null : ["Due", formatReceiptDate(invoice.dueDate)],
-      ["Settlement", invoice.settlement || "-"],
-    ].filter(Boolean),
-    seller: { name: invoice.companyName, lines: sellerLines(invoice), logoDataUrl: invoice.companyLogoUrl },
-    partyHeading: invoice.partyHeading || "BILL TO",
+    posSlip: isPos,
+    title: invoice.title || (isPos ? "BILL" : "SALES INVOICE"),
+    meta: isPos
+      ? [
+        ["Date", dateValue],
+        invoice.cashier ? ["Cashier", invoice.cashier] : null,
+        invoice.tillLabel ? ["Till", invoice.tillLabel] : null,
+        ["Bill No.", invoice.invoiceNumber],
+      ].filter(Boolean)
+      : [
+        [invoice.numberLabel || "Invoice No", invoice.invoiceNumber],
+        ["Date", dateValue],
+        moneyOnly || !invoice.dueDate ? null : ["Due", formatReceiptDate(invoice.dueDate)],
+        ["Settlement", invoice.settlement || "-"],
+      ].filter(Boolean),
+    seller: { name: invoice.companyName, lines: sellerLines(invoice, { posSlip: isPos }), logoDataUrl: invoice.companyLogoUrl },
+    partyHeading: isPos ? "Name" : (invoice.partyHeading || "BILL TO"),
     party: {
-      name: invoice.customerName || "Customer",
-      lines: [
-        invoice.customerAddress,
-        invoice.customerGstin ? `GSTIN: ${invoice.customerGstin}` : "",
-        invoice.customerPhone ? `Phone: ${invoice.customerPhone}` : "",
-      ],
+      name: partyName,
+      lines: isPos
+        ? [
+          invoice.customerGstin ? `GSTIN: ${invoice.customerGstin}` : "",
+          invoice.customerAddress || "",
+        ]
+        : [
+          invoice.customerAddress,
+          invoice.customerGstin ? `GSTIN: ${invoice.customerGstin}` : "",
+          invoice.customerPhone ? `Phone: ${invoice.customerPhone}` : "",
+        ],
     },
     items: (invoice.itemLines || []).map(line => ({
       name: line.name,
-      detail: [line.sku ? `SKU ${line.sku}` : "", line.hsnSac ? `HSN/SAC ${line.hsnSac}` : ""].filter(Boolean).join(" - "),
-      quantity: quantityText(line.quantity, line.unit),
+      detail: isPos
+        ? (line.hsnSac && hasGst ? `HSN ${line.hsnSac}` : "")
+        : [line.sku ? `SKU ${line.sku}` : "", line.hsnSac ? `HSN/SAC ${line.hsnSac}` : ""].filter(Boolean).join(" - "),
+      quantity: isPos
+        ? String(Number(line.quantity || 0).toLocaleString("en-IN", { maximumFractionDigits: 3 }))
+        : quantityText(line.quantity, line.unit),
+      qtyValue: Number(line.quantity || 0),
       rate: m(line.rate),
       discount: line.discount > 0 ? m(line.discount) : "",
-      gst: line.gstRate ? `${line.gstRate}%` : "",
+      gst: !isPos && line.gstRate ? `${line.gstRate}%` : "",
       amount: m(line.amount),
     })),
-    description: [invoice.narration, invoice.hsnSac ? `HSN/SAC: ${invoice.hsnSac}` : ""].filter(Boolean).join(" - "),
+    description: [invoice.narration, !isPos && invoice.hsnSac ? `HSN/SAC: ${invoice.hsnSac}` : ""].filter(Boolean).join(" - "),
     totals,
+    totalQty: qtyTotal > 0 ? qtyTotal.toLocaleString("en-IN", { maximumFractionDigits: 3 }) : "",
+    payment: isPos && invoice.settlement
+      ? {
+        when: dateValue,
+        method: invoice.settlement,
+        amount: /credit|khata/i.test(String(invoice.settlement || ""))
+          ? m(0)
+          : m(invoice.amount),
+      }
+      : null,
     amountNote: taxSheet ? `Amount chargeable (in words): ${taxSheet.amountWords}` : "",
-    notes: [
-      invoice.itemLines?.length && invoice.narration ? { heading: "Notes", lines: [invoice.narration] } : null,
-      invoice.receiptTerms ? { heading: "Terms", lines: [invoice.receiptTerms] } : null,
-    ].filter(Boolean),
-    bankLines: invoice.bankLines || [],
+    notes: isPos
+      ? []
+      : [
+        invoice.itemLines?.length && invoice.narration ? { heading: "Notes", lines: [invoice.narration] } : null,
+        invoice.receiptTerms ? { heading: "Terms", lines: [invoice.receiptTerms] } : null,
+      ].filter(Boolean),
+    bankLines: isPos ? [] : (invoice.bankLines || []),
     upi: showQr ? { link: invoice.upiLink, caption: upiCaption(invoice, invoice.payableAmount, m) } : null,
-    footer: invoice.receiptFooter || "Thank you for your business.",
+    footer: invoice.receiptFooter || (isPos ? "Thank You & Visit Again..!" : "Thank you for your business."),
   };
 }
 

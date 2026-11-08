@@ -10,10 +10,16 @@ import { useDialogDismiss } from "../../../components/useDialogDismiss.js";
 /** Counter / POS receipts use thermal 80 mm; Accounts credit invoices keep company template. */
 export function withCounterReceiptPrint(invoice) {
   if (!invoice) return invoice;
+  const isReturn = /return/i.test(String(invoice.narration || "")) || /return/i.test(String(invoice.title || ""));
   return {
     ...invoice,
     documentTemplate: "thermal",
     autoPrint: true,
+    posSlip: true,
+    title: isReturn ? "RETURN BILL" : (invoice.tax > 0 && invoice.companyGstin ? "TAX INVOICE" : "BILL"),
+    receiptFooter: invoice.receiptFooter && !/offline receipt/i.test(invoice.receiptFooter)
+      ? invoice.receiptFooter
+      : "Thank You & Visit Again..!",
   };
 }
 

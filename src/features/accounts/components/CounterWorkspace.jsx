@@ -78,6 +78,7 @@ import {
 import { syncOfflineCounterBills } from "../model/counterOfflineSync.js";
 import { printSalesInvoicePdf } from "../io/salesInvoicePdf.js";
 import { formatReceiptDateTime } from "../../receipts/model/receiptModel.js";
+import { openManualWhatsAppShare } from "../../receipts/io/receiptWhatsApp.js";
 import { accountsCompanyBranding } from "../model/salesInvoiceModel.js";
 import { isValidUpiId, upiPayLink } from "../model/upiPay.js";
 import { QrSvg } from "../PayPage.jsx";
@@ -155,6 +156,8 @@ export function CounterWorkspace({
   const [moneyMode, setMoneyMode] = useState("cash");
   const [settlement, setSettlement] = useState("paid");
   const [tillMode, setTillMode] = useState("sale"); // sale | return
+  const [walkInName, setWalkInName] = useState("");
+  const [walkInPhone, setWalkInPhone] = useState("");
   const [billDiscount, setBillDiscount] = useState("");
   const [lotPicker, setLotPicker] = useState(null);
   const [printNotice, setPrintNotice] = useState("");
@@ -289,6 +292,8 @@ export function CounterWorkspace({
       setReceivedUpi(draft.receivedUpi || "");
       setTenderedCash(draft.tenderedCash || "");
       setPaymentRef(draft.paymentRef || "");
+      setWalkInName(draft.walkInName || "");
+      setWalkInPhone(draft.walkInPhone || "");
     } else {
       setLines([]);
       setPartyId(CASH_PARTY_ID);
@@ -300,6 +305,8 @@ export function CounterWorkspace({
       setReceivedUpi("");
       setTenderedCash("");
       setPaymentRef("");
+      setWalkInName("");
+      setWalkInPhone("");
     }
     setCategoryFilter("");
     setDraftReady(true);
@@ -327,6 +334,8 @@ export function CounterWorkspace({
       receivedUpi,
       tenderedCash,
       paymentRef,
+      walkInName,
+      walkInPhone,
     });
   }, [
     companyId,
@@ -342,6 +351,8 @@ export function CounterWorkspace({
     receivedUpi,
     tenderedCash,
     paymentRef,
+    walkInName,
+    walkInPhone,
   ]);
 
   useEffect(() => {
@@ -593,7 +604,8 @@ export function CounterWorkspace({
     }));
   };
 
-  const shareDayCloseBrief = () => {
+  const shareDayCloseBrief = async () => {
+    // Owner ops brief — open WhatsApp with the text; nothing is sent until they tap send.
     if (!window.confirm("Open WhatsApp with this day-close brief? Nothing is sent until you tap send in WhatsApp.")) {
       return;
     }
@@ -712,7 +724,22 @@ export function CounterWorkspace({
     setReceivedUpi("");
     setTenderedCash("");
     setPaymentRef("");
+    setWalkInName("");
+    setWalkInPhone("");
     setError("");
+  };
+
+  const receiptCustomer = () => {
+    if (selectedParty) {
+      return {
+        name: selectedParty.name || "",
+        phone: selectedParty.phone || "",
+      };
+    }
+    return {
+      name: String(walkInName || "").trim(),
+      phone: String(walkInPhone || "").trim(),
+    };
   };
 
   const toggleFavourite = itemId => {
@@ -770,17 +797,26 @@ export function CounterWorkspace({
     return bills;
   };
 
-  const buildTillBill = ({ draft, moneyParts, payMode, voucherId, total, isReturn, offlineRef }) => ({
+  const buildTillBill = ({ draft, moneyParts, payMode, voucherId, total, isReturn, offlineRef, customer }) => ({
     id: voucherId || newClientRequestId(),
-    offlineRef: offlineRef || (voucherId ? `Till · ${String(voucherId).slice(0, 8)}` : "Counter"),
+    // Short bill ref from the voucher id — not the till register id (that is tillLabel / activeTillId).
+    offlineRef: offlineRef || (voucherId
+      ? `B-${String(voucherId).replace(/-/g, "").slice(0, 8).toUpperCase()}`
+      : "Counter"),
     date: today,
     createdAt: new Date().toISOString(),
     moneyMode: payMode,
     moneyParts,
     amount: total,
     syncStatus: voucherId ? "posted" : "pending",
+    tillLabel,
+    cashierName: cashierName || "",
+    customerName: customer?.name || "",
+    customerPhone: customer?.phone || "",
     payload: {
       ...draft,
+      customerName: customer?.name || "",
+      customerPhone: customer?.phone || "",
       narration: [
         draft?.narration || "",
         isReturn ? "Return" : "Counter sale",
@@ -851,6 +887,8 @@ export function CounterWorkspace({
       tillId: activeTillId,
       tillLabel,
       cashierName: cashierName || "",
+      customerName: receiptCustomer().name,
+      customerPhone: receiptCustomer().phone,
       date: today,
       createdAt: new Date().toISOString(),
       moneyMode,
@@ -864,6 +902,8 @@ export function CounterWorkspace({
         clientRequestId,
         sourceModule: "accounts",
         sourceType: "pos_counter",
+        customerName: receiptCustomer().name,
+        customerPhone: receiptCustomer().phone,
       },
     };
     await putOfflineBill(bill);
@@ -880,7 +920,8 @@ export function CounterWorkspace({
       receiptLines: chargeLines,
       receiptTotals: totals,
       payLabel: counterPayLabel(moneyMode),
-      customerName: selectedParty?.name || "",
+      customerName: receiptCustomer().name,
+      customerPhone: receiptCustomer().phone,
     });
     clearBill();
     setPrintNotice("Bill saved offline. Use Print receipt below for the thermal slip.");
@@ -1010,7 +1051,8 @@ export function CounterWorkspace({
           sourceType: "pos_counter",
         });
         const total = voucherTotals(draft.lines).debit;
-        const printBill = buildTillBill({ draft, moneyParts, payMode, voucherId, total, isReturn });
+        const customer = receiptCustomer();
+        const printBill = buildTillBill({ draft, moneyParts, payMode, voucherId, total, isReturn, customer });
         setLastBill({
           voucherId,
           total,
@@ -1018,10 +1060,12 @@ export function CounterWorkspace({
           lines: lines.length,
           isReturn,
           printBill,
+          offlineRef: printBill.offlineRef,
           receiptLines: chargeLines,
           receiptTotals: totals,
           payLabel: useCredit ? "Khata" : counterPayLabel(payMode),
-          customerName: selectedParty?.name || "",
+          customerName: customer.name,
+          customerPhone: customer.phone,
         });
         clearBill();
         setPrintNotice("Bill posted. Use Print receipt below for the thermal slip.");
@@ -1048,30 +1092,48 @@ export function CounterWorkspace({
     }
   };
 
-  const shareLastReceipt = () => {
+  const shareLastReceipt = async () => {
     if (!lastBill) {
       setPrintNotice("Charge a bill first, then share from Print receipt.");
       return;
     }
     const receiptTotals = lastBill.receiptTotals || { taxable: lastBill.total, tax: 0, taxLabel: "", total: lastBill.total };
+    const partyPhone = lastBill.customerPhone
+      || selectedParty?.phone
+      || (lastBill.customerName
+        ? (customers.find(party => party.name === lastBill.customerName)?.phone || "")
+        : "");
     const text = buildCounterWhatsAppReceipt({
       companyName: branding?.companyName || activeCompany?.name || "Store",
       companyPhone: branding?.companyPhone || "",
       companyGstin: branding?.companyGstin || "",
       companyAddress: branding?.companyAddress || "",
       tillLabel,
+      cashierName: cashierName || "",
+      billNo: lastBill.printBill?.offlineRef || lastBill.offlineRef || lastBill.voucherId || "",
       isReturn: Boolean(lastBill.isReturn),
       isCredit: Boolean(lastBill.payLabel === "Khata"),
       payLabel: lastBill.payLabel || "",
       customerName: lastBill.customerName || "",
+      customerPhone: partyPhone,
       lines: lastBill.receiptLines || [],
       taxable: receiptTotals.taxable,
       tax: receiptTotals.tax,
+      cgst: receiptTotals.cgst,
+      sgst: receiptTotals.sgst,
+      igst: receiptTotals.igst,
       taxLabel: receiptTotals.taxLabel,
       total: receiptTotals.total || lastBill.total,
       date: lastBill.printBill?.date || today,
     });
-    if (!window.confirm("Open WhatsApp with this receipt text? Nothing is sent until you tap send in WhatsApp.")) {
+    if (partyPhone) {
+      if (!window.confirm("Open WhatsApp with this receipt for the customer? Nothing is sent until you tap send in WhatsApp.")) {
+        return;
+      }
+      openManualWhatsAppShare({ phone: partyPhone, message: text });
+      return;
+    }
+    if (!window.confirm("No customer phone on this bill. Open WhatsApp with the receipt text to pick a chat?")) {
       return;
     }
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
@@ -2043,7 +2105,26 @@ export function CounterWorkspace({
             ) : (
               <>
                 <p className="counter-walkin" aria-label="Customer">Cash (walk-in)</p>
-                <p className="small">Walk-in only. Choose Khata / credit above for a named customer.</p>
+                <input
+                  className="counter-walkin-input"
+                  type="text"
+                  autoComplete="name"
+                  placeholder="Customer name (optional)"
+                  value={walkInName}
+                  disabled={busy}
+                  onChange={event => setWalkInName(event.target.value)}
+                />
+                <input
+                  className="counter-walkin-input"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  placeholder="WhatsApp phone (optional)"
+                  value={walkInPhone}
+                  disabled={busy}
+                  onChange={event => setWalkInPhone(event.target.value)}
+                />
+                <p className="small">Optional — used for WhatsApp receipt. Choose Khata for a saved customer.</p>
               </>
             )}
           </FieldBlock>
