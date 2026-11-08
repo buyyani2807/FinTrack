@@ -38,7 +38,9 @@ test("FEFO sorts lots by earliest expiry and skips expired", () => {
 test("cash change due is tendered minus total", () => {
   assert.equal(cashChangeDue("500", 336), 164);
   assert.equal(cashChangeDue("", 100), null);
+  assert.equal(cashChangeDue("0", 100), null);
   assert.equal(cashChangeDue("50", 100), -50);
+  assert.equal(cashChangeDue("100", 100), 0);
 });
 
 test("oversell lines flag qty above stock and skip services", () => {

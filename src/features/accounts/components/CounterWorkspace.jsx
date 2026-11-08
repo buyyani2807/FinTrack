@@ -487,6 +487,11 @@ export function CounterWorkspace({
     if (tillMode === "return" || settlement !== "paid" || moneyMode !== "cash") return null;
     return cashChangeDue(tenderedCash, totals.total);
   }, [tillMode, settlement, moneyMode, tenderedCash, totals.total]);
+  // Paid cash sales need tendered ≥ total before Charge (returns / khata / UPI-card skip this).
+  const cashTenderMissing = tillMode !== "return"
+    && settlement === "paid"
+    && moneyMode === "cash"
+    && (changeDue == null || changeDue < 0);
   const oversellLines = useMemo(
     () => (tillMode === "return" ? [] : counterOversellLines(chargeLines, stockByItem, workingItems)),
     [tillMode, chargeLines, stockByItem, workingItems],
@@ -1001,16 +1006,15 @@ export function CounterWorkspace({
       );
       return;
     }
-    if (
-      !isReturn
-      && !useCredit
-      && moneyMode === "cash"
-      && String(tenderedCash).trim()
-      && changeDue != null
-      && changeDue < 0
-    ) {
-      setError(`Cash tendered is short by ${money(Math.abs(changeDue))}.`);
-      return;
+    if (!isReturn && !useCredit && moneyMode === "cash") {
+      if (!String(tenderedCash).trim() || changeDue == null) {
+        setError("Enter cash tendered before charging.");
+        return;
+      }
+      if (changeDue < 0) {
+        setError(`Cash tendered is short by ${money(Math.abs(changeDue))}.`);
+        return;
+      }
     }
     const payMode = useCredit ? "cash" : moneyMode;
     const moneyParts = !useCredit && payMode === "cash_upi"
@@ -2246,6 +2250,7 @@ export function CounterWorkspace({
                 || !workingAccounts.length
                 || creditAdvice?.level === "block"
                 || (blockOversell && oversellLines.length > 0)
+                || cashTenderMissing
               }
               onClick={charge}
             >
@@ -2280,6 +2285,7 @@ export function CounterWorkspace({
               || !workingAccounts.length
               || creditAdvice?.level === "block"
               || (blockOversell && oversellLines.length > 0)
+              || cashTenderMissing
             }
             onClick={charge}
           >
