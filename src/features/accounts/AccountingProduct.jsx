@@ -339,6 +339,8 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     booksStartedOn: todayIso(),
     industry: "retail",
     pan: "",
+    businessAddress: "",
+    businessPhone: "",
     copyFromExisting: false,
     sourceCompanyId: "",
     asOf: "",

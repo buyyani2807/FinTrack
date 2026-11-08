@@ -1,4 +1,10 @@
-import { createAccountsCompany, createAccountsCompanyFrom } from "../../data/accountingRepository.js";
+import {
+  createAccountsCompany,
+  createAccountsCompanyFrom,
+  DEFAULT_DOCUMENT_SETTINGS,
+  saveDocumentSettings,
+  setActiveAccountsCompanyId,
+} from "../../data/accountingRepository.js";
 import { Select } from "../../../../components/Select.jsx";
 import { INDUSTRY_TEMPLATES, saveIndustry } from "../AccOnboardingWizard.jsx";
 import { normalizePan, panValidationMessage } from "../../model/accountingGst.js";
@@ -61,6 +67,20 @@ export function CreateCompanyModal({
       }
       const id = Array.isArray(created) ? created[0] : created;
       if (typeof id === "string") saveIndustry(id, companyDraft.industry || "retail");
+      const address = String(companyDraft.businessAddress || "").trim();
+      const phone = String(companyDraft.businessPhone || "").trim();
+      if (
+        typeof id === "string"
+        && (address || phone)
+        && !(copyFromExisting && companyDraft.copyDocumentSettings !== false)
+      ) {
+        setActiveAccountsCompanyId(id);
+        await saveDocumentSettings(token, {
+          ...DEFAULT_DOCUMENT_SETTINGS,
+          businessAddress: address,
+          businessPhone: phone,
+        });
+      }
       if (typeof id === "string") onCreated?.(id);
       setShowCreateCompany(false);
       setCompanyDraft({
@@ -68,6 +88,8 @@ export function CreateCompanyModal({
         booksStartedOn: companyDraft.booksStartedOn,
         industry: "retail",
         pan: "",
+        businessAddress: "",
+        businessPhone: "",
         copyFromExisting: false,
         sourceCompanyId: "",
         asOf: "",
@@ -136,6 +158,23 @@ export function CreateCompanyModal({
                 asOf: current.asOf || addDaysIso(booksStartedOn, -1),
               }));
             }}
+          />
+        </Field>
+        <Field label="Business address">
+          <input
+            value={companyDraft.businessAddress || ""}
+            onChange={event => setCompanyDraft(current => ({ ...current, businessAddress: event.target.value }))}
+            placeholder="Shop / office address for receipts"
+          />
+          <span className="small">Printed and WhatsApp bills use this address.</span>
+        </Field>
+        <Field label="Business phone">
+          <input
+            type="tel"
+            inputMode="tel"
+            value={companyDraft.businessPhone || ""}
+            onChange={event => setCompanyDraft(current => ({ ...current, businessPhone: event.target.value }))}
+            placeholder="Mobile / landline on receipts"
           />
         </Field>
         <Field label="Industry template">
