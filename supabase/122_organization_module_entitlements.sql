@@ -155,6 +155,8 @@ as $$
     'name', name,
     'description', description,
     'amountPaise', amount_paise,
+    'annualAmountPaise', annual_amount_paise,
+    'gstRate', gst_rate,
     'currency', currency,
     'billingPeriod', billing_period,
     'isBundle', is_bundle
