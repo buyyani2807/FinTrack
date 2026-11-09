@@ -5,20 +5,21 @@ export const TRIAL_DAYS = 14;
 export const TRIAL_ZONE = "Asia/Kolkata";
 export const TRIAL_LENGTH_MS = TRIAL_DAYS * 24 * 60 * 60 * 1000;
 
+/** Legacy all-in-one cards removed from Subscribe UI — modules use MODULE_BILLING_DEFAULTS. */
 export const SUBSCRIPTION_PLANS = [
   {
     id: "monthly",
     name: "Monthly",
-    price: "₹499",
+    price: "₹498 + GST",
     period: "month",
-    note: "All modules.",
+    note: "Per module. See module store for GST total.",
   },
   {
     id: "annual",
     name: "Annual",
-    price: "₹5,000",
+    price: "₹5,976 + GST",
     period: "year",
-    note: "₹988 less than twelve monthly payments.",
+    note: "Per module. See module store for GST total.",
   },
 ];
 
