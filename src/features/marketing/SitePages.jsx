@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Reveal, RevealProvider } from "../../components/ui/Reveal.jsx";
-import { MODULE_PRODUCT_LIST, priceForPeriod } from "../commercial/moduleProducts.js";
+import { MODULE_PRODUCT_LIST, priceForPeriod, priceForProduct } from "../commercial/moduleProducts.js";
 import { SECURITY_POINTS, SECURITY_TRUST, SOLUTIONS, featureBySlug } from "./catalog.js";
 import { featurePath, marketingPaths } from "./paths.js";
 import { InstallGuide } from "./InstallGuide.jsx";
@@ -100,37 +100,43 @@ export function SecurityPage() {
 export function PricingPage() {
   const monthly = priceForPeriod("monthly");
   const annual = priceForPeriod("annual");
+  const posMonthly = priceForProduct("accounts_pos", "monthly");
   return <RevealProvider intent="landing"><section className="mkt-section">
     <PageTitle title="FinTrack pricing" />
     <Reveal as="p" className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Pricing</Reveal>
     <Reveal as="h1" index={1}>Pay for the modules you need.</Reveal>
     <Reveal as="p" className="mkt-lead" index={2}>
-      Each module is {monthly.baseLabel} + GST {monthly.gstPercentLabel} ({monthly.totalLabel} per month),
+      Finance, Chit Fund, and Accounts are {monthly.baseLabel} + GST {monthly.gstPercentLabel} ({monthly.totalLabel} per month),
       or {annual.baseLabel} + GST {annual.gstPercentLabel} ({annual.totalLabel} per year).
-      There is no lifetime plan. Unlock Finance, Chit Fund, Accounts, or Accounts + POS after a 14-day free trial of the full workspace.
+      Accounts + POS is {posMonthly.baseLabel} + GST ({posMonthly.totalLabel} / month) — ₹100 more for Counter.
+      There is no lifetime plan. Unlock after a 14-day free trial of the full workspace.
     </Reveal>
     <Reveal className="mkt-plan-prices mkt-plan-prices-rate" index={3}>
       <div>
-        <p className="mkt-muted">Monthly per module</p>
+        <p className="mkt-muted">Standard modules / month</p>
         <p className="mkt-price">{monthly.totalLabel} <span>/ month</span></p>
         <p className="mkt-muted">{monthly.breakdown}</p>
       </div>
       <div>
-        <p className="mkt-muted">Annual per module</p>
-        <p className="mkt-price">{annual.totalLabel} <span>/ year</span></p>
-        <p className="mkt-muted">{annual.breakdown}</p>
+        <p className="mkt-muted">Accounts + POS / month</p>
+        <p className="mkt-price">{posMonthly.totalLabel} <span>/ month</span></p>
+        <p className="mkt-muted">{posMonthly.breakdown}</p>
       </div>
     </Reveal>
     <div className="mkt-module-price-grid">
-      {MODULE_PRODUCT_LIST.map((product, index) => (
+      {MODULE_PRODUCT_LIST.map((product, index) => {
+        const productMonthly = priceForProduct(product, "monthly");
+        const productAnnual = priceForProduct(product, "annual");
+        return (
         <Reveal as="article" key={product.key} className="mkt-card mkt-module-price-card" index={index % 4}>
           <h2>{product.name}</h2>
           <p>{product.description}</p>
           <ul className="mkt-ticks">{product.includes.map(item => <li key={item}>{item}</li>)}</ul>
-          <p className="mkt-module-price-line"><strong>{monthly.totalLabel}</strong> <span>/ month</span></p>
-          <p className="mkt-muted">or {annual.totalLabel} / year · GST included in totals</p>
+          <p className="mkt-module-price-line"><strong>{productMonthly.totalLabel}</strong> <span>/ month</span></p>
+          <p className="mkt-muted">or {productAnnual.totalLabel} / year · GST included in totals</p>
         </Reveal>
-      ))}
+        );
+      })}
     </div>
     <Reveal className="mkt-cta-row" index={4}>
       <ProductCta primary />
@@ -161,7 +167,7 @@ const ABOUT_PRINCIPLES = [
   { icon: "Sparkles", title: "You confirm every record", text: "Ask FinTrack, Tell FinTrack, bill scanning, and AI Review draft and suggest. Nothing is posted, sent, or imported until you save it." },
   { icon: "Lock", title: "Each person sees only their part", text: "The owner, a collection agent, a finance customer, and a chit member each sign in separately and see only what is theirs." },
   { icon: "Landmark", title: "Built for how Indian businesses work", text: "An April to March financial year, GST preparation for your CA, rupee amounts, daily and monthly collections, and chit funds." },
-  { icon: "WalletCards", title: "Modules you choose", text: "₹498 + GST 18% per module each month, or ₹5,976 + GST 18% per year. Unlock Finance, Chit Fund, Accounts, or Accounts + POS after the free trial." },
+  { icon: "WalletCards", title: "Modules you choose", text: "₹498 + GST 18% per standard module each month (₹5,976 + GST / year). Accounts + POS is ₹598 + GST. Unlock after the free trial." },
 ];
 
 const ABOUT_SIGN_INS = [
@@ -300,7 +306,7 @@ export function ResourcesPage() {
     [marketingPaths.how, "How it works", "The path from sign-in to a record you confirm."],
     [marketingPaths.features, "Feature directory", "Every module currently in the product."],
     [marketingPaths.security, "Security", "Roles, companies, locks, and review."],
-    [marketingPaths.pricing, "Pricing", "Modules from ₹498 + GST 18% per month, or ₹5,976 + GST 18% per year. 14-day free trial."],
+    [marketingPaths.pricing, "Pricing", "Modules from ₹498 + GST 18% per month; Accounts + POS ₹598 + GST. 14-day free trial."],
     [marketingPaths.about, "About FinTrack", "What FinTrack stands for and who uses it."],
     [marketingPaths.founder, "CEO and Founder", "Sudheer Kumar Buyyani, and the experience behind FinTrack."],
     [marketingPaths.contact, "Request a demo", "A local note until contact is connected."],

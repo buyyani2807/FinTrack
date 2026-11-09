@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useOutletContext, useSearchParams } from "react-router";
 import { Check, Lock } from "lucide-react";
-import { MODULE_PRODUCT_LIST, cartTotals, priceForPeriod } from "./moduleProducts.js";
+import { MODULE_PRODUCT_LIST, cartTotals, priceForPeriod, priceForProduct } from "./moduleProducts.js";
 import { catalogWithPurchaseState } from "./moduleAccess.js";
 
 /**
@@ -22,7 +22,8 @@ export function ModuleStorePage() {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const unit = priceForPeriod(period);
+  const standard = priceForPeriod(period);
+  const posPrice = priceForProduct("accounts_pos", period);
   const lines = MODULE_PRODUCT_LIST.filter(product => selected.has(product.key));
   const totals = cartTotals([...selected], period);
 
@@ -85,20 +86,22 @@ export function ModuleStorePage() {
       <p className="ft-kicker">Modules</p>
       <h1>Choose modules for this business</h1>
       <p className="ft-subscribe-lead">
-        Each module is {unit.baseLabel} + GST {unit.gstPercentLabel} ({unit.totalLabel} {unit.periodLabel}).
+        Standard modules are {standard.baseLabel} + GST {standard.gstPercentLabel} ({standard.totalLabel} {standard.periodLabel}).
+        Accounts + POS is {posPrice.baseLabel} + GST ({posPrice.totalLabel} {posPrice.periodLabel}).
         There is no lifetime plan. Your 14-day free trial still opens every module.
       </p>
       <div className="ft-module-period" role="group" aria-label="Billing period">
         <button type="button" className={`btn${period === "monthly" ? " primary" : ""}`} onClick={() => setPeriod("monthly")}>
-          Monthly · {priceForPeriod("monthly").breakdown}
+          Monthly · from {priceForPeriod("monthly").baseLabel} + GST
         </button>
         <button type="button" className={`btn${period === "annual" ? " primary" : ""}`} onClick={() => setPeriod("annual")}>
-          Annual · {priceForPeriod("annual").breakdown}
+          Annual · from {priceForPeriod("annual").baseLabel} + GST
         </button>
       </div>
       <div className="ft-module-store-grid">
         {catalog.map(product => {
           const isOn = selected.has(product.key);
+          const price = priceForProduct(product, period);
           return (
             <article
               key={product.key}
@@ -112,8 +115,8 @@ export function ModuleStorePage() {
               </header>
               <p>{product.description}</p>
               <ul>{product.includes.map(item => <li key={item}>{item}</li>)}</ul>
-              <p className="ft-plan-price">{unit.totalLabel} <span>/ {unit.periodLabel}</span></p>
-              <p className="small">{unit.breakdown}</p>
+              <p className="ft-plan-price">{price.totalLabel} <span>/ {price.periodLabel}</span></p>
+              <p className="small">{price.breakdown}</p>
               {product.owned ? (
                 <p className="small">Active for this business.</p>
               ) : (

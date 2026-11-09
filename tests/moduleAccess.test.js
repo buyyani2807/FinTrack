@@ -12,6 +12,7 @@ import {
   appModulesFromProductKeys,
   cartTotals,
   priceForPeriod,
+  priceForProduct,
   productKeysSatisfy,
   unlockCopyForAppModule,
 } from "../src/features/commercial/moduleProducts.js";
@@ -36,12 +37,34 @@ test("module price is monthly ₹498 or annual ₹5976 plus 18% GST — no lifet
   assert.equal(annual.totalPaise, 705168);
 });
 
-test("cart totals multiply modules and keep GST", () => {
+test("accounts_pos is ₹100 more than Accounts (₹598 / ₹7,176 + GST)", () => {
+  assert.equal(MODULE_BILLING_DEFAULTS.accountsPosMonthlyBasePaise, 59800);
+  assert.equal(MODULE_BILLING_DEFAULTS.accountsPosAnnualBasePaise, 717600);
+  const monthly = priceForProduct("accounts_pos", "monthly");
+  assert.equal(monthly.basePaise, 59800);
+  assert.equal(monthly.taxPaise, 10764);
+  assert.equal(monthly.totalPaise, 70564);
+  const annual = priceForProduct("accounts_pos", "annual");
+  assert.equal(annual.basePaise, 717600);
+  assert.equal(annual.taxPaise, 129168);
+  assert.equal(annual.totalPaise, 846768);
+  assert.equal(priceForProduct("accounts", "monthly").basePaise, 49800);
+});
+
+test("cart totals sum per-product prices and keep GST", () => {
   const two = cartTotals(["chit_fund", "accounts"], "monthly");
   assert.equal(two.moduleCount, 2);
   assert.equal(two.basePaise, 99600);
   assert.equal(two.taxPaise, 17928);
   assert.equal(two.totalPaise, 117528);
+
+  const withPos = cartTotals(["accounts_pos"], "monthly");
+  assert.equal(withPos.basePaise, 59800);
+  assert.equal(withPos.totalPaise, 70564);
+
+  const mixed = cartTotals(["chit_fund", "accounts_pos"], "monthly");
+  assert.equal(mixed.basePaise, 49800 + 59800);
+  assert.equal(mixed.totalPaise, 58764 + 70564);
 });
 
 test("accounts_pos unlocks accounts surfaces and counter", () => {

@@ -43,6 +43,8 @@ export default async function handler(req, res) {
         assumedBilling: {
           monthlyBasePaise: 49800,
           annualBasePaise: 597600,
+          accountsPosMonthlyBasePaise: 59800,
+          accountsPosAnnualBasePaise: 717600,
           gstRate: 0.18,
           currency: "INR",
           periods: ["monthly", "annual"],

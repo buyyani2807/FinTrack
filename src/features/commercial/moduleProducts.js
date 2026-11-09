@@ -2,8 +2,9 @@
  * Configurable paid modules for FinTrack commerce.
  *
  * Billing (confirmed):
- * - Monthly: ₹498 + GST 18% per module/bundle
- * - Annual: ₹5,976 + GST 18% per module/bundle
+ * - Monthly: ₹498 + GST 18% per standard module
+ * - Annual: ₹5,976 + GST 18% per standard module
+ * - Accounts + POS: ₹598 + GST 18% / month, ₹7,176 + GST 18% / year (+₹100 vs Accounts)
  * - No lifetime membership
  * - Currency INR
  * - Free 14-day org trial still grants full module access
@@ -15,9 +16,12 @@
 export const MODULE_BILLING_DEFAULTS = {
   currency: "INR",
   gstRate: 0.18,
-  /** Base prices before GST (paise). */
+  /** Base prices before GST (paise) — standard module. */
   monthlyBasePaise: 49800, // ₹498
   annualBasePaise: 597600, // ₹5,976
+  /** Accounts + POS premium (+₹100 / month vs Accounts). */
+  accountsPosMonthlyBasePaise: 59800, // ₹598
+  accountsPosAnnualBasePaise: 717600, // ₹7,176
   /** Default selection on unlock UI */
   period: "monthly",
   provider: "razorpay",
@@ -26,6 +30,13 @@ export const MODULE_BILLING_DEFAULTS = {
 function gstPaise(basePaise, rate = MODULE_BILLING_DEFAULTS.gstRate) {
   const base = Math.max(0, Number(basePaise) || 0);
   return Math.round(base * Number(rate));
+}
+
+function formatInr(paise) {
+  return `₹${(Number(paise) / 100).toLocaleString("en-IN", {
+    minimumFractionDigits: Number(paise) % 100 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 export function priceForPeriod(period = MODULE_BILLING_DEFAULTS.period, overrides = {}) {
@@ -40,10 +51,6 @@ export function priceForPeriod(period = MODULE_BILLING_DEFAULTS.period, override
   const taxPaise = gstPaise(basePaise, rate);
   const totalPaise = basePaise + taxPaise;
   const currency = overrides.currency || MODULE_BILLING_DEFAULTS.currency;
-  const formatInr = paise => `₹${(Number(paise) / 100).toLocaleString("en-IN", {
-    minimumFractionDigits: Number(paise) % 100 === 0 ? 0 : 2,
-    maximumFractionDigits: 2,
-  })}`;
   return {
     period: billingPeriod,
     periodLabel: billingPeriod === "annual" ? "per year" : "per month",
@@ -129,6 +136,9 @@ export const MODULE_PRODUCTS = {
     unlocks: ["accounts", "cashbook", "counter", "dashboard", "reports", "receipts"],
     bundle: true,
     satisfies: ["accounts", "accounts_pos"],
+    /** +₹100 / month vs Accounts (annual = 12 × monthly base). */
+    monthlyBasePaise: MODULE_BILLING_DEFAULTS.accountsPosMonthlyBasePaise,
+    annualBasePaise: MODULE_BILLING_DEFAULTS.accountsPosAnnualBasePaise,
   },
 };
 
@@ -138,10 +148,34 @@ export function getModuleProduct(key) {
   return MODULE_PRODUCTS[key] || null;
 }
 
-/** @deprecated Prefer priceForPeriod — kept for older call sites. */
+export function basePaiseForProduct(productOrKey, period = MODULE_BILLING_DEFAULTS.period) {
+  const product = typeof productOrKey === "string"
+    ? getModuleProduct(productOrKey)
+    : productOrKey;
+  const billingPeriod = period === "annual" ? "annual" : "monthly";
+  if (billingPeriod === "annual") {
+    return Number(
+      product?.annualBasePaise
+      ?? MODULE_BILLING_DEFAULTS.annualBasePaise,
+    );
+  }
+  return Number(
+    product?.monthlyBasePaise
+    ?? MODULE_BILLING_DEFAULTS.monthlyBasePaise,
+  );
+}
+
+export function priceForProduct(productOrKey, period = MODULE_BILLING_DEFAULTS.period, overrides = {}) {
+  return priceForPeriod(period, {
+    ...overrides,
+    basePaise: overrides.basePaise ?? basePaiseForProduct(productOrKey, period),
+  });
+}
+
+/** @deprecated Prefer priceForPeriod / priceForProduct — kept for older call sites. */
 export function formatModulePrice(product = {}, overrides = {}) {
   const period = overrides.period || product.period || MODULE_BILLING_DEFAULTS.period;
-  return priceForPeriod(period, overrides);
+  return priceForProduct(product, period, overrides);
 }
 
 export const APP_MODULE_PRODUCT = {
@@ -154,9 +188,9 @@ export const APP_MODULE_PRODUCT = {
 };
 
 export function unlockCopyForAppModule(appModuleId, period = MODULE_BILLING_DEFAULTS.period) {
-  const price = priceForPeriod(period);
   if (appModuleId === "counter" || APP_MODULE_PRODUCT[appModuleId] === "accounts_pos") {
     const product = MODULE_PRODUCTS.accounts_pos;
+    const price = priceForProduct(product, period);
     return {
       productKey: product.key,
       title: product.name,
@@ -167,6 +201,7 @@ export function unlockCopyForAppModule(appModuleId, period = MODULE_BILLING_DEFA
   }
   if (appModuleId === "accounts" || appModuleId === "cashbook") {
     const product = MODULE_PRODUCTS.accounts;
+    const price = priceForProduct(product, period);
     return {
       productKey: product.key,
       title: product.name,
@@ -177,6 +212,7 @@ export function unlockCopyForAppModule(appModuleId, period = MODULE_BILLING_DEFA
   }
   if (appModuleId === "daily" || appModuleId === "monthly") {
     const product = MODULE_PRODUCTS.finance_daily_monthly;
+    const price = priceForProduct(product, period);
     return {
       productKey: product.key,
       title: product.name,
@@ -187,6 +223,7 @@ export function unlockCopyForAppModule(appModuleId, period = MODULE_BILLING_DEFA
   }
   if (appModuleId === "chit") {
     const product = MODULE_PRODUCTS.chit_fund;
+    const price = priceForProduct(product, period);
     return {
       productKey: product.key,
       title: product.name,
@@ -218,21 +255,34 @@ export function productKeysSatisfy(ownedKeys = [], requiredProductKey) {
 }
 
 export function cartTotals(productKeys = [], period = MODULE_BILLING_DEFAULTS.period) {
-  const keys = [...new Set(productKeys || [])];
-  const unit = priceForPeriod(period);
-  const count = keys.length;
+  const keys = [...new Set(productKeys || [])].filter(key => MODULE_PRODUCTS[key]);
+  let basePaise = 0;
+  let taxPaise = 0;
+  let totalPaise = 0;
+  const lines = keys.map(key => {
+    const price = priceForProduct(key, period);
+    basePaise += price.basePaise;
+    taxPaise += price.taxPaise;
+    totalPaise += price.totalPaise;
+    return { key, ...price };
+  });
+  const periodMeta = priceForPeriod(period);
+  const summed = priceForPeriod(period, { basePaise });
   return {
-    ...unit,
-    moduleCount: count,
-    basePaise: unit.basePaise * count,
-    taxPaise: unit.taxPaise * count,
-    totalPaise: unit.totalPaise * count,
-    amountPaise: unit.totalPaise * count,
-    baseLabel: priceForPeriod(period, { basePaise: unit.basePaise * count }).baseLabel,
-    taxLabel: priceForPeriod(period, { basePaise: unit.basePaise * count }).taxLabel,
-    totalLabel: priceForPeriod(period, { basePaise: unit.basePaise * count }).totalLabel,
-    label: priceForPeriod(period, { basePaise: unit.basePaise * count }).totalLabel,
-    display: `${priceForPeriod(period, { basePaise: unit.basePaise * count }).totalLabel} ${unit.periodLabel} (incl. GST)`,
-    breakdown: `${count} × (${unit.breakdown})`,
+    ...periodMeta,
+    moduleCount: keys.length,
+    lines,
+    basePaise,
+    taxPaise,
+    totalPaise,
+    amountPaise: totalPaise,
+    baseLabel: summed.baseLabel,
+    taxLabel: summed.taxLabel,
+    totalLabel: summed.totalLabel,
+    label: summed.totalLabel,
+    display: `${summed.totalLabel} ${periodMeta.periodLabel} (incl. GST)`,
+    breakdown: keys.length
+      ? `${keys.length} module${keys.length === 1 ? "" : "s"} · ${summed.breakdown}`
+      : summed.breakdown,
   };
 }

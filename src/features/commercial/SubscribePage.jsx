@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Link, useOutletContext } from "react-router";
 import { catalogWithPurchaseState } from "./moduleAccess.js";
-import { priceForPeriod } from "./moduleProducts.js";
+import { priceForPeriod, priceForProduct } from "./moduleProducts.js";
 import {
   formatTrialDate,
   subscriptionLockCopy,
@@ -20,6 +20,7 @@ export function SubscribePage() {
   const modules = useMemo(() => catalogWithPurchaseState(moduleState), [moduleState]);
   const monthly = priceForPeriod("monthly");
   const annual = priceForPeriod("annual");
+  const posMonthly = priceForProduct("accounts_pos", "monthly");
 
   return <main className="ft-subscribe">
     <p className="ft-kicker">Subscription</p>
@@ -38,15 +39,19 @@ export function SubscribePage() {
     <section className="ft-subscribe-modules">
       <h2>{ended ? "Modules" : "Your modules"}</h2>
       <p className="small">
-        Pricing per module: {monthly.breakdown} monthly, or {annual.breakdown} yearly. No lifetime plan.
+        Standard modules: {monthly.breakdown} monthly, or {annual.breakdown} yearly.
+        Accounts + POS: {posMonthly.breakdown}. No lifetime plan.
       </p>
       <ul className="ft-module-billing-list">
-        {modules.map(product => (
+        {modules.map(product => {
+          const price = priceForProduct(product, "monthly");
+          return (
           <li key={product.key} className={product.owned ? "is-owned" : "is-locked"}>
             <strong>{product.name}</strong>
-            <span>{product.owned ? "Active" : "Locked"} · from {monthly.totalLabel}/mo</span>
+            <span>{product.owned ? "Active" : "Locked"} · {price.totalLabel}/mo</span>
           </li>
-        ))}
+          );
+        })}
       </ul>
       {isOwner ? (
         <p><Link className="btn primary" to="/subscribe/modules">Unlock modules</Link></p>

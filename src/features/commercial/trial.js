@@ -10,16 +10,16 @@ export const SUBSCRIPTION_PLANS = [
   {
     id: "monthly",
     name: "Monthly",
-    price: "₹498 + GST",
+    price: "From ₹498 + GST",
     period: "month",
-    note: "Per module. See module store for GST total.",
+    note: "Per module. Accounts + POS is ₹598 + GST. See module store for totals.",
   },
   {
     id: "annual",
     name: "Annual",
-    price: "₹5,976 + GST",
+    price: "From ₹5,976 + GST",
     period: "year",
-    note: "Per module. See module store for GST total.",
+    note: "Per module. Accounts + POS is ₹7,176 + GST. See module store for totals.",
   },
 ];
 
