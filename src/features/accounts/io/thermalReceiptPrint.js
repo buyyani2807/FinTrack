@@ -1,7 +1,11 @@
 /**
  * Counter / POS thermal print via HTML — not PDF.
- * Cheap ESC/POS printers often print PDF→PostScript (cg-pdf.ps) as raw junk;
- * an 80 mm HTML slip is rasterized or treated as text by the driver instead.
+ *
+ * Why HTML: PDF print on macOS often becomes PostScript (cg-pdf.ps) that ESC/POS
+ * printers dump as junk. HTML is rasterized or sent as text by the OS driver.
+ *
+ * Cross-device: print from a same-origin iframe (works in mobile PWA, Windows,
+ * and macOS). Pop-ups are a desktop fallback only — many phones block them.
  */
 import { encodeQr } from "../../../lib/qrCode.js";
 
@@ -38,8 +42,10 @@ function qrSvg(link, { module = 2 } = {}) {
 /**
  * @param {object} model - from salesInvoicePdfModel(invoice)
  * @param {object} [invoice] - original invoice for UPI / money helpers
+ * @param {{ autoPrint?: boolean }} [options]
  */
-export function buildThermalReceiptHtml(model, invoice = null) {
+export function buildThermalReceiptHtml(model, invoice = null, options = {}) {
+  const autoPrint = options.autoPrint !== false;
   const sellerLines = (model.seller?.lines || []).filter(Boolean).map(line => `<div class="c muted">${escapeHtml(line)}</div>`).join("");
   const partyLines = (model.party?.lines || []).filter(Boolean).map(line => `<div>${escapeHtml(line)}</div>`).join("");
   const metaRows = (model.meta || [])
@@ -83,29 +89,43 @@ export function buildThermalReceiptHtml(model, invoice = null) {
   const qtyLine = model.totalQty
     ? `<div class="row"><span>Total Qty</span><span>${escapeHtml(model.totalQty)}</span></div>`
     : "";
+  const printScript = autoPrint
+    ? `<script>
+    (function () {
+      function go() {
+        try { window.focus(); window.print(); } catch (e) {}
+      }
+      if (document.readyState === "complete") go();
+      else window.addEventListener("load", go);
+    })();
+  </script>`
+    : "";
 
   return `<!doctype html>
 <html>
 <head>
   <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>${escapeHtml(model.title || "Receipt")}</title>
   <style>
+    /* 80 mm slip. Drivers that ignore @page still get a narrow body. */
     @page { size: 80mm auto; margin: 2mm; }
     * { box-sizing: border-box; }
     html, body {
       margin: 0;
       padding: 0;
-      width: 76mm;
+      width: 80mm;
+      max-width: 80mm;
       color: #000;
       background: #fff;
-      font: 11px/1.35 ui-monospace, "SF Mono", Menlo, Consolas, "Courier New", monospace;
+      font: 11px/1.35 "Courier New", Courier, ui-monospace, monospace;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-    .slip { width: 72mm; margin: 0 auto; padding: 1mm 0 4mm; }
+    .slip { width: 72mm; max-width: 100%; margin: 0 auto; padding: 1mm 2mm 6mm; }
     .c { text-align: center; }
     .bold { font-weight: 700; }
-    .muted { opacity: 0.9; font-size: 10px; }
+    .muted { font-size: 10px; }
     .title { font-weight: 700; letter-spacing: 0.04em; margin: 0 0 2px; }
     .shop { font-size: 13px; font-weight: 700; margin: 0 0 2px; }
     .rule { border-top: 1px dashed #000; margin: 6px 0; }
@@ -113,7 +133,7 @@ export function buildThermalReceiptHtml(model, invoice = null) {
     .row > span:last-child { text-align: right; white-space: nowrap; }
     .head {
       display: grid;
-      grid-template-columns: 1fr 10mm 14mm 16mm;
+      grid-template-columns: minmax(0, 1fr) 9mm 13mm 15mm;
       gap: 2px;
       font-weight: 700;
       font-size: 10px;
@@ -123,20 +143,20 @@ export function buildThermalReceiptHtml(model, invoice = null) {
     .item { margin: 3px 0; }
     .item-grid {
       display: grid;
-      grid-template-columns: 1fr 10mm 14mm 16mm;
+      grid-template-columns: minmax(0, 1fr) 9mm 13mm 15mm;
       gap: 2px;
       align-items: start;
     }
-    .item-grid .name { font-weight: 700; word-break: break-word; }
-    .detail { margin-top: 1px; padding-right: 40mm; }
+    .item-grid .name { font-weight: 700; overflow-wrap: anywhere; word-break: break-word; }
+    .detail { margin-top: 1px; font-size: 10px; }
     .pay { display: grid; grid-template-columns: 1fr auto 1fr; gap: 4px; align-items: center; font-size: 10px; }
     .pay > span:nth-child(2) { text-align: center; }
     .pay > span:last-child { text-align: right; }
     .qr { text-align: center; margin: 4px 0; }
-    .qr svg { max-width: 38mm; height: auto; }
+    .qr svg { max-width: 36mm; height: auto; }
     .foot { margin-top: 4px; font-weight: 700; }
     @media print {
-      html, body { width: 76mm; }
+      html, body { width: 80mm !important; max-width: 80mm !important; }
       .slip { width: 72mm; }
     }
   </style>
@@ -160,26 +180,55 @@ export function buildThermalReceiptHtml(model, invoice = null) {
     <div class="rule"></div>
     <div class="c foot">${escapeHtml(model.footer || "Thank You & Visit Again..!")}</div>
   </div>
-  <script>
-    window.onload = function () {
-      try { window.focus(); window.print(); } catch (e) {}
-    };
-  </script>
+  ${printScript}
 </body>
 </html>`;
 }
 
-/**
- * Open an HTML thermal slip and trigger the system print dialog.
- * @param {object} model - from salesInvoicePdfModel(invoice)
- * @param {object} [invoice]
- */
-export function printThermalReceiptHtml(model, invoice = null) {
-  if (typeof window === "undefined" || !model) return false;
-  const html = buildThermalReceiptHtml(model, invoice);
+function cleanupPrintFrame(frame) {
+  window.setTimeout(() => {
+    try { frame.remove(); } catch { /* ignore */ }
+  }, 60_000);
+}
+
+/** Hidden iframe print — reliable on mobile PWA (no pop-up) and desktop. */
+function printViaIframe(html) {
+  if (typeof document === "undefined") return false;
+  const frame = document.createElement("iframe");
+  frame.setAttribute("title", "Thermal receipt");
+  frame.setAttribute("aria-hidden", "true");
+  // Must be in the layout tree (not display:none) or some browsers skip print.
+  frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0;pointer-events:none;";
+  document.body.appendChild(frame);
+
+  const win = frame.contentWindow;
+  const doc = frame.contentDocument || win?.document;
+  if (!win || !doc) {
+    frame.remove();
+    return false;
+  }
+
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  // Call print in the same user-gesture turn when possible (required on iOS).
+  try {
+    win.focus();
+    win.print();
+    cleanupPrintFrame(frame);
+    return true;
+  } catch {
+    frame.remove();
+    return false;
+  }
+}
+
+/** Desktop fallback: blob tab (no noopener — we need to trigger print). */
+function printViaPopup(html) {
   let popup = null;
   try {
-    popup = window.open("", "_blank", "noopener,noreferrer,width=420,height=720");
+    popup = window.open("", "_blank", "width=420,height=720");
   } catch {
     popup = null;
   }
@@ -188,9 +237,28 @@ export function printThermalReceiptHtml(model, invoice = null) {
     popup.document.open();
     popup.document.write(html);
     popup.document.close();
+    try {
+      popup.focus();
+      popup.print();
+    } catch { /* user can use browser Print */ }
     return true;
   } catch {
     try { popup.close(); } catch { /* ignore */ }
     return false;
   }
+}
+
+/**
+ * Open the system print dialog for an 80 mm Counter slip.
+ * Prefer iframe (PWA / phone / Windows / Mac). Pop-up only if iframe fails.
+ * @param {object} model - from salesInvoicePdfModel(invoice)
+ * @param {object} [invoice]
+ */
+export function printThermalReceiptHtml(model, invoice = null) {
+  if (typeof window === "undefined" || !model) return false;
+  // Host calls print() — do not double-fire via embedded onload on iframe path.
+  const iframeHtml = buildThermalReceiptHtml(model, invoice, { autoPrint: false });
+  if (printViaIframe(iframeHtml)) return true;
+  const popupHtml = buildThermalReceiptHtml(model, invoice, { autoPrint: true });
+  return printViaPopup(popupHtml);
 }

@@ -24,10 +24,14 @@ test("thermal HTML slip includes shop, items, and grand total without PDF marker
     receiptFooter: "Thank You & Visit Again..!",
     money: formatInr,
   };
-  const html = buildThermalReceiptHtml(salesInvoicePdfModel(invoice), invoice);
+  const html = buildThermalReceiptHtml(salesInvoicePdfModel(invoice), invoice, { autoPrint: false });
   assert.match(html, /Demo Store/);
   assert.match(html, /Samosa/);
   assert.match(html, /Grand Total/);
   assert.match(html, /80mm/);
+  assert.doesNotMatch(html, /window\.print/);
   assert.doesNotMatch(html, /%PDF|cg-pdf\.ps|PostScript/i);
+
+  const withAuto = buildThermalReceiptHtml(salesInvoicePdfModel(invoice), invoice, { autoPrint: true });
+  assert.match(withAuto, /window\.print/);
 });

@@ -322,7 +322,7 @@ export function SalesInvoiceSuccessModal({ invoice, settings = {}, close }) {
               : `Date: ${formatReceiptDate(invoice.invoiceDate)}`}
             {invoice.dueDate ? ` · Due: ${formatReceiptDate(invoice.dueDate)}` : ""}
           </p>
-          {counterReceipt ? <p className="small">Opening thermal receipt — choose your 80 mm printer in the print dialog.</p> : null}
+          {counterReceipt ? <p className="small">Print dialog — choose your thermal / 80 mm printer (works on phone, Windows, and Mac).</p> : null}
           <div className="tool-stack spacer">
             {counterReceipt ? (
               <button type="button" className="btn primary" onClick={printThermalAgain}>Print again</button>

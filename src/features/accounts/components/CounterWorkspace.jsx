@@ -844,8 +844,8 @@ export function CounterWorkspace({
     }
     const ok = printSalesInvoicePdf(invoice, { template: "thermal" });
     setPrintNotice(ok
-      ? "Receipt opened — choose your thermal printer, paper size ~80 mm, and print. Do not use “Save as PDF” for the shop printer."
-      : "Allow pop-ups for FinTrack, then tap Print again.");
+      ? "Print dialog opened — pick your thermal printer and ~80 mm paper (phone, Windows, or Mac). Don’t choose Save as PDF for the shop printer."
+      : "Could not open print. Tap Print again, or allow pop-ups if your browser asks.");
     window.setTimeout(() => setPrintNotice(""), 10000);
     return ok;
   };
