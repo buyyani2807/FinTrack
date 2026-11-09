@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Reveal, RevealProvider } from "../../components/ui/Reveal.jsx";
+import { MODULE_PRODUCT_LIST, priceForPeriod } from "../commercial/moduleProducts.js";
 import { SECURITY_POINTS, SECURITY_TRUST, SOLUTIONS, featureBySlug } from "./catalog.js";
 import { featurePath, marketingPaths } from "./paths.js";
 import { InstallGuide } from "./InstallGuide.jsx";
@@ -96,45 +97,61 @@ export function SecurityPage() {
   </RevealProvider>;
 }
 
-const PLAN_INCLUDES = [
-  "Accounts, Counter POS, cashbook, payroll, and GST preparation",
-  "Daily and monthly finance",
-  "Chit schemes and live bidding",
-  "Collection agents, customer portals, and member portals",
-  "Collection reports, Daily and Monthly P&L, chit statements, and company reports",
-  "Bill scan: a supplier photo or PDF becomes a purchase draft",
-  "AI Review: cash-flow forecast, expense, GST, and month-end checks, bank matching, and stock forecasts",
-  "Receipts, and Ask FinTrack when you confirm",
-];
-
 export function PricingPage() {
+  const monthly = priceForPeriod("monthly");
+  const annual = priceForPeriod("annual");
   return <RevealProvider intent="landing"><section className="mkt-section">
     <PageTitle title="FinTrack pricing" />
     <Reveal as="p" className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Pricing</Reveal>
-    <Reveal as="h1" index={1}>One plan for all modules.</Reveal>
-    <Reveal as="p" className="mkt-lead" index={2}>₹499 a month, or ₹5,000 a year, is the whole workspace. Accounts, finance, chit funds, collections, portals, and AI are included. There is no second plan and no module add-on.</Reveal>
-    <Reveal as="article" className="mkt-plan" index={3}>
-      <h2>FinTrack</h2>
-      <p className="mkt-muted">All modules included</p>
-      <div className="mkt-plan-prices">
-        <p className="mkt-price">₹499 <span>/ month</span></p>
-        <div>
-          <p className="mkt-price">₹5,000 <span>/ year</span></p>
-          <p className="mkt-muted">₹988 less than twelve monthly payments.</p>
-        </div>
+    <Reveal as="h1" index={1}>Pay for the modules you need.</Reveal>
+    <Reveal as="p" className="mkt-lead" index={2}>
+      Each module is {monthly.baseLabel} + GST {monthly.gstPercentLabel} ({monthly.totalLabel} per month),
+      or {annual.baseLabel} + GST {annual.gstPercentLabel} ({annual.totalLabel} per year).
+      There is no lifetime plan. Unlock Finance, Chit Fund, Accounts, or Accounts + POS after a 14-day free trial of the full workspace.
+    </Reveal>
+    <Reveal className="mkt-plan-prices mkt-plan-prices-rate" index={3}>
+      <div>
+        <p className="mkt-muted">Monthly per module</p>
+        <p className="mkt-price">{monthly.totalLabel} <span>/ month</span></p>
+        <p className="mkt-muted">{monthly.breakdown}</p>
       </div>
-      <ul className="mkt-ticks">{PLAN_INCLUDES.map((item, index) => <Reveal as="li" key={item} index={index} y={8}>{item}</Reveal>)}</ul>
-      <div className="mkt-cta-row"><ProductCta primary /><Link className="mkt-btn" to={marketingPaths.contact}>Request a demo</Link></div>
-      <p className="mkt-note">A new workspace includes 14 days. This page states the price. Signing up does not charge a card. After the trial, recording waits until a plan is active. Your records stay.</p>
+      <div>
+        <p className="mkt-muted">Annual per module</p>
+        <p className="mkt-price">{annual.totalLabel} <span>/ year</span></p>
+        <p className="mkt-muted">{annual.breakdown}</p>
+      </div>
+    </Reveal>
+    <div className="mkt-module-price-grid">
+      {MODULE_PRODUCT_LIST.map((product, index) => (
+        <Reveal as="article" key={product.key} className="mkt-card mkt-module-price-card" index={index % 4}>
+          <h2>{product.name}</h2>
+          <p>{product.description}</p>
+          <ul className="mkt-ticks">{product.includes.map(item => <li key={item}>{item}</li>)}</ul>
+          <p className="mkt-module-price-line"><strong>{monthly.totalLabel}</strong> <span>/ month</span></p>
+          <p className="mkt-muted">or {annual.totalLabel} / year · GST included in totals</p>
+        </Reveal>
+      ))}
+    </div>
+    <Reveal className="mkt-cta-row" index={4}>
+      <ProductCta primary />
+      <Link className="mkt-btn" to={marketingPaths.contact}>Request a demo</Link>
+    </Reveal>
+    <Reveal as="p" className="mkt-note" index={5}>
+      A new workspace includes 14 days with every module open. Signing up does not charge a card.
+      After the trial, unlock only what you need. Your records stay.
     </Reveal>
   </section></RevealProvider>;
 }
 
 export function PageClose() {
+  const monthly = priceForPeriod("monthly");
   return <section className="mkt-band">
     <Reveal className="mkt-wrap">
-      <h2>Start with the full workspace.</h2>
-      <p>One plan includes every module. Start free opens a 14-day trial and does not charge a card.</p>
+      <h2>Start free, then unlock modules.</h2>
+      <p>
+        A 14-day trial opens the full workspace. After that, each module is {monthly.baseLabel} + GST {monthly.gstPercentLabel} per month
+        (or yearly). Start free does not charge a card.
+      </p>
       <div className="mkt-cta-row"><ProductCta primary /><Link className="mkt-btn light" to={marketingPaths.contact}>Talk to us</Link></div>
     </Reveal>
   </section>;
@@ -144,7 +161,7 @@ const ABOUT_PRINCIPLES = [
   { icon: "Sparkles", title: "You confirm every record", text: "Ask FinTrack, Tell FinTrack, bill scanning, and AI Review draft and suggest. Nothing is posted, sent, or imported until you save it." },
   { icon: "Lock", title: "Each person sees only their part", text: "The owner, a collection agent, a finance customer, and a chit member each sign in separately and see only what is theirs." },
   { icon: "Landmark", title: "Built for how Indian businesses work", text: "An April to March financial year, GST preparation for your CA, rupee amounts, daily and monthly collections, and chit funds." },
-  { icon: "WalletCards", title: "One price, every module", text: "₹499 a month or ₹5,000 a year. Accounts, finance, chit funds, collections, portals, and AI are all included." },
+  { icon: "WalletCards", title: "Modules you choose", text: "₹498 + GST 18% per module each month, or ₹5,976 + GST 18% per year. Unlock Finance, Chit Fund, Accounts, or Accounts + POS after the free trial." },
 ];
 
 const ABOUT_SIGN_INS = [
@@ -283,7 +300,7 @@ export function ResourcesPage() {
     [marketingPaths.how, "How it works", "The path from sign-in to a record you confirm."],
     [marketingPaths.features, "Feature directory", "Every module currently in the product."],
     [marketingPaths.security, "Security", "Roles, companies, locks, and review."],
-    [marketingPaths.pricing, "Pricing", "One plan for all modules: ₹499 a month, or ₹5,000 a year."],
+    [marketingPaths.pricing, "Pricing", "Modules from ₹498 + GST 18% per month, or ₹5,976 + GST 18% per year. 14-day free trial."],
     [marketingPaths.about, "About FinTrack", "What FinTrack stands for and who uses it."],
     [marketingPaths.founder, "CEO and Founder", "Sudheer Kumar Buyyani, and the experience behind FinTrack."],
     [marketingPaths.contact, "Request a demo", "A local note until contact is connected."],

@@ -55,7 +55,7 @@ function TrialBar() {
       <span className="mkt-trial-text">
         <strong>14-day free trial</strong>
         <span className="mkt-trial-detail">Every module included, no payment to start</span>
-        <span className="mkt-trial-price">Then ₹499 a month</span>
+        <span className="mkt-trial-price">Then modules from ₹498 + GST / month</span>
       </span>
       <span className="mkt-trial-cta">Start free <ArrowRight size={14} aria-hidden="true" /></span>
     </Link>
