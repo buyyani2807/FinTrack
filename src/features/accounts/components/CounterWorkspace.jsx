@@ -1277,19 +1277,6 @@ export function CounterWorkspace({
                 }}
               />
             </label>
-            {lastBill ? (
-              <span className="counter-session-pill counter-last-bill">
-                <span className="small">
-                  Last {money(lastBill.total)}
-                  {lastBill.offlineRef ? ` · ${lastBill.offlineRef}` : ""}
-                </span>
-                {canPrintLastBill ? (
-                  <button type="button" className="btn counter-last-print" onClick={printLastBill}>
-                    Print
-                  </button>
-                ) : null}
-              </span>
-            ) : null}
           </div>
         </div>
         <div className="counter-head-actions">
@@ -1334,12 +1321,9 @@ export function CounterWorkspace({
       </div>
 
       {error ? <p className="acc-form-error" role="alert">{error}</p> : null}
-      {printNotice || (panel === "bill" && canPrintLastBill) ? (
-        <div className={`notice counter-print-bar${printNotice ? " is-active" : ""}`} role="status">
-          <p>
-            {printNotice
-              || `Last bill ${money(lastBill.total)}${lastBill.offlineRef ? ` · ${lastBill.offlineRef}` : ""} — print when needed.`}
-          </p>
+      {printNotice ? (
+        <div className="notice counter-print-bar is-active" role="status">
+          <p>{printNotice}</p>
           {canPrintLastBill ? (
             <div className="counter-print-actions">
               <button type="button" className="btn primary counter-print-cta" onClick={printLastBill}>

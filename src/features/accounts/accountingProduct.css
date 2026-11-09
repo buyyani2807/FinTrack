@@ -7036,24 +7036,6 @@
   line-height: 1.2;
 }
 
-.accounts-dashboard .counter-last-bill {
-  gap: 10px;
-}
-
-.accounts-dashboard .counter-last-bill .small {
-  display: inline-flex;
-  align-items: center;
-  margin: 0;
-  line-height: 1.2;
-  vertical-align: middle;
-}
-
-.accounts-dashboard .counter-last-print {
-  min-height: 2rem;
-  padding: 4px 10px;
-  border-radius: 10px;
-}
-
 .accounts-dashboard .counter-print-bar {
   display: flex;
   flex-wrap: wrap;
