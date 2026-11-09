@@ -1,6 +1,7 @@
 import { formatReceiptDate, formatReceiptDateTime } from "../../receipts/model/receiptModel.js";
 import { salesInvoicePresentation } from "../model/salesInvoiceModel.js";
 import { downloadPdf, pdfBinaryToBytes, renderDocumentPdf } from "./documentPdf.js";
+import { printThermalReceiptHtml } from "./thermalReceiptPrint.js";
 
 const quantityText = (quantity, unit) => `${Number(quantity || 0).toLocaleString("en-IN", { maximumFractionDigits: 3 })}${unit ? ` ${unit}` : ""}`;
 
@@ -149,12 +150,22 @@ export function downloadSalesInvoicePdf(invoice, options = {}) {
   downloadPdf(renderSalesInvoicePdf(invoice, options), `${invoice.invoiceNumber || "sales-invoice"}.pdf`);
 }
 
+function isThermalPrint(invoice, options = {}) {
+  const template = options.template || invoice?.documentTemplate || "a4";
+  return template === "thermal" || Boolean(invoice?.posSlip);
+}
+
 /**
- * Open the receipt PDF in a new tab and trigger the system print dialog.
+ * Print a receipt. Thermal / Counter slips use HTML (80 mm) so ESC/POS printers
+ * do not dump PDF→PostScript source. A4 invoices still print from PDF.
  * Call only from a Print click — browsers block this after async Charge alone.
  */
 export function printSalesInvoicePdf(invoice, options = {}) {
-  if (typeof window === "undefined" || typeof URL === "undefined") return false;
+  if (typeof window === "undefined") return false;
+  if (isThermalPrint(invoice, options)) {
+    return printThermalReceiptHtml(salesInvoicePdfModel(invoice), invoice);
+  }
+  if (typeof URL === "undefined") return false;
   const binary = renderSalesInvoicePdf(invoice, options);
   const blob = new Blob([pdfBinaryToBytes(binary)], { type: "application/pdf" });
   const url = URL.createObjectURL(blob);

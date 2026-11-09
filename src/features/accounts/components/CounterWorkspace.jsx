@@ -844,7 +844,7 @@ export function CounterWorkspace({
     }
     const ok = printSalesInvoicePdf(invoice, { template: "thermal" });
     setPrintNotice(ok
-      ? "Receipt opened — choose your thermal printer in the print dialog."
+      ? "Receipt opened — choose your thermal printer, paper size ~80 mm, and print. Do not use “Save as PDF” for the shop printer."
       : "Allow pop-ups for FinTrack, then tap Print again.");
     window.setTimeout(() => setPrintNotice(""), 10000);
     return ok;
