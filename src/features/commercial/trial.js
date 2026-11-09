@@ -182,7 +182,10 @@ export function subscriptionLockCopy(subscription) {
 export function subscriptionPathAllowed(pathname, subscription) {
   if (workspaceAccessAllowed(subscription)) return true;
   const path = String(pathname || "/").split("?")[0].replace(/\/+$/, "") || "/";
-  return path === "/subscribe" || path === "/settings" || path.startsWith("/settings/");
+  return path === "/subscribe"
+    || path.startsWith("/subscribe/")
+    || path === "/settings"
+    || path.startsWith("/settings/");
 }
 
 export function moduleOpenDuringSubscription(subscription, moduleEnabled) {

@@ -15,6 +15,7 @@ import { FinanceRoute } from "../features/workspace/routes/FinanceRoute.jsx";
 import { RequireModule } from "../features/workspace/routes/RequireModule.jsx";
 import { RouteCollectionsRoute } from "../features/workspace/routes/RouteCollectionsRoute.jsx";
 import { SettingsRoute } from "../features/workspace/routes/SettingsRoute.jsx";
+import { ModuleStorePage } from "../features/commercial/ModuleStorePage.jsx";
 import { SubscribePage } from "../features/commercial/SubscribePage.jsx";
 
 // Every URL in the app and the component it shows. Paths match `workspacePaths` in features/workspace/paths.js,
@@ -96,6 +97,7 @@ export function AppRoutes() {
           <Route path="/route-collections" element={<RouteCollectionsRoute />} />
           <Route path="/route-collections/:routeId" element={<RouteCollectionsRoute />} />
           <Route path="/subscribe" element={<SubscribePage />} />
+          <Route path="/subscribe/modules" element={<RequireModule module="isOwner"><ModuleStorePage /></RequireModule>} />
           <Route path="/settings" element={<Navigate to="/settings/company" replace />} />
           {/* :tab = company | whatsapp | reminders */}
           <Route path="/settings/:tab" element={<RequireModule module="isOwner"><SettingsRoute /></RequireModule>} />

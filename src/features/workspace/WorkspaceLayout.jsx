@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, Outlet, useLocation, useNavigate, useOutletContext } from "react-router";
 import { loadActiveChitSchemes } from "../../lib/financeRepository";
 import { todayIso } from "../../lib/dates.js";
 import { isModuleEnabled } from "../commercial/entitlements.js";
+import { resolveWorkspaceModuleState, orgSettingsWithModuleState } from "../commercial/moduleAccess.js";
+import { listOrganizationModuleEntitlements } from "../commercial/moduleEntitlementsRepository.js";
 import { TrialBanner } from "../commercial/TrialBanner.jsx";
 import { subscriptionPathAllowed, workspaceAccessAllowed } from "../commercial/trial.js";
 import { TopActions } from "../../components/TopActions.jsx";
@@ -26,21 +28,78 @@ export function WorkspaceLayout() {
   } = session;
   const navigate = useNavigate();
   const token = user.authToken;
-  const orgSettings = workspace?.organizationSettings || {};
-  const moduleAccess = workspaceModuleAccess(orgSettings, workspace || {});
+  const baseOrgSettings = workspace?.organizationSettings || {};
+  const [moduleEntitlements, setModuleEntitlements] = useState([]);
+  const subscription = workspace?.subscription;
+  const moduleState = useMemo(
+    () => resolveWorkspaceModuleState({
+      orgSettings: baseOrgSettings,
+      subscription,
+      entitlements: moduleEntitlements,
+    }),
+    [baseOrgSettings, subscription, moduleEntitlements],
+  );
+  const orgSettings = useMemo(
+    () => orgSettingsWithModuleState(baseOrgSettings, moduleState),
+    [baseOrgSettings, moduleState],
+  );
+  const moduleAccess = workspaceModuleAccess(orgSettings, workspace || {}, moduleState);
   // Owner gets full chrome. Accounts-team (CA) gets Accounts only. Staff agents get neither owner module.
   const access = showOwnerChrome
     ? moduleAccess
     : moduleAccess.isAccountsUser
-      ? { ...moduleAccess, isOwner: false, daily: false, monthly: false, chit: false, cashbook: false }
-      : { ...moduleAccess, isOwner: false, chit: false, cashbook: false, accounts: false };
+      ? {
+        ...moduleAccess,
+        isOwner: false,
+        daily: false,
+        monthly: false,
+        chit: false,
+        cashbook: false,
+        showDaily: false,
+        showMonthly: false,
+        showChit: false,
+        showCashbook: false,
+      }
+      : {
+        ...moduleAccess,
+        isOwner: false,
+        chit: false,
+        cashbook: false,
+        accounts: false,
+        showChit: false,
+        showCashbook: false,
+        showAccounts: false,
+      };
   const [chitSchemes, setChitSchemes] = useState([]);
   const [askOpen, setAskOpen] = useState(false);
   const [accountsCompanyName, setAccountsCompanyName] = useState("");
   const askEnabled = isModuleEnabled(orgSettings, "ai");
   const location = useLocation();
-  const subscription = workspace?.subscription;
   const subscriptionLocked = !workspaceAccessAllowed(subscription);
+
+  const refreshModuleEntitlements = useCallback(async () => {
+    if (!token) {
+      setModuleEntitlements([]);
+      return [];
+    }
+    try {
+      const rows = await listOrganizationModuleEntitlements(token);
+      setModuleEntitlements(rows || []);
+      return rows || [];
+    } catch {
+      setModuleEntitlements([]);
+      return [];
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (subscriptionLocked || !token) return undefined;
+    let cancelled = false;
+    refreshModuleEntitlements().then(rows => {
+      if (!cancelled) setModuleEntitlements(rows || []);
+    });
+    return () => { cancelled = true; };
+  }, [subscriptionLocked, token, refreshModuleEntitlements]);
 
   useEffect(() => {
     if (subscriptionLocked || !showOwnerChrome || !token) return undefined;
@@ -128,7 +187,7 @@ export function WorkspaceLayout() {
   }, [subscriptionLocked, access.accounts, token, workspace?.role, workspace?.id]);
 
   const routeContext = {
-    access, token, loans, workspace: workspace || {}, orgSettings, logout,
+    access, token, loans, workspace: workspace || {}, orgSettings, moduleState, refreshModuleEntitlements, logout,
     onLogReceipt: logReceipt, onSettingsSaved: () => refreshWorkspace(),
     onLoadAgents: getManagedAgents, onCreateAgent: addCollectionAgent, onAssignAgent: updateAgentAssignment, onUpdateAgent: saveCollectionStaff,
     chitSchemes, setChitSchemes, session,
