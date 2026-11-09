@@ -10,17 +10,38 @@ import {
   MODULE_BILLING_DEFAULTS,
   MODULE_PRODUCTS,
   appModulesFromProductKeys,
-  formatModulePrice,
+  cartTotals,
+  priceForPeriod,
   productKeysSatisfy,
   unlockCopyForAppModule,
 } from "../src/features/commercial/moduleProducts.js";
 import { subscriptionPathAllowed } from "../src/features/commercial/trial.js";
 
-test("default module price is ₹500 lifetime and configurable", () => {
-  assert.equal(MODULE_BILLING_DEFAULTS.amountPaise, 50000);
-  assert.equal(MODULE_BILLING_DEFAULTS.period, "lifetime");
-  assert.equal(formatModulePrice(MODULE_PRODUCTS.accounts).label, "₹500");
-  assert.equal(formatModulePrice(MODULE_PRODUCTS.accounts).periodLabel, "one-time");
+test("module price is monthly ₹498 or annual ₹5976 plus 18% GST — no lifetime", () => {
+  assert.equal(MODULE_BILLING_DEFAULTS.monthlyBasePaise, 49800);
+  assert.equal(MODULE_BILLING_DEFAULTS.annualBasePaise, 597600);
+  assert.equal(MODULE_BILLING_DEFAULTS.gstRate, 0.18);
+  assert.equal(MODULE_BILLING_DEFAULTS.period, "monthly");
+  assert.notEqual(MODULE_BILLING_DEFAULTS.period, "lifetime");
+
+  const monthly = priceForPeriod("monthly");
+  assert.equal(monthly.basePaise, 49800);
+  assert.equal(monthly.taxPaise, 8964);
+  assert.equal(monthly.totalPaise, 58764);
+  assert.match(monthly.breakdown, /GST 18%/);
+
+  const annual = priceForPeriod("annual");
+  assert.equal(annual.basePaise, 597600);
+  assert.equal(annual.taxPaise, 107568);
+  assert.equal(annual.totalPaise, 705168);
+});
+
+test("cart totals multiply modules and keep GST", () => {
+  const two = cartTotals(["chit_fund", "accounts"], "monthly");
+  assert.equal(two.moduleCount, 2);
+  assert.equal(two.basePaise, 99600);
+  assert.equal(two.taxPaise, 17928);
+  assert.equal(two.totalPaise, 117528);
 });
 
 test("accounts_pos unlocks accounts surfaces and counter", () => {
@@ -30,6 +51,7 @@ test("accounts_pos unlocks accounts surfaces and counter", () => {
   assert.equal(unlocked.has("counter"), true);
   assert.equal(productKeysSatisfy(["accounts_pos"], "accounts"), true);
   assert.equal(productKeysSatisfy(["accounts"], "accounts_pos"), false);
+  assert.ok(MODULE_PRODUCTS.accounts_pos.bundle);
 });
 
 test("grandfathered and trial keep full access without entitlement rows", () => {
@@ -66,13 +88,14 @@ test("commerce mode locks unpurchased modules after trial", () => {
   assert.equal(hasPurchasedProduct(state, "accounts"), false);
 });
 
-test("duplicate product keys collapse; unlock copy is plain language", () => {
+test("duplicate product keys collapse; unlock copy shows GST price", () => {
   assert.deepEqual(activeProductKeys([
     { module_key: "accounts", status: "active" },
     { module_key: "accounts", status: "active" },
   ]), ["accounts"]);
-  const copy = unlockCopyForAppModule("daily");
-  assert.match(copy.body, /₹500/);
+  const copy = unlockCopyForAppModule("daily", "monthly");
+  assert.match(copy.body, /₹498/);
+  assert.match(copy.body, /GST 18%/);
   assert.equal(copy.productKey, "finance_daily_monthly");
 });
 

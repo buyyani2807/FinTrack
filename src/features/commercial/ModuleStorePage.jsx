@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useOutletContext, useSearchParams } from "react-router";
 import { Check, Lock } from "lucide-react";
-import { MODULE_PRODUCT_LIST, formatModulePrice } from "./moduleProducts.js";
+import { MODULE_PRODUCT_LIST, cartTotals, priceForPeriod } from "./moduleProducts.js";
 import { catalogWithPurchaseState } from "./moduleAccess.js";
 
 /**
@@ -17,25 +17,25 @@ export function ModuleStorePage() {
     () => catalogWithPurchaseState(moduleState),
     [moduleState],
   );
+  const [period, setPeriod] = useState("monthly");
   const [selected, setSelected] = useState(() => new Set(focusKey ? [focusKey] : []));
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const unit = priceForPeriod(period);
+  const lines = MODULE_PRODUCT_LIST.filter(product => selected.has(product.key));
+  const totals = cartTotals([...selected], period);
 
   const toggle = key => {
     setSelected(current => {
       const next = new Set(current);
       if (next.has(key)) next.delete(key);
       else next.add(key);
-      // accounts_pos replaces accounts selection
       if (key === "accounts_pos" && next.has(key)) next.delete("accounts");
       if (key === "accounts" && next.has(key)) next.delete("accounts_pos");
       return next;
     });
   };
-
-  const lines = MODULE_PRODUCT_LIST.filter(product => selected.has(product.key));
-  const totalPaise = lines.reduce((sum, product) => sum + Number(product.amountPaise || 0), 0);
-  const totalLabel = formatModulePrice({ amountPaise: totalPaise }).display;
 
   const startCheckout = async () => {
     if (!isOwner) {
@@ -57,7 +57,8 @@ export function ModuleStorePage() {
         },
         body: JSON.stringify({
           productKeys: [...selected],
-          idempotencyKey: `mod-${workspace?.id || "org"}-${[...selected].sort().join("-")}-${Date.now()}`,
+          period,
+          idempotencyKey: `mod-${workspace?.id || "org"}-${period}-${[...selected].sort().join("-")}-${Date.now()}`,
         }),
       });
       const body = await response.json().catch(() => ({}));
@@ -84,12 +85,19 @@ export function ModuleStorePage() {
       <p className="ft-kicker">Modules</p>
       <h1>Choose modules for this business</h1>
       <p className="ft-subscribe-lead">
-        Each module is {formatModulePrice(MODULE_PRODUCT_LIST[0]).display} by default.
-        Your 14-day free trial still opens every module. Existing full-access workspaces stay unlocked.
+        Each module is {unit.baseLabel} + GST {unit.gstPercentLabel} ({unit.totalLabel} {unit.periodLabel}).
+        There is no lifetime plan. Your 14-day free trial still opens every module.
       </p>
+      <div className="ft-module-period" role="group" aria-label="Billing period">
+        <button type="button" className={`btn${period === "monthly" ? " primary" : ""}`} onClick={() => setPeriod("monthly")}>
+          Monthly · {priceForPeriod("monthly").breakdown}
+        </button>
+        <button type="button" className={`btn${period === "annual" ? " primary" : ""}`} onClick={() => setPeriod("annual")}>
+          Annual · {priceForPeriod("annual").breakdown}
+        </button>
+      </div>
       <div className="ft-module-store-grid">
         {catalog.map(product => {
-          const price = formatModulePrice(product);
           const isOn = selected.has(product.key);
           return (
             <article
@@ -104,9 +112,10 @@ export function ModuleStorePage() {
               </header>
               <p>{product.description}</p>
               <ul>{product.includes.map(item => <li key={item}>{item}</li>)}</ul>
-              <p className="ft-plan-price">{price.label} <span>/ {price.periodLabel}</span></p>
+              <p className="ft-plan-price">{unit.totalLabel} <span>/ {unit.periodLabel}</span></p>
+              <p className="small">{unit.breakdown}</p>
               {product.owned ? (
-                <p className="small">Purchased for this business.</p>
+                <p className="small">Active for this business.</p>
               ) : (
                 <button
                   type="button"
@@ -125,10 +134,13 @@ export function ModuleStorePage() {
         <h2>Review</h2>
         {lines.length ? (
           <ul>{lines.map(product => (
-            <li key={product.key}>{product.name} — {formatModulePrice(product).display}</li>
+            <li key={product.key}>{product.name} — {unit.breakdown}</li>
           ))}</ul>
         ) : <p className="small">No modules selected.</p>}
-        <p className="ft-module-store-total"><strong>Total:</strong> {lines.length ? totalLabel : "₹0"}</p>
+        <p className="ft-module-store-total">
+          <strong>Total:</strong> {lines.length ? `${totals.breakdown}` : "₹0"}
+        </p>
+        <p className="small">Payable now: {lines.length ? totals.totalLabel : "₹0"} (incl. GST)</p>
         {isOwner ? (
           <button type="button" className="btn primary" disabled={busy || !lines.length} onClick={startCheckout}>
             {busy ? "Starting…" : "Pay & unlock"}

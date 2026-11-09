@@ -2,11 +2,14 @@
 -- Paste after 121 in the Supabase SQL editor.
 --
 -- Defaults (configurable via module_products + grant args):
---   ₹500 one-time (lifetime) per module/bundle, currency INR.
+--   Monthly ₹498 + GST 18% per module/bundle
+--   Annual ₹5,976 + GST 18% per module/bundle
+--   No lifetime membership
 -- Free 14-day trial and grandfathered orgs keep full access in the app layer;
 -- this table only stores verified purchases for module-billing workspaces.
 --
 -- Product keys: finance_daily_monthly | chit_fund | accounts | accounts_pos
+-- amount_paise / annual_amount_paise store BASE prices before GST.
 
 create table if not exists public.module_products (
   product_key text primary key
@@ -14,28 +17,39 @@ create table if not exists public.module_products (
   name text not null,
   description text not null default '',
   amount_paise integer not null check (amount_paise >= 0),
+  annual_amount_paise integer not null default 597600 check (annual_amount_paise >= 0),
+  gst_rate numeric(5,4) not null default 0.1800,
   currency text not null default 'INR',
-  billing_period text not null default 'lifetime'
-    check (billing_period in ('lifetime', 'monthly', 'annual')),
+  billing_period text not null default 'monthly'
+    check (billing_period in ('monthly', 'annual')),
   is_bundle boolean not null default false,
   active boolean not null default true,
   updated_at timestamptz not null default now()
 );
 
-insert into public.module_products (product_key, name, description, amount_paise, billing_period, is_bundle)
+alter table public.module_products
+  add column if not exists annual_amount_paise integer not null default 597600;
+alter table public.module_products
+  add column if not exists gst_rate numeric(5,4) not null default 0.1800;
+
+insert into public.module_products (
+  product_key, name, description, amount_paise, annual_amount_paise, gst_rate, billing_period, is_bundle
+)
 values
   ('finance_daily_monthly', 'Daily + Monthly Finance',
-   'Daily collection finance and monthly interest finance.', 50000, 'lifetime', false),
+   'Daily collection finance and monthly interest finance.', 49800, 597600, 0.1800, 'monthly', false),
   ('chit_fund', 'Chit Fund',
-   'Chit schemes, members, bids, payments, and dividends.', 50000, 'lifetime', false),
+   'Chit schemes, members, bids, payments, and dividends.', 49800, 597600, 0.1800, 'monthly', false),
   ('accounts', 'Accounts',
-   'Accounting, cashbook, GST, inventory, and parties (no POS).', 50000, 'lifetime', false),
+   'Accounting, cashbook, GST, inventory, and parties (no POS).', 49800, 597600, 0.1800, 'monthly', false),
   ('accounts_pos', 'Accounts + POS',
-   'Accounts plus Counter POS checkout and POS reports.', 50000, 'lifetime', true)
+   'Accounts plus Counter POS checkout and POS reports.', 49800, 597600, 0.1800, 'monthly', true)
 on conflict (product_key) do update set
   name = excluded.name,
   description = excluded.description,
   amount_paise = excluded.amount_paise,
+  annual_amount_paise = excluded.annual_amount_paise,
+  gst_rate = excluded.gst_rate,
   billing_period = excluded.billing_period,
   is_bundle = excluded.is_bundle,
   updated_at = now();
@@ -57,8 +71,8 @@ create table if not exists public.organization_module_entitlements (
   product_key text not null references public.module_products (product_key),
   price_paise integer not null check (price_paise >= 0),
   currency text not null default 'INR',
-  billing_period text not null default 'lifetime'
-    check (billing_period in ('lifetime', 'monthly', 'annual')),
+  billing_period text not null default 'monthly'
+    check (billing_period in ('monthly', 'annual')),
   status text not null default 'active'
     check (status in ('active', 'expired', 'refunded', 'cancelled')),
   purchased_at timestamptz not null default now(),
@@ -96,7 +110,8 @@ create table if not exists public.organization_module_payments (
   product_keys text[] not null,
   amount_paise integer not null check (amount_paise >= 0),
   currency text not null default 'INR',
-  billing_period text not null default 'lifetime',
+  billing_period text not null default 'monthly'
+    check (billing_period in ('monthly', 'annual')),
   status text not null default 'created'
     check (status in ('created', 'pending', 'paid', 'failed', 'cancelled', 'expired')),
   provider text not null default 'razorpay',
@@ -252,7 +267,7 @@ create or replace function public.grant_organization_module_entitlement(
   input_product_key text,
   input_price_paise integer,
   input_currency text default 'INR',
-  input_billing_period text default 'lifetime',
+  input_billing_period text default 'monthly',
   input_payment_ref text default null,
   input_provider text default 'razorpay',
   input_provider_payment_id text default null,
@@ -295,7 +310,7 @@ begin
   ) values (
     target_org_id, input_module_key, input_product_key, coalesce(input_price_paise, 0),
     coalesce(nullif(trim(input_currency), ''), 'INR'),
-    coalesce(nullif(trim(input_billing_period), ''), 'lifetime'),
+    coalesce(nullif(trim(input_billing_period), ''), 'monthly'),
     'active', nullif(trim(input_payment_ref), ''), nullif(trim(input_provider), ''),
     nullif(trim(input_provider_payment_id), ''), input_created_by, now()
   )

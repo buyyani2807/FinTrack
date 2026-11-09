@@ -40,7 +40,13 @@ export default async function handler(req, res) {
         error: "Razorpay is not configured (RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET). Modules are not charged or unlocked from this button yet. Contact FinTrack support after payment, or add Razorpay env vars and redeploy.",
         providerReady: false,
         productKeys,
-        assumedBilling: { amountPaisePerModule: 50000, currency: "INR", period: "lifetime" },
+        assumedBilling: {
+          monthlyBasePaise: 49800,
+          annualBasePaise: 597600,
+          gstRate: 0.18,
+          currency: "INR",
+          periods: ["monthly", "annual"],
+        },
       });
     }
     return res.status(501).json({

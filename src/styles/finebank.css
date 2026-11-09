@@ -1934,6 +1934,8 @@ html[data-theme="dark"] .ft-trial-banner.is-urgent { background: #3a2222; color:
 }
 .ft-module-billing-list li.is-locked { opacity: 0.92; }
 .ft-module-store { max-width: 960px; margin: 0 auto; padding: 28px 16px 64px; }
+.ft-module-period { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 8px; }
+.ft-module-period .btn { flex: 1 1 220px; }
 .ft-module-store-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: 18px 0;
 }

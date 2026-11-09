@@ -80,7 +80,7 @@ export function SubscribePage() {
       <p>Will my records be removed? No. Customers, collections, chit records, and accounts stay in this workspace.</p>
       <p>Can I still sign in? Yes. Sign-in, this page, company settings, and log out stay available.</p>
       <p>When does the trial start? After the workspace is created, for 14 days. Opening the signup page does not start it.</p>
-      <p>Module price default: ₹500 one-time per module or Accounts + POS bundle (configurable in module_products).</p>
+      <p>Module price: ₹498 + GST 18% per month, or ₹5,976 + GST 18% per year, per module/bundle. No lifetime plan.</p>
       {workspaceAccessAllowed(subscription) ? <p><Link to="/dashboard">Back to the workspace</Link></p> : null}
       <button type="button" className="btn" onClick={logout}>Log out</button>
     </section>
