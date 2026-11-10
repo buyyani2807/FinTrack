@@ -54,12 +54,11 @@ export function WorkspaceLayout() {
         isOwner: false,
         canWriteFinance: false,
         chit: false,
-        cashbook: false,
         accounts: false,
         showChit: false,
-        showCashbook: false,
         showAccounts: false,
-        locked: { ...moduleAccess.locked, chit: false, cashbook: false, accounts: false, counter: false },
+        // Cashbook stays open when the finance pack includes it (view-only in the UI).
+        locked: { ...moduleAccess.locked, chit: false, accounts: false, counter: false },
       }
       : moduleAccess.isAccountsUser
         ? {

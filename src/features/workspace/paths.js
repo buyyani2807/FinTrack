@@ -61,7 +61,7 @@ export function workspaceModuleAccess(orgSettings = {}, workspace = {}, moduleSt
   const dailyOpen = canViewOwnerFinance && packOpen("daily");
   const monthlyOpen = canViewOwnerFinance && packOpen("monthly");
   const chitOpen = isOwner && packOpen("chit");
-  const cashbookOpen = isOwner && packOpen("cashbook");
+  const cashbookOpen = canViewOwnerFinance && packOpen("cashbook");
   const accountsOpen = (isOwner || isAccountsUser) && packOpen("accounts");
   return {
     isOwner,
@@ -78,7 +78,7 @@ export function workspaceModuleAccess(orgSettings = {}, workspace = {}, moduleSt
     showDaily: canViewOwnerFinance,
     showMonthly: canViewOwnerFinance,
     showChit: isOwner,
-    showCashbook: isOwner,
+    showCashbook: canViewOwnerFinance,
     showAccounts: isOwner || isAccountsUser,
     locked: {
       daily: isOwner && !dailyOpen,

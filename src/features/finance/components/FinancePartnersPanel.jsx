@@ -62,7 +62,7 @@ export function FinancePartnersPanel({ token }) {
       <header className="settings-section-head">
         <div>
           <h2>Finance partners (view only)</h2>
-          <p>Sleeping partners sign in with Owner sign-in. They see the same Daily and Monthly Finance records as you, but cannot record payments, add accounts, or change settings.</p>
+          <p>Sleeping partners sign in with Owner sign-in. They see Daily and Monthly Finance plus Cashbook in view-only mode, and cannot record payments, add cashbook entries, or change settings.</p>
         </div>
       </header>
       <div className="form spacer">

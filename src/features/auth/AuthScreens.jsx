@@ -20,7 +20,7 @@ const SIGN_IN_MODES = [
 
 // One line of guidance under the sign-in options: where this person's credentials come from.
 const MODE_GUIDE = {
-  signIn: "Owners use the email from signup. A CA or bookkeeper uses the same Owner sign-in with the email and temporary password from Accounts → Setup. A sleeping partner uses Owner sign-in from Settings → Partners and sees Daily and Monthly Finance in view-only mode.",
+  signIn: "Owners use the email from signup. A CA or bookkeeper uses the same Owner sign-in with the email and temporary password from Accounts → Setup. A sleeping partner uses Owner sign-in from Settings → Partners and sees Daily Finance, Monthly Finance, and Cashbook in view-only mode.",
   agent: "Your owner shares your agent ID (it starts with AG-) and a 6-digit PIN when they add you under Collection Staff.",
   customer: "Your owner shares your portal ID (it starts with FT-) and a 6-digit PIN when they open your customer portal.",
   chitCustomer: "Your chit manager shares your portal ID (it starts with CF-) and a 6-digit PIN when you join a scheme.",

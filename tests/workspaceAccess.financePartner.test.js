@@ -31,8 +31,14 @@ assert.equal(access.canViewOwnerFinance, true);
 assert.equal(access.canWriteFinance, false);
 assert.equal(access.showDaily, true);
 assert.equal(access.showMonthly, true);
+assert.equal(access.showCashbook, true);
+assert.equal(access.cashbook, true);
 assert.equal(access.showChit, false);
 assert.equal(access.showAccounts, false);
 assert.equal(access.isOwner, false);
+
+const financePack = workspaceModuleAccess({ featurePacks: ["finance"] }, partner, null);
+assert.equal(financePack.cashbook, true);
+assert.equal(financePack.showCashbook, true);
 
 console.log("workspaceAccess.financePartner.test.js ok");

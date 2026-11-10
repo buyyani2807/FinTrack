@@ -4,11 +4,11 @@ import { money } from "../cashbookConfig.js";
 import { PanelHead, EmptyState } from "../components/CashbookUi.jsx";
 import { PeriodPills } from "../components/PeriodPills.jsx";
 
-export function ExpensesSection({ openExpense, periodProps, expenseRows }) {
+export function ExpensesSection({ openExpense, periodProps, expenseRows, canWrite = true }) {
   const pagedRows = usePagedList(expenseRows, `${periodProps.period}|${periodProps.customFrom}|${periodProps.customTo}`);
   return (
     <div className="accounts-panel">
-      <PanelHead title="Expenses"><button type="button" className="btn primary" onClick={openExpense}>+ Add expense</button></PanelHead>
+      <PanelHead title="Expenses">{canWrite ? <button type="button" className="btn primary" onClick={openExpense}>+ Add expense</button> : null}</PanelHead>
       <div className="card accounts-filter-card spacer"><PeriodPills {...periodProps} /></div>
       <div className="accounts-entry-list">
         {pagedRows.items.map(entry => <article key={entry.id} className="card accounts-entry-row accounts-expense-row">
