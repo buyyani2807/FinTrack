@@ -887,7 +887,10 @@ html[data-theme="dark"] .hm-home .mkt-btn:not(.primary):not(.light) { border-col
 .hm-home .mkt-text-link { color: var(--hm-tx, var(--hm-ink)); text-decoration: underline; text-underline-offset: 3px; }
 
 /* Hero */
-.hm-hero { padding: 72px 0 0; overflow-x: clip; background: var(--hm-paper); }
+/* The hero ends 64px above the bottom of the screen: a strip of the next section's white top shows,
+   but not its panel, which starts 96px into that section. */
+.hm-hero { display: flex; flex-direction: column; min-height: calc(100vh - 72px - 64px); min-height: calc(100svh - 72px - 64px); padding: 72px 0 0; overflow-x: clip; background: var(--hm-paper); }
+.hm-hero > .hm-hero-grid { flex: 1; align-content: center; }
 .hm-hero-grid { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr); gap: 48px; align-items: center; }
 .hm-pill {
   display: inline-flex;
