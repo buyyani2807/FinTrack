@@ -5,7 +5,7 @@ import { APP_MODULES, featureBySlug, relatedFeatures } from "./catalog.js";
 import { AccountsPage } from "./AccountsPage.jsx";
 import { ChitPage } from "./ChitPage.jsx";
 import { FinancePage } from "./FinancePage.jsx";
-import { ModuleBar } from "./ModuleKit.jsx";
+import { ModulePager } from "./ModuleKit.jsx";
 import { PosPage } from "./PosPage.jsx";
 import { FeatureIcon } from "./icons.jsx";
 import { featurePath, marketingPaths } from "./paths.js";
@@ -31,7 +31,6 @@ export function FeatureDetailPage() {
   if (feature.slug === "counter-pos") return <PosPage feature={feature} />;
   const related = relatedFeatures(feature);
   return <RevealProvider intent="landing">
-    <ModuleBar current={feature.slug} />
     <header className="mkt-page-hero">
       <div className="mkt-wrap">
         <Reveal as="p" className="mkt-kicker"><FeatureIcon name={feature.icon} size={16} /> {moduleLabel}</Reveal>
@@ -94,5 +93,6 @@ export function FeatureDetailPage() {
       </div>
       </div>
     </section>
+    <ModulePager current={feature.slug} />
   </RevealProvider>;
 }

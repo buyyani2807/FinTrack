@@ -5,6 +5,8 @@ import { Reveal, RevealProvider } from "../../components/ui/Reveal.jsx";
 import { featureBySlug } from "./catalog.js";
 import { FeatureIcon } from "./icons.jsx";
 import { ModeSwitch, ModuleClosing, ModuleFaq, ModuleHero, SectionHead, Tile } from "./ModuleKit.jsx";
+import { ModuleParts } from "./ModuleParts.jsx";
+import { usePartLink } from "./moduleParts.js";
 import { featurePath } from "./paths.js";
 
 // Sample figures in the tile pictures; the till total is the sum of its lines.
@@ -25,10 +27,15 @@ const MODES = [
   { key: "close", label: "Close", slug: "for-the-ca", scene: "accounts-gst", line: "Hand the month to your chartered accountant." },
 ];
 
+function AlsoLink({ item }) {
+  const openPart = usePartLink(item.slug);
+  return <Link to={featurePath(item.slug)} onClick={openPart} aria-haspopup={openPart ? "dialog" : undefined}><FeatureIcon name={item.icon} size={16} />{item.name}<ArrowRight size={14} aria-hidden="true" /></Link>;
+}
+
 export function AccountsPage({ feature }) {
   useEffect(() => { document.title = "Accounts — FinTrack"; }, []);
   const more = MORE.map(featureBySlug).filter(Boolean);
-  return <RevealProvider intent="landing"><div className="hm-home fx">
+  return <RevealProvider intent="landing"><ModuleParts module="accounts-overview"><div className="hm-home fx">
     <ModuleHero
       name="Accounts"
       title="Billing, books, and GST preparation, in one company book."
@@ -108,7 +115,7 @@ export function AccountsPage({ feature }) {
         <div className="fx-also">
           <Reveal as="p" className="fx-eyebrow">Also in Accounts</Reveal>
           <ul>
-            {more.map(item => <li key={item.slug}><Link to={featurePath(item.slug)}><FeatureIcon name={item.icon} size={16} />{item.name}<ArrowRight size={14} aria-hidden="true" /></Link></li>)}
+            {more.map(item => <li key={item.slug}><AlsoLink item={item} /></li>)}
           </ul>
         </div>
       </div>
@@ -123,5 +130,5 @@ export function AccountsPage({ feature }) {
 
     <ModuleFaq title="Accounts, answered." questions={["Can I use it only for accounting?", "Does it have a POS / billing counter?", "Does it support GST?", "Can I move my books from Tally or Excel?"]} />
     <ModuleClosing title="Keep the company book in one login." appPath={feature.appPath} points={["Counter POS billing", "GST preparation", "A page for your CA"]} />
-  </div></RevealProvider>;
+  </div></ModuleParts></RevealProvider>;
 }

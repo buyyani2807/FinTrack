@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { FileText } from "lucide-react";
 import { RevealProvider } from "../../components/ui/Reveal.jsx";
+import { ModuleParts } from "./ModuleParts.jsx";
 import { ModeSwitch, ModuleClosing, ModuleFaq, ModuleHero, SectionHead, Tile } from "./ModuleKit.jsx";
 
 // Sample figures match the Gold 2 Lakh scheme in the product screenshots.
@@ -17,7 +18,7 @@ const MODES = [
 
 export function ChitPage({ feature }) {
   useEffect(() => { document.title = "Chit Fund — FinTrack"; }, []);
-  return <RevealProvider intent="landing"><div className="hm-home fx">
+  return <RevealProvider intent="landing"><ModuleParts module="auction-chit"><div className="hm-home fx">
     <ModuleHero
       name="Chit Fund"
       title="Every scheme, bid, and dividend, in one chit book."
@@ -109,5 +110,5 @@ export function ChitPage({ feature }) {
 
     <ModuleFaq title="Chit funds, answered." questions={["Does it support chit funds?", "What reports are included?", "Can I send WhatsApp messages?", "Can I install it on my phone?"]} />
     <ModuleClosing title="Run every chit scheme in one login." appPath={feature.appPath} points={["Auction and fixed schemes", "Live bidding", "Month statements and reports"]} />
-  </div></RevealProvider>;
+  </div></ModuleParts></RevealProvider>;
 }

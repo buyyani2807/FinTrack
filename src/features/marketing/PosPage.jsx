@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Check, Lock, MessageCircle, Printer, Search, WifiOff } from "lucide-react";
 import { RevealProvider } from "../../components/ui/Reveal.jsx";
+import { ModuleParts } from "./ModuleParts.jsx";
 import { ModeSwitch, ModuleClosing, ModuleFaq, ModuleHero, SectionHead, Tile } from "./ModuleKit.jsx";
 
 // Sample figures in the tile pictures; totals and change are the sums of their lines.
@@ -16,7 +17,7 @@ const MODES = [
 
 export function PosPage({ feature }) {
   useEffect(() => { document.title = "POS — FinTrack"; }, []);
-  return <RevealProvider intent="landing"><div className="hm-home fx">
+  return <RevealProvider intent="landing"><ModuleParts module="counter-pos"><div className="hm-home fx">
     <ModuleHero
       name="POS"
       title="A billing counter that posts straight into your books."
@@ -105,5 +106,5 @@ export function PosPage({ feature }) {
 
     <ModuleFaq title="POS, answered." questions={["Does it have a POS / billing counter?", "Does it support GST?", "Can I use it only for accounting?", "Can I install it on my phone?"]} />
     <ModuleClosing title="Open the counter in FinTrack." appPath={feature.appPath} points={["Cash, UPI, and khata", "Thermal and WhatsApp receipts", "Stock moves with every sale"]} />
-  </div></RevealProvider>;
+  </div></ModuleParts></RevealProvider>;
 }

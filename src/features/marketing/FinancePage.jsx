@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { FileText, MessageCircle, Receipt } from "lucide-react";
 import { RevealProvider } from "../../components/ui/Reveal.jsx";
+import { ModuleParts } from "./ModuleParts.jsx";
 import { ModeSwitch, ModuleClosing, ModuleFaq, ModuleHero, SectionHead, Tile } from "./ModuleKit.jsx";
 
 // Sample figures in the tile pictures match the demo workspace in the product screenshots.
@@ -18,7 +19,7 @@ const MODES = [
 
 export function FinancePage({ feature }) {
   useEffect(() => { document.title = "Finance — FinTrack"; }, []);
-  return <RevealProvider intent="landing"><div className="hm-home fx">
+  return <RevealProvider intent="landing"><ModuleParts module="finance"><div className="hm-home fx">
     <ModuleHero name="Finance" title="Every loan and every collection, in one lending book." lead={feature.summary} appPath={feature.appPath} scene="finance" frameLabel="Daily Finance · Today’s collections" />
 
     <section className="fx-sec fx-bento-sec">
@@ -97,5 +98,5 @@ export function FinancePage({ feature }) {
 
     <ModuleFaq title="Finance, answered." questions={["Can a finance business use it?", "What reports are included?", "Can I send WhatsApp messages?", "Can I install it on my phone?"]} />
     <ModuleClosing title="Put the whole lending book in one login." appPath={feature.appPath} points={["Daily and monthly accounts", "Collection staff access", "Daily and Monthly P&L"]} />
-  </div></RevealProvider>;
+  </div></ModuleParts></RevealProvider>;
 }
