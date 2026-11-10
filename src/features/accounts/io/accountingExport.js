@@ -241,7 +241,7 @@ function compactHeaderRow(header = []) {
 }
 
 /** Shared table PDF used by Accounts reports, Expenses, Ledger, and GST packs. */
-export function renderAccountsPdf({ title = "FinTrack report", subtitle = "", rows = [] } = {}) {
+export function renderAccountsPdf({ title = "MyFinTracker report", subtitle = "", rows = [] } = {}) {
   const raw = rows.length ? rows : [["No rows"]];
   const cols = Math.max(1, ...raw.map(row => row.length));
   const page = choosePage(cols);

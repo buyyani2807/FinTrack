@@ -49,7 +49,7 @@ export function ReceiptViewerModal({ receipt, settings, token, onLogAction, clos
       <hr />
       <p className="small">{receipt.receiptFooter}</p>
       {receipt.receiptTerms && <p className="small muted">{receipt.receiptTerms}</p>}
-      <p className="small muted">Powered by FinTrack</p>
+      <p className="small muted">Powered by MyFinTracker</p>
     </div>
     </ModalScroll>
     <div className="row spacer modal-foot">

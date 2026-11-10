@@ -1,5 +1,5 @@
 /**
- * Configurable paid modules for FinTrack commerce.
+ * Configurable paid modules for MyFinTracker commerce.
  *
  * Billing (confirmed):
  * - Monthly: ₹498 + GST 18% per standard module
@@ -9,7 +9,7 @@
  * - Currency INR
  * - Free 14-day org trial still grants full module access
  *
- * Scope: organization (FinTrack business workspace). Daily / Monthly / Chit are org-wide;
+ * Scope: organization (MyFinTracker business workspace). Daily / Monthly / Chit are org-wide;
  * Accounts companies inherit the org’s Accounts / Accounts+POS entitlements.
  */
 

@@ -153,7 +153,7 @@ export function RouteCollectionsPage({ token, businessName, back, routeId = "tod
     return <main className="shell rc-page">{header}
       <section className="card spacer">
         <h2 className="title">Route collections are not set up yet</h2>
-        <p className="copy">{error || "Ask the business owner to run the latest FinTrack update and assign you a collection route in Accounts → Collection routes."}</p>
+        <p className="copy">{error || "Ask the business owner to run the latest MyFinTracker update and assign you a collection route in Accounts → Collection routes."}</p>
       </section>
     </main>;
   }

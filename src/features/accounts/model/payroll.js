@@ -1,6 +1,6 @@
 import { findAccount, roundMoney, SYSTEM_CODES } from "./accountingModel.js";
 
-export const PAYROLL_DISCLAIMER = "Deductions are the amounts you enter. FinTrack does not calculate provident fund, ESI, professional tax, or income tax, and nothing is filed.";
+export const PAYROLL_DISCLAIMER = "Deductions are the amounts you enter. MyFinTracker does not calculate provident fund, ESI, professional tax, or income tax, and nothing is filed.";
 
 export const DAY_STATUSES = [
   { id: "present", label: "Present" },

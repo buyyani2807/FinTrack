@@ -24,7 +24,7 @@ const PILLARS = [
     id: "accounts",
     title: "Accounting",
     text: "The company book for a shop, a trader, a service business, or a finance company.",
-    items: ["Counter POS till for walk-in and khata sales", "Chart of accounts and ledgers", "Sales, purchases, receipts, and payments", "Contra, journal, and credit and debit notes", "Quotations, orders, delivery challans, and goods receipts", "Inventory, item profit, and GST preparation", "Payroll, attendance, leave, and payslips", "Receivables, payables, and bank reconciliation", "Customer profiles with a FinTrack credit score", "Expenses by month and category, with every entry", "Day book, trial balance, profit and loss, balance sheet, and cash flow", "For the CA: the month’s books, GST checks, unmatched bank lines, and stock to review", "Move in from Tally, Zoho Books, Book Keeper, or Excel"],
+    items: ["Counter POS till for walk-in and khata sales", "Chart of accounts and ledgers", "Sales, purchases, receipts, and payments", "Contra, journal, and credit and debit notes", "Quotations, orders, delivery challans, and goods receipts", "Inventory, item profit, and GST preparation", "Payroll, attendance, leave, and payslips", "Receivables, payables, and bank reconciliation", "Customer profiles with a MyFinTracker credit score", "Expenses by month and category, with every entry", "Day book, trial balance, profit and loss, balance sheet, and cash flow", "For the CA: the month’s books, GST checks, unmatched bank lines, and stock to review", "Move in from Tally, Zoho Books, Book Keeper, or Excel"],
     to: "accounts-overview",
     link: "Explore Accounting",
   },
@@ -47,9 +47,9 @@ const PILLARS = [
 ];
 
 const AI = [
-  { slug: "ai-bookkeeper", title: "Tell FinTrack", text: "“I bought a laptop for ₹85,000 using HDFC” becomes a balanced draft, explained in plain words. You post it." },
-  { slug: "ai-setup", title: "AI setup", text: "Say what kind of business you run and answer a few questions. FinTrack sets up ledgers, banks, GST, and stock categories." },
-  { slug: "ai-migration", title: "Move from Tally or Excel", text: "Upload your old books. FinTrack maps the accounts, finds duplicate parties, and asks only about the exceptions." },
+  { slug: "ai-bookkeeper", title: "Tell Finny", text: "“I bought a laptop for ₹85,000 using HDFC” becomes a balanced draft, explained in plain words. You post it." },
+  { slug: "ai-setup", title: "AI setup", text: "Say what kind of business you run and answer a few questions. MyFinTracker sets up ledgers, banks, GST, and stock categories." },
+  { slug: "ai-migration", title: "Move from Tally or Excel", text: "Upload your old books. MyFinTracker maps the accounts, finds duplicate parties, and asks only about the exceptions." },
   { slug: "forecasting", title: "Cash-flow forecast", text: "Where cash may stand today, in 7, 30, and 60 days, with the invoices and bills that drive it." },
   { slug: "expense-insights", title: "Expense and supplier prices", text: "Which costs rose against last month, the 3-month average, and last year, and which supplier raised a price." },
   { slug: "collection-priorities", title: "Who to collect first", text: "Ranked customers with the risk, the reason, and a reminder draft in five languages that you confirm." },
@@ -65,7 +65,7 @@ const AI = [
 
 const FY = "FY 2026–27";
 
-// Answers as Ask FinTrack returned them in the workspace on 2026-10-16.
+// Answers as Ask Finny returned them in the workspace on 2026-10-16.
 const ASK_EXAMPLES = [
   {
     icon: "HandCoins",
@@ -168,7 +168,7 @@ const ASK_EXAMPLES = [
   },
 ];
 
-// Same markup as the workspace Ask FinTrack answer; only the summary types, the rest fades in after it.
+// Same markup as the workspace Ask Finny answer; only the summary types, the rest fades in after it.
 function AskAnswer({ id, index, answer, delay, expanded, rowHeight, controls, onToggle, onMeasure }) {
   const boxRef = useRef(null);
   const bodyRef = useRef(null);
@@ -338,25 +338,25 @@ const AUDIENCES = [
 ];
 
 const FAQ = [
-  { question: "What is FinTrack?", answer: "One login for accounting, daily and monthly finance, collections, chit funds, payments, and AI suggestions from those records." },
+  { question: "What is MyFinTracker?", answer: "One login for accounting, daily and monthly finance, collections, chit funds, payments, and AI suggestions from those records." },
   { question: "Can I use it only for accounting?", answer: "Yes. Accounts can stand on its own: Counter POS billing, vouchers, inventory, payroll, GST preparation, banking, receivables, payables, and the statements, including a page to hand the month to your accountant." },
   { question: "Does it have a POS / billing counter?", answer: "Yes. Counter inside Accounts is the till for walk-in and khata sales. Charge posts the sale into the company books and stock. You can print a thermal receipt or share a WhatsApp receipt when you choose. Cashiers can open Counter without the rest of Accounts." },
   { question: "Can a finance business use it?", answer: "Yes. Daily Finance and Monthly Finance keep customer accounts, repayments, and collections." },
   { question: "Does it support chit funds?", answer: "Yes. Schemes, members, live bidding, payments, dividends, and reports." },
-  { question: "Does it support GST?", answer: "It prepares GST summaries from posted vouchers. Filing stays outside FinTrack." },
-  { question: "Can I send WhatsApp messages?", answer: "FinTrack opens WhatsApp with a reminder, receipt, or statement. You send the message." },
-  { question: "Does it have AI?", answer: "Yes, included in the plan. AI Review in Accounts gives a cash-flow forecast, expense and supplier price changes, collection priorities, unusual activity alerts, GST checks, month-end readiness, bank matching suggestions, and stock forecasts. Chit Fund has scheme health. Ask FinTrack answers questions from this workspace, and Tell FinTrack turns a plain sentence into an entry. AI also sets up new books from a few questions and maps data brought in from Tally, Zoho Books, or Excel. Every suggestion shows its reason and waits for you to act." },
-  { question: "What is Ask FinTrack?", answer: "A question box on every screen. Ask “Who has not paid today?”, “Why did profit decrease?”, or “Which expenses increased this month?” and the answer comes from this workspace’s records, with the period and the report it used. It is read-only and does not guess figures it cannot find." },
-  { question: "Does the AI change my books?", answer: "No. It does not post vouchers, file GST, lock a period, reverse an entry, create a purchase order, or send a message. A bank match is posted only when you approve it, a Tell FinTrack draft only when you choose Post, and imported data only when you choose Import. A locked period cannot be changed from a suggestion." },
-  { question: "Can I move my books from Tally or Excel?", answer: "Yes. Upload a Tally XML export, or Excel and CSV files from Zoho Books, Book Keeper, or your own sheets. FinTrack shows how many customers, suppliers, ledgers, and transactions it found, how many accounts it mapped automatically, and the exceptions for you to review before anything is imported." },
+  { question: "Does it support GST?", answer: "It prepares GST summaries from posted vouchers. Filing stays outside MyFinTracker." },
+  { question: "Can I send WhatsApp messages?", answer: "MyFinTracker opens WhatsApp with a reminder, receipt, or statement. You send the message." },
+  { question: "Does it have AI?", answer: "Yes, included in the plan. AI Review in Accounts gives a cash-flow forecast, expense and supplier price changes, collection priorities, unusual activity alerts, GST checks, month-end readiness, bank matching suggestions, and stock forecasts. Chit Fund has scheme health. Ask Finny answers questions from this workspace, and Tell Finny turns a plain sentence into an entry. AI also sets up new books from a few questions and maps data brought in from Tally, Zoho Books, or Excel. Every suggestion shows its reason and waits for you to act." },
+  { question: "What is Ask Finny?", answer: "A question box on every screen. Ask “Who has not paid today?”, “Why did profit decrease?”, or “Which expenses increased this month?” and the answer comes from this workspace’s records, with the period and the report it used. It is read-only and does not guess figures it cannot find." },
+  { question: "Does the AI change my books?", answer: "No. It does not post vouchers, file GST, lock a period, reverse an entry, create a purchase order, or send a message. A bank match is posted only when you approve it, a Tell Finny draft only when you choose Post, and imported data only when you choose Import. A locked period cannot be changed from a suggestion." },
+  { question: "Can I move my books from Tally or Excel?", answer: "Yes. Upload a Tally XML export, or Excel and CSV files from Zoho Books, Book Keeper, or your own sheets. MyFinTracker shows how many customers, suppliers, ledgers, and transactions it found, how many accounts it mapped automatically, and the exceptions for you to review before anything is imported." },
   { question: "What reports are included?", answer: "Daily and Monthly Finance have a collection report for any date and a Daily or Monthly P&L for the lending book. Chit Fund has a month statement PDF, a commission Profit & Loss by scheme, and scheme health. Accounts has the Day Book, Trial Balance, Profit & Loss, Balance Sheet, Cash Flow, GST, item profit, receivables, payables, and stock reports, with CSV, Excel, and PDF export. For the CA gathers the month’s books, GST invoices to check, unmatched bank lines, and stock rows that need review." },
-  { question: "Can I install it on my phone?", answer: "Yes. FinTrack is the mobile app: add it to the home screen from Safari on iPhone or iPad, or from Chrome on Android. It opens from its own icon. Sign in the same way you do in the browser." },
-  { question: "How is this different from Tally?", answer: "FinTrack keeps accounting, daily and monthly collections, and chit funds in one login, and it installs on the phone. You record the day’s work there." },
+  { question: "Can I install it on my phone?", answer: "Yes. MyFinTracker is the mobile app: add it to the home screen from Safari on iPhone or iPad, or from Chrome on Android. It opens from its own icon. Sign in the same way you do in the browser." },
+  { question: "How is this different from Tally?", answer: "MyFinTracker keeps accounting, daily and monthly collections, and chit funds in one login, and it installs on the phone. You record the day’s work there." },
 ];
 
 export function HomePage() {
   const { signedIn = false } = useOutletContext() || {};
-  useEffect(() => { document.title = "FinTrack — Accounting and collections on your phone"; }, []);
+  useEffect(() => { document.title = "MyFinTracker — Accounting and collections on your phone"; }, []);
 
   return <RevealProvider intent="landing">
     <section className="mkt-hero">
@@ -364,7 +364,7 @@ export function HomePage() {
         <div className="mkt-hero-copy">
           <Reveal as="p" className="mkt-kicker">A mobile app for the books</Reveal>
           <Reveal as="h1" index={1}>Your Tally on mobile.</Reveal>
-          <Reveal as="p" index={2}>FinTrack installs on iPhone and Android and opens from its own icon. Collections, company accounts, and chit funds are in that app.</Reveal>
+          <Reveal as="p" index={2}>MyFinTracker installs on iPhone and Android and opens from its own icon. Collections, company accounts, and chit funds are in that app.</Reveal>
           <Reveal className="mkt-cta-row" index={3}>
             {signedIn ? <ProductCta primary /> : null}
             <Link className="mkt-btn" to={`${marketingPaths.how}#install`}>Install on iPhone or Android</Link>
@@ -394,7 +394,7 @@ export function HomePage() {
       <div className="mkt-wrap">
         <div className="mkt-section-head">
           <Reveal as="h2">The books, the collections, and the chit.</Reveal>
-          <Reveal as="p" className="mkt-lead" index={1}>Accounting in one app, collections in another, and customers in a spreadsheet is the work FinTrack puts in one login.</Reveal>
+          <Reveal as="p" className="mkt-lead" index={1}>Accounting in one app, collections in another, and customers in a spreadsheet is the work MyFinTracker puts in one login.</Reveal>
         </div>
         <div className="mkt-grid three">
           {PILLARS.map((pillar, index) => <Reveal as="article" key={pillar.id} id={pillar.id} className="mkt-card" index={index % 3}>
@@ -407,15 +407,15 @@ export function HomePage() {
       </div>
     </section>
 
-    <section className="mkt-section mkt-tint" id="ask-fintrack">
+    <section className="mkt-section mkt-tint" id="ask-finny">
       <div className="mkt-wrap">
         <div className="mkt-section-head">
-          <Reveal as="p" className="mkt-kicker"><FeatureIcon name="MessageCircle" size={16} /> Ask FinTrack</Reveal>
+          <Reveal as="p" className="mkt-kicker"><FeatureIcon name="MessageCircle" size={16} /> Ask Finny</Reveal>
           <Reveal as="h2" index={1}>Ask your books the way you ask your accountant.</Reveal>
-          <Reveal as="p" className="mkt-lead" index={2}>Type a question in plain English and FinTrack answers from your own records: the figures, the customers or ledgers behind them, the period, and the report they came from. One tap opens that screen.</Reveal>
+          <Reveal as="p" className="mkt-lead" index={2}>Type a question in plain English and MyFinTracker answers from your own records: the figures, the customers or ledgers behind them, the period, and the report they came from. One tap opens that screen.</Reveal>
         </div>
         <AskGrid />
-        <Reveal as="p" className="mkt-lead">Read-only. Asking never posts, sends, or changes anything, and a collection agent sees only their own customers. <Link className="mkt-text-link" to={featurePath("ask-fintrack")}>See everything you can ask</Link></Reveal>
+        <Reveal as="p" className="mkt-lead">Read-only. Asking never posts, sends, or changes anything, and a collection agent sees only their own customers. <Link className="mkt-text-link" to={featurePath("ask-finny")}>See everything you can ask</Link></Reveal>
       </div>
     </section>
 
@@ -423,7 +423,7 @@ export function HomePage() {
       <div className="mkt-wrap">
         <div className="mkt-section-head">
           <Reveal as="h2">AI that reviews the books with you.</Reveal>
-          <Reveal as="p" className="mkt-lead" index={1}>FinTrack reads your own records and points out what needs a look: cash that may run short, costs that rose, GST details to fix, bank lines to match, and stock to reorder. Every suggestion shows its reason, its confidence, and a link to the record. You post the voucher, approve the match, and send the message.</Reveal>
+          <Reveal as="p" className="mkt-lead" index={1}>MyFinTracker reads your own records and points out what needs a look: cash that may run short, costs that rose, GST details to fix, bank lines to match, and stock to reorder. Every suggestion shows its reason, its confidence, and a link to the record. You post the voucher, approve the match, and send the message.</Reveal>
         </div>
         <div className="mkt-grid three">
           {AI.map((item, index) => <Reveal as={Link} key={item.slug} to={featurePath(item.slug)} className="mkt-card mkt-card-link" index={index % 3}>
@@ -452,7 +452,7 @@ export function HomePage() {
     <section className="mkt-section">
       <div className="mkt-wrap">
         <Reveal as="h2">The books, on your phone.</Reveal>
-        <Reveal as="p" className="mkt-lead" index={1}>Add FinTrack from the browser and record the day’s work on the phone. The owner signs in with email. A collection agent, a customer, or a chit member uses a portal ID and PIN.</Reveal>
+        <Reveal as="p" className="mkt-lead" index={1}>Add MyFinTracker from the browser and record the day’s work on the phone. The owner signs in with email. A collection agent, a customer, or a chit member uses a portal ID and PIN.</Reveal>
         <Reveal className="mkt-cta-row" index={2}>
           <Link className="mkt-btn" to={`${marketingPaths.how}#install`}>Install on iPhone or Android</Link>
         </Reveal>
@@ -473,7 +473,7 @@ export function HomePage() {
         <Reveal className="mkt-cta-row" index={2}>
           <ProductCta primary />
           <Link className="mkt-btn light" to={marketingPaths.contact}>Request a demo</Link>
-          {signedIn ? <Link className="mkt-btn light" to="/dashboard">Open FinTrack</Link> : null}
+          {signedIn ? <Link className="mkt-btn light" to="/dashboard">Open MyFinTracker</Link> : null}
         </Reveal>
       </div>
     </section>

@@ -10,11 +10,11 @@ import { ProductPreview, sceneForFeature } from "./ProductPreview.jsx";
 export function FeatureDetailPage() {
   const { slug } = useParams();
   const feature = featureBySlug(slug);
-  useEffect(() => { document.title = feature ? `${feature.name} — FinTrack` : "Feature — FinTrack"; }, [feature]);
+  useEffect(() => { document.title = feature ? `${feature.name} — MyFinTracker` : "Feature — MyFinTracker"; }, [feature]);
   if (!feature) {
     return <Reveal intent="content" className="mkt-empty">
       <h1>That feature is not on this site.</h1>
-      <p className="mkt-lead">The list only includes modules that exist in FinTrack.</p>
+      <p className="mkt-lead">The list only includes modules that exist in MyFinTracker.</p>
       <Link className="mkt-btn" to={marketingPaths.features}>Back to features</Link>
     </Reveal>;
   }

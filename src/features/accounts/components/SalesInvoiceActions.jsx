@@ -237,7 +237,7 @@ export function SalesInvoiceViewerModal({ invoice, close, onSettle }) {
           <hr />
           <p className="small">{invoice.receiptFooter}</p>
           {invoice.receiptTerms && <p className="small muted">{invoice.receiptTerms}</p>}
-          <p className="small muted">Powered by FinTrack</p>
+          <p className="small muted">Powered by MyFinTracker</p>
           </>}
         </div>
         </ModalScroll>

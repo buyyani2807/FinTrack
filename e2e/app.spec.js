@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("FinTrack login hub", () => {
+test.describe("MyFinTracker login hub", () => {
   test("renders financier and customer login tabs", async ({ page }) => {
     await page.goto("/login");
-    await expect(page.getByText("FinTrack").first()).toBeVisible();
+    await expect(page.getByText("MyFinTracker").first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Owner sign in" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Agent login" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Customer login" })).toBeVisible();

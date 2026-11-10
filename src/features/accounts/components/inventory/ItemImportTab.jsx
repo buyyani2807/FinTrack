@@ -6,7 +6,7 @@ export function ItemImportTab({ canEdit, saving, readImportFile, importPlan, set
   return (
     <>
       <p className="copy spacer">
-        Import a product list from FinTrack’s template or from another POS (Focus, Vyapar, Marg, Excel export, etc.).
+        Import a product list from MyFinTracker’s template or from another POS (Focus, Vyapar, Marg, Excel export, etc.).
         Name is required. SKU is preferred; if missing, barcode is used, otherwise a code is generated from the name.
         Prices, GST, HSN, unit, category, barcode, brand and stock columns are matched by common header names.
         Existing SKUs are skipped.

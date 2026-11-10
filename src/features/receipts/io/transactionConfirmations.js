@@ -50,7 +50,7 @@ export function formatConfirmationMoney(value) {
 }
 
 function companyName(settings = {}, workspace = {}) {
-  return settings.companyName || workspace.businessName || "FinTrack";
+  return settings.companyName || workspace.businessName || "MyFinTracker";
 }
 
 /** Build daily account-opened template variables from stored loan fields. */

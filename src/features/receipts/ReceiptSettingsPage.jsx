@@ -218,7 +218,7 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved, tab: routeT
       </div>}
 
       {tab === "whatsapp" && <>
-        <SettingsSection icon={MessageCircle} title="WhatsApp messages" copy="Optional. WhatsApp buttons work without saving these and without an API key or provider account. A saved template's wording is used; otherwise FinTrack sends the built-in message. View/PDF still shows the full receipt.">
+        <SettingsSection icon={MessageCircle} title="WhatsApp messages" copy="Optional. WhatsApp buttons work without saving these and without an API key or provider account. A saved template's wording is used; otherwise MyFinTracker sends the built-in message. View/PDF still shows the full receipt.">
           <div className="settings-variables">
             <span className="small">Tap a variable to insert it where your cursor is in the open template.</span>
             <div className="settings-variable-chips">
@@ -272,7 +272,7 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved, tab: routeT
             })}
           </ul>
         </SettingsSection>
-        <SettingsSection icon={MessageCircle} title="Automatic WhatsApp confirmations" copy="After a successful save, FinTrack opens WhatsApp with the confirmation message, the same way as receipts. The save still succeeds if WhatsApp cannot open.">
+        <SettingsSection icon={MessageCircle} title="Automatic WhatsApp confirmations" copy="After a successful save, MyFinTracker opens WhatsApp with the confirmation message, the same way as receipts. The save still succeeds if WhatsApp cannot open.">
           <div className="settings-switches">
             <SwitchRow icon={CalendarDays} title="Daily Finance" copy="New account confirmation" checked={confirmations.daily_account !== false} onChange={() => toggleConfirmation("daily_account")} />
             <SwitchRow icon={CalendarRange} title="Monthly Finance" copy="New account confirmation" checked={confirmations.monthly_account !== false} onChange={() => toggleConfirmation("monthly_account")} />

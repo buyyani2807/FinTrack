@@ -30,7 +30,7 @@ export const downloadDailyReport = (loans, reportDate) => {
   });
   const totalExpected = rows.reduce((sum, row) => sum + Number(row[1] || 0), 0);
   const total = rows.reduce((sum, row) => sum + Number(row[2] || 0), 0);
-  downloadCsv(`fintrack-collection-report-${reportDate}.csv`, [["FinTrack Collection Report"], ["Report date", reportDate], ["Account status", "Active only"], ["Accounts in report", loans.length], ["Expected collection", totalExpected], ["Total collected", total], [], ["Customer", "Expected collection", "Actual collected", "Outstanding", "Collection status", "Payment mode", "Cash amount", "UPI amount", "Collected by", "Notes/comments"], ...rows, [], ["Total", totalExpected, total]]);
+  downloadCsv(`fintrack-collection-report-${reportDate}.csv`, [["MyFinTracker Collection Report"], ["Report date", reportDate], ["Account status", "Active only"], ["Accounts in report", loans.length], ["Expected collection", totalExpected], ["Total collected", total], [], ["Customer", "Expected collection", "Actual collected", "Outstanding", "Collection status", "Payment mode", "Cash amount", "UPI amount", "Collected by", "Notes/comments"], ...rows, [], ["Total", totalExpected, total]]);
 };
 export const downloadProfitLossReport = (loans, { kind, status, customer, generatedOn }) => {
   if (!loans.length) throw new Error("No accounts match these filters.");
@@ -49,5 +49,5 @@ export const downloadProfitLossReport = (loans, { kind, status, customer, genera
 export const downloadCustomerReport = loan => {
   const monthly = loan.kind === "monthly";
   const rows = [...loan.transactions].sort((a, b) => a.date.localeCompare(b.date)).map(transaction => [transaction.date, monthly ? transaction.interestAmount || 0 : "", monthly ? transaction.principalAmount || 0 : "", monthly ? transaction.penaltyAmount || 0 : "", paymentValue(loan, transaction), paymentModeLabel(transaction), transaction.cashAmount || "", transaction.upiAmount || "", transaction.ref || "", transaction.notes || ""]);
-  downloadCsv(`fintrack-payment-history-${loan.id}.csv`, [["FinTrack Customer Payment Report"], ["Customer", loan.customerName], ["Finance ID", loan.id], ["Finance type", loan.kind], [monthly ? "Principal taken" : "Amount paid to customer", monthly ? loan.principal : loan.disbursedAmount], [monthly ? "Principal remaining" : "Collection balance", loanBalance(loan)], ["Total paid", loanPaid(loan)], [], ["Date", "Interest paid", "Principal repaid", "Penalty paid", "Total paid", "Mode", "Cash amount", "UPI amount", "Reference", "Notes"], ...rows]);
+  downloadCsv(`fintrack-payment-history-${loan.id}.csv`, [["MyFinTracker Customer Payment Report"], ["Customer", loan.customerName], ["Finance ID", loan.id], ["Finance type", loan.kind], [monthly ? "Principal taken" : "Amount paid to customer", monthly ? loan.principal : loan.disbursedAmount], [monthly ? "Principal remaining" : "Collection balance", loanBalance(loan)], ["Total paid", loanPaid(loan)], [], ["Date", "Interest paid", "Principal repaid", "Penalty paid", "Total paid", "Mode", "Cash amount", "UPI amount", "Reference", "Notes"], ...rows]);
 };

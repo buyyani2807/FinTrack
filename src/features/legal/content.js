@@ -7,7 +7,7 @@ export const LEGAL_PAGES = {
     sections: [
       {
         heading: "Who we are",
-        body: "FinTrack is a business workspace for financiers and chit fund operators. Each financier organization manages its own customer and member records.",
+        body: "MyFinTracker is a business workspace for financiers and chit fund operators. Each financier organization manages its own customer and member records.",
       },
       {
         heading: "Data we collect",
@@ -19,7 +19,7 @@ export const LEGAL_PAGES = {
       },
       {
         heading: "Security",
-        body: "Financial writes go through secured database functions. Organization data is isolated with row-level security. Customer, chit member, and collection agent PINs are hashed. Refresh tokens for financier and agent login are stored in HttpOnly cookies when deployed with FinTrack auth routes.",
+        body: "Financial writes go through secured database functions. Organization data is isolated with row-level security. Customer, chit member, and collection agent PINs are hashed. Refresh tokens for financier and agent login are stored in HttpOnly cookies when deployed with MyFinTracker auth routes.",
       },
       {
         heading: "Retention and deletion",
@@ -41,7 +41,7 @@ export const LEGAL_PAGES = {
     sections: [
       {
         heading: "Service description",
-        body: "FinTrack provides software for daily and monthly finance tracking, chit fund administration, collection workflows, and customer or member portals. The service is provided to business operators, not as a regulated financial institution.",
+        body: "MyFinTracker provides software for daily and monthly finance tracking, chit fund administration, collection workflows, and customer or member portals. The service is provided to business operators, not as a regulated financial institution.",
       },
       {
         heading: "Financier responsibilities",
@@ -49,7 +49,7 @@ export const LEGAL_PAGES = {
       },
       {
         heading: "Customer and member portals",
-        body: "Portal IDs and PINs must be kept confidential. FinTrack is not responsible for unauthorized access caused by shared PINs or device compromise.",
+        body: "Portal IDs and PINs must be kept confidential. MyFinTracker is not responsible for unauthorized access caused by shared PINs or device compromise.",
       },
       {
         heading: "Availability",
@@ -57,11 +57,11 @@ export const LEGAL_PAGES = {
       },
       {
         heading: "Prohibited use",
-        body: "Do not use FinTrack for unlawful lending, unauthorized personal data processing, or attempts to bypass security controls.",
+        body: "Do not use MyFinTracker for unlawful lending, unauthorized personal data processing, or attempts to bypass security controls.",
       },
       {
         heading: "Limitation of liability",
-        body: "FinTrack is business software, not legal or accounting advice. Operators should verify calculations and seek professional advice for regulated activities.",
+        body: "MyFinTracker is business software, not legal or accounting advice. Operators should verify calculations and seek professional advice for regulated activities.",
       },
       {
         heading: "Changes",

@@ -1,7 +1,7 @@
 {
-  "name": "FinTrack Collections",
-  "short_name": "FinTrack",
-  "description": "Daily and monthly finance collections",
+  "name": "MyFinTracker",
+  "short_name": "MyFinTracker",
+  "description": "Accounting, collections, chit funds, and POS for Indian businesses",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0e1118",

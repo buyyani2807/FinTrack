@@ -4,6 +4,7 @@ import { ArrowRight, BookOpen, Building2, ChevronDown, Gift, House, LayoutGrid, 
 import { ThemeToggle } from "../../components/ThemeToggle.jsx";
 import { FEATURE_CATEGORIES, featureBySlug } from "./catalog.js";
 import marketingStyles from "./marketing.css?inline";
+import { ASK_LABEL, OPEN_PRODUCT, PRODUCT_NAME } from "../../lib/brand.js";
 import { featurePath, marketingPaths } from "./paths.js";
 
 const LINKS = [
@@ -22,7 +23,7 @@ function NavIcon({ item, size = 15 }) {
 
 const MENU_MODULES = {
   accounts: ["accounts-overview", "payroll", "trade-documents", "inventory", "item-profit", "for-the-ca"],
-  intelligence: ["bill-scanning", "ask-fintrack", "ai-review", "forecasting", "bank-matching", "gst-review"],
+  intelligence: ["bill-scanning", "ask-finny", "ai-review", "forecasting", "bank-matching", "gst-review"],
 };
 
 const COMPANY_LINKS = [
@@ -66,7 +67,7 @@ function TrialBar() {
 }
 
 function Brand({ onClick }) {
-  return <Link to={marketingPaths.home} className="mkt-brand" aria-label="FinTrack home" onClick={onClick}>FIN<span>Track</span></Link>;
+  return <Link to={marketingPaths.home} className="mkt-brand" aria-label={`${PRODUCT_NAME} home`} onClick={onClick}>MyFin<span>Tracker</span></Link>;
 }
 
 export function MarketingLayout() {
@@ -141,10 +142,10 @@ export function MarketingLayout() {
   }, [productOpen]);
 
   const login = signedIn
-    ? <Link className="mkt-btn" to="/dashboard">Open FinTrack</Link>
+    ? <Link className="mkt-btn" to="/dashboard">{OPEN_PRODUCT}</Link>
     : <Link className="mkt-btn mkt-login-link" to={marketingPaths.login}>Login</Link>;
   const start = signedIn
-    ? <Link className="mkt-btn primary" to="/dashboard">Open FinTrack</Link>
+    ? <Link className="mkt-btn primary" to="/dashboard">{OPEN_PRODUCT}</Link>
     : <Link className="mkt-btn primary" to={marketingPaths.signup}>Start free</Link>;
 
   return <div className="mkt">
@@ -219,7 +220,7 @@ export function MarketingLayout() {
           <div className="mkt-drawer-cta">
             {signedIn ? null : <Link className="mkt-btn" to={marketingPaths.login} onClick={close}>Login</Link>}
             {signedIn
-              ? <Link className="mkt-btn primary" to="/dashboard" onClick={close}>Open FinTrack</Link>
+              ? <Link className="mkt-btn primary" to="/dashboard" onClick={close}>{OPEN_PRODUCT}</Link>
               : <Link className="mkt-btn primary" to={marketingPaths.signup} onClick={close}>Start free</Link>}
           </div>
         </div>
@@ -241,7 +242,7 @@ export function MarketingLayout() {
         <Link to="/features/auction-chit">Chit Funds</Link>
         <Link to="/features/cashbook">Cashbook</Link>
         <Link to="/features/bill-scanning">Bill scan</Link>
-        <Link to="/features/ask-fintrack">Ask FinTrack</Link>
+        <Link to="/features/ask-finny">{ASK_LABEL}</Link>
         <Link to="/features/ai-review">AI Review</Link>
       </div>
       <div>
@@ -256,7 +257,7 @@ export function MarketingLayout() {
       </div>
       <div>
         <h2>Access</h2>
-        <Link to={signedIn ? "/dashboard" : marketingPaths.login}>{signedIn ? "Open FinTrack" : "Login"}</Link>
+        <Link to={signedIn ? "/dashboard" : marketingPaths.login}>{signedIn ? OPEN_PRODUCT : "Login"}</Link>
         <Link to={marketingPaths.pricing}>Pricing</Link>
         <Link to="/?view=privacy">Privacy</Link>
         <Link to="/?view=terms">Terms</Link>

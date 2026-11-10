@@ -15,6 +15,7 @@ import { visibleFinanceLoans } from "../intelligence/assistant/askFintrack.js";
 import { COMPANY_STORAGE_KEY } from "../accounts/data/accountsCache.js";
 import { loadAccountsCompanies, loadMyAccountsCompanyIds } from "../accounts/data/accountingRepository.js";
 import { loadAccountsModule } from "./accountsModuleLoader.js";
+import { ASK_LABEL } from "../../lib/brand.js";
 import { FinancierNav } from "./FinancierNav.jsx";
 import { workspacePaths, workspaceModuleAccess } from "./paths.js";
 
@@ -110,7 +111,7 @@ export function WorkspaceLayout() {
     return () => { cancelled = true; };
   }, [subscriptionLocked, showOwnerChrome, token]);
 
-  // CA top bar: show the Acc company they can open (e.g. Buyyani's), not the FinTrack org name.
+  // CA top bar: show the Acc company they can open (e.g. Buyyani's), not the MyFinTracker org name.
   useEffect(() => {
     if (!access.isAccountsUser || !token) {
       setAccountsCompanyName("");
@@ -212,12 +213,12 @@ export function WorkspaceLayout() {
         {/* CA / Accounts-team: full-viewport Accounts (no Financier sidebar). Theme + logout stay in the slim bar. */}
         {access.isAccountsUser && !subscriptionLocked ? (
           <header className="ft-accounts-team-bar">
-            <span className="ft-brand"><span className="ft-brand-strong">FIN</span>Track <span className="ft-wordmark-suffix">Accounts</span></span>
+            <span className="ft-brand"><span className="ft-brand-strong">MyFin</span>Tracker <span className="ft-wordmark-suffix">Accounts</span></span>
             <span className="ft-accounts-team-biz">{accountsCompanyName || (access.isAccountsUser ? "No company assigned" : workspace?.businessName) || "Accounts"}</span>
             <TopActions logout={logout} />
           </header>
         ) : null}
-        {!subscriptionLocked && askEnabled && !access.isAccountsUser ? <div className="ft-ask-staff-bar"><button type="button" className="btn" onClick={() => setAskOpen(true)}>Ask FinTrack</button></div> : null}
+        {!subscriptionLocked && askEnabled && !access.isAccountsUser ? <div className="ft-ask-staff-bar"><button type="button" className="btn" onClick={() => setAskOpen(true)}>{ASK_LABEL}</button></div> : null}
         <PageReveal routeKey={location.pathname}><Outlet context={routeContext} /></PageReveal>
       </>}
     {!subscriptionLocked && <FintrackAssistant

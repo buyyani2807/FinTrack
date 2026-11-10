@@ -183,7 +183,7 @@ export function buildMonthEndReadiness({
     resolved: issues.filter(check => check.resolved).length,
     remaining: issues.filter(check => !check.resolved).length,
     checks,
-    note: "Readiness is advisory. FinTrack does not close or lock the period, change vouchers, reconcile, or post entries from this screen.",
+    note: "Readiness is advisory. MyFinTracker does not close or lock the period, change vouchers, reconcile, or post entries from this screen.",
     advisory: true,
     writeAction: "none",
   };

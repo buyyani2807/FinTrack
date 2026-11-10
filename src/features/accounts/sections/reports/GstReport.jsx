@@ -96,7 +96,7 @@ export function GstReport({
         }}>Export GSTR-3B prep JSON</button>
       </div>
       <div className="notice spacer">
-        <strong>e-Invoice / e-Way:</strong> {EINVOICE_INTEGRATION_STUB.note} Queue a payload from a posted sales voucher — FinTrack will not invent IRNs or call the portal.
+        <strong>e-Invoice / e-Way:</strong> {EINVOICE_INTEGRATION_STUB.note} Queue a payload from a posted sales voucher — MyFinTracker will not invent IRNs or call the portal.
       </div>
       <div className="acc-metric-grid three">
         <AccMetric label="Output GST" value={money(gstReport.outputTax)} />

@@ -97,7 +97,7 @@ export function pnlStatementRows(pnl) {
   return rows;
 }
 
-export function pnlExportRows(pnl, { companyName = "FinTrack", from = "", to = "" } = {}) {
+export function pnlExportRows(pnl, { companyName = "MyFinTracker", from = "", to = "" } = {}) {
   const result = profitResult(pnl?.net);
   const period = periodCaption(from, to);
   const out = [["Profit & Loss"], [companyName]];
@@ -180,7 +180,7 @@ export function balanceLiabilityRows(sheet) {
   ];
 }
 
-export function balanceExportRows(sheet, { companyName = "FinTrack", from = "", to = "" } = {}) {
+export function balanceExportRows(sheet, { companyName = "MyFinTracker", from = "", to = "" } = {}) {
   const period = periodCaption(from, to);
   const out = [["Balance Sheet"], [companyName]];
   if (period) out.push([`As of ${to || period}`]);
@@ -197,7 +197,7 @@ export function balanceExportRows(sheet, { companyName = "FinTrack", from = "", 
   return out;
 }
 
-export function trialExportRows(tb, { companyName = "FinTrack", from = "", to = "" } = {}) {
+export function trialExportRows(tb, { companyName = "MyFinTracker", from = "", to = "" } = {}) {
   const period = periodCaption(from, to);
   const diff = Math.abs(Number(tb?.totalDebit || 0) - Number(tb?.totalCredit || 0));
   const out = [["Trial Balance"], [companyName]];
@@ -211,7 +211,7 @@ export function trialExportRows(tb, { companyName = "FinTrack", from = "", to = 
   return out;
 }
 
-export function cashflowExportRows(flow, { companyName = "FinTrack", from = "", to = "" } = {}) {
+export function cashflowExportRows(flow, { companyName = "MyFinTracker", from = "", to = "" } = {}) {
   const period = periodCaption(from, to);
   const out = [["Cash Flow"], [companyName]];
   if (period) out.push([`Period: ${period}`]);

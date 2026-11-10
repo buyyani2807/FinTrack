@@ -44,8 +44,8 @@ Description: ${JSON.stringify(text)}`;
 }
 
 export function ledgerMappingPrompt(ledgers, targets) {
-  return `An Indian business is moving its books from Tally, Zoho Books or Excel to FinTrack.
-For each old ledger below, choose where it belongs in FinTrack. Return JSON only, in this shape:
+  return `An Indian business is moving its books from Tally, Zoho Books or Excel to MyFinTracker.
+For each old ledger below, choose where it belongs in MyFinTracker. Return JSON only, in this shape:
 {"suggestions":[{"name":"","target":""}]}
 target must be one of these values exactly:
 ${targets.map(target => `${target.value} = ${target.label}`).join("\n")}

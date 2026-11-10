@@ -37,7 +37,7 @@ export default async function handler(req, res) {
     if (!productKeys.length) return res.status(400).json({ error: "Select at least one module." });
     if (!razorpayConfigured()) {
       return res.status(501).json({
-        error: "Razorpay is not configured (RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET). Modules are not charged or unlocked from this button yet. Contact FinTrack support after payment, or add Razorpay env vars and redeploy.",
+        error: "Razorpay is not configured (RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET). Modules are not charged or unlocked from this button yet. Contact MyFinTracker support after payment, or add Razorpay env vars and redeploy.",
         providerReady: false,
         productKeys,
         assumedBilling: {

@@ -228,7 +228,7 @@ export function AccBulkImportWorkspace({
             <div className="acc-mig-body">
               {(stage === "upload" || stage === "reading") && (
                 <>
-                  <p className="acc-setup-ask">Upload a CSV or Excel sheet of sales and purchases. FinTrack groups invoice lines, matches parties, and shows a review before anything is posted.</p>
+                  <p className="acc-setup-ask">Upload a CSV or Excel sheet of sales and purchases. MyFinTracker groups invoice lines, matches parties, and shows a review before anything is posted.</p>
                   <div className="accounts-action-row spacer">
                     <button
                       type="button"
@@ -358,7 +358,7 @@ export function AccBulkImportWorkspace({
             <div className="acc-mig-body">
               {(stage === "upload" || stage === "reading") && (
                 <>
-                  <p className="acc-setup-ask">Upload supplier bill photos or PDFs (or a ZIP of them). FinTrack reads each bill, then you review and post purchases.</p>
+                  <p className="acc-setup-ask">Upload supplier bill photos or PDFs (or a ZIP of them). MyFinTracker reads each bill, then you review and post purchases.</p>
                   <label
                     className={`acc-mig-drop${stage === "reading" ? " is-busy" : ""}`}
                     onDragOver={event => event.preventDefault()}

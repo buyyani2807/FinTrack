@@ -39,7 +39,7 @@ test("profit and loss csv includes filters, totals, and detail rows", () => {
     { customerName: "Vamsee", kindLabel: "Daily", statusLabel: "Active", invested: 8500, collected: 1800, outstanding: 6700, profit: 0, loss: 0 },
     { customerName: "Meena", kindLabel: "Monthly", statusLabel: "Closed", invested: 100000, collected: 12000, outstanding: 100000, profit: 12000, loss: 0 },
   ], { kind: "all", status: "all", customer: "", generatedOn: "2026-08-31" });
-  assert.equal(rows[0][0], "FinTrack Profit & Loss Report");
+  assert.equal(rows[0][0], "MyFinTracker Profit & Loss Report");
   assert.deepEqual(rows[1], ["Generated on", "2026-08-31"]);
   assert.deepEqual(rows[2], ["Finance type", "Daily + Monthly"]);
   assert.deepEqual(rows[4], ["Customer filter", "All customers"]);

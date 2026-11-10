@@ -6,7 +6,7 @@ test("skuFromName builds a stable uppercase code", () => {
   assert.equal(skuFromName("Toor Dal 1kg"), "TOOR-DAL-1KG");
 });
 
-test("FinTrack template columns still parse", () => {
+test("MyFinTracker template columns still parse", () => {
   const rows = parseItemCsv([
     "Name,SKU,Unit,Selling price,Purchase price,GST %,Opening stock",
     "Rice,RICE-1,Kg,60,50,5,10",

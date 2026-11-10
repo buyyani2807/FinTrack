@@ -52,7 +52,7 @@ export function offlineChargeBlocked(bills = [], now = Date.now()) {
 
 export function buildOfflineReceiptInvoice({
   bill,
-  companyName = "FinTrack",
+  companyName = "MyFinTracker",
   companyAddress = "",
   companyGstin = "",
   companyPhone = "",

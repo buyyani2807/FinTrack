@@ -49,7 +49,7 @@ export function buildProfitLossCsvRows(accounts, { kind = "all", status = "all",
   }), { invested: 0, collected: 0, outstanding: 0, profit: 0, loss: 0 });
   const net = totals.profit - totals.loss;
   return [
-    ["FinTrack Profit & Loss Report"],
+    ["MyFinTracker Profit & Loss Report"],
     ["Generated on", generatedOn],
     ["Finance type", profitLossKindLabel(kind)],
     ["Account status", profitLossStatusLabel(status)],

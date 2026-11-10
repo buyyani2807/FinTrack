@@ -1502,7 +1502,7 @@ const openVoucher = () => {
     setShowSimple(true);
     setNotice(suggestion
       ? "Review the suggestion, then save. Nothing is posted until you save."
-      : "Select the party, then save. FinTrack will suggest matching this bank line after posting.");
+      : "Select the party, then save. MyFinTracker will suggest matching this bank line after posting.");
   };
 
   const openSimpleFromRecurring = template => {
@@ -2341,7 +2341,7 @@ const openVoucher = () => {
   const exportRows = () => {
     const active = ["receivables", "payables", "pnl", "balance", "trial"].includes(section) ? section : reportTab;
     const stamp = todayIso();
-    const companyName = activeCompany?.name || settings?.companyName || "FinTrack";
+    const companyName = activeCompany?.name || settings?.companyName || "MyFinTracker";
     const exportMeta = { companyName, from: rangeFrom, to: rangeTo };
     if (active === "trial") {
       return { filename: `fintrack-trial-balance-${stamp}`, rows: trialExportRows(tb, exportMeta) };
@@ -2535,7 +2535,7 @@ const openVoucher = () => {
         const { filename, rows } = exportRows();
         const active = ["receivables", "payables", "pnl", "balance", "trial"].includes(section) ? section : reportTab;
         const title = REPORT_TABS.find(item => item.id === active)?.label || "Accounts report";
-        const companyLabel = activeCompany?.name || settings?.companyName || "FinTrack";
+        const companyLabel = activeCompany?.name || settings?.companyName || "MyFinTracker";
         // PDF Helvetica is ASCII-only — avoid middle dots that become "?".
         const subtitle = `${companyLabel} - ${rangeFrom} to ${rangeTo}`;
         // PDF already has title/subtitle; start the table at the column-header row.

@@ -330,7 +330,7 @@ function drawSheet(model, surface, logo, qr) {
 
   surface.pages.forEach((page, index) => {
     surface.page = page;
-    surface.text("Powered by FinTrack", surface.left, spec.height - spec.margin + 4, { size: base - 2, gray: 0.5 });
+    surface.text("Powered by MyFinTracker", surface.left, spec.height - spec.margin + 4, { size: base - 2, gray: 0.5 });
     if (surface.pages.length > 1) surface.text(`Page ${index + 1} of ${surface.pages.length}`, surface.right, spec.height - spec.margin + 4, { size: base - 2, gray: 0.5, align: "right" });
   });
 }
@@ -560,7 +560,7 @@ function drawTaxInvoice(sheet, surface, logo, qr) {
   surface.pages.forEach((page, index) => {
     surface.page = page;
     if (!spec.height) return;
-    surface.text("Powered by FinTrack", surface.left, spec.height - spec.margin + 4, { size: base - 2, gray: 0.5 });
+    surface.text("Powered by MyFinTracker", surface.left, spec.height - spec.margin + 4, { size: base - 2, gray: 0.5 });
     if (surface.pages.length > 1) surface.text(`Page ${index + 1} of ${surface.pages.length}`, surface.right, spec.height - spec.margin + 4, { size: base - 2, gray: 0.5, align: "right" });
   });
 }
@@ -698,7 +698,7 @@ function drawThermal(model, surface, logo, qr) {
   }
   dashed();
   centered(model.footer, { size: base - 1, bold: pos });
-  if (!pos) centered("Powered by FinTrack", { size: base - 2, gray: 0.5 });
+  if (!pos) centered("Powered by MyFinTracker", { size: base - 2, gray: 0.5 });
   surface.page.height = Math.ceil(surface.y + spec.margin);
 }
 
@@ -724,7 +724,7 @@ export function renderDocumentPdf(model, { template = "a4" } = {}) {
     title: model.title || "DOCUMENT",
     posSlip: Boolean(model.posSlip),
     meta: model.meta || [],
-    seller: { name: model.seller?.name || "FinTrack", lines: (model.seller?.lines || []).filter(Boolean) },
+    seller: { name: model.seller?.name || "MyFinTracker", lines: (model.seller?.lines || []).filter(Boolean) },
     partyHeading: model.partyHeading || "BILL TO",
     party: { name: model.party?.name || "", lines: (model.party?.lines || []).filter(Boolean) },
     items: model.items || [],

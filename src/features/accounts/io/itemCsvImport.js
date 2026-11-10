@@ -162,7 +162,7 @@ function parseItemCsvRows(headers, rows) {
 }
 
 /**
- * Parse an items CSV/TSV from FinTrack template or another POS export (Focus, Vyapar, etc.).
+ * Parse an items CSV/TSV from MyFinTracker template or another POS export (Focus, Vyapar, etc.).
  * Headers are matched loosely — e.g. "Item Name", "Menu Name", "Item Code", "Sale Rate".
  */
 export function parseItemCsv(text) {
@@ -170,7 +170,7 @@ export function parseItemCsv(text) {
   return parseItemCsvRows(headers, rows);
 }
 
-/** CSV, TSV, TXT, or Excel (.xlsx) item master from FinTrack or another POS. */
+/** CSV, TSV, TXT, or Excel (.xlsx) item master from MyFinTracker or another POS. */
 export async function parseItemImportFile(file) {
   const name = String(file?.name || "file");
   if (/\.csv$/i.test(name) || /\.tsv$/i.test(name) || /\.txt$/i.test(name)) {

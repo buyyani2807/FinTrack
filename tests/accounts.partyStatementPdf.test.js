@@ -16,7 +16,7 @@ test("party statement PDF includes party name and period", () => {
     },
     periodFrom: "2026-04-01",
     periodTo: "2026-09-09",
-    company: { name: "FinTrack QA Trading Pvt Ltd", gstin: "07AAAAA0000A1Z4" },
+    company: { name: "MyFinTracker QA Trading Pvt Ltd", gstin: "07AAAAA0000A1Z4" },
     money: value => `Rs.${Number(value).toFixed(2)}`,
   });
 

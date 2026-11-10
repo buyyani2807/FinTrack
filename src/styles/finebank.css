@@ -1,5 +1,5 @@
 /*
- * FinTrack design system, based on the Finebank financial dashboard kit.
+ * MyFinTracker design system, based on the Finebank financial dashboard kit.
  * Loaded after app.css (see AppShell) so it is the final word on colour, type and shape.
  * Everything visual reads from the tokens below; the dark theme only redefines tokens.
  * Fonts (Inter, Poppins for the wordmark) are linked from index.html.

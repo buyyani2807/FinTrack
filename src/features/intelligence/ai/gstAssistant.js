@@ -13,7 +13,7 @@ const GST_DOC_TYPES = new Set(["sales", "purchase", "credit_note", "debit_note"]
 const SPECIAL_RATES = new Set([0.1, 0.25, 1.5, 3, 6, 7.5, 40]);
 const KNOWN_RATES = new Set([...GST_RATES, ...SPECIAL_RATES]);
 
-export const GST_DISCLAIMER = "FinTrack's calculated GST remains authoritative. These checks are for review only: they do not file returns, generate IRNs, or create acknowledgements.";
+export const GST_DISCLAIMER = "MyFinTracker's calculated GST remains authoritative. These checks are for review only: they do not file returns, generate IRNs, or create acknowledgements.";
 
 const lineTax = line => roundMoney(n(line.cgst) + n(line.sgst) + n(line.igst));
 

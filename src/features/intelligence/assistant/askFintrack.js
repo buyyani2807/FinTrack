@@ -199,7 +199,7 @@ function refuse(context, title, summary) {
   return envelope({
     title,
     summary,
-    sourceModule: "FinTrack",
+    sourceModule: "MyFinTracker",
     report: "Assistant policy",
     filters: scopeFilters(context),
     warning: "No records were changed.",
@@ -413,7 +413,7 @@ function reminderDraft(context) {
     report: "Reminder draft",
     link: context.isOwner ? { path: "/settings/whatsapp", label: "WhatsApp settings" } : null,
     filters: scopeFilters(context),
-    warning: "Draft only. Ask FinTrack does not send WhatsApp messages or change balances.",
+    warning: "Draft only. Ask Finny does not send WhatsApp messages or change balances.",
     today: context.today,
     range: { from: context.today, to: context.today, label: context.today },
   });
@@ -853,8 +853,8 @@ function accountsFallback(context, question) {
     return envelope({
       title: "Ask a question these records can answer",
       summary: "Try who has not paid today, overdue customers, this month versus last month, profit, receivables due this week, or GST.",
-      sourceModule: "FinTrack",
-      report: "Ask FinTrack",
+      sourceModule: "MyFinTracker",
+      report: "Ask Finny",
       today: context.today,
       matched: false,
       filters: scopeFilters(context),
@@ -879,9 +879,9 @@ export function askFintrack(question, context = {}) {
   const orgSettings = context.orgSettings || {};
   if (!isModuleEnabled(orgSettings, "ai")) {
     return envelope({
-      title: "Ask FinTrack is off for this workspace",
+      title: "Ask Finny is off for this workspace",
       summary: "The ai feature is not included in the current feature pack.",
-      sourceModule: "FinTrack",
+      sourceModule: "MyFinTracker",
       report: "Feature pack",
       today,
       matched: false,
@@ -891,15 +891,15 @@ export function askFintrack(question, context = {}) {
   const intent = classify(question);
   if (intent === "empty") {
     return envelope({
-      title: "Ask FinTrack",
+      title: "Ask Finny",
       summary: "Ask about collections, overdue customers, profit, receivables, or the GST report.",
-      sourceModule: "FinTrack",
-      report: "Ask FinTrack",
+      sourceModule: "MyFinTracker",
+      report: "Ask Finny",
       today,
       matched: false,
     });
   }
-  if (intent === "injection") return refuse(context, "This workspace only", "Ask FinTrack answers from this workspace’s verified records. It does not follow instructions to reveal keys, ignore its limits, or open another company.");
+  if (intent === "injection") return refuse(context, "This workspace only", "Ask Finny answers from this workspace’s verified records. It does not follow instructions to reveal keys, ignore its limits, or open another company.");
   if (intent === "auctionWrite") return refuse(context, "Auction stays with the chit engine", "Ask cannot select a winner, change a winning bid, or alter dividend, commission, or installment figures.");
   if (intent === "write") return refuse(context, "Nothing was changed", "Ask is read-only. Payments, messages, and vouchers stay on their own screens and still need you to confirm them.");
   if (intent === "unpaidToday") return unpaidToday(context);

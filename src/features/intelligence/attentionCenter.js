@@ -1,5 +1,5 @@
 /**
- * AI Attention Center — aggregates actionable items from existing FinTrack data.
+ * AI Attention Center — aggregates actionable items from existing MyFinTracker data.
  * Advisory only: never invents balances or writes accounting data.
  */
 
@@ -64,7 +64,7 @@ export function buildAttentionCenter({
     summary: items.length ? `${items.length} item${items.length === 1 ? "" : "s"} need your attention` : "No urgent attention items right now",
     byModule,
     items: items.slice(0, 40),
-    disclaimer: "Attention items are built from verified FinTrack records. They do not invent balances and never change books automatically.",
+    disclaimer: "Attention items are built from verified MyFinTracker records. They do not invent balances and never change books automatically.",
   };
 }
 
@@ -114,7 +114,7 @@ export function buildTodaysActionList(input = {}) {
       ? `${capped.length} action${capped.length === 1 ? "" : "s"} for today`
       : "No actions for today — you’re clear",
     items: capped,
-    disclaimer: "Built from verified FinTrack records only. Opening an action never changes books until you save a payment or voucher.",
+    disclaimer: "Built from verified MyFinTracker records only. Opening an action never changes books until you save a payment or voucher.",
   };
 }
 

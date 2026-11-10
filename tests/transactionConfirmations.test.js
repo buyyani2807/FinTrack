@@ -105,7 +105,7 @@ test("fixed lift payload uses schedule lift amount and post-lift installment", (
     liftDate: "2026-09-08",
     managerCommission: 5000,
   });
-  const vars = buildChitLiftVariables(payload, { companyName: "FinTrack Co" });
+  const vars = buildChitLiftVariables(payload, { companyName: "MyFinTracker Co" });
   assert.equal(vars.member_name, "Kumar");
   assert.equal(vars.amount_lifted, "₹97,000");
   assert.equal(vars.commission, "₹5,000");

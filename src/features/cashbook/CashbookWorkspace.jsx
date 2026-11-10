@@ -137,11 +137,11 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
     try {
       await backfillCashbook(token);
       setShowSetup(false);
-      setNotice("Accounts initialized and existing FinTrack transactions synced.");
+      setNotice("Accounts initialized and existing MyFinTracker transactions synced.");
       refresh();
     } catch (err) {
       setShowSetup(false);
-      setError(`${err.message || "Sync failed."} Opening balances were saved — tap Sync from FinTrack on the Cashbook tab.`);
+      setError(`${err.message || "Sync failed."} Opening balances were saved — tap Sync from MyFinTracker on the Cashbook tab.`);
       refresh();
     }
   };

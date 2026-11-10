@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useLocation } from "react-router";
 import { formatInr } from "../../../lib/formatMoney.js";
 import { CloseButton } from "../../../components/ui.jsx";
+import { ASK_LABEL } from "../../../lib/brand.js";
 import { askFintrack, assistantPromptsForPath, assistantQuestionGroups, createAskLimiter } from "./askFintrack.js";
 import "./assistant.css";
 
@@ -96,7 +97,7 @@ export function FintrackAssistant({ open, onClose, context, onNavigate, loadBook
       >
         <header className="ft-ask-head">
           <div>
-            <p className="ft-ask-kicker">Ask FinTrack</p>
+            <p className="ft-ask-kicker">{ASK_LABEL}</p>
             <h2 id={titleId}>Answers from your records</h2>
             <p className="ft-ask-note">Read-only. Amounts come from the same reports as the screens. Nothing is posted.</p>
           </div>

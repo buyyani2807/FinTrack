@@ -11,7 +11,7 @@ const accountById = (accounts = []) => Object.fromEntries((accounts || []).map(a
 
 /** Branding for Accounts documents — active books company name, never Finance org settings. */
 export function accountsCompanyBranding(company = null, workspace = {}) {
-  const booksName = String(company?.name || workspace.businessName || "FinTrack").trim();
+  const booksName = String(company?.name || workspace.businessName || "MyFinTracker").trim();
   const legalName = String(company?.legalName || "").trim();
   // Header uses the company shown in Accounts (books name). Legal name is only a GST subtitle when different.
   const companyName = booksName;

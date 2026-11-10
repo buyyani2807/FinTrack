@@ -8,6 +8,7 @@ import { isPublicSignupAllowed, signupInviteRequired, validateSignupInvite } fro
 import { supabase } from "../../lib/supabase";
 import { sessionUserRole } from "../finance/model/workspaceAccess.js";
 import { openLegalView } from "../legal/LegalPage.jsx";
+import { PRODUCT_NAME } from "../../lib/brand.js";
 
 // Who is signing in. `label` stays the button's accessible name.
 const SIGN_IN_MODES = [
@@ -33,7 +34,7 @@ const friendlyError = text => {
   if (/invalid login credentials|invalid (email|password)|wrong password/i.test(message)) return "The email or password is incorrect. Check both and try again, or use Forgot password.";
   if (/email not confirmed/i.test(message)) return "This email address has not been confirmed yet. Open the confirmation email, then sign in.";
   if (/user already registered|already exists/i.test(message)) return "An account with this email already exists. Sign in instead, or use Forgot password.";
-  if (/failed to fetch|network|load failed/i.test(message)) return "FinTrack could not be reached. Check your internet connection and try again.";
+  if (/failed to fetch|network|load failed/i.test(message)) return `${PRODUCT_NAME} could not be reached. Check your internet connection and try again.`;
   if (/rate limit|too many/i.test(message)) return "Too many attempts. Wait a minute, then try again.";
   return message;
 };
@@ -51,9 +52,9 @@ function AuthNotice({ notice }) {
   </div>;
 }
 
-// FINTrack wordmark (Poppins, as in the Finebank logo) with an optional product suffix such as "Accounts".
+// MyFinTracker wordmark (Poppins) with an optional product suffix such as "Accounts".
 function Wordmark({ suffix = "" }) {
-  return <span className="ft-brand"><span className="ft-brand-strong">FIN</span>Track{suffix ? <span className="ft-wordmark-suffix"> {suffix}</span> : null}</span>;
+  return <span className="ft-brand"><span className="ft-brand-strong">MyFin</span>Tracker{suffix ? <span className="ft-wordmark-suffix"> {suffix}</span> : null}</span>;
 }
 
 export function PasswordRecovery() {
@@ -155,7 +156,7 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
         if (profile.role !== "staff") { await supabase.auth.signOut(); throw new Error("This account is not a Collection Agent. Use Owner sign in."); }
         onLogin({ role: sessionUserRole(profile.role), authToken: session.access_token, name: profile.fullName, workspace: profile });
       } else if (mode === "signUp") {
-        if (!allowSignup) throw new Error("New business signup is invite-only. Contact FinTrack support for access.");
+        if (!allowSignup) throw new Error(`New business signup is invite-only. Contact ${PRODUCT_NAME} support for access.`);
         if (!businessName || !fullName) throw new Error("Enter your business name and your name.");
         if (!validateSignupInvite(inviteCode)) throw new Error("Enter a valid invite code.");
         const result = await supabase.auth.signUp(email, password, { businessName, fullName, inviteCode });
@@ -203,7 +204,7 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
     finally { setBusy(false); }
   };
   const isFinanceCustomer = mode === "customer", isChitCustomer = mode === "chitCustomer", isCustomer = isFinanceCustomer || isChitCustomer, isAgent = mode === "agent", isPortalLogin = isCustomer || isAgent;
-  const brandName = !isCustomer && !isAgent && accountsIntent ? "FinTrack Accounts" : "FinTrack";
+  const brandName = !isCustomer && !isAgent && accountsIntent ? `${PRODUCT_NAME} Accounts` : PRODUCT_NAME;
   const brandSub = mode === "signUp"
     ? "No payment required to start. Daily Finance, Monthly Finance, Chit Fund, and Accounts are included."
     : isChitCustomer ? "View your chit schemes, payments, and live bids when they apply" : isFinanceCustomer ? "View your finance balance and payment history" : isAgent ? "Collection Agent workspace" : accountsIntent ? "Sign in to your small-business books. Daily Finance and Chit Fund stay optional." : "Secure workspace for finance businesses";
@@ -214,7 +215,7 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
       <div className="ft-auth-panel-inner">
         <div className="ft-auth-brandrow">
           <Wordmark />
-          {brandName !== "FinTrack" && <span className="ft-auth-product">{brandName.replace(/^FinTrack\s*/, "")}</span>}
+          {brandName !== PRODUCT_NAME && <span className="ft-auth-product">{brandName.replace(new RegExp(`^${PRODUCT_NAME}\\s*`), "")}</span>}
         </div>
         <h1 className={`ft-auth-title${mode === "signUp" ? " is-one-line" : ""}`}>{mode === "signUp" ? "Start your 14-day free trial" : "Welcome back"}</h1>
         <p className="sub ft-auth-sub">{brandSub}</p>
@@ -259,10 +260,10 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
         {allowSignup && <p className="ft-auth-switch">
           {mode === "signUp"
             ? <>Already have an account? <button type="button" className="link-button" onClick={() => chooseMode("signIn")}>Sign in</button></>
-            : <>New to FinTrack? <button type="button" className="link-button" onClick={() => chooseMode("signUp")}>Create business account</button></>}
+            : <>New to {PRODUCT_NAME}? <button type="button" className="link-button" onClick={() => chooseMode("signUp")}>Create business account</button></>}
         </p>}
         <p className="ft-auth-legal small"><ShieldCheck size={14} aria-hidden="true" /> Encrypted sign-in · <button type="button" className="link-button" onClick={() => openLegalView("privacy")}>Privacy</button> · <button type="button" className="link-button" onClick={() => openLegalView("terms")}>Terms</button></p>
-        <p className="ft-auth-site"><Link to="/">Visit the FinTrack website <ArrowUpRight size={14} aria-hidden="true" /></Link></p>
+        <p className="ft-auth-site"><Link to="/">Visit the {PRODUCT_NAME} website <ArrowUpRight size={14} aria-hidden="true" /></Link></p>
       </div>
     </main>
   </div>;

@@ -1,5 +1,5 @@
 /**
- * FinTrack Credit Score — internal repayment assessment.
+ * MyFinTracker Credit Score — internal repayment assessment.
  * Not a CIBIL / Experian / Equifax / CRIF / bureau score.
  *
  * Weights (0–1) can be adjusted later without rewriting allocation logic.

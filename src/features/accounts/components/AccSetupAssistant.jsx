@@ -188,8 +188,8 @@ export function AccSetupAssistant({
         <div>
           <h2 className="acc-bk-title">{keepCompany ? `Fill gaps in ${company?.name || "this company"}` : "Set up your books"}</h2>
           <p className="acc-bk-sub">{keepCompany
-            ? "Answer a few questions about how this business works. FinTrack adds the bank ledgers, stock categories and ledgers it is missing. The company name, GST and books start date are not changed. Nothing is saved until you confirm."
-            : "Answer a few questions in your own words. FinTrack sets up the ledgers, banks, GST and stock categories for you. Nothing is saved until you confirm."}</p>
+            ? "Answer a few questions about how this business works. MyFinTracker adds the bank ledgers, stock categories and ledgers it is missing. The company name, GST and books start date are not changed. Nothing is saved until you confirm."
+            : "Answer a few questions in your own words. MyFinTracker sets up the ledgers, banks, GST and stock categories for you. Nothing is saved until you confirm."}</p>
         </div>
         <div className="acc-setup-head-actions">
           {onSkip && <button type="button" className="btn" disabled={saving} onClick={onSkip}>Skip for now</button>}
@@ -306,7 +306,7 @@ export function AccSetupAssistant({
             <div className="acc-bk-actions">
               {finished ? (
                 <>
-                  <button type="button" className="btn primary" onClick={onDone}>Start using FinTrack</button>
+                  <button type="button" className="btn primary" onClick={onDone}>Start using MyFinTracker</button>
                   {onOpenMigration && <button type="button" className="btn" onClick={onOpenMigration}>Bring my data from Tally, Zoho or Excel</button>}
                 </>
               ) : (

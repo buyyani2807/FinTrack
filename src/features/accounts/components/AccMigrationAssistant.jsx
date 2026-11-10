@@ -45,7 +45,7 @@ const formatCount = value => Number(value || 0).toLocaleString("en-IN");
 const joinAnd = list => (list.length > 1 ? `${list.slice(0, -1).join(", ")} and ${list[list.length - 1]}` : list[0] || "");
 
 /**
- * Upload Tally, Zoho Books, Book Keeper or Excel data, review what FinTrack could not
+ * Upload Tally, Zoho Books, Book Keeper or Excel data, review what MyFinTracker could not
  * place on its own, then import. The parent runs the plan with `onRun`.
  */
 export function AccMigrationAssistant({
@@ -98,7 +98,7 @@ export function AccMigrationAssistant({
         read.push(await readImportFile(file));
       }
       const next = analyzeMigration(read, { accounts, parties });
-      if (!next.ledgers.length && !next.vouchers.length) throw new Error("FinTrack could not find parties, ledgers or transactions in these files. Check that the first row has column names.");
+      if (!next.ledgers.length && !next.vouchers.length) throw new Error("MyFinTracker could not find parties, ledgers or transactions in these files. Check that the first row has column names.");
       setAnalysis(next);
       setTargets({});
       setSeparate(new Set());
@@ -138,9 +138,9 @@ export function AccMigrationAssistant({
 
   return (
     <div ref={layerRef} className="modal-bg" role="presentation" onClick={event => { if (event.target === event.currentTarget) close(); }}>
-      <div className="modal acc-modal acc-modal-wide acc-mig" role="dialog" aria-modal="true" aria-label="Move your books to FinTrack">
+      <div className="modal acc-modal acc-modal-wide acc-mig" role="dialog" aria-modal="true" aria-label="Move your books to MyFinTracker">
         <div className="row modal-head">
-          <h2 className="title">Move your books to FinTrack</h2>
+          <h2 className="title">Move your books to MyFinTracker</h2>
           <CloseButton onClick={close} />
         </div>
         <ModalScroll>
@@ -182,10 +182,10 @@ export function AccMigrationAssistant({
             </div>
             <div className="acc-bk-reply">
               <p className="acc-bk-reply-lead"><Sparkles size={15} aria-hidden="true" /> I mapped {analysis.autoMappedPercent}% of your accounts automatically.</p>
-              {asking && <p className="small"><LoaderCircle size={13} className="acc-setup-spin" aria-hidden="true" /> Asking FinTrack AI about the ledgers I was unsure of…</p>}
+              {asking && <p className="small"><LoaderCircle size={13} className="acc-setup-spin" aria-hidden="true" /> Asking MyFinTracker AI about the ledgers I was unsure of…</p>}
               <ul className="acc-setup-summary">
                 <li><CheckCircle2 size={15} aria-hidden="true" /><span><strong>Opening balances</strong> {counts.openings ? `${formatCount(counts.openings)} ledgers carry balances, posted as of ${shortDate(plan.openingDate)}.` : "None in these files."}{plan.openingDifference ? ` They differ by ${money(Math.abs(plan.openingDifference))}; the gap goes to Opening Balance Adjustment for your CA to check.` : ""}</span></li>
-                <li><CheckCircle2 size={15} aria-hidden="true" /><span><strong>To create</strong> {formatCount(plan.newParties.length)} parties and {formatCount(plan.newLedgers.length)} ledgers. Ones already in FinTrack are reused.</span></li>
+                <li><CheckCircle2 size={15} aria-hidden="true" /><span><strong>To create</strong> {formatCount(plan.newParties.length)} parties and {formatCount(plan.newLedgers.length)} ledgers. Ones already in MyFinTracker are reused.</span></li>
                 <li><CheckCircle2 size={15} aria-hidden="true" /><span><strong>To post</strong> {formatCount(plan.vouchers.length)} transactions{analysis.firstDate ? ` from ${shortDate(analysis.firstDate)} to ${shortDate(analysis.lastDate)}` : ""}.</span></li>
                 {(plan.skipped.invalid + plan.skipped.future + plan.skipped.unmapped + counts.cancelled) > 0 && (
                   <li className="is-warn"><CircleAlert size={15} aria-hidden="true" /><span><strong>Left out</strong> {[
@@ -200,7 +200,7 @@ export function AccMigrationAssistant({
               </ul>
               <div className="acc-bk-actions">
                 {analysis.exceptions > 0 && <button type="button" className="btn primary" onClick={() => { setShowAll(false); setLimit(PAGE); setStage("review"); }}>Review {formatCount(analysis.exceptions)} exceptions</button>}
-                <button type="button" className={`btn${analysis.exceptions > 0 ? "" : " primary"}`} disabled={!canAdmin || !plan.totalSteps || asking} onClick={startImport}>Import into FinTrack</button>
+                <button type="button" className={`btn${analysis.exceptions > 0 ? "" : " primary"}`} disabled={!canAdmin || !plan.totalSteps || asking} onClick={startImport}>Import into MyFinTracker</button>
                 <button type="button" className="btn" onClick={() => { setAnalysis(null); setStage("upload"); }}>Choose other files</button>
                 {!canAdmin && <span className="small">Only the owner can import.</span>}
               </div>
@@ -279,7 +279,7 @@ export function AccMigrationAssistant({
             )}
 
             <div className="acc-bk-actions acc-mig-sticky">
-              <button type="button" className="btn primary" disabled={!canAdmin || !plan?.totalSteps} onClick={startImport}>Import into FinTrack</button>
+              <button type="button" className="btn primary" disabled={!canAdmin || !plan?.totalSteps} onClick={startImport}>Import into MyFinTracker</button>
               <span className="small">{formatCount(plan?.newParties.length)} parties · {formatCount(plan?.newLedgers.length)} ledgers · {formatCount(plan?.vouchers.length)} transactions</span>
             </div>
           </div>
@@ -299,7 +299,7 @@ export function AccMigrationAssistant({
         {stage === "done" && result && (
           <div className="acc-mig-body">
             <div className="acc-bk-reply">
-              <p className="acc-bk-reply-lead">{result.stopped ? "Import stopped." : result.failed?.length ? "Import finished, with a few problems." : "Your books are in FinTrack."}</p>
+              <p className="acc-bk-reply-lead">{result.stopped ? "Import stopped." : result.failed?.length ? "Import finished, with a few problems." : "Your books are in MyFinTracker."}</p>
               <ul className="acc-setup-summary">
                 <li><CheckCircle2 size={15} aria-hidden="true" /><span><strong>{formatCount(result.done?.parties)}</strong> parties, <strong>{formatCount(result.done?.ledgers)}</strong> ledgers, <strong>{formatCount(result.done?.openings)}</strong> opening entries and <strong>{formatCount(result.done?.vouchers)}</strong> transactions added.</span></li>
               </ul>

@@ -17,7 +17,7 @@ const OVERVIEW_SHORTCUTS = [
 ];
 
 /**
- * Discoverable shortcut help (Marg-style affordance, FinTrack labels).
+ * Discoverable shortcut help (Marg-style affordance, MyFinTracker labels).
  * UI-only — does not register new global hotkeys beyond Counter's existing F2/F4/F9.
  */
 export function AccShortcutsPanel({ variant = "counter", className = "" }) {

@@ -833,7 +833,7 @@ export function CounterWorkspace({
     const company = activeCompany || cachedCatalog?.company || {};
     const invoice = buildOfflineReceiptInvoice({
       bill,
-      companyName: company.name || branding?.companyName || "FinTrack",
+      companyName: company.name || branding?.companyName || "MyFinTracker",
       companyAddress: company.documentSettings?.businessAddress || branding?.companyAddress || "",
       companyGstin: company.gstin || branding?.companyGstin || "",
       companyPhone: company.documentSettings?.businessPhone || branding?.companyPhone || "",
@@ -2085,7 +2085,7 @@ export function CounterWorkspace({
                         {khataRisk.messages[0]}
                       </p>
                     ) : (
-                      <p className="small">Internal FinTrack credit score from this customer’s invoices — not a bureau score.</p>
+                      <p className="small">Internal MyFinTracker credit score from this customer’s invoices — not a bureau score.</p>
                     )}
                   </div>
                 ) : null}
@@ -2246,7 +2246,7 @@ export function CounterWorkspace({
           <p className="small counter-pay-note">
             {settlement === "credit"
               ? "Khata posts to the customer ledger."
-              : "UPI/card confirmation is outside FinTrack unless you scan the QR above."}
+              : "UPI/card confirmation is outside MyFinTracker unless you scan the QR above."}
           </p>
         </section>
       </div>

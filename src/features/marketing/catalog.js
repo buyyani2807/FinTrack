@@ -70,7 +70,7 @@ export const FEATURES = [
     ],
     benefits: ["The day’s collection sheet comes from recorded entries", "Monthly profit comes from the interest and penalty actually received", "Loss on a bankrupt account is shown on its own", "Only the owner opens Reports; collection agents do not"],
     sections: [
-      { title: "Collection report", text: "Choose a date and FinTrack lists every active account with the amount expected, the amount collected, and what is still outstanding. The download adds the payment mode, the cash and UPI split, who collected it, and any notes, with a total row at the end." },
+      { title: "Collection report", text: "Choose a date and MyFinTracker lists every active account with the amount expected, the amount collected, and what is still outstanding. The download adds the payment mode, the cash and UPI split, who collected it, and any notes, with a total row at the end." },
       { title: "Daily P&L and Monthly P&L", text: "See what was paid out to customers, what has been collected back, and what is still receivable. Daily profit is what was collected above the amount given. Monthly profit is the interest and penalty received. A bankrupt account shows its unrecovered principal as a loss." },
       { title: "Separate from company accounts", text: "These reports read the lending book directly. They are an operational view and do not replace the Accounts Profit & Loss, which follows posted vouchers for a company." },
     ],
@@ -110,7 +110,7 @@ export const FEATURES = [
     name: "Collection Staff",
     summary: "Give collectors an agent ID and PIN, and only the accounts you assign.",
     problem: "Field staff should collect without opening the owner’s full books.",
-    how: ["Add a collection agent. FinTrack creates an agent ID and PIN.", "Assign the accounts or route they cover.", "They sign in with Agent login and record those collections."],
+    how: ["Add a collection agent. MyFinTracker creates an agent ID and PIN.", "Assign the accounts or route they cover.", "They sign in with Agent login and record those collections."],
     capabilities: ["Agent ID and PIN", "Assigned finance accounts", "Route customers from Accounts", "Owner review of who collected"],
     benefits: ["Staff stay inside their assignment", "The owner still sees the full book", "Route stops can follow the agent you set"],
     related: ["collections", "customers", "whatsapp-reminders"],
@@ -149,7 +149,7 @@ export const FEATURES = [
     name: "WhatsApp Reminders",
     summary: "Open a WhatsApp message for a reminder. You send it yourself.",
     problem: "Follow-ups stall when the message has to be typed from scratch.",
-    how: ["Turn confirmation on in settings if you want it offered.", "FinTrack prepares the message from the entry.", "WhatsApp opens so you can review and send."],
+    how: ["Turn confirmation on in settings if you want it offered.", "MyFinTracker prepares the message from the entry.", "WhatsApp opens so you can review and send."],
     capabilities: ["Message draft from the entry", "Opens WhatsApp on your device", "Settings for when a confirmation is offered", "No send until you confirm in WhatsApp"],
     benefits: ["The draft follows the recorded amount", "You stay in control of every send", "A number that cannot be used for WhatsApp does not open a chat"],
     related: ["digital-receipts", "collections", "chit-payments"],
@@ -160,9 +160,9 @@ export const FEATURES = [
     slug: "credit-score",
     category: "finance",
     name: "Credit Score",
-    summary: "A FinTrack score from this customer’s payment history in your workspace.",
+    summary: "A MyFinTracker score from this customer’s payment history in your workspace.",
     problem: "On-time, late, and missed payments are hard to weigh at a glance.",
-    how: ["FinTrack reads the payments already on the account.", "It shows a score, a band, and the reasons.", "You use it as context. It does not change the balance or a credit limit."],
+    how: ["MyFinTracker reads the payments already on the account.", "It shows a score, a band, and the reasons.", "You use it as context. It does not change the balance or a credit limit."],
     capabilities: ["Score from recorded payments", "On-time, late, missed, and overdue context", "Trend when enough history exists", "Daily Finance, Monthly Finance, Chit Fund, and Accounts customers", "Shown on the account, not sent to a bureau"],
     benefits: ["Payment behaviour is easier to see", "The score stays inside your workspace", "Helps you decide whether to give finance or credit the next time", "Nothing is decided for you"],
     related: ["customers", "party-profiles", "collections"],
@@ -214,7 +214,7 @@ export const FEATURES = [
     name: "Chit Payments",
     summary: "Track the installment due for each member after a month is recorded.",
     problem: "Dividends and net dues are hard to collect from a handwritten sheet.",
-    how: ["Record or finalize the month.", "FinTrack creates the installment row for each active member.", "Mark what was paid against that installment."],
+    how: ["Record or finalize the month.", "MyFinTracker creates the installment row for each active member.", "Mark what was paid against that installment."],
     capabilities: ["Installment per member", "Due, paid, and balance", "Month filter", "Outstanding on the member view"],
     benefits: ["Dues follow the recorded month", "Previous months stay as they were", "You record the payment yourself"],
     related: ["dividends", "chit-statements", "auction-chit"],
@@ -312,7 +312,7 @@ export const FEATURES = [
       "Quotations, orders, delivery challans, and goods receipts",
       "Item profit, and a For the CA page for the month",
       "GST preparation, bank reconciliation, and statements",
-      "Tell FinTrack what happened in a sentence and get the entry drafted",
+      "Tell Finny what happened in a sentence and get the entry drafted",
       "Setup by answering a few questions, and migration from Tally, Zoho Books, Book Keeper, or Excel",
     ],
     benefits: ["One company book for a small or medium business", "The numbers that matter are on the first screen", "You always see the company you opened", "A voucher, a bank match, and a period lock wait for you"],
@@ -331,7 +331,7 @@ export const FEATURES = [
       },
       {
         title: "Review stays with you",
-        text: "A bill photograph, a bank suggestion, and Ask FinTrack can offer a draft. You post the voucher. Debit has to equal credit. A locked month stays locked until you reopen it. The cashbook can stand on its own; its lines enter the finance company only when integration is on and you sync.",
+        text: "A bill photograph, a bank suggestion, and Ask Finny can offer a draft. You post the voucher. Debit has to equal credit. A locked month stays locked until you reopen it. The cashbook can stand on its own; its lines enter the finance company only when integration is on and you sync.",
       },
     ],
     related: ["counter-pos", "vouchers", "ai-bookkeeper", "ai-migration", "gst-preparation"],
@@ -455,7 +455,7 @@ export const FEATURES = [
     summary: "See what customers still owe on the company you have open.",
     problem: "Sales are recorded, then the outstanding is tracked somewhere else.",
     how: ["Post the sale or receipt on the party.", "Open receivables for that company.", "Follow the balance that remains, and tap a customer to open their profile."],
-    capabilities: ["Party balances", "Outstanding sales", "Receipts against the party", "Statements", "Customer profile with a FinTrack credit score"],
+    capabilities: ["Party balances", "Outstanding sales", "Receipts against the party", "Statements", "Customer profile with a MyFinTracker credit score"],
     benefits: ["The balance follows posted vouchers", "You collect against the party", "Another company is not mixed in"],
     related: ["party-profiles", "payables", "vouchers"],
     appPath: "/accounting/parties/receivables",
@@ -477,7 +477,7 @@ export const FEATURES = [
       "Ageing of what is open: not yet due, 1–30, 31–60, 61–90, and 90+ days",
       "Paid on time, average days to pay, and late payments",
       "Open invoices with Remind, and the latest receipts or payments",
-      "FinTrack credit score for customers, from their invoices and the dates they were paid",
+      "MyFinTracker credit score for customers, from their invoices and the dates they were paid",
       "Supplier profile showing what you owe and how promptly you pay",
       "A party you both sell to and buy from shows both sides and the net position",
       "Statement PDF and WhatsApp from the same page",
@@ -486,7 +486,7 @@ export const FEATURES = [
     sections: [
       {
         title: "A credit score from invoices",
-        text: "Each credit sale counts as one due. FinTrack checks whether it was paid by the due date, paid late, partly paid, or still unpaid after the due date, and builds the same 300–900 FinTrack credit score used for Daily Finance and Chit Fund customers, with the reasons. A cash sale is paid when it is made, so it does not count. An invoice that is not yet due does not count against the customer. The score is shown to the owner and is not a credit-bureau score.",
+        text: "Each credit sale counts as one due. MyFinTracker checks whether it was paid by the due date, paid late, partly paid, or still unpaid after the due date, and builds the same 300–900 MyFinTracker credit score used for Daily Finance and Chit Fund customers, with the reasons. A cash sale is paid when it is made, so it does not count. An invoice that is not yet due does not count against the customer. The score is shown to the owner and is not a credit-bureau score.",
       },
       {
         title: "Suppliers, and parties on both sides",
@@ -561,7 +561,7 @@ export const FEATURES = [
     sections: [
       { title: "Accounts Profit & Loss", text: "The company Profit & Loss lists every income and expense ledger for the period, then shows opening stock and closing stock, and the net profit or net loss. The overview shows the same stock lines. It is built from posted vouchers, so it matches the trial balance and balance sheet. Item profit is a separate report of what each item earned." },
       { title: "Profit views for finance and chit", text: "Daily Finance and Monthly Finance have their own P&L for the lending book: paid out, collected, realized profit, and loss. Chit Fund has a Profit & Loss for commission income by scheme. Each one is labelled so it is not confused with the company Profit & Loss." },
-      { title: "AI review of expenses", text: "With AI Review, FinTrack compares this month’s expenses with last month, the 3-month average, and the same month last year, and points out a category or supplier that rose. The Profit & Loss figures themselves are not changed." },
+      { title: "AI review of expenses", text: "With AI Review, MyFinTracker compares this month’s expenses with last month, the 3-month average, and the same month last year, and points out a category or supplier that rose. The Profit & Loss figures themselves are not changed." },
     ],
     related: ["expenses", "item-profit", "for-the-ca", "finance-reports"],
     appPath: "/accounting/reports/pnl",
@@ -616,7 +616,7 @@ export const FEATURES = [
     how: [
       "Open Accounts, then Payroll, and add each person you pay.",
       "Set basic pay, HRA, and allowance, and the deductions you want held. Mark attendance and leave for the month.",
-      "Review the net, then post salary. FinTrack writes one balanced voucher. Open the payslip from that row.",
+      "Review the net, then post salary. MyFinTracker writes one balanced voucher. Open the payslip from that row.",
     ],
     capabilities: [
       "Basic pay, HRA, and allowance, on the days in the month, 26 days, or 30 days",
@@ -628,7 +628,7 @@ export const FEATURES = [
     ],
     benefits: ["Pay and the expense are the same record", "Unpaid days reduce the month before you post", "The payslip matches the voucher", "Nothing is filed to a tax portal"],
     sections: [
-      { title: "What is not calculated", text: "Provident fund, ESI, professional tax, and income tax are not worked out for you. Enter the deduction amounts you have already decided. FinTrack does not file a return." },
+      { title: "What is not calculated", text: "Provident fund, ESI, professional tax, and income tax are not worked out for you. Enter the deduction amounts you have already decided. MyFinTracker does not file a return." },
       { title: "Attendance before you post", text: "The month starts from the pay you recorded. Absent days and unpaid leave reduce what is earned. Weekly offs, holidays, and paid leave stay paid. You post when the figures look right, including a person added after the rest of the month was posted." },
     ],
     related: ["expenses", "vouchers", "for-the-ca"],
@@ -667,7 +667,7 @@ export const FEATURES = [
     name: "Inventory",
     summary: "Keep items, stock movement, and item sales with the company books.",
     problem: "Stock and the sales voucher drift apart when they are tracked in two places.",
-    how: [      "Add items for the company.", "Use them on sales and purchases.", "Review stock and a physical count when you do one.", "When the item name is recognised, FinTrack suggests an HSN and GST rate. It is filled in only when you choose Use this, and saved only when you save the item."],
+    how: [      "Add items for the company.", "Use them on sales and purchases.", "Review stock and a physical count when you do one.", "When the item name is recognised, MyFinTracker suggests an HSN and GST rate. It is filled in only when you choose Use this, and saved only when you save the item."],
     capabilities: ["Items and categories", "Stock movement", "Item sales and item profit", "Physical count", "A suggested HSN and GST rate from the item name, applied only when you confirm"],
     benefits: ["A sale can carry the item", "Stock stays with the company", "You confirm a count rather than trusting a guess"],
     related: ["counter-pos", "item-profit", "trade-documents", "stock-forecast"],
@@ -705,11 +705,11 @@ export const FEATURES = [
     slug: "gst-preparation",
     category: "accounts",
     name: "GST Preparation",
-    summary: "Prepare GST summaries from posted vouchers. Filing stays outside FinTrack.",
+    summary: "Prepare GST summaries from posted vouchers. Filing stays outside MyFinTracker.",
     problem: "Tax totals are slow to gather from individual bills at month end.",
     how: ["Post sales and purchases with the tax you entered.", "Open the GST report or monthly pack.", "Export what you need for your filing workflow."],
     capabilities: ["GST report from posted documents", "Monthly pack", "Export for preparation", "You file with your own process"],
-    benefits: ["The summary follows the vouchers", "You can review it before export", "FinTrack does not file the return for you"],
+    benefits: ["The summary follows the vouchers", "You can review it before export", "MyFinTracker does not file the return for you"],
     related: ["vouchers", "gst-review", "profit-and-loss"],
     appPath: "/accounting/reports/gst",
     icon: "ReceiptText",
@@ -761,20 +761,20 @@ export const FEATURES = [
     ],
     benefits: ["The month is one packet", "Each line opens the record behind it", "Reviewed means you saw it", "Locking the month stays a separate step"],
     sections: [
-      { title: "Prepared from the books, not a filing", text: "The page is prepared from posted records in the company you have open. It is not an audit opinion. FinTrack does not file GST, lock the month, or change a voucher from this page. Month-end readiness is the checklist you use before you lock." },
+      { title: "Prepared from the books, not a filing", text: "The page is prepared from posted records in the company you have open. It is not an audit opinion. MyFinTracker does not file GST, lock the month, or change a voucher from this page. Month-end readiness is the checklist you use before you lock." },
     ],
     related: ["month-end-readiness", "gst-review", "profit-and-loss", "item-profit"],
     appPath: "/accounting/for-the-ca",
     icon: "FileText",
   },
   {
-    slug: "ask-fintrack",
+    slug: "ask-finny",
     category: "intelligence",
-    name: "Ask FinTrack",
+    name: "Ask Finny",
     summary: "Ask your business a question the way you would ask your accountant, and get the answer from your own records.",
     problem: "Simple questions such as who has not paid, why profit dropped, or how much GST is due mean opening several screens, or waiting for the accountant to call back.",
     how: [
-      "Tap Ask FinTrack in the sidebar on any screen, or use Ask the books on the Accounts overview.",
+      "Tap Ask Finny in the sidebar on any screen, or use Ask the books on the Accounts overview.",
       "Type a question in plain English, or tap one of the suggested questions for the screen you are on.",
       "Read the answer: the figures, the customers or ledgers behind them, the period, and the report they came from.",
       "Tap the button on the answer to open that screen and act there.",
@@ -799,9 +799,9 @@ export const FEATURES = [
       { group: "Cashbook and Chit Fund", questions: ["What is the cashbook cash balance?", "Why does Cashbook differ from Accounts?", "What is the current auction status?"] },
     ],
     sections: [
-      { title: "Like asking your accountant", text: "Ask the way you would ask the person who keeps your books: “Why did profit decrease?”, “Who owes me?”, “Rent in September 2026”. FinTrack reads the posted vouchers, collections, and cashbook for this workspace and replies with the figures and the rows behind them." },
+      { title: "Like asking your accountant", text: "Ask the way you would ask the person who keeps your books: “Why did profit decrease?”, “Who owes me?”, “Rent in September 2026”. MyFinTracker reads the posted vouchers, collections, and cashbook for this workspace and replies with the figures and the rows behind them." },
       { title: "Answers you can check", text: "Every answer shows the period, the financial year, and the report it came from, with a button to open that screen. If a question is not understood or the records are not there, it says so instead of guessing a number." },
-      { title: "Safe by design", text: "Ask FinTrack is read-only. It does not post vouchers, record payments, send WhatsApp messages, or change an auction. It answers only from this workspace and refuses requests for other companies or hidden data. A collection agent sees only the customers assigned to them." },
+      { title: "Safe by design", text: "Ask Finny is read-only. It does not post vouchers, record payments, send WhatsApp messages, or change an auction. It answers only from this workspace and refuses requests for other companies or hidden data. A collection agent sees only the customers assigned to them." },
     ],
     related: ["ai-review", "collection-priorities", "forecasting"],
     appPath: "/dashboard",
@@ -816,7 +816,7 @@ export const FEATURES = [
     how: [
       "Open Accounts and choose the AI Review tab.",
       "Pick a review: Expenses, Cash flow, Receivables, Anomalies, GST, Month-end, Bank reconciliation, or Inventory.",
-      "Each item shows the figures, the reason, how confident FinTrack is, and a link to the record.",
+      "Each item shows the figures, the reason, how confident MyFinTracker is, and a link to the record.",
       "Mark it reviewed, dismiss it, or open the record to act. Nothing is posted by itself.",
     ],
     capabilities: [
@@ -830,7 +830,7 @@ export const FEATURES = [
     benefits: ["Issues are found before the month is closed", "Every suggestion explains itself", "The books change only when a person acts", "Each company is reviewed on its own data"],
     sections: [
       { title: "What it checks", text: "Expense and supplier price changes, a cash outlook for the next 60 days, who to collect from first, unusual entries, GST details that need a look, month-end readiness, suggested bank matches, and items that may run out of stock." },
-      { title: "How it decides", text: "FinTrack calculates every figure from your posted records with fixed rules: averages, due dates, matching amounts, and stock movement. The same records give the same answer. It does not guess figures that are not in the books." },
+      { title: "How it decides", text: "MyFinTracker calculates every figure from your posted records with fixed rules: averages, due dates, matching amounts, and stock movement. The same records give the same answer. It does not guess figures that are not in the books." },
       { title: "What it never does", text: "It does not post vouchers, file GST, close or lock a period, reverse or delete an entry, create a purchase order, or send a message. It does not call anyone a fraud. Locked periods, company separation, and roles stay in force." },
     ],
     related: ["forecasting", "month-end-readiness", "bank-matching"],
@@ -845,7 +845,7 @@ export const FEATURES = [
     problem: "The bank balance today does not show the supplier bills due next week or the customer payments that usually arrive late.",
     how: [
       "Open AI Review in Accounts and choose Cash flow, or read the cash outlook on the Accounts overview.",
-      "FinTrack starts from your cash and bank balances, then adds open invoices and subtracts bills by when they are likely to be paid.",
+      "MyFinTracker starts from your cash and bank balances, then adds open invoices and subtracts bills by when they are likely to be paid.",
       "Read the plain summary, for example “Cash may fall by ₹42,000 over the next 30 days” or “₹1,20,000 of receivables expected within 10 days”.",
     ],
     capabilities: [
@@ -900,7 +900,7 @@ export const FEATURES = [
     problem: "A wrong GSTIN, a missing HSN code, or tax lines that do not add up are usually found when the return is being prepared, under deadline.",
     how: [
       "Open AI Review in Accounts and choose GST, or see the GST count on Month-end.",
-      "FinTrack checks the sales and purchase invoices for the period.",
+      "MyFinTracker checks the sales and purchase invoices for the period.",
       "Each warning links to the invoice or the GST report and shows how confident the check is.",
       "Correct the invoice yourself, then mark the warning reviewed.",
       "Open GSTR-2B, upload the portal JSON or a CSV, and read Accept, Reject or Pending against posted purchases. The action stays on the GST portal.",
@@ -916,7 +916,7 @@ export const FEATURES = [
     ],
     benefits: ["Errors are fixed before the return is prepared", "Each warning points at the exact invoice", "Calculated GST stays authoritative"],
     sections: [
-      { title: "What it does not do", text: "It does not file a return, generate an IRN, or create an acknowledgement. FinTrack prepares GST summaries from posted vouchers, and filing stays in your own process." },
+      { title: "What it does not do", text: "It does not file a return, generate an IRN, or create an acknowledgement. MyFinTracker prepares GST summaries from posted vouchers, and filing stays in your own process." },
     ],
     related: ["gst-preparation", "month-end-readiness", "ai-review"],
     appPath: "/accounting/ai-review",
@@ -930,7 +930,7 @@ export const FEATURES = [
     problem: "Closing a month means checking many things: unmatched bank lines, missing bills, GST errors, negative stock. One missed item means reopening the period later.",
     how: [
       "Open AI Review in Accounts and choose Month-end, then pick the month.",
-      "FinTrack runs each check and shows a readiness percentage.",
+      "MyFinTracker runs each check and shows a readiness percentage.",
       "Use Resolve issues to open the screen where each item can be fixed.",
       "When you are satisfied, lock the period yourself in Setup.",
       "Open For the CA for the month's books, the invoices a GST check would reject, unmatched bank lines, and stock rows that need review. Print or copy it. Nothing is sent.",
@@ -985,7 +985,7 @@ export const FEATURES = [
     problem: "An item runs out before the next delivery arrives, or money sits in stock that is not selling.",
     how: [
       "Open AI Review in Accounts and choose Inventory.",
-      "FinTrack reads recent sales and purchases for each item.",
+      "MyFinTracker reads recent sales and purchases for each item.",
       "Each item shows current stock, average weekly sales, supplier lead time, likely stockout date, and a suggested purchase quantity.",
     ],
     capabilities: [
@@ -1040,7 +1040,7 @@ export const FEATURES = [
     how: ["Open Dashboard, Chit Fund, or Accounts.", "Read the insight card for that module. On the Accounts overview it shows the cash outlook, bank lines waiting, items that may run out, and who to collect first.", "Treat it as a prompt. It does not post, send, or change a balance."],
     capabilities: ["Module insights", "Cash outlook for 7, 30, and 60 days on the Accounts overview", "Bank lines waiting for review and items that may run out", "Top collection priorities", "Advisory only"],
     benefits: ["A long list gets a shorter reading", "You still open the underlying record", "Nothing is booked from the card"],
-    related: ["ai-review", "ask-fintrack", "anomaly-detection"],
+    related: ["ai-review", "ask-finny", "anomaly-detection"],
     appPath: "/dashboard",
     icon: "Sparkles",
   },
@@ -1050,7 +1050,7 @@ export const FEATURES = [
     name: "Attention Center",
     summary: "A list of collections, dues, and items that look like they need a person.",
     problem: "The next follow-up is not always the first row on the screen.",
-    how: ["FinTrack gathers pending daily collections, monthly dues, and similar items.", "Each item points at the module where you can act.", "Opening it does not record a payment."],
+    how: ["MyFinTracker gathers pending daily collections, monthly dues, and similar items.", "Each item points at the module where you can act.", "Opening it does not record a payment."],
     capabilities: ["Pending daily collections", "Monthly dues", "Links into the module", "Advisory list"],
     benefits: ["The next look is named", "You still record the collection", "The list does not auto-collect"],
     related: ["collection-priorities", "collections", "business-insights"],
@@ -1082,7 +1082,7 @@ export const FEATURES = [
     summary: "Flags entries and days that look unlike the usual pattern, with the expected and actual figures.",
     problem: "A duplicate bill, an unusually large expense, or an odd collection day is easy to miss when the totals still look plausible.",
     how: [
-      "FinTrack compares new records with the recent pattern for the same supplier, ledger, item, or collection day.",
+      "MyFinTracker compares new records with the recent pattern for the same supplier, ledger, item, or collection day.",
       "Each alert shows the record, what was expected, what was recorded, the difference, and why it was flagged.",
       "Open the record from the alert, then mark it reviewed or dismiss it. Nothing is reversed, deleted, or blocked.",
     ],
@@ -1105,7 +1105,7 @@ export const FEATURES = [
     name: "Bill Scanning",
     summary: "Photograph a supplier bill, or choose a PDF, and review a draft before anything is posted.",
     problem: "Typing a purchase from a paper bill or a PDF is slow, and the same bill is easy to save twice.",
-    how: ["Take a photo or choose a PDF.", "FinTrack fills a draft and can match a supplier.", "You review it. A possible duplicate must be confirmed. Save is what posts."],
+    how: ["Take a photo or choose a PDF.", "MyFinTracker fills a draft and can match a supplier.", "You review it. A possible duplicate must be confirmed. Save is what posts."],
     capabilities: ["Photo or PDF to draft", "Supplier match by GSTIN or name", "Suggested expense ledger", "Duplicate warning before use"],
     benefits: ["The draft is not a voucher yet", "You can see a possible duplicate", "Posting happens when you save"],
     related: ["vouchers", "payables", "bookkeeping-suggestions"],
@@ -1128,11 +1128,11 @@ export const FEATURES = [
   {
     slug: "ai-bookkeeper",
     category: "intelligence",
-    name: "Tell FinTrack",
-    summary: "Write what happened in a plain sentence. FinTrack works out the entry.",
+    name: "Tell Finny",
+    summary: "Write what happened in a plain sentence. MyFinTracker works out the entry.",
     problem: "An owner knows what happened, “I bought a laptop for ₹85,000 using HDFC”, but not which ledger to debit, which voucher to use, or whether a laptop is an expense or an asset.",
     how: [
-      "Open Accounts and choose New, then Tell FinTrack, or use the box on the overview.",
+      "Open Accounts and choose New, then Tell Finny, or use the box on the overview.",
       "Write it the way you would tell your accountant, such as “Paid shop rent ₹25,000 by UPI”.",
       "Read the draft and the plain-English explanation, change anything, then post it.",
     ],
@@ -1148,7 +1148,7 @@ export const FEATURES = [
     sections: [
       {
         title: "A draft, never a guess posted for you",
-        text: "FinTrack reads the sentence and fills a draft: what happened, the amount, the date, the ledger, how it was paid, and GST. Each field can be changed before posting. If something cannot be worked out, such as which ledger to use, the draft says what to choose and cannot be posted until you do.",
+        text: "MyFinTracker reads the sentence and fills a draft: what happened, the amount, the date, the ledger, how it was paid, and GST. Each field can be changed before posting. If something cannot be worked out, such as which ledger to use, the draft says what to choose and cannot be posted until you do.",
       },
       {
         title: "The same rules as any voucher",
@@ -1163,12 +1163,12 @@ export const FEATURES = [
     slug: "ai-setup",
     category: "intelligence",
     name: "AI Setup",
-    summary: "Answer a few questions about your business. FinTrack sets up the books.",
+    summary: "Answer a few questions about your business. MyFinTracker sets up the books.",
     problem: "Setting up accounting software means creating a company, a chart of accounts, tax settings, bank ledgers, stock groups, and opening balances before the first entry. Most owners do not know where to start.",
     how: [
-      "Open Accounts for a new company, or choose Set up with AI in Setup. FinTrack asks “What kind of business do you run?”",
+      "Open Accounts for a new company, or choose Set up with AI in Setup. MyFinTracker asks “What kind of business do you run?”",
       "Answer in your own words, such as “Electrical wholesale”, then say whether you sell products, keep stock, are GST registered, and sell on credit.",
-      "Read the setup FinTrack will create, then choose Set up my books.",
+      "Read the setup MyFinTracker will create, then choose Set up my books.",
     ],
     capabilities: [
       "Business name, GST registration and GSTIN, banks you use, and the date the books start",
@@ -1181,11 +1181,11 @@ export const FEATURES = [
     sections: [
       {
         title: "A conversation instead of a form",
-        text: "FinTrack asks one question at a time and only the ones that apply. A business that does not sell products is not asked about stock, and one that is not GST registered is not asked for a GSTIN. Common answers are offered as buttons, and you can type your own.",
+        text: "MyFinTracker asks one question at a time and only the ones that apply. A business that does not sell products is not asked about stock, and one that is not GST registered is not asked for a GSTIN. Common answers are offered as buttons, and you can type your own.",
       },
       {
         title: "Next, bring your data",
-        text: "When the books are ready, FinTrack offers to bring your customers, suppliers, ledgers, and transactions from Tally, Zoho Books, Book Keeper, or Excel.",
+        text: "When the books are ready, MyFinTracker offers to bring your customers, suppliers, ledgers, and transactions from Tally, Zoho Books, Book Keeper, or Excel.",
       },
     ],
     related: ["ai-migration", "chart-of-accounts", "ai-bookkeeper"],
@@ -1196,26 +1196,26 @@ export const FEATURES = [
     slug: "ai-migration",
     category: "intelligence",
     name: "Move from Tally, Zoho, or Excel",
-    summary: "Upload your old books. FinTrack maps them and shows you what needs a decision.",
+    summary: "Upload your old books. MyFinTracker maps them and shows you what needs a decision.",
     problem: "Moving to new accounting software usually means retyping customers, suppliers, ledgers, and opening balances, then matching every old ledger to a new one by hand.",
     how: [
       "Open Accounts, then Setup, and choose Start migration.",
       "Upload a Tally XML export, or Excel and CSV files from Zoho Books, Book Keeper, or your own sheets.",
-      "Read the summary, review the exceptions, then import into FinTrack.",
+      "Read the summary, review the exceptions, then import into MyFinTracker.",
     ],
     capabilities: [
       "Tally Masters and Day Book XML, Excel (.xlsx), and CSV, several files at once",
       "Counts of customers, suppliers, ledger accounts, transactions, duplicate parties, and accounts requiring mapping",
-      "Old ledgers mapped to FinTrack automatically, with the share mapped shown up front",
+      "Old ledgers mapped to MyFinTracker automatically, with the share mapped shown up front",
       "A review of exceptions, such as a CGST ledger that does not say input or output",
       "Duplicate parties found by name, GSTIN, and phone, and merged when you agree",
       "Opening balances, then sales, purchases, receipts, payments, and journals, with a progress bar and Stop",
     ],
-    benefits: ["No retyping of parties and ledgers", "You decide only what FinTrack is unsure about", "Importing the same files again does not post twice", "Entries that do not balance are listed, not posted"],
+    benefits: ["No retyping of parties and ledgers", "You decide only what MyFinTracker is unsure about", "Importing the same files again does not post twice", "Entries that do not balance are listed, not posted"],
     sections: [
       {
         title: "A summary before anything is imported",
-        text: "FinTrack reads the files and reports what it found: how many customers, suppliers, ledgers, and transactions, which parties look like duplicates, and which accounts it could not map with confidence. It tells you the share of accounts it mapped automatically and offers Review exceptions.",
+        text: "MyFinTracker reads the files and reports what it found: how many customers, suppliers, ledgers, and transactions, which parties look like duplicates, and which accounts it could not map with confidence. It tells you the share of accounts it mapped automatically and offers Review exceptions.",
       },
       {
         title: "Opening balances your CA can check",
@@ -1235,7 +1235,7 @@ export const FEATURES = [
     how: [
       "Open Accounts → Setup → Open bulk import, or Transactions → More → Bulk import.",
       "Excel tab: download the template, fill sales and purchases, upload CSV or Excel, review, then post.",
-      "Bill photos tab: upload JPEG/PNG/PDF files or a ZIP, let FinTrack read each bill, review, then post purchases.",
+      "Bill photos tab: upload JPEG/PNG/PDF files or a ZIP, let MyFinTracker read each bill, review, then post purchases.",
     ],
     capabilities: [
       "CSV and Excel sales and purchase vouchers with amount-only or item lines",
@@ -1249,7 +1249,7 @@ export const FEATURES = [
     sections: [
       {
         title: "Excel for day-to-day vouchers",
-        text: "Use the template columns Type, Date, Party, Invoice number and Amount — or Item, Qty and Rate for itemized rows. FinTrack groups lines that share an invoice number, matches parties, and shows warnings such as possible duplicates before you post.",
+        text: "Use the template columns Type, Date, Party, Invoice number and Amount — or Item, Qty and Rate for itemized rows. MyFinTracker groups lines that share an invoice number, matches parties, and shows warnings such as possible duplicates before you post.",
       },
       {
         title: "Bill photos for supplier purchases",
@@ -1266,7 +1266,7 @@ export const FEATURES = [
     name: "Agent Portal",
     summary: "A collection agent signs in with an agent ID and PIN to the accounts and routes you assign.",
     problem: "Field staff should record collections without opening the owner’s books, chit schemes, or company accounts.",
-    how: ["Add the agent under Collection Staff. FinTrack creates an agent ID and PIN.", "Share them privately, then assign the finance accounts or route they cover.", "They use Agent login. The owner books stay with you."],
+    how: ["Add the agent under Collection Staff. MyFinTracker creates an agent ID and PIN.", "Share them privately, then assign the finance accounts or route they cover.", "They use Agent login. The owner books stay with you."],
     capabilities: ["Agent ID starting with AG- and a 6-digit PIN", "Assigned finance accounts", "Route stops when the agent is set on a route", "No chit book, cashbook, or company accounts"],
     benefits: ["Collectors work their own list", "A recorded collection stays on that account", "You still review the full book"],
     related: ["collection-staff", "collections", "customer-portals"],
@@ -1306,7 +1306,11 @@ export function featuresInCategory(categoryId) {
 }
 
 // Older feature URLs that now live under a new slug.
-const SLUG_ALIASES = { "ask-the-books": "ask-fintrack" };
+const SLUG_ALIASES = {
+  "ask-the-books": "ask-finny",
+  "ask-fintrack": "ask-finny",
+  "ask-myfintracker": "ask-finny",
+};
 
 export function featureBySlug(slug) {
   const target = SLUG_ALIASES[slug] || slug;
@@ -1376,12 +1380,12 @@ export const SECURITY_TRUST = [
   },
   {
     title: "Rate-Limited AI APIs",
-    text: "Ask FinTrack, bill scan, and other AI calls share a per-user request limit so the workspace cannot be scraped or abused.",
+    text: "Ask Finny, bill scan, and other AI calls share a per-user request limit so the workspace cannot be scraped or abused.",
     icon: "ShieldCheck",
   },
   {
     title: "TLS in Transit",
-    text: "Connections to FinTrack use HTTPS so data is encrypted on the wire between your browser and the service.",
+    text: "Connections to MyFinTracker use HTTPS so data is encrypted on the wire between your browser and the service.",
     icon: "Globe",
   },
   {
@@ -1426,7 +1430,7 @@ export const SECURITY_POINTS = [
   },
   {
     title: "Suggestions wait for you",
-    text: "Insights, bill drafts, bank matches, forecasts, and Ask FinTrack answers are advisory. Payments, bids, messages, and vouchers change when a person confirms them.",
+    text: "Insights, bill drafts, bank matches, forecasts, and Ask Finny answers are advisory. Payments, bids, messages, and vouchers change when a person confirms them.",
   },
   {
     title: "AI that stays inside your records",

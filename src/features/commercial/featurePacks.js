@@ -3,22 +3,22 @@
 export const FEATURE_PACKS = {
   finance: {
     id: "finance",
-    label: "FinTrack Finance",
+    label: "MyFinTracker Finance",
     modules: ["dashboard", "daily", "monthly", "reports", "receipts", "ai"],
   },
   chit: {
     id: "chit",
-    label: "FinTrack Chit",
+    label: "MyFinTracker Chit",
     modules: ["dashboard", "chit", "reports", "receipts", "ai"],
   },
   business: {
     id: "business",
-    label: "FinTrack Business",
+    label: "MyFinTracker Business",
     modules: ["dashboard", "accounts", "cashbook", "reports", "receipts", "ai"],
   },
   full: {
     id: "full",
-    label: "FinTrack Full",
+    label: "MyFinTracker Full",
     modules: ["dashboard", "daily", "monthly", "chit", "accounts", "cashbook", "reports", "receipts", "ai"],
   },
 };

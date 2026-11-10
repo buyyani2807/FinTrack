@@ -69,7 +69,7 @@ export async function fetchAccountsBundle(token, {
   if (company) {
     try { sessionStorage.setItem(COMPANY_STORAGE_KEY, company.id); } catch { /* ignore */ }
   }
-  // CA top bar (and any listeners) show the Acc company, not the FinTrack org name.
+  // CA top bar (and any listeners) show the Acc company, not the MyFinTracker org name.
   try {
     window.dispatchEvent(new CustomEvent("ft-accounts-company", {
       detail: { id: company?.id || "", name: company?.name || "" },

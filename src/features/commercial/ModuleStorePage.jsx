@@ -65,7 +65,7 @@ export function ModuleStorePage() {
       const body = await response.json().catch(() => ({}));
       if (response.status === 501 || body?.providerReady === false) {
         setNotice(body?.error
-          || "Card payment is not connected yet. Contact FinTrack support to unlock modules after payment, or configure Razorpay on the server.");
+          || "Card payment is not connected yet. Contact MyFinTracker support to unlock modules after payment, or configure Razorpay on the server.");
         return;
       }
       if (!response.ok) {

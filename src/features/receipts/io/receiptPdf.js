@@ -110,7 +110,7 @@ function layoutReceipt(receipt) {
   commands.push(line(PAGE.left, y, PAGE.right, y)); y -= 16;
   commands.push(text("F1", 10, PAGE.left, y, receipt.receiptFooter)); y -= 14;
   if (receipt.receiptTerms) { commands.push(text("F1", 8, PAGE.left, y, receipt.receiptTerms)); }
-  commands.push(text("F1", 8, PAGE.left, 36, "Powered by FinTrack"));
+  commands.push(text("F1", 8, PAGE.left, 36, "Powered by MyFinTracker"));
   return [commands];
 }
 

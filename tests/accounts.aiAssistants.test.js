@@ -157,7 +157,7 @@ test("reads the kind of business into an industry and a starting setup", () => {
   assert.deepEqual(profileBusiness("Something odd").ledgers, []);
 });
 
-test("AI business profiles are kept to values FinTrack knows", () => {
+test("AI business profiles are kept to values MyFinTracker knows", () => {
   const profile = normalizeBusinessProfile({ industry: "spaceships", sellsProducts: true, categories: ["A", "A", "B"], ledgers: [] }, "Drone parts shop");
   assert.ok(["retail", "wholesale", "hardware"].includes(profile.industry));
   assert.deepEqual(profile.categories, ["A", "B"]);
@@ -454,7 +454,7 @@ test("migration plan merges duplicates, balances openings, and is safe to re-run
   assert.equal(skipped.skipped.unmapped, 1);
 });
 
-test("AI suggestions only fill ledgers FinTrack was unsure about, with allowed targets", () => {
+test("AI suggestions only fill ledgers MyFinTracker was unsure about, with allowed targets", () => {
   const analysis = analyzeMigration([tallyFile], { accounts, parties });
   applyAiSuggestions(analysis, [{ name: "CGST", target: "coa:id1140" }, { name: "Output SGST", target: "skip" }]);
   const byName = name => analysis.ledgers.find(ledger => ledger.name === name);

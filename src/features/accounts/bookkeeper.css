@@ -1,4 +1,4 @@
-/* Accounts → Tell FinTrack. Scoped to .acc-bk inside the Accounts dashboard. */
+/* Accounts → Tell Finny. Scoped to .acc-bk inside the Accounts dashboard. */
 .accounts-dashboard .acc-bk {
   display: grid;
   gap: 14px;

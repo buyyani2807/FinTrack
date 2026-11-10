@@ -221,7 +221,7 @@ export function buildReminderReceipt(item, settings = {}) {
     schemeName: item.schemeName || "",
     chitType: item.chitTypeLabel || chitTypeLabel(item.chitType) || "",
     chitFields: item.type === "chit" ? { month: item.monthNumber, totalMonths: item.totalMonths } : null,
-    companyName: branding.companyName || "FinTrack",
+    companyName: branding.companyName || "MyFinTracker",
     money: formatInr,
   };
 }

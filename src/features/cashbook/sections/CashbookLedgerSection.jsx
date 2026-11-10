@@ -73,7 +73,7 @@ export function CashbookLedgerSection({
       <div className="accounts-action-row spacer">
         <button type="button" className="btn primary" onClick={openManual}>+ Add transaction</button>
         <ExportButton onClick={() => exportCsv(cashbookRows)} />
-        <button type="button" className="btn" onClick={() => backfillCashbook(token).then(refresh)}>Sync from FinTrack</button>
+        <button type="button" className="btn" onClick={() => backfillCashbook(token).then(refresh)}>Sync from MyFinTracker</button>
       </div>
       <div className="accounts-entry-list">
         {priorCount > 0 && <article className="card accounts-entry-row">

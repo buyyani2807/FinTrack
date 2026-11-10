@@ -183,8 +183,8 @@ export function AccBookkeeper({
         <header className="acc-bk-head">
           <span className="acc-bk-icon" aria-hidden="true"><MessageSquareText size={18} /></span>
           <div>
-            <h2 className="acc-bk-title">Tell FinTrack what happened</h2>
-            <p className="acc-bk-sub">Say it the way you would tell your accountant. FinTrack works out the entry, and nothing is saved until you post it.</p>
+            <h2 className="acc-bk-title">Tell Finny what happened</h2>
+            <p className="acc-bk-sub">Say it the way you would tell your accountant. MyFinTracker works out the entry, and nothing is saved until you post it.</p>
           </div>
         </header>
       )}
@@ -287,8 +287,8 @@ export function AccBookkeeper({
                 )}
               </div>
 
-              {draft?.newParty && <p className="acc-bk-newparty">{draft.newParty.name} is not in your parties yet. FinTrack adds them as a {draft.newParty.partyType} when you post.</p>}
-              {draft?.newLedger && <p className="acc-bk-newparty">There is no {draft.newLedger.name} ledger yet. FinTrack adds it to the chart of accounts when you post.</p>}
+              {draft?.newParty && <p className="acc-bk-newparty">{draft.newParty.name} is not in your parties yet. MyFinTracker adds them as a {draft.newParty.partyType} when you post.</p>}
+              {draft?.newLedger && <p className="acc-bk-newparty">There is no {draft.newLedger.name} ledger yet. MyFinTracker adds it to the chart of accounts when you post.</p>}
 
               {draft?.effects.length > 0 && (
                 <div className="acc-bk-effects">
@@ -336,13 +336,13 @@ export function AccBookkeeper({
   if (compact) {
     return (
       <Modal panelClassName="acc-entry-dialog" title="Describe it in words" close={close} actions={composer}>
-        <section className="acc-bk is-compact" aria-label="Tell FinTrack">{conversation}</section>
+        <section className="acc-bk is-compact" aria-label="Tell Finny">{conversation}</section>
       </Modal>
     );
   }
 
   return (
-    <section className="card acc-bk" aria-label="Tell FinTrack">
+    <section className="card acc-bk" aria-label="Tell Finny">
       {conversation}
       {composer}
     </section>
