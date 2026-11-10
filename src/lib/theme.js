@@ -1,12 +1,10 @@
 import { useSyncExternalStore } from "react";
 
-// Light/dark theme: an explicit choice is remembered per browser; otherwise the system setting is followed.
-// index.html applies the same rule before first paint, so there is no flash of the wrong theme.
+// Light/dark theme: light by default. A choice made in the app (the toggle is only shown after sign-in) is remembered
+// per browser. public/theme-init.js applies the same rule before first paint, so there is no flash of the wrong theme.
 const STORAGE_KEY = "fintrack-theme";
 const THEME_COLORS = { light: "#eef4f4", dark: "#111315" };
 const listeners = new Set();
-
-const systemQuery = () => (typeof window !== "undefined" && window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null);
 
 export function storedTheme() {
   try {
@@ -19,7 +17,7 @@ export function storedTheme() {
 
 export function currentTheme() {
   if (typeof document !== "undefined" && document.documentElement.dataset.theme) return document.documentElement.dataset.theme;
-  return storedTheme() || (systemQuery()?.matches ? "dark" : "light");
+  return storedTheme() || "light";
 }
 
 function applyTheme(theme) {
@@ -36,11 +34,6 @@ export function setTheme(theme) {
 }
 
 export const toggleTheme = () => setTheme(currentTheme() === "dark" ? "light" : "dark");
-
-// Follow the system setting until the person picks a theme.
-systemQuery()?.addEventListener?.("change", event => {
-  if (!storedTheme()) applyTheme(event.matches ? "dark" : "light");
-});
 
 const subscribe = listener => {
   listeners.add(listener);

@@ -2,12 +2,18 @@ import { test, expect } from "@playwright/test";
 import { mockAccountsWorkspace } from "./fixtures/accountsMocks.js";
 
 test.describe("Theme", () => {
-  test("follows the system setting until the toggle is used", async ({ browser }) => {
+  test("defaults to light even when the system prefers dark", async ({ browser }) => {
     const context = await browser.newContext({ colorScheme: "dark" });
     const page = await context.newPage();
     await page.goto("/");
-    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
     await context.close();
+  });
+
+  test("the public site has no theme toggle", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator(".mkt-nav")).toBeVisible();
+    await expect(page.getByRole("switch")).toHaveCount(0);
   });
 
   test("sign-in has no theme toggle", async ({ page }) => {

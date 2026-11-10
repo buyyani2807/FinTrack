@@ -1,7 +1,6 @@
 import { useEffect, useId, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useOutletContext } from "react-router";
 import { BookOpenText, Coins, HandCoins, House, Menu, ShoppingCart, X } from "lucide-react";
-import { ThemeToggle } from "../../components/ThemeToggle.jsx";
 import { APP_MODULES, moduleForFeature } from "./catalog.js";
 import marketingStyles from "./marketing.css?inline";
 import { featurePath, marketingPaths } from "./paths.js";
@@ -79,7 +78,6 @@ export function MarketingLayout() {
         {APP_MODULES.map(item => <Link className="mkt-nav-item" key={item.slug} to={moduleHref(item)} aria-current={moduleCurrent(item, pathname)}><ModuleIcon slug={item.slug} />{item.label}</Link>)}
       </nav>
       <div className="mkt-nav-end">
-        <ThemeToggle compact />
         {signedIn ? null : login}
         {start}
         <button type="button" className="mkt-burger" aria-label="Open menu" aria-expanded={open} aria-controls={menuId} onClick={() => setOpen(true)}>
@@ -100,7 +98,6 @@ export function MarketingLayout() {
           {COMPANY_LINKS.map(link => <NavLink key={link.to} className="mkt-drawer-link minor" to={link.to} onClick={close}>{link.label}</NavLink>)}
         </nav>
         <div className="mkt-drawer-foot">
-          <div className="mkt-drawer-theme"><span>Appearance</span><ThemeToggle /></div>
           <div className="mkt-drawer-cta">
             {signedIn ? null : <Link className="mkt-btn" to={marketingPaths.login} onClick={close}>Login</Link>}
             {signedIn
