@@ -11,9 +11,10 @@ const axisMoney = value => {
 };
 
 const niceStep = raw => {
-  if (raw <= 0) return 1;
-  const power = 10 ** Math.floor(Math.log10(raw));
-  return [1, 2, 2.5, 5, 10].map(factor => factor * power).find(step => step >= raw);
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value <= 0) return 1;
+  const power = 10 ** Math.floor(Math.log10(value));
+  return [1, 2, 2.5, 5, 10].map(factor => factor * power).find(step => step >= value) || 1;
 };
 
 const W = 640;
@@ -21,27 +22,31 @@ const H = 260;
 const PAD = { top: 14, right: 12, bottom: 30, left: 58 };
 
 export function AccMonthlyChart({ rows = [], onOpenPnl }) {
-  const hasData = rows.some(row => row.income || row.expenses);
-  const values = rows.flatMap(row => [row.income, Math.max(0, row.expenses), row.net]);
-  const step = niceStep((Math.max(0, ...values) - Math.min(0, ...values)) / 4);
-  const top = Math.max(step, Math.ceil(Math.max(0, ...values) / step) * step);
-  const bottom = Math.floor(Math.min(0, ...values) / step) * step;
+  const list = Array.isArray(rows) ? rows : [];
+  const hasData = list.some(row => row.income || row.expenses);
+  const values = list.flatMap(row => [Number(row.income) || 0, Math.max(0, Number(row.expenses) || 0), Number(row.net) || 0]);
+  const hi = values.length ? Math.max(0, ...values) : 0;
+  const lo = values.length ? Math.min(0, ...values) : 0;
+  const step = niceStep((hi - lo) / 4);
+  const top = Math.max(step, Math.ceil(hi / step) * step);
+  const bottom = Math.floor(lo / step) * step;
   const plotW = W - PAD.left - PAD.right;
   const plotH = H - PAD.top - PAD.bottom;
-  const y = value => PAD.top + ((top - value) / (top - bottom)) * plotH;
+  const span = top - bottom || step;
+  const y = value => PAD.top + ((top - value) / span) * plotH;
   const ticks = [];
   for (let tick = bottom; tick <= top + step / 2; tick += step) ticks.push(tick);
-  const group = rows.length ? plotW / rows.length : plotW;
+  const group = list.length ? plotW / list.length : plotW;
   const barW = Math.min(30, group * 0.3);
   const center = index => PAD.left + group * index + group / 2;
-  const netPoints = rows.map((row, index) => `${center(index)},${y(row.net)}`).join(" ");
-  const summary = rows.map(row => `${row.label}: income ${money(row.income)}, expenses ${money(row.expenses)}, net ${money(row.net)}`).join("; ");
+  const netPoints = list.map((row, index) => `${center(index)},${y(Number(row.net) || 0)}`).join(" ");
+  const summary = list.map(row => `${row.label}: income ${money(row.income)}, expenses ${money(row.expenses)}, net ${money(row.net)}`).join("; ");
 
   return <section className="card acc-ov-trend" aria-label="Monthly overview">
     <header className="acc-ov-chart-head">
       <div>
         <strong>Monthly overview</strong>
-        <p className="small">Income and expenses for the last {rows.length} months, with net profit</p>
+        <p className="small">Income and expenses for the last {list.length} months, with net profit</p>
       </div>
       {onOpenPnl && <button type="button" className="acc-ov-link-btn" onClick={onOpenPnl}>Open P&amp;L</button>}
     </header>
@@ -55,10 +60,11 @@ export function AccMonthlyChart({ rows = [], onOpenPnl }) {
         <line x1={PAD.left} x2={W - PAD.right} y1={y(tick)} y2={y(tick)} className={tick === 0 ? "zero" : ""} />
         <text x={PAD.left - 8} y={y(tick)} dy="0.35em" textAnchor="end">{axisMoney(tick)}</text>
       </g>)}
-      {rows.map((row, index) => {
-        const expenses = Math.max(0, row.expenses);
+      {list.map((row, index) => {
+        const income = Math.max(0, Number(row.income) || 0);
+        const expenses = Math.max(0, Number(row.expenses) || 0);
         return <g key={row.month}>
-          <rect className="acc-ov-bar income" x={center(index) - barW - 2} y={y(Math.max(0, row.income))} width={barW} height={Math.max(0, y(0) - y(Math.max(0, row.income)))} rx="3">
+          <rect className="acc-ov-bar income" x={center(index) - barW - 2} y={y(income)} width={barW} height={Math.max(0, y(0) - y(income))} rx="3">
             <title>{`${row.label} · Income ${money(row.income)}`}</title>
           </rect>
           <rect className="acc-ov-bar expenses" x={center(index) + 2} y={y(expenses)} width={barW} height={Math.max(0, y(0) - y(expenses))} rx="3">
@@ -68,7 +74,7 @@ export function AccMonthlyChart({ rows = [], onOpenPnl }) {
         </g>;
       })}
       <polyline className="acc-ov-net-line" points={netPoints} />
-      {rows.map((row, index) => <circle key={row.month} className="acc-ov-net-dot" cx={center(index)} cy={y(row.net)} r="4">
+      {list.map((row, index) => <circle key={row.month} className="acc-ov-net-dot" cx={center(index)} cy={y(Number(row.net) || 0)} r="4">
         <title>{`${row.label} · Net ${money(row.net)}`}</title>
       </circle>)}
     </svg> : <p className="acc-ov-chart-empty">No income or expenses posted in these months yet.</p>}

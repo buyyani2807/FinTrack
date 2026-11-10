@@ -16,9 +16,9 @@ const defaultReminderSettings = () => ({
 
 const SETTINGS_TABS = [
   { id: "company", label: "Company & receipts" },
+  { id: "partners", label: "View-only partners" },
   { id: "whatsapp", label: "WhatsApp messages" },
   { id: "reminders", label: "Reminders" },
-  { id: "partners", label: "Partners" },
 ];
 
 const TEMPLATE_GROUPS = [
@@ -177,6 +177,17 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved, tab: routeT
     {tab !== "partners" ? <form onSubmit={submit} className="settings-form">
       {tab === "company" && <div className="settings-company">
         <div className="settings-company-main">
+          <section className="card settings-section">
+            <header className="settings-section-head">
+              <div>
+                <h2>View-only partners</h2>
+                <p>Invite a sleeping partner to Daily and Monthly Finance. They use Owner sign-in and cannot change records.</p>
+              </div>
+            </header>
+            <div className="row">
+              <button type="button" className="btn primary" onClick={() => setTab("partners")}>Open Partners</button>
+            </div>
+          </section>
           <SettingsSection icon={Building2} title="Business details" copy="Your name, contact and logo, shown on receipts, statements and WhatsApp messages.">
             <div className="settings-logo-row">
               <span className="settings-logo-tile" aria-hidden="true">{logoOk ? <img src={form.companyLogoUrl} alt="" onError={() => setLogoFailed(form.companyLogoUrl)} /> : initialsOf(form.companyName)}</span>

@@ -380,21 +380,21 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
           userId: workspace?.id || "",
         });
       if (gen !== refreshGen.current) return;
-      setCompanies(bundle.companies);
-      setActiveCompanyId(bundle.activeCompanyId);
+      setCompanies(Array.isArray(bundle.companies) ? bundle.companies : []);
+      setActiveCompanyId(bundle.activeCompanyId || "");
       if (bundle.gstForm) setGstForm(bundle.gstForm);
-      setSettings(bundle.settings);
-      setAccounts(bundle.accounts);
-      setParties(bundle.parties);
-      setPartyPipeline(bundle.partyPipeline);
-      setVouchers(bundle.vouchers);
-      setItems(bundle.items);
-      setItemCategories(bundle.itemCategories);
-      setStockMovements(bundle.stockMovements);
-      setVoucherItemLines(bundle.voucherItemLines);
+      setSettings(bundle.settings || null);
+      setAccounts(Array.isArray(bundle.accounts) ? bundle.accounts : []);
+      setParties(Array.isArray(bundle.parties) ? bundle.parties : []);
+      setPartyPipeline(bundle.partyPipeline && typeof bundle.partyPipeline === "object" ? bundle.partyPipeline : {});
+      setVouchers(Array.isArray(bundle.vouchers) ? bundle.vouchers : []);
+      setItems(Array.isArray(bundle.items) ? bundle.items : []);
+      setItemCategories(Array.isArray(bundle.itemCategories) ? bundle.itemCategories : []);
+      setStockMovements(Array.isArray(bundle.stockMovements) ? bundle.stockMovements : []);
+      setVoucherItemLines(Array.isArray(bundle.voucherItemLines) ? bundle.voucherItemLines : []);
       setTradeDocuments(bundle.tradeDocuments);
-      setPriceLists(bundle.priceLists || []);
-      setDocumentSettings(bundle.documentSettings);
+      setPriceLists(Array.isArray(bundle.priceLists) ? bundle.priceLists : []);
+      setDocumentSettings(bundle.documentSettings || { ...DEFAULT_DOCUMENT_SETTINGS, available: false });
       setComplianceFilings(bundle.complianceFilings);
       setCollectionRoutes(bundle.collectionRoutes);
       // Setup (audit, locks, roles, invites) and bank-statement data are loaded
@@ -692,24 +692,32 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       : null),
     [wantStockValue, items, stockMovements, costLines, range],
   );
-  const metrics = useMemo(
-    () => (wantOverview ? dashboardMetrics(visibleAccounts, vouchers, parties, { today: todayIso(), ...range, stock: periodStock }) : null),
-    [wantOverview, visibleAccounts, vouchers, parties, range, periodStock],
-  );
+  const metrics = useMemo(() => {
+    if (!wantOverview) return null;
+    try {
+      return dashboardMetrics(visibleAccounts, vouchers, parties, { today: todayIso(), ...range, stock: periodStock });
+    } catch {
+      return null;
+    }
+  }, [wantOverview, visibleAccounts, vouchers, parties, range, periodStock]);
   const overviewCharts = useMemo(() => {
     if (!wantOverview) return null;
-    const today = todayIso();
-    return {
-      trend: monthlyIncomeExpense({
-        accounts: visibleAccounts,
-        vouchers,
-        items,
-        movements: stockMovements,
-        voucherItemLines: costLines,
-        endDate: range.to && range.to < today ? range.to : today,
-      }),
-      spending: expenseBreakdown(profitAndLoss(visibleAccounts, vouchers, range, { stock: periodStock }).expenses),
-    };
+    try {
+      const today = todayIso();
+      return {
+        trend: monthlyIncomeExpense({
+          accounts: visibleAccounts,
+          vouchers,
+          items,
+          movements: stockMovements,
+          voucherItemLines: costLines,
+          endDate: range.to && range.to < today ? range.to : today,
+        }),
+        spending: expenseBreakdown(profitAndLoss(visibleAccounts, vouchers, range, { stock: periodStock }).expenses),
+      };
+    } catch {
+      return { trend: [], spending: { slices: [], total: 0, purchases: 0 } };
+    }
   }, [wantOverview, visibleAccounts, vouchers, items, stockMovements, costLines, range, periodStock]);
   const tb = useMemo(
     () => (wantTrial ? trialBalance(visibleAccounts, vouchers, range) : { rows: [], totalDebit: 0, totalCredit: 0, balanced: true }),
@@ -1070,7 +1078,9 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   };
 
   const recentVouchers = useMemo(
-    () => [...vouchers].sort((a, b) => `${b.date}${b.voucherNumber}`.localeCompare(`${a.date}${a.voucherNumber}`)).slice(0, 5),
+    () => [...(Array.isArray(vouchers) ? vouchers : [])]
+      .sort((a, b) => `${b.date}${b.voucherNumber}`.localeCompare(`${a.date}${a.voucherNumber}`))
+      .slice(0, 5),
     [vouchers],
   );
 

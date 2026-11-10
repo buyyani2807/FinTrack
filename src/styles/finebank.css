@@ -689,7 +689,8 @@ input[type="month"]::-webkit-calendar-picker-indicator { margin: 0; padding: 0; 
 .nav-profile-text span { color: var(--ft-sidebar-text); font-size: var(--ft-type-caption); }
 @media (width >= 1051px) {
   /* the business name and Logout now live in the sidebar */
-  html[data-ft-role="owner"] .shell > header.top:has(.brand) { display: none !important; }
+  html[data-ft-role="owner"] .shell > header.top:has(.brand),
+  html[data-ft-role="finance_partner"] .shell > header.top:has(.brand) { display: none !important; }
 }
 @media (width <= 1050px) {
   .financier-nav .nav-footer, .financier-nav .nav-title { display: none !important; }
@@ -711,9 +712,12 @@ input[type="month"]::-webkit-calendar-picker-indicator { margin: 0; padding: 0; 
   .financier-nav .nav-footer { display: flex !important; margin-top: auto; gap: 0; }
   .financier-nav .nav-footer .nav-profile { display: none; }
   .financier-nav .nav-logout { background: var(--ft-sidebar-chip) !important; }
-  html[data-ft-role="owner"] .shell { margin-left: var(--ft-rail-w) !important; }
-  html[data-ft-role="owner"] .shell { padding-bottom: 32px !important; }
-  html[data-ft-role="owner"] .shell > header.top:has(.brand) { display: none !important; }
+  html[data-ft-role="owner"] .shell,
+  html[data-ft-role="finance_partner"] .shell { margin-left: var(--ft-rail-w) !important; }
+  html[data-ft-role="owner"] .shell,
+  html[data-ft-role="finance_partner"] .shell { padding-bottom: 32px !important; }
+  html[data-ft-role="owner"] .shell > header.top:has(.brand),
+  html[data-ft-role="finance_partner"] .shell > header.top:has(.brand) { display: none !important; }
 }
 
 /* ------------------------------------------------------------------ theme switch (no app header: it lives in the navigation) */
@@ -744,9 +748,12 @@ input[type="month"]::-webkit-calendar-picker-indicator { margin: 0; padding: 0; 
   .ft-mobile-brand { color: #fff !important; font-size: var(--ft-type-section); line-height: 1; }
   .app:has(.ft-mobile-header) { padding-top: calc(56px + env(safe-area-inset-top, 0px)); }
   /* the bottom bar is gone: pages need no room for it */
-  html[data-ft-role="owner"] .shell, html[data-ft-role="owner"] .collection-shell, .accounts-dashboard .acc-main { padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px)) !important; }
+  html[data-ft-role="owner"] .shell, html[data-ft-role="finance_partner"] .shell,
+  html[data-ft-role="owner"] .collection-shell, html[data-ft-role="finance_partner"] .collection-shell,
+  .accounts-dashboard .acc-main { padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px)) !important; }
   /* the menu carries the business profile and Logout */
-  html[data-ft-role="owner"] .shell > header.top:has(.brand) { display: none !important; }
+  html[data-ft-role="owner"] .shell > header.top:has(.brand),
+  html[data-ft-role="finance_partner"] .shell > header.top:has(.brand) { display: none !important; }
 
   /* menu: the full sidebar, covering the whole screen */
   html .financier-nav {
@@ -775,7 +782,8 @@ input[type="month"]::-webkit-calendar-picker-indicator { margin: 0; padding: 0; 
   html .financier-nav .nav-footer .nav-logout { display: flex !important; width: 100% !important; min-height: 48px !important; padding: 12px 16px !important; color: #fff !important; font-size: var(--ft-type-ui) !important; }
 }
 /* screens without the sidebar (agents, customer portals): beside Log out in the page's top bar */
-html[data-ft-role="owner"] .top-actions .top-theme { display: none; }
+html[data-ft-role="owner"] .top-actions .top-theme,
+html[data-ft-role="finance_partner"] .top-actions .top-theme { display: none; }
 .top-actions:has(.top-theme) { flex-direction: row !important; align-items: center !important; }
 .top-actions .top-theme { flex: none; }
 @media (width <= 680px) { .top-actions .top-theme .ft-theme-toggle-label { display: none; } }
@@ -783,8 +791,15 @@ html[data-ft-role="owner"] .top-actions .top-theme { display: none; }
 .accounts-dashboard { position: static !important; inset: auto !important; z-index: auto !important; overflow: visible !important; min-height: 100svh; padding: 0 !important; }
 .accounts-dashboard .acc-shell { display: block !important; min-height: 0; }
 .accounts-dashboard .acc-main { padding: 36px 44px 74px !important; }
-@media (width >= 1051px) { html[data-ft-role="owner"] .accounts-dashboard { margin-left: calc(var(--ft-sidebar-w) + 8px); } }
-@media (681px <= width <= 1050px) { html[data-ft-role="owner"] .accounts-dashboard { margin-left: var(--ft-rail-w); } .accounts-dashboard .acc-main { padding: 28px 24px 48px !important; } }
+@media (width >= 1051px) {
+  html[data-ft-role="owner"] .accounts-dashboard,
+  html[data-ft-role="finance_partner"] .accounts-dashboard { margin-left: calc(var(--ft-sidebar-w) + 8px); }
+}
+@media (681px <= width <= 1050px) {
+  html[data-ft-role="owner"] .accounts-dashboard,
+  html[data-ft-role="finance_partner"] .accounts-dashboard { margin-left: var(--ft-rail-w); }
+  .accounts-dashboard .acc-main { padding: 28px 24px 48px !important; }
+}
 @media (width <= 680px) { .accounts-dashboard .acc-main { padding: 20px 16px calc(96px + env(safe-area-inset-bottom, 0px)) !important; } }
 /* CA login: Accounts fills the viewport (no Financier sidebar / no owner margin). */
 html[data-ft-role="accounts"] .accounts-dashboard { margin-left: 0 !important; }
