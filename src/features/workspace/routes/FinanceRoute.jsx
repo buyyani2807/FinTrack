@@ -27,20 +27,21 @@ export function FinanceRoute({ module, section = "overview" }) {
   }
   const {
     loans, workspace, setLoans, createLoan, savePayment, updateLoan, removeLoan, saveCustomerPortal, getKyc, updateKyc,
-    changeStatus, changePaymentNotes, correctPayment, removePayment, changeCollectionOrder, showOwnerChrome, logout, user, logReceipt,
+    changeStatus, changePaymentNotes, correctPayment, removePayment, changeCollectionOrder, showOwnerChrome, showFinancePartnerChrome, logout, user, logReceipt,
   } = session;
-  if (!showOwnerChrome && workspace?.collectionScope === "accounts" && (module === "daily" || module === "monthly")) {
+  const financeChrome = showOwnerChrome || showFinancePartnerChrome;
+  if (!financeChrome && workspace?.collectionScope === "accounts" && (module === "daily" || module === "monthly")) {
     return <Navigate to={workspacePaths.routeCollections} replace />;
   }
   // Finance agents start on Today's collections, so that tab is present before a customer is opened.
-  if (!showOwnerChrome && workspace?.collectionScope !== "accounts" && module === "all") {
+  if (!financeChrome && workspace?.collectionScope !== "accounts" && module === "all") {
     const hasDaily = (loans || []).some(loan => loan.kind === "daily");
     const hasMonthly = (loans || []).some(loan => loan.kind === "monthly");
     if (hasDaily && access.daily) return <Navigate to={collectionsPath("daily")} replace />;
     if (hasMonthly && access.monthly) return <Navigate to={collectionsPath("monthly")} replace />;
   }
-  // Reports are for owners; collection agents land on Overview.
-  if (section === "reports" && !access.isOwner) return <Navigate to={financeSectionPath(module, "overview")} replace />;
+  // Reports are for owners and view-only partners; collection agents land on Overview.
+  if (section === "reports" && !access.canViewOwnerFinance) return <Navigate to={financeSectionPath(module, "overview")} replace />;
 
   return <>
     <Financier
@@ -59,7 +60,7 @@ export function FinanceRoute({ module, section = "overview" }) {
       onPaymentCorrect={correctPayment}
       onPaymentDelete={removePayment}
       onCollectionOrderChange={changeCollectionOrder}
-      role={showOwnerChrome ? "owner" : "staff"}
+      role={showOwnerChrome ? "owner" : showFinancePartnerChrome ? "partner" : "staff"}
       logout={logout}
       authToken={user.authToken}
       orgSettings={workspace?.organizationSettings || {}}

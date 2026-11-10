@@ -81,7 +81,7 @@ export function FinancierNav({ access, orgSettings = {}, businessName = "", logo
       {logout && <Button className="nav-logout" onClick={logout}><NavLabel icon={LogOut} long="Logout" short="Logout" /></Button>}
       <div className="nav-profile">
         <span className="nav-avatar" aria-hidden="true">{initialsOf(businessName)}</span>
-        <span className="nav-profile-text"><strong>{businessName || "My Finance Business"}</strong><span>{access.isAccountsUser ? "Accounts access" : "Financier workspace"}</span></span>
+        <span className="nav-profile-text"><strong>{businessName || "My Finance Business"}</strong><span>{access.isAccountsUser ? "Accounts access" : access.isFinancePartner ? "View-only partner" : "Financier workspace"}</span></span>
       </div>
     </div>
   </aside>

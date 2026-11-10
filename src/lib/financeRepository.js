@@ -102,7 +102,7 @@ export async function loadWorkspace(token) {
   const rows = await loadProfileOrganization(token, "id,full_name,role,is_active");
   const profile = rows[0];
   const organization = Array.isArray(profile?.organizations) ? profile.organizations[0] : profile?.organizations;
-  if (profile?.role !== "owner" && profile?.role !== "staff" && profile?.role !== "accounts") {
+  if (profile?.role !== "owner" && profile?.role !== "staff" && profile?.role !== "accounts" && profile?.role !== "finance_partner") {
     throw new Error("Could not load workspace role.");
   }
   let businessName = organization?.name || "My Finance Business";
@@ -480,6 +480,32 @@ export const loadManagedAgents = async token => {
   const response = await fetch("/api/agents", { headers: { Authorization: `Bearer ${token}` } });
   const body = await response.json().catch(() => []);
   if (!response.ok) throw new Error(body.error || "Could not load collection agents");
+  return body;
+};
+export const listFinancePartners = async token => {
+  const response = await fetch("/api/finance/partners", { headers: { Authorization: `Bearer ${token}` } });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || "Could not load finance partners");
+  return body.members || [];
+};
+export const createFinancePartner = async (token, details) => {
+  const response = await fetch("/api/finance/partners", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify(details),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || "Could not create finance partner");
+  return body;
+};
+export const updateFinancePartner = async (token, details) => {
+  const response = await fetch("/api/finance/partners", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify(details),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || "Could not update finance partner");
   return body;
 };
 export const updateCollectionAgent = async (token, details) => {

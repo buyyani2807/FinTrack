@@ -24,7 +24,7 @@ import { workspacePaths, workspaceModuleAccess } from "./paths.js";
 export function WorkspaceLayout() {
   const session = useOutletContext();
   const {
-    dataError, loans, workspace, showOwnerChrome, showWorkspaceChrome, logout, user, logReceipt, refreshWorkspace, addCollectionAgent,
+    dataError, loans, workspace, showOwnerChrome, showFinancePartnerChrome, showWorkspaceChrome, logout, user, logReceipt, refreshWorkspace, addCollectionAgent,
     getManagedAgents, updateAgentAssignment, saveCollectionStaff,
   } = session;
   const navigate = useNavigate();
@@ -45,32 +45,46 @@ export function WorkspaceLayout() {
     [baseOrgSettings, moduleState],
   );
   const moduleAccess = workspaceModuleAccess(orgSettings, workspace || {}, moduleState);
-  // Owner gets full chrome. Accounts-team (CA) gets Accounts only. Staff agents get neither owner module.
+  // Owner gets full chrome. Finance partners get Daily/Monthly view-only. Accounts-team gets Accounts only.
   const access = showOwnerChrome
     ? moduleAccess
-    : moduleAccess.isAccountsUser
+    : moduleAccess.isFinancePartner
       ? {
         ...moduleAccess,
         isOwner: false,
-        daily: false,
-        monthly: false,
-        chit: false,
-        cashbook: false,
-        showDaily: false,
-        showMonthly: false,
-        showChit: false,
-        showCashbook: false,
-      }
-      : {
-        ...moduleAccess,
-        isOwner: false,
+        canWriteFinance: false,
         chit: false,
         cashbook: false,
         accounts: false,
         showChit: false,
         showCashbook: false,
         showAccounts: false,
-      };
+        locked: { ...moduleAccess.locked, chit: false, cashbook: false, accounts: false, counter: false },
+      }
+      : moduleAccess.isAccountsUser
+        ? {
+          ...moduleAccess,
+          isOwner: false,
+          daily: false,
+          monthly: false,
+          chit: false,
+          cashbook: false,
+          showDaily: false,
+          showMonthly: false,
+          showChit: false,
+          showCashbook: false,
+        }
+        : {
+          ...moduleAccess,
+          isOwner: false,
+          chit: false,
+          cashbook: false,
+          accounts: false,
+          showChit: false,
+          showCashbook: false,
+          showAccounts: false,
+        };
+  const showFinanceChrome = showOwnerChrome || showFinancePartnerChrome;
   const [chitSchemes, setChitSchemes] = useState([]);
   const [askOpen, setAskOpen] = useState(false);
   const [accountsCompanyName, setAccountsCompanyName] = useState("");
@@ -207,7 +221,7 @@ export function WorkspaceLayout() {
         <button type="button" className="btn" onClick={logout}>Log out</button>
       </div>
     </div> : <TrialBanner subscription={subscription} isOwner={showOwnerChrome} />}
-    {showOwnerChrome && !subscriptionLocked
+    {showFinanceChrome && !subscriptionLocked
       ? <div className="financier-tools"><FinancierNav access={access} orgSettings={orgSettings} businessName={workspace?.businessName} logout={logout} askEnabled={askEnabled} onAsk={() => setAskOpen(true)} /><PageReveal routeKey={location.pathname}><Outlet context={routeContext} /></PageReveal></div>
       : <>
         {/* CA / Accounts-team: full-viewport Accounts (no Financier sidebar). Theme + logout stay in the slim bar. */}
@@ -230,7 +244,7 @@ export function WorkspaceLayout() {
       context={{
         today: todayIso(),
         orgSettings,
-        isOwner: Boolean(access.isOwner),
+        isOwner: Boolean(access.canViewOwnerFinance),
         agentId: workspace?.id || "",
         agentName: workspace?.fullName || "",
         collectionScope: workspace?.collectionScope || "",
@@ -238,7 +252,7 @@ export function WorkspaceLayout() {
         allowCashbook: Boolean(access.cashbook),
         allowChit: Boolean(access.chit),
         loans: visibleFinanceLoans(loans, {
-          isOwner: Boolean(access.isOwner),
+          isOwner: Boolean(access.canViewOwnerFinance),
           agentId: workspace?.id || "",
           collectionScope: workspace?.collectionScope || "",
         }),

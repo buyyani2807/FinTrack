@@ -5,6 +5,7 @@ import { DEFAULT_WHATSAPP_TEMPLATES } from "./model/templateEngine.js";
 import { defaultConfirmationSettings } from "./io/transactionConfirmations.js";
 import { loadOrganizationSettings, saveOrganizationSettings } from "../../lib/financeRepository.js";
 import { LabeledField as Field } from "../../components/ui.jsx";
+import { FinancePartnersPanel } from "../finance/components/FinancePartnersPanel.jsx";
 
 
 const defaultReminderSettings = () => ({
@@ -17,6 +18,7 @@ const SETTINGS_TABS = [
   { id: "company", label: "Company & receipts" },
   { id: "whatsapp", label: "WhatsApp messages" },
   { id: "reminders", label: "Reminders" },
+  { id: "partners", label: "Partners" },
 ];
 
 const TEMPLATE_GROUPS = [
@@ -167,11 +169,12 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved, tab: routeT
   };
 
   return <main className="shell settings-page">
-    <div className="toolbar"><div><h1 className="title">Settings</h1><p className="copy">Company branding, receipts, WhatsApp messages and payment reminders.</p></div></div>
+    <div className="toolbar"><div><h1 className="title">Settings</h1><p className="copy">Company branding, receipts, WhatsApp messages, payment reminders, and view-only partners.</p></div></div>
     <TabScroller><nav className="module-section-nav" aria-label="Settings sections">
       {SETTINGS_TABS.map(item => <button key={item.id} type="button" className={`module-section-tab ${tab === item.id ? "active" : ""}`} aria-current={tab === item.id ? "page" : undefined} onClick={() => setTab(item.id)}>{item.label}</button>)}
     </nav></TabScroller>
-    <form onSubmit={submit} className="settings-form">
+    {tab === "partners" ? <FinancePartnersPanel token={token} /> : null}
+    {tab !== "partners" ? <form onSubmit={submit} className="settings-form">
       {tab === "company" && <div className="settings-company">
         <div className="settings-company-main">
           <SettingsSection icon={Building2} title="Business details" copy="Your name, contact and logo, shown on receipts, statements and WhatsApp messages.">
@@ -288,6 +291,6 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved, tab: routeT
         <button type="button" className="btn" onClick={close}>Cancel</button>
         <button type="submit" className="btn primary" disabled={busy}>{busy ? "Saving…" : "Save settings"}</button>
       </div>
-    </form>
+    </form> : null}
   </main>;
 }

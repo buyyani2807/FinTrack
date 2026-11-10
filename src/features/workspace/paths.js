@@ -53,25 +53,30 @@ export const isWithin = (pathname, target) => pathname === target || pathname.st
 export function workspaceModuleAccess(orgSettings = {}, workspace = {}, moduleState = null) {
   const isOwner = workspace?.role === "owner";
   const isAccountsUser = workspace?.role === "accounts";
+  const isFinancePartner = workspace?.role === "finance_partner";
+  const canViewOwnerFinance = isOwner || isFinancePartner;
   const packOpen = moduleId => (moduleState
     ? isAppModuleOpen(moduleState, moduleId)
     : isModuleEnabled(orgSettings, moduleId));
-  const dailyOpen = isOwner && packOpen("daily");
-  const monthlyOpen = isOwner && packOpen("monthly");
+  const dailyOpen = canViewOwnerFinance && packOpen("daily");
+  const monthlyOpen = canViewOwnerFinance && packOpen("monthly");
   const chitOpen = isOwner && packOpen("chit");
   const cashbookOpen = isOwner && packOpen("cashbook");
   const accountsOpen = (isOwner || isAccountsUser) && packOpen("accounts");
   return {
     isOwner,
     isAccountsUser,
+    isFinancePartner,
+    canViewOwnerFinance,
+    canWriteFinance: isOwner,
     daily: dailyOpen,
     monthly: monthlyOpen,
     chit: chitOpen,
     cashbook: cashbookOpen,
     accounts: accountsOpen,
-    // Visible in nav even when locked (owners discover modules).
-    showDaily: isOwner,
-    showMonthly: isOwner,
+    // Visible in nav even when locked (owners discover modules; partners only see unlocked finance).
+    showDaily: canViewOwnerFinance,
+    showMonthly: canViewOwnerFinance,
     showChit: isOwner,
     showCashbook: isOwner,
     showAccounts: isOwner || isAccountsUser,
