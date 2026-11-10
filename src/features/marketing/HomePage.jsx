@@ -2,10 +2,12 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 import { ArrowRight, BadgeCheck, Check, Gavel, MessageCircle, Smartphone, Sparkles, TrendingUp } from "lucide-react";
 import { ChevronDown } from "lucide-react";
 import { Link } from "react-router";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../../components/ui/Accordion.jsx";
 import { Reveal, RevealProvider } from "../../components/ui/Reveal.jsx";
 import { TypewriterText } from "../../components/ui/TypewriterText.jsx";
 import "../intelligence/assistant/assistant.css";
 import { FeatureIcon } from "./icons.jsx";
+import { FAQ } from "./faq.js";
 import { HomeModules } from "./HomeModules.jsx";
 import { featurePath, marketingPaths } from "./paths.js";
 import { ProductCta } from "./ProductCta.jsx";
@@ -277,23 +279,6 @@ function AskGrid() {
   </div>;
 }
 
-const FAQ = [
-  { topic: "start", question: "What is FinTrack?", answer: "One login for accounting, daily and monthly finance, collections, chit funds, payments, and AI suggestions from those records." },
-  { topic: "accounts", question: "Can I use it only for accounting?", answer: "Yes. Accounts can stand on its own: Counter POS billing, vouchers, inventory, payroll, GST preparation, banking, receivables, payables, and the statements, including a page to hand the month to your accountant." },
-  { topic: "accounts", question: "Does it have a POS / billing counter?", answer: "Yes. Counter inside Accounts is the till for walk-in and khata sales. Charge posts the sale into the company books and stock. You can print a thermal receipt or share a WhatsApp receipt when you choose. Cashiers can open Counter without the rest of Accounts." },
-  { topic: "finance", question: "Can a finance business use it?", answer: "Yes. Daily Finance and Monthly Finance keep customer accounts, repayments, and collections." },
-  { topic: "finance", question: "Does it support chit funds?", answer: "Yes. Schemes, members, live bidding, payments, dividends, and reports." },
-  { topic: "accounts", question: "Does it support GST?", answer: "It prepares GST summaries from posted vouchers. Filing stays outside FinTrack." },
-  { topic: "finance", question: "Can I send WhatsApp messages?", answer: "FinTrack opens WhatsApp with a reminder, receipt, or statement. You send the message." },
-  { topic: "ai", question: "Does it have AI?", answer: "Yes, included in the plan. AI Review in Accounts gives a cash-flow forecast, expense and supplier price changes, collection priorities, unusual activity alerts, GST checks, month-end readiness, bank matching suggestions, and stock forecasts. Chit Fund has scheme health. Ask FinTrack answers questions from this workspace, and Tell FinTrack turns a plain sentence into an entry. AI also sets up new books from a few questions and maps data brought in from Tally, Zoho Books, or Excel. Every suggestion shows its reason and waits for you to act." },
-  { topic: "ai", question: "What is Ask FinTrack?", answer: "A question box on every screen. Ask “Who has not paid today?”, “Why did profit decrease?”, or “Which expenses increased this month?” and the answer comes from this workspace’s records, with the period and the report it used. It is read-only and does not guess figures it cannot find." },
-  { topic: "ai", question: "Does the AI change my books?", answer: "No. It does not post vouchers, file GST, lock a period, reverse an entry, create a purchase order, or send a message. A bank match is posted only when you approve it, a Tell FinTrack draft only when you choose Post, and imported data only when you choose Import. A locked period cannot be changed from a suggestion." },
-  { topic: "start", question: "Can I move my books from Tally or Excel?", answer: "Yes. Upload a Tally XML export, or Excel and CSV files from Zoho Books, Book Keeper, or your own sheets. FinTrack shows how many customers, suppliers, ledgers, and transactions it found, how many accounts it mapped automatically, and the exceptions for you to review before anything is imported." },
-  { topic: "accounts", question: "What reports are included?", answer: "Daily and Monthly Finance have a collection report for any date and a Daily or Monthly P&L for the lending book. Chit Fund has a month statement PDF, a commission Profit & Loss by scheme, and scheme health. Accounts has the Day Book, Trial Balance, Profit & Loss, Balance Sheet, Cash Flow, GST, item profit, receivables, payables, and stock reports, with CSV, Excel, and PDF export. For the CA gathers the month’s books, GST invoices to check, unmatched bank lines, and stock rows that need review." },
-  { topic: "start", question: "Can I install it on my phone?", answer: "Yes. FinTrack is the mobile app: add it to the home screen from Safari on iPhone or iPad, or from Chrome on Android. It opens from its own icon. Sign in the same way you do in the browser." },
-  { topic: "start", question: "How is this different from Tally?", answer: "FinTrack keeps accounting, daily and monthly collections, and chit funds in one login, and it installs on the phone. You record the day’s work there." },
-];
-
 const PROOF = [
   { icon: BadgeCheck, title: "5 modules", text: "in one login" },
   { icon: Smartphone, title: "iPhone and Android", text: "installs from the browser" },
@@ -374,6 +359,16 @@ function HomeFaq() {
             </button>
           </li>)}
         </ul>
+        {/* Phones: the same questions as a tap-to-open list. The chat layout stays for wider screens. */}
+        <div className="hm-faq-mobile">
+          <Accordion collapsible key={topic}>
+            {items.map(item => <AccordionItem key={item.question} value={item.question}>
+              <AccordionTrigger>{item.question}</AccordionTrigger>
+              <AccordionContent>{item.answer}</AccordionContent>
+            </AccordionItem>)}
+          </Accordion>
+          <p className="hm-faq-mobile-contact">Still have a question? <Link to={marketingPaths.contact}>Contact us</Link></p>
+        </div>
       </div>
       <div ref={chatRef} className="hm-chat">
         <header className="hm-chat-head">
@@ -409,7 +404,7 @@ export function HomePage() {
           <Reveal as="a" href="#ask-fintrack" className="hm-pill">
             <span className="hm-pill-tag">New</span> Ask FinTrack answers from your books <ArrowRight size={14} aria-hidden="true" />
           </Reveal>
-          <Reveal as="h1" index={1}>Collections, chits, and company books. <span>One login.</span></Reveal>
+          <Reveal as="h1" index={1}>Collections, chits, and company books.</Reveal>
           <Reveal as="p" className="hm-hero-lead" index={2}>FinTrack runs daily and monthly finance, chit funds, the cashbook, and GST-ready accounts together, on the web and on your phone.</Reveal>
           <Reveal className="hm-cta-row" index={3}>
             <ProductCta primary label="Start free trial" />

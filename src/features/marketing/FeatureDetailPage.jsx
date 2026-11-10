@@ -1,7 +1,12 @@
 import { useEffect } from "react";
 import { Link, Navigate, useParams } from "react-router";
 import { Reveal, RevealProvider } from "../../components/ui/Reveal.jsx";
-import { APP_MODULES, featureBySlug, featuresInCategory, relatedFeatures } from "./catalog.js";
+import { APP_MODULES, featureBySlug, relatedFeatures } from "./catalog.js";
+import { AccountsPage } from "./AccountsPage.jsx";
+import { ChitPage } from "./ChitPage.jsx";
+import { FinancePage } from "./FinancePage.jsx";
+import { ModuleBar } from "./ModuleKit.jsx";
+import { PosPage } from "./PosPage.jsx";
 import { FeatureIcon } from "./icons.jsx";
 import { featurePath, marketingPaths } from "./paths.js";
 import { ProductCta } from "./ProductCta.jsx";
@@ -20,8 +25,13 @@ export function FeatureDetailPage() {
     </Reveal>;
   }
   if (feature.slug !== slug) return <Navigate to={featurePath(feature.slug)} replace />;
+  if (feature.slug === "finance") return <FinancePage feature={feature} />;
+  if (feature.slug === "auction-chit") return <ChitPage feature={feature} />;
+  if (feature.slug === "accounts-overview") return <AccountsPage feature={feature} />;
+  if (feature.slug === "counter-pos") return <PosPage feature={feature} />;
   const related = relatedFeatures(feature);
   return <RevealProvider intent="landing">
+    <ModuleBar current={feature.slug} />
     <header className="mkt-page-hero">
       <div className="mkt-wrap">
         <Reveal as="p" className="mkt-kicker"><FeatureIcon name={feature.icon} size={16} /> {moduleLabel}</Reveal>
@@ -84,18 +94,5 @@ export function FeatureDetailPage() {
       </div>
       </div>
     </section>
-    {feature.slug === "accounts-overview" && <section className="mkt-section mkt-tint">
-      <div className="mkt-wrap">
-        <Reveal as="h2">Inside Accounts</Reveal>
-        <Reveal as="p" className="mkt-lead" index={1}>These are the parts a small or medium business opens after login. Each one stays on the company you have selected.</Reveal>
-        <div className="mkt-grid three">
-          {featuresInCategory("accounts").filter(item => item.slug !== "accounts-overview").map((item, index) => <Reveal as={Link} key={item.slug} to={featurePath(item.slug)} className="mkt-card mkt-card-link" index={index % 3}>
-            <div className="mkt-icon"><FeatureIcon name={item.icon} /></div>
-            <h3>{item.name}</h3>
-            <p>{item.summary}</p>
-          </Reveal>)}
-        </div>
-      </div>
-    </section>}
   </RevealProvider>;
 }

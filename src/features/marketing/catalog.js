@@ -24,6 +24,31 @@ export const FEATURES = [
     icon: "LayoutDashboard",
   },
   {
+    slug: "finance",
+    category: "finance",
+    name: "Finance",
+    summary: "Daily and monthly lending accounts, collections, and the profit on the lending book in one place.",
+    problem: "Daily receipts, monthly interest, and who still owes money end up in separate notebooks, so nobody sees the whole lending book.",
+    how: [
+      "Open a daily or monthly account for the customer with the amount and term you agree.",
+      "Record each collection against that account. A monthly receipt records the interest, principal, and penalty it covered.",
+      "See today’s collection list, what is still outstanding, and the Daily or Monthly P&L.",
+    ],
+    capabilities: [
+      "Daily customer accounts and today’s collection list",
+      "Monthly interest accounts with due amounts",
+      "Each monthly receipt split into interest, principal, and penalty",
+      "Balances, paid amounts, and customer history",
+      "Daily and Monthly collection reports and P&L",
+      "Who to collect first, with a reminder draft you confirm",
+      "Upcoming payment reminders",
+    ],
+    benefits: ["Daily and monthly lending stay in one login", "Today’s list matches the collections you record", "Each receipt shows what it covered", "Staff record only the accounts assigned to them", "Profit on the lending book is visible without a separate sheet"],
+    related: ["daily-finance", "monthly-finance", "finance-reports"],
+    appPath: "/daily-finance/todays-collections",
+    icon: "HandCoins",
+  },
+  {
     slug: "daily-finance",
     category: "finance",
     name: "Daily Finance",
@@ -1286,12 +1311,29 @@ export const FEATURES = [
 // Public nav. Home is the site root. The other items are the modules a visitor can read about.
 export const APP_MODULES = [
   { slug: "home", label: "Home", to: "/", end: true },
-  { slug: "daily-finance", label: "Daily Finance" },
-  { slug: "monthly-finance", label: "Monthly Finance" },
+  { slug: "finance", label: "Finance" },
   { slug: "auction-chit", label: "Chit Fund" },
-  { slug: "cashbook", label: "Cashbook" },
   { slug: "accounts-overview", label: "Accounts" },
+  { slug: "counter-pos", label: "POS" },
 ];
+
+// The parts of each module, in the order its page and module bar list them. Keys are the module page slugs.
+export const MODULE_FEATURES = {
+  finance: ["daily-finance", "monthly-finance", "finance-reports", "customers", "collections", "collection-staff", "customer-statements", "digital-receipts", "whatsapp-reminders", "credit-score"],
+  "auction-chit": ["auction-chit", "fixed-chit", "chit-members", "chit-payments", "live-bidding", "dividends", "chit-statements", "chit-reports"],
+  "accounts-overview": [
+    "chart-of-accounts", "ledger", "vouchers", "trade-documents", "receivables", "party-profiles", "payables",
+    "cashbook", "bank-reconciliation", "trial-balance", "profit-and-loss", "expenses", "payroll", "balance-sheet", "cash-flow",
+    "inventory", "item-profit", "gst-preparation", "audit-trail", "period-locking", "for-the-ca",
+  ],
+  "counter-pos": [],
+};
+
+// The module a feature page belongs to (a module page belongs to itself), or null.
+export function moduleForFeature(slug) {
+  if (slug in MODULE_FEATURES) return slug;
+  return Object.keys(MODULE_FEATURES).find(module => MODULE_FEATURES[module].includes(slug)) || null;
+}
 
 export function featuresInCategory(categoryId) {
   return FEATURES.filter(feature => feature.category === categoryId);
