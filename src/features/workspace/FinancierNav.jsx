@@ -41,8 +41,8 @@ export function FinancierNav({ access, orgSettings = {}, businessName = "", logo
     if (access.locked?.[moduleId]) {
       go(`${workspacePaths.moduleStore}?product=${encodeURIComponent(
         moduleId === "chit" ? "chit_fund"
-          : moduleId === "daily" || moduleId === "monthly" ? "finance_daily_monthly"
-            : moduleId === "accounts" || moduleId === "cashbook" ? "accounts"
+          : moduleId === "daily" || moduleId === "monthly" || moduleId === "cashbook" ? "finance_daily_monthly"
+            : moduleId === "accounts" ? "accounts"
               : "",
       )}`);
       return;

@@ -105,10 +105,46 @@ test("commerce mode locks unpurchased modules after trial", () => {
   });
   assert.equal(state.mode, "modules");
   assert.equal(state.enabled.has("chit"), true);
+  assert.equal(state.enabled.has("cashbook"), true);
   assert.equal(state.enabled.has("daily"), false);
   assert.equal(state.enabled.has("accounts"), false);
   assert.equal(hasPurchasedProduct(state, "chit_fund"), true);
   assert.equal(hasPurchasedProduct(state, "accounts"), false);
+});
+
+test("finance and chit products both unlock cashbook for cash in/out", () => {
+  assert.equal(appModulesFromProductKeys(["finance_daily_monthly"]).has("cashbook"), true);
+  assert.equal(appModulesFromProductKeys(["finance_daily_monthly"]).has("daily"), true);
+  assert.equal(appModulesFromProductKeys(["chit_fund"]).has("cashbook"), true);
+  assert.equal(appModulesFromProductKeys(["chit_fund"]).has("accounts"), false);
+  assert.equal(MODULE_PRODUCTS.finance_daily_monthly.bundle, true);
+  assert.equal(MODULE_PRODUCTS.chit_fund.bundle, true);
+
+  const financeOnly = resolveWorkspaceModuleState({
+    orgSettings: { featurePacks: ["full"] },
+    subscription: { status: "active", entitled: true, grandfathered: false },
+    entitlements: [{ module_key: "finance_daily_monthly", product_key: "finance_daily_monthly", status: "active" }],
+  });
+  assert.equal(financeOnly.enabled.has("cashbook"), true);
+  assert.equal(financeOnly.enabled.has("chit"), false);
+
+  const cashCopy = unlockCopyForAppModule("cashbook", "monthly");
+  assert.equal(cashCopy.productKey, "finance_daily_monthly");
+  assert.match(cashCopy.body, /Chit Fund/);
+  assert.match(cashCopy.body, /Accounts/);
+});
+
+test("finance feature pack includes cashbook for pilots", () => {
+  const state = resolveWorkspaceModuleState({
+    orgSettings: { featurePacks: ["finance"] },
+    subscription: { grandfathered: true, entitled: true, status: "active" },
+    entitlements: [],
+  });
+  assert.equal(state.enabled.has("daily"), true);
+  assert.equal(state.enabled.has("monthly"), true);
+  assert.equal(state.enabled.has("cashbook"), true);
+  assert.equal(state.enabled.has("chit"), false);
+  assert.equal(state.enabled.has("accounts"), false);
 });
 
 test("duplicate product keys collapse; unlock copy shows GST price", () => {

@@ -4,12 +4,12 @@ export const FEATURE_PACKS = {
   finance: {
     id: "finance",
     label: "MyFinTracker Finance",
-    modules: ["dashboard", "daily", "monthly", "reports", "receipts", "ai"],
+    modules: ["dashboard", "daily", "monthly", "cashbook", "reports", "receipts", "ai"],
   },
   chit: {
     id: "chit",
     label: "MyFinTracker Chit",
-    modules: ["dashboard", "chit", "reports", "receipts", "ai"],
+    modules: ["dashboard", "chit", "cashbook", "reports", "receipts", "ai"],
   },
   business: {
     id: "business",

@@ -77,22 +77,23 @@ export const MODULE_PRODUCTS = {
     key: "finance_daily_monthly",
     name: "Daily + Monthly Finance",
     shortName: "Finance",
-    description: "Daily collection finance and monthly interest finance for your lending business.",
+    description: "Daily collection finance, monthly interest finance, and cashbook for cash in and out.",
     includes: [
       "Daily collection finance",
       "Monthly interest finance",
+      "Cashbook (cash, bank, UPI movements)",
       "Customer dashboards",
       "Payment history",
       "Collection staff functionality",
     ],
-    unlocks: ["daily", "monthly", "dashboard", "reports", "receipts"],
-    bundle: false,
+    unlocks: ["daily", "monthly", "cashbook", "dashboard", "reports", "receipts"],
+    bundle: true,
   },
   chit_fund: {
     key: "chit_fund",
     name: "Chit Fund",
     shortName: "Chit Fund",
-    description: "Run chit schemes, members, auctions, payments, and dividends.",
+    description: "Run chit schemes, members, auctions, payments, dividends, and cashbook for cash in and out.",
     includes: [
       "Chit schemes",
       "Members",
@@ -100,9 +101,10 @@ export const MODULE_PRODUCTS = {
       "Payments",
       "Dividends",
       "Scheme reports",
+      "Cashbook (cash, bank, UPI movements)",
     ],
-    unlocks: ["chit", "dashboard", "reports", "receipts"],
-    bundle: false,
+    unlocks: ["chit", "cashbook", "dashboard", "reports", "receipts"],
+    bundle: true,
   },
   accounts: {
     key: "accounts",
@@ -183,9 +185,17 @@ export const APP_MODULE_PRODUCT = {
   monthly: "finance_daily_monthly",
   chit: "chit_fund",
   accounts: "accounts",
-  cashbook: "accounts",
+  // Cashbook ships with Finance, Chit, or Accounts — store deep-link prefers Finance.
+  cashbook: "finance_daily_monthly",
   counter: "accounts_pos",
 };
+
+/** Product keys that unlock the Cashbook app module (cash in/out). */
+export const CASHBOOK_PRODUCT_KEYS = ["finance_daily_monthly", "chit_fund", "accounts", "accounts_pos"];
+
+export function productUnlocksCashbook(productKey) {
+  return CASHBOOK_PRODUCT_KEYS.includes(productKey);
+}
 
 export function unlockCopyForAppModule(appModuleId, period = MODULE_BILLING_DEFAULTS.period) {
   if (appModuleId === "counter" || APP_MODULE_PRODUCT[appModuleId] === "accounts_pos") {
@@ -199,7 +209,18 @@ export function unlockCopyForAppModule(appModuleId, period = MODULE_BILLING_DEFA
       product,
     };
   }
-  if (appModuleId === "accounts" || appModuleId === "cashbook") {
+  if (appModuleId === "cashbook") {
+    const product = MODULE_PRODUCTS.finance_daily_monthly;
+    const price = priceForProduct(product, period);
+    return {
+      productKey: product.key,
+      title: "Cashbook",
+      body: `Cashbook is included with Daily + Monthly Finance, Chit Fund, or Accounts. Unlock Finance for ${price.breakdown} (${price.periodLabel}), or choose Chit Fund / Accounts in the module store.`,
+      price,
+      product,
+    };
+  }
+  if (appModuleId === "accounts") {
     const product = MODULE_PRODUCTS.accounts;
     const price = priceForProduct(product, period);
     return {
@@ -216,7 +237,7 @@ export function unlockCopyForAppModule(appModuleId, period = MODULE_BILLING_DEFA
     return {
       productKey: product.key,
       title: product.name,
-      body: `Unlock daily and monthly customer finance management for ${price.breakdown} (${price.periodLabel}).`,
+      body: `Unlock daily and monthly customer finance plus cashbook for ${price.breakdown} (${price.periodLabel}).`,
       price,
       product,
     };
@@ -227,7 +248,7 @@ export function unlockCopyForAppModule(appModuleId, period = MODULE_BILLING_DEFA
     return {
       productKey: product.key,
       title: product.name,
-      body: `Unlock chit schemes, members, auctions, payments, and dividends for ${price.breakdown} (${price.periodLabel}).`,
+      body: `Unlock chit schemes, members, auctions, payments, dividends, and cashbook for ${price.breakdown} (${price.periodLabel}).`,
       price,
       product,
     };
