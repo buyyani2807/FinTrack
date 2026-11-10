@@ -38,7 +38,9 @@ test("FEFO sorts lots by earliest expiry and skips expired", () => {
 test("cash change due is tendered minus total", () => {
   assert.equal(cashChangeDue("500", 336), 164);
   assert.equal(cashChangeDue("", 100), null);
+  assert.equal(cashChangeDue("0", 100), null);
   assert.equal(cashChangeDue("50", 100), -50);
+  assert.equal(cashChangeDue("100", 100), 0);
 });
 
 test("oversell lines flag qty above stock and skip services", () => {
@@ -70,23 +72,48 @@ test("estimate total includes GST after discounts", () => {
   assert.equal(totals.total, 118);
 });
 
-test("WhatsApp receipt uses bold store header, line detail, and TOTAL", () => {
+test("WhatsApp receipt uses retail slip layout with GST and grand total", () => {
   const text = buildCounterWhatsAppReceipt({
     companyName: "Shiva Traders",
     companyGstin: "29AAAAA0000A1Z5",
     companyPhone: "9876543210",
     tillLabel: "Till 1",
+    billNo: "B-101",
     date: "2026-11-06",
     payLabel: "Cash",
+    customerName: "Ravi",
+    customerPhone: "9876501234",
     lines: [{ itemId: "1", itemName: "Toor Dal", quantity: 9, rate: 125, unit: "Kg", sellUnit: "Kg" }],
     taxable: 1125,
+    tax: 0,
     total: 1125,
   });
+  assert.match(text, /\*BILL\*/);
   assert.match(text, /\*Shiva Traders\*/);
-  assert.match(text, /GSTIN 29AAAAA0000A1Z5/);
-  assert.match(text, /\*Sale receipt\*/);
+  assert.match(text, /GSTIN: 29AAAAA0000A1Z5/);
+  assert.match(text, /Name: Ravi \(M: 9876501234\)/);
+  assert.match(text, /Bill No\.: B-101/);
   assert.match(text, /\*Toor Dal\*/);
-  assert.match(text, /9 Kg × ₹125 = ₹1,125/);
-  assert.match(text, /\*TOTAL: ₹1,125\*/);
-  assert.match(text, /Thank you for your business/);
+  assert.match(text, /Grand Total ₹1,125/);
+  assert.match(text, /Thank You & Visit Again/);
+});
+
+test("WhatsApp receipt shows CGST/SGST for GST shops", () => {
+  const text = buildCounterWhatsAppReceipt({
+    companyName: "GST Mart",
+    companyGstin: "29AAAAA0000A1Z5",
+    lines: [{ itemId: "1", itemName: "Soap", quantity: 1, rate: 100, unit: "Nos", sellUnit: "Nos" }],
+    taxable: 100,
+    tax: 18,
+    cgst: 9,
+    sgst: 9,
+    total: 118,
+    payLabel: "UPI",
+    date: "2026-11-06",
+  });
+  assert.match(text, /\*TAX INVOICE\*/);
+  assert.match(text, /Sub Total: ₹100/);
+  assert.match(text, /CGST: ₹9/);
+  assert.match(text, /SGST: ₹9/);
+  assert.match(text, /Grand Total ₹118/);
 });

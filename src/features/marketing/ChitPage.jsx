@@ -17,7 +17,7 @@ const MODES = [
 ];
 
 export function ChitPage({ feature }) {
-  useEffect(() => { document.title = "Chit Fund — FinTrack"; }, []);
+  useEffect(() => { document.title = "Chit Fund — MyFinTracker"; }, []);
   return <RevealProvider intent="landing"><ModuleParts module="auction-chit"><div className="hm-home fx">
     <ModuleHero
       name="Chit Fund"

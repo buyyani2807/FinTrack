@@ -56,7 +56,7 @@ function ChitSchemeCard({ kind, row, open, edit, activate }) {
     </div>
     {scheme.status === "draft" && <div className="chit-scheme-actions" onClick={event => event.stopPropagation()}>
       {!predefined && <Button onClick={() => edit(scheme)}>Edit</Button>}
-      <Button className="primary" onClick={() => activate(scheme, members.length)}>Activate</Button>
+      <Button className="primary" onClick={() => activate(scheme)}>Activate</Button>
     </div>}
   </article>;
 }

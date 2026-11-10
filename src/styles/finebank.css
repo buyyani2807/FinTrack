@@ -1,5 +1,5 @@
 /*
- * FinTrack design system, based on the Finebank financial dashboard kit.
+ * MyFinTracker design system, based on the Finebank financial dashboard kit.
  * Loaded after app.css (see AppShell) so it is the final word on colour, type and shape.
  * Everything visual reads from the tokens below; the dark theme only redefines tokens.
  * Fonts (Inter, Poppins for the wordmark) are linked from index.html.
@@ -671,7 +671,8 @@ input[type="month"]::-webkit-calendar-picker-indicator { margin: 0; padding: 0; 
 .nav-profile-text span { color: var(--ft-sidebar-text); font-size: var(--ft-type-caption); }
 @media (width >= 1051px) {
   /* the business name and Logout now live in the sidebar */
-  html[data-ft-role="owner"] .shell > header.top:has(.brand) { display: none !important; }
+  html[data-ft-role="owner"] .shell > header.top:has(.brand),
+  html[data-ft-role="finance_partner"] .shell > header.top:has(.brand) { display: none !important; }
 }
 @media (width <= 1050px) {
   .financier-nav .nav-footer, .financier-nav .nav-title { display: none !important; }
@@ -693,9 +694,12 @@ input[type="month"]::-webkit-calendar-picker-indicator { margin: 0; padding: 0; 
   .financier-nav .nav-footer { display: flex !important; margin-top: auto; gap: 0; }
   .financier-nav .nav-footer .nav-profile { display: none; }
   .financier-nav .nav-logout { background: var(--ft-sidebar-chip) !important; }
-  html[data-ft-role="owner"] .shell { margin-left: var(--ft-rail-w) !important; }
-  html[data-ft-role="owner"] .shell { padding-bottom: 32px !important; }
-  html[data-ft-role="owner"] .shell > header.top:has(.brand) { display: none !important; }
+  html[data-ft-role="owner"] .shell,
+  html[data-ft-role="finance_partner"] .shell { margin-left: var(--ft-rail-w) !important; }
+  html[data-ft-role="owner"] .shell,
+  html[data-ft-role="finance_partner"] .shell { padding-bottom: 32px !important; }
+  html[data-ft-role="owner"] .shell > header.top:has(.brand),
+  html[data-ft-role="finance_partner"] .shell > header.top:has(.brand) { display: none !important; }
 }
 
 /* ------------------------------------------------------------------ theme switch (no app header: it lives in the navigation) */
@@ -726,9 +730,12 @@ input[type="month"]::-webkit-calendar-picker-indicator { margin: 0; padding: 0; 
   .ft-mobile-brand { color: #fff !important; font-size: var(--ft-type-section); line-height: 1; }
   .app:has(.ft-mobile-header) { padding-top: calc(56px + env(safe-area-inset-top, 0px)); }
   /* the bottom bar is gone: pages need no room for it */
-  html[data-ft-role="owner"] .shell, html[data-ft-role="owner"] .collection-shell, .accounts-dashboard .acc-main { padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px)) !important; }
+  html[data-ft-role="owner"] .shell, html[data-ft-role="finance_partner"] .shell,
+  html[data-ft-role="owner"] .collection-shell, html[data-ft-role="finance_partner"] .collection-shell,
+  .accounts-dashboard .acc-main { padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px)) !important; }
   /* the menu carries the business profile and Logout */
-  html[data-ft-role="owner"] .shell > header.top:has(.brand) { display: none !important; }
+  html[data-ft-role="owner"] .shell > header.top:has(.brand),
+  html[data-ft-role="finance_partner"] .shell > header.top:has(.brand) { display: none !important; }
 
   /* menu: the full sidebar, covering the whole screen */
   html .financier-nav {
@@ -757,7 +764,8 @@ input[type="month"]::-webkit-calendar-picker-indicator { margin: 0; padding: 0; 
   html .financier-nav .nav-footer .nav-logout { display: flex !important; width: 100% !important; min-height: 48px !important; padding: 12px 16px !important; color: #fff !important; font-size: var(--ft-type-ui) !important; }
 }
 /* screens without the sidebar (agents, customer portals): beside Log out in the page's top bar */
-html[data-ft-role="owner"] .top-actions .top-theme { display: none; }
+html[data-ft-role="owner"] .top-actions .top-theme,
+html[data-ft-role="finance_partner"] .top-actions .top-theme { display: none; }
 .top-actions:has(.top-theme) { flex-direction: row !important; align-items: center !important; }
 .top-actions .top-theme { flex: none; }
 @media (width <= 680px) { .top-actions .top-theme .ft-theme-toggle-label { display: none; } }
@@ -765,8 +773,15 @@ html[data-ft-role="owner"] .top-actions .top-theme { display: none; }
 .accounts-dashboard { position: static !important; inset: auto !important; z-index: auto !important; overflow: visible !important; min-height: 100svh; padding: 0 !important; }
 .accounts-dashboard .acc-shell { display: block !important; min-height: 0; }
 .accounts-dashboard .acc-main { padding: 36px 44px 74px !important; }
-@media (width >= 1051px) { html[data-ft-role="owner"] .accounts-dashboard { margin-left: calc(var(--ft-sidebar-w) + 8px); } }
-@media (681px <= width <= 1050px) { html[data-ft-role="owner"] .accounts-dashboard { margin-left: var(--ft-rail-w); } .accounts-dashboard .acc-main { padding: 28px 24px 48px !important; } }
+@media (width >= 1051px) {
+  html[data-ft-role="owner"] .accounts-dashboard,
+  html[data-ft-role="finance_partner"] .accounts-dashboard { margin-left: calc(var(--ft-sidebar-w) + 8px); }
+}
+@media (681px <= width <= 1050px) {
+  html[data-ft-role="owner"] .accounts-dashboard,
+  html[data-ft-role="finance_partner"] .accounts-dashboard { margin-left: var(--ft-rail-w); }
+  .accounts-dashboard .acc-main { padding: 28px 24px 48px !important; }
+}
 @media (width <= 680px) { .accounts-dashboard .acc-main { padding: 20px 16px calc(96px + env(safe-area-inset-bottom, 0px)) !important; } }
 /* CA login: Accounts fills the viewport (no Financier sidebar / no owner margin). */
 html[data-ft-role="accounts"] .accounts-dashboard { margin-left: 0 !important; }
@@ -1908,10 +1923,66 @@ html[data-theme="dark"] .ft-trial-banner.is-urgent { background: #3a2222; color:
 .ft-plan-card ul { margin: 0 0 16px; padding-left: 18px; }
 .ft-subscribe-help { margin-top: 12px; }
 .ft-subscribe-help h2 { margin: 16px 0 8px; font-size: var(--ft-type-card); }
+.ft-subscribe-modules { margin: 20px 0; }
+.ft-module-billing-list { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 8px; }
+.ft-module-billing-list li {
+  display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px;
+  padding: 12px 14px; border: 1px solid var(--ft-border); border-radius: 12px; background: var(--ft-surface);
+}
+.ft-module-billing-list li.is-locked { opacity: 0.92; }
+.ft-module-store { max-width: 960px; margin: 0 auto; padding: 28px 16px 64px; color: var(--ft-text); }
+.ft-module-store h1 { color: var(--ft-text); }
+.ft-module-period { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 8px; }
+.ft-module-period .btn { flex: 1 1 220px; }
+.ft-module-store-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: 18px 0;
+}
+.ft-module-card {
+  border: 1px solid var(--ft-border); border-radius: 16px; padding: 16px; background: var(--ft-surface);
+  color: var(--ft-text);
+  display: grid; gap: 8px;
+}
+.ft-module-card header { display: flex; justify-content: space-between; gap: 8px; align-items: start; }
+.ft-module-card h2 {
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--ft-text);
+  font-size: var(--ft-type-card);
+  font-weight: 700;
+  line-height: var(--ft-leading-tight);
+}
+.ft-module-card p,
+.ft-module-card li { color: var(--ft-text-2); }
+.ft-module-card .ft-plan-price { color: var(--ft-text); }
+.ft-module-card.is-selected { border-color: var(--ft-primary); box-shadow: 0 0 0 1px var(--ft-primary); }
+.ft-module-card ul { margin: 0; padding-left: 18px; }
+.ft-module-store-review { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--ft-border); }
+.ft-module-store-total { margin: 8px 0 12px; }
+.ft-module-locked {
+  min-height: 60vh; display: grid; place-items: center; padding: 24px 16px;
+}
+.ft-module-locked-card {
+  width: min(100%, 440px); border: 1px solid var(--ft-border); border-radius: 18px;
+  padding: 24px; background: var(--ft-surface); display: grid; gap: 10px;
+}
+.ft-module-locked-icon {
+  width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--ft-primary) 12%, var(--ft-surface)); color: var(--ft-primary);
+}
+.ft-module-locked-card h1 { margin: 0; font-size: var(--ft-type-title); }
+.ft-module-locked-body { margin: 0; color: var(--ft-text-2); }
+.ft-module-locked-includes { margin: 0; padding-left: 18px; }
+.ft-module-locked-price { margin: 0; font-size: var(--ft-type-section); }
+.ft-module-locked-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.financier-nav button.is-locked { opacity: 0.88; }
+.financier-nav .nav-lock { margin-left: 6px; vertical-align: -2px; }
 @media (width <= 680px) {
   .ft-trial-banner,
   .ft-trial-lockbar { align-items: flex-start; }
   .ft-subscribe { padding-top: 20px; }
+  .ft-module-locked-actions { width: 100%; }
+  .ft-module-locked-actions .btn { flex: 1 1 auto; min-height: 2.6rem; }
 }
 
 .chit-command-center{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin:22px 0 14px;padding:26px 28px;border:1px solid var(--ft-border);border-radius:20px;background:linear-gradient(120deg,color-mix(in srgb,var(--ft-primary) 9%,var(--ft-surface)),var(--ft-surface));box-shadow:var(--ft-shadow)}

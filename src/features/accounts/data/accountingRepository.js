@@ -45,7 +45,7 @@ const accQuery = (path, token) => supabase.query(path, token, accOpts());
 
 const wrap = promise => promise.catch(err => {
   if (isMissing(err)) {
-    const error = new Error("Run migrations 052–076 in the Supabase SQL editor to enable FinTrack Accounts companies, GST, attachments, items, QA hardening, bill-wise settlements, team invites, and recurring templates.");
+    const error = new Error("Run migrations 052–076 in the Supabase SQL editor to enable MyFinTracker Accounts companies, GST, attachments, items, QA hardening, bill-wise settlements, team invites, and recurring templates.");
     error.code = "MIGRATION_REQUIRED";
     error.cause = err;
     error.details = err?.details || err?.message || null;
@@ -565,7 +565,7 @@ export const postVoucher = async (token, payload) => {
     break;
   }
   if (!id) {
-    const error = new Error("Run migrations 052–076 in the Supabase SQL editor to enable FinTrack Accounts companies, GST, attachments, items, QA hardening, bill-wise settlements, team invites, and recurring templates.");
+    const error = new Error("Run migrations 052–076 in the Supabase SQL editor to enable MyFinTracker Accounts companies, GST, attachments, items, QA hardening, bill-wise settlements, team invites, and recurring templates.");
     error.code = "MIGRATION_REQUIRED";
     error.cause = lastMissing;
     error.details = lastMissing?.details || lastMissing?.message || null;
@@ -1108,7 +1108,7 @@ export const saveVoucherItemLines = async (token, voucherId, lines) => {
       throw error;
     }
     if (isMissing(err)) {
-      const error = new Error("Run migrations 052–076 in the Supabase SQL editor to enable FinTrack Accounts companies, GST, attachments, items, QA hardening, bill-wise settlements, team invites, and recurring templates.");
+      const error = new Error("Run migrations 052–076 in the Supabase SQL editor to enable MyFinTracker Accounts companies, GST, attachments, items, QA hardening, bill-wise settlements, team invites, and recurring templates.");
       error.code = "MIGRATION_REQUIRED";
       error.cause = err;
       error.details = err?.details || err?.message || null;

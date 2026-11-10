@@ -10,7 +10,7 @@ const CALENDAR = Array.from({ length: 21 }, (_, index) => index + 8);
 export function AuthShowcase() {
   return (
     <aside className="ft-auth-showcase" aria-hidden="true">
-      <span className="ft-auth-showcase-brand ft-brand"><span className="ft-brand-strong">FIN</span>Track</span>
+      <span className="ft-auth-showcase-brand ft-brand"><span className="ft-brand-strong">MyFin</span>Tracker</span>
       <div className="ft-auth-showcase-copy">
         <p className="ft-auth-kicker">Finance · Chit Fund · Accounts</p>
         <h2>Every collection, scheme and ledger in one place.</h2>
@@ -35,7 +35,7 @@ export function AuthShowcase() {
           </div>
 
           <div className="ft-auth-tile ft-auth-cashcard">
-            <span className="ft-auth-tile-label">FinTrack Cashbook</span>
+            <span className="ft-auth-tile-label">MyFinTracker Cashbook</span>
             <strong>₹2,48,500</strong>
             <span className="ft-auth-cashcard-foot"><span>Cash · Bank · UPI</span><span className="ft-auth-chip-dots"><i /><i /></span></span>
           </div>

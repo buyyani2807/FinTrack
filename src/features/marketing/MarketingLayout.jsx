@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useOutletContext } from "react-rout
 import { BookOpenText, Coins, HandCoins, House, Menu, ShoppingCart, X } from "lucide-react";
 import { APP_MODULES, moduleForFeature } from "./catalog.js";
 import marketingStyles from "./marketing.css?inline";
+import { OPEN_PRODUCT, PRODUCT_NAME } from "../../lib/brand.js";
 import { featurePath, marketingPaths } from "./paths.js";
 
 const MODULE_ICONS = {
@@ -39,7 +40,7 @@ const COMPANY_LINKS = [
 ];
 
 function Brand({ onClick }) {
-  return <Link to={marketingPaths.home} className="mkt-brand" aria-label="FinTrack home" onClick={onClick}>FIN<span>Track</span></Link>;
+  return <Link to={marketingPaths.home} className="mkt-brand" aria-label={`${PRODUCT_NAME} home`} onClick={onClick}>MyFin<span>Tracker</span></Link>;
 }
 
 export function MarketingLayout() {
@@ -62,10 +63,10 @@ export function MarketingLayout() {
   }, [open]);
 
   const login = signedIn
-    ? <Link className="mkt-btn" to="/dashboard">Open FinTrack</Link>
+    ? <Link className="mkt-btn" to="/dashboard">{OPEN_PRODUCT}</Link>
     : <Link className="mkt-btn mkt-login-link" to={marketingPaths.login}>Login</Link>;
   const start = signedIn
-    ? <Link className="mkt-btn primary" to="/dashboard">Open FinTrack</Link>
+    ? <Link className="mkt-btn primary" to="/dashboard">{OPEN_PRODUCT}</Link>
     : <Link className="mkt-btn primary" to={marketingPaths.signup}>Start free</Link>;
 
   return <div className="mkt">
@@ -101,7 +102,7 @@ export function MarketingLayout() {
           <div className="mkt-drawer-cta">
             {signedIn ? null : <Link className="mkt-btn" to={marketingPaths.login} onClick={close}>Login</Link>}
             {signedIn
-              ? <Link className="mkt-btn primary" to="/dashboard" onClick={close}>Open FinTrack</Link>
+              ? <Link className="mkt-btn primary" to="/dashboard" onClick={close}>{OPEN_PRODUCT}</Link>
               : <Link className="mkt-btn primary" to={marketingPaths.signup} onClick={close}>Start free</Link>}
           </div>
         </div>
@@ -133,14 +134,14 @@ export function MarketingLayout() {
       </div>
       <div>
         <h2>Access</h2>
-        <Link to={signedIn ? "/dashboard" : marketingPaths.login}>{signedIn ? "Open FinTrack" : "Login"}</Link>
+        <Link to={signedIn ? "/dashboard" : marketingPaths.login}>{signedIn ? OPEN_PRODUCT : "Login"}</Link>
         <Link to={marketingPaths.pricing}>Pricing</Link>
         <Link to="/?view=privacy">Privacy</Link>
         <Link to="/?view=terms">Terms</Link>
       </div>
       </div>
       <div className="mkt-wrap mkt-footer-bottom">
-        <p>© {new Date().getFullYear()} FinTrack. Built for finance businesses, chit fund operators, and traders in India.</p>
+        <p>© {new Date().getFullYear()} {PRODUCT_NAME}. Built for finance businesses, chit fund operators, and traders in India.</p>
       </div>
     </footer>
   </div>;

@@ -153,7 +153,7 @@ export function profileBusiness(text) {
   };
 }
 
-/** Accepts the AI's reading of the business, keeping only values FinTrack understands. */
+/** Accepts the AI's reading of the business, keeping only values MyFinTracker understands. */
 export function normalizeBusinessProfile(raw, text = "") {
   const local = profileBusiness(text || raw?.text || "") || profileBusiness("business");
   if (!raw || typeof raw !== "object") return local;
@@ -287,8 +287,8 @@ export function questionText(question, answers = {}, profile = null) {
     case "credit": return "Do customers buy on credit and pay you later?";
     case "banks": return `Which banks does ${name} use? I will add a ledger for each one.`;
     case "start": return kind === "business"
-      ? "From which date should FinTrack keep your books?"
-      : "Last one. From which date should FinTrack keep your books? Most businesses start at the beginning of the financial year.";
+      ? "From which date should MyFinTracker keep your books?"
+      : "Last one. From which date should MyFinTracker keep your books? Most businesses start at the beginning of the financial year.";
     default: return "";
   }
 }

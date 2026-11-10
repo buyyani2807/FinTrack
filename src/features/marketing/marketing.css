@@ -591,7 +591,41 @@ html[data-theme="dark"] .mkt-shot { border-color: #4a6274; background: #101820; 
 }
 .mkt-plan > .mkt-muted { margin: 6px 0 0; }
 .mkt-plan-prices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 28px; align-items: start; margin-top: 16px; }
+.mkt-plan-prices-rate {
+  margin: 20px 0 8px;
+  padding: 18px 20px;
+  border: 1px solid var(--mkt-line);
+  border-radius: 16px;
+  background: var(--mkt-card);
+}
 .mkt-plan-prices .mkt-muted { margin: 8px 0 0; }
+.mkt-module-price-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 20px 0 8px;
+}
+.mkt-module-price-card h2 {
+  margin: 0 0 8px;
+  color: var(--mkt-ink);
+  font-size: var(--ft-type-card);
+  font-weight: 700;
+}
+.mkt-module-price-card .mkt-ticks { margin: 10px 0 12px; }
+.mkt-module-price-line {
+  margin: 0;
+  color: var(--mkt-ink);
+  font-size: var(--ft-type-section);
+  font-weight: 700;
+}
+.mkt-module-price-line span {
+  color: var(--mkt-muted);
+  font-size: var(--ft-type-body);
+  font-weight: 600;
+}
+@media (max-width: 700px) {
+  .mkt-module-price-grid { grid-template-columns: 1fr; }
+}
 .mkt-price {
   margin: 0;
   color: var(--mkt-ink);
@@ -1087,7 +1121,7 @@ html[data-theme="dark"] .hm-home .mkt-btn:not(.primary):not(.light) { border-col
 .hm-accounts-foot .hm-points { grid-auto-flow: column; gap: 28px; margin: 0; }
 .hm-accounts-foot .hm-module-link { margin-top: 0; }
 
-/* Ask FinTrack keeps its own layout; only the section spacing follows the page. */
+/* Ask Finny keeps its own layout; only the section spacing follows the page. */
 .hm-ask { padding: 104px 0; background: var(--hm-paper); }
 .mkt .hm-ask .mkt-section-head h2 { max-width: 20ch; color: var(--hm-head, var(--hm-ink)); font-size: clamp(32px, 4vw, 48px); font-weight: 800; letter-spacing: -0.04em !important; }
 .hm-ask .mkt-kicker { border: 2px solid var(--hm-ink); }

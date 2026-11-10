@@ -2,7 +2,7 @@ import { useNavigate, useOutletContext, useParams } from "react-router";
 import { ReceiptSettingsPage } from "../../receipts/ReceiptSettingsPage.jsx";
 import { workspacePaths } from "../paths.js";
 
-// /settings/:tab (company, whatsapp, reminders): receipt and WhatsApp settings; Cancel returns to the dashboard.
+// /settings/:tab (company, whatsapp, reminders, partners): receipt/WhatsApp settings and view-only partners.
 export function SettingsRoute() {
   const { token, onSettingsSaved } = useOutletContext();
   const { tab = "company" } = useParams();

@@ -20,7 +20,7 @@ export function SessionLayout() {
   const workspaceUser = user?.role === "financier" || user?.role === "agent";
   const screen = node => <RevealProvider intent="functional"><PageReveal routeKey={`${path}${location.search}`}>{node}</PageReveal></RevealProvider>;
   const signIn = screen(<FinancierAuth onLogin={enterSession} onCustomerLogin={enterCustomerSession} onChitCustomerLogin={enterChitCustomerSession} />);
-  if (legalView) return screen(<LegalPage view={legalView} backLabel={path === "/" ? "Back to FinTrack" : "Back to sign in"} />);
+  if (legalView) return screen(<LegalPage view={legalView} backLabel={path === "/" ? "Back to MyFinTracker" : "Back to sign in"} />);
   if (isPasswordRecovery) return screen(<PasswordRecovery />);
   if (user?.role === "chitCustomer") return screen(<ChitCustomerPortal session={user.session} logout={logout} />);
   if (user && user.role !== "financier" && user.role !== "agent") return screen(<><Customer loan={customerLoan} logout={logout} /><CustomerReportDownload loan={customerLoan} /></>);

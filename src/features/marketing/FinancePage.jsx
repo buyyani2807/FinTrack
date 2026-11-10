@@ -18,7 +18,7 @@ const MODES = [
 ];
 
 export function FinancePage({ feature }) {
-  useEffect(() => { document.title = "Finance — FinTrack"; }, []);
+  useEffect(() => { document.title = "Finance — MyFinTracker"; }, []);
   return <RevealProvider intent="landing"><ModuleParts module="finance"><div className="hm-home fx">
     <ModuleHero name="Finance" title="Every loan and every collection, in one lending book." lead={feature.summary} appPath={feature.appPath} scene="finance" frameLabel="Daily Finance · Today’s collections" />
 

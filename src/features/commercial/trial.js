@@ -5,20 +5,21 @@ export const TRIAL_DAYS = 14;
 export const TRIAL_ZONE = "Asia/Kolkata";
 export const TRIAL_LENGTH_MS = TRIAL_DAYS * 24 * 60 * 60 * 1000;
 
+/** Legacy all-in-one cards removed from Subscribe UI — modules use MODULE_BILLING_DEFAULTS. */
 export const SUBSCRIPTION_PLANS = [
   {
     id: "monthly",
     name: "Monthly",
-    price: "₹499",
+    price: "From ₹498 + GST",
     period: "month",
-    note: "All modules.",
+    note: "Per module. Accounts + POS is ₹598 + GST. See module store for totals.",
   },
   {
     id: "annual",
     name: "Annual",
-    price: "₹5,000",
+    price: "From ₹5,976 + GST",
     period: "year",
-    note: "₹988 less than twelve monthly payments.",
+    note: "Per module. Accounts + POS is ₹7,176 + GST. See module store for totals.",
   },
 ];
 
@@ -182,7 +183,10 @@ export function subscriptionLockCopy(subscription) {
 export function subscriptionPathAllowed(pathname, subscription) {
   if (workspaceAccessAllowed(subscription)) return true;
   const path = String(pathname || "/").split("?")[0].replace(/\/+$/, "") || "/";
-  return path === "/subscribe" || path === "/settings" || path.startsWith("/settings/");
+  return path === "/subscribe"
+    || path.startsWith("/subscribe/")
+    || path === "/settings"
+    || path.startsWith("/settings/");
 }
 
 export function moduleOpenDuringSubscription(subscription, moduleEnabled) {

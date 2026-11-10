@@ -54,7 +54,7 @@ export function buildAccountsCompanyBackup({
 export function parseAccountsCompanyBackup(raw) {
   const data = typeof raw === "string" ? JSON.parse(raw) : raw;
   if (!data || data.format !== "fintrack-accounts-company-backup") {
-    throw new Error("Not a FinTrack Accounts company backup file.");
+    throw new Error("Not a MyFinTracker Accounts company backup file.");
   }
   if (Number(data.version) !== ACCOUNTS_BACKUP_VERSION) {
     throw new Error(`Unsupported backup version ${data.version}.`);

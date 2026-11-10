@@ -13,16 +13,18 @@ import { Modal } from "../components/ChitUi.jsx";
 
 export function ChitLiveBidding({ token, scheme, data, onFinalized, orgSettings = {}, workspace = {} }) {
   const [live, setLive] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [payoutMode, setPayoutMode] = useState("cash");
   const [payoutCash, setPayoutCash] = useState("");
   const [payoutUpi, setPayoutUpi] = useState("");
-  const refresh = () => loadChitLiveAuction(token, scheme.id).then(payload => { setLive(payload); setError(""); }).catch(err => setError(err.message || "Could not load live bidding."));
+  const refresh = () => loadChitLiveAuction(token, scheme.id).then(payload => { setLive(payload); setError(""); return payload; }).catch(err => { setError(err.message || "Could not load live bidding."); return null; });
   useEffect(() => {
     let ignore = false;
-    loadChitLiveAuction(token, scheme.id).then(payload => { if (!ignore) { setLive(payload); setError(""); } }).catch(err => { if (!ignore) setError(err.message || "Could not load live bidding."); });
+    setLoading(true);
+    loadChitLiveAuction(token, scheme.id).then(payload => { if (!ignore) { setLive(payload); setError(""); } }).catch(err => { if (!ignore) setError(err.message || "Could not load live bidding."); }).finally(() => { if (!ignore) setLoading(false); });
     return () => { ignore = true; };
   }, [scheme.id, token]);
   useEffect(() => {
@@ -140,9 +142,9 @@ export function ChitLiveBidding({ token, scheme, data, onFinalized, orgSettings 
     </div>
     {LIVE_BID_MODEL === "highest_bid_wins" && leadingMember && <p className="notice">Leading discount bid: Ticket {leadingMember.ticket_number} · {leadingMember.full_name} · {money(leading.bid_amount)} · Lift amount {money(winnerPayout)}</p>}
     {auction?.status === "open" && <p className="notice">Waiting for members to post bids from Chit customer login. You monitor here and end bidding when ready. The highest bid is recorded as that month’s winner.</p>}
-    {live && <AnomalyReviewCard review={auctionReview} />}
+    {loading ? <p className="notice">Loading live bidding members…</p> : live && <AnomalyReviewCard review={auctionReview} />}
     <div className="grid two spacer">
-      <div className="card"><strong>Participants</strong><div className="table spacer"><table><thead><tr><th>Ticket</th><th>Member</th><th>Status</th><th>Portal</th></tr></thead><tbody>{liveMembers.map(member => { const enrolled = data.enrollments.find(item => item.id === member.enrollment_id); return <tr key={member.enrollment_id}><td>{member.ticket_number}</td><td>{member.full_name}</td><td>{member.status === "eligible" ? "Eligible" : member.status === "already_won" ? "Already won" : member.status}</td><td>{enrollmentPortalId(enrolled) || "Not enabled"}</td></tr>; })}</tbody></table>{!liveMembers.length && <p className="small">No members in this scheme.</p>}</div></div>
+      <div className="card"><strong>Participants</strong><div className="table spacer">{loading ? <p className="small">Loading eligible members…</p> : <><table><thead><tr><th>Ticket</th><th>Member</th><th>Status</th><th>Portal</th></tr></thead><tbody>{liveMembers.map(member => { const enrolled = data.enrollments.find(item => item.id === member.enrollment_id); return <tr key={member.enrollment_id}><td>{member.ticket_number}</td><td>{member.full_name}</td><td>{member.status === "eligible" ? "Eligible" : member.status === "already_won" ? "Already won" : member.status}</td><td>{enrollmentPortalId(enrolled) || "Not enabled"}</td></tr>; })}</tbody></table>{!liveMembers.length && <p className="small">No members in this scheme.</p>}</>}</div></div>
       <div className="card"><strong>Bid history</strong><div className="table spacer"><table><thead><tr><th>Time</th><th>Member</th><th>Amount</th><th>Status</th></tr></thead><tbody>{(live?.bids || []).map(bid => <tr key={bid.id}><td>{formatTime(bid.submitted_at)}</td><td>Ticket {bid.ticket_number} · {bid.member_name}</td><td>{money(bid.bid_amount)}</td><td>{bid.status === "winner" ? "Lift member" : bid.status === "not_selected" ? "Not selected" : "Valid"}</td></tr>)}</tbody></table>{!(live?.bids || []).length && <p className="small">No live bids yet.</p>}</div></div>
     </div>
     {confirmEnd && <Modal close={() => setConfirmEnd(false)}><h2 className="title">End live bidding?</h2><p className="copy">This will finalize Month {auction.cycle_number} using the highest discount bid, then create the monthly bid, dividend, and installment records. Previous months will not change.</p><div className="notice">Lift member: Ticket {leadingMember?.ticket_number} · {leadingMember?.full_name}<br />Discount bid: {money(leading?.bid_amount)}<br />Lift amount: {money(winnerPayout)} (chit value − discount)<br />Manager commission: {money(limits.commission)}</div><div className="form spacer"><Field label="Lift method"><Select value={payoutMode} onChange={e => setPayoutMode(e.target.value)}><option value="cash">Cash</option><option value="upi">UPI</option><option value="cash_upi">Cash + UPI</option></Select></Field>{payoutMode === "cash_upi" && <><Field label="Cash amount (₹)"><input type="number" min="0" value={payoutCash} onChange={e => setPayoutCash(e.target.value)} /></Field><Field label="UPI amount (₹)"><input type="number" min="0" value={payoutUpi} onChange={e => setPayoutUpi(e.target.value)} /></Field></>}</div><div className="row spacer"><Button className="primary" disabled={busy} onClick={endAuction}>{busy ? "Finalizing…" : "Confirm and finalize"}</Button></div></Modal>}

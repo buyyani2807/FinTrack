@@ -10,10 +10,16 @@ import { useDialogDismiss } from "../../../components/useDialogDismiss.js";
 /** Counter / POS receipts use thermal 80 mm; Accounts credit invoices keep company template. */
 export function withCounterReceiptPrint(invoice) {
   if (!invoice) return invoice;
+  const isReturn = /return/i.test(String(invoice.narration || "")) || /return/i.test(String(invoice.title || ""));
   return {
     ...invoice,
     documentTemplate: "thermal",
     autoPrint: true,
+    posSlip: true,
+    title: isReturn ? "RETURN BILL" : (invoice.tax > 0 && invoice.companyGstin ? "TAX INVOICE" : "BILL"),
+    receiptFooter: invoice.receiptFooter && !/offline receipt/i.test(invoice.receiptFooter)
+      ? invoice.receiptFooter
+      : "Thank You & Visit Again..!",
   };
 }
 
@@ -231,7 +237,7 @@ export function SalesInvoiceViewerModal({ invoice, close, onSettle }) {
           <hr />
           <p className="small">{invoice.receiptFooter}</p>
           {invoice.receiptTerms && <p className="small muted">{invoice.receiptTerms}</p>}
-          <p className="small muted">Powered by FinTrack</p>
+          <p className="small muted">Powered by MyFinTracker</p>
           </>}
         </div>
         </ModalScroll>
@@ -316,7 +322,7 @@ export function SalesInvoiceSuccessModal({ invoice, settings = {}, close }) {
               : `Date: ${formatReceiptDate(invoice.invoiceDate)}`}
             {invoice.dueDate ? ` · Due: ${formatReceiptDate(invoice.dueDate)}` : ""}
           </p>
-          {counterReceipt ? <p className="small">Sending thermal receipt to the printer…</p> : null}
+          {counterReceipt ? <p className="small">Print dialog — choose your thermal / 80 mm printer (works on phone, Windows, and Mac).</p> : null}
           <div className="tool-stack spacer">
             {counterReceipt ? (
               <button type="button" className="btn primary" onClick={printThermalAgain}>Print again</button>

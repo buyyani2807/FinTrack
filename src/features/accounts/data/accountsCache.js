@@ -69,7 +69,7 @@ export async function fetchAccountsBundle(token, {
   if (company) {
     try { sessionStorage.setItem(COMPANY_STORAGE_KEY, company.id); } catch { /* ignore */ }
   }
-  // CA top bar (and any listeners) show the Acc company, not the FinTrack org name.
+  // CA top bar (and any listeners) show the Acc company, not the MyFinTracker org name.
   try {
     window.dispatchEvent(new CustomEvent("ft-accounts-company", {
       detail: { id: company?.id || "", name: company?.name || "" },
@@ -112,10 +112,10 @@ export async function fetchAccountsBundle(token, {
       stateCode: company.stateCode || "",
     } : null,
     settings: mergedSettings,
-    accounts,
-    parties,
+    accounts: accounts || [],
+    parties: parties || [],
     partyPipeline: Object.fromEntries((pipeline || []).map(row => [row.partyId, row.stage])),
-    vouchers,
+    vouchers: vouchers || [],
     items: items || [],
     itemCategories: itemCategories || [],
     stockMovements: stockMovements || [],

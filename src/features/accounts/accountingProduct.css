@@ -7036,24 +7036,6 @@
   line-height: 1.2;
 }
 
-.accounts-dashboard .counter-last-bill {
-  gap: 10px;
-}
-
-.accounts-dashboard .counter-last-bill .small {
-  display: inline-flex;
-  align-items: center;
-  margin: 0;
-  line-height: 1.2;
-  vertical-align: middle;
-}
-
-.accounts-dashboard .counter-last-print {
-  min-height: 2rem;
-  padding: 4px 10px;
-  border-radius: 10px;
-}
-
 .accounts-dashboard .counter-print-bar {
   display: flex;
   flex-wrap: wrap;
@@ -8015,6 +7997,23 @@
   font-size: var(--ft-type-ui);
   font-weight: 650;
   color: var(--ft-text);
+}
+
+.accounts-dashboard .counter-walkin-input {
+  width: 100%;
+  margin-top: 8px;
+  min-height: 2.4rem;
+  padding: 8px 12px;
+  border: 1px solid var(--ft-border);
+  border-radius: 12px;
+  background: var(--ft-surface);
+  color: var(--ft-text);
+  font: 500 var(--ft-type-ui)/1.3 var(--ft-font);
+  box-sizing: border-box;
+}
+
+.accounts-dashboard .counter-walkin-input::placeholder {
+  color: var(--ft-text-3);
 }
 
 .accounts-dashboard .counter-split {

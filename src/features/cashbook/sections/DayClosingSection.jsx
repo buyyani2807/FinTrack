@@ -1,10 +1,10 @@
 import { money } from "../cashbookConfig.js";
 import { PanelHead, EmptyState } from "../components/CashbookUi.jsx";
 
-export function DayClosingSection({ openClosing, closings }) {
+export function DayClosingSection({ openClosing, closings, canWrite = true }) {
   return (
     <div className="accounts-panel">
-      <PanelHead title="Day closing"><button type="button" className="btn primary" onClick={openClosing}>Record closing</button></PanelHead>
+      <PanelHead title="Day closing">{canWrite ? <button type="button" className="btn primary" onClick={openClosing}>Record closing</button> : null}</PanelHead>
       <div className="accounts-entry-list">
         {closings.map(row => {
           const reconciled = Number(row.difference) === 0;

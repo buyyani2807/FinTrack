@@ -35,7 +35,7 @@ export function draftCollectionReminder({ name, due, outstanding, date, business
     due: money(due || 0),
     outstanding: money(outstanding || 0),
     date: date || "",
-    business: businessName || "FinTrack",
+    business: businessName || "MyFinTracker",
   });
 }
 

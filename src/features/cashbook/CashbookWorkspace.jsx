@@ -36,7 +36,7 @@ import { DayClosingModal } from "./dialogs/DayClosingModal.jsx";
 import { Spinner } from "../../components/ui.jsx";
 
 // The open section is the URL (/cashbook/:section, see app/AppRoutes.jsx).
-export function CashbookWorkspace({ token, loans = [], section: routeSection = "cashbook", onSectionChange }) {
+export function CashbookWorkspace({ token, loans = [], section: routeSection = "cashbook", onSectionChange, canWrite = true }) {
   const section = SECTIONS.some(item => item.id === routeSection) ? routeSection : "cashbook";
   const setSection = next => onSectionChange?.(next);
   const [ledgers, setLedgers] = useState([]);
@@ -82,14 +82,14 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
       setClosings(closingRows);
       setReady(true);
       const initialized = entryRows.some(entry => entry.sourceType === "opening_balance");
-      if (!initialized) setShowSetup(true);
+      if (canWrite && !initialized) setShowSetup(true);
     } catch (err) {
       if (seq !== loadSeq.current) return;
       setError(err.message || "Could not load accounts.");
     } finally {
       if (seq === loadSeq.current) setLoading(false);
     }
-  }, [token]);
+  }, [token, canWrite]);
 
   useEffect(() => { refresh(); }, [refresh]);
 
@@ -123,6 +123,7 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
   );
 
   const saveSetup = async () => {
+    if (!canWrite) return;
     setError("");
     try {
       await initializeAccounts(token, {
@@ -137,16 +138,17 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
     try {
       await backfillCashbook(token);
       setShowSetup(false);
-      setNotice("Accounts initialized and existing FinTrack transactions synced.");
+      setNotice("Accounts initialized and existing MyFinTracker transactions synced.");
       refresh();
     } catch (err) {
       setShowSetup(false);
-      setError(`${err.message || "Sync failed."} Opening balances were saved — tap Sync from FinTrack on the Cashbook tab.`);
+      setError(`${err.message || "Sync failed."} Opening balances were saved — tap Sync from MyFinTracker on the Cashbook tab.`);
       refresh();
     }
   };
 
   const openManual = () => {
+    if (!canWrite) return;
     setManualForm(emptyManualForm());
     setShowManual(true);
   };
@@ -155,6 +157,7 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
     setManualForm(emptyManualForm());
   };
   const openExpense = () => {
+    if (!canWrite) return;
     setExpenseForm(emptyExpenseForm());
     setShowExpense(true);
   };
@@ -163,6 +166,7 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
     setExpenseForm(emptyExpenseForm());
   };
   const openTransfer = () => {
+    if (!canWrite) return;
     setTransferForm(emptyTransferForm());
     setShowTransfer(true);
   };
@@ -171,6 +175,7 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
     setTransferForm(emptyTransferForm());
   };
   const openClosing = () => {
+    if (!canWrite) return;
     const cashId = ledgers.find(l => l.accountType === "cash")?.id || "";
     setClosingForm(emptyClosingForm(cashId));
     setShowClosing(true);
@@ -181,6 +186,7 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
   };
 
   const saveManual = async () => {
+    if (!canWrite) return;
     try {
       await recordManualEntry(token, {
         ...manualForm,
@@ -195,6 +201,7 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
   };
 
   const saveExpense = async () => {
+    if (!canWrite) return;
     try {
       await recordExpense(token, {
         ...expenseForm,
@@ -209,6 +216,7 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
   };
 
   const saveTransfer = async () => {
+    if (!canWrite) return;
     try {
       await recordTransfer(token, {
         ...transferForm,
@@ -223,6 +231,7 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
   };
 
   const saveClosing = async () => {
+    if (!canWrite) return;
     try {
       await recordDayClosing(token, {
         ...closingForm,
@@ -237,6 +246,7 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
   };
 
   const addBank = async () => {
+    if (!canWrite) return;
     try {
       await createBankAccount(token, bankForm);
       setBankForm({ name: "", bankAccountLast4: "" });
@@ -247,7 +257,7 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
   };
 
   const removeManual = async entry => {
-    if (!entry.isEditable) return;
+    if (!canWrite || !entry.isEditable) return;
     if (!window.confirm("Delete this manual transaction?")) return;
     try {
       await deleteManualEntry(token, entry.id);
@@ -276,8 +286,9 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
   const periodProps = { period, setPeriod, customFrom, setCustomFrom, customTo, setCustomTo };
 
   return <div className="accounts-module shell">
-    <header className="top"><div><h1 className="title">Cashbook</h1><p className="copy">Cash, bank and UPI for this Finance workspace. Independent of Accounts companies and their double-entry books.</p></div></header>
+    <header className="top"><div><h1 className="title">Cashbook</h1><p className="copy">{canWrite ? "Cash, bank and UPI for this Finance workspace. Independent of Accounts companies and their double-entry books." : "View-only cash, bank and UPI for this Finance workspace. Recording changes is reserved for the owner."}</p></div></header>
     <Toasts items={[{ id: "error", tone: "error", message: error, onClose: () => setError("") }, { id: "notice", message: notice, onClose: () => setNotice("") }]} />
+    {!canWrite && ready ? <div className="notice" role="status">View only — you can review cash movements, but cannot add, edit, or sync entries.</div> : null}
     <TabScroller><nav className="accounts-section-nav spacer" aria-label="Cashbook sections">
       {SECTIONS.map(item => <button key={item.id} type="button" className={`accounts-section-tab ${section === item.id ? "active" : ""}`} onClick={() => setSection(item.id)}>{item.label}</button>)}
     </nav></TabScroller>
@@ -307,16 +318,18 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
         refresh={refresh}
         loanById={loanById}
         removeManual={removeManual}
+        canWrite={canWrite}
       />}
-      {section === "expenses" && <ExpensesSection openExpense={openExpense} periodProps={periodProps} expenseRows={expenseRows} />}
+      {section === "expenses" && <ExpensesSection openExpense={openExpense} periodProps={periodProps} expenseRows={expenseRows} canWrite={canWrite} />}
       {section === "bank" && <BankAccountsSection
         allTimeOverview={allTimeOverview}
         bankForm={bankForm}
         setBankForm={setBankForm}
         addBank={addBank}
+        canWrite={canWrite}
       />}
-      {section === "transfers" && <TransfersSection openTransfer={openTransfer} />}
-      {section === "closing" && <DayClosingSection openClosing={openClosing} closings={closings} />}
+      {section === "transfers" && <TransfersSection openTransfer={openTransfer} canWrite={canWrite} />}
+      {section === "closing" && <DayClosingSection openClosing={openClosing} closings={closings} canWrite={canWrite} />}
       {section === "reports" && <CashbookReportsSection
         periodProps={periodProps}
         exportCsv={exportCsv}
@@ -325,34 +338,34 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
         allTimeOverview={allTimeOverview}
       />}
     </>}
-    {showSetup && <OpeningBalancesModal
+    {canWrite && showSetup && <OpeningBalancesModal
       setShowSetup={setShowSetup}
       saveSetup={saveSetup}
       setupForm={setupForm}
       setSetupForm={setSetupForm}
     />}
-    {showManual && <ManualEntryModal
+    {canWrite && showManual && <ManualEntryModal
       closeManual={closeManual}
       saveManual={saveManual}
       manualForm={manualForm}
       setManualForm={setManualForm}
       ledgers={ledgers}
     />}
-    {showExpense && <ExpenseModal
+    {canWrite && showExpense && <ExpenseModal
       closeExpense={closeExpense}
       saveExpense={saveExpense}
       expenseForm={expenseForm}
       setExpenseForm={setExpenseForm}
       ledgers={ledgers}
     />}
-    {showTransfer && <TransferModal
+    {canWrite && showTransfer && <TransferModal
       closeTransfer={closeTransfer}
       saveTransfer={saveTransfer}
       transferForm={transferForm}
       setTransferForm={setTransferForm}
       ledgers={ledgers}
     />}
-    {showClosing && <DayClosingModal
+    {canWrite && showClosing && <DayClosingModal
       closeClosing={closeClosing}
       saveClosing={saveClosing}
       closingForm={closingForm}

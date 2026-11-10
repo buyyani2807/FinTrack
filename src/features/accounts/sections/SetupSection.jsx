@@ -138,7 +138,7 @@ export function SetupSection({
         <AccSetupSection
           icon="AI"
           title="Set up with AI"
-          copy={`For a different business, set up a new company: it gets its own books, and FinTrack asks what kind of business it is. To add missing bank ledgers, stock categories and ledgers to ${activeCompany?.name || "this company"}, fill its gaps; its name, GST and books start date are not changed.`}
+          copy={`For a different business, set up a new company: it gets its own books, and MyFinTracker asks what kind of business it is. To add missing bank ledgers, stock categories and ledgers to ${activeCompany?.name || "this company"}, fill its gaps; its name, GST and books start date are not changed.`}
           collapsible
           summary="Setup options"
         >
@@ -152,7 +152,7 @@ export function SetupSection({
         <AccSetupSection
           icon="↥"
           title="Move from Tally, Zoho or Excel"
-          copy="Upload your Tally XML, Zoho Books or Book Keeper export, or an Excel sheet. FinTrack maps ledgers and parties, finds duplicates, and shows you what it is unsure about before importing."
+          copy="Upload your Tally XML, Zoho Books or Book Keeper export, or an Excel sheet. MyFinTracker maps ledgers and parties, finds duplicates, and shows you what it is unsure about before importing."
           collapsible
           summary="Migration"
         >

@@ -62,7 +62,7 @@ export function buildFinanceReceipt({ loan, transaction, settings = {}, workspac
     paymentTime: transaction.createdAt
       ? new Date(transaction.createdAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" })
       : new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" }),
-    companyName: settings.companyName || "FinTrack",
+    companyName: settings.companyName || "MyFinTracker",
     companyAddress: settings.companyAddress || "",
     companyPhone: settings.companyPhone || "",
     companyEmail: settings.companyEmail || "",
@@ -143,7 +143,7 @@ export function buildChitReceipt({
     receiptNumber: paymentRow.receipt_number || paymentRow.receiptNumber || "",
     paymentDate: paymentRow.paid_date || paymentRow.paidDate || "",
     paymentTime: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" }),
-    companyName: settings.companyName || "FinTrack",
+    companyName: settings.companyName || "MyFinTracker",
     companyAddress: settings.companyAddress || "",
     companyPhone: settings.companyPhone || "",
     companyEmail: settings.companyEmail || "",
@@ -234,7 +234,7 @@ export function withReceiptBranding(receipt, settings = {}) {
   const branding = settings || {};
   return {
     ...receipt,
-    companyName: branding.companyName || receipt.companyName || "FinTrack",
+    companyName: branding.companyName || receipt.companyName || "MyFinTracker",
     companyAddress: branding.companyAddress ?? receipt.companyAddress ?? "",
     companyPhone: branding.companyPhone ?? receipt.companyPhone ?? "",
     companyEmail: branding.companyEmail ?? receipt.companyEmail ?? "",

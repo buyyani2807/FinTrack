@@ -20,7 +20,7 @@ export default async function handler(req, res) {
   let createdUserId = null;
   try {
     if (!publicSignupAllowed()) {
-      return res.status(403).json({ error: "New business signup is invite-only. Contact FinTrack support for access." });
+      return res.status(403).json({ error: "New business signup is invite-only. Contact MyFinTracker support for access." });
     }
     const { email, password, businessName, fullName, inviteCode } = req.body || {};
     if (!email?.trim() || !password) return res.status(400).json({ error: "Email and password are required" });

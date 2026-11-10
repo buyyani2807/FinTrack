@@ -17,7 +17,7 @@ const CATEGORY_SCENE = {
 
 export function FeaturesPage() {
   const location = useLocation();
-  useEffect(() => { document.title = "FinTrack features"; }, []);
+  useEffect(() => { document.title = "MyFinTracker features"; }, []);
   useEffect(() => {
     const id = location.hash.replace("#", "");
     if (!id) return undefined;

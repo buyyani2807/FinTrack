@@ -77,19 +77,20 @@ export function AccountsBusinessPulse({ metrics, receivables, payables, items, s
     {/* Items needing review are listed in the Attention center card right below. */}
   </section>;
 }
-export function AccOverviewRecent({ rows, onViewAll }) {
+export function AccOverviewRecent({ rows = [], onViewAll }) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
+  const list = Array.isArray(rows) ? rows : [];
   return (
     <section className="card acc-ov-recent-card">
       <button type="button" className="acc-ov-recent-toggle" aria-expanded={open} aria-controls={panelId} onClick={() => setOpen(current => !current)}>
-        <span>Recent transactions{rows.length ? ` · ${rows.length}` : ""}</span>
+        <span>Recent transactions{list.length ? ` · ${list.length}` : ""}</span>
         <span className="acc-ov-recent-chevron" aria-hidden="true">{open ? "▲" : "▼"}</span>
       </button>
       <div id={panelId} hidden={!open}>
-        {rows.length ? (
+        {list.length ? (
           <div className="acc-ov-recent">
-            {rows.map(voucher => (
+            {list.map(voucher => (
               <div key={voucher.id} className="acc-ov-recent-row">
                 <div>
                   <strong>{voucher.voucherNumber}</strong>

@@ -7,6 +7,8 @@ import { Reveal, RevealProvider } from "../../components/ui/Reveal.jsx";
 import { TypewriterText } from "../../components/ui/TypewriterText.jsx";
 import "../intelligence/assistant/assistant.css";
 import { FeatureIcon } from "./icons.jsx";
+import { ASK_LABEL, PRODUCT_NAME } from "../../lib/brand.js";
+import { priceForPeriod } from "../commercial/moduleProducts.js";
 import { FAQ } from "./faq.js";
 import { HomeModules } from "./HomeModules.jsx";
 import { featurePath, marketingPaths } from "./paths.js";
@@ -15,7 +17,7 @@ import { ProductPreview } from "./ProductPreview.jsx";
 
 const FY = "FY 2026–27";
 
-// Answers as Ask FinTrack returned them in the workspace on 2026-10-16.
+// Answers as Ask Finny returned them in the workspace on 2026-10-16.
 const ASK_EXAMPLES = [
   {
     icon: "HandCoins",
@@ -118,7 +120,7 @@ const ASK_EXAMPLES = [
   },
 ];
 
-// Same markup as the workspace Ask FinTrack answer; only the summary types, the rest fades in after it.
+// Same markup as the workspace Ask Finny answer; only the summary types, the rest fades in after it.
 function AskAnswer({ id, index, answer, delay, expanded, rowHeight, controls, onToggle, onMeasure }) {
   const boxRef = useRef(null);
   const bodyRef = useRef(null);
@@ -279,6 +281,9 @@ function AskGrid() {
   </div>;
 }
 
+const MONTHLY = priceForPeriod("monthly");
+const ANNUAL = priceForPeriod("annual");
+
 const PROOF = [
   { icon: BadgeCheck, title: "5 modules", text: "in one login" },
   { icon: Smartphone, title: "iPhone and Android", text: "installs from the browser" },
@@ -373,7 +378,7 @@ function HomeFaq() {
       <div ref={chatRef} className="hm-chat">
         <header className="hm-chat-head">
           <span className="hm-chat-avatar" aria-hidden="true"><MessageCircle size={20} /></span>
-          <span><strong>FinTrack</strong><small>Answers about the product</small></span>
+          <span><strong>{PRODUCT_NAME}</strong><small>Answers about the product</small></span>
         </header>
         <div ref={bodyRef} className="hm-chat-body" aria-live="polite">
           {thread.map(item => <div key={item.question} className="hm-chat-pair">
@@ -382,7 +387,7 @@ function HomeFaq() {
           </div>)}
           {typing ? <div className="hm-chat-pair">
             <p className="hm-bubble is-you">{typing.question}</p>
-            <p className="hm-bubble is-bot is-typing" aria-label="FinTrack is typing"><i /><i /><i /></p>
+            <p className="hm-bubble is-bot is-typing" aria-label={`${PRODUCT_NAME} is typing`}><i /><i /><i /></p>
           </div> : null}
         </div>
         <footer className="hm-chat-foot">
@@ -395,22 +400,22 @@ function HomeFaq() {
 }
 
 export function HomePage() {
-  useEffect(() => { document.title = "FinTrack — Accounting and collections on your phone"; }, []);
+  useEffect(() => { document.title = `${PRODUCT_NAME} — Accounting and collections on your phone`; }, []);
 
   return <RevealProvider intent="landing"><div className="hm-home">
     <section className="hm-hero hm-flip">
       <div className="mkt-wrap hm-hero-grid">
         <div className="hm-hero-copy">
-          <Reveal as="a" href="#ask-fintrack" className="hm-pill">
-            <span className="hm-pill-tag">New</span> Ask FinTrack answers from your books <ArrowRight size={14} aria-hidden="true" />
+          <Reveal as="a" href="#ask-finny" className="hm-pill">
+            <span className="hm-pill-tag">New</span> {ASK_LABEL} answers from your books <ArrowRight size={14} aria-hidden="true" />
           </Reveal>
           <Reveal as="h1" index={1}>Collections, chits, and company books.</Reveal>
-          <Reveal as="p" className="hm-hero-lead" index={2}>FinTrack runs daily and monthly finance, chit funds, the cashbook, and GST-ready accounts together, on the web and on your phone.</Reveal>
+          <Reveal as="p" className="hm-hero-lead" index={2}>{PRODUCT_NAME} runs daily and monthly finance, chit funds, the cashbook, and GST-ready accounts together, on the web and on your phone.</Reveal>
           <Reveal className="hm-cta-row" index={3}>
             <ProductCta primary label="Start free trial" />
             <Link className="mkt-btn ghost" to={marketingPaths.contact}>Book a demo</Link>
           </Reveal>
-          <Reveal as="p" className="hm-hero-note" index={4}>{["14 days free", "No payment to start", "₹499 a month after"].map(item => <span key={item}><Check size={14} aria-hidden="true" />{item}</span>)}</Reveal>
+          <Reveal as="p" className="hm-hero-note" index={4}>{["14 days free", "No payment to start", `Modules from ${MONTHLY.baseLabel} + GST a month`].map(item => <span key={item}><Check size={14} aria-hidden="true" />{item}</span>)}</Reveal>
         </div>
         <Reveal index={2} duration={1.1} style={{ minWidth: 0 }}><HeroVisual /></Reveal>
       </div>
@@ -423,15 +428,15 @@ export function HomePage() {
 
     <HomeModules />
 
-    <section className="home-mod hm-ask hm-flip" id="ask-fintrack">
+    <section className="home-mod hm-ask hm-flip" id="ask-finny">
       <div className="mkt-wrap">
         <div className="mkt-section-head">
-          <Reveal as="p" className="mkt-kicker"><FeatureIcon name="MessageCircle" size={16} /> Ask FinTrack</Reveal>
+          <Reveal as="p" className="mkt-kicker"><FeatureIcon name="MessageCircle" size={16} /> Ask Finny</Reveal>
           <Reveal as="h2" index={1}>Ask your books the way you ask your accountant.</Reveal>
-          <Reveal as="p" className="mkt-lead" index={2}>Type a question in plain English and FinTrack answers from your own records: the figures, the customers or ledgers behind them, the period, and the report they came from. One tap opens that screen.</Reveal>
+          <Reveal as="p" className="mkt-lead" index={2}>Type a question in plain English and MyFinTracker answers from your own records: the figures, the customers or ledgers behind them, the period, and the report they came from. One tap opens that screen.</Reveal>
         </div>
         <AskGrid />
-        <Reveal as="p" className="mkt-lead">Read-only. Asking never posts, sends, or changes anything, and a collection agent sees only their own customers. <Link className="mkt-text-link" to={featurePath("ask-fintrack")}>See everything you can ask</Link></Reveal>
+        <Reveal as="p" className="mkt-lead">Read-only. Asking never posts, sends, or changes anything, and a collection agent sees only their own customers. <Link className="mkt-text-link" to={featurePath("ask-finny")}>See everything you can ask</Link></Reveal>
       </div>
     </section>
 
@@ -442,7 +447,7 @@ export function HomePage() {
         <Reveal className="hm-cta-card">
           <div>
             <h2>Start your 14-day free trial today.</h2>
-            <p>Every module included. No payment to start. Then ₹499 a month or ₹5,000 a year.</p>
+            <p>Every module included. No payment to start. Then modules from {MONTHLY.baseLabel} + GST a month, or {ANNUAL.baseLabel} + GST a year.</p>
           </div>
           <div className="hm-cta-actions">
             <ProductCta primary label="Start free trial" />

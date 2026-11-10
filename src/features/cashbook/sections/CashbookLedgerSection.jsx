@@ -41,6 +41,7 @@ export function CashbookLedgerSection({
   refresh,
   loanById,
   removeManual,
+  canWrite = true,
 }) {
   const filtersActive = Boolean(search) || accountFilter !== "all" || sourceFilter !== "all" || directionFilter !== "all";
   const pagedRows = usePagedList(cashbookRows, `${period}|${periodStart}|${search}|${accountFilter}|${sourceFilter}|${directionFilter}`);
@@ -71,9 +72,9 @@ export function CashbookLedgerSection({
         </div>
       </div>
       <div className="accounts-action-row spacer">
-        <button type="button" className="btn primary" onClick={openManual}>+ Add transaction</button>
+        {canWrite ? <button type="button" className="btn primary" onClick={openManual}>+ Add transaction</button> : null}
         <ExportButton onClick={() => exportCsv(cashbookRows)} />
-        <button type="button" className="btn" onClick={() => backfillCashbook(token).then(refresh)}>Sync from FinTrack</button>
+        {canWrite ? <button type="button" className="btn" onClick={() => backfillCashbook(token).then(refresh)}>Sync from MyFinTracker</button> : null}
       </div>
       <div className="accounts-entry-list">
         {priorCount > 0 && <article className="card accounts-entry-row">
@@ -106,7 +107,7 @@ export function CashbookLedgerSection({
             {entry.reference || ""}
           </p>}
           {sourceOriginLabel(entry, loanById) && <p className="small accounts-origin-note">Synced from {sourceOriginLabel(entry, loanById)} — edit the original record to change the amount.</p>}
-          {entry.isEditable && <button type="button" className="btn danger accounts-entry-delete" onClick={() => removeManual(entry)}>Delete</button>}
+          {canWrite && entry.isEditable && <button type="button" className="btn danger accounts-entry-delete" onClick={() => removeManual(entry)}>Delete</button>}
         </article>)}
         {!cashbookRows.length && <EmptyState>{priorCount ? `No transactions from ${periodStart} to the end of this filter.` : "No cashbook entries match these filters."}</EmptyState>}
       </div>

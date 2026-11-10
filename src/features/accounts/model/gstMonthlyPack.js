@@ -206,7 +206,7 @@ export function buildGstMonthlyPack({
     ["Checks", ""],
     ...checks.map(check => [`${check.severity.toUpperCase()}: ${check.title}`, check.detail]),
     ["", ""],
-    ["Note", "Calculated from FinTrack books. Not filed on the GST portal."],
+    ["Note", "Calculated from MyFinTracker books. Not filed on the GST portal."],
   ];
 
   const partyRows = [["Party", "Type", "GSTIN", "GSTIN check", "State code", "Phone"]];
@@ -225,7 +225,7 @@ export function buildGstMonthlyPack({
   const readme = [
     `GST pack — ${label}`,
     header,
-    `Generated ${generatedAt.slice(0, 16).replace("T", " ")} UTC from FinTrack Accounts.`,
+    `Generated ${generatedAt.slice(0, 16).replace("T", " ")} UTC from MyFinTracker Accounts.`,
     "",
     "This pack is CALCULATED from the books. Nothing has been filed on the GST portal.",
     "",

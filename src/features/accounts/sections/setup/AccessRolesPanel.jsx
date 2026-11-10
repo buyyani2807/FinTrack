@@ -214,7 +214,7 @@ export function AccessRolesPanel({
       {createdLogin && (
         <div className="notice accounts-invite-email" role="status">
           <strong>{createdLogin.status === "created" ? "Login created" : "Login updated"} · {createdLogin.fullName || createdLogin.email}</strong>
-          <p className="small">Tell them to open FinTrack → sign in as <b>Owner</b> (not Agent / Customer / Chit member). They only open the companies you assigned.</p>
+          <p className="small">Tell them to open MyFinTracker → sign in as <b>Owner</b> (not Agent / Customer / Chit member). They only open the companies you assigned.</p>
           <div className="form">
             <Field label="Email"><input readOnly value={createdLogin.email || ""} /></Field>
             {createdLogin.temporaryPassword ? (
@@ -234,7 +234,7 @@ export function AccessRolesPanel({
                   const companiesLine = (createdLogin.companyNames || []).length
                     ? `\nCompanies: ${createdLogin.companyNames.join(", ")}`
                     : "";
-                  const text = `FinTrack Accounts access\n\nSign in as Owner (email + password).\nEmail: ${createdLogin.email}\nTemporary password: ${createdLogin.temporaryPassword}\nAccess: ${createdLogin.role}${companiesLine}\n\nChange the password after first sign-in using Forgot password if you prefer.`;
+                  const text = `MyFinTracker Accounts access\n\nSign in as Owner (email + password).\nEmail: ${createdLogin.email}\nTemporary password: ${createdLogin.temporaryPassword}\nAccess: ${createdLogin.role}${companiesLine}\n\nChange the password after first sign-in using Forgot password if you prefer.`;
                   try {
                     await navigator.clipboard.writeText(text);
                     setNotice("Login details copied. Paste them into WhatsApp or email for your CA.");
@@ -250,11 +250,11 @@ export function AccessRolesPanel({
               const companiesLine = (createdLogin.companyNames || []).length
                 ? `\nCompanies: ${createdLogin.companyNames.join(", ")}`
                 : "";
-              const subject = encodeURIComponent("FinTrack Accounts access");
+              const subject = encodeURIComponent("MyFinTracker Accounts access");
               const body = encodeURIComponent(
                 createdLogin.temporaryPassword
-                  ? `You have Accounts access on FinTrack.\n\n1. Open FinTrack and choose Owner sign-in.\n2. Email: ${createdLogin.email}\n3. Temporary password: ${createdLogin.temporaryPassword}\n4. Access: ${createdLogin.role}${companiesLine}\n\nPlease change the password after you sign in (Forgot password).`
-                  : `Your FinTrack Accounts access was updated (${createdLogin.role}).\n\nSign in as Owner with ${createdLogin.email}. Use Forgot password if you need a new password.`,
+                  ? `You have Accounts access on MyFinTracker.\n\n1. Open MyFinTracker and choose Owner sign-in.\n2. Email: ${createdLogin.email}\n3. Temporary password: ${createdLogin.temporaryPassword}\n4. Access: ${createdLogin.role}${companiesLine}\n\nPlease change the password after you sign in (Forgot password).`
+                  : `Your MyFinTracker Accounts access was updated (${createdLogin.role}).\n\nSign in as Owner with ${createdLogin.email}. Use Forgot password if you need a new password.`,
               );
               window.location.href = `mailto:${createdLogin.email}?subject=${subject}&body=${body}`;
             }}

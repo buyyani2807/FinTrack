@@ -33,7 +33,7 @@ function AlsoLink({ item }) {
 }
 
 export function AccountsPage({ feature }) {
-  useEffect(() => { document.title = "Accounts — FinTrack"; }, []);
+  useEffect(() => { document.title = "Accounts — MyFinTracker"; }, []);
   const more = MORE.map(featureBySlug).filter(Boolean);
   return <RevealProvider intent="landing"><ModuleParts module="accounts-overview"><div className="hm-home fx">
     <ModuleHero

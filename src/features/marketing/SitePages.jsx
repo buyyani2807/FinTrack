@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Reveal, RevealProvider } from "../../components/ui/Reveal.jsx";
+import { MODULE_PRODUCT_LIST, priceForPeriod, priceForProduct } from "../commercial/moduleProducts.js";
 import { SECURITY_POINTS, SECURITY_TRUST, SOLUTIONS, featureBySlug } from "./catalog.js";
 import { featurePath, marketingPaths } from "./paths.js";
 import { InstallGuide } from "./InstallGuide.jsx";
@@ -16,11 +17,11 @@ function PageTitle({ title }) {
 export function SolutionsPage() {
   return <RevealProvider intent="content">
   <section className="mkt-section">
-    <PageTitle title="FinTrack solutions" />
+    <PageTitle title="MyFinTracker solutions" />
     <Reveal>
       <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Solutions</p>
       <h1>One platform, for the work you already do.</h1>
-      <p className="mkt-lead">Finance businesses, chit operators, shops, traders, service companies, and small and medium businesses. Each link opens a module that is in FinTrack today.</p>
+      <p className="mkt-lead">Finance businesses, chit operators, shops, traders, service companies, and small and medium businesses. Each link opens a module that is in MyFinTracker today.</p>
     </Reveal>
     <Reveal className="mkt-grid two">
       {SOLUTIONS.map(item => <article key={item.title} className="mkt-card">
@@ -40,18 +41,18 @@ export function SolutionsPage() {
 const STEPS = [
   { title: "Open one workspace", text: "Owner sign-in opens the business workspace, or create the business account when signup is open. A CA uses the same Owner sign-in for assigned Accounts companies only. A collection agent, a customer, and a chit member each sign in on the same screen with their own ID and PIN." },
   { title: "Record the work", text: "Add daily or monthly customers, enroll a chit scheme, or post a voucher on the company you have open. Scan a supplier bill from a photo or a PDF and review the draft before you save." },
-  { title: "Review what FinTrack highlights", text: "Insights, unusual days, bill drafts, and bank suggestions are there to read. You record the payment, accept the match, or save the voucher." },
+  { title: "Review what MyFinTracker highlights", text: "Insights, unusual days, bill drafts, and bank suggestions are there to read. You record the payment, accept the match, or save the voucher." },
   { title: "Share only when you mean to", text: "Download a receipt or statement, or open WhatsApp with a draft. The message is sent when you send it. Portals show a customer or member their own records." },
 ];
 
 export function HowItWorksPage() {
   return <RevealProvider intent="content">
     <section className="mkt-section">
-      <PageTitle title="How FinTrack works" />
+      <PageTitle title="How MyFinTracker works" />
       <Reveal>
         <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>How it works</p>
         <h1>You stay in control of every record.</h1>
-        <p className="mkt-lead">FinTrack organises the workspace and suggests a next look. Posting, bidding results, and messages wait for a person.</p>
+        <p className="mkt-lead">MyFinTracker organises the workspace and suggests a next look. Posting, bidding results, and messages wait for a person.</p>
       </Reveal>
       <Reveal className="mkt-grid two mkt-steps">
         {STEPS.map(step => <article key={step.title} className="mkt-card mkt-step">
@@ -68,7 +69,7 @@ export function HowItWorksPage() {
 export function SecurityPage() {
   return <RevealProvider intent="content">
   <section className="mkt-section">
-    <PageTitle title="FinTrack security" />
+    <PageTitle title="MyFinTracker security" />
     <Reveal>
       <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Security</p>
       <h1>Access, isolation, and review.</h1>
@@ -96,55 +97,77 @@ export function SecurityPage() {
   </RevealProvider>;
 }
 
-const PLAN_INCLUDES = [
-  "Accounts, Counter POS, cashbook, payroll, and GST preparation",
-  "Daily and monthly finance",
-  "Chit schemes and live bidding",
-  "Collection agents, customer portals, and member portals",
-  "Collection reports, Daily and Monthly P&L, chit statements, and company reports",
-  "Bill scan: a supplier photo or PDF becomes a purchase draft",
-  "AI Review: cash-flow forecast, expense, GST, and month-end checks, bank matching, and stock forecasts",
-  "Receipts, and Ask FinTrack when you confirm",
-];
-
 export function PricingPage() {
+  const monthly = priceForPeriod("monthly");
+  const annual = priceForPeriod("annual");
+  const posMonthly = priceForProduct("accounts_pos", "monthly");
   return <RevealProvider intent="landing"><section className="mkt-section">
-    <PageTitle title="FinTrack pricing" />
+    <PageTitle title="MyFinTracker pricing" />
     <Reveal as="p" className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Pricing</Reveal>
-    <Reveal as="h1" index={1}>One plan for all modules.</Reveal>
-    <Reveal as="p" className="mkt-lead" index={2}>₹499 a month, or ₹5,000 a year, is the whole workspace. Accounts, finance, chit funds, collections, portals, and AI are included. There is no second plan and no module add-on.</Reveal>
-    <Reveal as="article" className="mkt-plan" index={3}>
-      <h2>FinTrack</h2>
-      <p className="mkt-muted">All modules included</p>
-      <div className="mkt-plan-prices">
-        <p className="mkt-price">₹499 <span>/ month</span></p>
-        <div>
-          <p className="mkt-price">₹5,000 <span>/ year</span></p>
-          <p className="mkt-muted">₹988 less than twelve monthly payments.</p>
-        </div>
+    <Reveal as="h1" index={1}>Pay for the modules you need.</Reveal>
+    <Reveal as="p" className="mkt-lead" index={2}>
+      Finance, Chit Fund, and Accounts are {monthly.baseLabel} + GST {monthly.gstPercentLabel} ({monthly.totalLabel} per month),
+      or {annual.baseLabel} + GST {annual.gstPercentLabel} ({annual.totalLabel} per year).
+      Accounts + POS is {posMonthly.baseLabel} + GST ({posMonthly.totalLabel} / month) — ₹100 more for Counter.
+      There is no lifetime plan. Unlock after a 14-day free trial of the full workspace.
+    </Reveal>
+    <Reveal className="mkt-plan-prices mkt-plan-prices-rate" index={3}>
+      <div>
+        <p className="mkt-muted">Standard modules / month</p>
+        <p className="mkt-price">{monthly.totalLabel} <span>/ month</span></p>
+        <p className="mkt-muted">{monthly.breakdown}</p>
       </div>
-      <ul className="mkt-ticks">{PLAN_INCLUDES.map((item, index) => <Reveal as="li" key={item} index={index} y={8}>{item}</Reveal>)}</ul>
-      <div className="mkt-cta-row"><ProductCta primary /><Link className="mkt-btn" to={marketingPaths.contact}>Request a demo</Link></div>
-      <p className="mkt-note">A new workspace includes 14 days. This page states the price. Signing up does not charge a card. After the trial, recording waits until a plan is active. Your records stay.</p>
+      <div>
+        <p className="mkt-muted">Accounts + POS / month</p>
+        <p className="mkt-price">{posMonthly.totalLabel} <span>/ month</span></p>
+        <p className="mkt-muted">{posMonthly.breakdown}</p>
+      </div>
+    </Reveal>
+    <div className="mkt-module-price-grid">
+      {MODULE_PRODUCT_LIST.map((product, index) => {
+        const productMonthly = priceForProduct(product, "monthly");
+        const productAnnual = priceForProduct(product, "annual");
+        return (
+        <Reveal as="article" key={product.key} className="mkt-card mkt-module-price-card" index={index % 4}>
+          <h2>{product.name}</h2>
+          <p>{product.description}</p>
+          <ul className="mkt-ticks">{product.includes.map(item => <li key={item}>{item}</li>)}</ul>
+          <p className="mkt-module-price-line"><strong>{productMonthly.totalLabel}</strong> <span>/ month</span></p>
+          <p className="mkt-muted">or {productAnnual.totalLabel} / year · GST included in totals</p>
+        </Reveal>
+        );
+      })}
+    </div>
+    <Reveal className="mkt-cta-row" index={4}>
+      <ProductCta primary />
+      <Link className="mkt-btn" to={marketingPaths.contact}>Request a demo</Link>
+    </Reveal>
+    <Reveal as="p" className="mkt-note" index={5}>
+      A new workspace includes 14 days with every module open. Signing up does not charge a card.
+      After the trial, unlock only what you need. Your records stay.
     </Reveal>
   </section></RevealProvider>;
 }
 
 export function PageClose() {
+  const monthly = priceForPeriod("monthly");
   return <section className="mkt-band">
     <Reveal className="mkt-wrap">
-      <h2>Start with the full workspace.</h2>
-      <p>One plan includes every module. Start free opens a 14-day trial and does not charge a card.</p>
+      <h2>Start free, then unlock modules.</h2>
+      <p>
+        A 14-day trial opens the full workspace. After that, each module is {monthly.baseLabel} + GST {monthly.gstPercentLabel} per month
+        (or yearly). Start free does not charge a card.
+      </p>
       <div className="mkt-cta-row"><ProductCta primary /><Link className="mkt-btn light" to={marketingPaths.contact}>Talk to us</Link></div>
     </Reveal>
   </section>;
 }
 
 const ABOUT_PRINCIPLES = [
-  { icon: "Sparkles", title: "You confirm every record", text: "Ask FinTrack, Tell FinTrack, bill scanning, and AI Review draft and suggest. Nothing is posted, sent, or imported until you save it." },
+  { icon: "Sparkles", title: "You confirm every record", text: "Ask Finny, Tell Finny, bill scanning, and AI Review draft and suggest. Nothing is posted, sent, or imported until you save it." },
   { icon: "Lock", title: "Each person sees only their part", text: "The owner, a collection agent, a finance customer, and a chit member each sign in separately and see only what is theirs." },
   { icon: "Landmark", title: "Built for how Indian businesses work", text: "An April to March financial year, GST preparation for your CA, rupee amounts, daily and monthly collections, and chit funds." },
-  { icon: "WalletCards", title: "One price, every module", text: "₹499 a month or ₹5,000 a year. Accounts, finance, chit funds, collections, portals, and AI are all included." },
+  { icon: "WalletCards", title: "Modules you choose", text: "₹498 + GST 18% per standard module each month (₹5,976 + GST / year). Accounts + POS is ₹598 + GST. Unlock after the free trial." },
 ];
 
 const ABOUT_SIGN_INS = [
@@ -156,18 +179,18 @@ const ABOUT_SIGN_INS = [
 
 export function AboutPage() {
   return <RevealProvider intent="landing">
-  <PageTitle title="About FinTrack" />
+  <PageTitle title="About MyFinTracker" />
   <section className="mkt-hero mkt-tint">
     <div className="mkt-wrap mkt-hero-copy">
-      <Reveal as="p" className="mkt-kicker">About FinTrack</Reveal>
+      <Reveal as="p" className="mkt-kicker">About MyFinTracker</Reveal>
       <Reveal as="h1" index={1}>One login for the books, the collections, and the chit.</Reveal>
-      <Reveal as="p" index={2}>Many finance businesses, chit fund operators, and traders keep the accounts in one place, collections in a notebook, and customers in a spreadsheet or on WhatsApp. FinTrack puts that work in one workspace that opens on a laptop and installs on iPhone and Android.</Reveal>
+      <Reveal as="p" index={2}>Many finance businesses, chit fund operators, and traders keep the accounts in one place, collections in a notebook, and customers in a spreadsheet or on WhatsApp. MyFinTracker puts that work in one workspace that opens on a laptop and installs on iPhone and Android.</Reveal>
     </div>
   </section>
 
   <section className="mkt-section">
     <div className="mkt-wrap">
-      <div className="mkt-section-head"><Reveal as="h2">What FinTrack stands for</Reveal></div>
+      <div className="mkt-section-head"><Reveal as="h2">What MyFinTracker stands for</Reveal></div>
       <div className="mkt-grid four">
         {ABOUT_PRINCIPLES.map((item, index) => <Reveal as="article" key={item.title} className="mkt-card" index={index % 4}>
           <div className="mkt-icon"><FeatureIcon name={item.icon} /></div>
@@ -181,7 +204,7 @@ export function AboutPage() {
   <section className="mkt-section mkt-tint">
     <div className="mkt-wrap">
       <div className="mkt-section-head">
-        <Reveal as="h2">Who uses FinTrack</Reveal>
+        <Reveal as="h2">Who uses MyFinTracker</Reveal>
         <Reveal as="p" className="mkt-lead" index={1}>Each business opens the modules it needs. The rest stay in the same login for later.</Reveal>
       </div>
       <div className="mkt-grid three">
@@ -191,7 +214,7 @@ export function AboutPage() {
         </Reveal>)}
         <Reveal as="article" className="mkt-card" index={SOLUTIONS.length % 3}>
           <h3>Moving from Tally, Zoho Books, or Excel</h3>
-          <p>Upload your old books. FinTrack maps the ledgers and parties and shows you what needs a decision before anything is imported.</p>
+          <p>Upload your old books. MyFinTracker maps the ledgers and parties and shows you what needs a decision before anything is imported.</p>
           <Link className="mkt-text-link" to={featurePath("ai-migration")}>How migration works</Link>
         </Reveal>
       </div>
@@ -224,15 +247,15 @@ export function AboutPage() {
 export function FounderPage() {
   return <RevealProvider intent="content">
   <section className="mkt-section">
-    <PageTitle title="Sudheer Kumar Buyyani, CEO and Founder — FinTrack" />
+    <PageTitle title="Sudheer Kumar Buyyani, CEO and Founder — MyFinTracker" />
     <Reveal>
       <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>CEO and Founder</p>
       <h1>Sudheer Kumar Buyyani</h1>
-      <p className="mkt-lead">Sudheer founded FinTrack so a business can keep accounting, collections, customers, and chit funds in one workspace.</p>
+      <p className="mkt-lead">Sudheer founded MyFinTracker so a business can keep accounting, collections, customers, and chit funds in one workspace.</p>
     </Reveal>
     <Reveal as="article" className="mkt-profile">
       <div className="mkt-profile-photo">
-        <img src="/founder/sudheer-kumar-buyyani.jpg" alt="Sudheer Kumar Buyyani, CEO and Founder of FinTrack" width="888" height="1024" />
+        <img src="/founder/sudheer-kumar-buyyani.jpg" alt="Sudheer Kumar Buyyani, CEO and Founder of MyFinTracker" width="888" height="1024" />
       </div>
       <div className="mkt-grid two">
         <article className="mkt-card">
@@ -253,7 +276,7 @@ export function FounderPage() {
 export function ContactPage() {
   const [sent, setSent] = useState(false);
   return <RevealProvider intent="content"><section className="mkt-section">
-    <PageTitle title="Contact FinTrack" />
+    <PageTitle title="Contact MyFinTracker" />
     <Reveal>
       <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Contact</p>
       <h1>Request a demo.</h1>
@@ -270,7 +293,7 @@ export function ContactPage() {
       </form>
       <article className="mkt-card">
         <h2>Prefer to sign in?</h2>
-        <p>Login opens the existing FinTrack authentication screen, including financier, collection agent, customer, and chit member.</p>
+        <p>Login opens the existing MyFinTracker authentication screen, including financier, collection agent, customer, and chit member.</p>
         <div className="mkt-cta-row"><Link className="mkt-btn primary" to={marketingPaths.login}>Login</Link></div>
       </article>
     </Reveal>
@@ -279,18 +302,18 @@ export function ContactPage() {
 
 export function ResourcesPage() {
   const links = [
-    [`${marketingPaths.how}#install`, "Install on iPhone or Android", "Add FinTrack to the home screen and open it from its own icon."],
+    [`${marketingPaths.how}#install`, "Install on iPhone or Android", "Add MyFinTracker to the home screen and open it from its own icon."],
     [marketingPaths.how, "How it works", "The path from sign-in to a record you confirm."],
     [marketingPaths.features, "Feature directory", "Every module currently in the product."],
     [marketingPaths.security, "Security", "Roles, companies, locks, and review."],
-    [marketingPaths.pricing, "Pricing", "One plan for all modules: ₹499 a month, or ₹5,000 a year."],
-    [marketingPaths.about, "About FinTrack", "What FinTrack stands for and who uses it."],
-    [marketingPaths.founder, "CEO and Founder", "Sudheer Kumar Buyyani, and the experience behind FinTrack."],
+    [marketingPaths.pricing, "Pricing", "Modules from ₹498 + GST 18% per month; Accounts + POS ₹598 + GST. 14-day free trial."],
+    [marketingPaths.about, "About MyFinTracker", "What MyFinTracker stands for and who uses it."],
+    [marketingPaths.founder, "CEO and Founder", "Sudheer Kumar Buyyani, and the experience behind MyFinTracker."],
     [marketingPaths.contact, "Request a demo", "A local note until contact is connected."],
   ];
   return <RevealProvider intent="content">
   <section className="mkt-section">
-    <PageTitle title="FinTrack resources" />
+    <PageTitle title="MyFinTracker resources" />
     <Reveal>
       <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Resources</p>
       <h1>Read the product before you sign in.</h1>

@@ -395,7 +395,7 @@ export function counterDayCloseBrief({
   const day = report?.date || "";
   const tender = report?.tender || {};
   const lines = [
-    `*${companyName || "FinTrack"} — Day close*`,
+    `*${companyName || "MyFinTracker"} — Day close*`,
     tillLabel ? `Till: ${tillLabel}` : null,
     day ? `Date: ${day}` : null,
     cashierName ? `Cashier: ${cashierName}` : null,

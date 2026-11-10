@@ -32,6 +32,7 @@ export function TodayCollectionRouteTable({
   cancelTouchDrag,
   collect,
   view,
+  canCollect = true,
 }) {
   const monthly = sectionKind === "monthly";
   const dueLabel = monthly ? "Interest due" : "Daily due";
@@ -70,9 +71,9 @@ export function TodayCollectionRouteTable({
           const statusLabel = monthly
             ? (monthlyDue.pending ? "Pending" : monthlyDue.settled ? "Collected" : "Not due")
             : (!dueEligible ? "Starts tomorrow" : paid ? "Collected" : "Pending");
-          const showCollect = monthly
+          const showCollect = canCollect && (monthly
             ? monthlyDue.pending && loan.status === "active"
-            : dueEligible && !paid && loan.status === "active";
+            : dueEligible && !paid && loan.status === "active");
           return <tr
             key={loan.id}
             data-account-id={loan.id}
@@ -116,6 +117,7 @@ export function TodayCollections({
   collect,
   view,
   canReorder = false,
+  canCollect = true,
   isOwner = true,
   businessName = "",
   draggedId,
@@ -157,6 +159,7 @@ export function TodayCollections({
     cancelTouchDrag,
     collect,
     view,
+    canCollect,
   };
   useEffect(() => {
     const sections = document.querySelectorAll(".collection-shell .collection-section");

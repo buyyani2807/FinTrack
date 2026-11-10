@@ -82,7 +82,7 @@ export function buildDailyFinanceFacts(loans = [], { asOf, isOwner = true } = {}
         row.missedDays >= 2 ? `${row.missedDays} missed collections in the last 7 days` : null,
         row.outstanding > 0 ? `${money(row.outstanding)} outstanding` : null,
         credit.available && (credit.band === "high_risk" || credit.band === "attention")
-          ? `FinTrack credit score ${credit.label}`
+          ? `MyFinTracker credit score ${credit.label}`
           : null,
       ].filter(Boolean);
       return { id: row.id, name: row.name, dueToday: row.dueToday, outstanding: row.outstanding, why };
@@ -218,7 +218,7 @@ export function buildMonthlyFinanceFacts(loans = [], { asOf, isOwner = true } = 
         missed ? `${missed} missed monthly payment${missed === 1 ? "" : "s"}` : "interest is pending",
         outstanding > 0 ? `${money(outstanding)} outstanding` : null,
         credit.available && (credit.band === "high_risk" || credit.band === "attention")
-          ? `FinTrack credit score ${credit.label}`
+          ? `MyFinTracker credit score ${credit.label}`
           : null,
       ].filter(Boolean);
       return { id: loan.id, name: loan.customerName, dueToday: next?.amount || 0, outstanding, why, missed };

@@ -83,15 +83,15 @@ export function AccIntelligenceBrief({
       ) : (
         <>
           <ul className="acc-intel-brief">
-            {report.brief.map(line => <li key={line}>{line}</li>)}
+            {(report.brief || []).map(line => <li key={line}>{line}</li>)}
           </ul>
-          {report.watch.length ? (
+          {(report.watch || []).length ? (
             <div className="acc-intel-block acc-intel-watch">
               <strong>Areas to watch</strong>
               <ul>{report.watch.slice(0, 3).map(item => <li key={item}><span className="acc-intel-priority" aria-hidden="true">!</span>{item}</li>)}</ul>
             </div>
           ) : null}
-          {report.actions.length ? (
+          {(report.actions || []).length ? (
             <div className="acc-intel-block acc-intel-actions">
               <strong>Recommended actions</strong>
               <ul>{report.actions.slice(0, 3).map(item => <li key={item}>{item}</li>)}</ul>
@@ -126,7 +126,7 @@ export function AccIntelligenceBrief({
           })}
           <article className="acc-intel-cat">
             <header><h3>Anomalies / attention required</h3></header>
-            {report.anomalies.length ? (
+            {(report.anomalies || []).length ? (
               <ul>{report.anomalies.map(item => <li key={item.title + item.detail}><em>{item.title}.</em> {item.detail}</li>)}</ul>
             ) : (
               <p className="acc-intel-empty">No unusual activity flagged from the selected period.</p>

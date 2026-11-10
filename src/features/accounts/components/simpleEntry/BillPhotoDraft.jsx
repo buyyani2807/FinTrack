@@ -209,7 +209,7 @@ export function BillPhotoDraft({
   return (
     <section className="acc-form-section acc-bill-scan">
       <h3 className="acc-form-section-title">Supplier bill</h3>
-      <p className="small">Photograph the bill, or choose a PDF. FinTrack shows what it read. The purchase form changes only after you use the draft, and nothing is posted until you save. New items are added to inventory when you use the draft; stock increases when you save the purchase.</p>
+      <p className="small">Photograph the bill, or choose a PDF. MyFinTracker shows what it read. The purchase form changes only after you use the draft, and nothing is posted until you save. New items are added to inventory when you use the draft; stock increases when you save the purchase.</p>
       <div className="acc-bill-scan-row">
         {preview ? <img src={preview} alt="Scanned bill" /> : null}
         {fileLabel ? <p className="small">{fileLabel}</p> : null}

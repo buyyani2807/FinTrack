@@ -49,29 +49,33 @@ function WorksForField({ value, onChange, companies }) {
 }
 
 export function CollectionStaffPage({ loans, loadAgents, createAgent, assignAgent, updateAgent, staffId = null, onSelect, companies = [], loadRouteCustomers, onOpenRoutes }) {
-  const [agents, setAgents] = useState([]), [search, setSearch] = useState(""), [showCreate, setShowCreate] = useState(false), [showEdit, setShowEdit] = useState(false), [showPin, setShowPin] = useState(false), [issued, setIssued] = useState(null), [error, setError] = useState(""), [draftIds, setDraftIds] = useState([]), [saved, setSaved] = useState(""), [loading, setLoading] = useState(true);
+  const [agents, setAgents] = useState([]), [search, setSearch] = useState(""), [showCreate, setShowCreate] = useState(false), [showEdit, setShowEdit] = useState(false), [showPin, setShowPin] = useState(false), [issued, setIssued] = useState(null), [error, setError] = useState(""), [draftIds, setDraftIds] = useState([]), [saved, setSaved] = useState(""), [loading, setLoading] = useState(true), [routeLoading, setRouteLoading] = useState(false);
   const refresh = async () => {
     setLoading(true); setError("");
     try {
       const list = await loadAgents();
-      const enriched = await Promise.all((list || []).map(async agent => {
-        if (!agentCollectsAccounts(agent) || !loadRouteCustomers) return agent;
-        try {
-          const result = await loadRouteCustomers(agent);
-          const fromBooks = mapAgentRouteCustomers(result?.routes, result?.stops, result?.parties, result?.agentId || agent.id);
-          if (fromBooks.length) return { ...agent, route_customers: fromBooks };
-        } catch (err) {
-          setError(err?.message || "Could not load route customers.");
-        }
-        return agent;
-      }));
-      setAgents(enriched);
+      // Load route customers only after an agent is opened; the summary list
+      // needs only agent metadata and assigned counts.
+      setAgents(list || []);
     } catch (e) { setError(e.message || "Could not load staff."); } finally { setLoading(false); }
   };
   useEffect(() => { refresh(); }, []);
   const selected = staffId ? agents.find(agent => agent.id === staffId) || null : null;
   const accountsAgent = agentCollectsAccounts(selected);
   const shownRouteCustomers = Array.isArray(selected?.route_customers) ? selected.route_customers : [];
+  useEffect(() => {
+    if (!selected || !accountsAgent || !loadRouteCustomers || shownRouteCustomers.length) return undefined;
+    let ignore = false;
+    setRouteLoading(true);
+    loadRouteCustomers(selected).then(result => {
+      if (ignore) return;
+      const customers = mapAgentRouteCustomers(result?.routes, result?.stops, result?.parties, result?.agentId || selected.id);
+      setAgents(current => current.map(agent => agent.id === selected.id ? { ...agent, route_customers: customers } : agent));
+    }).catch(err => {
+      if (!ignore) setError(err?.message || "Could not load route customers.");
+    }).finally(() => { if (!ignore) setRouteLoading(false); });
+    return () => { ignore = true; };
+  }, [selected?.id, accountsAgent, loadRouteCustomers, shownRouteCustomers.length]);
   const resetDraft = agent => { setDraftIds(loans.filter(loan => loan.collectionAgentId === agent.id).map(loan => loan.id)); setSearch(""); setSaved(""); };
   // Opening a staff member (from the list or a URL) starts their assignment draft from what is saved.
   const [draftFor, setDraftFor] = useState(null);
@@ -107,9 +111,9 @@ export function CollectionStaffPage({ loans, loadAgents, createAgent, assignAgen
           <div className="toolbar"><div><strong>Route customers</strong><p className="small">{worksForLabel(selected, companies)} customers on this agent's collection routes. Add or remove them under Accounts, with {worksForLabel(selected, companies)} selected, in Parties → Routes.</p></div>{onOpenRoutes && <Button onClick={() => onOpenRoutes(selected.accounts_company_id)}>Open routes</Button>}</div>
           {saved && <p className="green small">{saved}</p>}
           <div className="customer-search"><input aria-label="Search route customers" placeholder="Search customers" value={search} onChange={e => setSearch(e.target.value)} /></div>
-          {loading ? <Spinner label="Loading route customers" /> : <div className="table"><table><thead><tr><th>Customer</th><th>Route</th><th>Phone</th></tr></thead><tbody>{pagedRoutes.items.map(customer => <tr key={`${customer.routeId}:${customer.partyId}`}><td>{customer.name}</td><td>{customer.routeName}{customer.routeActive ? "" : " · Paused"}</td><td>{customer.phone || "—"}</td></tr>)}</tbody></table></div>}
+          {routeLoading ? <Spinner label="Loading route customers" /> : <div className="table"><table><thead><tr><th>Customer</th><th>Route</th><th>Phone</th></tr></thead><tbody>{pagedRoutes.items.map(customer => <tr key={`${customer.routeId}:${customer.partyId}`}><td>{customer.name}</td><td>{customer.routeName}{customer.routeActive ? "" : " · Paused"}</td><td>{customer.phone || "—"}</td></tr>)}</tbody></table></div>}
           <AccPager page={pagedRoutes.page} pages={pagedRoutes.pages} total={pagedRoutes.total} from={pagedRoutes.from} to={pagedRoutes.to} onPage={pagedRoutes.setPage} noun="customers" />
-          {!loading && !shownRouteCustomers.length && <p className="copy spacer">No customers on a route for this agent yet. Open routes for {worksForLabel(selected, companies)} and assign {selected.full_name}.</p>}
+          {!routeLoading && !shownRouteCustomers.length && <p className="copy spacer">No customers on a route for this agent yet. Open routes for {worksForLabel(selected, companies)} and assign {selected.full_name}.</p>}
         </div> : <div className="card">
           <div className="toolbar"><div><strong>Assigned customers</strong><p className="small">Finance and chit customers only. Select customers, then save. {draftIds.length} customers selected.</p></div></div>
           {saved && <p className="green small">{saved}</p>}
@@ -146,5 +150,5 @@ export function CreateAgent({ close, save, companies = [] }) {
     setBusy(true); setError("");
     try { await save({ name, email, phone, active: true, ...link }); } catch (e) { setError(e.message || "Could not create agent."); } finally { setBusy(false); }
   };
-  return <Modal close={close}><h2 className="title">Add collection staff</h2><p className="copy">FinTrack creates an agent ID and a 6-digit PIN. Share both privately. The agent signs in with Agent login. Email is a contact detail, not the login. Accounts agents collect that company's route customers. Finance and chit agents collect the customers you assign here.</p><div className="form spacer"><Field label="Staff name"><input value={name} onChange={e => setName(e.target.value)} /></Field><Field label="Email address"><input type="email" value={email} onChange={e => setEmail(e.target.value)} /></Field><Field label="Mobile number"><input inputMode="tel" value={phone} onChange={e => setPhone(e.target.value)} /></Field><WorksForField value={worksFor} onChange={setWorksFor} companies={companies} /></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button className="primary" disabled={busy || !name.trim() || !worksFor} onClick={submit}>{busy ? "Creating…" : "Create staff"}</Button></div></Modal>;
+  return <Modal close={close}><h2 className="title">Add collection staff</h2><p className="copy">MyFinTracker creates an agent ID and a 6-digit PIN. Share both privately. The agent signs in with Agent login. Email is a contact detail, not the login. Accounts agents collect that company's route customers. Finance and chit agents collect the customers you assign here.</p><div className="form spacer"><Field label="Staff name"><input value={name} onChange={e => setName(e.target.value)} /></Field><Field label="Email address"><input type="email" value={email} onChange={e => setEmail(e.target.value)} /></Field><Field label="Mobile number"><input inputMode="tel" value={phone} onChange={e => setPhone(e.target.value)} /></Field><WorksForField value={worksFor} onChange={setWorksFor} companies={companies} /></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button className="primary" disabled={busy || !name.trim() || !worksFor} onClick={submit}>{busy ? "Creating…" : "Create staff"}</Button></div></Modal>;
 }

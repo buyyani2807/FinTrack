@@ -163,7 +163,7 @@ function layoutCustomerStatement(bundle) {
     }
   };
 
-  commands.push(text("F2", 16, PAGE.left, y, String(bundle.companyName || "FinTrack").toUpperCase()));
+  commands.push(text("F2", 16, PAGE.left, y, String(bundle.companyName || "MyFinTracker").toUpperCase()));
   y -= 16;
   commands.push(text("F2", 13, PAGE.left, y, "CUSTOMER STATEMENT"));
   y -= 18;

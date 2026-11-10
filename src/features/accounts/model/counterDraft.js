@@ -18,6 +18,8 @@ export function emptyCounterDraft() {
     receivedUpi: "",
     tenderedCash: "",
     paymentRef: "",
+    walkInName: "",
+    walkInPhone: "",
   };
 }
 
@@ -42,6 +44,8 @@ export function readCounterDraft(companyId, tillId = "till-1") {
       receivedUpi: parsed.receivedUpi == null ? "" : String(parsed.receivedUpi),
       tenderedCash: parsed.tenderedCash == null ? "" : String(parsed.tenderedCash),
       paymentRef: parsed.paymentRef == null ? "" : String(parsed.paymentRef),
+      walkInName: parsed.walkInName == null ? "" : String(parsed.walkInName),
+      walkInPhone: parsed.walkInPhone == null ? "" : String(parsed.walkInPhone),
     };
   } catch {
     return null;
@@ -69,6 +73,8 @@ export function saveCounterDraft(companyId, tillId = "till-1", draft = null) {
       receivedUpi: draft.receivedUpi == null ? "" : String(draft.receivedUpi),
       tenderedCash: draft.tenderedCash == null ? "" : String(draft.tenderedCash),
       paymentRef: draft.paymentRef == null ? "" : String(draft.paymentRef),
+      walkInName: draft.walkInName == null ? "" : String(draft.walkInName),
+      walkInPhone: draft.walkInPhone == null ? "" : String(draft.walkInPhone),
       savedAt: new Date().toISOString(),
     };
     localStorage.setItem(draftKey(companyId, tillId), JSON.stringify(payload));

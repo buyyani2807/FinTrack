@@ -42,7 +42,7 @@ export function CreditScoreGauge({ score = 300, available = true, size = 320 }) 
   const right = { x: cx - px * 8, y: cy - py * 8 };
   const scale = size / 360;
 
-  return <svg className="credit-score-gauge" viewBox="0 0 360 250" width={size} height={250 * scale} role="img" aria-label={available ? `FinTrack Credit Score ${score}` : "FinTrack Credit Score not available"}>
+  return <svg className="credit-score-gauge" viewBox="0 0 360 250" width={size} height={250 * scale} role="img" aria-label={available ? `MyFinTracker Credit Score ${score}` : "MyFinTracker Credit Score not available"}>
     {GAUGE_SEGMENTS.map(segment => {
       const mid = (segment.start + segment.end) / 2;
       const labelPos = polar(cx, cy, outer + 22, mid);
@@ -72,7 +72,7 @@ export function CreditScoreDetails({ result, close, accountLabel }) {
   if (!result) return null;
   return <div className="modal-bg" ref={layerRef} onClick={close}><div className="modal credit-score-modal" onClick={event => event.stopPropagation()}>
     <div className="row modal-head">
-      <h2 className="title">FinTrack Credit Score</h2>
+      <h2 className="title">MyFinTracker Credit Score</h2>
       <CloseButton onClick={close} />
     </div>
     <ModalScroll>
@@ -119,7 +119,7 @@ export function CreditScoreDetails({ result, close, accountLabel }) {
         <ul className="credit-score-history">{result.history.map(item => <li key={item.month}><span>{item.label}</span><strong>{item.score}</strong></li>)}</ul>
       </div>}
     </>}
-    <p className="small credit-score-disclaimer">FinTrack Credit Score is an internal assessment based on payment history recorded in FinTrack. It is not an official credit-bureau score.</p>
+    <p className="small credit-score-disclaimer">MyFinTracker Credit Score is an internal assessment based on payment history recorded in MyFinTracker. It is not an official credit-bureau score.</p>
     </ModalScroll>
   </div></div>;
 }
@@ -144,7 +144,7 @@ export function CreditScoreCard({
       <div className="credit-score-card-main">
         <div className="credit-score-gauge-wrap"><CreditScoreGauge score={result.score} available={result.available} size={280} /></div>
         <div className="credit-score-card-copy">
-          <p className="credit-score-kicker">FinTrack Credit Score</p>
+          <p className="credit-score-kicker">MyFinTracker Credit Score</p>
           {result.available ? <>
             <strong className="credit-score-number" style={{ color }}>{result.score}</strong>
             <span className={`credit-score-rating ${result.band}`}>{result.rating} {result.trend === "improving" ? "↑" : result.trend === "declining" ? "↓" : ""}</span>
@@ -168,7 +168,7 @@ export function CreditScoreCard({
         {result.positives.slice(0, 3).map(item => <p key={item} className="credit-score-why-good">🟢 {item}</p>)}
         {result.negatives.slice(0, 2).map(item => <p key={item} className="credit-score-why-bad">🔴 {item}</p>)}
       </div>}
-      <p className="small credit-score-disclaimer">Internal FinTrack assessment from recorded payments. Not a bureau score.</p>
+      <p className="small credit-score-disclaimer">Internal MyFinTracker assessment from recorded payments. Not a bureau score.</p>
     </section>
     {open && <CreditScoreDetails result={result} close={() => setOpen(false)} accountLabel={accountLabel} />}
   </>;

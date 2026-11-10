@@ -407,7 +407,7 @@ function taxTarget(name, ledger, accounts) {
   }
   const guessInput = ledger.openingBalance > 0 && ledger.openingSide === "debit";
   const account = accountByCode(accounts, SYSTEM_CODES[`${guessInput ? "input" : "output"}${which}`]);
-  return { coaId: account?.id || "", confidence: 0.55, reason: `"${name}" does not say input or output. FinTrack keeps them apart, so choose one.` };
+  return { coaId: account?.id || "", confidence: 0.55, reason: `"${name}" does not say input or output. MyFinTracker keeps them apart, so choose one.` };
 }
 
 function bankTarget(name, accounts) {
@@ -431,7 +431,7 @@ function mapLedger(ledger, accounts) {
     case "tax": return taxTarget(ledger.name, ledger, accounts);
     case "sales": return /service/i.test(ledger.name) && code(SYSTEM_CODES.serviceIncome)
       ? { coaId: code(SYSTEM_CODES.serviceIncome), confidence: 0.9, reason: "Service Income." }
-      : { coaId: code(SYSTEM_CODES.sales), confidence: 0.9, reason: "Sales. GST rate splits are tracked on each invoice in FinTrack." };
+      : { coaId: code(SYSTEM_CODES.sales), confidence: 0.9, reason: "Sales. GST rate splits are tracked on each invoice in MyFinTracker." };
     case "purchase": return { coaId: code(SYSTEM_CODES.purchase), confidence: 0.9, reason: "Purchase." };
     case "expense": return { create: { groupType: "expense", accountType: "expense" }, confidence: 0.9, reason: "Expense ledger." };
     case "income": return /interest/i.test(ledger.name) && code(SYSTEM_CODES.interestIncome)
@@ -451,7 +451,7 @@ function mapLedger(ledger, accounts) {
     case "liability": return { create: { groupType: "liability", accountType: "other" }, confidence: 0.82, reason: "Liability ledger." };
     case "asset": return { create: { groupType: "asset", accountType: "other" }, confidence: 0.82, reason: "Asset ledger." };
     case "suspense": return { create: { groupType: "asset", accountType: "other" }, confidence: 0.3, reason: "Suspense holds entries nobody classified. Decide where they belong." };
-    default: return { create: { groupType: "asset", accountType: "other" }, confidence: 0.2, reason: ledger.group ? `FinTrack does not know the group "${ledger.group}".` : "This ledger has no group in the file." };
+    default: return { create: { groupType: "asset", accountType: "other" }, confidence: 0.2, reason: ledger.group ? `MyFinTracker does not know the group "${ledger.group}".` : "This ledger has no group in the file." };
   }
 }
 
@@ -622,14 +622,14 @@ export function analyzeMigration(files, { accounts = [], parties = [] } = {}) {
   };
 }
 
-/** Applies AI suggestions for ledgers FinTrack could not place on its own. */
+/** Applies AI suggestions for ledgers MyFinTracker could not place on its own. */
 export function applyAiSuggestions(analysis, suggestions = []) {
   const byName = new Map(suggestions.map(item => [norm(item.name), item.target]));
   for (const ledger of analysis.ledgers) {
     if (ledger.suggested.confidence >= AUTO_MAP_CONFIDENCE) continue;
     const target = parseTargetValue(byName.get(ledger.key));
     if (!target) continue;
-    ledger.suggested = { ...target, confidence: 0.75, reason: "Suggested by FinTrack AI. Please confirm.", ai: true };
+    ledger.suggested = { ...target, confidence: 0.75, reason: "Suggested by MyFinTracker AI. Please confirm.", ai: true };
   }
   return analysis;
 }

@@ -196,7 +196,7 @@ export function collectionReceiptMessage(result = {}) {
     `Balance due: ${formatInr(Math.max(0, Number(result.outstandingAfter || 0)))}`,
   ].filter(Boolean);
   const footer = [result.agentName ? `Collected by ${result.agentName}.` : "", "Thank you."].filter(Boolean);
-  return [`Payment received - ${result.companyName || "FinTrack"}`, "", ...body, "", ...footer].join("\n");
+  return [`Payment received - ${result.companyName || "MyFinTracker"}`, "", ...body, "", ...footer].join("\n");
 }
 
 export const mapCollectionResult = row => ({

@@ -140,7 +140,7 @@ export function readZipEntries(buffer) {
       const data = bytes.subarray(start, start + compressedSize);
       if (method === 0) return data;
       if (method === 8) return inflateRaw(data);
-      throw new Error("This Excel file uses compression FinTrack cannot read. Save it again as .xlsx or CSV.");
+      throw new Error("This Excel file uses compression MyFinTracker cannot read. Save it again as .xlsx or CSV.");
     });
     offset += 46 + nameLength + extraLength + commentLength;
   }
@@ -220,7 +220,7 @@ export async function readXlsx(buffer) {
   const entries = readZipEntries(buffer);
   const text = async name => (entries.has(name) ? new TextDecoder("utf-8").decode(await entries.get(name)()) : "");
   const workbook = await text("xl/workbook.xml");
-  if (!workbook) throw new Error("This Excel file has no worksheets FinTrack can read.");
+  if (!workbook) throw new Error("This Excel file has no worksheets MyFinTracker can read.");
   const rels = await text("xl/_rels/workbook.xml.rels");
   const targets = new Map();
   for (const match of rels.matchAll(/<Relationship\b[^>]*>/g)) targets.set(attr(match[0], "Id"), attr(match[0], "Target"));

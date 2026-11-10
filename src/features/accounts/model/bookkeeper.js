@@ -364,7 +364,7 @@ export function freeLedgerCode(accounts = [], preferred = "9000") {
   return String(code);
 }
 
-/** The ledger FinTrack offers to add when the books have none for this kind of entry. */
+/** The ledger MyFinTracker offers to add when the books have none for this kind of entry. */
 export function starterLedger(action, accounts = []) {
   const starter = STARTER_LEDGERS[action];
   if (!starter) return null;

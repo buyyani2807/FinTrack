@@ -9,6 +9,9 @@ import { usePartLink } from "./moduleParts.js";
 import { featurePath, marketingPaths } from "./paths.js";
 import { ProductCta } from "./ProductCta.jsx";
 import { ProductPreview } from "./ProductPreview.jsx";
+import { priceForPeriod } from "../commercial/moduleProducts.js";
+
+const MONTHLY = priceForPeriod("monthly");
 
 // Shared parts of the Finance, Chit Fund, and Accounts pages. Styles: the "Module pages" block in marketing.css.
 
@@ -115,7 +118,7 @@ export function ModuleClosing({ title, appPath, points }) {
   return <section className="fx-end hm-flip">
     <div className="mkt-wrap fx-end-inner">
       <Reveal as="h2">{title}</Reveal>
-      <Reveal as="p" index={1}>14 days free. Every module included. No payment to start, then ₹499 a month.</Reveal>
+      <Reveal as="p" index={1}>14 days free. Every module included. No payment to start, then modules from {MONTHLY.baseLabel} + GST a month.</Reveal>
       <Reveal className="fx-actions is-center" index={2}>
         <ProductCta appPath={appPath} primary label="Start free trial" />
         <Link className="mkt-btn" to={marketingPaths.contact}>Talk to us</Link>

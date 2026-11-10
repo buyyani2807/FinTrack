@@ -1,4 +1,5 @@
 import { isModuleEnabled } from "../commercial/entitlements.js";
+import { isAppModuleOpen } from "../commercial/moduleAccess.js";
 
 // URL paths for the financier workspace; each sidebar option is one route. The route table in src/app/AppRoutes.jsx uses
 // these same paths, so change both together.
@@ -13,6 +14,7 @@ export const workspacePaths = {
   routeCollections: "/route-collections",
   settings: "/settings",
   subscribe: "/subscribe",
+  moduleStore: "/subscribe/modules",
 };
 
 // Tabs of Daily / Monthly Finance; each is a child route, e.g. /daily-finance/customers (see src/app/AppRoutes.jsx).
@@ -47,16 +49,44 @@ export const chitSchemePath = schemeId => chitPath({ schemeId });
 export const isWithin = (pathname, target) => pathname === target || pathname.startsWith(`${target}/`);
 
 // Which workspace modules this user may open. Owner-only modules also need the owner role.
-export function workspaceModuleAccess(orgSettings = {}, workspace = {}) {
+// When moduleState is provided (commerce), locked modules stay visible for owners but open=false.
+export function workspaceModuleAccess(orgSettings = {}, workspace = {}, moduleState = null) {
   const isOwner = workspace?.role === "owner";
   const isAccountsUser = workspace?.role === "accounts";
+  const isFinancePartner = workspace?.role === "finance_partner";
+  const canViewOwnerFinance = isOwner || isFinancePartner;
+  const packOpen = moduleId => (moduleState
+    ? isAppModuleOpen(moduleState, moduleId)
+    : isModuleEnabled(orgSettings, moduleId));
+  const dailyOpen = canViewOwnerFinance && packOpen("daily");
+  const monthlyOpen = canViewOwnerFinance && packOpen("monthly");
+  const chitOpen = isOwner && packOpen("chit");
+  const cashbookOpen = canViewOwnerFinance && packOpen("cashbook");
+  const accountsOpen = (isOwner || isAccountsUser) && packOpen("accounts");
   return {
     isOwner,
     isAccountsUser,
-    daily: isOwner && isModuleEnabled(orgSettings, "daily"),
-    monthly: isOwner && isModuleEnabled(orgSettings, "monthly"),
-    chit: isOwner && isModuleEnabled(orgSettings, "chit"),
-    cashbook: isOwner && isModuleEnabled(orgSettings, "cashbook"),
-    accounts: (isOwner || isAccountsUser) && isModuleEnabled(orgSettings, "accounts"),
+    isFinancePartner,
+    canViewOwnerFinance,
+    canWriteFinance: isOwner,
+    daily: dailyOpen,
+    monthly: monthlyOpen,
+    chit: chitOpen,
+    cashbook: cashbookOpen,
+    accounts: accountsOpen,
+    // Visible in nav even when locked (owners discover modules; partners only see unlocked finance).
+    showDaily: canViewOwnerFinance,
+    showMonthly: canViewOwnerFinance,
+    showChit: isOwner,
+    showCashbook: canViewOwnerFinance,
+    showAccounts: isOwner || isAccountsUser,
+    locked: {
+      daily: isOwner && !dailyOpen,
+      monthly: isOwner && !monthlyOpen,
+      chit: isOwner && !chitOpen,
+      cashbook: isOwner && !cashbookOpen,
+      accounts: (isOwner || isAccountsUser) && !accountsOpen,
+      counter: isOwner && moduleState && !isAppModuleOpen(moduleState, "counter"),
+    },
   };
 }

@@ -74,7 +74,7 @@ export function PayPage() {
           <span className="small">UPI ID: <strong>{params.upiId}</strong></span>
           <button type="button" className="btn ghost" onClick={copyUpiId}>{copied ? "Copied" : "Copy"}</button>
         </div>
-        <p className="small muted">Check the payee name in your UPI app before you pay. FinTrack does not process this payment.</p>
+        <p className="small muted">Check the payee name in your UPI app before you pay. MyFinTracker does not process this payment.</p>
       </section>
     </main>
   );

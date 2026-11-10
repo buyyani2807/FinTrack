@@ -281,7 +281,7 @@ export default async function handler(req, res) {
       const rows = await existingProfile.json().catch(() => []);
       const row = Array.isArray(rows) ? rows[0] : null;
       if (row && row.organization_id !== orgId) {
-        return json(res, 409, { error: "That email already belongs to another FinTrack business. Use a different email." });
+        return json(res, 409, { error: "That email already belongs to another MyFinTracker business. Use a different email." });
       }
       if (row && row.organization_id === orgId && row.role === "owner") {
         return json(res, 400, { error: "That email is already the owner of this business." });
@@ -329,7 +329,7 @@ export default async function handler(req, res) {
           message: "This CA already had a login. Their role and company access were updated. Ask them to sign in with their existing password, or use Forgot password.",
         });
       }
-      return json(res, 409, { error: "That email is already registered on FinTrack. Use a different email." });
+      return json(res, 409, { error: "That email is already registered on MyFinTracker. Use a different email." });
     }
 
     const password = temporaryAuthPassword();

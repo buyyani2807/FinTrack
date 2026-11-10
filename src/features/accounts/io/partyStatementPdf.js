@@ -60,7 +60,7 @@ function layoutPartyStatement({
   const m = typeof money === "function" ? money : value => `Rs.${Number(value || 0).toFixed(2)}`;
   const rows = partyBook.rows || [];
 
-  commands.push(text("F2", 16, PAGE.left, y, String(company.name || company.legalName || "FinTrack").toUpperCase()));
+  commands.push(text("F2", 16, PAGE.left, y, String(company.name || company.legalName || "MyFinTracker").toUpperCase()));
   y -= 18;
   commands.push(text("F2", 12, PAGE.left, y, "PARTY STATEMENT OF ACCOUNT"));
   y -= 20;
@@ -105,12 +105,12 @@ function layoutPartyStatement({
   }
   if (rows.length > maxRows) {
     y -= 4;
-    commands.push(text("F1", 8, PAGE.left, y, `… and ${rows.length - maxRows} more lines in FinTrack`));
+    commands.push(text("F1", 8, PAGE.left, y, `… and ${rows.length - maxRows} more lines in MyFinTracker`));
     y -= 14;
   }
   y -= 8;
   commands.push(line(PAGE.left, y, PAGE.right, y)); y -= 16;
-  commands.push(text("F1", 9, PAGE.left, y, "Generated from FinTrack Accounts. Not a tax invoice."));
+  commands.push(text("F1", 9, PAGE.left, y, "Generated from MyFinTracker Accounts. Not a tax invoice."));
   return [commands];
 }
 

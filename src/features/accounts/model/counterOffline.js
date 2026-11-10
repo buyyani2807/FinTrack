@@ -52,7 +52,7 @@ export function offlineChargeBlocked(bills = [], now = Date.now()) {
 
 export function buildOfflineReceiptInvoice({
   bill,
-  companyName = "FinTrack",
+  companyName = "MyFinTracker",
   companyAddress = "",
   companyGstin = "",
   companyPhone = "",
@@ -79,19 +79,23 @@ export function buildOfflineReceiptInvoice({
   const igst = roundMoney(rawLines.reduce((sum, line) => sum + Number(line.igstAmount || 0), 0));
   const tax = roundMoney(Number(bill.payload?.totals?.tax) || cgst + sgst + igst);
   const amount = roundMoney(Number(bill.amount || bill.payload?.totals?.total || taxable + tax));
+  const customerName = bill.customerName || bill.payload?.customerName || "Cash customer";
+  const customerPhone = bill.customerPhone || bill.payload?.customerPhone || "";
   return {
     kind: "sales_invoice",
-    title: "SALES RECEIPT",
+    title: tax > 0 && companyGstin ? "TAX INVOICE" : "BILL",
     invoiceNumber: bill.offlineRef || bill.id,
     invoiceDate: bill.date || "",
     soldAt: bill.createdAt || "",
     showSaleTime: true,
     dueDate: "",
     settlement: counterPayLabel(bill.moneyMode),
-    customerName: "Cash customer",
-    customerPhone: "",
+    customerName,
+    customerPhone,
     customerGstin: "",
     customerAddress: "",
+    cashier: bill.cashierName || "",
+    tillLabel: bill.tillLabel || "",
     narration: [
       bill.payload?.narration || "",
       bill.syncStatus === "pending" ? "Offline bill · pending sync" : "",
@@ -110,10 +114,13 @@ export function buildOfflineReceiptInvoice({
     companyGstin,
     companyPhone,
     companyEmail: "",
-    receiptFooter: "Offline receipt — final invoice number assigned after sync.",
+    receiptFooter: bill.syncStatus === "synced"
+      ? "Thank You & Visit Again..!"
+      : "Thank You & Visit Again..! Offline — final bill no. after sync.",
     receiptTerms: "",
     documentTemplate: "thermal",
     autoPrint: true,
+    posSlip: true,
     money: formatInr,
   };
 }

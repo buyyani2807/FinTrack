@@ -1,4 +1,6 @@
 import { Navigate, useNavigate, useOutletContext } from "react-router";
+import { ModuleLockedPanel } from "../../commercial/ModuleLockedPanel.jsx";
+import { moduleLockInfo } from "../../commercial/moduleAccess.js";
 import { Financier } from "../../finance/FinancierDashboard.jsx";
 import { ActiveChitSchemes } from "../ActiveChitSchemes.jsx";
 import { chitSchemePath, collectionsPath, financeSectionPath, workspacePaths } from "../paths.js";
@@ -7,25 +9,39 @@ import { chitSchemePath, collectionsPath, financeSectionPath, workspacePaths } f
 // (section: overview, collections, customers, users, reports). Every one of these routes renders this same component,
 // so moving between them keeps the dashboard's state.
 export function FinanceRoute({ module, section = "overview" }) {
-  const { access, session, chitSchemes } = useOutletContext();
+  const { access, session, chitSchemes, moduleState } = useOutletContext();
   const navigate = useNavigate();
-  if (module !== "all" && !access[module]) return <Navigate to={workspacePaths.dashboard} replace />;
+  if (module !== "all" && !access[module]) {
+    if (access?.locked?.[module]) {
+      const info = moduleLockInfo(moduleState, module);
+      return (
+        <ModuleLockedPanel
+          title={info?.title || "Module locked"}
+          body={info?.body}
+          product={info?.product}
+          unlockPath={`${workspacePaths.moduleStore}?product=${encodeURIComponent(info?.productKey || "")}`}
+        />
+      );
+    }
+    return <Navigate to={workspacePaths.dashboard} replace />;
+  }
   const {
     loans, workspace, setLoans, createLoan, savePayment, updateLoan, removeLoan, saveCustomerPortal, getKyc, updateKyc,
-    changeStatus, changePaymentNotes, correctPayment, removePayment, changeCollectionOrder, showOwnerChrome, logout, user, logReceipt,
+    changeStatus, changePaymentNotes, correctPayment, removePayment, changeCollectionOrder, showOwnerChrome, showFinancePartnerChrome, logout, user, logReceipt,
   } = session;
-  if (!showOwnerChrome && workspace?.collectionScope === "accounts" && (module === "daily" || module === "monthly")) {
+  const financeChrome = showOwnerChrome || showFinancePartnerChrome;
+  if (!financeChrome && workspace?.collectionScope === "accounts" && (module === "daily" || module === "monthly")) {
     return <Navigate to={workspacePaths.routeCollections} replace />;
   }
   // Finance agents start on Today's collections, so that tab is present before a customer is opened.
-  if (!showOwnerChrome && workspace?.collectionScope !== "accounts" && module === "all") {
+  if (!financeChrome && workspace?.collectionScope !== "accounts" && module === "all") {
     const hasDaily = (loans || []).some(loan => loan.kind === "daily");
     const hasMonthly = (loans || []).some(loan => loan.kind === "monthly");
     if (hasDaily && access.daily) return <Navigate to={collectionsPath("daily")} replace />;
     if (hasMonthly && access.monthly) return <Navigate to={collectionsPath("monthly")} replace />;
   }
-  // Reports are for owners; collection agents land on Overview.
-  if (section === "reports" && !access.isOwner) return <Navigate to={financeSectionPath(module, "overview")} replace />;
+  // Reports are for owners and view-only partners; collection agents land on Overview.
+  if (section === "reports" && !access.canViewOwnerFinance) return <Navigate to={financeSectionPath(module, "overview")} replace />;
 
   return <>
     <Financier
@@ -44,7 +60,7 @@ export function FinanceRoute({ module, section = "overview" }) {
       onPaymentCorrect={correctPayment}
       onPaymentDelete={removePayment}
       onCollectionOrderChange={changeCollectionOrder}
-      role={showOwnerChrome ? "owner" : "staff"}
+      role={showOwnerChrome ? "owner" : showFinancePartnerChrome ? "partner" : "staff"}
       logout={logout}
       authToken={user.authToken}
       orgSettings={workspace?.organizationSettings || {}}

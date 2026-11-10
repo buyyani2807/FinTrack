@@ -5,6 +5,7 @@ import { DEFAULT_WHATSAPP_TEMPLATES } from "./model/templateEngine.js";
 import { defaultConfirmationSettings } from "./io/transactionConfirmations.js";
 import { loadOrganizationSettings, saveOrganizationSettings } from "../../lib/financeRepository.js";
 import { LabeledField as Field } from "../../components/ui.jsx";
+import { FinancePartnersPanel } from "../finance/components/FinancePartnersPanel.jsx";
 
 
 const defaultReminderSettings = () => ({
@@ -15,6 +16,7 @@ const defaultReminderSettings = () => ({
 
 const SETTINGS_TABS = [
   { id: "company", label: "Company & receipts" },
+  { id: "partners", label: "View-only partners" },
   { id: "whatsapp", label: "WhatsApp messages" },
   { id: "reminders", label: "Reminders" },
 ];
@@ -167,13 +169,25 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved, tab: routeT
   };
 
   return <main className="shell settings-page">
-    <div className="toolbar"><div><h1 className="title">Settings</h1><p className="copy">Company branding, receipts, WhatsApp messages and payment reminders.</p></div></div>
+    <div className="toolbar"><div><h1 className="title">Settings</h1><p className="copy">Company branding, receipts, WhatsApp messages, payment reminders, and view-only partners.</p></div></div>
     <TabScroller><nav className="module-section-nav" aria-label="Settings sections">
       {SETTINGS_TABS.map(item => <button key={item.id} type="button" className={`module-section-tab ${tab === item.id ? "active" : ""}`} aria-current={tab === item.id ? "page" : undefined} onClick={() => setTab(item.id)}>{item.label}</button>)}
     </nav></TabScroller>
-    <form onSubmit={submit} className="settings-form">
+    {tab === "partners" ? <FinancePartnersPanel token={token} /> : null}
+    {tab !== "partners" ? <form onSubmit={submit} className="settings-form">
       {tab === "company" && <div className="settings-company">
         <div className="settings-company-main">
+          <section className="card settings-section">
+            <header className="settings-section-head">
+              <div>
+                <h2>View-only partners</h2>
+                <p>Invite a sleeping partner to Daily and Monthly Finance. They use Owner sign-in and cannot change records.</p>
+              </div>
+            </header>
+            <div className="row">
+              <button type="button" className="btn primary" onClick={() => setTab("partners")}>Open Partners</button>
+            </div>
+          </section>
           <SettingsSection icon={Building2} title="Business details" copy="Your name, contact and logo, shown on receipts, statements and WhatsApp messages.">
             <div className="settings-logo-row">
               <span className="settings-logo-tile" aria-hidden="true">{logoOk ? <img src={form.companyLogoUrl} alt="" onError={() => setLogoFailed(form.companyLogoUrl)} /> : initialsOf(form.companyName)}</span>
@@ -218,7 +232,7 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved, tab: routeT
       </div>}
 
       {tab === "whatsapp" && <>
-        <SettingsSection icon={MessageCircle} title="WhatsApp messages" copy="Optional. WhatsApp buttons work without saving these and without an API key or provider account. A saved template's wording is used; otherwise FinTrack sends the built-in message. View/PDF still shows the full receipt.">
+        <SettingsSection icon={MessageCircle} title="WhatsApp messages" copy="Optional. WhatsApp buttons work without saving these and without an API key or provider account. A saved template's wording is used; otherwise MyFinTracker sends the built-in message. View/PDF still shows the full receipt.">
           <div className="settings-variables">
             <span className="small">Tap a variable to insert it where your cursor is in the open template.</span>
             <div className="settings-variable-chips">
@@ -272,7 +286,7 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved, tab: routeT
             })}
           </ul>
         </SettingsSection>
-        <SettingsSection icon={MessageCircle} title="Automatic WhatsApp confirmations" copy="After a successful save, FinTrack opens WhatsApp with the confirmation message, the same way as receipts. The save still succeeds if WhatsApp cannot open.">
+        <SettingsSection icon={MessageCircle} title="Automatic WhatsApp confirmations" copy="After a successful save, MyFinTracker opens WhatsApp with the confirmation message, the same way as receipts. The save still succeeds if WhatsApp cannot open.">
           <div className="settings-switches">
             <SwitchRow icon={CalendarDays} title="Daily Finance" copy="New account confirmation" checked={confirmations.daily_account !== false} onChange={() => toggleConfirmation("daily_account")} />
             <SwitchRow icon={CalendarRange} title="Monthly Finance" copy="New account confirmation" checked={confirmations.monthly_account !== false} onChange={() => toggleConfirmation("monthly_account")} />
@@ -288,6 +302,6 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved, tab: routeT
         <button type="button" className="btn" onClick={close}>Cancel</button>
         <button type="submit" className="btn primary" disabled={busy}>{busy ? "Saving…" : "Save settings"}</button>
       </div>
-    </form>
+    </form> : null}
   </main>;
 }

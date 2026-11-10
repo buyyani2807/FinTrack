@@ -1,5 +1,5 @@
 /**
- * Cross-module review flags from recorded FinTrack data.
+ * Cross-module review flags from recorded MyFinTracker data.
  * Advisory only: never labels a person as fraudulent and never writes books, bids, or winners.
  */
 
@@ -729,6 +729,6 @@ export function buildAnomalyReview({
     summary: items.length
       ? `${items.length} pattern${items.length === 1 ? "" : "s"} to review`
       : "No unusual patterns in the records checked.",
-    disclaimer: "These patterns come from recorded FinTrack data. They do not label a customer, employee, or agent as fraudulent, and they do not change books, collections, bids, or auction winners.",
+    disclaimer: "These patterns come from recorded MyFinTracker data. They do not label a customer, employee, or agent as fraudulent, and they do not change books, collections, bids, or auction winners.",
   };
 }

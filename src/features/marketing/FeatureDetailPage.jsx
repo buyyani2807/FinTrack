@@ -16,11 +16,11 @@ export function FeatureDetailPage() {
   const { slug } = useParams();
   const feature = featureBySlug(slug);
   const moduleLabel = APP_MODULES.find(item => item.slug === feature?.slug)?.label || feature?.name;
-  useEffect(() => { document.title = feature ? `${moduleLabel} — FinTrack` : "Feature — FinTrack"; }, [feature, moduleLabel]);
+  useEffect(() => { document.title = feature ? `${moduleLabel} — MyFinTracker` : "Feature — MyFinTracker"; }, [feature, moduleLabel]);
   if (!feature) {
     return <Reveal intent="content" className="mkt-empty">
       <h1>That feature is not on this site.</h1>
-      <p className="mkt-lead">The list only includes modules that exist in FinTrack.</p>
+      <p className="mkt-lead">The list only includes modules that exist in MyFinTracker.</p>
       <Link className="mkt-btn" to={marketingPaths.features}>Back to features</Link>
     </Reveal>;
   }

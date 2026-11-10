@@ -1,4 +1,4 @@
-// Calendar helpers in India Standard Time (the business day used across FinTrack).
+// Calendar helpers in India Standard Time (the business day used across MyFinTracker).
 export const todayIso = (date = new Date()) => date.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 
 export function formatIstDateTime(iso) {

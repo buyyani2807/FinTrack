@@ -1,4 +1,4 @@
-// FinTrack MVP. This browser-only build is for testing; add a secure backend,
+// MyFinTracker MVP. This browser-only build is for testing; add a secure backend,
 // authentication, audit trails, and local compliance review before production.
 import { useEffect } from "react";
 import { BrowserRouter, useLocation } from "react-router";

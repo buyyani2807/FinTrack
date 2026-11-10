@@ -88,7 +88,7 @@ function DailyModule() {
     <div className="hm-module-copy">
       <Tag icon={CalendarDays}>Daily Finance</Tag>
       <h3>Every daily collection on one list.</h3>
-      <p className="hm-module-lead">Open a 100-day style account once. Each day FinTrack shows who has paid, who is still due, and who to visit first.</p>
+      <p className="hm-module-lead">Open a 100-day style account once. Each day MyFinTracker shows who has paid, who is still due, and who to visit first.</p>
       <Points items={["Today’s collection list with what is still due", "Who to collect first, ranked with the reason", "Digital receipts and WhatsApp reminders you send", "Daily collection report and Daily P&L"]} />
       <More to={featurePath("daily-finance")}>Explore Daily Finance</More>
     </div>

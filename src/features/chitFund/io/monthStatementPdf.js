@@ -165,7 +165,7 @@ function layoutStatement(statement) {
   pages.push(commands);
   return pages.map((pageCommands, index) => {
     const copy = [...pageCommands];
-    copy.push(text("F1", 8, PAGE.left, 28, `FinTrack Confidential  ${statement.generatedAt}  ·  Page ${index + 1} of ${pages.length}`));
+    copy.push(text("F1", 8, PAGE.left, 28, `MyFinTracker Confidential  ${statement.generatedAt}  ·  Page ${index + 1} of ${pages.length}`));
     return copy;
   });
 }

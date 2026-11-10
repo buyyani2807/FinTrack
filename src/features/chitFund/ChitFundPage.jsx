@@ -196,8 +196,9 @@ export function ChitFundPage({ token, tab: routeTab = "schemes", schemeId = null
     } catch (err) { setError(err.message || "Could not save scheme."); }
     finally { setBusy(false); }
   };
-  const requestActivate = (scheme, memberCount) => {
+  const requestActivate = scheme => {
     setActivateError("");
+    const memberCount = enrollments.filter(item => item.scheme_id === scheme.id && item.status === "active").length;
     setActivateTarget({ scheme, memberCount });
   };
   const confirmActivate = async () => {
