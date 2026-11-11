@@ -112,13 +112,28 @@ begin
       delete from public.customers where organization_id = target_org_id;
 
       insert into public.customers
-      select * from jsonb_populate_recordset(null::public.customers, coalesce(finance->'customers', '[]'::jsonb));
+      select r.*
+      from jsonb_array_elements(coalesce(finance->'customers', '[]'::jsonb)) elem,
+           lateral jsonb_populate_record(
+             null::public.customers,
+             elem || jsonb_build_object('organization_id', target_org_id)
+           ) r;
       insert into public.finance_accounts
-      select * from jsonb_populate_recordset(null::public.finance_accounts, coalesce(finance->'finance_accounts', '[]'::jsonb));
+      select r.*
+      from jsonb_array_elements(coalesce(finance->'finance_accounts', '[]'::jsonb)) elem,
+           lateral jsonb_populate_record(
+             null::public.finance_accounts,
+             elem || jsonb_build_object('organization_id', target_org_id)
+           ) r;
       insert into public.rate_changes
       select * from jsonb_populate_recordset(null::public.rate_changes, coalesce(finance->'rate_changes', '[]'::jsonb));
       insert into public.payments
-      select * from jsonb_populate_recordset(null::public.payments, coalesce(finance->'payments', '[]'::jsonb));
+      select r.*
+      from jsonb_array_elements(coalesce(finance->'payments', '[]'::jsonb)) elem,
+           lateral jsonb_populate_record(
+             null::public.payments,
+             elem || jsonb_build_object('organization_id', target_org_id)
+           ) r;
       restored := array_append(restored, 'finance');
 
     elsif key = 'cashbook' then
@@ -129,14 +144,35 @@ begin
       delete from public.cashbook_entries where organization_id = target_org_id;
       delete from public.ledger_accounts where organization_id = target_org_id;
 
+      -- Force organization_id: populate_recordset can leave it null if the key is missing.
       insert into public.ledger_accounts
-      select * from jsonb_populate_recordset(null::public.ledger_accounts, coalesce(cashbook->'ledger_accounts', '[]'::jsonb));
+      select r.*
+      from jsonb_array_elements(coalesce(cashbook->'ledger_accounts', '[]'::jsonb)) elem,
+           lateral jsonb_populate_record(
+             null::public.ledger_accounts,
+             elem || jsonb_build_object('organization_id', target_org_id)
+           ) r;
       insert into public.cashbook_entries
-      select * from jsonb_populate_recordset(null::public.cashbook_entries, coalesce(cashbook->'cashbook_entries', '[]'::jsonb));
+      select r.*
+      from jsonb_array_elements(coalesce(cashbook->'cashbook_entries', '[]'::jsonb)) elem,
+           lateral jsonb_populate_record(
+             null::public.cashbook_entries,
+             elem || jsonb_build_object('organization_id', target_org_id)
+           ) r;
       insert into public.account_transfers
-      select * from jsonb_populate_recordset(null::public.account_transfers, coalesce(cashbook->'account_transfers', '[]'::jsonb));
+      select r.*
+      from jsonb_array_elements(coalesce(cashbook->'account_transfers', '[]'::jsonb)) elem,
+           lateral jsonb_populate_record(
+             null::public.account_transfers,
+             elem || jsonb_build_object('organization_id', target_org_id)
+           ) r;
       insert into public.day_closings
-      select * from jsonb_populate_recordset(null::public.day_closings, coalesce(cashbook->'day_closings', '[]'::jsonb));
+      select r.*
+      from jsonb_array_elements(coalesce(cashbook->'day_closings', '[]'::jsonb)) elem,
+           lateral jsonb_populate_record(
+             null::public.day_closings,
+             elem || jsonb_build_object('organization_id', target_org_id)
+           ) r;
       restored := array_append(restored, 'cashbook');
 
     elsif key = 'chit' then
@@ -170,16 +206,36 @@ begin
       delete from public.chit_members where organization_id = target_org_id;
 
       insert into public.chit_members
-      select * from jsonb_populate_recordset(null::public.chit_members, coalesce(chit->'chit_members', '[]'::jsonb));
+      select r.*
+      from jsonb_array_elements(coalesce(chit->'chit_members', '[]'::jsonb)) elem,
+           lateral jsonb_populate_record(
+             null::public.chit_members,
+             elem || jsonb_build_object('organization_id', target_org_id)
+           ) r;
       insert into public.chit_schemes
-      select * from jsonb_populate_recordset(null::public.chit_schemes, coalesce(chit->'chit_schemes', '[]'::jsonb));
+      select r.*
+      from jsonb_array_elements(coalesce(chit->'chit_schemes', '[]'::jsonb)) elem,
+           lateral jsonb_populate_record(
+             null::public.chit_schemes,
+             elem || jsonb_build_object('organization_id', target_org_id)
+           ) r;
       begin
         insert into public.chit_enrollments
-        select * from jsonb_populate_recordset(null::public.chit_enrollments, coalesce(chit->'chit_enrollments', '[]'::jsonb));
+        select r.*
+        from jsonb_array_elements(coalesce(chit->'chit_enrollments', '[]'::jsonb)) elem,
+             lateral jsonb_populate_record(
+               null::public.chit_enrollments,
+               elem || jsonb_build_object('organization_id', target_org_id)
+             ) r;
       exception when undefined_table then null; end;
       begin
         insert into public.chit_cycles
-        select * from jsonb_populate_recordset(null::public.chit_cycles, coalesce(chit->'chit_cycles', '[]'::jsonb));
+        select r.*
+        from jsonb_array_elements(coalesce(chit->'chit_cycles', '[]'::jsonb)) elem,
+             lateral jsonb_populate_record(
+               null::public.chit_cycles,
+               elem || jsonb_build_object('organization_id', target_org_id)
+             ) r;
       exception when undefined_table then null; end;
       begin
         insert into public.chit_bids
@@ -187,31 +243,66 @@ begin
       exception when undefined_table then null; end;
       begin
         insert into public.chit_installments
-        select * from jsonb_populate_recordset(null::public.chit_installments, coalesce(chit->'chit_installments', '[]'::jsonb));
+        select r.*
+        from jsonb_array_elements(coalesce(chit->'chit_installments', '[]'::jsonb)) elem,
+             lateral jsonb_populate_record(
+               null::public.chit_installments,
+               elem || jsonb_build_object('organization_id', target_org_id)
+             ) r;
       exception when undefined_table then null; end;
       begin
         insert into public.chit_payouts
-        select * from jsonb_populate_recordset(null::public.chit_payouts, coalesce(chit->'chit_payouts', '[]'::jsonb));
+        select r.*
+        from jsonb_array_elements(coalesce(chit->'chit_payouts', '[]'::jsonb)) elem,
+             lateral jsonb_populate_record(
+               null::public.chit_payouts,
+               elem || jsonb_build_object('organization_id', target_org_id)
+             ) r;
       exception when undefined_table then null; end;
       begin
         insert into public.chit_security_deposits
-        select * from jsonb_populate_recordset(null::public.chit_security_deposits, coalesce(chit->'chit_security_deposits', '[]'::jsonb));
+        select r.*
+        from jsonb_array_elements(coalesce(chit->'chit_security_deposits', '[]'::jsonb)) elem,
+             lateral jsonb_populate_record(
+               null::public.chit_security_deposits,
+               elem || jsonb_build_object('organization_id', target_org_id)
+             ) r;
       exception when undefined_table then null; end;
       begin
         insert into public.predefined_chit_schedule
-        select * from jsonb_populate_recordset(null::public.predefined_chit_schedule, coalesce(chit->'predefined_chit_schedule', '[]'::jsonb));
+        select r.*
+        from jsonb_array_elements(coalesce(chit->'predefined_chit_schedule', '[]'::jsonb)) elem,
+             lateral jsonb_populate_record(
+               null::public.predefined_chit_schedule,
+               elem || jsonb_build_object('organization_id', target_org_id)
+             ) r;
       exception when undefined_table then null; end;
       begin
         insert into public.predefined_chit_payments
-        select * from jsonb_populate_recordset(null::public.predefined_chit_payments, coalesce(chit->'predefined_chit_payments', '[]'::jsonb));
+        select r.*
+        from jsonb_array_elements(coalesce(chit->'predefined_chit_payments', '[]'::jsonb)) elem,
+             lateral jsonb_populate_record(
+               null::public.predefined_chit_payments,
+               elem || jsonb_build_object('organization_id', target_org_id)
+             ) r;
       exception when undefined_table then null; end;
       begin
         insert into public.fixed_chit_lifts
-        select * from jsonb_populate_recordset(null::public.fixed_chit_lifts, coalesce(chit->'fixed_chit_lifts', '[]'::jsonb));
+        select r.*
+        from jsonb_array_elements(coalesce(chit->'fixed_chit_lifts', '[]'::jsonb)) elem,
+             lateral jsonb_populate_record(
+               null::public.fixed_chit_lifts,
+               elem || jsonb_build_object('organization_id', target_org_id)
+             ) r;
       exception when undefined_table then null; end;
       begin
         insert into public.fixed_chit_payments
-        select * from jsonb_populate_recordset(null::public.fixed_chit_payments, coalesce(chit->'fixed_chit_payments', '[]'::jsonb));
+        select r.*
+        from jsonb_array_elements(coalesce(chit->'fixed_chit_payments', '[]'::jsonb)) elem,
+             lateral jsonb_populate_record(
+               null::public.fixed_chit_payments,
+               elem || jsonb_build_object('organization_id', target_org_id)
+             ) r;
       exception when undefined_table then null; end;
       restored := array_append(restored, 'chit');
 

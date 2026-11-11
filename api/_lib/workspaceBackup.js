@@ -75,6 +75,8 @@ export async function callerOwnerProfile(accessToken) {
   return { ...profile, userId: user.id };
 }
 
+const withOrgId = (rows, orgId) => (rows || []).map(row => ({ ...row, organization_id: orgId }));
+
 async function exportFinance(orgId) {
   const customers = await restGetAll(`customers?organization_id=eq.${orgId}&select=*`);
   const accounts = await restGetAll(`finance_accounts?organization_id=eq.${orgId}&select=*`);
@@ -90,7 +92,12 @@ async function exportFinance(orgId) {
     payments = await restGetAll(`payments?organization_id=eq.${orgId}&select=*`);
   }
   if (!customers.length && !accounts.length && !payments.length) return null;
-  return { customers, finance_accounts: accounts, rate_changes: rateChanges, payments };
+  return {
+    customers: withOrgId(customers, orgId),
+    finance_accounts: withOrgId(accounts, orgId),
+    rate_changes: rateChanges,
+    payments: withOrgId(payments, orgId),
+  };
 }
 
 async function exportCashbook(orgId) {
@@ -99,7 +106,12 @@ async function exportCashbook(orgId) {
   const account_transfers = await restGetAll(`account_transfers?organization_id=eq.${orgId}&select=*`);
   const day_closings = await restGetAll(`day_closings?organization_id=eq.${orgId}&select=*`);
   if (![ledger_accounts, cashbook_entries, account_transfers, day_closings].some(rows => rows.length)) return null;
-  return { ledger_accounts, cashbook_entries, account_transfers, day_closings };
+  return {
+    ledger_accounts: withOrgId(ledger_accounts, orgId),
+    cashbook_entries: withOrgId(cashbook_entries, orgId),
+    account_transfers: withOrgId(account_transfers, orgId),
+    day_closings: withOrgId(day_closings, orgId),
+  };
 }
 
 async function exportChit(orgId) {
