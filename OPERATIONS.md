@@ -15,7 +15,8 @@ Use this checklist after deploying to Vercel + Supabase and before onboarding re
 3. **Customer workspace backups** (Settings → Backup & restore):
    - Apply migration `126_workspace_backups.sql`.
    - Create a private Storage bucket `workspace-backups` if the API cannot auto-create it.
-   - Set Vercel env `CRON_SECRET` (random string). Nightly cron hits `/api/cron/workspace-backups` at **00:00 IST** (`30 18 * * *` UTC).
+   - Set Vercel env `CRON_SECRET` (random string). Protects `/api/cron/workspace-backups`.
+   - Schedule nightly runs with **Supabase Cron** (`pg_cron` + `pg_net`) at **00:00 IST** (`30 18 * * *` UTC) calling that URL with `Authorization: Bearer $CRON_SECRET`. Do not rely on Vercel Cron (Hobby can skip deploys when `crons` is in `vercel.json`).
    - Owners can back up / restore any modules present (Finance, Cashbook, Chit, Accounts). Restore creates a safety checkpoint first.
 
 ### Restore drill (do once on staging)

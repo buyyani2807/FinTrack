@@ -1,10 +1,4 @@
 {
-  "crons": [
-    {
-      "path": "/api/cron/workspace-backups",
-      "schedule": "30 18 * * *"
-    }
-  ],
   "headers": [
     {
       "source": "/(.*)",
