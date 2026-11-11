@@ -451,10 +451,25 @@ begin
     insert into public.acc_price_lists
     select * from jsonb_populate_recordset(null::public.acc_price_lists, coalesce(company_pack->'acc_price_lists', '[]'::jsonb));
   exception when undefined_table then null; end;
+  -- Older backups include party.price_list_id but not the price list rows.
   begin
     insert into public.acc_parties
-    select * from jsonb_populate_recordset(null::public.acc_parties, coalesce(company_pack->'acc_parties', '[]'::jsonb));
-  exception when undefined_table then null; end;
+    select r.*
+    from jsonb_array_elements(coalesce(company_pack->'acc_parties', '[]'::jsonb)) elem,
+         lateral jsonb_populate_record(
+           null::public.acc_parties,
+           elem || jsonb_build_object('price_list_id', null)
+         ) r;
+    update public.acc_parties p
+    set price_list_id = (elem->>'price_list_id')::uuid
+    from jsonb_array_elements(coalesce(company_pack->'acc_parties', '[]'::jsonb)) elem
+    where p.id = (elem->>'id')::uuid
+      and nullif(elem->>'price_list_id', '') is not null
+      and exists (
+        select 1 from public.acc_price_lists pl
+        where pl.id = (elem->>'price_list_id')::uuid
+      );
+  exception when undefined_table then null; when undefined_column then null; end;
   begin
     insert into public.acc_price_list_rates
     select * from jsonb_populate_recordset(null::public.acc_price_list_rates, coalesce(company_pack->'acc_price_list_rates', '[]'::jsonb));
