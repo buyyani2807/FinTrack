@@ -28,6 +28,7 @@ import {
   sellUnitChoices,
   expiredStockReport,
   expiryAlertLabel,
+  expiryReportAsOf,
   splitExpiryAlerts,
 } from "../src/features/accounts/model/inventoryModel.js";
 import { CASH_PARTY_ID } from "../src/features/accounts/model/accountingModel.js";
@@ -257,6 +258,14 @@ test("expired stock report lists expired and near-expiry items only", () => {
   assert.equal(split.soon.length, 1);
   assert.match(expiryAlertLabel(rows[0]), /expired/);
   assert.match(expiryAlertLabel(rows[1]), /in 16 days/);
+  assert.equal(expiryReportAsOf("2027-03-31", "2026-11-11"), "2026-11-11");
+  assert.equal(expiryReportAsOf("2026-03-31", "2026-11-11"), "2026-03-31");
+  const china = expiredStockReport(
+    [{ id: "c", name: "China Coat", sku: "1", itemType: "product", unit: "Litre", expiryDate: "2026-11-20", openingStock: 1 }],
+    [],
+    { asOf: expiryReportAsOf("2027-03-31", "2026-11-11") },
+  );
+  assert.equal(china[0].status, "soon");
 });
 
 test("itemized sale accepts loose kg from a bag-priced item", () => {

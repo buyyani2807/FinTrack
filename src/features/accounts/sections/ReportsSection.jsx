@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { AccTable, DateSortTh } from "../components/AccUi.jsx";
-import { expiredStockReport, stockReasonLabel } from "../model/inventoryModel.js";
+import { expiredStockReport, expiryReportAsOf, stockReasonLabel } from "../model/inventoryModel.js";
+import { todayIso } from "../../../lib/dates.js";
 import { money } from "../accountsFormat.js";
 import { useDateSort } from "../model/useDateSort.js";
 import { ReportRangeBar } from "../components/AccPeriodBars.jsx";
@@ -86,9 +87,10 @@ export function ReportsSection({
   onOpenTradeDocument,
 }) {
   const stockSort = useDateSort(stockMoveRows, "movementDate");
+  const expiryAsOf = expiryReportAsOf(rangeTo || range?.to || "", todayIso());
   const expiredRows = useMemo(
-    () => expiredStockReport(items, stockMovements, { asOf: rangeTo || range?.to || "" }),
-    [items, stockMovements, rangeTo, range?.to],
+    () => expiredStockReport(items, stockMovements, { asOf: expiryAsOf }),
+    [items, stockMovements, expiryAsOf],
   );
   const companyName = activeCompany?.name || settings?.companyName || "";
   const showTrial = (section === "trial" || reportTab === "trial") && section !== "pnl" && section !== "balance";
@@ -313,7 +315,7 @@ export function ReportsSection({
       {section === "reports" && reportTab === "expired_stock" && (
         <>
           <ReportPlainSpeak reportId="expired_stock" insight={expiredInsight} />
-          <p className="small">As of {rangeTo || "today"}. Near expiry means within 30 days. Set expiry on the item to appear here.</p>
+          <p className="small">As of {expiryAsOf}. Near expiry means within 30 days of that date. Set expiry on the item to appear here.</p>
           <AccTable
             columns={[
               "Status",

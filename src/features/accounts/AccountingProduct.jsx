@@ -131,6 +131,7 @@ import { expenseBreakdown, monthlyIncomeExpense } from "./model/accountsCharts.j
 import { isEmployeeParty, partyHasTradeProfile, partyProfile } from "./model/partyProfile.js";
 import {
   expiredStockReport,
+  expiryReportAsOf,
   itemPurchasesReport,
   itemSalesReport,
   itemizedEntryDraft,
@@ -2594,13 +2595,14 @@ const openVoucher = () => {
       };
     }
     if (active === "expired_stock") {
-      const expiredRows = expiredStockReport(items, stockMovements, { asOf: rangeTo });
+      const expiryAsOf = expiryReportAsOf(rangeTo, todayIso());
+      const expiredRows = expiredStockReport(items, stockMovements, { asOf: expiryAsOf });
       return {
         filename: `fintrack-expired-stock-${stamp}`,
         rows: [
           ["Expired stock"],
           [companyName],
-          [`As of: ${rangeTo}`],
+          [`As of: ${expiryAsOf}`],
           [],
           ["Status", "Item", "SKU", "Batch", "Expiry", "On hand", "Unit"],
           ...expiredRows.map(row => [

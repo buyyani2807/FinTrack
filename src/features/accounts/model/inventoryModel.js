@@ -712,8 +712,19 @@ export function stockStatus(current, reorderLevel) {
 }
 
 /**
+ * Expired-stock is “check before you sell”: use today while the report period still runs.
+ * Only a closed (past) period end is used as the as-of date.
+ */
+export function expiryReportAsOf(rangeTo = "", today = "") {
+  const asOf = String(today || new Date().toISOString().slice(0, 10)).slice(0, 10);
+  const to = String(rangeTo || "").slice(0, 10);
+  if (to && to < asOf) return to;
+  return asOf;
+}
+
+/**
  * Items with an expiry date that are already expired or due within `soonDays`.
- * Read-only operational list — does not change stock. Uses `asOf` (usually report end / today).
+ * Read-only operational list — does not change stock. Uses `asOf` (today, or a closed period end).
  */
 export function expiredStockReport(items = [], movements = [], { asOf = "", soonDays = 30 } = {}) {
   const today = String(asOf || new Date().toISOString().slice(0, 10)).slice(0, 10);
