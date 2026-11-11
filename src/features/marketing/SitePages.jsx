@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
+import { Check } from "lucide-react";
 import { Reveal, RevealProvider } from "../../components/ui/Reveal.jsx";
 import { MODULE_PRODUCT_LIST, priceForPeriod, priceForProduct } from "../commercial/moduleProducts.js";
 import { SOLUTIONS, featureBySlug } from "./catalog.js";
@@ -66,6 +67,24 @@ export function HowItWorksPage() {
   </RevealProvider>;
 }
 
+function PriceCard({ product, period, index }) {
+  const price = priceForProduct(product, period);
+  const yearly = period === "annual";
+  return <Reveal as="article" className="pc-card" index={index % 2}>
+    <header className="pc-head">
+      <h2>{product.name}</h2>
+      <p className="pc-amount"><strong>{price.baseLabel}</strong><span>{yearly ? "/ year" : "/ month"} + GST</span></p>
+    </header>
+    <p className="pc-desc">{product.description}</p>
+    <div className="pc-includes">
+      <p className="pc-label">Includes</p>
+      <ul>
+        {product.includes.map(item => <li key={item}><span aria-hidden="true"><Check size={15} strokeWidth={2.5} /></span>{item}</li>)}
+      </ul>
+    </div>
+  </Reveal>;
+}
+
 export function PricingPage() {
   const [period, setPeriod] = useState("monthly");
   useEffect(() => { document.title = "Pricing — MyFinTracker"; }, []);
@@ -82,20 +101,7 @@ export function PricingPage() {
           <button type="button" role="tab" aria-selected={yearly} onClick={() => setPeriod("annual")}>Yearly</button>
         </div>
         <div className="sec-modules">
-          {MODULE_PRODUCT_LIST.map((product, index) => {
-            const price = priceForProduct(product, period);
-            return <Reveal as="article" key={product.key} className="sec-card sec-module" index={index % 2}>
-              <header className="sec-module-price">
-                <h2>{product.name}</h2>
-                <p className="mkt-price">{price.baseLabel} <span>{yearly ? "/ year" : "/ month"} + GST</span></p>
-              </header>
-              <p className="sec-summary">{product.description}</p>
-              <div className="sec-includes">
-                <p className="sec-kicker">Includes</p>
-                <ul className="mkt-ticks">{product.includes.map(item => <li key={item}>{item}</li>)}</ul>
-              </div>
-            </Reveal>;
-          })}
+          {MODULE_PRODUCT_LIST.map((product, index) => <PriceCard key={product.key} product={product} period={period} index={index} />)}
         </div>
         <div className="sec-plan-end">
           <div className="mkt-cta-row">

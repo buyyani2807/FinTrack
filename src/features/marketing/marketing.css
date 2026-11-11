@@ -1522,6 +1522,34 @@ html[data-theme="dark"] .mkt :is(.fx-segment button[aria-selected="true"], .fx-p
   .fx-pricing .sec-modules { grid-template-columns: 1fr; }
 }
 
+/* Pricing cards: name with a small icon, description, price, and a plain checklist. Kept light on purpose. */
+.fx-pricing .sec-modules { align-items: stretch; }
+.pc-card { container-type: inline-size; display: flex; flex-direction: column; min-width: 0; padding: 28px; border-radius: 20px; background: #ffffff; color: #131313; }
+.pc-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.app .mkt .pc-card h2, .mkt .pc-card h2 { flex: 1; min-width: 0; margin: 0; color: #131313; font-size: 20px; font-weight: 700; line-height: 1.25; letter-spacing: -0.01em !important; }
+.mkt .pc-desc { margin: 20px 0 0; padding-top: 20px; border-top: 1px solid #9fb5b5; color: #131313; font-size: var(--ft-type-secondary); line-height: 1.55; }
+.mkt .pc-amount { display: flex; flex: none; align-items: baseline; gap: 6px; margin: 0 0 0 auto; color: #131313; white-space: nowrap; }
+.pc-amount strong { font: 700 26px/1 "Plus Jakarta Sans", var(--ft-font); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.pc-amount span { font-size: var(--ft-type-secondary); font-weight: 500; }
+.pc-includes { margin-top: 22px; }
+.mkt .pc-label { margin: 0 0 10px; color: #131313; font-size: var(--ft-type-label); font-weight: 600; }
+.pc-includes ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.mkt .pc-includes li { display: flex; align-items: flex-start; gap: 10px; color: #131313; font-size: var(--ft-type-secondary); line-height: 1.45; }
+.pc-includes li span { display: grid; flex: none; place-items: center; width: 16px; height: 20px; color: #03393a; }
+html[data-theme="dark"] .pc-card { background: #18222c; color: #f4f7f8; }
+html[data-theme="dark"] .mkt :is(.pc-card h2, .pc-desc, .pc-amount, .pc-label, .pc-includes li) { color: #f4f7f8; }
+html[data-theme="dark"] .pc-includes li span { color: #5ccbb3; }
+html[data-theme="dark"] .mkt .pc-desc { border-top-color: #4a6274; }
+/* When the name and price no longer fit on one line, the price moves under the name, lined up with it. */
+@container (max-width: 470px) {
+  .pc-head { justify-content: center; }
+  .app .mkt .pc-card h2, .mkt .pc-card h2 { flex: 0 1 auto; text-align: center; }
+  .mkt .pc-amount { flex-basis: 100%; justify-content: center; margin: 6px 0 0; }
+}
+@media (max-width: 560px) {
+  .pc-card { padding: 22px 18px; }
+}
+
 /* Site chrome: header, trial strip, footer use the same two colours on every page */
 /* Header: white with deep-teal text in the light theme; near-black in the dark theme. */
 .mkt .mkt-nav-bar { border-bottom: 1px solid #03393a; background: #ffffff; }
