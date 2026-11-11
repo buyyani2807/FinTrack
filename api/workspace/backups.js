@@ -1,6 +1,6 @@
 /* global process */
-// Owner workspace backups: create / list / download / restore / schedule toggle.
-// Covers whatever modules the org has (finance, cashbook, chit, accounts).
+// Owner workspace backups + nightly cron (merged for Vercel Hobby 12-function limit).
+// `/api/cron/workspace-backups` rewrites here in vercel.json.
 import {
   anonKey,
   callerOwnerProfile,
@@ -8,7 +8,9 @@ import {
   downloadBackupObject,
   getBackupRow,
   listBackupRows,
+  listOrgsForScheduledBackup,
   parseWorkspaceBackup,
+  pruneOldBackups,
   restoreWorkspaceBackup,
   serviceKey,
   supabaseUrl,
@@ -21,6 +23,55 @@ const missingConfig = () => [
   !anonKey() && "VITE_SUPABASE_ANON_KEY (or SUPABASE_ANON_KEY)",
   !serviceKey() && "SUPABASE_SERVICE_ROLE_KEY",
 ].filter(Boolean);
+
+function cronAuthorized(req) {
+  const secret = String(process.env.CRON_SECRET || "").trim();
+  const header = String(req.headers.authorization || "");
+  if (secret && header === `Bearer ${secret}`) return true;
+  if (secret && String(req.query?.secret || "") === secret) return true;
+  return false;
+}
+
+async function runScheduledBackups(req, res) {
+  if (req.method !== "GET" && req.method !== "POST") {
+    return json(res, 405, { error: "Method not allowed" });
+  }
+  if (!supabaseUrl() || !serviceKey()) {
+    return json(res, 500, { error: "Supabase is not configured for scheduled backups." });
+  }
+  if (!cronAuthorized(req)) {
+    return json(res, 401, { error: "Unauthorized cron call." });
+  }
+
+  const orgs = await listOrgsForScheduledBackup().catch(() => []);
+  const results = [];
+  for (const org of orgs) {
+    try {
+      const status = org.subscription_status;
+      if (status === "expired" || status === "cancelled") {
+        results.push({ orgId: org.id, skipped: true, reason: status });
+        continue;
+      }
+      const { row } = await createWorkspaceBackup({
+        orgId: org.id,
+        kind: "scheduled",
+        createdBy: null,
+        note: "Scheduled nightly backup (00:00 IST)",
+      });
+      await pruneOldBackups(org.id).catch(() => {});
+      results.push({ orgId: org.id, backupId: row.id, ok: true, modules: row.module_keys });
+    } catch (err) {
+      results.push({ orgId: org.id, ok: false, error: err.message || "backup failed" });
+    }
+  }
+
+  return json(res, 200, {
+    ok: true,
+    ranAt: new Date().toISOString(),
+    orgCount: orgs.length,
+    results,
+  });
+}
 
 async function setSchedule(orgId, enabled) {
   const response = await fetch(`${supabaseUrl()}/rest/v1/organizations?id=eq.${orgId}`, {
@@ -53,6 +104,11 @@ async function readSchedule(orgId) {
 }
 
 export default async function handler(req, res) {
+  // Cron Bearer secret must be checked before treating the token as an owner JWT.
+  if (cronAuthorized(req)) {
+    return runScheduledBackups(req, res);
+  }
+
   const missing = missingConfig();
   if (missing.length) {
     return json(res, 500, {
