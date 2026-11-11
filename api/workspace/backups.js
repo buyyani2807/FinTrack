@@ -143,6 +143,7 @@ export default async function handler(req, res) {
         }
         return json(res, 200, { backup: row });
       }
+      await pruneOldBackups(orgId).catch(() => {});
       const [backups, scheduleEnabled] = await Promise.all([
         listBackupRows(orgId),
         readSchedule(orgId),
@@ -163,6 +164,7 @@ export default async function handler(req, res) {
           createdBy: profile.userId,
           note: String(req.body?.note || "").trim() || "Manual backup",
         });
+        await pruneOldBackups(orgId).catch(() => {});
         return json(res, 200, {
           backup: row,
           message: "Workspace backup created. It includes every module that has data in this workspace.",

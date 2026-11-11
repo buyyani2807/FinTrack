@@ -82,7 +82,7 @@ export function WorkspaceBackupPanel({ token }) {
           <h2>Workspace backup & restore</h2>
           <p>
             Back up every module this workspace uses — Finance, Cashbook, Chit Fund, and Accounts — then restore if data is wrong.
-            Nightly backups run at 00:00 India time.
+            Nightly backups run at 00:00 India time. Copies older than 14 days are removed, including manual backups and safety checkpoints.
           </p>
         </div>
       </header>
@@ -108,7 +108,7 @@ export function WorkspaceBackupPanel({ token }) {
             />
             <span className="settings-list-text">
               <strong>Nightly backup at midnight (IST)</strong>
-              <span className="small">Keeps recent scheduled copies so you can roll back a bad day.</span>
+              <span className="small">Keeps the last 14 days of nightly, manual, and safety copies.</span>
             </span>
           </label>
         </div>

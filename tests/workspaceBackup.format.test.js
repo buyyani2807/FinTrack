@@ -33,3 +33,9 @@ test("restore creates a pre_restore checkpoint path in API flow", () => {
   assert.match(source, /kind: "pre_restore"/);
   assert.match(source, /restore_workspace_backup_json/);
 });
+
+test("backup retention is 14 days for every backup kind", () => {
+  assert.match(source, /BACKUP_RETENTION_DAYS = 14/);
+  assert.match(source, /created_at=lt\.\$\{cutoff\}/);
+  assert.doesNotMatch(source, /kind=eq\.scheduled/);
+});

@@ -576,7 +576,7 @@ export async function listOrgsForScheduledBackup() {
 export async function pruneOldBackups(orgId) {
   const cutoff = new Date(Date.now() - BACKUP_RETENTION_DAYS * 86400000).toISOString();
   const old = await restGet(
-    `workspace_backups?organization_id=eq.${orgId}&kind=eq.scheduled&created_at=lt.${cutoff}&select=id,storage_path`,
+    `workspace_backups?organization_id=eq.${orgId}&created_at=lt.${cutoff}&select=id,storage_path`,
   );
   for (const row of old) {
     if (row.storage_path) await deleteBackupObject(row.storage_path);
