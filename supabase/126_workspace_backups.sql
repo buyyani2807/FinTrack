@@ -39,6 +39,65 @@ revoke all on table public.workspace_backups from public, anon;
 grant select on table public.workspace_backups to authenticated;
 grant all on table public.workspace_backups to service_role;
 
+-- Disable cashbook-sync triggers while restoring snapshots (they already include cashbook rows).
+create or replace function public._ws_backup_toggle_data_triggers(enable boolean)
+returns void
+language plpgsql
+as $$
+declare
+  tbl text;
+begin
+  foreach tbl in array array[
+    'chit_installments',
+    'fixed_chit_payments',
+    'predefined_chit_payments',
+    'fixed_chit_lifts',
+    'predefined_chit_schedule',
+    'chit_cycles',
+    'chit_payouts',
+    'payments',
+    'finance_accounts'
+  ]
+  loop
+    if to_regclass('public.' || tbl) is null then continue; end if;
+    begin
+      execute format(
+        'alter table public.%I %s trigger user',
+        tbl,
+        case when enable then 'enable' else 'disable' end
+      );
+    exception
+      when insufficient_privilege then null;
+      when undefined_object then null;
+      when undefined_table then null;
+    end;
+  end loop;
+end;
+$$;
+
+revoke all on function public._ws_backup_toggle_data_triggers(boolean) from public, anon, authenticated;
+grant execute on function public._ws_backup_toggle_data_triggers(boolean) to service_role;
+
+create or replace function public.accounts_ensure_default_ledgers(input_org_id uuid)
+returns void language plpgsql security definer set search_path = public
+as $$
+begin
+  if input_org_id is null then return; end if;
+  if not exists (select 1 from public.ledger_accounts where organization_id = input_org_id and account_type = 'cash') then
+    insert into public.ledger_accounts(organization_id, account_type, name, is_default)
+    values (input_org_id, 'cash', 'Cash', true);
+  end if;
+  if not exists (select 1 from public.ledger_accounts where organization_id = input_org_id and account_type = 'upi') then
+    insert into public.ledger_accounts(organization_id, account_type, name, is_default)
+    values (input_org_id, 'upi', 'UPI', true);
+  end if;
+  if not exists (select 1 from public.ledger_accounts where organization_id = input_org_id and account_type = 'bank') then
+    insert into public.ledger_accounts(organization_id, account_type, name, is_default)
+    values (input_org_id, 'bank', 'Bank', true);
+  end if;
+end;
+$$;
+
 -- Restore selected modules from a workspace backup payload (service role only).
 -- Replaces live data for those modules; caller should create a pre_restore checkpoint first.
 create or replace function public.restore_workspace_backup_json(
@@ -84,6 +143,11 @@ begin
     raise exception 'Backup has no modules to restore';
   end if;
 
+  -- Chit/finance cashbook sync triggers use current_organization_id(), which is null
+  -- for service_role restore and would insert ledger_accounts with a null org.
+  perform public._ws_backup_toggle_data_triggers(false);
+
+  begin
   -- Optional org branding / packs (never touch subscription columns here).
   update public.organizations o
   set
@@ -325,11 +389,16 @@ begin
     end if;
   end loop;
 
+  perform public._ws_backup_toggle_data_triggers(true);
   return jsonb_build_object(
     'ok', true,
     'restored', to_jsonb(restored),
     'actorId', actor_id
   );
+  exception when others then
+    perform public._ws_backup_toggle_data_triggers(true);
+    raise;
+  end;
 end;
 $$;
 
