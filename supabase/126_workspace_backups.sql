@@ -247,14 +247,14 @@ security definer
 set search_path = public
 as $$
 declare
-  company_id uuid;
+  target_company_id uuid;
   company_row jsonb;
 begin
   company_row := company_pack->'company';
   if company_row is null or company_row->>'id' is null then
     return;
   end if;
-  company_id := (company_row->>'id')::uuid;
+  target_company_id := (company_row->>'id')::uuid;
 
   -- Ensure company row exists for this org (insert or update).
   insert into public.acc_companies
@@ -274,22 +274,23 @@ begin
 
   if not exists (
     select 1 from public.acc_companies c
-    where c.id = company_id and c.organization_id = target_org_id
+    where c.id = target_company_id and c.organization_id = target_org_id
   ) then
     raise exception 'Accounts company does not belong to this workspace';
   end if;
 
   -- Wipe dependent books for this company (order matters).
-  begin delete from public.acc_gst_lines where company_id = company_id; exception when undefined_table then null; end;
-  begin delete from public.acc_voucher_item_lines where company_id = company_id; exception when undefined_table then null; end;
-  begin delete from public.acc_stock_movements where company_id = company_id; exception when undefined_table then null; end;
-  begin delete from public.acc_voucher_lines where company_id = company_id; exception when undefined_table then null; end;
-  begin delete from public.acc_vouchers where company_id = company_id; exception when undefined_table then null; end;
-  begin delete from public.acc_items where company_id = company_id; exception when undefined_table then null; end;
-  begin delete from public.acc_item_categories where company_id = company_id; exception when undefined_table then null; end;
-  begin delete from public.acc_parties where company_id = company_id; exception when undefined_table then null; end;
-  begin delete from public.acc_coa where company_id = company_id; exception when undefined_table then null; end;
-  begin delete from public.acc_settings where company_id = company_id; exception when undefined_table then null; end;
+  -- Variable must not be named company_id — that makes "where company_id = company_id" ambiguous.
+  begin delete from public.acc_gst_lines t where t.company_id = target_company_id; exception when undefined_table then null; end;
+  begin delete from public.acc_voucher_item_lines t where t.company_id = target_company_id; exception when undefined_table then null; end;
+  begin delete from public.acc_stock_movements t where t.company_id = target_company_id; exception when undefined_table then null; end;
+  begin delete from public.acc_voucher_lines t where t.company_id = target_company_id; exception when undefined_table then null; end;
+  begin delete from public.acc_vouchers t where t.company_id = target_company_id; exception when undefined_table then null; end;
+  begin delete from public.acc_items t where t.company_id = target_company_id; exception when undefined_table then null; end;
+  begin delete from public.acc_item_categories t where t.company_id = target_company_id; exception when undefined_table then null; end;
+  begin delete from public.acc_parties t where t.company_id = target_company_id; exception when undefined_table then null; end;
+  begin delete from public.acc_coa t where t.company_id = target_company_id; exception when undefined_table then null; end;
+  begin delete from public.acc_settings t where t.company_id = target_company_id; exception when undefined_table then null; end;
 
   if company_pack->'settings' is not null and company_pack->'settings' != 'null'::jsonb then
     begin
