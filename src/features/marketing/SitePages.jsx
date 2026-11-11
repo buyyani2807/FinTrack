@@ -67,55 +67,42 @@ export function HowItWorksPage() {
 }
 
 export function PricingPage() {
-  const monthly = priceForPeriod("monthly");
-  const annual = priceForPeriod("annual");
-  const posMonthly = priceForProduct("accounts_pos", "monthly");
-  return <RevealProvider intent="landing"><section className="mkt-section">
-    <PageTitle title="MyFinTracker pricing" />
-    <Reveal as="p" className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Pricing</Reveal>
-    <Reveal as="h1" index={1}>Pay for the modules you need.</Reveal>
-    <Reveal as="p" className="mkt-lead" index={2}>
-      Finance, Chit Fund, and Accounts are {monthly.baseLabel} + GST {monthly.gstPercentLabel} ({monthly.totalLabel} per month),
-      or {annual.baseLabel} + GST {annual.gstPercentLabel} ({annual.totalLabel} per year).
-      Accounts + POS is {posMonthly.baseLabel} + GST ({posMonthly.totalLabel} / month) — ₹100 more for Counter.
-      There is no lifetime plan. Unlock after a 14-day free trial of the full workspace.
-    </Reveal>
-    <Reveal className="mkt-plan-prices mkt-plan-prices-rate" index={3}>
-      <div>
-        <p className="mkt-muted">Standard modules / month</p>
-        <p className="mkt-price">{monthly.totalLabel} <span>/ month</span></p>
-        <p className="mkt-muted">{monthly.breakdown}</p>
+  const [period, setPeriod] = useState("monthly");
+  useEffect(() => { document.title = "Pricing — MyFinTracker"; }, []);
+  const yearly = period === "annual";
+  return <RevealProvider intent="content"><div className="hm-home fx fx-pricing">
+    <section className="fx-sec hm-flip">
+      <div className="mkt-wrap">
+        <header className="fx-head">
+          <Reveal as="p" className="fx-eyebrow">Pricing</Reveal>
+          <Reveal as="h1" index={1}>Pay for the modules you need.</Reveal>
+        </header>
+        <div className="fx-segment sec-bill" role="tablist" aria-label="Billing period">
+            <button type="button" role="tab" aria-selected={!yearly} onClick={() => setPeriod("monthly")}>Monthly</button>
+            <button type="button" role="tab" aria-selected={yearly} onClick={() => setPeriod("annual")}>Yearly</button>
+          </div>
+        <div className="sec-modules">
+          {MODULE_PRODUCT_LIST.map((product, index) => {
+            const price = priceForProduct(product, period);
+            return <Reveal as="article" key={product.key} className="sec-card sec-module" index={index % 2}>
+              <header className="sec-module-price">
+                <h2>{product.name}</h2>
+                <div className="sec-module-amount">
+                  <p className="mkt-price">{price.totalLabel} <span>{yearly ? "/ year" : "/ month"}</span></p>
+                  <p className="sec-meta">GST included</p>
+                </div>
+              </header>
+              <p>{product.description}</p>
+              <div className="sec-includes">
+                <p className="sec-kicker">Includes</p>
+                <ul className="mkt-ticks">{product.includes.map(item => <li key={item}>{item}</li>)}</ul>
+              </div>
+            </Reveal>;
+          })}
+        </div>
       </div>
-      <div>
-        <p className="mkt-muted">Accounts + POS / month</p>
-        <p className="mkt-price">{posMonthly.totalLabel} <span>/ month</span></p>
-        <p className="mkt-muted">{posMonthly.breakdown}</p>
-      </div>
-    </Reveal>
-    <div className="mkt-module-price-grid">
-      {MODULE_PRODUCT_LIST.map((product, index) => {
-        const productMonthly = priceForProduct(product, "monthly");
-        const productAnnual = priceForProduct(product, "annual");
-        return (
-        <Reveal as="article" key={product.key} className="mkt-card mkt-module-price-card" index={index % 4}>
-          <h2>{product.name}</h2>
-          <p>{product.description}</p>
-          <ul className="mkt-ticks">{product.includes.map(item => <li key={item}>{item}</li>)}</ul>
-          <p className="mkt-module-price-line"><strong>{productMonthly.totalLabel}</strong> <span>/ month</span></p>
-          <p className="mkt-muted">or {productAnnual.totalLabel} / year · GST included in totals</p>
-        </Reveal>
-        );
-      })}
-    </div>
-    <Reveal className="mkt-cta-row" index={4}>
-      <ProductCta primary />
-      <Link className="mkt-btn" to={marketingPaths.contact}>Request a demo</Link>
-    </Reveal>
-    <Reveal as="p" className="mkt-note" index={5}>
-      A new workspace includes 14 days with every module open. Signing up does not charge a card.
-      After the trial, unlock only what you need. Your records stay.
-    </Reveal>
-  </section></RevealProvider>;
+    </section>
+  </div></RevealProvider>;
 }
 
 export function PageClose() {
