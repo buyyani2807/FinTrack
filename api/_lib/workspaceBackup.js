@@ -190,7 +190,7 @@ async function exportAccountsCompany(company) {
     restGetAll(`acc_voucher_item_lines?company_id=eq.${companyId}&select=*`).catch(() => []),
     restGetAll(`acc_stock_movements?company_id=eq.${companyId}&select=*`).catch(() => []),
     restGetAll(`acc_gst_lines?company_id=eq.${companyId}&select=*`).catch(() => []),
-    restGet(`acc_settings?company_id=eq.${companyId}&select=*&limit=1`).catch(() => []),
+    restGet(`acc_settings?organization_id=eq.${company.organization_id}&select=*&limit=1`).catch(() => []),
     restGetAll(`acc_trade_documents?company_id=eq.${companyId}&select=*`).catch(() => []),
     restGetAll(`acc_trade_document_lines?company_id=eq.${companyId}&select=*`).catch(() => []),
     restGetAll(`acc_price_lists?company_id=eq.${companyId}&select=*`).catch(() => []),
