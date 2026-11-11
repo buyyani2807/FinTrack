@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useOutletContext } from "react-router";
-import { BookOpenText, Coins, HandCoins, House, Menu, ShoppingCart, X } from "lucide-react";
+import { BookOpenText, Coins, HandCoins, House, Menu, ShoppingCart, Sparkles, X } from "lucide-react";
 import { APP_MODULES, moduleForFeature } from "./catalog.js";
 import marketingStyles from "./marketing.css?inline";
 import { OPEN_PRODUCT, PRODUCT_NAME } from "../../lib/brand.js";
@@ -12,6 +12,7 @@ const MODULE_ICONS = {
   "auction-chit": Coins,
   "accounts-overview": BookOpenText,
   "counter-pos": ShoppingCart,
+  ai: Sparkles,
 };
 
 function moduleHref(item) {

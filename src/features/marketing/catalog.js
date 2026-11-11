@@ -24,6 +24,36 @@ export const FEATURES = [
     icon: "LayoutDashboard",
   },
   {
+    slug: "ai",
+    category: "intelligence",
+    name: "AI",
+    summary: "MyFinTracker reads your own records and points out what needs a look: cash that may run short, costs that rose, GST details to fix, bank lines to match, and stock to reorder.",
+    problem: "Cash that may run short, costs that rose, GST details to fix, bank lines to match, and stock to reorder are easy to miss until they cost money.",
+    how: [
+      "Open AI Review in Accounts, or ask Finny a question from any screen.",
+      "Read each suggestion with its reason, its confidence, and a link to the record.",
+      "You post the voucher, approve the match, and send the message.",
+    ],
+    capabilities: [
+      "Ask Finny questions about your own records",
+      "Tell Finny what happened and get a balanced draft",
+      "Bill scanning from a photo or PDF",
+      "Cash-flow forecast for 7, 30, and 60 days",
+      "Expense and supplier price changes",
+      "Who to collect first",
+      "Unusual activity",
+      "GST review",
+      "Month-end readiness",
+      "Bank matching",
+      "Stock forecast",
+      "Chit scheme health",
+    ],
+    benefits: ["Included in the plan", "Every suggestion shows its reason, its confidence, and a link to the record", "A forecast is shown apart from actual figures and is never posted into the books", "Nothing is filed, locked, reversed, or sent by itself"],
+    related: ["ai-review", "ask-finny", "ai-bookkeeper"],
+    appPath: "/accounting/ai-review",
+    icon: "Sparkles",
+  },
+  {
     slug: "finance",
     category: "finance",
     name: "Finance",
@@ -1315,6 +1345,7 @@ export const APP_MODULES = [
   { slug: "auction-chit", label: "Chit Fund" },
   { slug: "accounts-overview", label: "Accounts" },
   { slug: "counter-pos", label: "POS" },
+  { slug: "ai", label: "AI" },
 ];
 
 // The parts of each module, in the order its page and module bar list them. Keys are the module page slugs.
@@ -1327,6 +1358,11 @@ export const MODULE_FEATURES = {
     "inventory", "item-profit", "gst-preparation", "audit-trail", "period-locking", "for-the-ca",
   ],
   "counter-pos": [],
+  ai: [
+    "ask-finny", "ai-bookkeeper", "bill-scanning", "ai-review", "forecasting", "expense-insights", "collection-priorities",
+    "anomaly-detection", "gst-review", "month-end-readiness", "bank-matching", "stock-forecast", "chit-scheme-health",
+    "credit-score", "ai-setup", "ai-migration", "bulk-import", "business-insights", "attention-center", "bookkeeping-suggestions",
+  ],
 };
 
 // The module a feature page belongs to (a module page belongs to itself), or null.

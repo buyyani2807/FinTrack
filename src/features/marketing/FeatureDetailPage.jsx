@@ -3,6 +3,7 @@ import { Link, Navigate, useParams } from "react-router";
 import { Reveal, RevealProvider } from "../../components/ui/Reveal.jsx";
 import { APP_MODULES, featureBySlug, relatedFeatures } from "./catalog.js";
 import { AccountsPage } from "./AccountsPage.jsx";
+import { AiPage } from "./AiPage.jsx";
 import { ChitPage } from "./ChitPage.jsx";
 import { FinancePage } from "./FinancePage.jsx";
 import { ModulePager } from "./ModuleKit.jsx";
@@ -29,6 +30,7 @@ export function FeatureDetailPage() {
   if (feature.slug === "auction-chit") return <ChitPage feature={feature} />;
   if (feature.slug === "accounts-overview") return <AccountsPage feature={feature} />;
   if (feature.slug === "counter-pos") return <PosPage feature={feature} />;
+  if (feature.slug === "ai") return <AiPage feature={feature} />;
   const related = relatedFeatures(feature);
   return <RevealProvider intent="landing">
     <header className="mkt-page-hero">
