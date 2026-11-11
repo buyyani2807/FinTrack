@@ -588,6 +588,55 @@ grant execute on function public._ws_backup_insert_rows(text, jsonb, text[]) to 
 grant execute on function public._ws_backup_insert_one(text, jsonb) to service_role;
 grant execute on function public._ws_backup_reattach_fk(text, text, text, jsonb) to service_role;
 
+-- After restore, last_number can lag restored vouchers (silent sequence skip / mixed pad).
+create or replace function public._ws_backup_resync_acc_sequences(target_company_id uuid)
+returns void
+language plpgsql
+as $$
+declare
+  org_id uuid;
+  rec record;
+begin
+  select organization_id into org_id from public.acc_companies where id = target_company_id;
+  if org_id is null then return; end if;
+
+  for rec in
+    select v.voucher_type,
+           max((regexp_match(v.voucher_number, '(\d+)$'))[1]::int) as max_n
+    from public.acc_vouchers v
+    where v.company_id = target_company_id
+      and v.voucher_number ~ '[0-9]+$'
+    group by v.voucher_type
+  loop
+    if rec.max_n is null then continue; end if;
+    insert into public.acc_sequences(organization_id, company_id, voucher_type, last_number)
+    values (org_id, target_company_id, rec.voucher_type, rec.max_n)
+    on conflict (company_id, voucher_type)
+    do update set last_number = greatest(public.acc_sequences.last_number, excluded.last_number);
+  end loop;
+
+  if to_regclass('public.acc_trade_documents') is not null then
+    for rec in
+      select ('doc_' || d.doc_type) as voucher_type,
+             max((regexp_match(d.doc_number, '(\d+)$'))[1]::int) as max_n
+      from public.acc_trade_documents d
+      where d.company_id = target_company_id
+        and d.doc_number ~ '[0-9]+$'
+      group by d.doc_type
+    loop
+      if rec.max_n is null then continue; end if;
+      insert into public.acc_sequences(organization_id, company_id, voucher_type, last_number)
+      values (org_id, target_company_id, rec.voucher_type, rec.max_n)
+      on conflict (company_id, voucher_type)
+      do update set last_number = greatest(public.acc_sequences.last_number, excluded.last_number);
+    end loop;
+  end if;
+end;
+$$;
+
+revoke all on function public._ws_backup_resync_acc_sequences(uuid) from public, anon, authenticated;
+grant execute on function public._ws_backup_resync_acc_sequences(uuid) to service_role;
+
 create or replace function public.restore_accounts_company_from_backup(
   target_org_id uuid,
   company_pack jsonb
@@ -785,6 +834,8 @@ begin
     'acc_voucher_lines',
     company_pack->'acc_bank_statement_lines'
   );
+
+  perform public._ws_backup_resync_acc_sequences(target_company_id);
 end;
 $$;
 
