@@ -169,6 +169,13 @@ async function exportAccountsCompany(company) {
     stock_movements,
     gst_lines,
     settings,
+    trade_documents,
+    trade_document_lines,
+    price_lists,
+    price_list_rates,
+    party_pipeline,
+    document_settings,
+    inventory_settings,
   ] = await Promise.all([
     restGetAll(`acc_coa?company_id=eq.${companyId}&select=*`).catch(() => []),
     restGetAll(`acc_parties?company_id=eq.${companyId}&select=*`).catch(() => []),
@@ -180,6 +187,13 @@ async function exportAccountsCompany(company) {
     restGetAll(`acc_stock_movements?company_id=eq.${companyId}&select=*`).catch(() => []),
     restGetAll(`acc_gst_lines?company_id=eq.${companyId}&select=*`).catch(() => []),
     restGet(`acc_settings?company_id=eq.${companyId}&select=*&limit=1`).catch(() => []),
+    restGetAll(`acc_trade_documents?company_id=eq.${companyId}&select=*`).catch(() => []),
+    restGetAll(`acc_trade_document_lines?company_id=eq.${companyId}&select=*`).catch(() => []),
+    restGetAll(`acc_price_lists?company_id=eq.${companyId}&select=*`).catch(() => []),
+    restGetAll(`acc_price_list_rates?company_id=eq.${companyId}&select=*`).catch(() => []),
+    restGetAll(`acc_party_pipeline?company_id=eq.${companyId}&select=*`).catch(() => []),
+    restGet(`acc_document_settings?company_id=eq.${companyId}&select=*&limit=1`).catch(() => []),
+    restGet(`acc_inventory_settings?company_id=eq.${companyId}&select=*&limit=1`).catch(() => []),
   ]);
   return {
     company,
@@ -193,6 +207,13 @@ async function exportAccountsCompany(company) {
     acc_voucher_item_lines: voucher_item_lines,
     acc_stock_movements: stock_movements,
     acc_gst_lines: gst_lines,
+    acc_trade_documents: trade_documents,
+    acc_trade_document_lines: trade_document_lines,
+    acc_price_lists: price_lists,
+    acc_price_list_rates: price_list_rates,
+    acc_party_pipeline: party_pipeline,
+    acc_document_settings: document_settings[0] || null,
+    acc_inventory_settings: inventory_settings[0] || null,
   };
 }
 
