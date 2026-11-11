@@ -89,7 +89,6 @@ export function PricingPage() {
                 <h2>{product.name}</h2>
                 <div className="sec-module-amount">
                   <p className="mkt-price">{price.totalLabel} <span>{yearly ? "/ year" : "/ month"}</span></p>
-                  <p className="sec-meta">GST included</p>
                 </div>
               </header>
               <p>{product.description}</p>

@@ -1510,7 +1510,6 @@ html[data-theme="dark"] .mkt :is(.fx-segment button[aria-selected="true"], .fx-p
 .mkt .fx-pricing .sec-card p.sec-kicker { margin: 0; font-size: var(--ft-type-label); font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
 .mkt .fx-pricing .sec-card .mkt-price { margin: 0; color: inherit; font-size: var(--ft-type-title); font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; white-space: normal; }
 .fx-pricing .mkt-price span { color: inherit; font-size: var(--ft-type-body); font-weight: 600; }
-.mkt .fx-pricing .sec-card p.sec-meta { color: inherit; font-size: var(--ft-type-secondary); }
 .fx-pricing .mkt-ticks { margin: 0; }
 .fx-pricing .hm-flip .sec-card .mkt-ticks li { color: var(--hm-tx2, var(--hm-paper)); }
 .fx-pricing .hm-flip .sec-card .mkt-ticks li::before { background: var(--hm-tx2, var(--hm-paper)); }
