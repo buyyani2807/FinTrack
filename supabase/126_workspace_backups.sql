@@ -56,7 +56,17 @@ begin
     'chit_cycles',
     'chit_payouts',
     'payments',
-    'finance_accounts'
+    'finance_accounts',
+    'acc_vouchers',
+    'acc_voucher_lines',
+    'acc_voucher_item_lines',
+    'acc_gst_lines',
+    'acc_stock_movements',
+    'acc_trade_documents',
+    'acc_trade_document_lines',
+    'acc_items',
+    'acc_parties',
+    'acc_coa'
   ]
   loop
     if to_regclass('public.' || tbl) is null then continue; end if;
@@ -468,9 +478,13 @@ declare
   elem jsonb;
   cleaned jsonb;
   k text;
+  org_stamp uuid;
+  company_stamp uuid;
 begin
   if not public._ws_backup_table_exists(tbl) then return; end if;
   if rows is null or jsonb_typeof(rows) <> 'array' then return; end if;
+  begin org_stamp := nullif(current_setting('myfin.backup_org', true), '')::uuid; exception when others then org_stamp := null; end;
+  begin company_stamp := nullif(current_setting('myfin.backup_company', true), '')::uuid; exception when others then company_stamp := null; end;
   for elem in select value from jsonb_array_elements(rows)
   loop
     cleaned := elem;
@@ -478,6 +492,12 @@ begin
       foreach k in array drop_keys loop
         cleaned := cleaned - k;
       end loop;
+    end if;
+    if org_stamp is not null and public._ws_backup_has_column(tbl, 'organization_id') then
+      cleaned := cleaned || jsonb_build_object('organization_id', org_stamp);
+    end if;
+    if company_stamp is not null and public._ws_backup_has_column(tbl, 'company_id') then
+      cleaned := cleaned || jsonb_build_object('company_id', company_stamp);
     end if;
     begin
       execute format(
@@ -622,6 +642,8 @@ begin
     return;
   end if;
   target_company_id := (company_row->>'id')::uuid;
+  perform set_config('myfin.backup_org', target_org_id::text, true);
+  perform set_config('myfin.backup_company', target_company_id::text, true);
 
   insert into public.acc_companies
   select * from jsonb_populate_record(null::public.acc_companies, company_row)

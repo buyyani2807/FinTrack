@@ -535,13 +535,16 @@ export async function restoreWorkspaceBackup({ orgId, backupId, actorId, modules
     throw new Error("This backup belongs to a different workspace.");
   }
 
-  // Safety checkpoint of current state before replace.
-  await createWorkspaceBackup({
-    orgId,
-    kind: "pre_restore",
-    createdBy: actorId,
-    note: `Automatic checkpoint before restoring ${backupId}`,
-  }).catch(() => null);
+  // Snapshot live data before replace. Skip when undoing via a checkpoint so we
+  // do not bury the useful copy under a newer checkpoint of already-restored data.
+  if (row.kind !== "pre_restore") {
+    await createWorkspaceBackup({
+      orgId,
+      kind: "pre_restore",
+      createdBy: actorId,
+      note: `Automatic checkpoint before restoring ${backupId}`,
+    }).catch(() => null);
+  }
 
   const wanted = Array.isArray(modules) && modules.length
     ? modules.filter(key => snapshot.moduleKeys.includes(key))

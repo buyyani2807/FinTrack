@@ -138,7 +138,10 @@ export function WorkspaceBackupPanel({ token }) {
               {backups.map(row => (
                 <tr key={row.id}>
                   <td>{new Date(row.created_at).toLocaleString("en-IN")}</td>
-                  <td>{kindLabel(row.kind)}</td>
+                  <td>
+                    {kindLabel(row.kind)}
+                    {row.note ? <div className="small">{row.note}</div> : null}
+                  </td>
                   <td>{(row.module_keys || []).map(key => MODULE_LABELS[key] || key).join(", ") || "—"}</td>
                   <td>{formatBytes(row.bytes)}</td>
                   <td>
@@ -173,8 +176,9 @@ export function WorkspaceBackupPanel({ token }) {
       ) : null}
 
       <p className="small">
-        Restore replaces the live data for modules in that backup. A safety checkpoint is created automatically first.
-        Only the owner can back up or restore.
+        Restore replaces the live data for modules in that backup. A safety checkpoint is the live workspace
+        immediately before that restore — if you restored twice, use the checkpoint from the first restore,
+        not a newer one. Only the owner can back up or restore.
       </p>
     </section>
   );
