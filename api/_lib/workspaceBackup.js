@@ -118,9 +118,11 @@ async function exportChit(orgId) {
   };
   const enrollments = schemeIds.length ? await chunkIn("chit_enrollments", "scheme_id", schemeIds) : [];
   const cycles = schemeIds.length ? await chunkIn("chit_cycles", "scheme_id", schemeIds) : [];
-  const bids = cycles.length ? await chunkIn("chit_bids", "cycle_id", cycles.map(row => row.id)) : [];
-  const installments = schemeIds.length ? await chunkIn("chit_installments", "scheme_id", schemeIds) : [];
-  const payouts = schemeIds.length ? await chunkIn("chit_payouts", "scheme_id", schemeIds) : [];
+  const cycleIds = cycles.map(row => row.id);
+  const bids = cycleIds.length ? await chunkIn("chit_bids", "cycle_id", cycleIds) : [];
+  // installments / payouts are keyed by cycle_id (no scheme_id column).
+  const installments = cycleIds.length ? await chunkIn("chit_installments", "cycle_id", cycleIds) : [];
+  const payouts = cycleIds.length ? await chunkIn("chit_payouts", "cycle_id", cycleIds) : [];
   const deposits = schemeIds.length ? await chunkIn("chit_security_deposits", "scheme_id", schemeIds) : [];
   const predefined_chit_schedule = schemeIds.length ? await chunkIn("predefined_chit_schedule", "scheme_id", schemeIds) : [];
   const predefined_chit_payments = schemeIds.length ? await chunkIn("predefined_chit_payments", "scheme_id", schemeIds) : [];

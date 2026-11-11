@@ -157,10 +157,9 @@ begin
         where p.scheme_id = s.id and s.organization_id = target_org_id; exception when undefined_table then null; end;
       begin delete from public.chit_security_deposits d using public.chit_schemes s
         where d.scheme_id = s.id and s.organization_id = target_org_id; exception when undefined_table then null; end;
-      begin delete from public.chit_payouts p using public.chit_schemes s
-        where p.scheme_id = s.id and s.organization_id = target_org_id; exception when undefined_table then null; end;
-      begin delete from public.chit_installments i using public.chit_schemes s
-        where i.scheme_id = s.id and s.organization_id = target_org_id; exception when undefined_table then null; end;
+      -- chit_payouts / chit_installments have cycle_id (+ organization_id), not scheme_id.
+      begin delete from public.chit_payouts where organization_id = target_org_id; exception when undefined_table then null; end;
+      begin delete from public.chit_installments where organization_id = target_org_id; exception when undefined_table then null; end;
       begin delete from public.chit_bids b using public.chit_cycles c, public.chit_schemes s
         where b.cycle_id = c.id and c.scheme_id = s.id and s.organization_id = target_org_id; exception when undefined_table then null; end;
       begin delete from public.chit_cycles c using public.chit_schemes s
