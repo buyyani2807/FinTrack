@@ -1487,6 +1487,7 @@ html[data-theme="dark"] .mkt :is(.fx-segment button[aria-selected="true"], .fx-p
 .fx-security .hm-flip .sec-icon { background: var(--hm-paper); color: var(--hm-ink); }
 .mkt .fx-security .sec-card h2,
 .mkt .fx-pricing .sec-card h2 { font-size: var(--ft-type-card); line-height: 1.25; letter-spacing: -0.02em !important; }
+.mkt .fx-pricing .sec-card h2 { font-size: var(--ft-type-section); font-weight: 700; line-height: var(--ft-leading-tight); }
 .mkt .fx-security .sec-card p,
 .mkt .fx-pricing .sec-card p { margin: 0; color: var(--hm-text, inherit); font-size: var(--ft-type-ui); line-height: 1.55; }
 .fx-security .sec-icon { display: grid; place-items: center; width: 42px; height: 42px; margin-bottom: 8px; border-radius: 12px; background: var(--hm-ink); color: var(--hm-paper); }
@@ -1502,17 +1503,21 @@ html[data-theme="dark"] .mkt :is(.fx-segment button[aria-selected="true"], .fx-p
 .fx-pricing .sec-bill { display: flex; width: fit-content; margin: 0 auto; }
 .fx-pricing .sec-bill button { flex: none; }
 .fx-pricing .sec-modules { display: grid; width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
-.fx-pricing .sec-module { gap: 20px; }
-.fx-pricing .sec-module-price { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; column-gap: 16px; padding-bottom: 16px; border-bottom: 2px solid var(--hm-paper); }
-.fx-pricing .sec-module-price h2 { min-width: 0; margin: 0; }
-.fx-pricing .sec-module-amount { display: grid; gap: 6px; justify-items: end; text-align: right; }
-.fx-pricing .sec-includes { display: grid; gap: 12px; }
+.fx-pricing .sec-module { gap: 0; padding: 28px; }
+.fx-pricing .sec-module-price { display: grid; gap: 10px; }
+.fx-pricing .sec-module-price h2 { margin: 0; }
+.mkt .fx-pricing .sec-card .mkt-price { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; margin: 0; color: inherit; font-size: var(--ft-type-page); font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
+.fx-pricing .mkt-price span { color: inherit; font-size: var(--ft-type-ui); font-weight: 600; letter-spacing: 0; }
+.mkt .fx-pricing .sec-card p.sec-summary { margin: 14px 0 0; }
+.fx-pricing .sec-plan-end { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.fx-pricing .sec-plan-end .mkt-cta-row { justify-content: center; margin-top: 0; }
+.mkt .fx-pricing .sec-plan-note { max-width: 62ch; margin: 0; color: inherit; font-size: var(--ft-type-ui); line-height: 1.55; text-align: center; }
+.fx-pricing .sec-includes { display: grid; gap: 12px; margin-top: 22px; padding-top: 18px; border-top: 1px solid color-mix(in srgb, var(--hm-tx2, var(--hm-paper)) 18%, transparent); }
 .mkt .fx-pricing .sec-card p.sec-kicker { margin: 0; font-size: var(--ft-type-label); font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
-.mkt .fx-pricing .sec-card .mkt-price { margin: 0; color: inherit; font-size: var(--ft-type-title); font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; white-space: normal; }
-.fx-pricing .mkt-price span { color: inherit; font-size: var(--ft-type-body); font-weight: 600; }
-.fx-pricing .mkt-ticks { margin: 0; }
+.fx-pricing .mkt-ticks { display: grid; gap: 2px; margin: 0; }
+.fx-pricing .mkt-ticks li { padding: 6px 0 6px 18px; font-size: var(--ft-type-ui); line-height: 1.45; }
 .fx-pricing .hm-flip .sec-card .mkt-ticks li { color: var(--hm-tx2, var(--hm-paper)); }
-.fx-pricing .hm-flip .sec-card .mkt-ticks li::before { background: var(--hm-tx2, var(--hm-paper)); }
+.fx-pricing .hm-flip .sec-card .mkt-ticks li::before { top: 12px; width: 6px; height: 6px; background: var(--hm-tx2, var(--hm-paper)); }
 @media (max-width: 700px) {
   .fx-pricing .sec-modules { grid-template-columns: 1fr; }
 }

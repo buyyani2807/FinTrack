@@ -78,26 +78,31 @@ export function PricingPage() {
           <Reveal as="h1" index={1}>Pay for the modules you need.</Reveal>
         </header>
         <div className="fx-segment sec-bill" role="tablist" aria-label="Billing period">
-            <button type="button" role="tab" aria-selected={!yearly} onClick={() => setPeriod("monthly")}>Monthly</button>
-            <button type="button" role="tab" aria-selected={yearly} onClick={() => setPeriod("annual")}>Yearly</button>
-          </div>
+          <button type="button" role="tab" aria-selected={!yearly} onClick={() => setPeriod("monthly")}>Monthly</button>
+          <button type="button" role="tab" aria-selected={yearly} onClick={() => setPeriod("annual")}>Yearly</button>
+        </div>
         <div className="sec-modules">
           {MODULE_PRODUCT_LIST.map((product, index) => {
             const price = priceForProduct(product, period);
             return <Reveal as="article" key={product.key} className="sec-card sec-module" index={index % 2}>
               <header className="sec-module-price">
                 <h2>{product.name}</h2>
-                <div className="sec-module-amount">
-                  <p className="mkt-price">{price.totalLabel} <span>{yearly ? "/ year" : "/ month"}</span></p>
-                </div>
+                <p className="mkt-price">{price.baseLabel} <span>{yearly ? "/ year" : "/ month"} + GST</span></p>
               </header>
-              <p>{product.description}</p>
+              <p className="sec-summary">{product.description}</p>
               <div className="sec-includes">
                 <p className="sec-kicker">Includes</p>
                 <ul className="mkt-ticks">{product.includes.map(item => <li key={item}>{item}</li>)}</ul>
               </div>
             </Reveal>;
           })}
+        </div>
+        <div className="sec-plan-end">
+          <div className="mkt-cta-row">
+            <ProductCta primary label="Start free trial" />
+            <Link className="mkt-btn" to={marketingPaths.contact}>Request a demo</Link>
+          </div>
+          <p className="sec-plan-note">A new workspace includes 14 days with every module open. Signing up does not charge a card. After the trial, unlock only what you need. Your records stay.</p>
         </div>
       </div>
     </section>
