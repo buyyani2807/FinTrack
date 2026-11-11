@@ -22,6 +22,21 @@ test.describe("Theme", () => {
     await expect(page.getByRole("switch")).toHaveCount(0);
   });
 
+  test("a saved dark theme stays in the app and the public site stays light", async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem("fintrack-theme", "dark"));
+    await page.goto("/");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await page.goto("/login");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await mockAccountsWorkspace(page);
+    await page.goto("/dashboard");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await page.getByRole("complementary", { name: "Workspace" }).getByRole("button", { name: "Logout" }).click();
+    await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await expect.poll(() => page.evaluate(() => localStorage.getItem("fintrack-theme"))).toBe("dark");
+  });
+
   test("the sidebar toggle switches theme and remembers the choice", async ({ page }) => {
     await page.emulateMedia({ colorScheme: "light" });
     await mockAccountsWorkspace(page);

@@ -37,6 +37,12 @@ export function isMarketingPath(pathname) {
   return MARKETING_ROOTS.some(root => path === root || path.startsWith(`${root}/`));
 }
 
+// Pages shown before sign-in. public/theme-init.js uses the same paths so the first paint stays light.
+export function isGuestThemePath(pathname) {
+  const path = normalizePath(pathname);
+  return path === "/login" || path === "/pay" || isMarketingPath(path);
+}
+
 export function featurePath(slug) {
   return `/features/${slug}`;
 }

@@ -1,3 +1,4 @@
+import { useLayoutEffect } from "react";
 import { Navigate, Outlet, useLocation } from "react-router";
 import { PageReveal } from "../components/ui/PageReveal.jsx";
 import { RevealProvider } from "../components/ui/Reveal.jsx";
@@ -6,6 +7,7 @@ import { FinancierAuth, PasswordRecovery } from "../features/auth/AuthScreens.js
 import { Customer } from "../features/finance/CustomerAccountView.jsx";
 import { CustomerReportDownload } from "../features/finance/PortfolioReport.jsx";
 import { isMarketingPath, normalizePath } from "../features/marketing/paths.js";
+import { applyDocumentTheme, storedTheme } from "../lib/theme.js";
 import { LegalPage } from "../features/legal/LegalPage.jsx";
 import { LoadingScreen } from "./AppShell.jsx";
 import { useFinTrackSession } from "./useFinTrackSession.js";
@@ -18,6 +20,12 @@ export function SessionLayout() {
   const { legalView, isLoading, isPasswordRecovery, user, customerLoan, enterSession, enterCustomerSession, enterChitCustomerSession, logout } = session;
   const path = normalizePath(location.pathname);
   const workspaceUser = user?.role === "financier" || user?.role === "agent";
+  useLayoutEffect(() => {
+    const guestUrl = isMarketingPath(path) || path === "/login";
+    if (!user && isLoading && !guestUrl && !isPasswordRecovery) return;
+    const guestScreen = isPasswordRecovery || !user || (workspaceUser && guestUrl);
+    applyDocumentTheme(guestScreen ? "light" : (storedTheme() || "light"));
+  }, [user, isLoading, isPasswordRecovery, path, workspaceUser]);
   const screen = node => <RevealProvider intent="functional"><PageReveal routeKey={`${path}${location.search}`}>{node}</PageReveal></RevealProvider>;
   const signIn = screen(<FinancierAuth onLogin={enterSession} onCustomerLogin={enterCustomerSession} onChitCustomerLogin={enterChitCustomerSession} />);
   if (legalView) return screen(<LegalPage view={legalView} backLabel={path === "/" ? "Back to MyFinTracker" : "Back to sign in"} />);
