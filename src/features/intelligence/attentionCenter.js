@@ -182,7 +182,7 @@ export function buildAccountsAttentionItems({
       title: `${expiredCount} item${expiredCount === 1 ? "" : "s"} expired`,
       detail: "On-hand dates from Inventory — pull from sale. Stock is not changed until you post a write-off.",
       actionLabel: "Open expired stock",
-      href: { panel: "accounts", section: "reports", reportTab: "expired_stock" },
+      href: { panel: "accounts", section: "expired_stock" },
     });
   }
   if (soonCount > 0) {
@@ -193,7 +193,7 @@ export function buildAccountsAttentionItems({
       title: `${soonCount} item${soonCount === 1 ? "" : "s"} due within 30 days`,
       detail: "Sell earliest-expiry first. This is the item date on file, not a forecast.",
       actionLabel: "Open expired stock",
-      href: { panel: "accounts", section: "reports", reportTab: "expired_stock" },
+      href: { panel: "accounts", section: "expired_stock" },
     });
   }
   if (lowStockCount > 0) {

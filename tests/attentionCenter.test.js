@@ -48,7 +48,8 @@ test("accounts attention flags expired and near-expiry stock", () => {
   const soon = items.find(item => item.id === "accounts-near-expiry");
   assert.equal(expired.severity, "high");
   assert.match(expired.title, /2 items expired/);
-  assert.equal(expired.href.reportTab, "expired_stock");
+  assert.equal(expired.href.section, "expired_stock");
+  assert.equal(soon.href.section, "expired_stock");
   assert.equal(soon.severity, "medium");
   assert.match(soon.title, /3 items due within 30 days/);
 });

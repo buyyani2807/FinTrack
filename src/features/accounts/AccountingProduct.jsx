@@ -131,7 +131,6 @@ import { expenseBreakdown, monthlyIncomeExpense } from "./model/accountsCharts.j
 import { isEmployeeParty, partyHasTradeProfile, partyProfile } from "./model/partyProfile.js";
 import {
   expiredStockReport,
-  expiryReportAsOf,
   itemPurchasesReport,
   itemSalesReport,
   itemizedEntryDraft,
@@ -1024,7 +1023,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       return;
     }
     if (id === "expired_stock") {
-      go({ section: "reports", reportTab: "expired_stock" });
+      go({ section: "inventory", sub: "expired" });
       window.scrollTo(0, 0);
       return;
     }
@@ -2590,29 +2589,6 @@ const openVoucher = () => {
             row.quantityDelta,
             stockReasonLabel(row.reason),
             row.voucherNumber || "",
-          ]),
-        ],
-      };
-    }
-    if (active === "expired_stock") {
-      const expiryAsOf = expiryReportAsOf(rangeTo, todayIso());
-      const expiredRows = expiredStockReport(items, stockMovements, { asOf: expiryAsOf });
-      return {
-        filename: `fintrack-expired-stock-${stamp}`,
-        rows: [
-          ["Expired stock"],
-          [companyName],
-          [`As of: ${expiryAsOf}`],
-          [],
-          ["Status", "Item", "SKU", "Batch", "Expiry", "On hand", "Unit"],
-          ...expiredRows.map(row => [
-            row.statusLabel,
-            row.name,
-            row.sku || "",
-            row.batchNo || "",
-            row.expiryDate,
-            row.stock,
-            row.unit,
           ]),
         ],
       };

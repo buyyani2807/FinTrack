@@ -15,7 +15,8 @@ export function AccountsRoute() {
   const navigate = useNavigate();
   const area = section || (docType && "documents") || (inventoryTab && "inventory") || ((partyView || routesTab || partyId) && "parties") || (report && "reports") || "overview";
   const view = accountsViewFromPath(area, docType || inventoryTab || partyView || (routesTab && "routes") || (partyId && "profile") || report, routesTab || partyId);
-  // An unknown section goes to Overview.
+  // An unknown section goes to Overview. Expired stock used to live under Reports.
+  if (report === "expired_stock") return <Navigate to={accountsPath({ section: "inventory", sub: "expired" })} replace />;
   if (view.section === "overview" && area !== "overview") return <Navigate to={accountsPath(view)} replace />;
   return <div className="accounts-dashboard">
     <Suspense fallback={<div className="shell"><Spinner label="Loading Accounts" /></div>}>

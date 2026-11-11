@@ -777,7 +777,7 @@ export function InventoryPanel({ rows, expiryRows = [], openSource }) {
       { label: "Due in 30 days", value: String(soonCount), tone: soonCount ? "warning" : "" },
     ]} />
     {expiryRows.length ? <Section title="On-hand expiry" count={expiryRows.length}>
-      <p className="air-note">Dates on the item record, not a forecast. Expired rows stay listed even at zero stock so a write-off is visible. Near-expiry only lists quantity still on hand.</p>
+      <p className="air-note">Dates on the item record, not a forecast. Expired and near-expiry rows stay listed even at zero stock.</p>
       <div key={`exp-${expiryPaging.page}`} className={`air-picks is-${expiryPaging.dir}`}>
         {expiryPaging.rows.map(row => {
           const expired = row.status === "expired";
@@ -791,7 +791,7 @@ export function InventoryPanel({ rows, expiryRows = [], openSource }) {
               <li>On hand: {row.stock} {row.unit || ""}</li>
               <li>{expired ? "Pull from sale. Post a write-off if the quantity is still on the books." : "Sell earliest-expiry first. The till already warns on near-expiry batches."}</li>
             </ul>
-            <div className="air-foot"><SourceLink link={{ section: "reports", reportTab: "expired_stock", label: "Open expired stock report" }} onOpen={openSource} /></div>
+            <div className="air-foot"><SourceLink link={{ section: "expired_stock", label: "Open expired stock" }} onOpen={openSource} /></div>
           </PickRow>;
         })}
         {expiryPaging.pageCount > 1 && Array.from({ length: expiryPaging.size - expiryPaging.rows.length }, (_, index) => <span key={`exp-fill-${index}`} className="air-pick-fill" aria-hidden="true" />)}

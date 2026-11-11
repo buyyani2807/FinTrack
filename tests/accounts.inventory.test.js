@@ -32,6 +32,7 @@ import {
   splitExpiryAlerts,
 } from "../src/features/accounts/model/inventoryModel.js";
 import { CASH_PARTY_ID } from "../src/features/accounts/model/accountingModel.js";
+import { REPORT_TABS, accountsPath, accountsViewFromPath } from "../src/features/accounts/accountsNavigation.js";
 
 const accounts = [
   { id: "cash", code: "1000", name: "Cash", accountType: "cash", groupType: "asset" },
@@ -276,6 +277,15 @@ test("expired stock report lists expired and near-expiry items only", () => {
   assert.equal(burma[0].status, "soon");
   assert.equal(burma[0].days, 1);
   assert.equal(burma[0].stock, 0);
+});
+
+test("expired stock lives under Inventory, not Reports", () => {
+  assert.equal(REPORT_TABS.some(tab => tab.id === "expired_stock"), false);
+  assert.equal(accountsPath({ section: "inventory", sub: "expired" }), "/accounting/inventory/expired");
+  assert.equal(accountsPath({ section: "expired_stock" }), "/accounting/inventory/expired");
+  assert.equal(accountsPath({ section: "reports", reportTab: "expired_stock" }), "/accounting/inventory/expired");
+  assert.deepEqual(accountsViewFromPath("inventory", "expired"), { section: "inventory", reportTab: "daybook", sub: "expired" });
+  assert.deepEqual(accountsViewFromPath("reports", "expired_stock"), { section: "inventory", reportTab: "daybook", sub: "expired" });
 });
 
 test("itemized sale accepts loose kg from a bag-priced item", () => {
