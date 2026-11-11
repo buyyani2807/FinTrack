@@ -84,9 +84,6 @@ begin
     raise exception 'Backup has no modules to restore';
   end if;
 
-  -- Disable finance/chit → cashbook sync triggers while we replace tables from backup.
-  perform set_config('session_replication_role', 'replica', true);
-
   -- Optional org branding / packs (never touch subscription columns here).
   update public.organizations o
   set
