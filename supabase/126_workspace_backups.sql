@@ -414,7 +414,15 @@ begin
   begin delete from public.acc_items t where t.company_id = target_company_id; exception when undefined_table then null; end;
   begin delete from public.acc_item_categories t where t.company_id = target_company_id; exception when undefined_table then null; end;
   begin delete from public.acc_party_pipeline t where t.company_id = target_company_id; exception when undefined_table then null; end;
+  -- Payroll references parties + COA pay accounts.
+  begin delete from public.acc_payroll_runs t where t.company_id = target_company_id; exception when undefined_table then null; end;
+  begin delete from public.acc_payroll_days t where t.company_id = target_company_id; exception when undefined_table then null; end;
+  begin delete from public.acc_payroll_leave t where t.company_id = target_company_id; exception when undefined_table then null; end;
+  begin delete from public.acc_payroll_profiles t where t.company_id = target_company_id; exception when undefined_table then null; end;
   begin delete from public.acc_parties t where t.company_id = target_company_id; exception when undefined_table then null; end;
+  begin
+    update public.acc_coa t set parent_id = null where t.company_id = target_company_id;
+  exception when undefined_table then null; when undefined_column then null; end;
   begin delete from public.acc_coa t where t.company_id = target_company_id; exception when undefined_table then null; end;
   begin delete from public.acc_settings t where t.company_id = target_company_id; exception when undefined_table then null; end;
   begin delete from public.acc_document_settings t where t.company_id = target_company_id; exception when undefined_table then null; end;
@@ -481,6 +489,22 @@ begin
   begin
     insert into public.acc_party_pipeline
     select * from jsonb_populate_recordset(null::public.acc_party_pipeline, coalesce(company_pack->'acc_party_pipeline', '[]'::jsonb));
+  exception when undefined_table then null; end;
+  begin
+    insert into public.acc_payroll_profiles
+    select * from jsonb_populate_recordset(null::public.acc_payroll_profiles, coalesce(company_pack->'acc_payroll_profiles', '[]'::jsonb));
+  exception when undefined_table then null; end;
+  begin
+    insert into public.acc_payroll_days
+    select * from jsonb_populate_recordset(null::public.acc_payroll_days, coalesce(company_pack->'acc_payroll_days', '[]'::jsonb));
+  exception when undefined_table then null; end;
+  begin
+    insert into public.acc_payroll_leave
+    select * from jsonb_populate_recordset(null::public.acc_payroll_leave, coalesce(company_pack->'acc_payroll_leave', '[]'::jsonb));
+  exception when undefined_table then null; end;
+  begin
+    insert into public.acc_payroll_runs
+    select * from jsonb_populate_recordset(null::public.acc_payroll_runs, coalesce(company_pack->'acc_payroll_runs', '[]'::jsonb));
   exception when undefined_table then null; end;
   if company_pack->'acc_document_settings' is not null and company_pack->'acc_document_settings' != 'null'::jsonb then
     begin

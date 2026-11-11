@@ -176,6 +176,10 @@ async function exportAccountsCompany(company) {
     party_pipeline,
     document_settings,
     inventory_settings,
+    payroll_profiles,
+    payroll_days,
+    payroll_leave,
+    payroll_runs,
   ] = await Promise.all([
     restGetAll(`acc_coa?company_id=eq.${companyId}&select=*`).catch(() => []),
     restGetAll(`acc_parties?company_id=eq.${companyId}&select=*`).catch(() => []),
@@ -194,6 +198,10 @@ async function exportAccountsCompany(company) {
     restGetAll(`acc_party_pipeline?company_id=eq.${companyId}&select=*`).catch(() => []),
     restGet(`acc_document_settings?company_id=eq.${companyId}&select=*&limit=1`).catch(() => []),
     restGet(`acc_inventory_settings?company_id=eq.${companyId}&select=*&limit=1`).catch(() => []),
+    restGetAll(`acc_payroll_profiles?company_id=eq.${companyId}&select=*`).catch(() => []),
+    restGetAll(`acc_payroll_days?company_id=eq.${companyId}&select=*`).catch(() => []),
+    restGetAll(`acc_payroll_leave?company_id=eq.${companyId}&select=*`).catch(() => []),
+    restGetAll(`acc_payroll_runs?company_id=eq.${companyId}&select=*`).catch(() => []),
   ]);
   return {
     company,
@@ -214,6 +222,10 @@ async function exportAccountsCompany(company) {
     acc_party_pipeline: party_pipeline,
     acc_document_settings: document_settings[0] || null,
     acc_inventory_settings: inventory_settings[0] || null,
+    acc_payroll_profiles: payroll_profiles,
+    acc_payroll_days: payroll_days,
+    acc_payroll_leave: payroll_leave,
+    acc_payroll_runs: payroll_runs,
   };
 }
 
