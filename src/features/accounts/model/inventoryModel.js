@@ -744,8 +744,6 @@ export function expiredStockReport(items = [], movements = [], { asOf = "", soon
     if (days < 0) status = "expired";
     else if (days <= daysAhead) status = "soon";
     if (status === "ok") continue;
-    // Skip empty near-expiry shelves; keep expired rows even at zero so write-offs stay visible.
-    if (status === "soon" && !(Number(stock) > 0)) continue;
     rows.push({
       itemId: item.id,
       name: item.name || "",

@@ -260,12 +260,22 @@ test("expired stock report lists expired and near-expiry items only", () => {
   assert.match(expiryAlertLabel(rows[1]), /in 16 days/);
   assert.equal(expiryReportAsOf("2027-03-31", "2026-11-11"), "2026-11-11");
   assert.equal(expiryReportAsOf("2026-03-31", "2026-11-11"), "2026-03-31");
+  const openFy = expiryReportAsOf("2027-03-31", "2026-11-11");
   const china = expiredStockReport(
     [{ id: "c", name: "China Coat", sku: "1", itemType: "product", unit: "Litre", expiryDate: "2026-11-20", openingStock: 1 }],
     [],
-    { asOf: expiryReportAsOf("2027-03-31", "2026-11-11") },
+    { asOf: openFy },
   );
   assert.equal(china[0].status, "soon");
+  const burma = expiredStockReport(
+    [{ id: "b", name: "Burma Paper", sku: "3", itemType: "product", unit: "Kg", expiryDate: "2026-11-12", openingStock: 0 }],
+    [],
+    { asOf: openFy },
+  );
+  assert.equal(burma.length, 1);
+  assert.equal(burma[0].status, "soon");
+  assert.equal(burma[0].days, 1);
+  assert.equal(burma[0].stock, 0);
 });
 
 test("itemized sale accepts loose kg from a bag-priced item", () => {
