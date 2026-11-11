@@ -8035,6 +8035,11 @@
   z-index: 1;
 }
 
+.accounts-dashboard .counter-discount-hint {
+  margin: 6px 0 0;
+  color: var(--ft-success);
+}
+
 .accounts-dashboard .counter-totals > div {
   display: flex;
   justify-content: space-between;
@@ -8042,6 +8047,10 @@
   gap: 10px;
   font-size: var(--ft-type-secondary);
   color: var(--ft-text-2);
+}
+
+.accounts-dashboard .counter-totals > .counter-discount-row strong {
+  color: var(--ft-success);
 }
 
 .accounts-dashboard .counter-totals > div strong {

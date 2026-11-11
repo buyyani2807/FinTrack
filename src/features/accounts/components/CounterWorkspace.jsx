@@ -41,6 +41,7 @@ import { readCounterHolds, saveCounterHolds } from "../model/counterHolds.js";
 import { clearCounterDraft, readCounterDraft, saveCounterDraft } from "../model/counterDraft.js";
 import {
   applyBillDiscountToLines,
+  billDiscountAmount,
   buildCounterWhatsAppReceipt,
   cashChangeDue,
   counterEstimateTotal,
@@ -457,6 +458,10 @@ export function CounterWorkspace({
   const totals = useMemo(
     () => estimateTotal(chargeLines, { gstEnabled, intra }),
     [chargeLines, gstEnabled, intra],
+  );
+  const discountOff = useMemo(
+    () => billDiscountAmount(billLines, billDiscount),
+    [billLines, billDiscount],
   );
   const upiLink = useMemo(() => {
     if (tillMode === "return") return "";
@@ -2125,6 +2130,9 @@ export function CounterWorkspace({
               disabled={busy || !lines.length}
               aria-label="Bill discount"
             />
+            {discountOff > 0 ? (
+              <p className="small counter-discount-hint">{money(discountOff)} off this bill</p>
+            ) : null}
           </FieldBlock>
           {settlement === "paid" ? (
             <>
@@ -2207,6 +2215,12 @@ export function CounterWorkspace({
           ) : null}
 
           <div className="counter-totals">
+            {discountOff > 0 ? (
+              <div className="counter-discount-row">
+                <span>Discount{String(billDiscount).trim().endsWith("%") ? ` (${String(billDiscount).trim()})` : ""}</span>
+                <strong>−{money(discountOff)}</strong>
+              </div>
+            ) : null}
             <div><span>Taxable</span><strong>{money(totals.taxable)}</strong></div>
             {gstEnabled ? <div><span>{totals.taxLabel || "GST"}</span><strong>{money(totals.tax)}</strong></div> : null}
             <div className="counter-total-due"><span>{tillMode === "return" ? "Refund" : "Total due"}</span><strong>{money(totals.total)}</strong></div>
