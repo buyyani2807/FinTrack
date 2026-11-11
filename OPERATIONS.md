@@ -15,6 +15,7 @@ Use this checklist after deploying to Vercel + Supabase and before onboarding re
 3. **Customer workspace backups** (Settings → Backup & restore):
    - Apply migration `126_workspace_backups.sql`.
    - Create a private Storage bucket `workspace-backups` if the API cannot auto-create it.
+   - Pro still defaults Storage **Global file size limit** to 50 MB — raise it (e.g. 100–500 MB) under **Storage → Settings**, then set the `workspace-backups` bucket limit to match. Backups are stored gzip-compressed (`.json.gz`).
    - Set Vercel env `CRON_SECRET` (random string). Protects scheduled backup calls.
    - Schedule nightly runs with **Supabase Cron** (`pg_cron` + `pg_net`) at **00:00 IST** (`30 18 * * *` UTC) calling `/api/cron/workspace-backups` (rewrites to `/api/workspace/backups`) with `Authorization: Bearer $CRON_SECRET`.
    - Hobby is capped at **12 serverless functions**; backup cron is merged into the owner backups API (do not add a separate `api/cron` file).

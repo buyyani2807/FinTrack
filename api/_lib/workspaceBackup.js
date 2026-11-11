@@ -3,6 +3,7 @@
  * Modular workspace backup: export / store / restore whatever modules
  * the organization actually has (finance, cashbook, chit, accounts).
  */
+import { gunzipSync, gzipSync } from "node:zlib";
 
 const readEnv = (...keys) => {
   for (const key of keys) {
@@ -16,6 +17,8 @@ export const WORKSPACE_BACKUP_FORMAT = "myfintracker-workspace-backup";
 export const WORKSPACE_BACKUP_VERSION = 1;
 export const BACKUP_RETENTION_DAYS = 14;
 export const STORAGE_BUCKET = "workspace-backups";
+/** Per-bucket cap (bytes). Pro global Storage limit must be >= this in Dashboard. */
+export const BACKUP_FILE_SIZE_LIMIT = 524288000; // 500 MB
 
 export const supabaseUrl = () => readEnv("SUPABASE_URL", "VITE_SUPABASE_URL");
 export const serviceKey = () => readEnv("SUPABASE_SERVICE_ROLE_KEY");
@@ -249,15 +252,16 @@ export function parseWorkspaceBackup(raw) {
 }
 
 export async function ensureBackupBucket() {
+  const payload = {
+    id: STORAGE_BUCKET,
+    name: STORAGE_BUCKET,
+    public: false,
+    file_size_limit: BACKUP_FILE_SIZE_LIMIT,
+  };
   const response = await fetch(`${supabaseUrl()}/storage/v1/bucket`, {
     method: "POST",
     headers: serviceHeaders(),
-    body: JSON.stringify({
-      id: STORAGE_BUCKET,
-      name: STORAGE_BUCKET,
-      public: false,
-      file_size_limit: 104857600,
-    }),
+    body: JSON.stringify(payload),
   });
   // 200 create or 409 already exists are fine
   if (!response.ok && response.status !== 409) {
@@ -267,41 +271,64 @@ export async function ensureBackupBucket() {
       throw new Error(body?.message || "Could not create backup storage bucket.");
     }
   }
+  // Raise limit on existing buckets (create alone does not update them).
+  await fetch(`${supabaseUrl()}/storage/v1/bucket/${STORAGE_BUCKET}`, {
+    method: "PUT",
+    headers: serviceHeaders(),
+    body: JSON.stringify({
+      public: false,
+      file_size_limit: BACKUP_FILE_SIZE_LIMIT,
+    }),
+  }).catch(() => {});
+}
+
+function decodeBackupBytes(buffer, path = "") {
+  const bytes = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+  const looksGzip = path.endsWith(".gz") || (bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b);
+  if (looksGzip) return gunzipSync(bytes).toString("utf8");
+  return bytes.toString("utf8");
 }
 
 export async function uploadBackupObject(orgId, backupId, snapshot) {
   await ensureBackupBucket();
-  const path = `${orgId}/${backupId}.json`;
-  const body = JSON.stringify(snapshot);
+  const path = `${orgId}/${backupId}.json.gz`;
+  const json = JSON.stringify(snapshot);
+  const body = gzipSync(Buffer.from(json, "utf8"));
   const response = await fetch(`${supabaseUrl()}/storage/v1/object/${STORAGE_BUCKET}/${path}`, {
     method: "POST",
     headers: {
       ...serviceHeaders(),
-      "Content-Type": "application/json",
+      "Content-Type": "application/gzip",
       "x-upsert": "true",
     },
     body,
   });
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err?.message || "Could not store the backup file.");
+    const message = err?.message || "Could not store the backup file.";
+    if (/maximum allowed size|entity too large|payload too large/i.test(message)) {
+      throw new Error(
+        `${message} Raise Storage → Settings → Global file size limit (Pro) to at least 100 MB, then edit the workspace-backups bucket limit to match.`,
+      );
+    }
+    throw new Error(message);
   }
-  return { path, bytes: Buffer.byteLength(body, "utf8") };
+  return { path, bytes: body.length };
 }
 
 export async function downloadBackupObject(path) {
   const response = await fetch(`${supabaseUrl()}/storage/v1/object/authenticated/${STORAGE_BUCKET}/${path}`, {
     headers: serviceHeaders(),
   });
-  if (!response.ok) {
-    // Prefer service download path
-    const alt = await fetch(`${supabaseUrl()}/storage/v1/object/${STORAGE_BUCKET}/${path}`, {
-      headers: serviceHeaders(),
-    });
-    if (!alt.ok) throw new Error("Could not download that backup.");
-    return alt.text();
+  if (response.ok) {
+    return decodeBackupBytes(Buffer.from(await response.arrayBuffer()), path);
   }
-  return response.text();
+  // Prefer service download path
+  const alt = await fetch(`${supabaseUrl()}/storage/v1/object/${STORAGE_BUCKET}/${path}`, {
+    headers: serviceHeaders(),
+  });
+  if (!alt.ok) throw new Error("Could not download that backup.");
+  return decodeBackupBytes(Buffer.from(await alt.arrayBuffer()), path);
 }
 
 export async function deleteBackupObject(path) {

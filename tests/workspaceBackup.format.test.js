@@ -11,6 +11,9 @@ test("workspace backup format constants are stable", () => {
   assert.match(source, /myfintracker-workspace-backup/);
   assert.match(source, /WORKSPACE_BACKUP_VERSION = 1/);
   assert.match(source, /STORAGE_BUCKET = "workspace-backups"/);
+  assert.match(source, /BACKUP_FILE_SIZE_LIMIT = 524288000/);
+  assert.match(source, /gzipSync/);
+  assert.match(source, /\.json\.gz/);
 });
 
 test("snapshot builder covers all product modules", () => {
