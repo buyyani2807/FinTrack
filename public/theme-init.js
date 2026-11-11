@@ -3,7 +3,7 @@
 // Loaded as a file because the Content-Security-Policy does not allow inline scripts.
 (function () {
   var path = (location.pathname || "/").replace(/\/+$/, "") || "/";
-  var guestRoots = ["/features", "/solutions", "/how-it-works", "/security", "/pricing", "/about", "/founder", "/contact", "/resources", "/login", "/pay"];
+  var guestRoots = ["/features", "/solutions", "/how-it-works", "/security", "/pricing", "/about", "/founder", "/contact", "/login", "/pay"];
   var guest = path === "/" || guestRoots.some(function (root) {
     return path === root || path.indexOf(root + "/") === 0;
   });

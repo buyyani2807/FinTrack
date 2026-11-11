@@ -265,29 +265,3 @@ export function ContactPage() {
     </Reveal>
   </section></RevealProvider>;
 }
-
-export function ResourcesPage() {
-  const links = [
-    [`${marketingPaths.how}#install`, "Install on iPhone or Android", "Add MyFinTracker to the home screen and open it from its own icon."],
-    [marketingPaths.how, "How it works", "The path from sign-in to a record you confirm."],
-    [marketingPaths.features, "Feature directory", "Every module currently in the product."],
-    [marketingPaths.security, "Security", "Roles, companies, locks, and review."],
-    [marketingPaths.pricing, "Pricing", "Modules from ₹498 + GST 18% per month; Accounts + POS ₹598 + GST. 14-day free trial."],
-    [marketingPaths.about, "About MyFinTracker", "What MyFinTracker stands for and who uses it."],
-    [marketingPaths.founder, "CEO and Founder", "Sudheer Kumar Buyyani, and the experience behind MyFinTracker."],
-    [marketingPaths.contact, "Request a demo", "A local note until contact is connected."],
-  ];
-  return <RevealProvider intent="content">
-  <section className="mkt-section">
-    <PageTitle title="MyFinTracker resources" />
-    <Reveal>
-      <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Resources</p>
-      <h1>Read the product before you sign in.</h1>
-    </Reveal>
-    <Reveal className="mkt-grid three">
-      {links.map(([to, title, text]) => <Link key={to} to={to} className="mkt-card"><h2>{title}</h2><p>{text}</p></Link>)}
-    </Reveal>
-  </section>
-  <PageClose />
-  </RevealProvider>;
-}
