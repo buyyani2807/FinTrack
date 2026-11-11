@@ -93,8 +93,8 @@ export function ModeSwitch({ label, modes }) {
   </div>;
 }
 
-export function ModuleFaq({ title, questions }) {
-  const items = questions.map(question => FAQ.find(item => item.question === question)).filter(Boolean);
+export function ModuleFaq({ title, questions, items: provided }) {
+  const items = provided || questions.map(question => FAQ.find(item => item.question === question)).filter(Boolean);
   return <section className="fx-sec">
     <div className="mkt-wrap fx-faq">
       <div>

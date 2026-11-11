@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Reveal, RevealProvider } from "../../components/ui/Reveal.jsx";
 import { MODULE_PRODUCT_LIST, priceForPeriod, priceForProduct } from "../commercial/moduleProducts.js";
-import { SECURITY_POINTS, SECURITY_TRUST, SOLUTIONS, featureBySlug } from "./catalog.js";
+import { SOLUTIONS, featureBySlug } from "./catalog.js";
 import { featurePath, marketingPaths } from "./paths.js";
 import { InstallGuide } from "./InstallGuide.jsx";
 import { ProductCta } from "./ProductCta.jsx";
@@ -63,37 +63,6 @@ export function HowItWorksPage() {
       <Reveal className="mkt-cta-row"><ProductCta primary /><Link className="mkt-btn" to={marketingPaths.features}>Explore features</Link></Reveal>
     </section>
     <InstallGuide />
-  </RevealProvider>;
-}
-
-export function SecurityPage() {
-  return <RevealProvider intent="content">
-  <section className="mkt-section">
-    <PageTitle title="MyFinTracker security" />
-    <Reveal>
-      <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Security</p>
-      <h1>Access, isolation, and review.</h1>
-    </Reveal>
-    <Reveal className="mkt-grid two">
-      {SECURITY_POINTS.map(point => <article key={point.title} className="mkt-card">
-        <h2>{point.title}</h2>
-        <p>{point.text}</p>
-      </article>)}
-    </Reveal>
-  </section>
-  <section className="mkt-security-trust" aria-labelledby="mkt-security-trust-title">
-    <div className="mkt-wrap">
-      <Reveal as="p" className="mkt-security-trust-kicker" id="mkt-security-trust-title">Security &amp; trust</Reveal>
-      <Reveal className="mkt-grid four">
-        {SECURITY_TRUST.map((point, index) => <article key={point.title} className="mkt-security-trust-card" style={{ "--reveal-i": index }}>
-          <div className="mkt-icon"><FeatureIcon name={point.icon} /></div>
-          <h2>{point.title}</h2>
-          <p>{point.text}</p>
-        </article>)}
-      </Reveal>
-    </div>
-  </section>
-  <PageClose />
   </RevealProvider>;
 }
 

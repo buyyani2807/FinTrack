@@ -1358,6 +1358,7 @@ export const MODULE_FEATURES = {
     "inventory", "item-profit", "gst-preparation", "audit-trail", "period-locking", "for-the-ca",
   ],
   "counter-pos": [],
+  security: ["agent-portal", "customer-portals", "member-portals", "audit-trail", "period-locking", "vouchers", "ai-review"],
   ai: [
     "ask-finny", "ai-bookkeeper", "bill-scanning", "ai-review", "forecasting", "expense-insights", "collection-priorities",
     "anomaly-detection", "gst-review", "month-end-readiness", "bank-matching", "stock-forecast", "chit-scheme-health",
@@ -1367,8 +1368,8 @@ export const MODULE_FEATURES = {
 
 // The module a feature page belongs to (a module page belongs to itself), or null.
 export function moduleForFeature(slug) {
-  if (slug in MODULE_FEATURES) return slug;
-  return Object.keys(MODULE_FEATURES).find(module => MODULE_FEATURES[module].includes(slug)) || null;
+  if (slug in MODULE_FEATURES && slug !== "security") return slug;
+  return Object.keys(MODULE_FEATURES).find(module => module !== "security" && MODULE_FEATURES[module].includes(slug)) || null;
 }
 
 export function featuresInCategory(categoryId) {
