@@ -1,0 +1,341 @@
+-- Customer workspace backups (all modules the org uses) + midnight schedule flag.
+-- Paste after 125. Safe to re-run.
+-- App API stores JSON in Storage bucket "workspace-backups" and calls restore_workspace_backup_json.
+
+alter table public.organizations
+  add column if not exists backup_schedule_enabled boolean not null default true;
+
+comment on column public.organizations.backup_schedule_enabled is
+  'When true, nightly cron creates a scheduled workspace backup for this organization.';
+
+create table if not exists public.workspace_backups (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  kind text not null check (kind in ('manual', 'scheduled', 'pre_restore')),
+  module_keys text[] not null default '{}',
+  storage_path text not null,
+  bytes integer not null default 0 check (bytes >= 0),
+  counts jsonb not null default '{}'::jsonb,
+  status text not null default 'ready' check (status in ('ready', 'failed', 'deleted')),
+  note text,
+  created_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists workspace_backups_org_created_idx
+  on public.workspace_backups (organization_id, created_at desc);
+
+alter table public.workspace_backups enable row level security;
+
+drop policy if exists "owners read workspace backups" on public.workspace_backups;
+create policy "owners read workspace backups" on public.workspace_backups
+  for select to authenticated
+  using (
+    organization_id = public.current_organization_id()
+    and public.is_financier_owner()
+  );
+
+revoke all on table public.workspace_backups from public, anon;
+grant select on table public.workspace_backups to authenticated;
+grant all on table public.workspace_backups to service_role;
+
+-- Restore selected modules from a workspace backup payload (service role only).
+-- Replaces live data for those modules; caller should create a pre_restore checkpoint first.
+create or replace function public.restore_workspace_backup_json(
+  target_org_id uuid,
+  payload jsonb,
+  module_keys text[] default null,
+  actor_id uuid default null
+) returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  wanted text[];
+  key text;
+  finance jsonb;
+  cashbook jsonb;
+  chit jsonb;
+  accounts jsonb;
+  company jsonb;
+  restored text[] := '{}';
+begin
+  if coalesce(auth.role(), '') is distinct from 'service_role' then
+    raise exception 'Workspace restore requires a verified server call';
+  end if;
+  if target_org_id is null then
+    raise exception 'Organization is required';
+  end if;
+  if payload is null or payload->>'format' is distinct from 'myfintracker-workspace-backup' then
+    raise exception 'Invalid workspace backup payload';
+  end if;
+  if (payload #>> '{organization,id}')::uuid is distinct from target_org_id then
+    raise exception 'Backup organization does not match this workspace';
+  end if;
+
+  if module_keys is null or array_length(module_keys, 1) is null then
+    select array_agg(k) into wanted
+    from jsonb_array_elements_text(coalesce(payload->'moduleKeys', '[]'::jsonb)) as k;
+  else
+    wanted := module_keys;
+  end if;
+  if wanted is null or array_length(wanted, 1) is null then
+    raise exception 'Backup has no modules to restore';
+  end if;
+
+  -- Optional org branding / packs (never touch subscription columns here).
+  update public.organizations o
+  set
+    name = coalesce(nullif(trim(payload #>> '{organization,name}'), ''), o.name),
+    feature_packs = coalesce(payload #>'{organization,feature_packs}', o.feature_packs),
+    module_overrides = coalesce(payload #>'{organization,module_overrides}', o.module_overrides),
+    company_address = coalesce(payload #>> '{organization,company_address}', o.company_address),
+    company_phone = coalesce(payload #>> '{organization,company_phone}', o.company_phone),
+    company_email = coalesce(payload #>> '{organization,company_email}', o.company_email),
+    company_logo_url = coalesce(payload #>> '{organization,company_logo_url}', o.company_logo_url),
+    receipt_footer = coalesce(payload #>> '{organization,receipt_footer}', o.receipt_footer),
+    receipt_terms = coalesce(payload #>> '{organization,receipt_terms}', o.receipt_terms),
+    whatsapp_templates = coalesce(payload #>'{organization,whatsapp_templates}', o.whatsapp_templates),
+    reminder_settings = coalesce(payload #>'{organization,reminder_settings}', o.reminder_settings)
+  where o.id = target_org_id;
+
+  foreach key in array wanted loop
+    if key = 'finance' then
+      finance := payload #>'{modules,finance}';
+      if finance is null then continue; end if;
+      delete from public.payments where organization_id = target_org_id;
+      delete from public.rate_changes rc
+        using public.finance_accounts fa
+        where rc.finance_account_id = fa.id and fa.organization_id = target_org_id;
+      delete from public.finance_accounts where organization_id = target_org_id;
+      delete from public.customers where organization_id = target_org_id;
+
+      insert into public.customers
+      select * from jsonb_populate_recordset(null::public.customers, coalesce(finance->'customers', '[]'::jsonb));
+      insert into public.finance_accounts
+      select * from jsonb_populate_recordset(null::public.finance_accounts, coalesce(finance->'finance_accounts', '[]'::jsonb));
+      insert into public.rate_changes
+      select * from jsonb_populate_recordset(null::public.rate_changes, coalesce(finance->'rate_changes', '[]'::jsonb));
+      insert into public.payments
+      select * from jsonb_populate_recordset(null::public.payments, coalesce(finance->'payments', '[]'::jsonb));
+      restored := array_append(restored, 'finance');
+
+    elsif key = 'cashbook' then
+      cashbook := payload #>'{modules,cashbook}';
+      if cashbook is null then continue; end if;
+      delete from public.day_closings where organization_id = target_org_id;
+      delete from public.account_transfers where organization_id = target_org_id;
+      delete from public.cashbook_entries where organization_id = target_org_id;
+      delete from public.ledger_accounts where organization_id = target_org_id;
+
+      insert into public.ledger_accounts
+      select * from jsonb_populate_recordset(null::public.ledger_accounts, coalesce(cashbook->'ledger_accounts', '[]'::jsonb));
+      insert into public.cashbook_entries
+      select * from jsonb_populate_recordset(null::public.cashbook_entries, coalesce(cashbook->'cashbook_entries', '[]'::jsonb));
+      insert into public.account_transfers
+      select * from jsonb_populate_recordset(null::public.account_transfers, coalesce(cashbook->'account_transfers', '[]'::jsonb));
+      insert into public.day_closings
+      select * from jsonb_populate_recordset(null::public.day_closings, coalesce(cashbook->'day_closings', '[]'::jsonb));
+      restored := array_append(restored, 'cashbook');
+
+    elsif key = 'chit' then
+      chit := payload #>'{modules,chit}';
+      if chit is null then continue; end if;
+      -- Child tables first (best-effort; ignore missing tables on older DBs via exception blocks).
+      begin delete from public.chit_live_auction_bids b using public.chit_live_auctions a, public.chit_schemes s
+        where b.auction_id = a.id and a.scheme_id = s.id and s.organization_id = target_org_id; exception when undefined_table then null; end;
+      begin delete from public.chit_live_auctions a using public.chit_schemes s
+        where a.scheme_id = s.id and s.organization_id = target_org_id; exception when undefined_table then null; end;
+      begin delete from public.fixed_chit_payments p using public.chit_schemes s
+        where p.scheme_id = s.id and s.organization_id = target_org_id; exception when undefined_table then null; end;
+      begin delete from public.fixed_chit_lifts l using public.chit_schemes s
+        where l.scheme_id = s.id and s.organization_id = target_org_id; exception when undefined_table then null; end;
+      begin delete from public.predefined_chit_payments p using public.chit_schemes s
+        where p.scheme_id = s.id and s.organization_id = target_org_id; exception when undefined_table then null; end;
+      begin delete from public.predefined_chit_schedule p using public.chit_schemes s
+        where p.scheme_id = s.id and s.organization_id = target_org_id; exception when undefined_table then null; end;
+      begin delete from public.chit_security_deposits d using public.chit_schemes s
+        where d.scheme_id = s.id and s.organization_id = target_org_id; exception when undefined_table then null; end;
+      begin delete from public.chit_payouts p using public.chit_schemes s
+        where p.scheme_id = s.id and s.organization_id = target_org_id; exception when undefined_table then null; end;
+      begin delete from public.chit_installments i using public.chit_schemes s
+        where i.scheme_id = s.id and s.organization_id = target_org_id; exception when undefined_table then null; end;
+      begin delete from public.chit_bids b using public.chit_cycles c, public.chit_schemes s
+        where b.cycle_id = c.id and c.scheme_id = s.id and s.organization_id = target_org_id; exception when undefined_table then null; end;
+      begin delete from public.chit_cycles c using public.chit_schemes s
+        where c.scheme_id = s.id and s.organization_id = target_org_id; exception when undefined_table then null; end;
+      begin delete from public.chit_enrollments e using public.chit_schemes s
+        where e.scheme_id = s.id and s.organization_id = target_org_id; exception when undefined_table then null; end;
+      delete from public.chit_schemes where organization_id = target_org_id;
+      delete from public.chit_members where organization_id = target_org_id;
+
+      insert into public.chit_members
+      select * from jsonb_populate_recordset(null::public.chit_members, coalesce(chit->'chit_members', '[]'::jsonb));
+      insert into public.chit_schemes
+      select * from jsonb_populate_recordset(null::public.chit_schemes, coalesce(chit->'chit_schemes', '[]'::jsonb));
+      begin
+        insert into public.chit_enrollments
+        select * from jsonb_populate_recordset(null::public.chit_enrollments, coalesce(chit->'chit_enrollments', '[]'::jsonb));
+      exception when undefined_table then null; end;
+      begin
+        insert into public.chit_cycles
+        select * from jsonb_populate_recordset(null::public.chit_cycles, coalesce(chit->'chit_cycles', '[]'::jsonb));
+      exception when undefined_table then null; end;
+      begin
+        insert into public.chit_bids
+        select * from jsonb_populate_recordset(null::public.chit_bids, coalesce(chit->'chit_bids', '[]'::jsonb));
+      exception when undefined_table then null; end;
+      begin
+        insert into public.chit_installments
+        select * from jsonb_populate_recordset(null::public.chit_installments, coalesce(chit->'chit_installments', '[]'::jsonb));
+      exception when undefined_table then null; end;
+      begin
+        insert into public.chit_payouts
+        select * from jsonb_populate_recordset(null::public.chit_payouts, coalesce(chit->'chit_payouts', '[]'::jsonb));
+      exception when undefined_table then null; end;
+      begin
+        insert into public.chit_security_deposits
+        select * from jsonb_populate_recordset(null::public.chit_security_deposits, coalesce(chit->'chit_security_deposits', '[]'::jsonb));
+      exception when undefined_table then null; end;
+      begin
+        insert into public.predefined_chit_schedule
+        select * from jsonb_populate_recordset(null::public.predefined_chit_schedule, coalesce(chit->'predefined_chit_schedule', '[]'::jsonb));
+      exception when undefined_table then null; end;
+      begin
+        insert into public.predefined_chit_payments
+        select * from jsonb_populate_recordset(null::public.predefined_chit_payments, coalesce(chit->'predefined_chit_payments', '[]'::jsonb));
+      exception when undefined_table then null; end;
+      begin
+        insert into public.fixed_chit_lifts
+        select * from jsonb_populate_recordset(null::public.fixed_chit_lifts, coalesce(chit->'fixed_chit_lifts', '[]'::jsonb));
+      exception when undefined_table then null; end;
+      begin
+        insert into public.fixed_chit_payments
+        select * from jsonb_populate_recordset(null::public.fixed_chit_payments, coalesce(chit->'fixed_chit_payments', '[]'::jsonb));
+      exception when undefined_table then null; end;
+      restored := array_append(restored, 'chit');
+
+    elsif key = 'accounts' then
+      accounts := payload #>'{modules,accounts}';
+      if accounts is null then continue; end if;
+      for company in select * from jsonb_array_elements(coalesce(accounts->'companies', '[]'::jsonb))
+      loop
+        perform public.restore_accounts_company_from_backup(target_org_id, company);
+      end loop;
+      restored := array_append(restored, 'accounts');
+    end if;
+  end loop;
+
+  return jsonb_build_object(
+    'ok', true,
+    'restored', to_jsonb(restored),
+    'actorId', actor_id
+  );
+end;
+$$;
+
+revoke all on function public.restore_workspace_backup_json(uuid, jsonb, text[], uuid) from public, anon, authenticated;
+grant execute on function public.restore_workspace_backup_json(uuid, jsonb, text[], uuid) to service_role;
+
+-- Per-company Accounts restore helper used by restore_workspace_backup_json.
+create or replace function public.restore_accounts_company_from_backup(
+  target_org_id uuid,
+  company_pack jsonb
+) returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  company_id uuid;
+  company_row jsonb;
+begin
+  company_row := company_pack->'company';
+  if company_row is null or company_row->>'id' is null then
+    return;
+  end if;
+  company_id := (company_row->>'id')::uuid;
+
+  -- Ensure company row exists for this org (insert or update).
+  insert into public.acc_companies
+  select * from jsonb_populate_record(null::public.acc_companies, company_row)
+  on conflict (id) do update set
+    name = excluded.name,
+    books_started_on = excluded.books_started_on,
+    gstin = excluded.gstin,
+    pan = excluded.pan,
+    state_code = excluded.state_code,
+    gst_registration = excluded.gst_registration,
+    legal_name = excluded.legal_name,
+    status = excluded.status,
+    is_primary = excluded.is_primary,
+    fy_start_month = excluded.fy_start_month
+  where public.acc_companies.organization_id = target_org_id;
+
+  if not exists (
+    select 1 from public.acc_companies c
+    where c.id = company_id and c.organization_id = target_org_id
+  ) then
+    raise exception 'Accounts company does not belong to this workspace';
+  end if;
+
+  -- Wipe dependent books for this company (order matters).
+  begin delete from public.acc_gst_lines where company_id = company_id; exception when undefined_table then null; end;
+  begin delete from public.acc_voucher_item_lines where company_id = company_id; exception when undefined_table then null; end;
+  begin delete from public.acc_stock_movements where company_id = company_id; exception when undefined_table then null; end;
+  begin delete from public.acc_voucher_lines where company_id = company_id; exception when undefined_table then null; end;
+  begin delete from public.acc_vouchers where company_id = company_id; exception when undefined_table then null; end;
+  begin delete from public.acc_items where company_id = company_id; exception when undefined_table then null; end;
+  begin delete from public.acc_item_categories where company_id = company_id; exception when undefined_table then null; end;
+  begin delete from public.acc_parties where company_id = company_id; exception when undefined_table then null; end;
+  begin delete from public.acc_coa where company_id = company_id; exception when undefined_table then null; end;
+  begin delete from public.acc_settings where company_id = company_id; exception when undefined_table then null; end;
+
+  if company_pack->'settings' is not null and company_pack->'settings' != 'null'::jsonb then
+    begin
+      insert into public.acc_settings
+      select * from jsonb_populate_record(null::public.acc_settings, company_pack->'settings');
+    exception when undefined_table then null; end;
+  end if;
+  begin
+    insert into public.acc_coa
+    select * from jsonb_populate_recordset(null::public.acc_coa, coalesce(company_pack->'acc_coa', '[]'::jsonb));
+  exception when undefined_table then null; end;
+  begin
+    insert into public.acc_parties
+    select * from jsonb_populate_recordset(null::public.acc_parties, coalesce(company_pack->'acc_parties', '[]'::jsonb));
+  exception when undefined_table then null; end;
+  begin
+    insert into public.acc_item_categories
+    select * from jsonb_populate_recordset(null::public.acc_item_categories, coalesce(company_pack->'acc_item_categories', '[]'::jsonb));
+  exception when undefined_table then null; end;
+  begin
+    insert into public.acc_items
+    select * from jsonb_populate_recordset(null::public.acc_items, coalesce(company_pack->'acc_items', '[]'::jsonb));
+  exception when undefined_table then null; end;
+  begin
+    insert into public.acc_vouchers
+    select * from jsonb_populate_recordset(null::public.acc_vouchers, coalesce(company_pack->'acc_vouchers', '[]'::jsonb));
+  exception when undefined_table then null; end;
+  begin
+    insert into public.acc_voucher_lines
+    select * from jsonb_populate_recordset(null::public.acc_voucher_lines, coalesce(company_pack->'acc_voucher_lines', '[]'::jsonb));
+  exception when undefined_table then null; end;
+  begin
+    insert into public.acc_voucher_item_lines
+    select * from jsonb_populate_recordset(null::public.acc_voucher_item_lines, coalesce(company_pack->'acc_voucher_item_lines', '[]'::jsonb));
+  exception when undefined_table then null; end;
+  begin
+    insert into public.acc_stock_movements
+    select * from jsonb_populate_recordset(null::public.acc_stock_movements, coalesce(company_pack->'acc_stock_movements', '[]'::jsonb));
+  exception when undefined_table then null; end;
+  begin
+    insert into public.acc_gst_lines
+    select * from jsonb_populate_recordset(null::public.acc_gst_lines, coalesce(company_pack->'acc_gst_lines', '[]'::jsonb));
+  exception when undefined_table then null; end;
+end;
+$$;
+
+revoke all on function public.restore_accounts_company_from_backup(uuid, jsonb) from public, anon, authenticated;
+grant execute on function public.restore_accounts_company_from_backup(uuid, jsonb) to service_role;

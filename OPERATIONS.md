@@ -12,7 +12,11 @@ Use this checklist after deploying to Vercel + Supabase and before onboarding re
 
 1. Supabase Pro includes daily backups; verify **Database → Backups** in the project dashboard.
 2. Before major migrations, run **Database → Backups → Create backup** manually.
-3. Export a monthly CSV of active finance accounts and chit schemes as an operator backup (`Reports` in the app).
+3. **Customer workspace backups** (Settings → Backup & restore):
+   - Apply migration `126_workspace_backups.sql`.
+   - Create a private Storage bucket `workspace-backups` if the API cannot auto-create it.
+   - Set Vercel env `CRON_SECRET` (random string). Nightly cron hits `/api/cron/workspace-backups` at **00:00 IST** (`30 18 * * *` UTC).
+   - Owners can back up / restore any modules present (Finance, Cashbook, Chit, Accounts). Restore creates a safety checkpoint first.
 
 ### Restore drill (do once on staging)
 
@@ -20,6 +24,7 @@ Use this checklist after deploying to Vercel + Supabase and before onboarding re
 2. Restore a backup snapshot into staging (Supabase support/docs for your plan).
 3. Point a staging Vercel preview at staging env vars and sign in.
 4. Confirm one finance account and one chit scheme load correctly.
+5. In Settings → Backup & restore, create a backup, change a payment, restore, and confirm the payment returns.
 
 ## Incident response
 
