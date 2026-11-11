@@ -17,8 +17,12 @@ export const WORKSPACE_BACKUP_FORMAT = "myfintracker-workspace-backup";
 export const WORKSPACE_BACKUP_VERSION = 1;
 export const BACKUP_RETENTION_DAYS = 14;
 export const STORAGE_BUCKET = "workspace-backups";
-/** Per-bucket cap (bytes). Pro global Storage limit must be >= this in Dashboard. */
+/** Preferred per-bucket cap (bytes). Pro can use this; Free global max is 50 MB. */
 export const BACKUP_FILE_SIZE_LIMIT = 524288000; // 500 MB
+/** Free-plan safe cap — also used as max chunk size for multipart uploads. */
+export const BACKUP_FREE_FILE_SIZE_LIMIT = 52428800; // 50 MB
+/** Leave headroom under the 50 MB Free global limit for multipart parts. */
+export const BACKUP_PART_MAX_BYTES = 40 * 1024 * 1024;
 
 export const supabaseUrl = () => readEnv("SUPABASE_URL", "VITE_SUPABASE_URL");
 export const serviceKey = () => readEnv("SUPABASE_SERVICE_ROLE_KEY");
@@ -251,12 +255,24 @@ export function parseWorkspaceBackup(raw) {
   return data;
 }
 
+async function putBucketFileSizeLimit(limitBytes) {
+  const response = await fetch(`${supabaseUrl()}/storage/v1/bucket/${STORAGE_BUCKET}`, {
+    method: "PUT",
+    headers: serviceHeaders(),
+    body: JSON.stringify({
+      public: false,
+      file_size_limit: limitBytes,
+    }),
+  });
+  return response.ok;
+}
+
 export async function ensureBackupBucket() {
   const payload = {
     id: STORAGE_BUCKET,
     name: STORAGE_BUCKET,
     public: false,
-    file_size_limit: BACKUP_FILE_SIZE_LIMIT,
+    file_size_limit: BACKUP_FREE_FILE_SIZE_LIMIT,
   };
   const response = await fetch(`${supabaseUrl()}/storage/v1/bucket`, {
     method: "POST",
@@ -271,15 +287,10 @@ export async function ensureBackupBucket() {
       throw new Error(body?.message || "Could not create backup storage bucket.");
     }
   }
-  // Raise limit on existing buckets (create alone does not update them).
-  await fetch(`${supabaseUrl()}/storage/v1/bucket/${STORAGE_BUCKET}`, {
-    method: "PUT",
-    headers: serviceHeaders(),
-    body: JSON.stringify({
-      public: false,
-      file_size_limit: BACKUP_FILE_SIZE_LIMIT,
-    }),
-  }).catch(() => {});
+  // Prefer Pro-sized limit; fall back to Free 50 MB when the project cannot go higher.
+  if (!(await putBucketFileSizeLimit(BACKUP_FILE_SIZE_LIMIT))) {
+    await putBucketFileSizeLimit(BACKUP_FREE_FILE_SIZE_LIMIT);
+  }
 }
 
 function decodeBackupBytes(buffer, path = "") {
@@ -289,53 +300,114 @@ function decodeBackupBytes(buffer, path = "") {
   return bytes.toString("utf8");
 }
 
-export async function uploadBackupObject(orgId, backupId, snapshot) {
-  await ensureBackupBucket();
-  const path = `${orgId}/${backupId}.json.gz`;
-  const json = JSON.stringify(snapshot);
-  const body = gzipSync(Buffer.from(json, "utf8"));
+async function storageFetchObject(path) {
+  const response = await fetch(`${supabaseUrl()}/storage/v1/object/authenticated/${STORAGE_BUCKET}/${path}`, {
+    headers: serviceHeaders(),
+  });
+  if (response.ok) return Buffer.from(await response.arrayBuffer());
+  const alt = await fetch(`${supabaseUrl()}/storage/v1/object/${STORAGE_BUCKET}/${path}`, {
+    headers: serviceHeaders(),
+  });
+  if (!alt.ok) throw new Error("Could not download that backup.");
+  return Buffer.from(await alt.arrayBuffer());
+}
+
+async function uploadStorageBytes(path, bytes, contentType) {
+  const body = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   const response = await fetch(`${supabaseUrl()}/storage/v1/object/${STORAGE_BUCKET}/${path}`, {
     method: "POST",
     headers: {
       ...serviceHeaders(),
-      "Content-Type": "application/gzip",
+      "Content-Type": contentType,
       "x-upsert": "true",
     },
     body,
   });
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    const message = err?.message || "Could not store the backup file.";
-    if (/maximum allowed size|entity too large|payload too large/i.test(message)) {
+    const message = err?.message || err?.error || "Could not store the backup file.";
+    const mb = (body.byteLength / (1024 * 1024)).toFixed(1);
+    if (/maximum allowed size|entity too large|payload too large/i.test(String(message))) {
       throw new Error(
-        `${message} Raise Storage → Settings → Global file size limit (Pro) to at least 100 MB, then edit the workspace-backups bucket limit to match.`,
+        `${message} (upload part ${mb} MB). On Free, Storage max is 50 MB — check Storage → Buckets → workspace-backups file size limit. On Pro, raise Storage → Settings → Global file size limit.`,
       );
     }
-    throw new Error(message);
+    throw new Error(`${message} (upload part ${mb} MB)`);
   }
-  return { path, bytes: body.length };
+}
+
+function backupObjectPrefix(orgId, backupId) {
+  return `${orgId}/${backupId}`;
+}
+
+export async function uploadBackupObject(orgId, backupId, snapshot) {
+  await ensureBackupBucket();
+  const json = JSON.stringify(snapshot);
+  const compressed = gzipSync(Buffer.from(json, "utf8"));
+  const prefix = backupObjectPrefix(orgId, backupId);
+
+  // Small enough for a single Free-plan object.
+  if (compressed.length <= BACKUP_PART_MAX_BYTES) {
+    const path = `${prefix}.json.gz`;
+    await uploadStorageBytes(path, compressed, "application/gzip");
+    return { path, bytes: compressed.length };
+  }
+
+  // Split gzip stream into <50 MB parts so Free staging can store large workspaces.
+  const parts = [];
+  for (let offset = 0, index = 0; offset < compressed.length; offset += BACKUP_PART_MAX_BYTES, index += 1) {
+    const chunk = compressed.subarray(offset, offset + BACKUP_PART_MAX_BYTES);
+    const partPath = `${prefix}.part${String(index).padStart(3, "0")}`;
+    await uploadStorageBytes(partPath, chunk, "application/octet-stream");
+    parts.push(partPath);
+  }
+  const manifest = {
+    format: WORKSPACE_BACKUP_FORMAT,
+    version: WORKSPACE_BACKUP_VERSION,
+    kind: "gzip-parts",
+    encoding: "gzip",
+    bytes: compressed.length,
+    uncompressedBytes: Buffer.byteLength(json, "utf8"),
+    parts,
+  };
+  const path = `${prefix}.manifest.json`;
+  await uploadStorageBytes(path, Buffer.from(JSON.stringify(manifest), "utf8"), "application/json");
+  return { path, bytes: compressed.length };
 }
 
 export async function downloadBackupObject(path) {
-  const response = await fetch(`${supabaseUrl()}/storage/v1/object/authenticated/${STORAGE_BUCKET}/${path}`, {
-    headers: serviceHeaders(),
-  });
-  if (response.ok) {
-    return decodeBackupBytes(Buffer.from(await response.arrayBuffer()), path);
+  const bytes = await storageFetchObject(path);
+  if (path.endsWith(".manifest.json")) {
+    const manifest = JSON.parse(bytes.toString("utf8"));
+    if (manifest?.kind === "gzip-parts" && Array.isArray(manifest.parts)) {
+      const chunks = [];
+      for (const partPath of manifest.parts) {
+        chunks.push(await storageFetchObject(partPath));
+      }
+      return gunzipSync(Buffer.concat(chunks)).toString("utf8");
+    }
+    throw new Error("Unsupported multipart backup manifest.");
   }
-  // Prefer service download path
-  const alt = await fetch(`${supabaseUrl()}/storage/v1/object/${STORAGE_BUCKET}/${path}`, {
-    headers: serviceHeaders(),
-  });
-  if (!alt.ok) throw new Error("Could not download that backup.");
-  return decodeBackupBytes(Buffer.from(await alt.arrayBuffer()), path);
+  return decodeBackupBytes(bytes, path);
 }
 
 export async function deleteBackupObject(path) {
+  const prefixes = new Set([path]);
+  if (path.endsWith(".manifest.json")) {
+    prefixes.add(path.slice(0, -".manifest.json".length));
+    try {
+      const manifest = JSON.parse((await storageFetchObject(path)).toString("utf8"));
+      for (const partPath of manifest?.parts || []) prefixes.add(partPath);
+    } catch {
+      // Best-effort cleanup when the manifest is already gone.
+    }
+  } else if (path.endsWith(".json.gz")) {
+    prefixes.add(path.slice(0, -".json.gz".length));
+  }
   await fetch(`${supabaseUrl()}/storage/v1/object/${STORAGE_BUCKET}`, {
     method: "DELETE",
     headers: serviceHeaders(),
-    body: JSON.stringify({ prefixes: [path] }),
+    body: JSON.stringify({ prefixes: [...prefixes] }),
   }).catch(() => {});
 }
 

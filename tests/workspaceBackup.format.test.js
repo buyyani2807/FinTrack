@@ -12,8 +12,10 @@ test("workspace backup format constants are stable", () => {
   assert.match(source, /WORKSPACE_BACKUP_VERSION = 1/);
   assert.match(source, /STORAGE_BUCKET = "workspace-backups"/);
   assert.match(source, /BACKUP_FILE_SIZE_LIMIT = 524288000/);
+  assert.match(source, /BACKUP_PART_MAX_BYTES/);
   assert.match(source, /gzipSync/);
   assert.match(source, /\.json\.gz/);
+  assert.match(source, /gzip-parts/);
 });
 
 test("snapshot builder covers all product modules", () => {
