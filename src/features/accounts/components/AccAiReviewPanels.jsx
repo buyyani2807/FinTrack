@@ -6,6 +6,7 @@ import { REMINDER_LANGUAGES, draftCollectionReminder, reminderSendAllowed } from
 import { axisMoney, money } from "../accountsFormat.js";
 import { AccEmpty } from "./AccUi.jsx";
 import { Select } from "../../../components/Select.jsx";
+import { expiryAlertLabel } from "../model/inventoryModel.js";
 
 const pct = value => (value == null ? "—" : `${value > 0 ? "+" : ""}${value}%`);
 const differenceText = alert => alert.pattern === "possible_backdated_entry" ? `${alert.difference} day(s)`
@@ -758,20 +759,47 @@ export function BankPanel({ result, decisions, canWrite, busy, isLocked, onAppro
 
 /* ---------- Inventory ---------- */
 
-export function InventoryPanel({ rows, openSource }) {
+export function InventoryPanel({ rows, expiryRows = [], openSource }) {
   const [openId, toggle, setOpenId] = useAccordion();
   const sorted = [...rows].sort((a, b) => (a.daysOfCover ?? Infinity) - (b.daysOfCover ?? Infinity));
   const paging = usePagedList(sorted);
-  if (!rows.length) return <AccEmpty title="No stock items" copy="Products with stock tracking appear here." />;
+  const expiryPaging = usePagedList(expiryRows);
+  const expiredCount = expiryRows.filter(row => row.status === "expired").length;
+  const soonCount = expiryRows.filter(row => row.status === "soon").length;
+  if (!rows.length && !expiryRows.length) return <AccEmpty title="No stock items" copy="Products with stock tracking appear here." />;
   const atRisk = rows.filter(row => row.status === "Likely stockout").length;
   return <div className="air-stack">
     <Stats items={[
       { label: "Items tracked", value: String(rows.length) },
       { label: "Likely stockout", value: String(atRisk), tone: atRisk ? "warning" : "" },
       { label: "Need reorder", value: String(rows.filter(row => row.suggestedReorderQty).length) },
+      { label: "Expired", value: String(expiredCount), tone: expiredCount ? "danger" : "" },
+      { label: "Due in 30 days", value: String(soonCount), tone: soonCount ? "warning" : "" },
     ]} />
-    <Section title="Stock cover" count={rows.length}>
-      <p className="air-note">Items that run out soonest are listed first.</p>
+    {expiryRows.length ? <Section title="On-hand expiry" count={expiryRows.length}>
+      <p className="air-note">Dates on the item record, not a forecast. Expired rows stay listed even at zero stock so a write-off is visible. Near-expiry only lists quantity still on hand.</p>
+      <div key={`exp-${expiryPaging.page}`} className={`air-picks is-${expiryPaging.dir}`}>
+        {expiryPaging.rows.map(row => {
+          const expired = row.status === "expired";
+          const id = `expiry-${row.itemId}`;
+          return <PickRow key={id} open={openId === id} onToggle={element => toggle(id, element)} title={row.name}
+            sub={`${expiryAlertLabel(row)}${row.batchNo ? ` · batch ${row.batchNo}` : ""}${row.sku ? ` · ${row.sku}` : ""}`}
+            figure={`${row.stock} ${row.unit || ""}`.trim()} figureTone={expired ? "is-danger" : ""}
+            badge={<span className={`badge${expired ? " warning" : ""}`}>{row.statusLabel}</span>}>
+            <ul className="air-plain">
+              <li>Expiry date: {row.expiryDate}</li>
+              <li>On hand: {row.stock} {row.unit || ""}</li>
+              <li>{expired ? "Pull from sale. Post a write-off if the quantity is still on the books." : "Sell earliest-expiry first. The till already warns on near-expiry batches."}</li>
+            </ul>
+            <div className="air-foot"><SourceLink link={{ section: "reports", reportTab: "expired_stock", label: "Open expired stock report" }} onOpen={openSource} /></div>
+          </PickRow>;
+        })}
+        {expiryPaging.pageCount > 1 && Array.from({ length: expiryPaging.size - expiryPaging.rows.length }, (_, index) => <span key={`exp-fill-${index}`} className="air-pick-fill" aria-hidden="true" />)}
+      </div>
+      <Pager label="expiry items" page={expiryPaging.page} pageCount={expiryPaging.pageCount} from={expiryPaging.from} to={expiryPaging.to} total={expiryPaging.total} onPage={next => { expiryPaging.goToPage(next); setOpenId(null); }} />
+    </Section> : null}
+    {rows.length ? <Section title="Stock cover" count={rows.length}>
+      <p className="air-note">Items that run out soonest are listed first. This is a sales forecast, separate from expiry dates above.</p>
       <div key={paging.page} className={`air-picks is-${paging.dir}`}>
         {paging.rows.map(row => {
           const stockout = row.status === "Likely stockout";
@@ -792,6 +820,6 @@ export function InventoryPanel({ rows, openSource }) {
         {paging.pageCount > 1 && Array.from({ length: paging.size - paging.rows.length }, (_, index) => <span key={`fill-${index}`} className="air-pick-fill" aria-hidden="true" />)}
       </div>
       <Pager label="items" page={paging.page} pageCount={paging.pageCount} from={paging.from} to={paging.to} total={paging.total} onPage={next => { paging.goToPage(next); setOpenId(null); }} />
-    </Section>
+    </Section> : null}
   </div>;
 }

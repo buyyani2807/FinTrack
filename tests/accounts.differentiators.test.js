@@ -371,6 +371,20 @@ test("daily brief: file list, totals and share text", () => {
   assert.match(text, /Anand: ₹3,000 \(14d late\)/);
   assert.match(text, /Cement: 18 Bag/);
   assert.match(text, /3 bank lines to match/);
+  assert.equal((brief.expiry || []).length, 0);
+
+  const withExpiry = buildOwnerDailyBrief({
+    today: "2026-11-04",
+    expiryRows: [
+      { itemId: "a", name: "Syrup", stock: 5, unit: "Nos", status: "expired", days: -34, expiryDate: "2026-10-01" },
+      { itemId: "b", name: "Cream", stock: 2, unit: "Nos", status: "soon", days: 16, expiryDate: "2026-11-20" },
+    ],
+  });
+  assert.equal(withExpiry.totals.expired, 1);
+  assert.equal(withExpiry.totals.soon, 1);
+  assert.equal(withExpiry.actionCount, 2);
+  assert.match(ownerBriefShareText(withExpiry), /Expiry: 1 expired, 1 due within 30 days/);
+  assert.match(ownerBriefShareText(withExpiry), /Syrup: expired 34 days ago/);
 
   const clear = buildOwnerDailyBrief({ today: "2026-10-15" });
   assert.equal(clear.allClear, true);

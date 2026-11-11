@@ -712,7 +712,7 @@
 .accounts-dashboard .acc-brief { display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px; }
 .accounts-dashboard .acc-brief-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .accounts-dashboard .acc-brief-head h3 { margin: 2px 0 0; font-size: var(--ft-type-card); }
-.accounts-dashboard .acc-brief-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.accounts-dashboard .acc-brief-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
 .accounts-dashboard .acc-brief-col {
   display: flex; flex-direction: column; gap: 8px; min-width: 0;
   padding: 12px; border: 1px solid var(--acc-line); border-radius: var(--acc-radius-sm); background: var(--acc-card-elevated);
@@ -728,6 +728,7 @@
 .accounts-dashboard .acc-brief-po { display: flex; flex-direction: column; gap: 6px; }
 .accounts-dashboard .acc-brief-po .btn { width: 100%; justify-content: center; }
 .accounts-dashboard .acc-brief .btn.linkish { align-self: flex-start; padding: 0; min-height: 0; }
+@media (max-width: 1400px) { .accounts-dashboard .acc-brief-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 1200px) { .accounts-dashboard .acc-brief-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 640px) { .accounts-dashboard .acc-brief-grid { grid-template-columns: 1fr; } }
 

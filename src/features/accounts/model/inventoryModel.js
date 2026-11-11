@@ -754,6 +754,24 @@ export function expiredStockReport(items = [], movements = [], { asOf = "", soon
   });
 }
 
+export function splitExpiryAlerts(rows = []) {
+  const expired = (rows || []).filter(row => row.status === "expired");
+  const soon = (rows || []).filter(row => row.status === "soon");
+  return { expired, soon, count: expired.length + soon.length };
+}
+
+export function expiryAlertLabel(row) {
+  const days = Number(row?.days);
+  if (row?.status === "expired") {
+    const ago = Number.isFinite(days) ? Math.abs(days) : 0;
+    if (ago <= 0) return `expired ${row.expiryDate || ""}`.trim();
+    return `expired ${ago} day${ago === 1 ? "" : "s"} ago`;
+  }
+  if (!Number.isFinite(days)) return `due ${row?.expiryDate || ""}`.trim();
+  if (days <= 0) return "expires today";
+  return `in ${days} day${days === 1 ? "" : "s"}`;
+}
+
 function itemMovementValueReport(voucherItemLines, vouchers, { from, to }, forwardType, returnType) {
   const byVoucher = Object.fromEntries((vouchers || []).map(v => [v.id, v]));
   const map = new Map();

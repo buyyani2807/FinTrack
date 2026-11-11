@@ -42,6 +42,17 @@ test("accounts attention stays empty when nothing is flagged", () => {
   assert.equal(items.length, 0);
 });
 
+test("accounts attention flags expired and near-expiry stock", () => {
+  const items = buildAccountsAttentionItems({ expiredCount: 2, soonCount: 3 });
+  const expired = items.find(item => item.id === "accounts-expired-stock");
+  const soon = items.find(item => item.id === "accounts-near-expiry");
+  assert.equal(expired.severity, "high");
+  assert.match(expired.title, /2 items expired/);
+  assert.equal(expired.href.reportTab, "expired_stock");
+  assert.equal(soon.severity, "medium");
+  assert.match(soon.title, /3 items due within 30 days/);
+});
+
 test("GST review is flagged only when the period has GST entries", () => {
   assert.equal(buildAccountsAttentionItems({ gstEntryCount: 0 }).length, 0);
   const [gst] = buildAccountsAttentionItems({ gstEntryCount: 3 });

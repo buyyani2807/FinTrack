@@ -27,6 +27,8 @@ import {
   normalizeQuantityNumber,
   sellUnitChoices,
   expiredStockReport,
+  expiryAlertLabel,
+  splitExpiryAlerts,
 } from "../src/features/accounts/model/inventoryModel.js";
 import { CASH_PARTY_ID } from "../src/features/accounts/model/accountingModel.js";
 
@@ -250,6 +252,11 @@ test("expired stock report lists expired and near-expiry items only", () => {
   assert.equal(rows[0].status, "expired");
   assert.equal(rows[1].status, "soon");
   assert.equal(rows[0].stock, 5);
+  const split = splitExpiryAlerts(rows);
+  assert.equal(split.expired.length, 1);
+  assert.equal(split.soon.length, 1);
+  assert.match(expiryAlertLabel(rows[0]), /expired/);
+  assert.match(expiryAlertLabel(rows[1]), /in 16 days/);
 });
 
 test("itemized sale accepts loose kg from a bag-priced item", () => {

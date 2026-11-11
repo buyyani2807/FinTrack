@@ -134,6 +134,7 @@ import {
   itemPurchasesReport,
   itemSalesReport,
   itemizedEntryDraft,
+  splitExpiryAlerts,
   stockMovementReport,
   stockOnHandByItem,
   stockReasonLabel,
@@ -845,6 +846,10 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       outstandingOnly: true,
     });
   }, [showSimple, simpleKind, accounts, vouchers, parties]);
+  const expiryAlerts = useMemo(
+    () => ((wantOverview || wantBrief) ? expiredStockReport(items, stockMovements, { asOf: todayIso() }) : []),
+    [wantOverview, wantBrief, items, stockMovements],
+  );
   const accountsAttention = useMemo(() => {
     if (!wantOverview) return null;
     const overdueInvoices = overviewReceivableInvoices.filter(row => Number(row.daysOverdue || 0) > 0);
@@ -857,11 +862,14 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       const lines = statement.lines || [];
       return sum + lines.filter(line => line.matchStatus !== "matched" && line.matchStatus !== "ignored").length;
     }, 0);
+    const expirySplit = splitExpiryAlerts(expiryAlerts);
     const itemsList = buildAccountsAttentionItems({
       overdueReceivables: overdueInvoices.reduce((sum, row) => sum + Number(row.outstanding || 0), 0),
       overdueInvoiceCount: overdueInvoices.length,
       lowStockCount,
       unmatchedBankLines,
+      expiredCount: expirySplit.expired.length,
+      soonCount: expirySplit.soon.length,
       gstEntryCount: activeCompany?.gstRegistration && activeCompany.gstRegistration !== "unregistered"
         ? new Set(gstBooksReport(vouchers, range).rows.map(row => `${row.voucherType}:${row.voucherNumber}`)).size
         : 0,
@@ -872,7 +880,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       items: itemsList,
       disclaimer: "Advisory only — never changes books.",
     };
-  }, [wantOverview, overviewReceivableInvoices, items, stockByItem, statements, activeCompany, vouchers, range]);
+  }, [wantOverview, overviewReceivableInvoices, items, stockByItem, statements, activeCompany, vouchers, range, expiryAlerts]);
   const anomalyReview = useMemo(() => {
     if (!wantOverview) return null;
     return buildAnomalyReview({
@@ -925,8 +933,9 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       gstSchedule,
       unmatchedBankLines,
       periodToLock,
+      expiryRows: expiryAlerts,
     });
-  }, [wantBrief, accounts, vouchers, parties, items, stockByItem, tradeDocuments, fulfilment, voucherItemLines, gstSchedule, statements, locks, canAdmin, complianceFilings]);
+  }, [wantBrief, accounts, vouchers, parties, items, stockByItem, tradeDocuments, fulfilment, voucherItemLines, gstSchedule, statements, locks, canAdmin, complianceFilings, expiryAlerts]);
   const routePositions = useMemo(() => {
     if (section !== "routes") return new Map();
     return receivablePositions(invoiceRegister(accounts, vouchers, parties, { kind: "receivable", today: todayIso(), outstandingOnly: true }));
@@ -1010,6 +1019,11 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     }
     if (id === "gst") {
       go({ section: "reports", reportTab: "gst" });
+      window.scrollTo(0, 0);
+      return;
+    }
+    if (id === "expired_stock") {
+      go({ section: "reports", reportTab: "expired_stock" });
       window.scrollTo(0, 0);
       return;
     }

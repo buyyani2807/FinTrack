@@ -2,7 +2,7 @@
 
 import { addDaysIso, affectsLedgers, isReversalVoucher, roundMoney } from "./accountingModel.js";
 import { dueLabel } from "./gstCalendar.js";
-import { emptyItemLine } from "./inventoryModel.js";
+import { emptyItemLine, expiryAlertLabel, splitExpiryAlerts } from "./inventoryModel.js";
 
 const inr = value => `₹${Math.round(Number(value || 0)).toLocaleString("en-IN")}`;
 
@@ -174,11 +174,14 @@ export function buildOwnerDailyBrief({
   gstSchedule = null,
   unmatchedBankLines = 0,
   periodToLock = null,
+  expiryRows = [],
 } = {}) {
   const collect = collectList(receivables, today);
   const pay = payList(payables, today);
   const reorder = reorderList({ items, stockByItem, pendingPurchaseRows, lastPurchase: lastPurchaseByItem(voucherItemLines, vouchers), parties });
   const file = fileList({ gstSchedule, unmatchedBankLines, periodToLock });
+  const expiry = Array.isArray(expiryRows) ? expiryRows : [];
+  const expirySplit = splitExpiryAlerts(expiry);
   const totals = {
     collect: roundMoney(collect.reduce((sum, row) => sum + row.due, 0)),
     collectOverdue: roundMoney(collect.reduce((sum, row) => sum + row.overdue, 0)),
@@ -187,9 +190,11 @@ export function buildOwnerDailyBrief({
     reorder: reorder.filter(row => !row.covered).length,
     reorderValue: roundMoney(reorder.reduce((sum, row) => sum + row.value, 0)),
     fileUrgent: file.filter(row => row.status === "overdue" || row.status === "due_soon").length,
+    expired: expirySplit.expired.length,
+    soon: expirySplit.soon.length,
   };
-  const actionCount = collect.length + pay.length + totals.reorder + file.filter(row => !row.upcoming).length;
-  return { today, collect, pay, reorder, file, totals, actionCount, allClear: actionCount === 0 };
+  const actionCount = collect.length + pay.length + totals.reorder + file.filter(row => !row.upcoming).length + expiry.length;
+  return { today, collect, pay, reorder, file, expiry, totals, actionCount, allClear: actionCount === 0 };
 }
 
 export function ownerBriefShareText(brief, { companyName = "" } = {}) {
@@ -201,6 +206,15 @@ export function ownerBriefShareText(brief, { companyName = "" } = {}) {
   const toOrder = brief.reorder.filter(row => !row.covered);
   lines.push(`Reorder ${toOrder.length} item${toOrder.length === 1 ? "" : "s"}${brief.totals.reorderValue ? ` (~${inr(brief.totals.reorderValue)})` : ""}`);
   for (const row of toOrder.slice(0, 5)) lines.push(`  • ${row.itemName}: ${row.suggested} ${row.unit} (stock ${row.stock})`);
+  const expiry = brief.expiry || [];
+  if (expiry.length) {
+    const expiredCount = Number(brief.totals?.expired ?? expiry.filter(row => row.status === "expired").length);
+    const soonCount = Number(brief.totals?.soon ?? expiry.filter(row => row.status === "soon").length);
+    lines.push(`Expiry: ${expiredCount} expired, ${soonCount} due within 30 days`);
+    for (const row of expiry.slice(0, 5)) {
+      lines.push(`  • ${row.name}: ${expiryAlertLabel(row)} (${row.stock} ${row.unit || "Nos"})`);
+    }
+  }
   if (brief.file.length) {
     lines.push("File");
     for (const row of brief.file.slice(0, 5)) lines.push(`  • ${row.title}: ${row.detail}`);
