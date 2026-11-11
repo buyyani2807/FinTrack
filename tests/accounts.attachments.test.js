@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   assertVoucherAttachmentMeta,
   normalizeAttachmentContentType,
+  proofCountByVoucher,
   VOUCHER_ATTACHMENT_MAX_BYTES,
 } from "../src/features/accounts/data/voucherAttachments.js";
 
@@ -24,6 +25,17 @@ test("attachment meta rejects oversized and unknown types", () => {
     }),
     /512 KB/,
   );
+});
+
+test("proof counts group attachments by voucher", () => {
+  const counts = proofCountByVoucher([
+    { voucherId: "a" },
+    { voucherId: "a" },
+    { voucherId: "b" },
+  ]);
+  assert.equal(counts.get("a"), 2);
+  assert.equal(counts.get("b"), 1);
+  assert.equal(counts.get("c") || 0, 0);
 });
 
 test("attachment meta accepts a valid PDF under the size cap", () => {

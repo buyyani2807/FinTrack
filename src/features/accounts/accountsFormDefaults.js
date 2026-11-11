@@ -54,6 +54,7 @@ export const emptySimpleForm = () => ({
   amountReceived: "",
   receivedCash: "",
   receivedUpi: "",
+  billProofs: [],
 });
 export const emptyCoaForm = () => ({
   id: null,

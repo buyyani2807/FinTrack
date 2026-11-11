@@ -588,6 +588,64 @@
 
 .accounts-dashboard .acc-exp-negative { color: var(--acc-green); }
 
+.accounts-dashboard .acc-exp-proof {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  min-width: 0;
+}
+
+.accounts-dashboard .acc-exp-proof-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ft-primary);
+  font: inherit;
+  font-size: var(--ft-type-caption);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.accounts-dashboard .acc-exp-proof-missing {
+  color: var(--ft-warning);
+}
+
+.accounts-dashboard .acc-exp-proof-ok {
+  color: var(--ft-success);
+}
+
+.accounts-dashboard .acc-exp-proof-add {
+  position: relative;
+  display: inline-flex;
+  color: var(--ft-primary);
+  font-size: var(--ft-type-caption);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.accounts-dashboard .acc-exp-proof-add input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.accounts-dashboard .acc-exp-proof-add-card {
+  margin: 4px 0 10px;
+}
+
+.accounts-dashboard .acc-exp-card-item {
+  display: grid;
+}
+
 .accounts-dashboard .acc-exp-cards { display: none; margin: 0; padding: 0; list-style: none; }
 
 .accounts-dashboard .acc-exp-row-card {

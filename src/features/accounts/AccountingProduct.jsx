@@ -15,6 +15,7 @@ import {
   loadAuditLog,
   loadBankStatements,
   loadPeriodLocks,
+  loadVoucherAttachmentIndex,
   loadVoucherAttachments,
   loadVouchers,
   matchBankLine as saveBankMatch,
@@ -58,7 +59,7 @@ import { buildAccountsAttentionItems } from "../intelligence/attentionCenter.js"
 import { buildAnomalyReview } from "../intelligence/anomalyReview.js";
 import { loadCashbookEntries } from "../cashbook/cashbookRepository.js";
 import { trackProductEvent } from "../commercial/productAnalytics.js";
-import { assertVoucherAttachmentMeta, normalizeAttachmentContentType, readFileAsBase64 } from "./data/voucherAttachments.js";
+import { assertVoucherAttachmentMeta, attachmentDownloadHref, prepareVoucherAttachmentFile } from "./data/voucherAttachments.js";
 import {
   CASH_PARTY_ID,
   PARTY_FORM_TYPES,
@@ -354,6 +355,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [listPage, setListPage] = useState(1);
   const [expandedVoucherId, setExpandedVoucherId] = useState(null);
   const [voucherAttachments, setVoucherAttachments] = useState([]);
+  const [voucherAttachmentIndex, setVoucherAttachmentIndex] = useState([]);
   const [attachmentBusy, setAttachmentBusy] = useState(false);
   const deferredSearch = useDeferredValue(search);
   const deferredPartySearch = useDeferredValue(partySearch);
@@ -604,6 +606,35 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       });
     return () => { cancelled = true; };
   }, [token, expandedVoucherId, migrationRequired]);
+
+  const reloadAttachmentIndex = useCallback(async () => {
+    if (!token || migrationRequired) {
+      setVoucherAttachmentIndex([]);
+      return;
+    }
+    try {
+      const rows = await loadVoucherAttachmentIndex(token);
+      setVoucherAttachmentIndex(rows || []);
+    } catch (err) {
+      if (err.code === "MIGRATION_REQUIRED") setVoucherAttachmentIndex([]);
+    }
+  }, [token, migrationRequired]);
+
+  useEffect(() => {
+    if (!token || migrationRequired) {
+      setVoucherAttachmentIndex([]);
+      return undefined;
+    }
+    if (section !== "expenses" && section !== "vouchers") return undefined;
+    let cancelled = false;
+    loadVoucherAttachmentIndex(token)
+      .then(rows => { if (!cancelled) setVoucherAttachmentIndex(rows || []); })
+      .catch(err => {
+        if (cancelled) return;
+        if (err.code === "MIGRATION_REQUIRED") setVoucherAttachmentIndex([]);
+      });
+    return () => { cancelled = true; };
+  }, [token, activeCompanyId, migrationRequired, section]);
 
   useEffect(() => {
     if (!token || migrationRequired || section !== "inventory") return undefined;
@@ -1289,24 +1320,44 @@ const openVoucher = () => {
     setAttachmentBusy(true);
     setError("");
     try {
-      const meta = assertVoucherAttachmentMeta({
-        fileName: file.name,
-        contentType: normalizeAttachmentContentType(file.type, file.name),
-        byteSize: file.size,
-      });
-      const contentBase64 = await readFileAsBase64(file);
+      const prepared = await prepareVoucherAttachmentFile(file);
       await addVoucherAttachment(token, {
         voucherId: voucher.id,
-        fileName: meta.fileName,
-        contentType: meta.contentType,
-        contentBase64,
+        fileName: prepared.fileName,
+        contentType: prepared.contentType,
+        contentBase64: prepared.data,
       });
       await reloadExpandedAttachments(voucher.id);
-      setNotice("Attachment saved.");
+      await reloadAttachmentIndex();
+      setNotice("Bill attached.");
     } catch (err) {
       setError(err.message || "Could not save attachment.");
     } finally {
       setAttachmentBusy(false);
+    }
+  };
+
+  const viewExpenseProof = async voucherId => {
+    if (!voucherId) return;
+    setError("");
+    try {
+      const rows = await loadVoucherAttachments(token, voucherId);
+      const file = (rows || [])[0];
+      if (!file) {
+        setNotice("No bill on this expense yet.");
+        return;
+      }
+      const href = attachmentDownloadHref(file);
+      if (!href) throw new Error("Could not open that bill.");
+      const link = document.createElement("a");
+      link.href = href;
+      link.download = file.fileName || "expense-bill";
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      setError(err.message || "Could not open that bill.");
     }
   };
 
@@ -1317,6 +1368,7 @@ const openVoucher = () => {
     try {
       await deleteVoucherAttachment(token, attachmentId);
       await reloadExpandedAttachments(voucherId);
+      await reloadAttachmentIndex();
       setNotice("Attachment removed.");
     } catch (err) {
       setError(err.message || "Could not remove attachment.");
@@ -2069,25 +2121,33 @@ const openVoucher = () => {
         /* posting succeeded; schedule can be advanced manually */
       }
     }
+    const proofs = [
+      ...(simpleForm.billPhoto?.data ? [simpleForm.billPhoto] : []),
+      ...((simpleForm.billProofs || []).filter(file => file?.data)),
+    ];
     let billAttached = null;
-    if (voucherId && simpleForm.billPhoto?.data) {
-      billAttached = false;
-      try {
-        const meta = assertVoucherAttachmentMeta({
-          fileName: simpleForm.billPhoto.fileName || "supplier-bill.jpg",
-          contentType: simpleForm.billPhoto.contentType || "image/jpeg",
-          byteSize: simpleForm.billPhoto.byteSize,
-        });
-        await addVoucherAttachment(token, {
-          voucherId,
-          fileName: meta.fileName,
-          contentType: meta.contentType,
-          contentBase64: simpleForm.billPhoto.data,
-        });
-        billAttached = true;
-      } catch {
-        billAttached = false;
+    if (voucherId && proofs.length) {
+      let attached = 0;
+      for (const proof of proofs) {
+        try {
+          const meta = assertVoucherAttachmentMeta({
+            fileName: proof.fileName || "expense-bill.jpg",
+            contentType: proof.contentType || "image/jpeg",
+            byteSize: proof.byteSize,
+          });
+          await addVoucherAttachment(token, {
+            voucherId,
+            fileName: meta.fileName,
+            contentType: meta.contentType,
+            contentBase64: proof.data,
+          });
+          attached += 1;
+        } catch {
+          /* posting succeeded; bill can be attached from Expenses */
+        }
       }
+      billAttached = attached === proofs.length;
+      if (attached) await reloadAttachmentIndex();
     }
     if (pending?.lineId && voucherId) {
       try {
@@ -2920,6 +2980,8 @@ const openVoucher = () => {
           companyName={activeCompany?.name || settings?.companyName || ""}
           canWrite={canWrite}
           aiEnabled={aiEnabled}
+          attachmentIndex={voucherAttachmentIndex}
+          attachmentBusy={attachmentBusy}
           onAddExpense={() => openSimple("expense")}
           onOpenVoucher={voucherNumber => {
             if (voucherNumber) setSearch(voucherNumber);
@@ -2927,6 +2989,8 @@ const openVoucher = () => {
           }}
           onOpenPnl={() => openSection("pnl")}
           onOpenAiReview={aiEnabled ? () => openSection("ai") : null}
+          onAttachProof={(row, file) => onAttachVoucherFile({ id: row.voucherId, status: row.status }, file)}
+          onViewProof={viewExpenseProof}
         />}
         {(section === "payroll" || section === "attendance" || section === "leave") && <PayrollSection
           key={activeCompanyId || "company"}

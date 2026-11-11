@@ -24,6 +24,7 @@ import { ItemLinesSection } from "./simpleEntry/ItemLinesSection.jsx";
 import { SaleSummaryCard } from "./simpleEntry/SaleSummaryCard.jsx";
 import { BillwiseSettlement } from "./simpleEntry/BillwiseSettlement.jsx";
 import { BillPhotoDraft } from "./simpleEntry/BillPhotoDraft.jsx";
+import { ExpenseBillProof } from "./simpleEntry/ExpenseBillProof.jsx";
 import { billNumberFromNarration, findPostedPurchaseDuplicates } from "../model/billScan.js";
 import { resolveItemRate } from "../model/priceLists.js";
 
@@ -332,6 +333,14 @@ export function SimpleEntryForm({ kind, accounts, parties, form, setForm, onSubm
         syncSettlements={syncSettlements}
       />
     )}
+
+    {kind === "expense" ? (
+      <ExpenseBillProof
+        files={form.billProofs || []}
+        disabled={saving}
+        onChange={billProofs => set({ billProofs })}
+      />
+    ) : null}
 
     {purchaseDuplicates.length ? (
       <div className="acc-credit-alert spacer" role="alert">

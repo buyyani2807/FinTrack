@@ -4756,6 +4756,50 @@
   color: var(--acc-muted);
 }
 
+.accounts-dashboard .acc-expense-proof-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.accounts-dashboard .acc-expense-proof-file {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.accounts-dashboard .acc-expense-proof-file img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border: 1px solid var(--ft-border);
+  border-radius: 8px;
+}
+
+.accounts-dashboard .acc-expense-proof label.btn {
+  position: relative;
+  cursor: pointer;
+}
+
+.accounts-dashboard .acc-expense-proof input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.accounts-dashboard .acc-expense-proof-error {
+  margin: 0;
+  color: var(--ft-danger);
+}
+
 .accounts-dashboard .acc-bill-scan-row {
   display: flex;
   flex-wrap: wrap;
