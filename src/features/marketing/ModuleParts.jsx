@@ -48,7 +48,7 @@ function PartPanel({ module, feature, onOpen, onClose }) {
   const sheet = useRef(null);
   const closeButton = useRef(null);
   const body = useRef(null);
-  const label = APP_MODULES.find(item => item.slug === module)?.label || (module === "security" ? "Security" : "");
+  const label = APP_MODULES.find(item => item.slug === module)?.label || "";
   const parts = (MODULE_FEATURES[module] || []).map(featureBySlug).filter(Boolean);
   const index = parts.findIndex(item => item.slug === feature.slug);
   const prev = index > 0 ? parts[index - 1] : null;
@@ -94,7 +94,7 @@ function PartPanel({ module, feature, onOpen, onClose }) {
 
       <div className="fx-sheet-body" ref={body}>
         <p className="fx-sheet-lead">{feature.summary}</p>
-        <div className="fx-sheet-shot"><ProductPreview scene={module === "security" && feature.category === "portals" ? "login" : sceneForFeature(feature)} /></div>
+        <div className="fx-sheet-shot"><ProductPreview scene={sceneForFeature(feature)} /></div>
 
         <h3>How it works</h3>
         <ol className="fx-sheet-steps">

@@ -1423,6 +1423,7 @@ html[data-theme="dark"] .mkt .fx-pager-card:hover, html[data-theme="dark"] .mkt 
 
 /* Closing */
 .fx-end { padding: 104px 0; border-bottom: 1px solid var(--hm-ink); background: var(--hm-paper); color: var(--hm-tx, var(--hm-ink)); text-align: center; }
+.hm-home .hm-trial .fx-end { padding-top: 64px; padding-bottom: 64px; }
 .mkt .fx .fx-end h2 { max-width: 18ch; margin: 0 auto; font-size: clamp(36px, 4.6vw, 60px); line-height: 1.05; }
 .mkt .fx-end p { max-width: 56ch; margin: 16px auto 0; font-size: 18px; }
 .fx-actions.is-center { justify-content: center; }
@@ -1442,6 +1443,7 @@ html[data-theme="dark"] .mkt :is(.fx-segment button[aria-selected="true"], .fx-p
 }
 @media (max-width: 560px) {
   .fx-sec, .fx-end { padding: 56px 0; }
+  .hm-home .hm-trial .fx-end { padding-top: 40px; padding-bottom: 40px; }
   .fx-hero { padding-top: 32px; }
   .mkt .fx-lead { font-size: var(--ft-type-lead); }
   .fx-actions .mkt-btn { flex: 1 1 auto; }
@@ -1460,6 +1462,28 @@ html[data-theme="dark"] .mkt :is(.fx-segment button[aria-selected="true"], .fx-p
 }
 @media (prefers-reduced-motion: reduce) {
   .fx-book-copy, .fx-book-shot, .fx-live i { animation: none; }
+}
+
+/* Security keeps the original point cards and trust row. Backgrounds are the same white and teal as the other module pages. */
+.mkt .fx-security h1 { max-width: 18ch; margin: 0; text-align: left; font-size: var(--ft-type-page); }
+.fx-security .sec-points { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.fx-security .sec-trust { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
+.fx-security .sec-card { display: grid; align-content: start; gap: 8px; min-width: 0; padding: 24px; border: 2px solid var(--hm-ink); border-radius: 28px; background: var(--hm-paper); color: var(--hm-tx, var(--hm-ink)); }
+.fx-security .sec-points .sec-card:nth-child(even) { background: var(--hm-ink); color: var(--hm-tx2, var(--hm-paper)); }
+.mkt .fx-security .sec-points .sec-card:nth-child(even) h2,
+.mkt .fx-security .sec-points .sec-card:nth-child(even) p { color: var(--hm-tx2, var(--hm-paper)); }
+.fx-security .hm-flip .sec-card { background: var(--hm-ink); color: var(--hm-tx2, var(--hm-paper)); }
+.mkt .fx-security .hm-flip .sec-card h2,
+.mkt .fx-security .hm-flip .sec-card p { color: var(--hm-tx2, var(--hm-paper)); }
+.fx-security .hm-flip .sec-icon { background: var(--hm-paper); color: var(--hm-ink); }
+.mkt .fx-security .sec-card h2 { font-size: var(--ft-type-card); line-height: 1.25; letter-spacing: -0.02em !important; }
+.mkt .fx-security .sec-card p { margin: 0; color: var(--hm-text, inherit); font-size: var(--ft-type-ui); line-height: 1.55; }
+.fx-security .sec-icon { display: grid; place-items: center; width: 42px; height: 42px; margin-bottom: 8px; border-radius: 12px; background: var(--hm-ink); color: var(--hm-paper); }
+@media (max-width: 980px) {
+  .fx-security .sec-trust { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .fx-security .sec-points, .fx-security .sec-trust { grid-template-columns: 1fr; }
 }
 
 /* Site chrome: header, trial strip, footer use the same two colours on every page */

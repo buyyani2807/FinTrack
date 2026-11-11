@@ -93,8 +93,8 @@ export function ModeSwitch({ label, modes }) {
   </div>;
 }
 
-export function ModuleFaq({ title, questions, items: provided }) {
-  const items = provided || questions.map(question => FAQ.find(item => item.question === question)).filter(Boolean);
+export function ModuleFaq({ title, questions }) {
+  const items = questions.map(question => FAQ.find(item => item.question === question)).filter(Boolean);
   return <section className="fx-sec">
     <div className="mkt-wrap fx-faq">
       <div>
@@ -114,11 +114,11 @@ export function ModuleFaq({ title, questions, items: provided }) {
   </section>;
 }
 
-export function ModuleClosing({ title, appPath, points }) {
+export function ModuleClosing({ title, appPath, points, lead }) {
   return <section className="fx-end hm-flip">
     <div className="mkt-wrap fx-end-inner">
       <Reveal as="h2">{title}</Reveal>
-      <Reveal as="p" index={1}>14 days free. Every module included. No payment to start, then modules from {MONTHLY.baseLabel} + GST a month.</Reveal>
+      <Reveal as="p" index={1}>{lead || <>14 days free. Every module included. No payment to start, then modules from {MONTHLY.baseLabel} + GST a month.</>}</Reveal>
       <Reveal className="fx-actions is-center" index={2}>
         <ProductCta appPath={appPath} primary label="Start free trial" />
         <Link className="mkt-btn" to={marketingPaths.contact}>Talk to us</Link>

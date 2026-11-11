@@ -58,7 +58,6 @@ const SHOTS = {
   "ai-setup": "AI setup for an electrical wholesaler: the questions answered and the setup MyFinTracker will create, with GST, banks, stock categories, credit sales, and extra ledgers",
   "ai-migration": "Migration summary for files from Tally, Zoho Books, and Book Keeper: customers, suppliers, ledgers, transactions, duplicate parties, accounts to map, and 85% mapped automatically",
   portals: "Sign-in screen with Owner sign-in, Collection agent, Customer login, and Chit customer",
-  login: "Login page with the product panel and Owner, Collection agent, Customer, and Chit member sign-in",
 };
 
 const FEATURE_SCENE = {

@@ -14,6 +14,7 @@ import { HomeModules } from "./HomeModules.jsx";
 import { featurePath, marketingPaths } from "./paths.js";
 import { ProductCta } from "./ProductCta.jsx";
 import { ProductPreview } from "./ProductPreview.jsx";
+import { ModuleClosing } from "./ModuleKit.jsx";
 
 const FY = "FY 2026–27";
 
@@ -442,19 +443,12 @@ export function HomePage() {
 
     <HomeFaq />
 
-    <section className="hm-cta hm-flip">
-      <div className="mkt-wrap">
-        <Reveal className="hm-cta-card">
-          <div>
-            <h2>Start your 14-day free trial today.</h2>
-            <p>Every module included. No payment to start. Then modules from {MONTHLY.baseLabel} + GST a month, or {ANNUAL.baseLabel} + GST a year.</p>
-          </div>
-          <div className="hm-cta-actions">
-            <ProductCta primary label="Start free trial" />
-            <Link className="mkt-btn light" to={marketingPaths.contact}>Talk to us</Link>
-          </div>
-        </Reveal>
-      </div>
-    </section>
+    <div className="fx hm-trial">
+      <ModuleClosing
+        title="Start your 14-day free trial today."
+        lead={`Every module included. No payment to start. Then modules from ${MONTHLY.baseLabel} + GST a month, or ${ANNUAL.baseLabel} + GST a year.`}
+        points={["14 days free", "No payment to start", `Modules from ${MONTHLY.baseLabel} + GST a month`]}
+      />
+    </div>
   </div></RevealProvider>;
 }
