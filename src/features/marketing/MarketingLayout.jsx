@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useOutletContext } from "react-router";
-import { BookOpenText, Coins, HandCoins, House, Menu, ShoppingCart, Sparkles, X } from "lucide-react";
+import { BookOpenText, Coins, HandCoins, House, Menu, Shield, ShoppingCart, Sparkles, X } from "lucide-react";
 import { APP_MODULES, moduleForFeature } from "./catalog.js";
 import marketingStyles from "./marketing.css?inline";
 import { OPEN_PRODUCT, PRODUCT_NAME } from "../../lib/brand.js";
@@ -78,6 +78,7 @@ export function MarketingLayout() {
       <Brand />
       <nav className="mkt-links" aria-label="Primary">
         {APP_MODULES.map(item => <Link className="mkt-nav-item" key={item.slug} to={moduleHref(item)} aria-current={moduleCurrent(item, pathname)}><ModuleIcon slug={item.slug} />{item.label}</Link>)}
+        <Link className="mkt-nav-item" to={marketingPaths.security} aria-current={pathname === marketingPaths.security ? "page" : undefined}><Shield size={16} aria-hidden="true" />Security</Link>
       </nav>
       <div className="mkt-nav-end">
         {signedIn ? null : login}
@@ -96,6 +97,7 @@ export function MarketingLayout() {
         </div>
         <nav className="mkt-drawer-body" aria-label="Menu">
           {APP_MODULES.map(item => <Link key={item.slug} className="mkt-drawer-link" to={moduleHref(item)} aria-current={moduleCurrent(item, pathname)} onClick={close}><span className="mkt-nav-label"><ModuleIcon slug={item.slug} size={18} />{item.label}</span></Link>)}
+          <Link className="mkt-drawer-link" to={marketingPaths.security} aria-current={pathname === marketingPaths.security ? "page" : undefined} onClick={close}><span className="mkt-nav-label"><Shield size={18} aria-hidden="true" />Security</span></Link>
           <p className="mkt-drawer-label">Company</p>
           {COMPANY_LINKS.map(link => <NavLink key={link.to} className="mkt-drawer-link minor" to={link.to} onClick={close}>{link.label}</NavLink>)}
         </nav>
