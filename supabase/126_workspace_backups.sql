@@ -84,6 +84,9 @@ begin
     raise exception 'Backup has no modules to restore';
   end if;
 
+  -- Disable finance/chit → cashbook sync triggers while we replace tables from backup.
+  perform set_config('session_replication_role', 'replica', true);
+
   -- Optional org branding / packs (never touch subscription columns here).
   update public.organizations o
   set
@@ -144,14 +147,22 @@ begin
       delete from public.cashbook_entries where organization_id = target_org_id;
       delete from public.ledger_accounts where organization_id = target_org_id;
 
-      -- Force organization_id: populate_recordset can leave it null if the key is missing.
-      insert into public.ledger_accounts
-      select r.*
-      from jsonb_array_elements(coalesce(cashbook->'ledger_accounts', '[]'::jsonb)) elem,
-           lateral jsonb_populate_record(
-             null::public.ledger_accounts,
-             elem || jsonb_build_object('organization_id', target_org_id)
-           ) r;
+      -- Explicit columns — never rely on record position / populate_record for NOT NULL org id.
+      insert into public.ledger_accounts (
+        id, organization_id, account_type, name, bank_account_last4, is_default, is_active, created_at, updated_at
+      )
+      select
+        coalesce((elem->>'id')::uuid, gen_random_uuid()),
+        target_org_id,
+        elem->>'account_type',
+        coalesce(nullif(elem->>'name', ''), 'Account'),
+        nullif(elem->>'bank_account_last4', ''),
+        coalesce((elem->>'is_default')::boolean, false),
+        coalesce((elem->>'is_active')::boolean, true),
+        coalesce((elem->>'created_at')::timestamptz, now()),
+        coalesce((elem->>'updated_at')::timestamptz, now())
+      from jsonb_array_elements(coalesce(cashbook->'ledger_accounts', '[]'::jsonb)) elem;
+
       insert into public.cashbook_entries
       select r.*
       from jsonb_array_elements(coalesce(cashbook->'cashbook_entries', '[]'::jsonb)) elem,
