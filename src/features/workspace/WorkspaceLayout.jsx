@@ -181,9 +181,19 @@ export function WorkspaceLayout() {
     }
   }, [showWorkspaceChrome, workspace?.role, location.pathname, navigate]);
 
-  // Warm the Accounts bundle and data while the owner is idle so opening Accounts is instant.
+  // Warm the Accounts bundle while idle. Skip while Daily/Monthly/Cashbook/Chit are open so those
+  // screens are not competing with a 20k-row books fetch.
   useEffect(() => {
     if (subscriptionLocked || !access.accounts || !token) return undefined;
+    const path = location.pathname;
+    if (
+      path.startsWith("/daily-finance")
+      || path.startsWith("/monthly-finance")
+      || path.startsWith("/cashbook")
+      || path.startsWith("/chit-fund")
+    ) {
+      return undefined;
+    }
     const preload = () => {
       loadAccountsModule()
         .then(module => module.prefetchAccounts?.(token, {
@@ -192,13 +202,17 @@ export function WorkspaceLayout() {
         }))
         .catch(() => {});
     };
+    if (path.startsWith("/accounting")) {
+      preload();
+      return undefined;
+    }
     if (typeof window.requestIdleCallback === "function") {
-      const id = window.requestIdleCallback(preload, { timeout: 4000 });
+      const id = window.requestIdleCallback(preload, { timeout: 8000 });
       return () => window.cancelIdleCallback?.(id);
     }
-    const id = window.setTimeout(preload, 1500);
+    const id = window.setTimeout(preload, 6000);
     return () => window.clearTimeout(id);
-  }, [subscriptionLocked, access.accounts, token, workspace?.role, workspace?.id]);
+  }, [subscriptionLocked, access.accounts, token, workspace?.role, workspace?.id, location.pathname]);
 
   const routeContext = {
     access, token, loans, workspace: workspace || {}, orgSettings, moduleState, refreshModuleEntitlements, logout,

@@ -1,22 +1,47 @@
+import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router";
+import { LoadingScreen } from "./AppShell.jsx";
 import { SessionLayout } from "./SessionLayout.jsx";
+import { Spinner } from "../components/ui.jsx";
 import { PayPage } from "../features/accounts/PayPage.jsx";
-import { FeatureDetailPage } from "../features/marketing/FeatureDetailPage.jsx";
-import { FeaturesPage } from "../features/marketing/FeaturesPage.jsx";
-import { HomePage } from "../features/marketing/HomePage.jsx";
 import { MarketingLayout } from "../features/marketing/MarketingLayout.jsx";
-import { AboutPage, ContactPage, FounderPage, HowItWorksPage, PricingPage, ResourcesPage, SecurityPage, SolutionsPage } from "../features/marketing/SitePages.jsx";
-import { WorkspaceLayout } from "../features/workspace/WorkspaceLayout.jsx";
 import { AccountsRoute } from "../features/workspace/routes/AccountsRoute.jsx";
-import { CashbookRoute } from "../features/workspace/routes/CashbookRoute.jsx";
-import { ChitFundRoute } from "../features/workspace/routes/ChitFundRoute.jsx";
-import { CollectionStaffRoute } from "../features/workspace/routes/CollectionStaffRoute.jsx";
-import { FinanceRoute } from "../features/workspace/routes/FinanceRoute.jsx";
 import { RequireModule } from "../features/workspace/routes/RequireModule.jsx";
-import { RouteCollectionsRoute } from "../features/workspace/routes/RouteCollectionsRoute.jsx";
-import { SettingsRoute } from "../features/workspace/routes/SettingsRoute.jsx";
-import { ModuleStorePage } from "../features/commercial/ModuleStorePage.jsx";
-import { SubscribePage } from "../features/commercial/SubscribePage.jsx";
+
+const named = (importer, exportName) => lazy(() => importer().then(mod => ({ default: mod[exportName] })));
+
+function withLazy(importer, exportName, fallback) {
+  const Comp = named(importer, exportName);
+  return function LazyRoute(props) {
+    return <Suspense fallback={fallback}><Comp {...props} /></Suspense>;
+  };
+}
+
+const marketingFallback = null;
+const workspaceFallback = <LoadingScreen />;
+const pageFallback = <div className="shell"><Spinner label="Loading" /></div>;
+
+const HomePage = withLazy(() => import("../features/marketing/HomePage.jsx"), "HomePage", marketingFallback);
+const FeaturesPage = withLazy(() => import("../features/marketing/FeaturesPage.jsx"), "FeaturesPage", marketingFallback);
+const FeatureDetailPage = withLazy(() => import("../features/marketing/FeatureDetailPage.jsx"), "FeatureDetailPage", marketingFallback);
+const SolutionsPage = withLazy(() => import("../features/marketing/SitePages.jsx"), "SolutionsPage", marketingFallback);
+const HowItWorksPage = withLazy(() => import("../features/marketing/SitePages.jsx"), "HowItWorksPage", marketingFallback);
+const SecurityPage = withLazy(() => import("../features/marketing/SitePages.jsx"), "SecurityPage", marketingFallback);
+const PricingPage = withLazy(() => import("../features/marketing/SitePages.jsx"), "PricingPage", marketingFallback);
+const AboutPage = withLazy(() => import("../features/marketing/SitePages.jsx"), "AboutPage", marketingFallback);
+const FounderPage = withLazy(() => import("../features/marketing/SitePages.jsx"), "FounderPage", marketingFallback);
+const ContactPage = withLazy(() => import("../features/marketing/SitePages.jsx"), "ContactPage", marketingFallback);
+const ResourcesPage = withLazy(() => import("../features/marketing/SitePages.jsx"), "ResourcesPage", marketingFallback);
+
+const WorkspaceLayout = withLazy(() => import("../features/workspace/WorkspaceLayout.jsx"), "WorkspaceLayout", workspaceFallback);
+const FinanceRoute = withLazy(() => import("../features/workspace/routes/FinanceRoute.jsx"), "FinanceRoute", pageFallback);
+const CashbookRoute = withLazy(() => import("../features/workspace/routes/CashbookRoute.jsx"), "CashbookRoute", pageFallback);
+const ChitFundRoute = withLazy(() => import("../features/workspace/routes/ChitFundRoute.jsx"), "ChitFundRoute", pageFallback);
+const CollectionStaffRoute = withLazy(() => import("../features/workspace/routes/CollectionStaffRoute.jsx"), "CollectionStaffRoute", pageFallback);
+const RouteCollectionsRoute = withLazy(() => import("../features/workspace/routes/RouteCollectionsRoute.jsx"), "RouteCollectionsRoute", pageFallback);
+const SettingsRoute = withLazy(() => import("../features/workspace/routes/SettingsRoute.jsx"), "SettingsRoute", pageFallback);
+const ModuleStorePage = withLazy(() => import("../features/commercial/ModuleStorePage.jsx"), "ModuleStorePage", pageFallback);
+const SubscribePage = withLazy(() => import("../features/commercial/SubscribePage.jsx"), "SubscribePage", pageFallback);
 
 // Every URL in the app and the component it shows. Paths match `workspacePaths` in features/workspace/paths.js,
 // which the rest of the code uses to navigate.

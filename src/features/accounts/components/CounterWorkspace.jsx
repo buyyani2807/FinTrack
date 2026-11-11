@@ -318,26 +318,38 @@ export function CounterWorkspace({
     saveCounterHolds(companyId, activeTillId, holds);
   }, [companyId, activeTillId, holds, holdsReady]);
 
+  const draftStateRef = useRef(null);
+  draftStateRef.current = {
+    companyId,
+    activeTillId,
+    draftReady,
+    lines,
+    partyId: billingPartyId,
+    moneyMode,
+    settlement,
+    tillMode,
+    billDiscount,
+    receivedCash,
+    receivedUpi,
+    tenderedCash,
+    paymentRef,
+    walkInName,
+    walkInPhone,
+  };
+
   useEffect(() => {
-    if (!companyId || !draftReady) return;
+    if (!companyId || !draftReady) return undefined;
     if (!lines.length) {
       clearCounterDraft(companyId, activeTillId);
-      return;
+      return undefined;
     }
-    saveCounterDraft(companyId, activeTillId, {
-      lines,
-      partyId: billingPartyId,
-      moneyMode,
-      settlement,
-      tillMode,
-      billDiscount,
-      receivedCash,
-      receivedUpi,
-      tenderedCash,
-      paymentRef,
-      walkInName,
-      walkInPhone,
-    });
+    const persist = () => {
+      const draft = draftStateRef.current;
+      if (!draft?.companyId || !draft.draftReady || !draft.lines.length) return;
+      saveCounterDraft(draft.companyId, draft.activeTillId, draft);
+    };
+    const id = window.setTimeout(persist, 250);
+    return () => window.clearTimeout(id);
   }, [
     companyId,
     activeTillId,
@@ -355,6 +367,13 @@ export function CounterWorkspace({
     walkInName,
     walkInPhone,
   ]);
+
+  useEffect(() => () => {
+    const draft = draftStateRef.current;
+    if (!draft?.companyId || !draft.draftReady) return;
+    if (!draft.lines.length) clearCounterDraft(draft.companyId, draft.activeTillId);
+    else saveCounterDraft(draft.companyId, draft.activeTillId, draft);
+  }, []);
 
   useEffect(() => {
     const onOnline = () => setOnline(true);

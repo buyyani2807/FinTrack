@@ -682,6 +682,29 @@ export function currentStockForItem(item, movements = []) {
   return roundMoney(moved + opening);
 }
 
+/** One pass over movements, then one pass over items — same result as calling currentStockForItem per item. */
+export function stockOnHandByItem(items = [], movements = []) {
+  const moved = new Map();
+  const openingPosted = new Set();
+  for (const row of movements || []) {
+    const id = row?.itemId;
+    if (!id) continue;
+    moved.set(id, (moved.get(id) || 0) + Number(row.quantityDelta || 0));
+    if (row.reason === "opening") openingPosted.add(id);
+  }
+  const map = {};
+  for (const item of items || []) {
+    if (!item?.id) continue;
+    if (item.itemType === "service") {
+      map[item.id] = null;
+      continue;
+    }
+    const opening = openingPosted.has(item.id) ? 0 : Number(item.openingStock || 0);
+    map[item.id] = roundMoney((moved.get(item.id) || 0) + opening);
+  }
+  return map;
+}
+
 export function stockStatus(current, reorderLevel) {
   if (current == null) return "service";
   if (Number(reorderLevel || 0) > 0 && Number(current) < Number(reorderLevel)) return "low";
@@ -696,12 +719,13 @@ export function expiredStockReport(items = [], movements = [], { asOf = "", soon
   const today = String(asOf || new Date().toISOString().slice(0, 10)).slice(0, 10);
   const horizon = Number(soonDays);
   const daysAhead = Number.isFinite(horizon) && horizon >= 0 ? horizon : 30;
+  const stockByItem = stockOnHandByItem(items, movements);
   const rows = [];
   for (const item of items || []) {
     if (!item || item.itemType === "service") continue;
     const expiry = String(item.expiryDate || "").slice(0, 10);
     if (!expiry) continue;
-    const stock = currentStockForItem(item, movements);
+    const stock = stockByItem[item.id];
     if (stock == null) continue;
     const dayMs = 86400000;
     const days = Math.round((new Date(`${expiry}T00:00:00`) - new Date(`${today}T00:00:00`)) / dayMs);

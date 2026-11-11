@@ -1,7 +1,7 @@
 import { addDaysIso, roundMoney } from "./accountingModel.js";
 import { formatInr } from "../../../lib/formatMoney.js";
 import { cashFlow, dashboardMetrics, gstBooksReport, invoiceAgingTotals, invoiceRegister, profitAndLoss } from "./accountingReports.js";
-import { currentStockForItem, itemSalesReport, stockStatus } from "./inventoryModel.js";
+import { itemSalesReport, stockOnHandByItem, stockStatus } from "./inventoryModel.js";
 
 const money = value => formatInr(value);
 const pct = (current, previous) => {
@@ -106,11 +106,12 @@ export function buildAccountsFacts({
   const amounts = currentPosted.map(row => voucherTotalsSafe(row));
   const itemSales = itemSalesReport(voucherItemLines, vouchers, currentRange);
   const topItem = itemSales[0] || null;
+  const stockByItem = stockOnHandByItem(items, stockMovements);
   const lowStockItems = (items || [])
     .filter(item => item.itemType === "product" && item.isActive !== false)
     .map(item => ({
       name: item.name,
-      stock: currentStockForItem(item, stockMovements),
+      stock: stockByItem[item.id],
       reorderLevel: item.reorderLevel,
       unit: item.unit,
     }))

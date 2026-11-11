@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   financeRolesAligned,
   ownerChromeAllowed,
+  sessionNeedsFinanceBooks,
   sessionUserRole,
   workspaceAccess,
   workspaceChromeAllowed,
@@ -37,6 +38,9 @@ test("workspace access helpers recognize accounts role", () => {
     isOwner: false,
     isStaff: false,
     isAccountsUser: true,
+    isFinancePartner: false,
+    canViewOwnerFinance: false,
+    canWriteFinance: false,
   });
   assert.equal(workspaceSessionAllowed({ role: "accounts", active: true }), true);
   assert.equal(workspaceSessionAllowed({ role: "accounts", active: false }), false);
@@ -51,4 +55,13 @@ test("accounts-team module access is Accounts only", () => {
   assert.equal(access.monthly, false);
   assert.equal(access.chit, false);
   assert.equal(access.cashbook, false);
+});
+
+test("finance books load only for daily/monthly roles", () => {
+  assert.equal(sessionNeedsFinanceBooks({ role: "owner" }), true);
+  assert.equal(sessionNeedsFinanceBooks({ role: "finance_partner" }), true);
+  assert.equal(sessionNeedsFinanceBooks({ role: "staff", collectionScope: "daily" }), true);
+  assert.equal(sessionNeedsFinanceBooks({ role: "accounts" }), false);
+  assert.equal(sessionNeedsFinanceBooks({ role: "staff", collectionScope: "accounts" }), false);
+  assert.equal(sessionNeedsFinanceBooks(null), false);
 });

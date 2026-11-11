@@ -1,6 +1,6 @@
 import { affectsLedgers, dateIsLocked, isReversalVoucher } from "../../accounts/model/accountingModel.js";
 import { invoiceRegister } from "../../accounts/model/accountingReports.js";
-import { currentStockForItem } from "../../accounts/model/inventoryModel.js";
+import { stockOnHandByItem } from "../../accounts/model/inventoryModel.js";
 import { addDaysIso, formatInr, isoDate, n, roundMoney, shiftMonthKey, source } from "./aiCommon.js";
 
 const UNCATEGORISED = /suspense|uncategori[sz]ed|unclassified|to be classified/i;
@@ -78,7 +78,8 @@ export function buildMonthEndReadiness({
   const gaps = missingInvoiceNumbers((vouchers || []).filter(affectsLedgers), range);
   const overduePayables = invoiceRegister(accounts, vouchers, parties, { kind: "payable", today: range.to, outstandingOnly: true }).filter(row => n(row.daysOverdue) > 0);
   const gstIssues = (gstWarnings || []).filter(warning => warning.severity === "critical" || warning.severity === "high");
-  const negativeStock = (items || []).filter(item => item.itemType !== "service").map(item => ({ item, stock: currentStockForItem(item, stockMovements) })).filter(row => row.stock != null && row.stock < 0);
+  const stockByItem = stockOnHandByItem(items, stockMovements);
+  const negativeStock = (items || []).filter(item => item.itemType !== "service").map(item => ({ item, stock: stockByItem[item.id] })).filter(row => row.stock != null && row.stock < 0);
   const locked = dateIsLocked(range.from, locks) && dateIsLocked(range.to, locks);
 
   const checks = [

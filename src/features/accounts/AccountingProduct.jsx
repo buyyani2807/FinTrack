@@ -130,12 +130,12 @@ import { periodStockValues } from "./model/inventoryValuation.js";
 import { expenseBreakdown, monthlyIncomeExpense } from "./model/accountsCharts.js";
 import { isEmployeeParty, partyHasTradeProfile, partyProfile } from "./model/partyProfile.js";
 import {
-  currentStockForItem,
   expiredStockReport,
   itemPurchasesReport,
   itemSalesReport,
   itemizedEntryDraft,
   stockMovementReport,
+  stockOnHandByItem,
   stockReasonLabel,
   usesItemLines,
 } from "./model/inventoryModel.js";
@@ -708,15 +708,24 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     }
   }, [ledgerId, visibleAccounts]);
 
+  const wantStockValue = wantOverview || wantPnl || wantSheet;
+  const wantCostLines = wantStockValue || section === "inventory" || section === "reports" || section === "ca";
   const costLines = useMemo(() => {
+    if (!wantCostLines) return voucherItemLines;
     const documentLines = (tradeDocuments || []).filter(doc => doc.docType === "goods_receipt").flatMap(doc => doc.lines || []);
     return documentLines.length ? [...voucherItemLines, ...documentLines] : voucherItemLines;
-  }, [tradeDocuments, voucherItemLines]);
+  }, [wantCostLines, tradeDocuments, voucherItemLines]);
+  const wantBrief = wantOverview && canWrite;
+  const wantFulfilment = section === "documents" || wantBrief || showSimple;
   const fulfilment = useMemo(
-    () => documentFulfilment({ documents: tradeDocuments || [], voucherItemLines, vouchers }),
-    [tradeDocuments, voucherItemLines, vouchers],
+    () => (wantFulfilment ? documentFulfilment({ documents: tradeDocuments || [], voucherItemLines, vouchers }) : new Map()),
+    [wantFulfilment, tradeDocuments, voucherItemLines, vouchers],
   );
-  const wantStockValue = wantOverview || wantPnl || wantSheet;
+  const wantLiveStock = wantOverview || section === "counter" || section === "inventory" || section === "documents" || section === "manufacturing" || showSimple;
+  const stockByItem = useMemo(
+    () => (wantLiveStock ? stockOnHandByItem(items, stockMovements) : {}),
+    [wantLiveStock, items, stockMovements],
+  );
   const periodStock = useMemo(
     () => (wantStockValue && items.length
       ? periodStockValues({ items, movements: stockMovements, voucherItemLines: costLines, from: range.from, to: range.to })
@@ -787,17 +796,25 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       : []),
     [wantInvoices, section, reportId, accounts, vouchers, parties, range, outstandingOnly],
   );
-  const overviewArAging = useMemo(
+  const overviewReceivableInvoices = useMemo(
     () => (wantOverview
-      ? invoiceAgingTotals(invoiceRegister(accounts, vouchers, parties, { kind: "receivable", today: todayIso(), ...range, outstandingOnly: true }))
-      : { current: 0, overdue: 0, total: 0 }),
+      ? invoiceRegister(accounts, vouchers, parties, { kind: "receivable", today: todayIso(), ...range, outstandingOnly: true })
+      : []),
     [wantOverview, accounts, vouchers, parties, range],
   );
-  const overviewApAging = useMemo(
+  const overviewPayableInvoices = useMemo(
     () => (wantOverview
-      ? invoiceAgingTotals(invoiceRegister(accounts, vouchers, parties, { kind: "payable", today: todayIso(), ...range, outstandingOnly: true }))
-      : { current: 0, overdue: 0, total: 0 }),
+      ? invoiceRegister(accounts, vouchers, parties, { kind: "payable", today: todayIso(), ...range, outstandingOnly: true })
+      : []),
     [wantOverview, accounts, vouchers, parties, range],
+  );
+  const overviewArAging = useMemo(
+    () => (wantOverview ? invoiceAgingTotals(overviewReceivableInvoices) : { current: 0, overdue: 0, total: 0 }),
+    [wantOverview, overviewReceivableInvoices],
+  );
+  const overviewApAging = useMemo(
+    () => (wantOverview ? invoiceAgingTotals(overviewPayableInvoices) : { current: 0, overdue: 0, total: 0 }),
+    [wantOverview, overviewPayableInvoices],
   );
   const salesRows = useMemo(() => books.filter(row => row.voucherType === "sales"), [books]);
   const purchaseRows = useMemo(() => books.filter(row => row.voucherType === "purchase"), [books]);
@@ -830,14 +847,9 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   }, [showSimple, simpleKind, accounts, vouchers, parties]);
   const accountsAttention = useMemo(() => {
     if (!wantOverview) return null;
-    const overdueInvoices = invoiceRegister(accounts, vouchers, parties, {
-      kind: "receivable",
-      today: todayIso(),
-      ...range,
-      outstandingOnly: true,
-    }).filter(row => Number(row.daysOverdue || 0) > 0);
+    const overdueInvoices = overviewReceivableInvoices.filter(row => Number(row.daysOverdue || 0) > 0);
     const lowStockCount = items.filter(item => {
-      const stock = currentStockForItem(item, stockMovements);
+      const stock = stockByItem[item.id];
       const reorder = Number(item.reorderLevel || 0);
       return reorder > 0 && stock < reorder;
     }).length;
@@ -860,7 +872,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       items: itemsList,
       disclaimer: "Advisory only — never changes books.",
     };
-  }, [wantOverview, accounts, vouchers, parties, range, items, stockMovements, statements, activeCompany]);
+  }, [wantOverview, overviewReceivableInvoices, items, stockByItem, statements, activeCompany, vouchers, range]);
   const anomalyReview = useMemo(() => {
     if (!wantOverview) return null;
     return buildAnomalyReview({
@@ -873,17 +885,11 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       today: todayIso(),
     });
   }, [wantOverview, vouchers, accounts, parties, statements, locks, cashbookEntries]);
-  const stockByItem = useMemo(() => {
-    const map = {};
-    for (const item of items) map[item.id] = currentStockForItem(item, stockMovements);
-    return map;
-  }, [items, stockMovements]);
   const gstFrequency = gstFrequencyState?.companyId === activeCompanyId ? gstFrequencyState.value : readGstFrequency(activeCompanyId);
   const changeGstFrequency = value => {
     writeGstFrequency(activeCompanyId, value);
     setGstFrequencyState({ companyId: activeCompanyId, value });
   };
-  const wantBrief = wantOverview && canWrite;
   const gstSchedule = useMemo(() => {
     if (!wantBrief || !activeCompany) return null;
     return gstFilingSchedule({
@@ -925,9 +931,12 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     if (section !== "routes") return new Map();
     return receivablePositions(invoiceRegister(accounts, vouchers, parties, { kind: "receivable", today: todayIso(), outstandingOnly: true }));
   }, [section, accounts, vouchers, parties]);
-  const itemSalesRows = useMemo(() => itemSalesReport(voucherItemLines, vouchers, range), [voucherItemLines, vouchers, range]);
-  const itemPurchaseRows = useMemo(() => itemPurchasesReport(voucherItemLines, vouchers, range), [voucherItemLines, vouchers, range]);
-  const stockMoveRows = useMemo(() => stockMovementReport(stockMovements, items, range).slice(0, 200), [stockMovements, items, range]);
+  const wantItemSales = reportId === "item_sales" || reportId === "item_profit";
+  const wantItemPurchases = reportId === "item_purchases" || reportId === "item_profit";
+  const wantStockMoves = reportId === "stock_moves";
+  const itemSalesRows = useMemo(() => (wantItemSales ? itemSalesReport(voucherItemLines, vouchers, range) : []), [wantItemSales, voucherItemLines, vouchers, range]);
+  const itemPurchaseRows = useMemo(() => (wantItemPurchases ? itemPurchasesReport(voucherItemLines, vouchers, range) : []), [wantItemPurchases, voucherItemLines, vouchers, range]);
+  const stockMoveRows = useMemo(() => (wantStockMoves ? stockMovementReport(stockMovements, items, range).slice(0, 200) : []), [wantStockMoves, stockMovements, items, range]);
   const ledgerParties = useMemo(() => parties.filter(party => !isEmployeeParty(party)), [parties]);
   const focusedParty = useMemo(() => ledgerParties.find(party => party.id === partyFocusId) || ledgerParties[0] || null, [ledgerParties, partyFocusId]);
   const profileParty = useMemo(() => (section === "party" ? parties.find(party => party.id === view.sub) || null : null), [section, parties, view.sub]);

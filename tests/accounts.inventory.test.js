@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   aggregateItemizedGst,
   currentStockForItem,
+  stockOnHandByItem,
   itemizedEntryDraft,
   itemPurchasesReport,
   itemSalesReport,
@@ -112,6 +113,18 @@ test("stock is opening plus movements and flags low stock", () => {
   assert.equal(stockStatus(35, 50), "low");
   assert.equal(stockStatus(130, 50), "normal");
   assert.equal(currentStockForItem({ id: "s1", itemType: "service" }, []), null);
+  const map = stockOnHandByItem(
+    [item, { id: "s1", itemType: "service" }, { id: "i2", itemType: "product", openingStock: 10 }],
+    [
+      { itemId: "i1", quantityDelta: 100, reason: "opening" },
+      { itemId: "i1", quantityDelta: 50, reason: "purchase" },
+      { itemId: "i1", quantityDelta: -20, reason: "sale" },
+      { itemId: "i2", quantityDelta: -4, reason: "sale" },
+    ],
+  );
+  assert.equal(map.i1, 130);
+  assert.equal(map.s1, null);
+  assert.equal(map.i2, 6);
 });
 
 test("itemized sale draft keeps double-entry balanced with GST", () => {
