@@ -26,7 +26,7 @@ export function FeatureDetailPage() {
     return <Reveal intent="content" className="mkt-empty">
       <h1>That feature is not on this site.</h1>
       <p className="mkt-lead">The list only includes modules that exist in MyFinTracker.</p>
-      <Link className="mkt-btn" to={marketingPaths.features}>Back to features</Link>
+      <Link className="mkt-btn" to={marketingPaths.home}>Back to home</Link>
     </Reveal>;
   }
   if (normalizePath(location.pathname) !== featurePath(feature.slug, parent)) {

@@ -17,12 +17,21 @@ function withLazy(importer, exportName, fallback) {
   };
 }
 
-const marketingFallback = null;
+function MarketingPageFallback() {
+  return <div className="mkt-page-loading" role="status" aria-live="polite">
+    <div className="mkt-coin-roll" aria-hidden="true">
+      <span className="mkt-coin-shadow" />
+      <span className="mkt-coin"><span className="mkt-coin-face">₹</span></span>
+    </div>
+    <span className="ft-sr-only">Loading page</span>
+  </div>;
+}
+
+const marketingFallback = <MarketingPageFallback />;
 const workspaceFallback = <LoadingScreen />;
 const pageFallback = <div className="shell"><Spinner label="Loading" /></div>;
 
 const HomePage = withLazy(() => import("../features/marketing/HomePage.jsx"), "HomePage", marketingFallback);
-const FeaturesPage = withLazy(() => import("../features/marketing/FeaturesPage.jsx"), "FeaturesPage", marketingFallback);
 const FeatureDetailPage = withLazy(() => import("../features/marketing/FeatureDetailPage.jsx"), "FeatureDetailPage", marketingFallback);
 const SolutionsPage = withLazy(() => import("../features/marketing/SitePages.jsx"), "SolutionsPage", marketingFallback);
 const HowItWorksPage = withLazy(() => import("../features/marketing/SitePages.jsx"), "HowItWorksPage", marketingFallback);
@@ -60,7 +69,7 @@ export function AppRoutes() {
       <Route element={<SessionLayout />}>
         <Route element={<MarketingLayout />}>
           <Route path="/" element={<HomePage />} />
-          <Route path="/features" element={<FeaturesPage />} />
+          <Route path="/features" element={<Navigate to="/" replace />} />
           <Route path="/features/:slug" element={<FeatureDetailPage />} />
           <Route path="/finance/features/:slug" element={<FeatureDetailPage />} />
           <Route path="/auction-chit/features/:slug" element={<FeatureDetailPage />} />

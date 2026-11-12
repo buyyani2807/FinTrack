@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
-import { ArrowLeft, ArrowRight, Check, ExternalLink, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ChevronDown, ExternalLink, X } from "lucide-react";
 import { APP_MODULES, MODULE_FEATURES, featureBySlug } from "./catalog.js";
 import { FeatureIcon } from "./icons.jsx";
 import { ModulePartsContext } from "./moduleParts.js";
@@ -48,6 +48,8 @@ function PartPanel({ module, feature, onOpen, onClose }) {
   const sheet = useRef(null);
   const closeButton = useRef(null);
   const body = useRef(null);
+  const [moreBelow, setMoreBelow] = useState(false);
+  const [hintUsed, setHintUsed] = useState(false);
   const label = APP_MODULES.find(item => item.slug === module)?.label || "";
   const parts = (MODULE_FEATURES[module] || []).map(featureBySlug).filter(Boolean);
   const index = parts.findIndex(item => item.slug === feature.slug);
@@ -64,6 +66,36 @@ function PartPanel({ module, feature, onOpen, onClose }) {
   useEffect(() => {
     closeButton.current?.focus();
     body.current?.scrollTo(0, 0);
+    setHintUsed(false);
+  }, [feature.slug]);
+
+  const revealMore = () => {
+    const el = body.current;
+    if (!el) return;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const next = Math.min(el.scrollHeight - el.clientHeight, el.scrollTop + Math.round(el.clientHeight * 0.85));
+    el.scrollTo({ top: next, behavior: reduce ? "auto" : "smooth" });
+    setHintUsed(true);
+  };
+
+  useEffect(() => {
+    const el = body.current;
+    if (!el) return undefined;
+    const measure = () => {
+      const more = el.scrollHeight - el.clientHeight - el.scrollTop > 12;
+      setMoreBelow(current => (current === more ? current : more));
+    };
+    measure();
+    const frame = requestAnimationFrame(measure);
+    el.addEventListener("scroll", measure, { passive: true });
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
+    observer?.observe(el);
+    [...el.children].forEach(node => observer?.observe(node));
+    return () => {
+      cancelAnimationFrame(frame);
+      el.removeEventListener("scroll", measure);
+      observer?.disconnect();
+    };
   }, [feature.slug]);
 
   useEffect(() => {
@@ -92,6 +124,7 @@ function PartPanel({ module, feature, onOpen, onClose }) {
         <button type="button" className="fx-sheet-close" ref={closeButton} onClick={onClose} aria-label="Close"><X size={20} aria-hidden="true" /></button>
       </header>
 
+      <div className={`fx-sheet-scroll${moreBelow && !hintUsed ? " is-more" : ""}`}>
       <div className="fx-sheet-body" ref={body}>
         <p className="fx-sheet-lead">{feature.summary}</p>
         {sceneForFeature(feature) ? <div className="fx-sheet-shot"><ProductPreview scene={sceneForFeature(feature)} /></div> : null}
@@ -113,6 +146,8 @@ function PartPanel({ module, feature, onOpen, onClose }) {
         </ul>
 
         <Link className="fx-sheet-full" to={featurePath(feature.slug, module)}>Open the full {feature.name} page <ExternalLink size={14} aria-hidden="true" /></Link>
+      </div>
+      <button type="button" className="fx-sheet-more" onClick={revealMore} aria-label="Scroll for more"><ChevronDown size={16} strokeWidth={2.5} aria-hidden="true" /></button>
       </div>
 
       <footer className="fx-sheet-foot">

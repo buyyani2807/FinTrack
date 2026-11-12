@@ -63,7 +63,7 @@ export function HowItWorksPage() {
           <p>{step.text}</p>
         </article>)}
       </Reveal>
-      <Reveal className="mkt-cta-row"><ProductCta primary /><Link className="mkt-btn" to={marketingPaths.features}>Explore features</Link></Reveal>
+      <Reveal className="mkt-cta-row"><ProductCta primary /></Reveal>
     </section>
     <InstallGuide />
   </RevealProvider>;
@@ -244,23 +244,25 @@ export function FounderPage() {
 function LegalDoc({ view }) {
   const page = LEGAL_PAGES[view];
   if (!page) return null;
-  return <RevealProvider intent="content">
+  return <RevealProvider intent="content"><div className="mkt-legal-page">
     <section className="mkt-section">
-      <PageTitle title={`${page.title} — MyFinTracker`} />
-      <Reveal>
-        <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Legal</p>
-        <h1>{page.title}</h1>
-        <p className="mkt-lead">Last updated {page.updated}.</p>
-      </Reveal>
-      <div className="mkt-legal">
-        {page.sections.map(section => <Reveal as="article" key={section.heading} className="mkt-card">
-          <h2>{section.heading}</h2>
-          <p>{section.body}</p>
-        </Reveal>)}
+      <div className="mkt-wrap">
+        <PageTitle title={`${page.title} — MyFinTracker`} />
+        <Reveal>
+          <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Legal</p>
+          <h1>{page.title}</h1>
+          <p className="mkt-lead">Last updated {page.updated}.</p>
+        </Reveal>
+        <div className="mkt-legal-points">
+          {page.sections.map((section, index) => <Reveal as="article" key={section.heading} className="mkt-legal-card" index={index % 2}>
+            <h2>{section.heading}</h2>
+            <p>{section.body}</p>
+          </Reveal>)}
+        </div>
       </div>
     </section>
     <PageClose />
-  </RevealProvider>;
+  </div></RevealProvider>;
 }
 
 export function PrivacyPage() {
@@ -280,7 +282,7 @@ export function ContactPage() {
       <h1>Request a demo.</h1>
       <p className="mkt-lead">Tell us the business and what you want to see. This local preview keeps the note on the page only. It does not email anyone and it does not create an account.</p>
     </Reveal>
-    <Reveal className="mkt-detail">
+    <Reveal className="mkt-detail mkt-contact-detail">
       <form className="mkt-card mkt-form" onSubmit={event => { event.preventDefault(); setSent(true); }}>
         <label>Your name<input name="name" required autoComplete="name" /></label>
         <label>Business<input name="business" required autoComplete="organization" /></label>
