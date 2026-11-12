@@ -108,6 +108,8 @@ export async function loadWorkspace(token) {
   let businessName = organization?.name || "My Finance Business";
   let collectionScope = "";
   let accountsCompanyId = "";
+  // Start subscription while staff extras load so login is not profile → subscription waterfall.
+  const subscriptionPromise = loadSubscription(token);
   if (profile.role === "staff") {
     try {
       const [self] = await supabase.query(`/rest/v1/profiles?id=eq.${profile.id}&select=collection_scope,accounts_company_id&limit=1`, token);
@@ -133,7 +135,7 @@ export async function loadWorkspace(token) {
     active: profile?.is_active !== false,
     id: profile?.id || "",
     organizationSettings: mapOrganizationSettings(organization),
-    subscription: await loadSubscription(token),
+    subscription: await subscriptionPromise,
   };
 }
 
@@ -336,17 +338,27 @@ export const fetchChitInstallmentById = (token, id) => supabase.query(`/rest/v1/
 export const fetchFixedChitPaymentById = (token, id) => supabase.query(`/rest/v1/fixed_chit_payments?id=eq.${id}&select=*`, token).then(rows => rows[0]);
 export const fetchPredefinedChitPaymentById = (token, id) => supabase.query(`/rest/v1/predefined_chit_payments?id=eq.${id}&select=*`, token).then(rows => rows[0]);
 
-export async function fetchFinancePaymentReceipt(token, paymentId) {
-  const selectWithReceipt = "id,receipt_number,paid_on,mode,total_amount,interest_amount,principal_amount,penalty_amount,payment_reference,notes,cash_amount,upi_amount,collected_by,created_at,profiles!payments_collected_by_fkey(full_name)";
-  const selectBasic = "id,paid_on,mode,total_amount,interest_amount,principal_amount,penalty_amount,payment_reference,notes,cash_amount,upi_amount,collected_by,created_at,profiles!payments_collected_by_fkey(full_name)";
-  let rows;
-  try {
-    rows = await supabase.query(`/rest/v1/payments?id=eq.${paymentId}&select=${selectWithReceipt}`, token);
-  } catch (error) {
-    if (!isMissingSchemaError(error)) throw error;
-    rows = await supabase.query(`/rest/v1/payments?id=eq.${paymentId}&select=${selectBasic}`, token);
+const REST_PAGE = 1000;
+const REST_MAX_ROWS = 50000;
+const FINANCE_ACCOUNT_SELECT = "*,customers(*),rate_changes(*),customer_portal_credentials(portal_id)";
+const PAYMENT_SELECT_RECEIPT = "id,finance_account_id,receipt_number,paid_on,mode,total_amount,interest_amount,principal_amount,penalty_amount,payment_reference,notes,cash_amount,upi_amount,collected_by,created_at,profiles!payments_collected_by_fkey(full_name)";
+const PAYMENT_SELECT_BASIC = "id,finance_account_id,paid_on,mode,total_amount,interest_amount,principal_amount,penalty_amount,payment_reference,notes,cash_amount,upi_amount,collected_by,created_at,profiles!payments_collected_by_fkey(full_name)";
+
+async function restGetAll(token, path) {
+  const rows = [];
+  let offset = 0;
+  const joiner = path.includes("?") ? "&" : "?";
+  while (offset < REST_MAX_ROWS) {
+    const chunk = await supabase.query(`${path}${joiner}limit=${REST_PAGE}&offset=${offset}`, token);
+    const list = Array.isArray(chunk) ? chunk : [];
+    rows.push(...list);
+    if (list.length < REST_PAGE) break;
+    offset += REST_PAGE;
   }
-  const payment = rows[0];
+  return rows;
+}
+
+function mapPaymentRow(payment) {
   if (!payment) return null;
   const profile = Array.isArray(payment.profiles) ? payment.profiles[0] : payment.profiles;
   return {
@@ -368,11 +380,41 @@ export async function fetchFinancePaymentReceipt(token, paymentId) {
   };
 }
 
+async function loadFinancePaymentRows(token) {
+  try {
+    return await restGetAll(token, `/rest/v1/payments?select=${PAYMENT_SELECT_RECEIPT}&order=paid_on.asc,created_at.asc`);
+  } catch (error) {
+    if (!isMissingSchemaError(error)) throw error;
+    return restGetAll(token, `/rest/v1/payments?select=${PAYMENT_SELECT_BASIC}&order=paid_on.asc,created_at.asc`);
+  }
+}
+
+export async function fetchFinancePaymentReceipt(token, paymentId) {
+  const selectWithReceipt = "id,receipt_number,paid_on,mode,total_amount,interest_amount,principal_amount,penalty_amount,payment_reference,notes,cash_amount,upi_amount,collected_by,created_at,profiles!payments_collected_by_fkey(full_name)";
+  const selectBasic = "id,paid_on,mode,total_amount,interest_amount,principal_amount,penalty_amount,payment_reference,notes,cash_amount,upi_amount,collected_by,created_at,profiles!payments_collected_by_fkey(full_name)";
+  let rows;
+  try {
+    rows = await supabase.query(`/rest/v1/payments?id=eq.${paymentId}&select=${selectWithReceipt}`, token);
+  } catch (error) {
+    if (!isMissingSchemaError(error)) throw error;
+    rows = await supabase.query(`/rest/v1/payments?id=eq.${paymentId}&select=${selectBasic}`, token);
+  }
+  return mapPaymentRow(rows[0]);
+}
+
 export async function loadFinanceAccounts(token) {
-  const rows = await supabase.query(
-    "/rest/v1/finance_accounts?select=*,customers(*),payments(*,profiles!payments_collected_by_fkey(full_name)),rate_changes(*),customer_portal_credentials(portal_id)&order=collection_order.asc,created_at.asc",
-    token,
-  );
+  const [rows, paymentRows] = await Promise.all([
+    restGetAll(token, `/rest/v1/finance_accounts?select=${FINANCE_ACCOUNT_SELECT}&order=collection_order.asc,created_at.asc`),
+    loadFinancePaymentRows(token),
+  ]);
+  const paymentsByAccount = new Map();
+  for (const payment of paymentRows || []) {
+    const id = payment.finance_account_id;
+    if (!id) continue;
+    const list = paymentsByAccount.get(id);
+    if (list) list.push(payment);
+    else paymentsByAccount.set(id, [payment]);
+  }
   return rows.map(account => {
     const credential = Array.isArray(account.customer_portal_credentials) ? account.customer_portal_credentials[0] : account.customer_portal_credentials;
     return ({
@@ -400,15 +442,7 @@ export async function loadFinanceAccounts(token) {
     collectionAgentId: account.collection_agent_id || "",
     portalId: credential?.portal_id || "",
     rateChanges: (account.rate_changes || []).map(rate => ({ effectiveDate: rate.effective_date, annualRate: asNumber(rate.monthly_interest_rate) })),
-    transactions: (account.payments || []).map(payment => ({
-      id: payment.id, date: payment.paid_on, mode: payment.mode, amount: asNumber(payment.total_amount),
-      interestAmount: asNumber(payment.interest_amount), principalAmount: asNumber(payment.principal_amount),
-      penaltyAmount: asNumber(payment.penalty_amount), ref: payment.payment_reference || "", notes: payment.notes || "",
-      cashAmount: asNumber(payment.cash_amount), upiAmount: asNumber(payment.upi_amount),
-      collectedBy: payment.collected_by || "", collectorName: (Array.isArray(payment.profiles) ? payment.profiles[0] : payment.profiles)?.full_name || "Financier/Admin",
-      receiptNumber: payment.receipt_number || "",
-      createdAt: payment.created_at || "",
-    })),
+    transactions: (paymentsByAccount.get(account.id) || []).map(mapPaymentRow),
     });
   });
 }

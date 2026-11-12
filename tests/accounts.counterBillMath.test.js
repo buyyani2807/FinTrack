@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   applyBillDiscountToLines,
+  billDiscountAmount,
   buildCounterWhatsAppReceipt,
   cashChangeDue,
   counterEstimateTotal,
@@ -23,6 +24,16 @@ test("bill discount prorates onto lines without inventing negative stock", () =>
   const next = applyBillDiscountToLines(lines, "40");
   assert.equal(counterLineNet(next[0]) + counterLineNet(next[1]), 360);
   assert.equal(Number(next[0].discount) + Number(next[1].discount), 40);
+});
+
+test("bill discount amount shows rupees for percent and rupee input", () => {
+  const lines = [
+    { itemId: "a", itemName: "A", quantity: 1, rate: 100, unit: "Nos", discount: "" },
+    { itemId: "b", itemName: "B", quantity: 1, rate: 300, unit: "Nos", discount: "" },
+  ];
+  assert.equal(billDiscountAmount(lines, "10%"), 40);
+  assert.equal(billDiscountAmount(lines, "40"), 40);
+  assert.equal(billDiscountAmount(lines, ""), 0);
 });
 
 test("FEFO sorts lots by earliest expiry and skips expired", () => {

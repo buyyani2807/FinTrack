@@ -84,8 +84,8 @@ export function ModuleStorePage() {
     <main className="ft-module-store">
       <div className="ft-mod">
         <header className="ft-mod-head">
-          <p className="ft-mod-kicker">Modules</p>
-          <h1>Pay for the modules you need.</h1>
+          <p className="ft-mod-kicker">Subscriptions</p>
+          <h1>Active plans and new subscriptions.</h1>
         </header>
 
         <div className="ft-mod-bill" role="tablist" aria-label="Billing period">
@@ -156,7 +156,13 @@ export function ModuleStorePage() {
                 );
               })}
             </ul>
-          ) : <p className="ft-mod-empty">No modules selected.</p>}
+          ) : (
+            <p className="ft-mod-empty">
+              {catalog.every(product => product.owned)
+                ? "Every module here is already active for this business."
+                : "No modules selected yet. Choose a module above to unlock after payment."}
+            </p>
+          )}
           <p className="ft-mod-total">
             <span>Payable now</span>
             <strong>{lines.length ? totals.totalLabel : "₹0"}</strong>
@@ -171,7 +177,7 @@ export function ModuleStorePage() {
           )}
           {notice ? <p className="ft-subscribe-note" role="status">{notice}</p> : null}
           <p className="ft-mod-note">Your 14-day free trial still opens every module. After the trial, only what you unlock stays open. Your records stay.</p>
-          <p className="ft-mod-back"><Link to="/subscribe">Back to billing</Link></p>
+          <p className="ft-mod-back"><Link to="/dashboard">Back to the workspace</Link></p>
         </section>
       </div>
     </main>

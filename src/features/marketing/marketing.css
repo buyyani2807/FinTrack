@@ -91,15 +91,19 @@ html[data-theme="dark"] .mkt {
   flex-wrap: wrap;
 }
 .mkt-brand {
-  display: flex;
-  align-items: baseline;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   margin-right: 12px;
   color: var(--mkt-ink);
   font-family: Poppins, var(--ft-font-brand, sans-serif);
   font-weight: 700;
   font-size: var(--ft-type-section);
   letter-spacing: -0.04em;
+  text-decoration: none;
 }
+.mkt-brand .ft-brand-mark { width: 28px; height: 28px; border-radius: 22%; box-shadow: none; }
+.mkt-brand-text { display: inline-flex; align-items: baseline; line-height: 1; }
 .mkt-brand span { color: var(--mkt-accent-ink); }
 .mkt-links { display: flex; align-items: center; flex: 1 1 280px; flex-wrap: wrap; gap: 2px; min-width: 0; }
 .mkt-nav-item, .mkt-nav-label { display: inline-flex; align-items: center; gap: 6px; }
@@ -676,6 +680,7 @@ html[data-theme="dark"] .mkt-shot { border-color: #4a6274; background: #101820; 
 
 .mkt-page-hero { padding: 48px 0 8px; }
 .mkt-detail { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr); gap: 22px; align-items: start; }
+.mkt-legal { display: grid; gap: 16px; max-width: 72ch; }
 .mkt-list { margin: 8px 0 0; padding-left: 18px; color: var(--mkt-muted); }
 .mkt-list li { margin: 6px 0; }
 .mkt-ticks { margin: 4px 0 0; padding: 0; list-style: none; }
@@ -1078,6 +1083,13 @@ html[data-theme="dark"] .hm-home .mkt-btn:not(.primary):not(.light) { border-col
 .hm-accounts-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 16px 40px; }
 .hm-accounts-foot .hm-points { grid-auto-flow: column; gap: 28px; margin: 0; }
 .hm-accounts-foot .hm-module-link { margin-top: 0; }
+
+/* Workspace backup sits after the modules, not inside Accounts. */
+.hm-backup { max-width: 760px; margin: 0 auto; text-align: center; }
+.hm-backup-mods { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 28px 0 0; padding: 0; list-style: none; }
+.hm-backup-mods li { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border: 2px solid var(--hm-ink); border-radius: 999px; font-size: var(--ft-type-secondary); font-weight: 700; }
+.hm-backup .hm-points { max-width: 42ch; margin-left: auto; margin-right: auto; text-align: left; }
+.hm-backup .hm-module-link { margin-top: 28px; }
 
 /* Ask Finny keeps its own layout; only the section spacing follows the page. */
 .hm-ask { padding: 104px 0; background: var(--hm-paper); }

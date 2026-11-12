@@ -1,4 +1,4 @@
-import { currentStockForItem } from "../../accounts/model/inventoryModel.js";
+import { stockOnHandByItem } from "../../accounts/model/inventoryModel.js";
 import { addDaysIso, advisory, average, daysBetween, isoDate, n, roundMoney, source, stdDev } from "./aiCommon.js";
 
 const OUT_REASONS = new Set(["sale", "delivery"]);
@@ -53,12 +53,21 @@ export function buildInventoryForecast({ items = [], stockMovements = [], tradeD
   const today = isoDate(asOf);
   const movements = stockMovements || [];
   const leadTimes = leadTimesByItem(tradeDocuments);
+  const stockByItem = stockOnHandByItem(items, movements);
+  const movementsByItem = new Map();
+  for (const row of movements) {
+    if (!row?.itemId) continue;
+    const list = movementsByItem.get(row.itemId);
+    if (list) list.push(row);
+    else movementsByItem.set(row.itemId, [row]);
+  }
   const rows = [];
   for (const item of (items || []).filter(row => row.itemType !== "service" && row.isActive !== false)) {
-    const stock = currentStockForItem(item, movements);
+    const stock = stockByItem[item.id];
     if (stock == null) continue;
-    const { weeks, samples } = weeklySales(movements, item.id, today);
-    const firstMovement = movements.filter(row => row.itemId === item.id).reduce((min, row) => (!min || row.movementDate < min ? row.movementDate : min), "");
+    const itemMoves = movementsByItem.get(item.id) || [];
+    const { weeks, samples } = weeklySales(itemMoves, item.id, today);
+    const firstMovement = itemMoves.reduce((min, row) => (!min || row.movementDate < min ? row.movementDate : min), "");
     const historyWeeks = firstMovement ? Math.min(WEEKS, Math.floor((daysBetween(firstMovement, today) || 0) / 7)) : 0;
     const insufficientHistory = samples < 3 || historyWeeks < 4;
     const recent = weeks.slice(0, 4);

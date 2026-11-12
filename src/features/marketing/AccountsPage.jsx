@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Link } from "react-router";
-import { ArrowRight, Check } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, Paperclip } from "lucide-react";
 import { Reveal, RevealProvider } from "../../components/ui/Reveal.jsx";
 import { featureBySlug } from "./catalog.js";
 import { FeatureIcon } from "./icons.jsx";
@@ -39,7 +39,7 @@ export function AccountsPage({ feature }) {
     <ModuleHero
       name="Accounts"
       title="Billing, books, and GST preparation, in one company book."
-      lead="Bill from Counter POS, post vouchers, keep stock and payroll, and hand a GST-ready month to your CA."
+      lead="Bill from Counter POS — including 48 hours offline — post vouchers, keep stock and payroll, attach bill proofs, and hand a GST-ready month to your CA."
       appPath={feature.appPath}
       scene="accounts-overview"
       frameLabel="Accounts · Overview"
@@ -49,7 +49,7 @@ export function AccountsPage({ feature }) {
       <div className="mkt-wrap">
         <SectionHead eyebrow="Inside Accounts" title="Everything the company book needs." />
         <div className="fx-bento">
-          <Tile slug="counter-pos" size="lg" title="Bill walk-in and khata sales at the counter.">
+          <Tile slug="counter-pos" size="lg" title="Bill walk-in and khata sales — including 48 hours offline.">
             <div className="fx-card fx-list fx-till">
               <div className="fx-list-head"><span>Counter · Bill 214</span><strong>₹1,125</strong></div>
               <ul>
@@ -111,6 +111,22 @@ export function AccountsPage({ feature }) {
               <p><Check size={14} strokeWidth={3} /><span>Bank lines matched</span></p>
             </div>
           </Tile>
+          <Tile slug="bill-proofs" title="A photo or PDF of the supplier bill, kept on the expense.">
+            <div className="fx-card fx-rows fx-checks">
+              <p><Paperclip size={14} /> Bill proof</p>
+              <p><Check size={14} strokeWidth={3} /><span>Photo or PDF on the voucher</span></p>
+              <p><Check size={14} strokeWidth={3} /><span>Ready for audit</span></p>
+              <p><span className="fx-off">—</span><span>Does not post a second entry</span></p>
+            </div>
+          </Tile>
+          <Tile slug="expired-stock" title="Items past expiry or due within 30 days — from the date on the item.">
+            <div className="fx-card fx-rows fx-flags">
+              <p><AlertTriangle size={14} /> Expired stock</p>
+              <p><span>Burma Paper · tomorrow</span></p>
+              <p><span>China Coat · in 9 days</span></p>
+              <p><span>Pull from sale. Dates, not a forecast.</span></p>
+            </div>
+          </Tile>
         </div>
         <div className="fx-also">
           <Reveal as="p" className="fx-eyebrow">Also in Accounts</Reveal>
@@ -128,7 +144,7 @@ export function AccountsPage({ feature }) {
       </div>
     </section>
 
-    <ModuleFaq title="Accounts, answered." questions={["Can I use it only for accounting?", "Does it have a POS / billing counter?", "Does it support GST?", "Can I move my books from Tally or Excel?"]} />
-    <ModuleClosing title="Keep the company book in one login." appPath={feature.appPath} points={["Counter POS billing", "GST preparation", "A page for your CA"]} />
+    <ModuleFaq title="Accounts, answered." questions={["Can I use it only for accounting?", "Does it have a POS / billing counter?", "Can I bill without internet?", "Can I keep a bill as proof?"]} />
+    <ModuleClosing title="Keep the company book in one login." appPath={feature.appPath} points={["Counter POS with 48-hour offline billing", "Bill proofs on expenses", "A page for your CA"]} />
   </div></ModuleParts></RevealProvider>;
 }

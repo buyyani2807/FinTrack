@@ -215,7 +215,7 @@ export function unlockCopyForAppModule(appModuleId, period = MODULE_BILLING_DEFA
     return {
       productKey: product.key,
       title: "Cashbook",
-      body: `Cashbook is included with Daily + Monthly Finance, Chit Fund, or Accounts. Unlock Finance for ${price.breakdown} (${price.periodLabel}), or choose Chit Fund / Accounts in the module store.`,
+      body: `Cashbook is included with Daily + Monthly Finance, Chit Fund, or Accounts. Unlock Finance for ${price.breakdown} (${price.periodLabel}), or choose Chit Fund / Accounts under Subscriptions.`,
       price,
       product,
     };

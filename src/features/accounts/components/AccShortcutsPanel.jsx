@@ -13,7 +13,8 @@ const OVERVIEW_SHORTCUTS = [
   { keys: "Counter · F2", action: "Search / scan on the till" },
   { keys: "Counter · F4", action: "Hold a bill" },
   { keys: "Counter · F9", action: "Charge" },
-  { keys: "Reports", action: "Open Reports for P&L, GST, expired stock" },
+  { keys: "Reports", action: "Open Reports for P&L and GST" },
+  { keys: "Inventory", action: "Open Inventory for expired stock" },
 ];
 
 /**

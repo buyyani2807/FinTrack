@@ -7,6 +7,7 @@ import { resolveWorkspaceModuleState, orgSettingsWithModuleState } from "../comm
 import { listOrganizationModuleEntitlements } from "../commercial/moduleEntitlementsRepository.js";
 import { TrialBanner } from "../commercial/TrialBanner.jsx";
 import { subscriptionPathAllowed, workspaceAccessAllowed } from "../commercial/trial.js";
+import { BrandWordmark } from "../../components/BrandMark.jsx";
 import { TopActions } from "../../components/TopActions.jsx";
 import { PageReveal } from "../../components/ui/PageReveal.jsx";
 import { RevealProvider } from "../../components/ui/Reveal.jsx";
@@ -45,7 +46,7 @@ export function WorkspaceLayout() {
     [baseOrgSettings, moduleState],
   );
   const moduleAccess = workspaceModuleAccess(orgSettings, workspace || {}, moduleState);
-  // Owner gets full chrome. Finance partners get Daily/Monthly view-only. Accounts-team gets Accounts only.
+  // Owner gets full chrome. Finance partners inherit every unlocked module, view-only. Accounts-team gets Accounts only.
   const access = showOwnerChrome
     ? moduleAccess
     : moduleAccess.isFinancePartner
@@ -53,12 +54,7 @@ export function WorkspaceLayout() {
         ...moduleAccess,
         isOwner: false,
         canWriteFinance: false,
-        chit: false,
-        accounts: false,
-        showChit: false,
-        showAccounts: false,
-        // Cashbook stays open when the finance pack includes it (view-only in the UI).
-        locked: { ...moduleAccess.locked, chit: false, accounts: false, counter: false },
+        locked: { ...moduleAccess.locked, daily: false, monthly: false, chit: false, cashbook: false, accounts: false, counter: false },
       }
       : moduleAccess.isAccountsUser
         ? {
@@ -116,13 +112,14 @@ export function WorkspaceLayout() {
   }, [subscriptionLocked, token, refreshModuleEntitlements]);
 
   useEffect(() => {
-    if (subscriptionLocked || !showOwnerChrome || !token) return undefined;
+    const canLoadChit = showOwnerChrome || (moduleAccess.isFinancePartner && moduleAccess.chit);
+    if (subscriptionLocked || !canLoadChit || !token) return undefined;
     let cancelled = false;
     loadActiveChitSchemes(token)
       .then(schemes => { if (!cancelled) setChitSchemes(schemes || []); })
       .catch(() => { if (!cancelled) setChitSchemes([]); });
     return () => { cancelled = true; };
-  }, [subscriptionLocked, showOwnerChrome, token]);
+  }, [subscriptionLocked, showOwnerChrome, moduleAccess.isFinancePartner, moduleAccess.chit, token]);
 
   // CA top bar: show the Acc company they can open (e.g. Buyyani's), not the MyFinTracker org name.
   useEffect(() => {
@@ -181,9 +178,19 @@ export function WorkspaceLayout() {
     }
   }, [showWorkspaceChrome, workspace?.role, location.pathname, navigate]);
 
-  // Warm the Accounts bundle and data while the owner is idle so opening Accounts is instant.
+  // Warm the Accounts bundle while idle. Skip while Daily/Monthly/Cashbook/Chit are open so those
+  // screens are not competing with a 20k-row books fetch.
   useEffect(() => {
     if (subscriptionLocked || !access.accounts || !token) return undefined;
+    const path = location.pathname;
+    if (
+      path.startsWith("/daily-finance")
+      || path.startsWith("/monthly-finance")
+      || path.startsWith("/cashbook")
+      || path.startsWith("/chit-fund")
+    ) {
+      return undefined;
+    }
     const preload = () => {
       loadAccountsModule()
         .then(module => module.prefetchAccounts?.(token, {
@@ -192,13 +199,17 @@ export function WorkspaceLayout() {
         }))
         .catch(() => {});
     };
+    if (path.startsWith("/accounting")) {
+      preload();
+      return undefined;
+    }
     if (typeof window.requestIdleCallback === "function") {
-      const id = window.requestIdleCallback(preload, { timeout: 4000 });
+      const id = window.requestIdleCallback(preload, { timeout: 8000 });
       return () => window.cancelIdleCallback?.(id);
     }
-    const id = window.setTimeout(preload, 1500);
+    const id = window.setTimeout(preload, 6000);
     return () => window.clearTimeout(id);
-  }, [subscriptionLocked, access.accounts, token, workspace?.role, workspace?.id]);
+  }, [subscriptionLocked, access.accounts, token, workspace?.role, workspace?.id, location.pathname]);
 
   const routeContext = {
     access, token, loans, workspace: workspace || {}, orgSettings, moduleState, refreshModuleEntitlements, logout,
@@ -226,7 +237,7 @@ export function WorkspaceLayout() {
         {/* CA / Accounts-team: full-viewport Accounts (no Financier sidebar). Theme + logout stay in the slim bar. */}
         {access.isAccountsUser && !subscriptionLocked ? (
           <header className="ft-accounts-team-bar">
-            <span className="ft-brand"><span className="ft-brand-strong">MyFin</span>Tracker <span className="ft-wordmark-suffix">Accounts</span></span>
+            <BrandWordmark suffix="Accounts" markSize={26} />
             <span className="ft-accounts-team-biz">{accountsCompanyName || (access.isAccountsUser ? "No company assigned" : workspace?.businessName) || "Accounts"}</span>
             <TopActions logout={logout} />
           </header>
@@ -243,7 +254,7 @@ export function WorkspaceLayout() {
       context={{
         today: todayIso(),
         orgSettings,
-        isOwner: Boolean(access.canViewOwnerFinance),
+        isOwner: Boolean(access.isOwner),
         agentId: workspace?.id || "",
         agentName: workspace?.fullName || "",
         collectionScope: workspace?.collectionScope || "",

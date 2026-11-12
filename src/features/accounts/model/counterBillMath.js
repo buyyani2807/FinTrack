@@ -89,28 +89,32 @@ export function counterEstimateTotal(lines, { gstEnabled, intra }) {
   };
 }
 
+/** Rupee amount of a bill-level discount (₹ or %) against line nets before that bill discount. */
+export function billDiscountAmount(lines = [], billDiscount = "") {
+  const text = String(billDiscount || "").trim();
+  if (!text) return 0;
+  const nets = (lines || []).map(line => counterLineNet({ ...line, discount: line.discount || "" }));
+  const subtotal = roundMoney(nets.reduce((sum, value) => sum + value, 0));
+  if (!(subtotal > 0)) return 0;
+  if (text.endsWith("%")) {
+    const pct = Number(text.slice(0, -1));
+    if (!Number.isFinite(pct) || pct <= 0) return 0;
+    return roundMoney((subtotal * Math.min(pct, 100)) / 100);
+  }
+  const value = Number(text);
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return roundMoney(Math.min(value, subtotal));
+}
+
 /**
  * Apply a bill-level discount (₹ or %) by writing extra ₹ into each line.discount.
  * Keeps posting on existing line discountAmount path.
  */
 export function applyBillDiscountToLines(lines = [], billDiscount = "") {
-  const text = String(billDiscount || "").trim();
-  if (!text) return (lines || []).map(line => ({ ...line }));
+  const billOff = billDiscountAmount(lines, billDiscount);
+  if (!(billOff > 0)) return (lines || []).map(line => ({ ...line }));
   const nets = (lines || []).map(line => counterLineNet({ ...line, discount: line.discount || "" }));
   const subtotal = roundMoney(nets.reduce((sum, value) => sum + value, 0));
-  if (!(subtotal > 0)) return (lines || []).map(line => ({ ...line }));
-
-  let billOff = 0;
-  if (text.endsWith("%")) {
-    const pct = Number(text.slice(0, -1));
-    if (!Number.isFinite(pct) || pct <= 0) return (lines || []).map(line => ({ ...line }));
-    billOff = roundMoney((subtotal * Math.min(pct, 100)) / 100);
-  } else {
-    const value = Number(text);
-    if (!Number.isFinite(value) || value <= 0) return (lines || []).map(line => ({ ...line }));
-    billOff = roundMoney(Math.min(value, subtotal));
-  }
-  if (!(billOff > 0)) return (lines || []).map(line => ({ ...line }));
 
   let allocated = 0;
   const usable = (lines || []).map((line, index) => ({ line, index, net: nets[index] })).filter(row => row.net > 0);

@@ -460,7 +460,13 @@ export function filterExpenseRows(rows = [], { search = "", paidFrom = "", sort 
   });
 }
 
-export const EXPENSE_EXPORT_HEADER = ["Date", "Voucher", "Category", "Ledger", "Description", "Paid to", "Paid from", "Status", "Amount"];
+export const EXPENSE_EXPORT_HEADER = ["Date", "Voucher", "Category", "Ledger", "Description", "Paid to", "Paid from", "Status", "Bill", "Amount"];
 const STATUS_LABEL = { posted: "Posted", reversed: "Reversed", reversal: "Reversal" };
 export const expenseStatusLabel = status => STATUS_LABEL[status] || status;
-export const expenseExportRows = rows => rows.map(row => [row.date, row.voucherNumber, row.categoryName, row.ledgerName, row.description, row.partyName, row.paidFrom, expenseStatusLabel(row.status), row.amount]);
+const billExportLabel = row => {
+  const count = Number(row.billCount || 0);
+  if (count > 1) return `${count} files`;
+  if (count === 1) return "Attached";
+  return "Missing";
+};
+export const expenseExportRows = rows => rows.map(row => [row.date, row.voucherNumber, row.categoryName, row.ledgerName, row.description, row.partyName, row.paidFrom, expenseStatusLabel(row.status), billExportLabel(row), row.amount]);

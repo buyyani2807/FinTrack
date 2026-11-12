@@ -712,7 +712,7 @@
 .accounts-dashboard .acc-brief { display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px; }
 .accounts-dashboard .acc-brief-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .accounts-dashboard .acc-brief-head h3 { margin: 2px 0 0; font-size: var(--ft-type-card); }
-.accounts-dashboard .acc-brief-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.accounts-dashboard .acc-brief-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
 .accounts-dashboard .acc-brief-col {
   display: flex; flex-direction: column; gap: 8px; min-width: 0;
   padding: 12px; border: 1px solid var(--acc-line); border-radius: var(--acc-radius-sm); background: var(--acc-card-elevated);
@@ -728,6 +728,7 @@
 .accounts-dashboard .acc-brief-po { display: flex; flex-direction: column; gap: 6px; }
 .accounts-dashboard .acc-brief-po .btn { width: 100%; justify-content: center; }
 .accounts-dashboard .acc-brief .btn.linkish { align-self: flex-start; padding: 0; min-height: 0; }
+@media (max-width: 1400px) { .accounts-dashboard .acc-brief-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 1200px) { .accounts-dashboard .acc-brief-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 640px) { .accounts-dashboard .acc-brief-grid { grid-template-columns: 1fr; } }
 
@@ -4756,6 +4757,50 @@
   color: var(--acc-muted);
 }
 
+.accounts-dashboard .acc-expense-proof-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.accounts-dashboard .acc-expense-proof-file {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.accounts-dashboard .acc-expense-proof-file img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border: 1px solid var(--ft-border);
+  border-radius: 8px;
+}
+
+.accounts-dashboard .acc-expense-proof label.btn {
+  position: relative;
+  cursor: pointer;
+}
+
+.accounts-dashboard .acc-expense-proof input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.accounts-dashboard .acc-expense-proof-error {
+  margin: 0;
+  color: var(--ft-danger);
+}
+
 .accounts-dashboard .acc-bill-scan-row {
   display: flex;
   flex-wrap: wrap;
@@ -8035,6 +8080,11 @@
   z-index: 1;
 }
 
+.accounts-dashboard .counter-discount-hint {
+  margin: 6px 0 0;
+  color: var(--ft-success);
+}
+
 .accounts-dashboard .counter-totals > div {
   display: flex;
   justify-content: space-between;
@@ -8042,6 +8092,10 @@
   gap: 10px;
   font-size: var(--ft-type-secondary);
   color: var(--ft-text-2);
+}
+
+.accounts-dashboard .counter-totals > .counter-discount-row strong {
+  color: var(--ft-success);
 }
 
 .accounts-dashboard .counter-totals > div strong {

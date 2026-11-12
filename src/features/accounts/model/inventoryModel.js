@@ -682,6 +682,29 @@ export function currentStockForItem(item, movements = []) {
   return roundMoney(moved + opening);
 }
 
+/** One pass over movements, then one pass over items — same result as calling currentStockForItem per item. */
+export function stockOnHandByItem(items = [], movements = []) {
+  const moved = new Map();
+  const openingPosted = new Set();
+  for (const row of movements || []) {
+    const id = row?.itemId;
+    if (!id) continue;
+    moved.set(id, (moved.get(id) || 0) + Number(row.quantityDelta || 0));
+    if (row.reason === "opening") openingPosted.add(id);
+  }
+  const map = {};
+  for (const item of items || []) {
+    if (!item?.id) continue;
+    if (item.itemType === "service") {
+      map[item.id] = null;
+      continue;
+    }
+    const opening = openingPosted.has(item.id) ? 0 : Number(item.openingStock || 0);
+    map[item.id] = roundMoney((moved.get(item.id) || 0) + opening);
+  }
+  return map;
+}
+
 export function stockStatus(current, reorderLevel) {
   if (current == null) return "service";
   if (Number(reorderLevel || 0) > 0 && Number(current) < Number(reorderLevel)) return "low";
@@ -689,19 +712,31 @@ export function stockStatus(current, reorderLevel) {
 }
 
 /**
+ * Expired-stock is “check before you sell”: use today while the report period still runs.
+ * Only a closed (past) period end is used as the as-of date.
+ */
+export function expiryReportAsOf(rangeTo = "", today = "") {
+  const asOf = String(today || new Date().toISOString().slice(0, 10)).slice(0, 10);
+  const to = String(rangeTo || "").slice(0, 10);
+  if (to && to < asOf) return to;
+  return asOf;
+}
+
+/**
  * Items with an expiry date that are already expired or due within `soonDays`.
- * Read-only operational list — does not change stock. Uses `asOf` (usually report end / today).
+ * Read-only operational list — does not change stock. Uses `asOf` (today, or a closed period end).
  */
 export function expiredStockReport(items = [], movements = [], { asOf = "", soonDays = 30 } = {}) {
   const today = String(asOf || new Date().toISOString().slice(0, 10)).slice(0, 10);
   const horizon = Number(soonDays);
   const daysAhead = Number.isFinite(horizon) && horizon >= 0 ? horizon : 30;
+  const stockByItem = stockOnHandByItem(items, movements);
   const rows = [];
   for (const item of items || []) {
     if (!item || item.itemType === "service") continue;
     const expiry = String(item.expiryDate || "").slice(0, 10);
     if (!expiry) continue;
-    const stock = currentStockForItem(item, movements);
+    const stock = stockByItem[item.id];
     if (stock == null) continue;
     const dayMs = 86400000;
     const days = Math.round((new Date(`${expiry}T00:00:00`) - new Date(`${today}T00:00:00`)) / dayMs);
@@ -709,8 +744,6 @@ export function expiredStockReport(items = [], movements = [], { asOf = "", soon
     if (days < 0) status = "expired";
     else if (days <= daysAhead) status = "soon";
     if (status === "ok") continue;
-    // Skip empty near-expiry shelves; keep expired rows even at zero so write-offs stay visible.
-    if (status === "soon" && !(Number(stock) > 0)) continue;
     rows.push({
       itemId: item.id,
       name: item.name || "",
@@ -728,6 +761,24 @@ export function expiredStockReport(items = [], movements = [], { asOf = "", soon
     if (a.status !== b.status) return a.status === "expired" ? -1 : 1;
     return String(a.expiryDate).localeCompare(String(b.expiryDate)) || String(a.name).localeCompare(String(b.name));
   });
+}
+
+export function splitExpiryAlerts(rows = []) {
+  const expired = (rows || []).filter(row => row.status === "expired");
+  const soon = (rows || []).filter(row => row.status === "soon");
+  return { expired, soon, count: expired.length + soon.length };
+}
+
+export function expiryAlertLabel(row) {
+  const days = Number(row?.days);
+  if (row?.status === "expired") {
+    const ago = Number.isFinite(days) ? Math.abs(days) : 0;
+    if (ago <= 0) return `expired ${row.expiryDate || ""}`.trim();
+    return `expired ${ago} day${ago === 1 ? "" : "s"} ago`;
+  }
+  if (!Number.isFinite(days)) return `due ${row?.expiryDate || ""}`.trim();
+  if (days <= 0) return "expires today";
+  return `in ${days} day${days === 1 ? "" : "s"}`;
 }
 
 function itemMovementValueReport(voucherItemLines, vouchers, { from, to }, forwardType, returnType) {

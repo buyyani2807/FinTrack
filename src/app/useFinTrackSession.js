@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { useNavigate } from "react-router";
-import { financePartnerChromeAllowed, financeRolesAligned, ownerChromeAllowed, sessionUserRole, workspaceChromeAllowed, workspaceSessionAllowed } from "../features/finance/model/workspaceAccess.js";
+import { financePartnerChromeAllowed, financeRolesAligned, ownerChromeAllowed, sessionNeedsFinanceBooks, sessionUserRole, workspaceChromeAllowed, workspaceSessionAllowed } from "../features/finance/model/workspaceAccess.js";
 import { legalViewFromLocation } from "../features/legal/LegalPage.jsx";
 import { loadFinanceAccounts, loadWorkspace } from "../lib/financeRepository";
 import { supabase } from "../lib/supabase";
@@ -20,6 +20,8 @@ export function useFinTrackSession() {
   const [dataError, setDataError] = useState("");
   const sessionGen = useRef(0);
   const userRoleRef = useRef(null);
+  // Login already loaded workspace; skip the immediate re-fetch on the same auth token.
+  const skipNextWorkspaceRefresh = useRef(false);
   const beginSession = () => { sessionGen.current += 1; return sessionGen.current; };
   const isCurrentSession = gen => gen === sessionGen.current;
   const canApplyWorkspace = next => {
@@ -72,6 +74,11 @@ export function useFinTrackSession() {
   }, []);
   const refreshLoans = async (token = user?.authToken) => {
     if (!token) return;
+    if (!sessionNeedsFinanceBooks(workspace)) {
+      setLoans([]);
+      setFinanceLoaded(true);
+      return;
+    }
     const gen = sessionGen.current;
     try {
       const next = await loadFinanceAccounts(token);
@@ -85,6 +92,11 @@ export function useFinTrackSession() {
   };
   useEffect(() => {
     if (!user?.authToken) return undefined;
+    if (!sessionNeedsFinanceBooks(workspace)) {
+      setLoans([]);
+      setFinanceLoaded(true);
+      return undefined;
+    }
     const gen = sessionGen.current;
     let cancelled = false;
     loadFinanceAccounts(user.authToken)
@@ -101,7 +113,7 @@ export function useFinTrackSession() {
         if (!cancelled && isCurrentSession(gen)) setFinanceLoaded(true);
       });
     return () => { cancelled = true; };
-  }, [user?.authToken]);
+  }, [user?.authToken, workspace?.role, workspace?.collectionScope]);
   const enterSession = payload => {
     const { workspace: nextWorkspace, ...session } = payload;
     beginSession();
@@ -109,6 +121,7 @@ export function useFinTrackSession() {
     setFinanceLoaded(false);
     setDataError("");
     userRoleRef.current = session.role;
+    if (nextWorkspace) skipNextWorkspaceRefresh.current = true;
     flushSync(() => {
       setWorkspace(nextWorkspace || null);
       setUser(session);
@@ -133,6 +146,10 @@ export function useFinTrackSession() {
   };
   useEffect(() => {
     if (!user?.authToken) return undefined;
+    if (skipNextWorkspaceRefresh.current) {
+      skipNextWorkspaceRefresh.current = false;
+      return undefined;
+    }
     const gen = sessionGen.current;
     let cancelled = false;
     loadWorkspace(user.authToken)
@@ -173,7 +190,7 @@ export function useFinTrackSession() {
   const showWorkspaceChrome = workspaceChromeAllowed(user?.role, workspace?.role);
   const waitingForWorkspaceRole = financeSession && !financeRolesAligned(user?.role, workspace?.role);
   // Hold the loading screen until the first finance load settles, so pages open (and reveal) with their data.
-  const waitingForFinanceData = financeSession && Boolean(user?.authToken) && !financeLoaded;
+  const waitingForFinanceData = financeSession && Boolean(user?.authToken) && sessionNeedsFinanceBooks(workspace) && !financeLoaded;
   const isLoading = (!authReady || waitingForWorkspaceRole || waitingForFinanceData) && !isPasswordRecovery;
   const enterCustomerSession = loan => setUser({ role: "customer", loan });
   const enterChitCustomerSession = session => setUser({ role: "chitCustomer", session });

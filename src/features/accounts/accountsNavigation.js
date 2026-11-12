@@ -117,7 +117,6 @@ export const REPORT_TABS = [
   { id: "item_purchases", label: "Item Purchases" },
   { id: "item_profit", label: "Item profit" },
   { id: "stock_moves", label: "Stock Movement" },
-  { id: "expired_stock", label: "Expired stock" },
   { id: "purchase_match", label: "PO match" },
   { id: "crm", label: "Customer Pipeline" },
 ];
@@ -151,6 +150,9 @@ const STATEMENTS = ["trial", "pnl", "balance"];
 const fromSlug = (map, slug) => Object.keys(map).find(key => map[key] === slug);
 
 export function accountsPath({ section = "overview", reportTab = "daybook", sub = null } = {}) {
+  if (section === "expired_stock" || (section === "reports" && reportTab === "expired_stock") || (section === "inventory" && sub === "expired_stock")) {
+    return "/accounting/inventory/expired";
+  }
   if (section === "party" && !sub) return "/accounting/parties/ledger";
   if (PARTY_SLUGS[section]) return `/accounting/parties/${PARTY_SLUGS[section]}${PARTY_SUB_SECTIONS.includes(section) && sub ? `/${encodeURIComponent(sub)}` : ""}`;
   if (section === "crm" || (section === "reports" && reportTab === "crm")) return "/accounting/reports/crm";
@@ -170,6 +172,7 @@ export function accountsViewFromPath(area, sub, subsub) {
     return { section, reportTab: "daybook", sub: PARTY_SUB_SECTIONS.includes(section) ? subsub || null : null };
   }
   if (area === "reports") {
+    if (sub === "expired_stock") return { section: "inventory", reportTab: "daybook", sub: "expired" };
     const report = REPORT_TABS.some(item => item.id === sub) ? sub : "daybook";
     if (report === "crm") return { section: "crm", reportTab: "crm", sub: null };
     return { section: STATEMENTS.includes(report) ? report : "reports", reportTab: report, sub: null };

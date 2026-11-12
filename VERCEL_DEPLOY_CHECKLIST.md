@@ -27,6 +27,7 @@ Set in **Project → Settings → Environment Variables**. Apply to **Production
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Production, Preview | Server-only; powers `/api/auth/*` and `/api/agents` |
 | `VITE_ALLOW_PUBLIC_SIGNUP` | No | Production | Omit or `true` = signup visible; `false` = hide Create business account |
 | `VITE_SIGNUP_INVITE_CODE` | No | Production | Client-side invite; pair with Supabase DB setting below |
+| `CRON_SECRET` | Yes (for nightly backups) | Production + Staging | Bearer secret for `/api/cron/workspace-backups` (00:00 IST) |
 | `VITE_SENTRY_DSN` | No | Production | Optional; install `@sentry/react` before enabling |
 
 **Never** add the service role key to a `VITE_` variable or commit it to git.

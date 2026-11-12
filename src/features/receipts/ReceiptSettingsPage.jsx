@@ -6,6 +6,7 @@ import { defaultConfirmationSettings } from "./io/transactionConfirmations.js";
 import { loadOrganizationSettings, saveOrganizationSettings } from "../../lib/financeRepository.js";
 import { LabeledField as Field } from "../../components/ui.jsx";
 import { FinancePartnersPanel } from "../finance/components/FinancePartnersPanel.jsx";
+import { WorkspaceBackupPanel } from "../workspace/backup/WorkspaceBackupPanel.jsx";
 
 
 const defaultReminderSettings = () => ({
@@ -17,6 +18,7 @@ const defaultReminderSettings = () => ({
 const SETTINGS_TABS = [
   { id: "company", label: "Company & receipts" },
   { id: "partners", label: "View-only partners" },
+  { id: "backup", label: "Backup & restore" },
   { id: "whatsapp", label: "WhatsApp messages" },
   { id: "reminders", label: "Reminders" },
 ];
@@ -55,7 +57,7 @@ function SwitchRow({ icon: RowIcon, checked, onChange, title, copy }) {
 
 // The open tab is the URL (/settings/:tab, see app/AppRoutes.jsx); every tab route renders this same page, so unsaved
 // edits survive switching tabs.
-export function ReceiptSettingsPage({ token, close, onSettingsSaved, tab: routeTab = "company", onTabChange }) {
+export function ReceiptSettingsPage({ token, close, onSettingsSaved, tab: routeTab = "company", onTabChange, partnerModules = [] }) {
   const [form, setForm] = useState({
     companyName: "",
     companyAddress: "",
@@ -169,19 +171,20 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved, tab: routeT
   };
 
   return <main className="shell settings-page">
-    <div className="toolbar"><div><h1 className="title">Settings</h1><p className="copy">Company branding, receipts, WhatsApp messages, payment reminders, and view-only partners.</p></div></div>
+    <div className="toolbar"><div><h1 className="title">Settings</h1><p className="copy">Company branding, receipts, WhatsApp, reminders, view-only partners, and workspace backup.</p></div></div>
     <TabScroller><nav className="module-section-nav" aria-label="Settings sections">
       {SETTINGS_TABS.map(item => <button key={item.id} type="button" className={`module-section-tab ${tab === item.id ? "active" : ""}`} aria-current={tab === item.id ? "page" : undefined} onClick={() => setTab(item.id)}>{item.label}</button>)}
     </nav></TabScroller>
-    {tab === "partners" ? <FinancePartnersPanel token={token} /> : null}
-    {tab !== "partners" ? <form onSubmit={submit} className="settings-form">
+    {tab === "partners" ? <FinancePartnersPanel token={token} visibleModules={partnerModules} /> : null}
+    {tab === "backup" ? <WorkspaceBackupPanel token={token} /> : null}
+    {tab !== "partners" && tab !== "backup" ? <form onSubmit={submit} className="settings-form">
       {tab === "company" && <div className="settings-company">
         <div className="settings-company-main">
           <section className="card settings-section">
             <header className="settings-section-head">
               <div>
                 <h2>View-only partners</h2>
-                <p>Invite a sleeping partner to Daily and Monthly Finance. They use Owner sign-in and cannot change records.</p>
+                <p>Invite a sleeping partner to view every unlocked module in this workspace. They use Owner sign-in and cannot change records.</p>
               </div>
             </header>
             <div className="row">

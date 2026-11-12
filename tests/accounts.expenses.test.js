@@ -3,8 +3,10 @@ import assert from "node:assert/strict";
 import { DEFAULT_CHART_OF_ACCOUNTS } from "../src/features/accounts/model/accountingModel.js";
 import { profitAndLoss } from "../src/features/accounts/model/accountingReports.js";
 import {
+  EXPENSE_EXPORT_HEADER,
   applyExpensePreset,
   defaultExpenseFilter,
+  expenseExportRows,
   expensePeriod,
   expenseReconciliation,
   expenseSummary,
@@ -186,4 +188,21 @@ test("Expenses has its own Accounts address", () => {
   assert.equal(accountsPath({ section: "expenses" }), "/accounting/expenses");
   assert.equal(accountsViewFromPath("expenses").section, "expenses");
   assert.deepEqual(sectionTrail("expenses"), ["Expenses"]);
+});
+
+test("expense export includes whether a bill is attached", () => {
+  assert.ok(EXPENSE_EXPORT_HEADER.includes("Bill"));
+  const [row] = expenseExportRows([{
+    date: "2026-09-05",
+    voucherNumber: "PAY-1",
+    categoryName: "Rent",
+    ledgerName: "Rent",
+    description: "September",
+    partyName: "Lakshmi Estates",
+    paidFrom: "Bank",
+    status: "posted",
+    billCount: 1,
+    amount: 22000,
+  }]);
+  assert.equal(row[EXPENSE_EXPORT_HEADER.indexOf("Bill")], "Attached");
 });

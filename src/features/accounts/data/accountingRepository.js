@@ -669,19 +669,28 @@ export const loadAccountsAccessRole = token =>
     .then(role => (role == null || role === "" ? null : String(role)))
     .catch(() => null);
 
+const mapAttachmentRow = (row, withContent = false) => ({
+  id: row.id,
+  voucherId: row.voucher_id,
+  fileName: row.file_name,
+  contentType: row.content_type,
+  byteSize: Number(row.byte_size || 0),
+  createdAt: row.created_at,
+  ...(withContent ? { contentBase64: row.content_base64 } : {}),
+});
+
+export const loadVoucherAttachmentIndex = token => wrap(
+  accQuery(
+    `/rest/v1/acc_voucher_attachments?select=id,voucher_id,file_name,content_type,byte_size,created_at&order=created_at.desc&limit=5000${companyEq()}`,
+    token,
+  ).then(rows => (rows || []).map(row => mapAttachmentRow(row))),
+);
+
 export const loadVoucherAttachments = (token, voucherId) => wrap(
   accQuery(
     `/rest/v1/acc_voucher_attachments?select=id,voucher_id,file_name,content_type,byte_size,content_base64,created_at&voucher_id=eq.${encodeURIComponent(voucherId)}&order=created_at.desc${companyEq()}`,
     token,
-  ).then(rows => (rows || []).map(row => ({
-    id: row.id,
-    voucherId: row.voucher_id,
-    fileName: row.file_name,
-    contentType: row.content_type,
-    byteSize: Number(row.byte_size || 0),
-    contentBase64: row.content_base64,
-    createdAt: row.created_at,
-  }))),
+  ).then(rows => (rows || []).map(row => mapAttachmentRow(row, true))),
 );
 
 export const addVoucherAttachment = (token, { voucherId, fileName, contentType, contentBase64 }) =>

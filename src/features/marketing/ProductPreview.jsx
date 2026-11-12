@@ -82,7 +82,6 @@ const FEATURE_SCENE = {
   "chit-reports": "chit-reports",
   "accounts-overview": "accounts-overview",
   "counter-pos": "accounts-counter",
-  "chart-of-accounts": "accounts-setup",
   ledger: "accounts-ledger",
   vouchers: "accounts",
   "trade-documents": "accounts-documents",
@@ -98,11 +97,9 @@ const FEATURE_SCENE = {
   "balance-sheet": "accounts-balance",
   "cash-flow": "accounts-cashflow",
   inventory: "accounts-inventory",
-  "item-profit": "accounts-inventory",
   "gst-preparation": "accounts-gst",
   "audit-trail": "accounts-audit",
   "period-locking": "accounts-locks",
-  "for-the-ca": "accounts-gst",
   "ask-finny": "intelligence",
   "ai-review": "ai-overview",
   forecasting: "ai-cashflow",
@@ -112,16 +109,13 @@ const FEATURE_SCENE = {
   "bank-matching": "ai-bank",
   "stock-forecast": "ai-inventory",
   "chit-scheme-health": "chit-health",
-  "business-insights": "ai-overview",
   "attention-center": "ai-overview",
-  "collection-priorities": "collect-first",
+  "collection-priorities": "ai-collections",
   "anomaly-detection": "ai-anomalies",
   "bill-scanning": "bill-scan",
-  "bookkeeping-suggestions": "accounts-banking",
   "ai-bookkeeper": "ai-bookkeeper",
   "ai-setup": "ai-setup",
   "ai-migration": "ai-migration",
-  "bulk-import": "ai-migration",
   "agent-portal": "portals",
   "customer-portals": "portals",
   "member-portals": "portals",
@@ -130,21 +124,14 @@ const FEATURE_SCENE = {
 /** New captures ship as PNG until converted to webp beside the older library. */
 const PNG_SCENES = new Set(["accounts-counter", "accounts-documents", "accounts-payroll"]);
 
-const CATEGORY_FALLBACK = {
-  finance: "finance",
-  chit: "chit-scheme",
-  accounts: "accounts-overview",
-  intelligence: "intelligence",
-  portals: "portals",
-};
-
 export function sceneForFeature(feature) {
-  if (!feature) return "dashboard";
-  return FEATURE_SCENE[feature.slug] || CATEGORY_FALLBACK[feature.category] || "dashboard";
+  if (!feature) return null;
+  return FEATURE_SCENE[feature.slug] || null;
 }
 
-export function ProductPreview({ scene = "dashboard" }) {
-  const name = SHOTS[scene] ? scene : "dashboard";
+export function ProductPreview({ scene }) {
+  const name = SHOTS[scene] ? scene : null;
+  if (!name) return null;
   const ext = PNG_SCENES.has(name) ? "png" : "webp";
   return (
     <figure className="mkt-shot">

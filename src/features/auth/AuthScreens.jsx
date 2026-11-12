@@ -9,6 +9,7 @@ import { supabase } from "../../lib/supabase";
 import { sessionUserRole } from "../finance/model/workspaceAccess.js";
 import { openLegalView } from "../legal/LegalPage.jsx";
 import { PRODUCT_NAME } from "../../lib/brand.js";
+import { BrandWordmark } from "../../components/BrandMark.jsx";
 
 // Who is signing in. `label` stays the button's accessible name.
 const SIGN_IN_MODES = [
@@ -52,9 +53,9 @@ function AuthNotice({ notice }) {
   </div>;
 }
 
-// MyFinTracker wordmark (Poppins) with an optional product suffix such as "Accounts".
+// MyFinTracker mark + wordmark (Poppins), optional product suffix such as "Accounts".
 function Wordmark({ suffix = "" }) {
-  return <span className="ft-brand"><span className="ft-brand-strong">MyFin</span>Tracker{suffix ? <span className="ft-wordmark-suffix"> {suffix}</span> : null}</span>;
+  return <BrandWordmark suffix={suffix} markSize={36} />;
 }
 
 export function PasswordRecovery() {

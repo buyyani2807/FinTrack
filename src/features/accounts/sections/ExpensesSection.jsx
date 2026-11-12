@@ -1,5 +1,5 @@
 import { useDeferredValue, useMemo, useState } from "react";
-import { CalendarDays, ChartPie, ExternalLink, Plus, ReceiptText, RotateCcw, Sparkles, Wallet } from "lucide-react";
+import { CalendarDays, ChartPie, ExternalLink, Paperclip, Plus, ReceiptText, RotateCcw, Sparkles, Wallet } from "lucide-react";
 import { ExportGroup, FilterSelect, SearchInput } from "../../../components/ui.jsx";
 import { todayIso } from "../../../lib/dates.js";
 import { AccMoreMenu, AccPager, DateSortTh } from "../components/AccUi.jsx";
@@ -30,7 +30,49 @@ import {
   possibleRepeatExpenses,
 } from "../model/expenseDashboard.js";
 import { buildExpenseComparisons } from "../../intelligence/ai/expenseIntelligence.js";
+import { proofCountByVoucher } from "../data/voucherAttachments.js";
 import "../expenses.css";
+
+const BILL_ACCEPT = "image/jpeg,image/png,image/webp,application/pdf,.jpg,.jpeg,.png,.webp,.pdf";
+
+function ExpenseProofCell({ row, canWrite, busy, onAttachProof, onViewProof }) {
+  const count = Number(row.billCount || 0);
+  return (
+    <div className="acc-exp-proof">
+      {count > 0 ? (
+        <button
+          type="button"
+          className="acc-exp-proof-link"
+          onClick={event => {
+            event.stopPropagation();
+            onViewProof?.(row.voucherId);
+          }}
+        >
+          <Paperclip size={14} aria-hidden="true" />
+          {count === 1 ? "View bill" : `View bills (${count})`}
+        </button>
+      ) : (
+        <span className="small acc-exp-proof-missing">No bill</span>
+      )}
+      {canWrite && (row.status === "posted" || row.status === "reversed") && onAttachProof ? (
+        <label className="acc-exp-proof-add">
+          {count > 0 ? "Add" : "Attach"}
+          <input
+            type="file"
+            accept={BILL_ACCEPT}
+            disabled={busy}
+            onClick={event => event.stopPropagation()}
+            onChange={event => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+              if (file) onAttachProof(row, file);
+            }}
+          />
+        </label>
+      ) : null}
+    </div>
+  );
+}
 
 const SORTS = [
   { id: "date_desc", label: "Newest first" },
@@ -65,12 +107,17 @@ export function ExpensesSection({
   onOpenVoucher,
   onOpenPnl,
   onOpenAiReview,
+  attachmentIndex = [],
+  attachmentBusy = false,
+  onAttachProof,
+  onViewProof,
 }) {
   const today = todayIso();
   const [filter, setFilterState] = useState(() => defaultExpenseFilter(today));
   const [categoryId, setCategoryState] = useState("");
   const [ledgerId, setLedgerState] = useState("");
   const [paidFrom, setPaidFromState] = useState("");
+  const [billFilter, setBillFilterState] = useState("");
   const [search, setSearchState] = useState("");
   const [sort, setSortState] = useState("date_desc");
   const [page, setPage] = useState(1);
@@ -80,6 +127,7 @@ export function ExpensesSection({
   const paged = setter => value => { setter(value); setPage(1); };
   const setFilter = paged(setFilterState);
   const setPaidFrom = paged(setPaidFromState);
+  const setBillFilter = paged(setBillFilterState);
   const setSearch = paged(setSearchState);
   const setSort = paged(setSortState);
   const setCategory = id => { setCategoryState(id); setLedgerState(""); setPage(1); };
@@ -96,10 +144,14 @@ export function ExpensesSection({
   );
   const insight = useMemo(() => expenseTrendInsight(trend, aggregation), [trend, aggregation]);
   const check = useMemo(() => expenseReconciliation({ accounts, vouchers, period }), [accounts, vouchers, period]);
-  const tableRows = useMemo(
-    () => filterExpenseRows(summary.current, { search: deferredSearch, paidFrom, sort }),
-    [summary.current, deferredSearch, paidFrom, sort], // eslint-disable-line react-hooks/exhaustive-deps
-  );
+  const proofCounts = useMemo(() => proofCountByVoucher(attachmentIndex), [attachmentIndex]);
+  const tableRows = useMemo(() => {
+    const next = filterExpenseRows(summary.current, { search: deferredSearch, paidFrom, sort })
+      .map(row => ({ ...row, billCount: proofCounts.get(row.voucherId) || 0 }));
+    if (billFilter === "attached") return next.filter(row => row.billCount > 0);
+    if (billFilter === "missing") return next.filter(row => row.billCount === 0);
+    return next;
+  }, [summary.current, deferredSearch, paidFrom, sort, proofCounts, billFilter]); // eslint-disable-line react-hooks/exhaustive-deps
   const pageRows = pageSlice(tableRows, page);
   const tableTotal = roundMoney(tableRows.reduce((sum, row) => sum + row.amount, 0));
   const periodTotal = roundMoney(summary.categories.reduce((sum, row) => sum + row.amount, 0));
@@ -143,12 +195,13 @@ export function ExpensesSection({
   const preset = activeExpensePreset(filter, today);
   const selectedCategory = summary.categories.find(row => row.id === categoryId);
   const defaults = defaultExpenseFilter(today);
-  const filtered = categoryId || ledgerId || paidFrom || search || filter.mode !== defaults.mode || filter.fyStart !== defaults.fyStart || Boolean(filter.month);
+  const filtered = categoryId || ledgerId || paidFrom || billFilter || search || filter.mode !== defaults.mode || filter.fyStart !== defaults.fyStart || Boolean(filter.month);
   const reset = () => {
     setFilterState(defaults);
     setCategoryState("");
     setLedgerState("");
     setPaidFromState("");
+    setBillFilterState("");
     setSearchState("");
     setSortState("date_desc");
     setPage(1);
@@ -166,7 +219,9 @@ export function ExpensesSection({
   const previousName = period.previous?.label || "the period before";
 
   const exportName = ext => `fintrack-expenses-${period.from || today}-to-${period.to || today}.${ext}`;
-  const exportRows = () => [EXPENSE_EXPORT_HEADER, ...expenseExportRows(tableRows), ["", "", "", "", "", "", "", "Total", tableTotal]];
+  const postedInView = tableRows.filter(row => row.status === "posted");
+  const billsOnFile = postedInView.filter(row => row.billCount > 0).length;
+  const exportRows = () => [EXPENSE_EXPORT_HEADER, ...expenseExportRows(tableRows), ["", "", "", "", "", "", "", "", "Total", tableTotal]];
   const exports = [
     { id: "csv", label: "CSV", disabled: !tableRows.length, onClick: () => downloadAccountsCsv(exportName("csv"), exportRows()) },
     { id: "xlsx", label: "Excel", disabled: !tableRows.length, onClick: () => downloadAccountsExcel(exportName("xlsx"), exportRows()) },
@@ -318,7 +373,7 @@ export function ExpensesSection({
         <header className="acc-exp-card-head">
           <div>
             <h2>Expense Transactions</h2>
-            <p className="small">{tableRows.length} {tableRows.length === 1 ? "entry" : "entries"} · {money(tableTotal)}{tableRows.length !== summary.current.length ? ` of ${money(summary.total)}` : ""} · open an entry to see or change its voucher</p>
+            <p className="small">{tableRows.length} {tableRows.length === 1 ? "entry" : "entries"} · {money(tableTotal)}{tableRows.length !== summary.current.length ? ` of ${money(summary.total)}` : ""} · {postedInView.length ? `${billsOnFile} of ${postedInView.length} posted ${postedInView.length === 1 ? "entry has" : "entries have"} a bill attached` : "open an entry to see its voucher"}</p>
           </div>
         </header>
         <div className="acc-exp-toolbar">
@@ -335,6 +390,11 @@ export function ExpensesSection({
           <FilterSelect label="Paid from" value={paidFrom} allValue="" onChange={setPaidFrom}>
             <option value="">Any account</option>
             {paidFromOptions.map(name => <option key={name} value={name}>{name}</option>)}
+          </FilterSelect>
+          <FilterSelect label="Bill" value={billFilter} allValue="" onChange={setBillFilter}>
+            <option value="">Any bill</option>
+            <option value="attached">Bill attached</option>
+            <option value="missing">Missing bill</option>
           </FilterSelect>
           <FilterSelect label="Sort" value={sort} allValue="date_desc" onChange={setSort}>
             {SORTS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
@@ -355,7 +415,7 @@ export function ExpensesSection({
                   }}
                 />
               </th>
-              <th>Category</th><th>Description</th><th>Paid to</th><th>Voucher</th><th>Paid from</th><th>Status</th><th className="acc-num">Amount</th>
+              <th>Category</th><th>Description</th><th>Paid to</th><th>Voucher</th><th>Paid from</th><th>Status</th><th>Bill</th><th className="acc-num">Amount</th>
             </tr></thead>
             <tbody>
               {pageRows.items.map(row => <tr key={row.id}>
@@ -366,13 +426,22 @@ export function ExpensesSection({
                 <td><button type="button" className="acc-exp-voucher" onClick={() => onOpenVoucher(row.voucherNumber)}>{row.voucherNumber}</button></td>
                 <td><span className={`acc-exp-paid is-${row.paidKind}`}>{row.paidFrom}</span></td>
                 <td>{row.status === "posted" ? <span className="small">Posted</span> : <span className="acc-exp-status">{expenseStatusLabel(row.status)}</span>}</td>
+                <td>
+                  <ExpenseProofCell
+                    row={row}
+                    canWrite={canWrite}
+                    busy={attachmentBusy}
+                    onAttachProof={onAttachProof}
+                    onViewProof={onViewProof}
+                  />
+                </td>
                 <td className={`acc-num${row.amount < 0 ? " acc-exp-negative" : ""}`}>{money(row.amount)}</td>
               </tr>)}
             </tbody>
-            <tfoot><tr><td colSpan="7">Total of {tableRows.length} {tableRows.length === 1 ? "entry" : "entries"}</td><td className="acc-num">{money(tableTotal)}</td></tr></tfoot>
+            <tfoot><tr><td colSpan="8">Total of {tableRows.length} {tableRows.length === 1 ? "entry" : "entries"}</td><td className="acc-num">{money(tableTotal)}</td></tr></tfoot>
           </table></div>
           <ul className="acc-exp-cards">
-            {pageRows.items.map(row => <li key={row.id}>
+            {pageRows.items.map(row => <li key={row.id} className="acc-exp-card-item">
               <button type="button" className="acc-exp-row-card" onClick={() => onOpenVoucher(row.voucherNumber)}>
                 <span className="acc-exp-row-top">
                   <strong>{row.description || row.ledgerName}</strong>
@@ -387,8 +456,26 @@ export function ExpensesSection({
                   <span>{row.voucherNumber}</span>
                   <span className={`acc-exp-paid is-${row.paidKind}`}>{row.paidFrom}</span>
                   {row.status !== "posted" && <span className="acc-exp-status">{expenseStatusLabel(row.status)}</span>}
+                  <span className={row.billCount ? "acc-exp-proof-ok" : "acc-exp-proof-missing"}>{row.billCount ? "Bill on file" : "No bill"}</span>
                 </span>
               </button>
+              {canWrite && (row.status === "posted" || row.status === "reversed") && onAttachProof ? (
+                <label className="acc-exp-proof-add acc-exp-proof-add-card">
+                  {row.billCount ? "Add bill" : "Attach bill"}
+                  <input
+                    type="file"
+                    accept={BILL_ACCEPT}
+                    disabled={attachmentBusy}
+                    onChange={event => {
+                      const file = event.target.files?.[0];
+                      event.target.value = "";
+                      if (file) onAttachProof(row, file);
+                    }}
+                  />
+                </label>
+              ) : row.billCount && onViewProof ? (
+                <button type="button" className="acc-exp-proof-link" onClick={() => onViewProof(row.voucherId)}>View bill</button>
+              ) : null}
             </li>)}
             <li className="acc-exp-cards-total"><span>Total of {tableRows.length} {tableRows.length === 1 ? "entry" : "entries"}</span><strong>{money(tableTotal)}</strong></li>
           </ul>

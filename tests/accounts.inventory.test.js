@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   aggregateItemizedGst,
   currentStockForItem,
+  stockOnHandByItem,
   itemizedEntryDraft,
   itemPurchasesReport,
   itemSalesReport,
@@ -26,8 +27,12 @@ import {
   normalizeQuantityNumber,
   sellUnitChoices,
   expiredStockReport,
+  expiryAlertLabel,
+  expiryReportAsOf,
+  splitExpiryAlerts,
 } from "../src/features/accounts/model/inventoryModel.js";
 import { CASH_PARTY_ID } from "../src/features/accounts/model/accountingModel.js";
+import { REPORT_TABS, accountsPath, accountsViewFromPath } from "../src/features/accounts/accountsNavigation.js";
 
 const accounts = [
   { id: "cash", code: "1000", name: "Cash", accountType: "cash", groupType: "asset" },
@@ -112,6 +117,18 @@ test("stock is opening plus movements and flags low stock", () => {
   assert.equal(stockStatus(35, 50), "low");
   assert.equal(stockStatus(130, 50), "normal");
   assert.equal(currentStockForItem({ id: "s1", itemType: "service" }, []), null);
+  const map = stockOnHandByItem(
+    [item, { id: "s1", itemType: "service" }, { id: "i2", itemType: "product", openingStock: 10 }],
+    [
+      { itemId: "i1", quantityDelta: 100, reason: "opening" },
+      { itemId: "i1", quantityDelta: 50, reason: "purchase" },
+      { itemId: "i1", quantityDelta: -20, reason: "sale" },
+      { itemId: "i2", quantityDelta: -4, reason: "sale" },
+    ],
+  );
+  assert.equal(map.i1, 130);
+  assert.equal(map.s1, null);
+  assert.equal(map.i2, 6);
 });
 
 test("itemized sale draft keeps double-entry balanced with GST", () => {
@@ -237,6 +254,38 @@ test("expired stock report lists expired and near-expiry items only", () => {
   assert.equal(rows[0].status, "expired");
   assert.equal(rows[1].status, "soon");
   assert.equal(rows[0].stock, 5);
+  const split = splitExpiryAlerts(rows);
+  assert.equal(split.expired.length, 1);
+  assert.equal(split.soon.length, 1);
+  assert.match(expiryAlertLabel(rows[0]), /expired/);
+  assert.match(expiryAlertLabel(rows[1]), /in 16 days/);
+  assert.equal(expiryReportAsOf("2027-03-31", "2026-11-11"), "2026-11-11");
+  assert.equal(expiryReportAsOf("2026-03-31", "2026-11-11"), "2026-03-31");
+  const openFy = expiryReportAsOf("2027-03-31", "2026-11-11");
+  const china = expiredStockReport(
+    [{ id: "c", name: "China Coat", sku: "1", itemType: "product", unit: "Litre", expiryDate: "2026-11-20", openingStock: 1 }],
+    [],
+    { asOf: openFy },
+  );
+  assert.equal(china[0].status, "soon");
+  const burma = expiredStockReport(
+    [{ id: "b", name: "Burma Paper", sku: "3", itemType: "product", unit: "Kg", expiryDate: "2026-11-12", openingStock: 0 }],
+    [],
+    { asOf: openFy },
+  );
+  assert.equal(burma.length, 1);
+  assert.equal(burma[0].status, "soon");
+  assert.equal(burma[0].days, 1);
+  assert.equal(burma[0].stock, 0);
+});
+
+test("expired stock lives under Inventory, not Reports", () => {
+  assert.equal(REPORT_TABS.some(tab => tab.id === "expired_stock"), false);
+  assert.equal(accountsPath({ section: "inventory", sub: "expired" }), "/accounting/inventory/expired");
+  assert.equal(accountsPath({ section: "expired_stock" }), "/accounting/inventory/expired");
+  assert.equal(accountsPath({ section: "reports", reportTab: "expired_stock" }), "/accounting/inventory/expired");
+  assert.deepEqual(accountsViewFromPath("inventory", "expired"), { section: "inventory", reportTab: "daybook", sub: "expired" });
+  assert.deepEqual(accountsViewFromPath("reports", "expired_stock"), { section: "inventory", reportTab: "daybook", sub: "expired" });
 });
 
 test("itemized sale accepts loose kg from a bag-priced item", () => {

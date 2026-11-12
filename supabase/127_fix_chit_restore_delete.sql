@@ -1,0 +1,11 @@
+-- DEPRECATED: an earlier version of this file replaced restore_workspace_backup_json
+-- with cashbook inserts that omitted organization_id and could regress later fixes.
+--
+-- Do NOT re-run the old body of this migration.
+-- Apply instead (in order, if not already applied):
+--   128_fix_accounts_restore_company_id.sql
+--   129_fix_restore_force_organization_id.sql
+--   130_fix_ledger_restore_explicit_org.sql
+--
+-- Kept as a no-op so runbooks that mention 127 do not fail.
+select 1;

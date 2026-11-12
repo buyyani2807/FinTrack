@@ -13,6 +13,7 @@ import { GST_DISCLAIMER, buildGstWarnings } from "../../intelligence/ai/gstAssis
 import { buildMonthEndReadiness, defaultCloseMonth, monthRange } from "../../intelligence/ai/monthEndReadiness.js";
 import { buildBankReconciliationSuggestions } from "../../intelligence/ai/bankReconciliationAgent.js";
 import { buildInventoryForecast } from "../../intelligence/ai/inventoryForecast.js";
+import { expiredStockReport } from "../model/inventoryModel.js";
 import { daysBetween, shiftMonthKey } from "../../intelligence/ai/aiCommon.js";
 import { latestDecisions } from "../../intelligence/ai/aiReviewAudit.js";
 import { AI_AUDIT_MIGRATION_MESSAGE, loadAiReviewActions, recordAiInsightRun, recordAiReviewAction } from "../../intelligence/ai/aiReviewRepository.js";
@@ -198,6 +199,7 @@ export function AccAiReviewWorkspace({
   }, [tab, month, asOf, accounts, vouchers, parties, items, stockMovements, locks, statements, resolvedKeys, company, voucherItemLines]); // eslint-disable-line react-hooks/exhaustive-deps
   const bank = useMemo(() => (needs("bank") ? buildBankReconciliationSuggestions({ statements, accounts, vouchers, parties, matchedLineIds }) : null), [tab, statements, accounts, vouchers, parties, matchedLineIds]); // eslint-disable-line react-hooks/exhaustive-deps
   const inventory = useMemo(() => (needs("inventory") ? buildInventoryForecast({ items, stockMovements, tradeDocuments: tradeDocuments || [], asOf }) : null), [tab, items, stockMovements, tradeDocuments, asOf]); // eslint-disable-line react-hooks/exhaustive-deps
+  const expiryRows = useMemo(() => (needs("inventory") ? expiredStockReport(items, stockMovements, { asOf }) : []), [tab, items, stockMovements, asOf]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const current = TABS.find(item => item.id === tab);
   const tabInsights = {
@@ -365,7 +367,7 @@ export function AccAiReviewWorkspace({
         />}
         {tab === "month_end" && readiness && <MonthEndPanel readiness={readiness} months={months} month={month} setMonth={setMonth} canWrite={canWrite && auditAvailable} busy={busy} onResolve={resolveCheck} openSource={openLink} />}
         {tab === "bank" && bank && <BankPanel result={bank} decisions={decisions} canWrite={canWrite} busy={busy} isLocked={bankLocked} onApprove={approveBank} onReject={rejectBank} openSource={openLink} />}
-        {tab === "inventory" && inventory && <InventoryPanel rows={inventory} openSource={openLink} />}
+        {tab === "inventory" && inventory && <InventoryPanel rows={inventory} expiryRows={expiryRows} openSource={openLink} />}
       </section>}
     </div>
   );

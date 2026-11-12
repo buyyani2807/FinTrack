@@ -83,7 +83,7 @@ export function FeatureDetailPage() {
         </Reveal>
       </div>
       <div>
-        <Reveal index={1} duration={1.1}><ProductPreview scene={sceneForFeature(feature)} /></Reveal>
+        {sceneForFeature(feature) ? <Reveal index={1} duration={1.1}><ProductPreview scene={sceneForFeature(feature)} /></Reveal> : null}
         <Reveal className="mkt-cta-row" index={2}>
           <ProductCta appPath={feature.appPath} primary detail />
           <Link className="mkt-btn" to={marketingPaths.contact}>Request a demo</Link>

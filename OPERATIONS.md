@@ -12,7 +12,16 @@ Use this checklist after deploying to Vercel + Supabase and before onboarding re
 
 1. Supabase Pro includes daily backups; verify **Database → Backups** in the project dashboard.
 2. Before major migrations, run **Database → Backups → Create backup** manually.
-3. Export a monthly CSV of active finance accounts and chit schemes as an operator backup (`Reports` in the app).
+3. **Customer workspace backups** (Settings → Backup & restore):
+   - Apply migration `126_workspace_backups.sql`.
+   - Create a private Storage bucket `workspace-backups` if the API cannot auto-create it.
+   - Pro: raise Storage **Global file size limit** (e.g. 100–500 MB) under **Storage → Settings**, then set the `workspace-backups` bucket limit to match.
+   - Free (staging): hard max is **50 MB**. Backups are gzip-compressed and automatically split into ≤40 MB parts when needed.
+   - In the bucket settings, do not leave a tiny custom file-size restriction below 50 MB.
+   - Set Vercel env `CRON_SECRET` (random string). Protects scheduled backup calls.
+   - Schedule nightly runs with **Supabase Cron** (`pg_cron` + `pg_net`) at **00:00 IST** (`30 18 * * *` UTC) calling `/api/cron/workspace-backups` (rewrites to `/api/workspace/backups`) with `Authorization: Bearer $CRON_SECRET`.
+   - Hobby is capped at **12 serverless functions**; backup cron is merged into the owner backups API (do not add a separate `api/cron` file).
+   - Owners can back up / restore any modules present (Finance, Cashbook, Chit, Accounts). Restore creates a safety checkpoint first.
 
 ### Restore drill (do once on staging)
 
@@ -20,6 +29,7 @@ Use this checklist after deploying to Vercel + Supabase and before onboarding re
 2. Restore a backup snapshot into staging (Supabase support/docs for your plan).
 3. Point a staging Vercel preview at staging env vars and sign in.
 4. Confirm one finance account and one chit scheme load correctly.
+5. In Settings → Backup & restore, create a backup, change a payment, restore, and confirm the payment returns.
 
 ## Incident response
 

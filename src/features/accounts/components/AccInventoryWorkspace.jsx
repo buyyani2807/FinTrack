@@ -3,7 +3,7 @@ import { TabScroller } from "../../../components/TabScroller.jsx";
 import { useActiveTabInView } from "./useActiveTabInView.js";
 import { todayIso } from "../../../lib/dates.js";
 import { downloadAccountsCsv } from "../io/accountingExport.js";
-import { stockMovementReport } from "../model/inventoryModel.js";
+import { expiredStockReport, expiryReportAsOf, stockMovementReport } from "../model/inventoryModel.js";
 import { STOCK_AGE_BUCKETS, physicalCountVariances, stockAgeing, stockValuation } from "../model/inventoryValuation.js";
 import { parseItemImportFile, planItemImport } from "../io/itemCsvImport.js";
 import { StockSummaryTab } from "./inventory/StockSummaryTab.jsx";
@@ -12,6 +12,7 @@ import { itemProfitability } from "../model/itemProfitability.js";
 import { StockMovementsTab } from "./inventory/StockMovementsTab.jsx";
 import { PhysicalCountTab } from "./inventory/PhysicalCountTab.jsx";
 import { StockAgeingTab } from "./inventory/StockAgeingTab.jsx";
+import { ExpiredStockTab } from "./inventory/ExpiredStockTab.jsx";
 import { ItemImportTab } from "./inventory/ItemImportTab.jsx";
 import { InventorySettingsTab } from "./inventory/InventorySettingsTab.jsx";
 
@@ -22,6 +23,7 @@ const TABS = [
   { id: "movements", label: "Movements" },
   { id: "count", label: "Physical count" },
   { id: "ageing", label: "Ageing" },
+  { id: "expired", label: "Expired stock" },
   { id: "import", label: "Import items" },
   { id: "settings", label: "Settings" },
 ];
@@ -69,6 +71,11 @@ export function AccInventoryWorkspace({
     () => (tab === "ageing" ? stockAgeing({ items: products, movements, voucherItemLines, asOf }) : null),
     [tab, products, movements, voucherItemLines, asOf],
   );
+  const expiryAsOf = expiryReportAsOf(asOf, todayIso());
+  const expiryRows = useMemo(
+    () => (tab === "expired" ? expiredStockReport(items, movements, { asOf: expiryAsOf }) : []),
+    [tab, items, movements, expiryAsOf],
+  );
   const moveRows = useMemo(
     () => (tab === "movements" ? stockMovementReport(movements, items, { from: moveFrom, to: moveTo, itemId: moveItemId }).slice(0, 500) : []),
     [tab, movements, items, moveFrom, moveTo, moveItemId],
@@ -105,6 +112,14 @@ export function AccInventoryWorkspace({
   const exportAgeing = () => downloadAccountsCsv(`fintrack-stock-ageing-${asOf}.csv`, [
     ["Item", "SKU", "Quantity", "Value", "Oldest (days)", ...STOCK_AGE_BUCKETS.map(bucket => bucket.label)],
     ...ageing.rows.map(row => [row.name, row.sku, row.quantity, row.value, row.oldestDays, ...STOCK_AGE_BUCKETS.map(bucket => row[bucket.id])]),
+  ]);
+
+  const exportExpired = () => downloadAccountsCsv(`fintrack-expired-stock-${expiryAsOf}.csv`, [
+    ["Expired stock"],
+    [`As of: ${expiryAsOf}`],
+    [],
+    ["Status", "Item", "SKU", "Batch", "Expiry", "On hand", "Unit"],
+    ...expiryRows.map(row => [row.statusLabel, row.name, row.sku || "", row.batchNo || "", row.expiryDate, row.stock, row.unit]),
   ]);
 
   const readImportFile = async event => {
@@ -218,6 +233,13 @@ export function AccInventoryWorkspace({
         setAsOf={setAsOf}
         exportAgeing={exportAgeing}
         ageing={ageing}
+      />}
+
+      {tab === "expired" && <ExpiredStockTab
+        asOf={expiryAsOf}
+        setAsOf={setAsOf}
+        rows={expiryRows}
+        exportExpired={exportExpired}
       />}
 
       {tab === "import" && <ItemImportTab

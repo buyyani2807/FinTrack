@@ -15,6 +15,7 @@ import {
   loadAuditLog,
   loadBankStatements,
   loadPeriodLocks,
+  loadVoucherAttachmentIndex,
   loadVoucherAttachments,
   loadVouchers,
   matchBankLine as saveBankMatch,
@@ -58,7 +59,7 @@ import { buildAccountsAttentionItems } from "../intelligence/attentionCenter.js"
 import { buildAnomalyReview } from "../intelligence/anomalyReview.js";
 import { loadCashbookEntries } from "../cashbook/cashbookRepository.js";
 import { trackProductEvent } from "../commercial/productAnalytics.js";
-import { assertVoucherAttachmentMeta, normalizeAttachmentContentType, readFileAsBase64 } from "./data/voucherAttachments.js";
+import { assertVoucherAttachmentMeta, attachmentDownloadHref, prepareVoucherAttachmentFile } from "./data/voucherAttachments.js";
 import {
   CASH_PARTY_ID,
   PARTY_FORM_TYPES,
@@ -129,12 +130,13 @@ import { periodStockValues } from "./model/inventoryValuation.js";
 import { expenseBreakdown, monthlyIncomeExpense } from "./model/accountsCharts.js";
 import { isEmployeeParty, partyHasTradeProfile, partyProfile } from "./model/partyProfile.js";
 import {
-  currentStockForItem,
   expiredStockReport,
   itemPurchasesReport,
   itemSalesReport,
   itemizedEntryDraft,
+  splitExpiryAlerts,
   stockMovementReport,
+  stockOnHandByItem,
   stockReasonLabel,
   usesItemLines,
 } from "./model/inventoryModel.js";
@@ -298,6 +300,8 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [pendingBankMatch, setPendingBankMatch] = useState(null);
   const [accountsAccessRole, setAccountsAccessRole] = useState(() => {
     if (workspace?.role === "owner") return "owner";
+    // View-only partners inherit Accounts as viewers (migration 140).
+    if (workspace?.role === "finance_partner") return "viewer";
     // Remember last Accounts-team role so cashier chrome is Counter-only on first paint
     // (role RPC otherwise arrives a tick later and used to flash the full tab strip).
     if (workspace?.role === "accounts" && workspace?.id && typeof sessionStorage !== "undefined") {
@@ -354,6 +358,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [listPage, setListPage] = useState(1);
   const [expandedVoucherId, setExpandedVoucherId] = useState(null);
   const [voucherAttachments, setVoucherAttachments] = useState([]);
+  const [voucherAttachmentIndex, setVoucherAttachmentIndex] = useState([]);
   const [attachmentBusy, setAttachmentBusy] = useState(false);
   const deferredSearch = useDeferredValue(search);
   const deferredPartySearch = useDeferredValue(partySearch);
@@ -468,8 +473,11 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
           try { sessionStorage.setItem(`ft-acc-access-role:${workspace.id}`, role); } catch { /* ignore */ }
         }
       } else if (workspace?.role === "owner") setAccountsAccessRole("owner");
+      else if (workspace?.role === "finance_partner") setAccountsAccessRole("viewer");
     }).catch(() => {
-      if (!cancelled && workspace?.role === "owner") setAccountsAccessRole("owner");
+      if (cancelled) return;
+      if (workspace?.role === "owner") setAccountsAccessRole("owner");
+      else if (workspace?.role === "finance_partner") setAccountsAccessRole("viewer");
     });
     return () => { cancelled = true; };
   }, [token, workspace?.role, workspace?.id]);
@@ -605,6 +613,35 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     return () => { cancelled = true; };
   }, [token, expandedVoucherId, migrationRequired]);
 
+  const reloadAttachmentIndex = useCallback(async () => {
+    if (!token || migrationRequired) {
+      setVoucherAttachmentIndex([]);
+      return;
+    }
+    try {
+      const rows = await loadVoucherAttachmentIndex(token);
+      setVoucherAttachmentIndex(rows || []);
+    } catch (err) {
+      if (err.code === "MIGRATION_REQUIRED") setVoucherAttachmentIndex([]);
+    }
+  }, [token, migrationRequired]);
+
+  useEffect(() => {
+    if (!token || migrationRequired) {
+      setVoucherAttachmentIndex([]);
+      return undefined;
+    }
+    if (section !== "expenses" && section !== "vouchers") return undefined;
+    let cancelled = false;
+    loadVoucherAttachmentIndex(token)
+      .then(rows => { if (!cancelled) setVoucherAttachmentIndex(rows || []); })
+      .catch(err => {
+        if (cancelled) return;
+        if (err.code === "MIGRATION_REQUIRED") setVoucherAttachmentIndex([]);
+      });
+    return () => { cancelled = true; };
+  }, [token, activeCompanyId, migrationRequired, section]);
+
   useEffect(() => {
     if (!token || migrationRequired || section !== "inventory") return undefined;
     let cancelled = false;
@@ -677,15 +714,24 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     }
   }, [ledgerId, visibleAccounts]);
 
+  const wantStockValue = wantOverview || wantPnl || wantSheet;
+  const wantCostLines = wantStockValue || section === "inventory" || section === "reports" || section === "ca";
   const costLines = useMemo(() => {
+    if (!wantCostLines) return voucherItemLines;
     const documentLines = (tradeDocuments || []).filter(doc => doc.docType === "goods_receipt").flatMap(doc => doc.lines || []);
     return documentLines.length ? [...voucherItemLines, ...documentLines] : voucherItemLines;
-  }, [tradeDocuments, voucherItemLines]);
+  }, [wantCostLines, tradeDocuments, voucherItemLines]);
+  const wantBrief = wantOverview && canWrite;
+  const wantFulfilment = section === "documents" || wantBrief || showSimple;
   const fulfilment = useMemo(
-    () => documentFulfilment({ documents: tradeDocuments || [], voucherItemLines, vouchers }),
-    [tradeDocuments, voucherItemLines, vouchers],
+    () => (wantFulfilment ? documentFulfilment({ documents: tradeDocuments || [], voucherItemLines, vouchers }) : new Map()),
+    [wantFulfilment, tradeDocuments, voucherItemLines, vouchers],
   );
-  const wantStockValue = wantOverview || wantPnl || wantSheet;
+  const wantLiveStock = wantOverview || section === "counter" || section === "inventory" || section === "documents" || section === "manufacturing" || showSimple;
+  const stockByItem = useMemo(
+    () => (wantLiveStock ? stockOnHandByItem(items, stockMovements) : {}),
+    [wantLiveStock, items, stockMovements],
+  );
   const periodStock = useMemo(
     () => (wantStockValue && items.length
       ? periodStockValues({ items, movements: stockMovements, voucherItemLines: costLines, from: range.from, to: range.to })
@@ -756,17 +802,25 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       : []),
     [wantInvoices, section, reportId, accounts, vouchers, parties, range, outstandingOnly],
   );
-  const overviewArAging = useMemo(
+  const overviewReceivableInvoices = useMemo(
     () => (wantOverview
-      ? invoiceAgingTotals(invoiceRegister(accounts, vouchers, parties, { kind: "receivable", today: todayIso(), ...range, outstandingOnly: true }))
-      : { current: 0, overdue: 0, total: 0 }),
+      ? invoiceRegister(accounts, vouchers, parties, { kind: "receivable", today: todayIso(), ...range, outstandingOnly: true })
+      : []),
     [wantOverview, accounts, vouchers, parties, range],
   );
-  const overviewApAging = useMemo(
+  const overviewPayableInvoices = useMemo(
     () => (wantOverview
-      ? invoiceAgingTotals(invoiceRegister(accounts, vouchers, parties, { kind: "payable", today: todayIso(), ...range, outstandingOnly: true }))
-      : { current: 0, overdue: 0, total: 0 }),
+      ? invoiceRegister(accounts, vouchers, parties, { kind: "payable", today: todayIso(), ...range, outstandingOnly: true })
+      : []),
     [wantOverview, accounts, vouchers, parties, range],
+  );
+  const overviewArAging = useMemo(
+    () => (wantOverview ? invoiceAgingTotals(overviewReceivableInvoices) : { current: 0, overdue: 0, total: 0 }),
+    [wantOverview, overviewReceivableInvoices],
+  );
+  const overviewApAging = useMemo(
+    () => (wantOverview ? invoiceAgingTotals(overviewPayableInvoices) : { current: 0, overdue: 0, total: 0 }),
+    [wantOverview, overviewPayableInvoices],
   );
   const salesRows = useMemo(() => books.filter(row => row.voucherType === "sales"), [books]);
   const purchaseRows = useMemo(() => books.filter(row => row.voucherType === "purchase"), [books]);
@@ -797,16 +851,15 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       outstandingOnly: true,
     });
   }, [showSimple, simpleKind, accounts, vouchers, parties]);
+  const expiryAlerts = useMemo(
+    () => ((wantOverview || wantBrief) ? expiredStockReport(items, stockMovements, { asOf: todayIso() }) : []),
+    [wantOverview, wantBrief, items, stockMovements],
+  );
   const accountsAttention = useMemo(() => {
     if (!wantOverview) return null;
-    const overdueInvoices = invoiceRegister(accounts, vouchers, parties, {
-      kind: "receivable",
-      today: todayIso(),
-      ...range,
-      outstandingOnly: true,
-    }).filter(row => Number(row.daysOverdue || 0) > 0);
+    const overdueInvoices = overviewReceivableInvoices.filter(row => Number(row.daysOverdue || 0) > 0);
     const lowStockCount = items.filter(item => {
-      const stock = currentStockForItem(item, stockMovements);
+      const stock = stockByItem[item.id];
       const reorder = Number(item.reorderLevel || 0);
       return reorder > 0 && stock < reorder;
     }).length;
@@ -814,11 +867,14 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       const lines = statement.lines || [];
       return sum + lines.filter(line => line.matchStatus !== "matched" && line.matchStatus !== "ignored").length;
     }, 0);
+    const expirySplit = splitExpiryAlerts(expiryAlerts);
     const itemsList = buildAccountsAttentionItems({
       overdueReceivables: overdueInvoices.reduce((sum, row) => sum + Number(row.outstanding || 0), 0),
       overdueInvoiceCount: overdueInvoices.length,
       lowStockCount,
       unmatchedBankLines,
+      expiredCount: expirySplit.expired.length,
+      soonCount: expirySplit.soon.length,
       gstEntryCount: activeCompany?.gstRegistration && activeCompany.gstRegistration !== "unregistered"
         ? new Set(gstBooksReport(vouchers, range).rows.map(row => `${row.voucherType}:${row.voucherNumber}`)).size
         : 0,
@@ -829,7 +885,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       items: itemsList,
       disclaimer: "Advisory only — never changes books.",
     };
-  }, [wantOverview, accounts, vouchers, parties, range, items, stockMovements, statements, activeCompany]);
+  }, [wantOverview, overviewReceivableInvoices, items, stockByItem, statements, activeCompany, vouchers, range, expiryAlerts]);
   const anomalyReview = useMemo(() => {
     if (!wantOverview) return null;
     return buildAnomalyReview({
@@ -842,17 +898,11 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       today: todayIso(),
     });
   }, [wantOverview, vouchers, accounts, parties, statements, locks, cashbookEntries]);
-  const stockByItem = useMemo(() => {
-    const map = {};
-    for (const item of items) map[item.id] = currentStockForItem(item, stockMovements);
-    return map;
-  }, [items, stockMovements]);
   const gstFrequency = gstFrequencyState?.companyId === activeCompanyId ? gstFrequencyState.value : readGstFrequency(activeCompanyId);
   const changeGstFrequency = value => {
     writeGstFrequency(activeCompanyId, value);
     setGstFrequencyState({ companyId: activeCompanyId, value });
   };
-  const wantBrief = wantOverview && canWrite;
   const gstSchedule = useMemo(() => {
     if (!wantBrief || !activeCompany) return null;
     return gstFilingSchedule({
@@ -888,15 +938,19 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       gstSchedule,
       unmatchedBankLines,
       periodToLock,
+      expiryRows: expiryAlerts,
     });
-  }, [wantBrief, accounts, vouchers, parties, items, stockByItem, tradeDocuments, fulfilment, voucherItemLines, gstSchedule, statements, locks, canAdmin, complianceFilings]);
+  }, [wantBrief, accounts, vouchers, parties, items, stockByItem, tradeDocuments, fulfilment, voucherItemLines, gstSchedule, statements, locks, canAdmin, complianceFilings, expiryAlerts]);
   const routePositions = useMemo(() => {
     if (section !== "routes") return new Map();
     return receivablePositions(invoiceRegister(accounts, vouchers, parties, { kind: "receivable", today: todayIso(), outstandingOnly: true }));
   }, [section, accounts, vouchers, parties]);
-  const itemSalesRows = useMemo(() => itemSalesReport(voucherItemLines, vouchers, range), [voucherItemLines, vouchers, range]);
-  const itemPurchaseRows = useMemo(() => itemPurchasesReport(voucherItemLines, vouchers, range), [voucherItemLines, vouchers, range]);
-  const stockMoveRows = useMemo(() => stockMovementReport(stockMovements, items, range).slice(0, 200), [stockMovements, items, range]);
+  const wantItemSales = reportId === "item_sales" || reportId === "item_profit";
+  const wantItemPurchases = reportId === "item_purchases" || reportId === "item_profit";
+  const wantStockMoves = reportId === "stock_moves";
+  const itemSalesRows = useMemo(() => (wantItemSales ? itemSalesReport(voucherItemLines, vouchers, range) : []), [wantItemSales, voucherItemLines, vouchers, range]);
+  const itemPurchaseRows = useMemo(() => (wantItemPurchases ? itemPurchasesReport(voucherItemLines, vouchers, range) : []), [wantItemPurchases, voucherItemLines, vouchers, range]);
+  const stockMoveRows = useMemo(() => (wantStockMoves ? stockMovementReport(stockMovements, items, range).slice(0, 200) : []), [wantStockMoves, stockMovements, items, range]);
   const ledgerParties = useMemo(() => parties.filter(party => !isEmployeeParty(party)), [parties]);
   const focusedParty = useMemo(() => ledgerParties.find(party => party.id === partyFocusId) || ledgerParties[0] || null, [ledgerParties, partyFocusId]);
   const profileParty = useMemo(() => (section === "party" ? parties.find(party => party.id === view.sub) || null : null), [section, parties, view.sub]);
@@ -970,6 +1024,11 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     }
     if (id === "gst") {
       go({ section: "reports", reportTab: "gst" });
+      window.scrollTo(0, 0);
+      return;
+    }
+    if (id === "expired_stock") {
+      go({ section: "inventory", sub: "expired" });
       window.scrollTo(0, 0);
       return;
     }
@@ -1289,24 +1348,44 @@ const openVoucher = () => {
     setAttachmentBusy(true);
     setError("");
     try {
-      const meta = assertVoucherAttachmentMeta({
-        fileName: file.name,
-        contentType: normalizeAttachmentContentType(file.type, file.name),
-        byteSize: file.size,
-      });
-      const contentBase64 = await readFileAsBase64(file);
+      const prepared = await prepareVoucherAttachmentFile(file);
       await addVoucherAttachment(token, {
         voucherId: voucher.id,
-        fileName: meta.fileName,
-        contentType: meta.contentType,
-        contentBase64,
+        fileName: prepared.fileName,
+        contentType: prepared.contentType,
+        contentBase64: prepared.data,
       });
       await reloadExpandedAttachments(voucher.id);
-      setNotice("Attachment saved.");
+      await reloadAttachmentIndex();
+      setNotice("Bill attached.");
     } catch (err) {
       setError(err.message || "Could not save attachment.");
     } finally {
       setAttachmentBusy(false);
+    }
+  };
+
+  const viewExpenseProof = async voucherId => {
+    if (!voucherId) return;
+    setError("");
+    try {
+      const rows = await loadVoucherAttachments(token, voucherId);
+      const file = (rows || [])[0];
+      if (!file) {
+        setNotice("No bill on this expense yet.");
+        return;
+      }
+      const href = attachmentDownloadHref(file);
+      if (!href) throw new Error("Could not open that bill.");
+      const link = document.createElement("a");
+      link.href = href;
+      link.download = file.fileName || "expense-bill";
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      setError(err.message || "Could not open that bill.");
     }
   };
 
@@ -1317,6 +1396,7 @@ const openVoucher = () => {
     try {
       await deleteVoucherAttachment(token, attachmentId);
       await reloadExpandedAttachments(voucherId);
+      await reloadAttachmentIndex();
       setNotice("Attachment removed.");
     } catch (err) {
       setError(err.message || "Could not remove attachment.");
@@ -2069,25 +2149,33 @@ const openVoucher = () => {
         /* posting succeeded; schedule can be advanced manually */
       }
     }
+    const proofs = [
+      ...(simpleForm.billPhoto?.data ? [simpleForm.billPhoto] : []),
+      ...((simpleForm.billProofs || []).filter(file => file?.data)),
+    ];
     let billAttached = null;
-    if (voucherId && simpleForm.billPhoto?.data) {
-      billAttached = false;
-      try {
-        const meta = assertVoucherAttachmentMeta({
-          fileName: simpleForm.billPhoto.fileName || "supplier-bill.jpg",
-          contentType: simpleForm.billPhoto.contentType || "image/jpeg",
-          byteSize: simpleForm.billPhoto.byteSize,
-        });
-        await addVoucherAttachment(token, {
-          voucherId,
-          fileName: meta.fileName,
-          contentType: meta.contentType,
-          contentBase64: simpleForm.billPhoto.data,
-        });
-        billAttached = true;
-      } catch {
-        billAttached = false;
+    if (voucherId && proofs.length) {
+      let attached = 0;
+      for (const proof of proofs) {
+        try {
+          const meta = assertVoucherAttachmentMeta({
+            fileName: proof.fileName || "expense-bill.jpg",
+            contentType: proof.contentType || "image/jpeg",
+            byteSize: proof.byteSize,
+          });
+          await addVoucherAttachment(token, {
+            voucherId,
+            fileName: meta.fileName,
+            contentType: meta.contentType,
+            contentBase64: proof.data,
+          });
+          attached += 1;
+        } catch {
+          /* posting succeeded; bill can be attached from Expenses */
+        }
       }
+      billAttached = attached === proofs.length;
+      if (attached) await reloadAttachmentIndex();
     }
     if (pending?.lineId && voucherId) {
       try {
@@ -2510,28 +2598,6 @@ const openVoucher = () => {
         ],
       };
     }
-    if (active === "expired_stock") {
-      const expiredRows = expiredStockReport(items, stockMovements, { asOf: rangeTo });
-      return {
-        filename: `fintrack-expired-stock-${stamp}`,
-        rows: [
-          ["Expired stock"],
-          [companyName],
-          [`As of: ${rangeTo}`],
-          [],
-          ["Status", "Item", "SKU", "Batch", "Expiry", "On hand", "Unit"],
-          ...expiredRows.map(row => [
-            row.statusLabel,
-            row.name,
-            row.sku || "",
-            row.batchNo || "",
-            row.expiryDate,
-            row.stock,
-            row.unit,
-          ]),
-        ],
-      };
-    }
     if (active === "cashflow") {
       return { filename: `fintrack-cash-flow-${stamp}`, rows: cashflowExportRows(flow, exportMeta) };
     }
@@ -2920,6 +2986,8 @@ const openVoucher = () => {
           companyName={activeCompany?.name || settings?.companyName || ""}
           canWrite={canWrite}
           aiEnabled={aiEnabled}
+          attachmentIndex={voucherAttachmentIndex}
+          attachmentBusy={attachmentBusy}
           onAddExpense={() => openSimple("expense")}
           onOpenVoucher={voucherNumber => {
             if (voucherNumber) setSearch(voucherNumber);
@@ -2927,6 +2995,8 @@ const openVoucher = () => {
           }}
           onOpenPnl={() => openSection("pnl")}
           onOpenAiReview={aiEnabled ? () => openSection("ai") : null}
+          onAttachProof={(row, file) => onAttachVoucherFile({ id: row.voucherId, status: row.status }, file)}
+          onViewProof={viewExpenseProof}
         />}
         {(section === "payroll" || section === "attendance" || section === "leave") && <PayrollSection
           key={activeCompanyId || "company"}

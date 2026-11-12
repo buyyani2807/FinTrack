@@ -54,3 +54,11 @@ export function workspaceSessionAllowed(workspace) {
     || workspace.role === "accounts"
     || workspace.role === "finance_partner";
 }
+
+/** Daily/Monthly loan books. Skip for Accounts-team and route-collection staff. */
+export function sessionNeedsFinanceBooks(workspace) {
+  const role = workspace?.role;
+  if (role === "accounts") return false;
+  if (role === "staff" && workspace?.collectionScope === "accounts") return false;
+  return role === "owner" || role === "staff" || role === "finance_partner";
+}

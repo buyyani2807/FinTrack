@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { formatInr } from "../../../lib/formatMoney.js";
 import { OutstandingWhatsAppButton } from "./SalesInvoiceActions.jsx";
+import { expiryAlertLabel } from "../model/inventoryModel.js";
 import { ownerBriefShareText, reorderBySupplier } from "../model/ownerDailyBrief.js";
 
 const money = formatInr;
@@ -17,7 +18,7 @@ function Column({ title, total, empty, children, footer }) {
   </article>;
 }
 
-/** Owner's morning card: who to collect from, what to pay, what to reorder and what to file. */
+/** Owner's morning card: who to collect from, what to pay, what to reorder, what is expiring, and what to file. */
 export function AccOwnerDailyBrief({
   brief,
   parties = [],
@@ -41,6 +42,7 @@ export function AccOwnerDailyBrief({
   const more = list => list.length > LIMIT;
   const toOrder = brief.reorder.filter(row => !row.covered);
   const covered = brief.reorder.filter(row => row.covered);
+  const expiry = brief.expiry || [];
 
   const share = () => {
     if (typeof window !== "undefined") window.open(`https://wa.me/?text=${encodeURIComponent(ownerBriefShareText(brief, { companyName }))}`, "_blank", "noopener,noreferrer");
@@ -53,7 +55,7 @@ export function AccOwnerDailyBrief({
         <h3>{brief.allClear ? "All clear today" : `${brief.actionCount} thing${brief.actionCount === 1 ? "" : "s"} to do today`}</h3>
       </div>
       <div className="acc-btn-group">
-        {(more(brief.collect) || more(brief.pay) || more(toOrder)) && <button type="button" className="btn ghost" onClick={() => setExpanded(value => !value)}>{expanded ? "Show less" : "Show all"}</button>}
+        {(more(brief.collect) || more(brief.pay) || more(toOrder) || more(expiry)) && <button type="button" className="btn ghost" onClick={() => setExpanded(value => !value)}>{expanded ? "Show less" : "Show all"}</button>}
         <button type="button" className="btn" onClick={share}>Share on WhatsApp</button>
       </div>
     </header>
@@ -120,6 +122,23 @@ export function AccOwnerDailyBrief({
             </button>)}
           </div>}
         </> : null}
+      </Column>
+
+      <Column
+        title="Expiry"
+        total={expiry.length ? [brief.totals.expired ? `${brief.totals.expired} expired` : "", brief.totals.soon ? `${brief.totals.soon} soon` : ""].filter(Boolean).join(" · ") : ""}
+        empty="No expired or near-expiry items with dates on file."
+        footer={expiry.length ? <button type="button" className="btn linkish" onClick={() => onOpenSection?.("expired_stock")}>Expired stock →</button> : null}
+      >
+        {expiry.length ? <ul className="acc-brief-list">
+          {show(expiry).map(row => <li key={row.itemId}>
+            <div className="acc-brief-row-main">
+              <strong>{row.name}</strong>
+              <span className={`small ${row.status === "expired" ? "red" : ""}`}>{expiryAlertLabel(row)}{row.batchNo ? ` · batch ${row.batchNo}` : ""}</span>
+            </div>
+            <span className="acc-num">{row.stock} {row.unit}</span>
+          </li>)}
+        </ul> : null}
       </Column>
 
       <Column title="File" total="" empty="Nothing to file right now.">

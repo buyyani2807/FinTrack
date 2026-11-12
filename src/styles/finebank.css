@@ -39,6 +39,9 @@
 body { min-width: 320px; font: 400 var(--ft-type-body)/var(--ft-leading-body) var(--ft-font) !important; overflow-wrap: break-word; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 .app, .app *:not(svg):not(svg *) { font-family: var(--ft-font) !important; letter-spacing: normal; }
 .app .ft-brand, .app .ft-brand * { font-family: var(--ft-font-brand) !important; }
+.ft-brand-lockup { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+.ft-brand-mark { display: block; width: 1.15em; height: 1.15em; flex: none; border-radius: 22%; box-shadow: 0 0 0 1px color-mix(in srgb, var(--ft-primary) 22%, transparent); }
+.ft-brand-lockup .ft-brand { line-height: 1; }
 ::selection { background: var(--ft-primary-soft-strong); color: var(--ft-text); }
 a { color: var(--ft-primary); }
 :where(.app) :focus-visible { outline: 3px solid var(--ft-focus-ring) !important; outline-offset: 2px !important; }
@@ -129,6 +132,9 @@ td:has(> .btn + .btn) { line-height: 2.6; }
 .login { max-width: 440px !important; margin: 8vh auto 48px !important; padding: 0 16px; }
 .login > .brand.ft-login-brand { margin-bottom: 8px; }
 .login > .brand.ft-login-brand .ft-brand { color: var(--ft-primary) !important; font-size: var(--ft-type-page); line-height: 48px; letter-spacing: .08em; }
+.ft-auth-brandrow .ft-brand-lockup .ft-brand { color: var(--ft-text) !important; }
+.financier-nav .nav-title .ft-brand-lockup .ft-brand { color: #fff !important; }
+.financier-nav .nav-title .ft-brand-mark { width: 28px; height: 28px; }
 .ft-wordmark-suffix { font-weight: 500; letter-spacing: 0; color: var(--ft-text-2); font-size: .55em; }
 .login > .sub { margin-bottom: 32px !important; font-size: var(--ft-type-secondary) !important; }
 .login .card { background: var(--ft-surface) !important; padding: 32px !important; box-shadow: var(--ft-shadow) !important; }
@@ -228,6 +234,8 @@ td:has(> .btn + .btn) { line-height: 2.6; }
 .ft-auth-showcase::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(55% 40% at 85% 8%, rgba(41, 157, 145, .40), transparent 70%), radial-gradient(60% 45% at 30% 75%, rgba(41, 157, 145, .26), transparent 70%); }
 .ft-auth-showcase::after { content: ""; position: absolute; inset: 0; z-index: -1; background-image: radial-gradient(rgba(255, 255, 255, .07) 1px, transparent 1px); background-size: 28px 28px; mask-image: radial-gradient(ellipse at 50% 65%, #000 25%, transparent 75%); }
 .ft-auth-showcase-brand { color: #fff !important; font-size: var(--ft-type-hero); letter-spacing: .08em; }
+.ft-auth-showcase-brand.ft-brand-lockup .ft-brand { color: #fff !important; font-size: inherit; letter-spacing: inherit; }
+.ft-auth-showcase-brand .ft-brand-mark { width: 40px; height: 40px; box-shadow: 0 0 0 1px rgba(110, 231, 216, .22), 0 8px 24px rgba(0, 0, 0, .28); }
 .ft-auth-showcase-copy { max-width: min(560px, 78cqw); margin-top: clamp(24px, 5svh, 64px); }
 .ft-auth-kicker { margin: 0 0 clamp(10px, 1.6cqw, 18px); color: #46c2b5; font-weight: 600; font-size: clamp(11px, 1.3cqw, 14px); letter-spacing: .08em; text-transform: uppercase; }
 .ft-auth-showcase-copy h2 { margin: 0 0 clamp(10px, 1.6cqw, 18px); color: #fff; font-weight: 700; font-size: clamp(28px, 4.6cqw, 52px); line-height: 1.14; letter-spacing: -.02em; }
@@ -728,6 +736,8 @@ input[type="month"]::-webkit-calendar-picker-indicator { margin: 0; padding: 0; 
   .ft-mobile-menu-btn { width: 44px; height: 44px; color: #fff !important; }
   .ft-mobile-menu-btn:hover { background: var(--ft-sidebar-hover) !important; }
   .ft-mobile-brand { color: #fff !important; font-size: var(--ft-type-section); line-height: 1; }
+  .ft-mobile-brand.ft-brand-lockup .ft-brand { color: #fff !important; font-size: inherit; }
+  .ft-mobile-brand .ft-brand-mark { width: 26px; height: 26px; }
   .app:has(.ft-mobile-header) { padding-top: calc(56px + env(safe-area-inset-top, 0px)); }
   /* the bottom bar is gone: pages need no room for it */
   html[data-ft-role="owner"] .shell, html[data-ft-role="finance_partner"] .shell,
@@ -892,6 +902,8 @@ html[data-ft-role="accounts"] .accounts-dashboard { margin-left: 0 !important; }
 .settings-section-head { display: flex; align-items: flex-start; gap: 14px; }
 .settings-section-head h2 { margin: 0 0 4px; font-size: var(--ft-type-lead) !important; line-height: 24px; }
 .settings-section-head p { max-width: 72ch; margin: 0; color: var(--ft-muted); font-size: var(--ft-type-label); line-height: 20px; }
+.partner-module-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.partner-module-chips li { padding: 6px 12px; border: 1px solid var(--ft-border); border-radius: 999px; background: var(--ft-surface); color: var(--ft-text); font-size: var(--ft-type-label); font-weight: 600; }
 .settings-section-head .ft-icon-tile { background: var(--ft-primary-soft); color: var(--ft-primary); }
 .settings-grid { margin: 0 !important; }
 /* variables */

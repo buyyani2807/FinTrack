@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
-import { ArrowRight, BookOpenText, CalendarDays, CalendarRange, Check, Coins, FileText, Gavel, Package, Printer, Receipt, Scale, Users, Wallet } from "lucide-react";
+import { ArchiveRestore, ArrowRight, BookOpenText, CalendarDays, CalendarRange, Check, Coins, FileText, Gavel, HandCoins, Package, Printer, Receipt, Scale, Users, Wallet } from "lucide-react";
 import { useInView } from "../../components/ui/useInView.js";
 import { featurePath } from "./paths.js";
 
@@ -88,8 +88,8 @@ function DailyModule() {
     <div className="hm-module-copy">
       <Tag icon={CalendarDays}>Daily Finance</Tag>
       <h3>Every daily collection on one list.</h3>
-      <p className="hm-module-lead">Open a 100-day style account once. Each day MyFinTracker shows who has paid, who is still due, and who to visit first.</p>
-      <Points items={["Today’s collection list with what is still due", "Who to collect first, ranked with the reason", "Digital receipts and WhatsApp reminders you send", "Daily collection report and Daily P&L"]} />
+      <p className="hm-module-lead">Open a 100-day style account once. Each day MyFinTracker shows who has paid, who is still due, who to visit first, and a credit score from that customer’s payments.</p>
+      <Points items={["MyFinTracker credit score from each customer’s payments", "Today’s collection list with what is still due", "Who to collect first, ranked with the reason", "Daily collection report and Daily P&L"]} />
       <More to={featurePath("daily-finance")}>Explore Daily Finance</More>
     </div>
     <div className="hm-daily-stage" aria-hidden="true">
@@ -184,8 +184,8 @@ function MonthlyModule() {
     <div className="hm-module-copy">
       <Tag icon={CalendarRange}>Monthly Finance</Tag>
       <h3>Interest, principal, and penalty never mix.</h3>
-      <p className="hm-module-lead">Every receipt on a monthly account records what it covered, so the balance and the interest you earned are always clear.</p>
-      <Points items={["Monthly interest accounts with due amounts", "Each receipt split into interest, principal, and penalty", "Monthly P&L from interest and penalty received", "Upcoming payment reminders"]} />
+      <p className="hm-module-lead">Every receipt on a monthly account records what it covered, so the balance, the interest you earned, and a credit score from how they paid stay clear.</p>
+      <Points items={["MyFinTracker credit score from how they paid", "Monthly interest accounts with due amounts", "Each receipt split into interest, principal, and penalty", "Monthly P&L from interest and penalty received"]} />
       <More to={featurePath("monthly-finance")}>Explore Monthly Finance</More>
     </div>
   </article></Section>;
@@ -321,7 +321,7 @@ function AccountsModule() {
     <header className="hm-accounts-head">
       <Tag icon={BookOpenText}>Accounts</Tag>
       <h3>Full company books, with a billing counter built in.</h3>
-      <p className="hm-module-lead">Bill from Counter POS, post vouchers, keep stock and payroll, and hand a GST-ready month to your CA.</p>
+      <p className="hm-module-lead">Bill from Counter POS — including 48 hours offline — post vouchers, keep stock and payroll, attach bill proofs, and hand a GST-ready month to your CA.</p>
     </header>
     <div className="hm-accounts-stage" aria-hidden="true">
       <ul className="hm-chips">
@@ -349,9 +349,29 @@ function AccountsModule() {
       </div>
     </div>
     <div className="hm-accounts-foot">
-      <Points items={["Counter POS with thermal and WhatsApp receipts", "Trial balance, P&L, balance sheet, and cash flow"]} />
+      <Points items={["Counter POS with 48-hour offline billing, then sync", "Till alerts, thermal, and WhatsApp receipts", "Bill proofs on expenses", "Trial balance, P&L, balance sheet, and cash flow"]} />
       <More to={featurePath("accounts-overview")}>Explore Accounts</More>
     </div>
+  </article></Section>;
+}
+
+const BACKUP_MODULES = [
+  { icon: HandCoins, label: "Finance" },
+  { icon: Coins, label: "Chit Fund" },
+  { icon: Wallet, label: "Cashbook" },
+  { icon: BookOpenText, label: "Accounts" },
+];
+
+function BackupModule() {
+  return <Section id="workspace-backup"><article className="hm-backup">
+    <Tag icon={ArchiveRestore}>Workspace</Tag>
+    <h3>One backup for every module.</h3>
+    <p className="hm-module-lead">Finance, Cashbook, Chit Fund, and Accounts sit in one login. The owner copies them from Settings — not from Accounts — and restores if the live data is wrong.</p>
+    <ul className="hm-backup-mods">
+      {BACKUP_MODULES.map(item => <li key={item.label}><item.icon size={16} aria-hidden="true" />{item.label}</li>)}
+    </ul>
+    <Points items={["Manual copy or nightly at midnight IST", "Restore takes a safety checkpoint first", "Copies older than 14 days are removed"]} />
+    <More to={featurePath("workspace-backup")}>Read backup & restore</More>
   </article></Section>;
 }
 
@@ -362,5 +382,6 @@ export function HomeModules() {
     <ChitModule />
     <CashbookModule />
     <AccountsModule />
+    <BackupModule />
   </>;
 }

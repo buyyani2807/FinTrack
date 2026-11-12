@@ -30,7 +30,7 @@ export function ModuleLockedPanel({
         ) : null}
         <div className="ft-module-locked-actions">
           <Link className="btn primary" to={unlockPath}>Unlock</Link>
-          <Link className="btn" to="/subscribe">Billing</Link>
+          <Link className="btn" to="/subscribe">Subscription</Link>
         </div>
         <p className="small muted">Payment is verified on the server before this module opens. Your other modules and data stay as they are.</p>
       </div>

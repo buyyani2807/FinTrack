@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { TriangleAlert } from "lucide-react";
 import { FilterSelect, SearchInput } from "../../../components/ui.jsx";
 import { todayIso } from "../../../lib/dates.js";
-import { currentStockForItem, defaultUnitForIndustry, emptyItemForm, itemToForm, stockMovementReport, stockStatus, validateItemForm } from "../model/inventoryModel.js";
+import { defaultUnitForIndustry, emptyItemForm, itemToForm, stockMovementReport, stockOnHandByItem, stockStatus, validateItemForm } from "../model/inventoryModel.js";
 import { findSkuConflict } from "./items/ItemFormDialog.jsx";
 import { costItemMovements } from "../model/inventoryValuation.js";
 import { AccPager } from "./AccUi.jsx";
@@ -41,11 +41,7 @@ export function AccItemsSetup({
   const [adjust, setAdjust] = useState({ itemId: "", date: todayIso(), quantityDelta: "", reasonNote: "" });
   const [error, setError] = useState("");
 
-  const stockByItem = useMemo(() => {
-    const map = {};
-    for (const item of items) map[item.id] = currentStockForItem(item, movements);
-    return map;
-  }, [items, movements]);
+  const stockByItem = useMemo(() => stockOnHandByItem(items, movements), [items, movements]);
 
   const lowStock = useMemo(
     () => items.filter(item => item.itemType === "product" && item.isActive !== false && stockStatus(stockByItem[item.id], item.reorderLevel) === "low"),

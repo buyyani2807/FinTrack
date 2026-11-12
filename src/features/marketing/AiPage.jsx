@@ -10,7 +10,7 @@ import { usePartLink } from "./moduleParts.js";
 import { featurePath } from "./paths.js";
 
 // Tiles with a picture; the rest of the AI module is listed under "Also in AI".
-const TILES = ["ask-finny", "ai-bookkeeper", "bill-scanning", "forecasting", "anomaly-detection", "gst-review", "bank-matching", "month-end-readiness"];
+const TILES = ["ask-finny", "ai-bookkeeper", "bill-scanning", "forecasting", "anomaly-detection", "gst-review", "bank-matching", "month-end-readiness", "stock-forecast", "expired-stock"];
 
 // Sample figures: Ask Finny's answer is the homepage example; Tell Finny's draft is the one in its product screenshot.
 const ASK_LINES = [
@@ -36,7 +36,7 @@ export function AiPage({ feature }) {
     <ModuleHero
       name="AI"
       title="AI that reviews the books with you."
-      lead="MyFinTracker reads your own records and points out what needs a look: cash that may run short, costs that rose, GST details to fix, bank lines to match, and stock to reorder. You post the voucher, approve the match, and send the message."
+      lead="MyFinTracker reads your own records and points out what needs a look: cash that may run short, costs that rose, GST details to fix, bank lines to match, stock to reorder, and items past or near expiry. You post the voucher, approve the match, and send the message."
       appPath={feature.appPath}
       scene="ai-overview"
       frameLabel="Accounts · AI Review"
@@ -115,6 +115,21 @@ export function AiPage({ feature }) {
               <strong>84%</strong>
             </div>
           </Tile>
+          <Tile slug="stock-forecast" title="Which items may run out, when, and how much to consider buying.">
+            <div className="fx-card fx-stock">
+              <div><span>Basmati Rice 5kg<b className="fx-pill">Stockout</b></span><i><em style={{ width: "18%" }} /></i></div>
+              <div><span>Toor Dal 1kg<b className="fx-pill">Reorder</b></span><i><em style={{ width: "32%" }} /></i></div>
+              <div><span>Tea Powder</span><i><em style={{ width: "74%" }} /></i></div>
+            </div>
+          </Tile>
+          <Tile slug="expired-stock" title="Items past expiry or due within 30 days — from the date on the item.">
+            <div className="fx-card fx-rows fx-flags">
+              <p><AlertTriangle size={14} /> Expired stock</p>
+              <p><span>Burma Paper · tomorrow</span></p>
+              <p><span>China Coat · in 9 days</span></p>
+              <p><span>Pull from sale. Dates, not a forecast.</span></p>
+            </div>
+          </Tile>
         </div>
         <Reveal as="p" className="fx-ai-note">A forecast is shown apart from actual figures and is never posted into the books. Nothing is filed, locked, reversed, or sent by itself.</Reveal>
         <div className="fx-also">
@@ -133,7 +148,7 @@ export function AiPage({ feature }) {
       </div>
     </section>
 
-    <ModuleFaq title="AI, answered." questions={["Does it have AI?", "What is Ask Finny?", "Does the AI change my books?", "Can I move my books from Tally or Excel?"]} />
+    <ModuleFaq title="AI, answered." questions={["Does it have AI?", "What is Ask Finny?", "Does the AI change my books?", "Does it have a POS / billing counter?"]} />
     <ModuleClosing title="Let the AI review the books with you." appPath={feature.appPath} points={["Included in the plan", "Every suggestion shows its reason", "Nothing posts until you confirm"]} />
   </div></ModuleParts></RevealProvider>;
 }

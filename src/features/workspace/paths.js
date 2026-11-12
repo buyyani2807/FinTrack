@@ -60,9 +60,9 @@ export function workspaceModuleAccess(orgSettings = {}, workspace = {}, moduleSt
     : isModuleEnabled(orgSettings, moduleId));
   const dailyOpen = canViewOwnerFinance && packOpen("daily");
   const monthlyOpen = canViewOwnerFinance && packOpen("monthly");
-  const chitOpen = isOwner && packOpen("chit");
+  const chitOpen = canViewOwnerFinance && packOpen("chit");
   const cashbookOpen = canViewOwnerFinance && packOpen("cashbook");
-  const accountsOpen = (isOwner || isAccountsUser) && packOpen("accounts");
+  const accountsOpen = (isOwner || isAccountsUser || isFinancePartner) && packOpen("accounts");
   return {
     isOwner,
     isAccountsUser,
@@ -74,12 +74,12 @@ export function workspaceModuleAccess(orgSettings = {}, workspace = {}, moduleSt
     chit: chitOpen,
     cashbook: cashbookOpen,
     accounts: accountsOpen,
-    // Visible in nav even when locked (owners discover modules; partners only see unlocked finance).
-    showDaily: canViewOwnerFinance,
-    showMonthly: canViewOwnerFinance,
-    showChit: isOwner,
-    showCashbook: canViewOwnerFinance,
-    showAccounts: isOwner || isAccountsUser,
+    // Owners see locked modules in nav. Partners only see modules the workspace has unlocked.
+    showDaily: isOwner || dailyOpen,
+    showMonthly: isOwner || monthlyOpen,
+    showChit: isOwner || chitOpen,
+    showCashbook: isOwner || cashbookOpen,
+    showAccounts: isOwner || isAccountsUser || accountsOpen,
     locked: {
       daily: isOwner && !dailyOpen,
       monthly: isOwner && !monthlyOpen,
@@ -89,4 +89,15 @@ export function workspaceModuleAccess(orgSettings = {}, workspace = {}, moduleSt
       counter: isOwner && moduleState && !isAppModuleOpen(moduleState, "counter"),
     },
   };
+}
+
+/** Labels for modules a view-only partner inherits from this workspace's unlocked packs. */
+export function partnerVisibleModuleLabels(access = {}) {
+  const labels = [];
+  if (access.daily) labels.push("Daily Finance");
+  if (access.monthly) labels.push("Monthly Finance");
+  if (access.cashbook) labels.push("Cashbook");
+  if (access.chit) labels.push("Chit Fund");
+  if (access.accounts) labels.push("Accounts");
+  return labels;
 }

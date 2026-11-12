@@ -4,6 +4,7 @@ import { buildReceivablesCollectionPlan } from "./ai/receivablesAgent.js";
 import { buildBankReconciliationSuggestions } from "./ai/bankReconciliationAgent.js";
 import { buildInventoryForecast } from "./ai/inventoryForecast.js";
 import { formatInr as money } from "./ai/aiCommon.js";
+import { expiredStockReport, splitExpiryAlerts } from "../accounts/model/inventoryModel.js";
 
 const countWord = (count, one, many) => `${count} ${count === 1 ? one : many}`;
 
@@ -16,6 +17,7 @@ export function AiAdvisoryPanel({ accounts = [], vouchers = [], parties = [], it
   const priorities = useMemo(() => buildReceivablesCollectionPlan({ accounts, vouchers, parties, asOf }).slice(0, 3), [accounts, vouchers, parties, asOf]);
   const bank = useMemo(() => buildBankReconciliationSuggestions({ statements, accounts, vouchers, parties }), [statements, accounts, vouchers, parties]);
   const stockouts = useMemo(() => buildInventoryForecast({ items, stockMovements, asOf }).filter(row => row.status === "Likely stockout"), [items, stockMovements, asOf]);
+  const expiry = useMemo(() => splitExpiryAlerts(expiredStockReport(items, stockMovements, { asOf })), [items, stockMovements, asOf]);
   const open = id => onNavigate && onNavigate(id);
   const horizons = forecast.horizons.filter(row => row.days > 0);
   const suggested = bank.suggestions.filter(row => row.actionKind === "match" || row.actionKind === "create_entry").length;
@@ -77,7 +79,11 @@ export function AiAdvisoryPanel({ accounts = [], vouchers = [], parties = [], it
               {preview.map(row => <li key={row.itemId || row.itemName}><span>{row.itemName}</span><b>{row.stockoutDate || "soon"}</b></li>)}
             </ul>
           ) : <p className="ai-advisory-copy">Based on weekly sales and current stock.</p>}
+          {expiry.count ? (
+            <p className="ai-advisory-copy">On hand: {countWord(expiry.expired.length, "expired item", "expired items")}{expiry.soon.length ? `, ${countWord(expiry.soon.length, "item", "items")} due within 30 days` : ""}. Item dates, not a forecast.</p>
+          ) : null}
           {stockouts.length > 0 && onNavigate ? <button type="button" className="ai-source-link" onClick={() => open("inventory")}>Open inventory</button> : null}
+          {expiry.count > 0 && onNavigate ? <button type="button" className="ai-source-link" onClick={() => open("expired_stock")}>Open expired stock</button> : null}
         </article>
       </div>
 

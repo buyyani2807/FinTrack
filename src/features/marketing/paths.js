@@ -9,6 +9,8 @@ export const marketingPaths = {
   about: "/about",
   founder: "/founder",
   contact: "/contact",
+  privacy: "/privacy",
+  terms: "/terms",
   login: "/login",
   signup: "/login?signup=1",
 };
@@ -22,6 +24,8 @@ const MARKETING_ROOTS = [
   "/about",
   "/founder",
   "/contact",
+  "/privacy",
+  "/terms",
 ];
 
 export function normalizePath(pathname = "/") {
