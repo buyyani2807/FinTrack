@@ -1467,7 +1467,9 @@ html[data-theme="dark"] .hm-home .mkt-btn:not(.primary):not(.light) { border-col
 .mkt .fx-sheet-heading h2 { margin: 2px 0 0; color: #131313; font-size: 24px; font-weight: 800; line-height: 1.15; letter-spacing: -0.02em !important; }
 .fx-sheet-close { display: grid; flex: none; place-items: center; width: 40px; height: 40px; border: 2px solid #03393a; border-radius: 999px; background: #ffffff; color: #131313; cursor: pointer; transition: background 0.18s ease, color 0.18s ease; }
 .fx-sheet-close:hover, .fx-sheet-close:focus-visible { background: #03393a; color: #ffffff; outline: none; }
-.fx-sheet-body { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 24px; }
+.fx-sheet-scroll { position: relative; display: flex; flex: 1; flex-direction: column; min-height: 0; }
+.fx-sheet-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 24px; }
+.fx-sheet-more { display: none; margin: 0; padding: 0; font: inherit; cursor: pointer; }
 .mkt .fx-sheet-lead { margin: 0; font-size: var(--ft-type-lead); line-height: 1.6; }
 .fx-sheet-shot { margin: 20px 0 8px; padding: 10px; border-radius: 18px; background: #03393a; }
 .fx-sheet-shot .mkt-shot { border: 0; border-radius: 10px; box-shadow: none; }
@@ -1505,8 +1507,28 @@ html[data-theme="dark"] :is(.fx-sheet-close:hover, .fx-sheet-close:focus-visible
   .fx-sheet-steps-nav button { width: 44px; padding: 0; justify-content: center; }
   .mkt .fx-sheet-heading h2 { font-size: 20px; }
 }
+.fx-sheet-scroll.is-more .fx-sheet-more {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: 10px;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 2px solid var(--mkt-navy);
+  border-radius: 999px;
+  background: var(--mkt-bg);
+  color: var(--mkt-navy);
+  transform: translateX(-50%);
+  animation: fx-sheet-more 1.4s ease-in-out infinite;
+}
+@keyframes fx-sheet-more {
+  50% { transform: translateX(-50%) translateY(4px); }
+}
+html[data-theme="dark"] .fx-sheet-more { border-color: var(--mkt-accent-ink); background: var(--mkt-bg); color: var(--mkt-ink); }
 @media (prefers-reduced-motion: reduce) {
-  .fx-sheet, .fx-sheet-backdrop { animation: none; }
+  .fx-sheet, .fx-sheet-backdrop, .fx-sheet-more { animation: none; }
 }
 
 /* Previous / next at the end of a feature page that belongs to a module */
