@@ -1086,12 +1086,34 @@ html[data-theme="dark"] .hm-home .mkt-btn:not(.primary):not(.light) { border-col
 .hm-accounts-foot .hm-points { grid-auto-flow: column; gap: 28px; margin: 0; }
 .hm-accounts-foot .hm-module-link { margin-top: 0; }
 
-/* AI band, then the workspace backup block. */
-.hm-ai { max-width: 760px; margin: 0 auto; text-align: center; }
-.hm-ai .hm-module-lead { max-width: 52ch; margin-left: auto; margin-right: auto; }
-.hm-ai-signals { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 28px 0 0; padding: 0; list-style: none; }
-.hm-ai-signals li { display: inline-flex; align-items: center; gap: 8px; min-width: 0; padding: 10px 16px; border: 2px solid var(--hm-ink); border-radius: 999px; font-size: var(--ft-type-secondary); font-weight: 700; }
-.hm-ai .hm-module-link { margin-top: 28px; }
+/* AI band: a fixed-height reader beside the copy, then the workspace backup block. */
+.hm-ai { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 64px; align-items: center; }
+.hm-ai-copy .hm-module-lead { max-width: 42ch; }
+.hm-ai-stage { order: 2; display: flex; flex-direction: column; gap: 18px; min-width: 0; padding: 28px; border-radius: 32px; background: var(--hm-ink); color: var(--hm-tx2, var(--hm-paper)); }
+.hm-ai-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.hm-ai-live { display: inline-flex; flex: none; align-items: center; gap: 8px; min-width: 0; padding: 4px 12px; border: 2px solid currentColor; border-radius: 999px; font-size: var(--ft-type-label); font-weight: 800; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.06em; }
+.hm-ai-live i { width: 10px; height: 10px; border-radius: 999px; background: currentColor; animation: hm-pulse 1s ease-in-out infinite; }
+.hm-ai-dots { display: flex; flex: none; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.hm-ai-dots li { width: 8px; height: 8px; border: 2px solid currentColor; border-radius: 999px; }
+.hm-ai-dots li[data-on="true"] { background: currentColor; }
+.hm-ai-flow { display: grid; gap: 0; }
+.hm-ai-card { padding: 14px 16px; border: 2px solid currentColor; border-radius: 18px; }
+.hm-ai-you small { display: inline-flex; align-items: center; gap: 6px; font-size: var(--ft-type-caption); font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.hm-ai-you p { margin: 6px 0 0; font-size: var(--ft-type-secondary); font-weight: 800; line-height: 1.3; animation: hm-pop 0.4s cubic-bezier(.2, .7, .2, 1.4); }
+.hm-ai-spine { display: grid; grid-template-columns: 28px minmax(0, 1fr); grid-template-rows: 18px 28px 18px; align-items: center; column-gap: 10px; }
+.hm-ai-spine i { justify-self: center; width: 2px; height: 18px; background: repeating-linear-gradient(to bottom, currentColor 0 4px, transparent 4px 8px); }
+.hm-ai-spine i:first-child { grid-area: 1 / 1; }
+.hm-ai-spine span { grid-area: 2 / 1; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 999px; background: var(--hm-paper); color: var(--hm-tx, var(--hm-ink)); }
+.hm-ai-spine i:nth-of-type(2) { grid-area: 3 / 1; }
+.hm-ai-spine em { grid-area: 2 / 2; overflow: hidden; font-size: var(--ft-type-caption); font-style: normal; font-weight: 700; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
+.hm-ai[data-live="true"] .hm-ai-spine i { animation: hm-ai-flow 0.7s linear infinite; }
+@keyframes hm-ai-flow { to { background-position: 0 8px; } }
+.hm-ai-out { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-color: transparent; background: var(--hm-paper); color: var(--hm-tx, var(--hm-ink)); }
+.hm-ai-out > span { min-width: 0; }
+.hm-ai-out strong, .hm-ai-out small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-ai-out strong { font-size: var(--ft-type-secondary); line-height: 1.3; }
+.hm-ai-out small { margin-top: 2px; font-size: var(--ft-type-caption); font-weight: 600; line-height: 1.3; }
+.hm-ai-out b { flex: none; padding: 6px 12px; border-radius: 999px; background: var(--hm-ink); color: var(--hm-tx2, var(--hm-paper)); font-size: var(--ft-type-label); font-weight: 800; white-space: nowrap; }
 
 .hm-backup { max-width: 760px; margin: 0 auto; text-align: center; }
 .hm-backup-mods { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 28px 0 0; padding: 0; list-style: none; }
@@ -1608,10 +1630,11 @@ html[data-theme="dark"] .mkt-nav-end .mkt-btn.primary:hover { background: #0b0c0
   .hm-hero-grid { grid-template-columns: 1fr; gap: 40px; }
   .hm-proof { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 40px; }
   .hm-sec, .hm-ask, .hm-faq, .hm-cta { padding: 72px 0; }
-  .hm-daily, .hm-chit, .hm-monthly, .hm-faq-grid { grid-template-columns: 1fr; }
+  .hm-daily, .hm-chit, .hm-monthly, .hm-faq-grid, .hm-ai { grid-template-columns: 1fr; }
   .hm-monthly { gap: 40px; }
   .hm-monthly .hm-module-copy { order: -1; }
-  .hm-chit-stage { order: 0; }
+  .hm-chit-stage, .hm-ai-stage { order: 0; }
+  .hm-ai { gap: 32px; }
   .hm-faq-grid { gap: 40px; }
   .hm-chat { position: static; }
   .hm-daily, .hm-chit { gap: 32px; }
@@ -1648,7 +1671,9 @@ html[data-theme="dark"] .mkt-nav-end .mkt-btn.primary:hover { background: #0b0c0
   .hm-steps button i { width: 26px; height: 26px; }
   .hm-steps li + li::before { top: 12px; }
   .hm-chat-body { height: 380px; padding: 18px 14px; }
-  .hm-chit-stage { padding: 24px 20px; border-radius: 24px; }
+  .hm-chit-stage, .hm-ai-stage { padding: 24px 20px; border-radius: 24px; }
+  .hm-ai-out { flex-direction: column; align-items: stretch; }
+  .hm-ai-out b { align-self: flex-end; }
   .hm-ring { width: 88px; height: 88px; }
   .hm-cashbook { grid-template-columns: 1fr; grid-template-areas: "copy" "cash" "bank" "upi" "feed"; }
   .hm-accounts-stage { padding: 32px 0; }
@@ -1659,7 +1684,7 @@ html[data-theme="dark"] .mkt-nav-end .mkt-btn.primary:hover { background: #0b0c0
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hm-float, .hm-live i, .hm-cash-sync i, .hm-report, .hm-chit-bid strong, .hm-bids li, .hm-pos-paper li, .hm-chat-pair, .hm-bubble.is-typing i, .hm-donut-center strong, .hm-hero h1 span::after { animation: none !important; }
+  .hm-float, .hm-live i, .hm-ai-live i, .hm-ai-spine i, .hm-ai-you p, .hm-cash-sync i, .hm-report, .hm-chit-bid strong, .hm-bids li, .hm-pos-paper li, .hm-chat-pair, .hm-bubble.is-typing i, .hm-donut-center strong, .hm-hero h1 span::after { animation: none !important; }
   .hm-donut-arc, .hm-split-track i { transition: none !important; }
   .hm-cashbook .hm-cash-window ul { animation: none !important; }
   .hm-module-link svg { transition: none; }

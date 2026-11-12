@@ -355,22 +355,50 @@ function AccountsModule() {
   </article></Section>;
 }
 
-const AI_SIGNALS = [
-  { icon: MessageCircle, label: "Ask Finny" },
-  { icon: PenLine, label: "Tell Finny" },
-  { icon: ScanLine, label: "Bill scan" },
-  { icon: Sparkles, label: "AI Review" },
+const AI_SCENES = [
+  { icon: MessageCircle, label: "Ask Finny", you: "You asked", input: "Who has not paid today?", read: "From today’s collections", out: "An answer you can open", guard: "Asking never posts" },
+  { icon: PenLine, label: "Tell Finny", you: "You wrote", input: "Paid shop rent ₹25,000 by UPI", read: "Drafts a balanced entry", out: "Ready for you to post", guard: "Nothing is saved until you post" },
+  { icon: ScanLine, label: "Bill scan", you: "You added", input: "A supplier bill, photo or PDF", read: "Reads the bill into a draft", out: "A purchase draft", guard: "You save it" },
+  { icon: Sparkles, label: "AI Review", you: "It checked", input: "Cash, expenses, GST, and stock", read: "Reason, confidence, and a link", out: "What needs a look", guard: "You decide what happens next" },
 ];
 
 function AiSignal() {
-  return <Section id="ai" flip><article className="hm-ai">
-    <Tag icon={Sparkles}>AI</Tag>
-    <h3>Built with AI. Not a normal books app.</h3>
-    <p className="hm-module-lead">MyFinTracker reads your own records and points out what needs a look: who to collect, cash that may run short, a bill to draft, a scheme that is slipping. You still post, approve, and send. Nothing is filed or sent by itself.</p>
-    <ul className="hm-ai-signals">
-      {AI_SIGNALS.map(item => <li key={item.label}><item.icon size={16} aria-hidden="true" />{item.label}</li>)}
-    </ul>
-    <More to={featurePath("ai")}>See how AI works</More>
+  const [ref, live] = useLive();
+  const step = useLoop(live, AI_SCENES.length, 2600, 2600);
+  const scene = AI_SCENES[step];
+  const Icon = scene.icon;
+  return <Section id="ai" flip><article ref={ref} className="hm-module hm-ai" data-live={live}>
+    <div className="hm-ai-stage" aria-hidden="true">
+      <div className="hm-ai-top">
+        <span className="hm-ai-live"><i /> {scene.label}</span>
+        <ol className="hm-ai-dots">
+          {AI_SCENES.map((item, index) => <li key={item.label} data-on={index === step ? "true" : "false"} />)}
+        </ol>
+      </div>
+      <div className="hm-ai-flow">
+        <div className="hm-ai-card hm-ai-you" key={scene.input}>
+          <small><Icon size={14} /> {scene.you}</small>
+          <p>{scene.input}</p>
+        </div>
+        <div className="hm-ai-spine">
+          <i /><span><Sparkles size={14} /></span><i />
+          <em>{scene.read}</em>
+        </div>
+        <div className="hm-ai-card hm-ai-out">
+          <span key={scene.out}>
+            <strong>{scene.out}</strong>
+            <small>{scene.guard}</small>
+          </span>
+          <b>You confirm</b>
+        </div>
+      </div>
+    </div>
+    <div className="hm-ai-copy">
+      <Tag icon={Sparkles}>AI</Tag>
+      <h3>Built with AI. Not a normal books app.</h3>
+      <p className="hm-module-lead">MyFinTracker reads your own records and points out what needs a look: who to collect, cash that may run short, a bill to draft, a scheme that is slipping. You still post, approve, and send. Nothing is filed or sent by itself.</p>
+      <More to={featurePath("ai")}>See how AI works</More>
+    </div>
   </article></Section>;
 }
 
