@@ -1,7 +1,6 @@
 // Public website paths. Authenticated workspace paths stay in features/workspace/paths.js.
 export const marketingPaths = {
   home: "/",
-  features: "/features",
   solutions: "/solutions",
   how: "/how-it-works",
   security: "/security",
