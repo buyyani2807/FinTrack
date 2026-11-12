@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useOutletContext } from "react-rout
 import { BookOpenText, Coins, HandCoins, House, IndianRupee, Menu, Shield, ShoppingCart, Sparkles, X } from "lucide-react";
 import { APP_MODULES, moduleForFeature } from "./catalog.js";
 import marketingStyles from "./marketing.css?inline";
+import { BrandMark } from "../../components/BrandMark.jsx";
 import { OPEN_PRODUCT, PRODUCT_NAME } from "../../lib/brand.js";
 import { featurePath, marketingPaths } from "./paths.js";
 
@@ -41,7 +42,12 @@ const COMPANY_LINKS = [
 ];
 
 function Brand({ onClick }) {
-  return <Link to={marketingPaths.home} className="mkt-brand" aria-label={`${PRODUCT_NAME} home`} onClick={onClick}>MyFin<span>Tracker</span></Link>;
+  return (
+    <Link to={marketingPaths.home} className="mkt-brand" aria-label={`${PRODUCT_NAME} home`} onClick={onClick}>
+      <BrandMark size={28} />
+      <span className="mkt-brand-text">MyFin<span>Tracker</span></span>
+    </Link>
+  );
 }
 
 export function MarketingLayout() {

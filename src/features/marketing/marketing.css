@@ -91,15 +91,19 @@ html[data-theme="dark"] .mkt {
   flex-wrap: wrap;
 }
 .mkt-brand {
-  display: flex;
-  align-items: baseline;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   margin-right: 12px;
   color: var(--mkt-ink);
   font-family: Poppins, var(--ft-font-brand, sans-serif);
   font-weight: 700;
   font-size: var(--ft-type-section);
   letter-spacing: -0.04em;
+  text-decoration: none;
 }
+.mkt-brand .ft-brand-mark { width: 28px; height: 28px; border-radius: 22%; box-shadow: none; }
+.mkt-brand-text { display: inline-flex; align-items: baseline; line-height: 1; }
 .mkt-brand span { color: var(--mkt-accent-ink); }
 .mkt-links { display: flex; align-items: center; flex: 1 1 280px; flex-wrap: wrap; gap: 2px; min-width: 0; }
 .mkt-nav-item, .mkt-nav-label { display: inline-flex; align-items: center; gap: 6px; }

@@ -4,6 +4,7 @@ import { BookOpenText, CalendarDays, CalendarRange, Coins, LayoutGrid, Lock, Log
 import { Button } from "../../components/ui.jsx";
 import { ThemeToggle } from "../../components/ThemeToggle.jsx";
 import { assertModuleEntitled } from "../commercial/entitlements.js";
+import { BrandWordmark } from "../../components/BrandMark.jsx";
 import { ASK_LABEL } from "../../lib/brand.js";
 import { financeSectionPath, isWithin, workspacePaths } from "./paths.js";
 
@@ -60,11 +61,11 @@ export function FinancierNav({ access, orgSettings = {}, businessName = "", logo
   return <>
   <header className="ft-mobile-header">
     <button type="button" className="ft-icon-btn ft-mobile-menu-btn" aria-label="Open menu" aria-expanded={drawerOpen} aria-controls="workspace-nav" onClick={() => setDrawerKey(location.key)}><Menu size={22} aria-hidden="true" /></button>
-    <span className="ft-brand ft-mobile-brand"><span className="ft-brand-strong">MyFin</span>Tracker</span>
+    <BrandWordmark className="ft-mobile-brand" markSize={26} />
   </header>
   {drawerOpen && <div className="ft-nav-backdrop" aria-hidden="true" onClick={closeDrawer} />}
   <aside className={`financier-nav${drawerOpen ? " is-open" : ""}`} id="workspace-nav" aria-label="Workspace">
-    <div className="nav-title ft-brand"><span className="ft-brand-strong">MyFin</span>Tracker</div>
+    <div className="nav-title"><BrandWordmark markSize={28} /></div>
     <button type="button" className="ft-icon-btn ft-nav-close" aria-label="Close menu" onClick={closeDrawer}><X size={20} aria-hidden="true" /></button>
     {!access.isAccountsUser && <Button className={itemClass(isActive(workspacePaths.dashboard))} onClick={() => go(workspacePaths.dashboard)}><NavLabel icon={LayoutGrid} long="Dashboard" short="Dash" /></Button>}
     {access.showDaily && <Button className={itemClass(isActive(workspacePaths.daily), access.locked?.daily)} onClick={() => (access.locked?.daily ? openEntitled("daily", workspacePaths.daily) : go(financeSectionPath("daily", "collections")))}><NavLabel icon={CalendarDays} long={<>Daily Finance{access.locked?.daily ? <LockedHint /> : null}</>} short="Daily" /></Button>}

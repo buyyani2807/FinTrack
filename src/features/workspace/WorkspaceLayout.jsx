@@ -7,6 +7,7 @@ import { resolveWorkspaceModuleState, orgSettingsWithModuleState } from "../comm
 import { listOrganizationModuleEntitlements } from "../commercial/moduleEntitlementsRepository.js";
 import { TrialBanner } from "../commercial/TrialBanner.jsx";
 import { subscriptionPathAllowed, workspaceAccessAllowed } from "../commercial/trial.js";
+import { BrandWordmark } from "../../components/BrandMark.jsx";
 import { TopActions } from "../../components/TopActions.jsx";
 import { PageReveal } from "../../components/ui/PageReveal.jsx";
 import { RevealProvider } from "../../components/ui/Reveal.jsx";
@@ -236,7 +237,7 @@ export function WorkspaceLayout() {
         {/* CA / Accounts-team: full-viewport Accounts (no Financier sidebar). Theme + logout stay in the slim bar. */}
         {access.isAccountsUser && !subscriptionLocked ? (
           <header className="ft-accounts-team-bar">
-            <span className="ft-brand"><span className="ft-brand-strong">MyFin</span>Tracker <span className="ft-wordmark-suffix">Accounts</span></span>
+            <BrandWordmark suffix="Accounts" markSize={26} />
             <span className="ft-accounts-team-biz">{accountsCompanyName || (access.isAccountsUser ? "No company assigned" : workspace?.businessName) || "Accounts"}</span>
             <TopActions logout={logout} />
           </header>
