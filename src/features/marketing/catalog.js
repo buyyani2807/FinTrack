@@ -2,11 +2,12 @@
 // `appPath` is where a signed-in owner opens that work. Login is required first.
 
 export const FEATURE_CATEGORIES = [
-  { id: "accounts", label: "Accounts", blurb: "Company books, Counter POS billing that continues for 48 hours offline, payroll, stock, bill proofs on expenses, a workspace backup, and a page to hand the month to the accountant." },
+  { id: "accounts", label: "Accounts", blurb: "Company books, Counter POS billing that continues for 48 hours offline, payroll, stock, bill proofs on expenses, and a page to hand the month to the accountant." },
   { id: "intelligence", label: "AI", blurb: "Scan a supplier bill from a photo or a PDF and review the purchase draft. Also cash-flow outlook, expense and supplier price changes, collection priorities, unusual activity, GST review, month-end readiness, bank matching, stock forecasts, expired and near-expiry stock, till alerts on Counter, and chit scheme health. Each suggestion shows its reason and a link to the record. You decide what happens next." },
   { id: "finance", label: "Finance", blurb: "Daily and monthly collections, a MyFinTracker credit score from each customer’s payments, collection reports, and a profit and loss view for the lending book." },
   { id: "chit", label: "Chit Fund", blurb: "Schemes, bidding, dividends, month statements, and commission income." },
   { id: "portals", label: "Portals", blurb: "Owner sign in opens the owner workspace. Agents, customers, and members have their own login." },
+  { id: "workspace", label: "Workspace", blurb: "The owner backs up Finance, Cashbook, Chit Fund, and Accounts from Settings — not from any one module — and can restore if the live data is wrong." },
 ];
 
 export const FEATURES = [
@@ -393,12 +394,11 @@ export const FEATURES = [
       "GST preparation, bank reconciliation, and statements",
       "A bill photo or PDF kept on the expense as proof",
       "Expired and near-expiry stock on Inventory",
-      "Workspace backup and restore from Settings",
       "Tell Finny what happened in a sentence and get the entry drafted",
       "Setup by answering a few questions, and migration from Tally, Zoho Books, Book Keeper, or Excel",
     ],
     benefits: ["One company book for a small or medium business", "The numbers that matter are on the first screen", "You always see the company you opened", "A voucher, a bank match, and a period lock wait for you"],
-    related: ["counter-pos", "vouchers", "ai-bookkeeper", "ai-migration", "workspace-backup", "expired-stock"],
+    related: ["counter-pos", "vouchers", "ai-bookkeeper", "ai-migration", "bill-proofs", "expired-stock"],
     appPath: "/accounting/overview",
     icon: "Building2",
   },
@@ -942,7 +942,7 @@ export const FEATURES = [
   },
   {
     slug: "workspace-backup",
-    category: "accounts",
+    category: "workspace",
     name: "Workspace backup & restore",
     summary: "Back up Finance, Cashbook, Chit Fund, and Accounts, then restore if the live data is wrong.",
     problem: "A bad import, a mistaken restore, or a day of wrong entries should not be the only copy of the workspace.",
@@ -969,7 +969,7 @@ export const FEATURES = [
         text: "Restore replaces the live records for the modules in that backup. A safety checkpoint is the live workspace just before the restore, so you can undo. Only the owner of this business can create or restore a backup. Another organisation’s data is never part of this file.",
       },
     ],
-    related: ["audit-trail", "period-locking", "ai-migration"],
+    related: ["dashboard", "cashbook", "accounts-overview", "period-locking"],
     appPath: "/settings/backup",
     icon: "ArchiveRestore",
   },
@@ -1552,7 +1552,7 @@ export const MODULE_FEATURES = {
   "accounts-overview": [
     "chart-of-accounts", "ledger", "vouchers", "trade-documents", "receivables", "party-profiles", "payables",
     "cashbook", "bank-reconciliation", "trial-balance", "profit-and-loss", "expenses", "payroll", "balance-sheet", "cash-flow",
-    "inventory", "expired-stock", "item-profit", "gst-preparation", "audit-trail", "period-locking", "workspace-backup", "bill-proofs", "for-the-ca",
+    "inventory", "expired-stock", "item-profit", "gst-preparation", "audit-trail", "period-locking", "bill-proofs", "for-the-ca",
   ],
   "counter-pos": ["offline-billing", "counter-ai"],
   ai: [

@@ -31,7 +31,7 @@ export function FeaturesPage() {
       <div className="mkt-wrap">
         <Reveal as="p" className="mkt-kicker">Features</Reveal>
         <Reveal as="h1" index={1}>Start with Accounts and AI.</Reveal>
-        <Reveal as="p" className="mkt-lead" index={2}>Company books for small and medium businesses, including Counter POS billing that continues for 48 hours without internet, a supplier bill scanned from a photo or a PDF, bill proofs on expenses, and a workspace backup. Then the suggestions that read those records — including stock that may run out or expire. Collections and chit funds are in the same login.</Reveal>
+        <Reveal as="p" className="mkt-lead" index={2}>Company books for small and medium businesses, including Counter POS billing that continues for 48 hours without internet, a supplier bill scanned from a photo or a PDF, and bill proofs on expenses. Then the suggestions that read those records — including stock that may run out or expire. Collections and chit funds are in the same login. The owner backs up every module from Settings.</Reveal>
         <Reveal className="mkt-tabs" index={3}>
           {FEATURE_CATEGORIES.map(category => <a key={category.id} href={`#${category.id}`}>{category.label}</a>)}
         </Reveal>
@@ -39,12 +39,12 @@ export function FeaturesPage() {
     </header>
     {FEATURE_CATEGORIES.map(category => <section key={category.id} id={category.id} className="mkt-section">
       <div className="mkt-wrap">
-      <div className="mkt-split mkt-cat">
+      <div className={CATEGORY_SCENE[category.id] ? "mkt-split mkt-cat" : "mkt-cat"}>
         <div>
           <Reveal as="h2">{category.label}</Reveal>
           <Reveal as="p" className="mkt-lead" index={1}>{category.blurb}</Reveal>
         </div>
-        <Reveal index={1} duration={1.1}><ProductPreview scene={CATEGORY_SCENE[category.id]} /></Reveal>
+        {CATEGORY_SCENE[category.id] ? <Reveal index={1} duration={1.1}><ProductPreview scene={CATEGORY_SCENE[category.id]} /></Reveal> : null}
       </div>
       <div className="mkt-grid three">
         {featuresInCategory(category.id).map((feature, index) => <Reveal as="article" key={feature.slug} className="mkt-card" index={index % 3}>

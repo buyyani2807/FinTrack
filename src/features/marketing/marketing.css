@@ -1080,6 +1080,13 @@ html[data-theme="dark"] .hm-home .mkt-btn:not(.primary):not(.light) { border-col
 .hm-accounts-foot .hm-points { grid-auto-flow: column; gap: 28px; margin: 0; }
 .hm-accounts-foot .hm-module-link { margin-top: 0; }
 
+/* Workspace backup sits after the modules, not inside Accounts. */
+.hm-backup { max-width: 760px; margin: 0 auto; text-align: center; }
+.hm-backup-mods { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 28px 0 0; padding: 0; list-style: none; }
+.hm-backup-mods li { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border: 2px solid var(--hm-ink); border-radius: 999px; font-size: var(--ft-type-secondary); font-weight: 700; }
+.hm-backup .hm-points { max-width: 42ch; margin-left: auto; margin-right: auto; text-align: left; }
+.hm-backup .hm-module-link { margin-top: 28px; }
+
 /* Ask Finny keeps its own layout; only the section spacing follows the page. */
 .hm-ask { padding: 104px 0; background: var(--hm-paper); }
 .mkt .hm-ask .mkt-section-head h2 { max-width: 20ch; color: var(--hm-head, var(--hm-ink)); font-size: clamp(32px, 4vw, 48px); font-weight: 800; letter-spacing: -0.04em !important; }

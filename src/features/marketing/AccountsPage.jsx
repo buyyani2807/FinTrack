@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Link } from "react-router";
-import { AlertTriangle, ArchiveRestore, ArrowRight, Check, Paperclip } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, Paperclip } from "lucide-react";
 import { Reveal, RevealProvider } from "../../components/ui/Reveal.jsx";
 import { featureBySlug } from "./catalog.js";
 import { FeatureIcon } from "./icons.jsx";
@@ -39,7 +39,7 @@ export function AccountsPage({ feature }) {
     <ModuleHero
       name="Accounts"
       title="Billing, books, and GST preparation, in one company book."
-      lead="Bill from Counter POS — including 48 hours offline — post vouchers, keep stock and payroll, attach bill proofs, back up the workspace, and hand a GST-ready month to your CA."
+      lead="Bill from Counter POS — including 48 hours offline — post vouchers, keep stock and payroll, attach bill proofs, and hand a GST-ready month to your CA."
       appPath={feature.appPath}
       scene="accounts-overview"
       frameLabel="Accounts · Overview"
@@ -127,14 +127,6 @@ export function AccountsPage({ feature }) {
               <p><span>Pull from sale. Dates, not a forecast.</span></p>
             </div>
           </Tile>
-          <Tile slug="workspace-backup" title="Back up the workspace and restore if the live data is wrong.">
-            <div className="fx-card fx-rows fx-checks">
-              <p><ArchiveRestore size={14} /> Backup & restore</p>
-              <p><Check size={14} strokeWidth={3} /><span>Nightly at midnight IST</span></p>
-              <p><Check size={14} strokeWidth={3} /><span>Restore takes a checkpoint first</span></p>
-              <p><span>Copies older than 14 days are removed</span></p>
-            </div>
-          </Tile>
         </div>
         <div className="fx-also">
           <Reveal as="p" className="fx-eyebrow">Also in Accounts</Reveal>
@@ -153,6 +145,6 @@ export function AccountsPage({ feature }) {
     </section>
 
     <ModuleFaq title="Accounts, answered." questions={["Can I use it only for accounting?", "Does it have a POS / billing counter?", "Can I bill without internet?", "Can I keep a bill as proof?"]} />
-    <ModuleClosing title="Keep the company book in one login." appPath={feature.appPath} points={["Counter POS with 48-hour offline billing", "Bill proofs and workspace backup", "A page for your CA"]} />
+    <ModuleClosing title="Keep the company book in one login." appPath={feature.appPath} points={["Counter POS with 48-hour offline billing", "Bill proofs on expenses", "A page for your CA"]} />
   </div></ModuleParts></RevealProvider>;
 }
