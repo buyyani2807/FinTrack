@@ -21,7 +21,7 @@
       </feMerge>
     </filter>
   </defs>
-  <rect width="512" height="512" rx="112" fill="url(#mft-bg)"/>
+  <rect width="512" height="512" fill="url(#mft-bg)"/>
   <rect x="28" y="28" width="456" height="456" rx="96" fill="none" stroke="rgba(110,231,216,0.14)" stroke-width="2"/>
   <g filter="url(#mft-glow)">
     <rect x="108" y="292" width="52" height="112" rx="14" fill="url(#mft-bar)" opacity="0.72"/>
