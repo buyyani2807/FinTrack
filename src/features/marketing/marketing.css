@@ -679,6 +679,7 @@ html[data-theme="dark"] .mkt-shot { border-color: #4a6274; background: #101820; 
 }
 
 .mkt-page-hero { padding: 48px 0 8px; }
+.mkt-page-hero.has-note + .mkt-section { padding-top: 16px; }
 .mkt-detail { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr); gap: 22px; align-items: start; }
 .mkt-legal { display: grid; gap: 16px; max-width: 72ch; }
 .mkt-list { margin: 8px 0 0; padding-left: 18px; color: var(--mkt-muted); }
@@ -705,6 +706,15 @@ html[data-theme="dark"] .mkt-shot { border-color: #4a6274; background: #101820; 
   color: var(--mkt-ink);
   font-size: var(--ft-type-secondary);
 }
+.mkt-note h2 { margin: 0 0 8px; font-size: var(--ft-type-card); letter-spacing: -0.02em; }
+.mkt-note p { margin: 0; }
+.mkt-notes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+.mkt-notes .mkt-note { margin-top: 0; min-width: 0; }
 .mkt-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
 .mkt-tabs a {
   padding: 8px 12px;

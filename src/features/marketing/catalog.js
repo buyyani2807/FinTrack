@@ -7,6 +7,7 @@ export const FEATURE_CATEGORIES = [
   { id: "finance", label: "Finance", blurb: "Daily and monthly collections, a MyFinTracker credit score from each customer’s payments, collection reports, and a profit and loss view for the lending book." },
   { id: "chit", label: "Chit Fund", blurb: "Schemes, bidding, dividends, month statements, and commission income." },
   { id: "portals", label: "Portals", blurb: "Owner sign in opens the owner workspace. Agents, customers, and members have their own login." },
+  { id: "workspace", label: "Workspace", blurb: "The owner backs up Finance, Cashbook, Chit Fund, and Accounts from Settings — not from any one module — and can restore if the live data is wrong." },
 ];
 
 export const FEATURES = [
@@ -935,9 +936,38 @@ export const FEATURES = [
     how: ["Choose the dates to lock.", "Save the lock.", "Reopen it yourself when a correction is actually needed."],
     capabilities: ["Lock a date range", "Blocked posting into a locked period", "Reopen when you decide"],
     benefits: ["Closed dates stay closed", "A correction is explicit", "The lock is yours to lift"],
-    related: ["audit-trail", "for-the-ca", "trial-balance"],
+    related: ["audit-trail", "for-the-ca", "trial-balance", "workspace-backup"],
     appPath: "/accounting/setup",
     icon: "Lock",
+  },
+  {
+    slug: "workspace-backup",
+    category: "workspace",
+    name: "Workspace backup & restore",
+    summary: "Back up Finance, Cashbook, Chit Fund, and Accounts, then restore if the live data is wrong.",
+    problem: "A bad import, a mistaken restore, or a day of wrong entries should not be the only copy of the workspace.",
+    how: [
+      "Open Settings → Backup & restore. Only the business owner can manage backups.",
+      "Create a backup now, or leave nightly backups on at 00:00 India time.",
+      "Download a copy to keep offline, or restore into this workspace. Restore saves a safety checkpoint first.",
+    ],
+    capabilities: [
+      "Manual backup of every module that has data",
+      "Nightly backup at midnight IST, which you can turn off",
+      "Download the snapshot as a JSON file",
+      "Restore into this workspace, with a safety checkpoint taken first",
+      "Copies older than 14 days are removed, including manual backups and safety checkpoints",
+    ],
+    benefits: [
+      "A bad day can be rolled back from a recent copy",
+      "Restore does not silently overwrite without a checkpoint",
+      "Nightly copies do not pile up forever",
+    ],
+    noteTitle: "What a restore does",
+    note: "Restore replaces the live records for the modules in that backup. A safety checkpoint is the live workspace just before the restore, so you can undo. Only the owner of this business can create or restore a backup. Another organisation’s data is never part of this file.",
+    related: ["dashboard", "cashbook", "accounts-overview", "period-locking"],
+    appPath: "/settings/backup",
+    icon: "ArchiveRestore",
   },
   {
     slug: "for-the-ca",
@@ -1579,7 +1609,7 @@ export const SOLUTIONS = [
   {
     title: "Small and medium businesses",
     text: "Bring the chart of accounts, GST preparation, banking, inventory, receivables, and payables into one company book.",
-    features: ["accounts-overview", "bank-reconciliation"],
+    features: ["accounts-overview", "workspace-backup", "bank-reconciliation"],
   },
 ];
 

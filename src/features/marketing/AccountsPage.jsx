@@ -6,8 +6,7 @@ import { featureBySlug } from "./catalog.js";
 import { FeatureIcon } from "./icons.jsx";
 import { ModeSwitch, ModuleClosing, ModuleFaq, ModuleHero, SectionHead, Tile } from "./ModuleKit.jsx";
 import { ModuleParts } from "./ModuleParts.jsx";
-import { usePartLink } from "./moduleParts.js";
-import { featurePath } from "./paths.js";
+import { useFeaturePath, usePartLink } from "./moduleParts.js";
 
 // Sample figures in the tile pictures; the till total is the sum of its lines.
 const TILL = [
@@ -29,7 +28,8 @@ const MODES = [
 
 function AlsoLink({ item }) {
   const openPart = usePartLink(item.slug);
-  return <Link to={featurePath(item.slug)} onClick={openPart} aria-haspopup={openPart ? "dialog" : undefined}><FeatureIcon name={item.icon} size={16} />{item.name}<ArrowRight size={14} aria-hidden="true" /></Link>;
+  const to = useFeaturePath(item.slug);
+  return <Link to={to} onClick={openPart} aria-haspopup={openPart ? "dialog" : undefined}><FeatureIcon name={item.icon} size={16} />{item.name}<ArrowRight size={14} aria-hidden="true" /></Link>;
 }
 
 export function AccountsPage({ feature }) {

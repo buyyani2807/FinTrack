@@ -37,7 +37,7 @@ export function ModuleParts({ module, children }) {
     requestAnimationFrame(() => target?.focus?.());
   }, [setParams]);
 
-  const value = useMemo(() => ({ open }), [open]);
+  const value = useMemo(() => ({ open, module }), [open, module]);
   return <ModulePartsContext.Provider value={value}>
     {children}
     {feature ? <PartPanel module={module} feature={feature} onOpen={open} onClose={close} /> : null}
@@ -112,7 +112,7 @@ function PartPanel({ module, feature, onOpen, onClose }) {
           {feature.benefits.map(item => <li key={item}><Check size={14} strokeWidth={3} aria-hidden="true" />{item}</li>)}
         </ul>
 
-        <Link className="fx-sheet-full" to={featurePath(feature.slug)}>Open the full {feature.name} page <ExternalLink size={14} aria-hidden="true" /></Link>
+        <Link className="fx-sheet-full" to={featurePath(feature.slug, module)}>Open the full {feature.name} page <ExternalLink size={14} aria-hidden="true" /></Link>
       </div>
 
       <footer className="fx-sheet-foot">

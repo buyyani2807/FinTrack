@@ -1,5 +1,7 @@
 import { createContext, useContext } from "react";
 
+import { featurePath } from "./paths.js";
+
 // Set by <ModuleParts> on a module overview page. Feature links on that page open the part panel instead of a new page.
 export const ModulePartsContext = createContext(null);
 
@@ -13,4 +15,10 @@ export function usePartLink(slug) {
     event.preventDefault();
     parts.open(slug, event.currentTarget);
   };
+}
+
+// Full-page address for a feature, grouped under the module page that rendered the link.
+export function useFeaturePath(slug) {
+  const parts = useContext(ModulePartsContext);
+  return featurePath(slug, parts?.module);
 }

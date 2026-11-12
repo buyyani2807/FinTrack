@@ -17,6 +17,11 @@ export const marketingPaths = {
 
 const MARKETING_ROOTS = [
   "/features",
+  "/finance",
+  "/auction-chit",
+  "/accounts-overview",
+  "/counter-pos",
+  "/ai",
   "/solutions",
   "/how-it-works",
   "/security",
@@ -45,6 +50,19 @@ export function isGuestThemePath(pathname) {
   return path === "/login" || path === "/pay" || isMarketingPath(path);
 }
 
-export function featurePath(slug) {
+// Nav modules live at /finance, /auction-chit, and so on.
+// A feature inside a module lives at /finance/features/credit-score.
+import { MODULE_FEATURES, moduleForFeature } from "./catalog.js";
+
+const MODULE_PAGE_SLUGS = new Set(["finance", "auction-chit", "accounts-overview", "counter-pos", "ai"]);
+
+function moduleOwns(module, slug) {
+  return MODULE_PAGE_SLUGS.has(module) && (MODULE_FEATURES[module] || []).includes(slug);
+}
+
+export function featurePath(slug, parent) {
+  if (MODULE_PAGE_SLUGS.has(slug)) return `/${slug}`;
+  const module = parent && moduleOwns(parent, slug) ? parent : moduleForFeature(slug);
+  if (module && MODULE_PAGE_SLUGS.has(module)) return `/${module}/features/${slug}`;
   return `/features/${slug}`;
 }

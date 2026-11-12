@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Link, Navigate, useParams } from "react-router";
+import { Link, Navigate, useLocation, useParams } from "react-router";
 import { Reveal, RevealProvider } from "../../components/ui/Reveal.jsx";
 import { APP_MODULES, featureBySlug, relatedFeatures } from "./catalog.js";
 import { AccountsPage } from "./AccountsPage.jsx";
@@ -9,12 +9,16 @@ import { FinancePage } from "./FinancePage.jsx";
 import { ModulePager } from "./ModuleKit.jsx";
 import { PosPage } from "./PosPage.jsx";
 import { FeatureIcon } from "./icons.jsx";
-import { featurePath, marketingPaths } from "./paths.js";
+import { featurePath, marketingPaths, normalizePath } from "./paths.js";
 import { ProductCta } from "./ProductCta.jsx";
 import { ProductPreview, sceneForFeature } from "./ProductPreview.jsx";
 
 export function FeatureDetailPage() {
-  const { slug } = useParams();
+  const params = useParams();
+  const location = useLocation();
+  const nested = location.pathname.match(/^\/(finance|auction-chit|accounts-overview|counter-pos|ai)\/features\/([^/]+)/);
+  const slug = params.slug || (nested ? nested[2] : normalizePath(location.pathname).slice(1));
+  const parent = nested ? nested[1] : null;
   const feature = featureBySlug(slug);
   const moduleLabel = APP_MODULES.find(item => item.slug === feature?.slug)?.label || feature?.name;
   useEffect(() => { document.title = feature ? `${moduleLabel} — MyFinTracker` : "Feature — MyFinTracker"; }, [feature, moduleLabel]);
@@ -25,19 +29,29 @@ export function FeatureDetailPage() {
       <Link className="mkt-btn" to={marketingPaths.features}>Back to features</Link>
     </Reveal>;
   }
-  if (feature.slug !== slug) return <Navigate to={featurePath(feature.slug)} replace />;
+  if (normalizePath(location.pathname) !== featurePath(feature.slug, parent)) {
+    return <Navigate to={`${featurePath(feature.slug, parent)}${location.search}`} replace />;
+  }
   if (feature.slug === "finance") return <FinancePage feature={feature} />;
   if (feature.slug === "auction-chit") return <ChitPage feature={feature} />;
   if (feature.slug === "accounts-overview") return <AccountsPage feature={feature} />;
   if (feature.slug === "counter-pos") return <PosPage feature={feature} />;
   if (feature.slug === "ai") return <AiPage feature={feature} />;
   const related = relatedFeatures(feature);
+  const headingNotes = [
+    ...(feature.note
+      ? [{ title: feature.noteTitle, text: feature.note }]
+      : (feature.sections || []).map(section => ({ title: section.title, text: section.text }))),
+    ...(feature.advisory ? [{ title: "Advisory", text: "A forecast is an estimate shown with its assumptions. It is not a guarantee, and it is never written into the books." }] : []),
+  ];
   return <RevealProvider intent="landing">
-    <header className="mkt-page-hero">
+    <header className={headingNotes.length ? "mkt-page-hero has-note" : "mkt-page-hero"}>
       <div className="mkt-wrap">
         <Reveal as="p" className="mkt-kicker"><FeatureIcon name={feature.icon} size={16} /> {moduleLabel}</Reveal>
         <Reveal as="h1" index={1}>{feature.summary}</Reveal>
-        {feature.advisory && <Reveal as="p" className="mkt-note" index={2}>Advisory. A forecast is an estimate shown with its assumptions. It is not a guarantee, and it is never written into the books.</Reveal>}
+        {headingNotes.length > 1 ? <div className="mkt-notes">
+          {headingNotes.map(note => <Reveal as="article" className="mkt-note" key={note.title} index={2}><h2>{note.title}</h2><p>{note.text}</p></Reveal>)}
+        </div> : headingNotes.map(note => <Reveal as="article" className="mkt-note" key={note.title || note.text} index={2}>{note.title ? <h2>{note.title}</h2> : null}<p>{note.text}</p></Reveal>)}
       </div>
     </header>
     {feature.examples?.length > 0 && <section className="mkt-section">
@@ -48,16 +62,6 @@ export function FeatureDetailPage() {
           {feature.examples.map((group, index) => <Reveal as="article" key={group.group} className="mkt-card" index={index % 3}>
             <h3>{group.group}</h3>
             <ul className="mkt-list">{group.questions.map(question => <li key={question}>{question}</li>)}</ul>
-          </Reveal>)}
-        </div>
-      </div>
-    </section>}
-    {feature.sections?.length > 0 && <section className="mkt-section mkt-tint">
-      <div className="mkt-wrap">
-        <div className="mkt-grid three">
-          {feature.sections.map((section, index) => <Reveal as="article" key={section.title} className="mkt-card" index={index % 3}>
-            <h2>{section.title}</h2>
-            <p>{section.text}</p>
           </Reveal>)}
         </div>
       </div>
@@ -90,11 +94,11 @@ export function FeatureDetailPage() {
         </Reveal>
         <Reveal as="article" className="mkt-card" style={{ marginTop: 16 }}>
           <h2>Related</h2>
-          {related.map(item => <Link key={item.slug} to={featurePath(item.slug)} style={{ display: "block", marginTop: 10 }}>{item.name}</Link>)}
+          {related.map(item => <Link key={item.slug} to={featurePath(item.slug, parent)} style={{ display: "block", marginTop: 10 }}>{item.name}</Link>)}
         </Reveal>
       </div>
       </div>
     </section>
-    <ModulePager current={feature.slug} />
+    <ModulePager current={feature.slug} parent={parent} />
   </RevealProvider>;
 }

@@ -62,6 +62,16 @@ export function AppRoutes() {
           <Route path="/" element={<HomePage />} />
           <Route path="/features" element={<FeaturesPage />} />
           <Route path="/features/:slug" element={<FeatureDetailPage />} />
+          <Route path="/finance/features/:slug" element={<FeatureDetailPage />} />
+          <Route path="/auction-chit/features/:slug" element={<FeatureDetailPage />} />
+          <Route path="/accounts-overview/features/:slug" element={<FeatureDetailPage />} />
+          <Route path="/counter-pos/features/:slug" element={<FeatureDetailPage />} />
+          <Route path="/ai/features/:slug" element={<FeatureDetailPage />} />
+          <Route path="/finance" element={<FeatureDetailPage />} />
+          <Route path="/auction-chit" element={<FeatureDetailPage />} />
+          <Route path="/accounts-overview" element={<FeatureDetailPage />} />
+          <Route path="/counter-pos" element={<FeatureDetailPage />} />
+          <Route path="/ai" element={<FeatureDetailPage />} />
           <Route path="/solutions" element={<SolutionsPage />} />
           <Route path="/how-it-works" element={<HowItWorksPage />} />
           <Route path="/security" element={<SecurityPage />} />
