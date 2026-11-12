@@ -29,13 +29,13 @@ export function SubscribePage() {
     <div className="ft-sub">
       <header className="ft-mod-head">
         <p className="ft-mod-kicker">Subscription</p>
-        <h1>{ended ? ended.title : trial ? "Your 14-day free trial is running" : "Unlock modules"}</h1>
+        <h1>{ended ? ended.title : trial ? "Your 14-day free trial is running" : "Subscription status"}</h1>
         <p className="ft-sub-lead">
           {ended
             ? ended.preservation
             : trial
               ? `${trial.detail} After the trial, unlock only the modules you need. Your records stay.`
-              : "Unlock Daily + Monthly Finance, Chit Fund, Accounts, or Accounts + POS for this business. Your records stay either way."}
+              : "See which modules are active for this business. To pay and unlock more, open Modules."}
         </p>
         {(started || ends) && <p className="ft-sub-dates">
           {started ? <span>Trial started {started}</span> : null}
