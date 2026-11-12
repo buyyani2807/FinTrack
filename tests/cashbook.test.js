@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   aggregateOverview,
+  buildTransferHistory,
   cashbookPeriodRows,
   cashbookSourceKind,
   dateRangeForFilter,
@@ -53,6 +54,29 @@ test("period money-in and money-out omit internal transfers", () => {
   assert.equal(overview.moneyOut, 8500);
   assert.equal(overview.cash, 88500);
   assert.equal(overview.upi, 6500);
+});
+
+test("buildTransferHistory pairs transfer legs into one row", () => {
+  const transferId = "tr-1";
+  const rows = buildTransferHistory([
+    ...entries,
+    {
+      id: "5", ledgerAccountId: "cash", ledgerName: "Cash", entryDate: "2026-08-28", entryTime: "13:00",
+      moneyIn: 0, moneyOut: 4000, category: "Transfer", description: "Cash to UPI",
+      transactionType: "transfer_out", sourceType: "transfer", sourceId: transferId, createdAt: "2026-08-28T13:00:00Z",
+    },
+    {
+      id: "6", ledgerAccountId: "upi", ledgerName: "UPI", entryDate: "2026-08-28", entryTime: "13:00",
+      moneyIn: 4000, moneyOut: 0, category: "Transfer", description: "Transfer in",
+      transactionType: "transfer_in", sourceType: "transfer", sourceId: transferId, createdAt: "2026-08-28T13:00:00Z",
+    },
+  ], { from: "2026-08-28", to: "2026-08-28" });
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].fromName, "Cash");
+  assert.equal(rows[0].toName, "UPI");
+  assert.equal(rows[0].amount, 4000);
+  assert.equal(rows[0].description, "Cash to UPI");
+  assert.equal(rows[0].complete, true);
 });
 
 test("runningBalancesForLedger calculates closing balance chronologically", () => {

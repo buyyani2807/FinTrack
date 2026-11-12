@@ -17,6 +17,7 @@ import {
 import {
   EXPENSE_CATEGORIES,
   aggregateOverview,
+  buildTransferHistory,
   cashbookPeriodRows,
   dateRangeForFilter,
   todayIso,
@@ -117,6 +118,10 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
   }), [entries, range, search, accountFilter, directionFilter, sourceFilter, loanById]);
   const cashbookRows = periodView.rows;
 
+  const transferRows = useMemo(
+    () => buildTransferHistory(entries, range),
+    [entries, range],
+  );
   const expenseRows = useMemo(
     () => rangedEntries.filter(entry => entry.sourceType === "expense" || entry.category === "Expense" || EXPENSE_CATEGORIES.includes(entry.category)),
     [rangedEntries],
@@ -224,6 +229,7 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
       });
       setShowTransfer(false);
       setTransferForm(emptyTransferForm());
+      setNotice("Transfer recorded. It is not counted as income or expense.");
       refresh();
     } catch (err) {
       setError(err.message || "Could not save transfer.");
@@ -328,7 +334,7 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
         addBank={addBank}
         canWrite={canWrite}
       />}
-      {section === "transfers" && <TransfersSection openTransfer={openTransfer} canWrite={canWrite} />}
+      {section === "transfers" && <TransfersSection openTransfer={openTransfer} periodProps={periodProps} transferRows={transferRows} canWrite={canWrite} />}
       {section === "closing" && <DayClosingSection openClosing={openClosing} closings={closings} canWrite={canWrite} />}
       {section === "reports" && <CashbookReportsSection
         periodProps={periodProps}

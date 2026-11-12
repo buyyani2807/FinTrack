@@ -44,6 +44,53 @@ export const balancesByLedger = (ledgers, entries) =>
 
 export const isInternalTransfer = entry => ["transfer_in", "transfer_out"].includes(entry.transactionType);
 
+/**
+ * Pair transfer_out / transfer_in legs into one history row (by sourceId).
+ * Sorted newest first for the Transfers tab.
+ */
+export function buildTransferHistory(entries = [], range = null) {
+  const legs = (entries || []).filter(entry =>
+    entry.sourceType === "transfer" || isInternalTransfer(entry));
+  const inRange = range
+    ? legs.filter(entry => entry.entryDate >= range.from && entry.entryDate <= range.to)
+    : legs;
+  const bySource = new Map();
+  for (const entry of inRange) {
+    const key = entry.sourceId || `solo:${entry.id}`;
+    const bucket = bySource.get(key) || { out: null, in: null, extras: [] };
+    if (entry.transactionType === "transfer_out" || Number(entry.moneyOut || 0) > 0) bucket.out = entry;
+    else if (entry.transactionType === "transfer_in" || Number(entry.moneyIn || 0) > 0) bucket.in = entry;
+    else bucket.extras.push(entry);
+    bySource.set(key, bucket);
+  }
+  const rows = [];
+  for (const [sourceId, bucket] of bySource) {
+    const out = bucket.out;
+    const inn = bucket.in;
+    const amount = Number(out?.moneyOut || inn?.moneyIn || 0);
+    const entryDate = out?.entryDate || inn?.entryDate || "";
+    const createdAt = out?.createdAt || inn?.createdAt || "";
+    const description = [out?.description, inn?.description]
+      .map(value => String(value || "").trim())
+      .find(value => value && value !== "Transfer out" && value !== "Transfer in") || "";
+    rows.push({
+      id: sourceId,
+      entryDate,
+      createdAt,
+      fromLedgerId: out?.ledgerAccountId || "",
+      fromName: out?.ledgerName || "—",
+      toLedgerId: inn?.ledgerAccountId || "",
+      toName: inn?.ledgerName || "—",
+      amount,
+      description,
+      notes: out?.notes || inn?.notes || "",
+      complete: Boolean(out && inn),
+    });
+  }
+  return rows.sort((a, b) =>
+    `${b.entryDate}${b.createdAt}${b.id}`.localeCompare(`${a.entryDate}${a.createdAt}${a.id}`));
+}
+
 export const aggregateOverview = (ledgers, entries, range) => {
   const inRange = entries.filter(entry => entry.entryDate >= range.from && entry.entryDate <= range.to);
   const operating = inRange.filter(entry => !isInternalTransfer(entry));
