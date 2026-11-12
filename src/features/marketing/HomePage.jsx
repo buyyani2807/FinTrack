@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
-import { ArrowRight, BadgeCheck, Check, Gavel, MessageCircle, Smartphone, Sparkles, TrendingUp } from "lucide-react";
+import { ArrowRight, BadgeCheck, Check, Gavel, MessageCircle, Sparkles, TrendingUp, WifiOff } from "lucide-react";
 import { ChevronDown } from "lucide-react";
 import { Link } from "react-router";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../../components/ui/Accordion.jsx";
@@ -7,7 +7,7 @@ import { Reveal, RevealProvider } from "../../components/ui/Reveal.jsx";
 import { TypewriterText } from "../../components/ui/TypewriterText.jsx";
 import "../intelligence/assistant/assistant.css";
 import { FeatureIcon } from "./icons.jsx";
-import { ASK_LABEL, PRODUCT_NAME } from "../../lib/brand.js";
+import { PRODUCT_NAME } from "../../lib/brand.js";
 import { priceForPeriod } from "../commercial/moduleProducts.js";
 import { FAQ } from "./faq.js";
 import { HomeModules } from "./HomeModules.jsx";
@@ -286,7 +286,7 @@ const MONTHLY = priceForPeriod("monthly");
 
 const PROOF = [
   { icon: BadgeCheck, title: "5 modules", text: "in one login" },
-  { icon: Smartphone, title: "iPhone and Android", text: "installs from the browser" },
+  { icon: WifiOff, title: "Offline billing", text: "48 hours, then sync" },
   { icon: TrendingUp, title: "GST-ready books", text: "with a pack for your CA" },
   { icon: Sparkles, title: "AI that waits", text: "for you to confirm" },
 ];
@@ -406,11 +406,11 @@ export function HomePage() {
     <section className="hm-hero hm-flip">
       <div className="mkt-wrap hm-hero-grid">
         <div className="hm-hero-copy">
-          <Reveal as="a" href="#ask-finny" className="hm-pill">
-            <span className="hm-pill-tag">New</span> {ASK_LABEL} answers from your books <ArrowRight size={14} aria-hidden="true" />
+          <Reveal as={Link} to={featurePath("offline-billing")} className="hm-pill">
+            <span className="hm-pill-tag">New</span> Bill for 48 hours without internet <ArrowRight size={14} aria-hidden="true" />
           </Reveal>
           <Reveal as="h1" index={1}>Collections, chits, and company books.</Reveal>
-          <Reveal as="p" className="hm-hero-lead" index={2}>{PRODUCT_NAME} runs daily and monthly finance, chit funds, the cashbook, and GST-ready accounts together, on the web and on your phone.</Reveal>
+          <Reveal as="p" className="hm-hero-lead" index={2}>{PRODUCT_NAME} runs daily and monthly finance, chit funds, the cashbook, and GST-ready accounts together, on the web and on your phone. Counter keeps cash and UPI billing going for 48 hours offline, then syncs the sales.</Reveal>
           <Reveal className="hm-cta-row" index={3}>
             <ProductCta primary label="Start free trial" />
             <Link className="mkt-btn ghost" to={marketingPaths.contact}>Book a demo</Link>

@@ -1,4 +1,4 @@
-const updated = "28 August 2026";
+const updated = "12 November 2026";
 
 export const LEGAL_PAGES = {
   privacy: {
@@ -7,15 +7,15 @@ export const LEGAL_PAGES = {
     sections: [
       {
         heading: "Who we are",
-        body: "MyFinTracker is a business workspace for financiers and chit fund operators. Each financier organization manages its own customer and member records.",
+        body: "MyFinTracker is a business workspace for accounting, Counter POS billing, collections, and chit funds. Each organisation manages its own company books, customers, and members.",
       },
       {
         heading: "Data we collect",
-        body: "We store business account details, customer and chit member contact information, loan and chit payment records, optional KYC fields (Aadhaar and PAN stored encrypted server-side), collection notes, and portal login metadata. Financier accounts use email and password. Collection agents, finance customers, and chit members use an ID and PIN.",
+        body: "We store business account details, company books, inventory, POS bills, expense attachments, workspace backups, customer and chit member contact information, loan and chit payment records, optional KYC fields (Aadhaar and PAN stored encrypted server-side), collection notes, and portal login metadata. Owner accounts use email and password. Collection agents, finance customers, and chit members use an ID and PIN.",
       },
       {
         heading: "How we use data",
-        body: "Data is used only to operate lending and chit fund workflows for your organization: collections, statements, member portals, live bidding, and audit history. We do not sell customer data.",
+        body: "Data is used only to operate your organisation’s workspace: accounting, Counter billing, collections, statements, member portals, live bidding, and audit history. AI suggestions read records in the company you have open. Offline till bills stay on that device until they sync. We do not sell customer data.",
       },
       {
         heading: "Security",
@@ -41,7 +41,7 @@ export const LEGAL_PAGES = {
     sections: [
       {
         heading: "Service description",
-        body: "MyFinTracker provides software for daily and monthly finance tracking, chit fund administration, collection workflows, and customer or member portals. The service is provided to business operators, not as a regulated financial institution.",
+        body: "MyFinTracker provides software for company accounts and Counter POS billing, daily and monthly finance tracking, chit fund administration, collection workflows, and customer or member portals. The service is provided to business operators, not as a regulated financial institution.",
       },
       {
         heading: "Financier responsibilities",
@@ -53,7 +53,7 @@ export const LEGAL_PAGES = {
       },
       {
         heading: "Availability",
-        body: "The service is provided on a best-effort basis. Planned maintenance and third-party outages may affect availability. Maintain your own backups of critical exports.",
+        body: "The service is provided on a best-effort basis. Planned maintenance and third-party outages may affect availability. Counter can take cash and UPI bills on this device for up to 48 hours without internet; those bills post when the device is back online. Maintain your own backups of critical exports.",
       },
       {
         heading: "Prohibited use",

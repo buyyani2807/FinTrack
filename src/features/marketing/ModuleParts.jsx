@@ -94,7 +94,7 @@ function PartPanel({ module, feature, onOpen, onClose }) {
 
       <div className="fx-sheet-body" ref={body}>
         <p className="fx-sheet-lead">{feature.summary}</p>
-        <div className="fx-sheet-shot"><ProductPreview scene={sceneForFeature(feature)} /></div>
+        {sceneForFeature(feature) ? <div className="fx-sheet-shot"><ProductPreview scene={sceneForFeature(feature)} /></div> : null}
 
         <h3>How it works</h3>
         <ol className="fx-sheet-steps">

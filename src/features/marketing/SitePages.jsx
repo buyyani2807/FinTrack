@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { Check } from "lucide-react";
 import { Reveal, RevealProvider } from "../../components/ui/Reveal.jsx";
 import { MODULE_PRODUCT_LIST, priceForPeriod, priceForProduct } from "../commercial/moduleProducts.js";
+import { LEGAL_PAGES } from "../legal/content.js";
 import { SOLUTIONS, featureBySlug } from "./catalog.js";
 import { featurePath, marketingPaths } from "./paths.js";
 import { InstallGuide } from "./InstallGuide.jsx";
@@ -238,6 +239,36 @@ export function FounderPage() {
   </section>
   <PageClose />
   </RevealProvider>;
+}
+
+function LegalDoc({ view }) {
+  const page = LEGAL_PAGES[view];
+  if (!page) return null;
+  return <RevealProvider intent="content">
+    <section className="mkt-section">
+      <PageTitle title={`${page.title} — MyFinTracker`} />
+      <Reveal>
+        <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Legal</p>
+        <h1>{page.title}</h1>
+        <p className="mkt-lead">Last updated {page.updated}.</p>
+      </Reveal>
+      <div className="mkt-legal">
+        {page.sections.map(section => <Reveal as="article" key={section.heading} className="mkt-card">
+          <h2>{section.heading}</h2>
+          <p>{section.body}</p>
+        </Reveal>)}
+      </div>
+    </section>
+    <PageClose />
+  </RevealProvider>;
+}
+
+export function PrivacyPage() {
+  return <LegalDoc view="privacy" />;
+}
+
+export function TermsPage() {
+  return <LegalDoc view="terms" />;
 }
 
 export function ContactPage() {

@@ -21,6 +21,8 @@ export function SessionLayout() {
   const session = useFinTrackSession();
   const { legalView, isLoading, isPasswordRecovery, user, customerLoan, enterSession, enterCustomerSession, enterChitCustomerSession, logout } = session;
   const path = normalizePath(location.pathname);
+  const queryView = new URLSearchParams(location.search).get("view");
+  const queryLegal = queryView === "privacy" || queryView === "terms" ? queryView : null;
   const workspaceUser = user?.role === "financier" || user?.role === "agent";
   useLayoutEffect(() => {
     const guestUrl = isMarketingPath(path) || path === "/login";
@@ -31,7 +33,8 @@ export function SessionLayout() {
   const screen = node => <RevealProvider intent="functional"><PageReveal routeKey={`${path}${location.search}`}>{node}</PageReveal></RevealProvider>;
   const boot = node => <Suspense fallback={<LoadingScreen />}>{node}</Suspense>;
   const signIn = boot(screen(<FinancierAuth onLogin={enterSession} onCustomerLogin={enterCustomerSession} onChitCustomerLogin={enterChitCustomerSession} />));
-  if (legalView) return boot(screen(<LegalPage view={legalView} backLabel={path === "/" ? "Back to MyFinTracker" : "Back to sign in"} />));
+  if (queryLegal && isMarketingPath(path)) return <Navigate to={`/${queryLegal}`} replace />;
+  if ((legalView || queryLegal) && path === "/login") return boot(screen(<LegalPage view={legalView || queryLegal} backLabel="Back to sign in" />));
   if (isPasswordRecovery) return boot(screen(<PasswordRecovery />));
   if (user?.role === "chitCustomer") return boot(screen(<ChitCustomerPortal session={user.session} logout={logout} />));
   if (user && user.role !== "financier" && user.role !== "agent") {

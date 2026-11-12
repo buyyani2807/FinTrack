@@ -31,6 +31,8 @@ const PricingPage = withLazy(() => import("../features/marketing/SitePages.jsx")
 const AboutPage = withLazy(() => import("../features/marketing/SitePages.jsx"), "AboutPage", marketingFallback);
 const FounderPage = withLazy(() => import("../features/marketing/SitePages.jsx"), "FounderPage", marketingFallback);
 const ContactPage = withLazy(() => import("../features/marketing/SitePages.jsx"), "ContactPage", marketingFallback);
+const PrivacyPage = withLazy(() => import("../features/marketing/SitePages.jsx"), "PrivacyPage", marketingFallback);
+const TermsPage = withLazy(() => import("../features/marketing/SitePages.jsx"), "TermsPage", marketingFallback);
 
 const WorkspaceLayout = withLazy(() => import("../features/workspace/WorkspaceLayout.jsx"), "WorkspaceLayout", workspaceFallback);
 const FinanceRoute = withLazy(() => import("../features/workspace/routes/FinanceRoute.jsx"), "FinanceRoute", pageFallback);
@@ -67,6 +69,8 @@ export function AppRoutes() {
           <Route path="/about" element={<AboutPage />} />
           <Route path="/founder" element={<FounderPage />} />
           <Route path="/contact" element={<ContactPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
         </Route>
         <Route path="/login" element={<Navigate to="/dashboard" replace />} />
 

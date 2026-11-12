@@ -20,8 +20,8 @@ export function PosPage({ feature }) {
   return <RevealProvider intent="landing"><ModuleParts module="counter-pos"><div className="hm-home fx">
     <ModuleHero
       name="POS"
-      title="A billing counter that posts straight into your books."
-      lead="A till for walk-in and khata sales. Charge posts the sale, updates stock, and prints or shares the receipt. The till flags short stock, expiry, and khata risk before you charge."
+      title="A billing counter that still sells when the internet drops."
+      lead="Walk-in and khata sales post into the books. If the line drops, cash and UPI bills stay on this device for 48 hours. When internet is back, those sales sync into Accounts and stock."
       appPath={feature.appPath}
       scene="accounts-counter"
       frameLabel="Counter · Till"
@@ -39,6 +39,13 @@ export function PosPage({ feature }) {
                 {BILL.map(line => <li key={line.item}><span>{line.item}</span><strong>{line.amount}</strong></li>)}
               </ul>
               <span className="fx-charge">Charge ₹1,125</span>
+            </div>
+          </Tile>
+          <Tile slug="offline-billing" size="wide" title="No internet? Keep billing for 48 hours. Sales sync when you are back online.">
+            <div className="fx-card fx-rows">
+              <p><WifiOff size={14} /> Offline · 48 hours</p>
+              <p><span>Queued cash/UPI bills</span><strong>3</strong></p>
+              <p className="is-total"><span>When back online</span><strong>Sync</strong></p>
             </div>
           </Tile>
           <Tile tag="Payments" size="wide" title="Cash, UPI, bank, or a split, with change due on cash.">
@@ -80,13 +87,6 @@ export function PosPage({ feature }) {
               <p><span className="fx-off">—</span><span>Rest of Accounts</span></p>
             </div>
           </Tile>
-          <Tile tag="Offline" title="Paid bills queue when the line drops, then sync.">
-            <div className="fx-card fx-rows">
-              <p><WifiOff size={14} /> Offline</p>
-              <p><span>Queued bills</span><strong>3</strong></p>
-              <p className="is-total"><span>When back online</span><strong>Sync</strong></p>
-            </div>
-          </Tile>
           <Tile slug="inventory" title="Stock moves with every sale.">
             <div className="fx-card fx-stock">
               <div><span>Basmati Rice 5kg</span><i><em style={{ width: "72%" }} /></i></div>
@@ -112,7 +112,7 @@ export function PosPage({ feature }) {
       </div>
     </section>
 
-    <ModuleFaq title="POS, answered." questions={["Does it have a POS / billing counter?", "Does it have AI?", "Does it support GST?", "Can I use it only for accounting?"]} />
-    <ModuleClosing title="Open the counter in MyFinTracker." appPath={feature.appPath} points={["Cash, UPI, and khata", "Till alerts before you charge", "Stock moves with every sale"]} />
+    <ModuleFaq title="POS, answered." questions={["Does it have a POS / billing counter?", "Can I bill without internet?", "Does it have AI?", "Can I use it only for accounting?"]} />
+    <ModuleClosing title="Open the counter in MyFinTracker." appPath={feature.appPath} points={["48-hour offline billing, then sync", "Cash, UPI, and khata", "Till alerts before you charge"]} />
   </div></ModuleParts></RevealProvider>;
 }

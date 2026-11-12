@@ -141,8 +141,8 @@ export function MarketingLayout() {
         <h2>Access</h2>
         <Link to={signedIn ? "/dashboard" : marketingPaths.login}>{signedIn ? OPEN_PRODUCT : "Login"}</Link>
         <Link to={marketingPaths.pricing}>Pricing</Link>
-        <Link to="/?view=privacy">Privacy</Link>
-        <Link to="/?view=terms">Terms</Link>
+        <Link to={marketingPaths.privacy}>Privacy</Link>
+        <Link to={marketingPaths.terms}>Terms</Link>
       </div>
       </div>
       <div className="mkt-wrap mkt-footer-bottom">

@@ -2,7 +2,7 @@
 // `appPath` is where a signed-in owner opens that work. Login is required first.
 
 export const FEATURE_CATEGORIES = [
-  { id: "accounts", label: "Accounts", blurb: "Company books, Counter POS billing, payroll, stock, bill proofs on expenses, a workspace backup, and a page to hand the month to the accountant." },
+  { id: "accounts", label: "Accounts", blurb: "Company books, Counter POS billing that continues for 48 hours offline, payroll, stock, bill proofs on expenses, a workspace backup, and a page to hand the month to the accountant." },
   { id: "intelligence", label: "AI", blurb: "Scan a supplier bill from a photo or a PDF and review the purchase draft. Also cash-flow outlook, expense and supplier price changes, collection priorities, unusual activity, GST review, month-end readiness, bank matching, stock forecasts, expired and near-expiry stock, till alerts on Counter, and chit scheme health. Each suggestion shows its reason and a link to the record. You decide what happens next." },
   { id: "finance", label: "Finance", blurb: "Daily and monthly collections, with collection reports and a profit and loss view for the lending book." },
   { id: "chit", label: "Chit Fund", blurb: "Schemes, bidding, dividends, month statements, and commission income." },
@@ -403,7 +403,7 @@ export const FEATURES = [
       "Optional block when stock is short",
       "Till alerts for short stock, near-expiry items, khata risk, and the day’s pattern — advisory, they do not block Charge",
       "Cashier logins that open Counter only",
-      "Offline queue for paid till bills when the line drops, then sync when you are back online",
+      "Cash and UPI billing continues for 48 hours without internet; queued sales post when you are back online",
     ],
     benefits: [
       "The till and the books stay the same company",
@@ -424,10 +424,47 @@ export const FEATURES = [
         title: "Receipts you control",
         text: "After Charge, print an 80 mm thermal slip from the browser print dialog, or open WhatsApp with a clear shop-bill message. Nothing is sent until you confirm in WhatsApp or the print dialog.",
       },
+      {
+        title: "Offline for 48 hours",
+        text: "When the internet drops, cash and UPI sales stay on this device for 48 hours. You can still print the receipt. When you are back online, the queued bills post into Accounts and stock. Card and khata need the network.",
+      },
     ],
-    related: ["accounts-overview", "inventory", "counter-ai", "vouchers", "digital-receipts", "whatsapp-reminders"],
+    related: ["accounts-overview", "inventory", "offline-billing", "counter-ai", "vouchers", "digital-receipts", "whatsapp-reminders"],
     appPath: "/accounting/counter",
     icon: "ShoppingCart",
+  },
+  {
+    slug: "offline-billing",
+    category: "accounts",
+    name: "Offline billing",
+    summary: "Keep charging cash and UPI sales for 48 hours without internet. When you are back online, those bills post into the books and stock.",
+    problem: "A shop cannot stop selling because the line dropped. A separate offline till then has to be typed into the books later, and the two totals drift.",
+    how: [
+      "Open Accounts → Counter as usual. Charge cash or UPI bills even when the device is offline.",
+      "Each paid bill stays on this device for up to 48 hours. Print the thermal receipt from that queued bill.",
+      "When internet is back, MyFinTracker posts the queued sales into Accounts and stock. You can tap Sync now, or it syncs when the till is online again.",
+    ],
+    capabilities: [
+      "Cash and UPI charges save on this device when the line drops",
+      "Billing continues for 48 hours; older unsynced bills stop new offline charges until they post",
+      "Queued bills post into the same company books and stock when you are back online",
+      "Print a receipt from an offline bill",
+      "Card and khata sales need the network",
+    ],
+    benefits: [
+      "The counter does not close because the internet dropped",
+      "Queued sales become the same posted bills as an online charge",
+      "Nothing is typed in twice when the line comes back",
+    ],
+    sections: [
+      {
+        title: "On this device, then in the books",
+        text: "An offline bill is stored on the till that took it. It is not in Accounts or stock until it syncs. After sync it is a normal sales voucher for the company you have open.",
+      },
+    ],
+    related: ["counter-pos", "counter-ai", "inventory", "vouchers"],
+    appPath: "/accounting/counter",
+    icon: "WifiOff",
   },
   {
     slug: "counter-ai",
@@ -1495,7 +1532,7 @@ export const MODULE_FEATURES = {
     "cashbook", "bank-reconciliation", "trial-balance", "profit-and-loss", "expenses", "payroll", "balance-sheet", "cash-flow",
     "inventory", "expired-stock", "item-profit", "gst-preparation", "audit-trail", "period-locking", "workspace-backup", "bill-proofs", "for-the-ca",
   ],
-  "counter-pos": ["counter-ai"],
+  "counter-pos": ["offline-billing", "counter-ai"],
   ai: [
     "ask-finny", "ai-bookkeeper", "bill-scanning", "ai-review", "forecasting", "expense-insights", "collection-priorities",
     "anomaly-detection", "gst-review", "month-end-readiness", "bank-matching", "stock-forecast", "expired-stock", "counter-ai", "chit-scheme-health",
@@ -1544,7 +1581,7 @@ export const SOLUTIONS = [
   {
     title: "Shops and traders",
     text: "Bill from Counter POS, keep stock and item profit, and read receivables and payables for the company you have open.",
-    features: ["counter-pos", "inventory", "expired-stock"],
+    features: ["counter-pos", "offline-billing", "inventory"],
   },
   {
     title: "Service businesses",
@@ -1622,6 +1659,10 @@ export const SECURITY_POINTS = [
   {
     title: "Workspace backups",
     text: "The owner can back up Finance, Cashbook, Chit Fund, and Accounts, download a copy, or restore it. Restore saves a safety checkpoint first. Copies older than 14 days are removed.",
+  },
+  {
+    title: "Offline till bills",
+    text: "Cash and UPI Counter bills can stay on this device for 48 hours when the internet is down. They post into the company books when the till is back online. Card and khata need the network.",
   },
   {
     title: "AI that stays inside your records",
