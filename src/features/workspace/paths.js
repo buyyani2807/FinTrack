@@ -35,9 +35,12 @@ export const collectionsPath = kind => financeSectionPath(kind, "collections");
 // One customer's account opens in its module's Users tab with that account chosen, e.g. /daily-finance/users?account=fa1.
 export const accountPath = loan => `${financeSectionPath(loan.kind, "users")}?account=${encodeURIComponent(loan.id)}`;
 
-// Chit Fund: /chit-fund/:tab, /chit-fund/schemes/:schemeId/:schemeTab and /chit-fund/schemes/:schemeId/members/:memberId.
+// Chit Fund: /chit-fund/schemes, /chit-fund/reports, /chit-fund/schemes/:schemeId/:schemeTab and /chit-fund/schemes/:schemeId/members/:memberId.
 export function chitPath({ tab = "schemes", schemeId = null, schemeTab = "overview", memberId = null } = {}) {
-  if (!schemeId) return `${workspacePaths.chit}/${tab}`;
+  if (!schemeId) {
+    const home = tab === "reports" ? "reports" : "schemes";
+    return `${workspacePaths.chit}/${home}`;
+  }
   const scheme = `${workspacePaths.chit}/schemes/${encodeURIComponent(schemeId)}`;
   if (memberId) return `${scheme}/members/${encodeURIComponent(memberId)}`;
   return `${scheme}/${schemeTab}`;

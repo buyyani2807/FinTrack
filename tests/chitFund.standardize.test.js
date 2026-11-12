@@ -14,17 +14,15 @@ test("payment modes stay the modes the chit records already accept", () => {
   assert.equal(CHIT_PAYMENT_MODES.some(item => item.id === "cheque"), false);
   assert.deepEqual(cashUpiSplit("bank", 5000, 10, 20), { cash: 0, upi: 0 });
   assert.deepEqual(cashUpiSplit("cash", 5000, 0, 0), { cash: 5000, upi: 0 });
+  const form = read("src/features/chitFund/components/ChitPaymentForm.jsx");
+  assert.match(form, /label="Payment mode"/);
+  assert.match(form, /CHIT_PAYMENT_MODES/);
   for (const file of [
     "src/features/chitFund/auction/AuctionModals.jsx",
     "src/features/chitFund/fixed/FixedChitModals.jsx",
     "src/features/chitFund/predefined/PredefinedChitModals.jsx",
   ]) {
-    const source = read(file);
-    assert.match(source, /label="Payment mode"/);
-    assert.match(source, /value="bank">Bank/);
-    assert.match(source, /value="cash">Cash/);
-    assert.match(source, /value="upi">UPI/);
-    assert.match(source, /value="cash_upi">Cash \+ UPI/);
+    assert.match(read(file), /<ChitPaymentForm/, file);
   }
 });
 
@@ -174,7 +172,7 @@ test("every chit type uses the shared member page with payment reversal and stan
     assert.match(source, /deletePayment=\{/, file);
     assert.match(source, /recordPayment=\{/, file);
   }
-  assert.match(read("src/features/chitFund/auction/AuctionChitSchemeDetails.jsx"), /recordPayment=\{openAuctionPayment\} deletePayment=\{remove\}/);
+  assert.match(read("src/features/chitFund/auction/AuctionChitSchemeDetails.jsx"), /recordPayment=\{canWrite \? openAuctionPayment : null\} deletePayment=\{canWrite \? remove : null\}/);
 });
 
 test("member standing needs a reason for defaulter or bankrupt and leaves enrollment status alone", () => {

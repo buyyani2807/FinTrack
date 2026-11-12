@@ -35,14 +35,12 @@ import { money, emptySchemeForm, groupRowsBySchemeId } from "./model/chitFormat.
 import { latestInRangeCycle } from "./model/liveBidding.js";
 import { Select } from "../../components/Select.jsx";
 import { Button, Spinner } from "../../components/ui.jsx";
-import { AccPager } from "../accounts/components/AccUi.jsx";
-import { usePagedList } from "../accounts/model/usePagedList.js";
 import { ChitActivateSchemeModal } from "./components/ChitAdminControls.jsx";
 import { ChitSchemeForm, ChitTypeChooser, FixedChitSchemeForm, PredefinedBidSchemeForm } from "./components/ChitSchemeForms.jsx";
 import { ChitSchemeDetails, ChitSchemeDashboardSection, ChitLandingReports } from "./components/ChitSchemeDashboard.jsx";
 
-// Every view is a URL (see app/AppRoutes.jsx): the landing tab, an open scheme with its tab, and a member's page.
-const LANDING_TABS = [["schemes", "Schemes"], ["members", "Members"], ["bids", "Bids"], ["payments", "Payments"], ["reports", "Reports"]];
+// Home is schemes (and reports). Members, bids, and payments live inside a scheme.
+const LANDING_TABS = [["schemes", "Schemes"], ["reports", "Reports"]];
 
 export function ChitFundPage({ token, tab: routeTab = "schemes", schemeId = null, schemeTab = "overview", memberId = null, onNavigate, onSchemesChanged, orgSettings = {}, workspace = {}, onLogReceipt }) {
   const canWrite = workspace?.role === "owner";
@@ -63,7 +61,7 @@ export function ChitFundPage({ token, tab: routeTab = "schemes", schemeId = null
   const [receiptSuccess, setReceiptSuccess] = useState(null);
   const [reminderRefresh, setReminderRefresh] = useState(0);
   const [schemeQuery, setSchemeQuery] = useState("");
-  const [schemeFilter, setSchemeFilter] = useState("all");
+  const [schemeFilter, setSchemeFilter] = useState("active");
   const landing = LANDING_TABS.some(([id]) => id === routeTab) ? routeTab : "schemes";
   const setLanding = next => onNavigate?.({ tab: next });
   const selected = schemeId ? schemes.find(scheme => scheme.id === schemeId) || null : null;
@@ -149,7 +147,9 @@ export function ChitFundPage({ token, tab: routeTab = "schemes", schemeId = null
     });
   }, [schemes, cycles, enrollments, fixedLifts, predefinedSchedule]);
   const visibleRows = useMemo(() => rows.filter(row => {
-    const matchesStatus = schemeFilter === "all" || row.scheme.status === schemeFilter;
+    const matchesStatus = schemeFilter === "all"
+      || row.scheme.status === schemeFilter
+      || (schemeFilter === "completed" && row.scheme.status === "closed");
     const query = schemeQuery.trim().toLowerCase();
     const matchesQuery = !query || [row.scheme.name, row.scheme.chit_type || ""].join(" ").toLowerCase().includes(query);
     return matchesStatus && matchesQuery;
@@ -193,7 +193,9 @@ export function ChitFundPage({ token, tab: routeTab = "schemes", schemeId = null
       } else if (modal === "edit-scheme") await updateChitScheme(token, schemeForm);
       else await createChitScheme(token, schemeForm);
       setNotice(modal === "edit-scheme" ? "Scheme updated." : "Scheme created as Draft.");
-      setModal(null); setSchemeForm(emptySchemeForm()); await refresh();
+      setModal(null); setSchemeForm(emptySchemeForm());
+      if (modal !== "edit-scheme") setSchemeFilter("draft");
+      await refresh();
     } catch (err) { setError(err.message || "Could not save scheme."); }
     finally { setBusy(false); }
   };
@@ -209,6 +211,7 @@ export function ChitFundPage({ token, tab: routeTab = "schemes", schemeId = null
       await activateChitScheme(token, activateTarget.scheme.id);
       setNotice("Scheme activated.");
       setActivateTarget(null);
+      setSchemeFilter("active");
       await refresh();
     } catch (err) {
       setActivateError(err.message || "Could not activate scheme.");
@@ -243,41 +246,43 @@ export function ChitFundPage({ token, tab: routeTab = "schemes", schemeId = null
     setNotice(`${scheme.name} was deleted.`);
     await refresh();
   };
-  const pagedMembers = usePagedList(enrollments, `${landing}|members`);
-  const pagedBids = usePagedList(cycles, `${landing}|bids`);
+  const openFirstActiveScheme = schemeTab => {
+    const row = rows.find(item => item.scheme.status === "active");
+    if (row) onNavigate?.({ schemeId: row.scheme.id, schemeTab });
+  };
   // An open scheme waits for the scheme list; an unknown id falls back to the landing page.
   if (schemeId && !selected && busy) return <main className="shell chit-fund-page"><Spinner label="Loading scheme" /></main>;
   if (selected) return <><ChitSchemeDetails key={selected.id} token={token} scheme={selected} tab={schemeTab} onTabChange={next => onNavigate?.({ schemeId: selected.id, schemeTab: next })} memberId={memberId} onMemberChange={id => onNavigate?.({ schemeId: selected.id, schemeTab: "members", memberId: id })} back={() => { onNavigate?.({ tab: "schemes" }); setReminderRefresh(current => current + 1); }} onSchemeDeleted={canWrite ? schemeDeleted : null} orgSettings={orgSettings} workspace={workspace} onReceipt={setReceiptSuccess} onLogReceipt={onLogReceipt} canWrite={canWrite} />{receiptSuccess && <ReceiptSuccessModal receipt={receiptSuccess} settings={orgSettings} token={token} onLogAction={onLogReceipt} close={() => setReceiptSuccess(null)} />}</>;
   return <main className="shell chit-fund-page">
-    <div className="toolbar"><div><p className="page-company-name">{workspace?.businessName || "My Finance Business"}</p><h1 className="title">Chit Fund</h1><p className="copy chit-fund-intro">{canWrite ? "Auction Chits use live bidding, Fixed Chits use scheduled lifts, and Fixed Predefined Bid Chits use an editable generated schedule." : "View-only access to schemes, members, bids, and payments in this workspace."}</p></div>{canWrite ? <Button className="primary" onClick={() => setModal("choose-type")}>+ New scheme</Button> : null}</div>
+    <div className="toolbar"><div><p className="page-company-name">{workspace?.businessName || "My Finance Business"}</p><h1 className="title">Chit Fund</h1><p className="copy chit-fund-intro">{canWrite ? "Open a scheme to manage members, record payments, and run lifts. New schemes start as drafts until you activate them." : "Open a scheme to review members, payments, and lifts in this workspace."}</p></div>{canWrite ? <Button className="primary" onClick={() => setModal("choose-type")}>+ New scheme</Button> : null}</div>
     <TabScroller><nav className="module-section-nav" aria-label="Chit Fund sections">
       {LANDING_TABS.map(([id, label]) => (
         <button key={id} type="button" className={`module-section-tab ${landing === id ? "active" : ""}`} aria-current={landing === id ? "page" : undefined} onClick={() => setLanding(id)}>{label}</button>
       ))}
     </nav></TabScroller>
     <Toasts items={[{ id: "error", tone: "error", message: error, onClose: () => setError("") }, { id: "notice", message: notice, onClose: () => setNotice("") }]} />
-    {(landing === "schemes" || landing === "payments") && <UpcomingPaymentsSection moduleType="chit" loans={[]} token={token} settings={orgSettings} workspace={workspace} isOwner={canWrite} refreshKey={reminderRefresh} />}
+    {landing === "schemes" && <UpcomingPaymentsSection moduleType="chit" loans={[]} token={token} settings={orgSettings} workspace={workspace} isOwner={canWrite} refreshKey={reminderRefresh} />}
     {landing === "schemes" && <>
-      <section className="chit-command-center" aria-label="Chit Fund overview"><div className="chit-command-copy"><span className="eyebrow">Portfolio overview</span><h2>{canWrite ? "Run your chit books with clarity." : "Review chit books in this workspace."}</h2><p>Stay ahead of collections, auctions, and member commitments across every scheme.</p></div><div className="chit-command-actions">{canWrite ? <Button onClick={() => setLanding("payments")}>Record payment</Button> : null}<Button onClick={() => setLanding("bids")}>Review bids</Button></div></section>
+      <section className="chit-command-center" aria-label="Chit Fund overview"><div className="chit-command-copy"><span className="eyebrow">Portfolio overview</span><h2>{canWrite ? "Run your chit books with clarity." : "Review chit books in this workspace."}</h2><p>Members, payments, and lifts are inside each scheme. Open a scheme to work on it.</p></div></section>
       <section className="chit-kpi-strip" aria-label="Chit Fund summary"><div><span>Active schemes</span><strong>{schemes.filter(item => item.status === "active").length}</strong><small>of {schemes.length} total</small></div><div><span>Enrolled members</span><strong>{enrollments.length}</strong><small>across all schemes</small></div><div><span>Monthly commitments</span><strong>{money(schemes.filter(item => item.status === "active").reduce((sum, item) => sum + Number(item.installment_amount || 0), 0))}</strong><small>configured installments</small></div><div><span>Open auctions</span><strong>{rows.filter(item => item.scheme.status === "active" && item.scheme.chit_type === CHIT_TYPES.AUCTION && !item.current).length}</strong><small>need attention</small></div></section>
-      <ChitInsightsBrief schemes={schemes} enrollments={enrollments} cycles={cycles} fixedLifts={fixedLifts} predefinedSchedule={predefinedSchedule} token={token} onViewMembers={() => setLanding("members")} />
-      <div className="chit-scheme-toolbar"><div><span className="eyebrow">Your schemes</span><h2>Scheme portfolio</h2></div><div className="chit-scheme-filters"><input aria-label="Search schemes" placeholder="Search schemes" value={schemeQuery} onChange={event => setSchemeQuery(event.target.value)} /><Select bare className="acc-company-picker" aria-label="Filter schemes" value={schemeFilter} onChange={event => setSchemeFilter(event.target.value)} renderValue={option => <><span className="acc-company-picker-name">{option?.label ?? "All statuses"}</span><ChevronDown className="acc-company-picker-chevron" size={16} aria-hidden="true" /></>}><option value="all">All statuses</option><option value="active">Active</option><option value="draft">Draft</option><option value="completed">Completed</option></Select></div></div>
+      <ChitInsightsBrief schemes={schemes} enrollments={enrollments} cycles={cycles} fixedLifts={fixedLifts} predefinedSchedule={predefinedSchedule} token={token} onViewMembers={() => openFirstActiveScheme("members")} />
+      <div className="chit-scheme-toolbar"><div><span className="eyebrow">Your schemes</span><h2>{schemeFilter === "active" ? "Active schemes" : schemeFilter === "draft" ? "Draft schemes" : schemeFilter === "completed" ? "Completed schemes" : "All schemes"}</h2></div><div className="chit-scheme-filters"><input aria-label="Search schemes" placeholder="Search schemes" value={schemeQuery} onChange={event => setSchemeQuery(event.target.value)} /><Select bare className="acc-company-picker" aria-label="Filter schemes" value={schemeFilter} onChange={event => setSchemeFilter(event.target.value)} renderValue={option => <><span className="acc-company-picker-name">{option?.label ?? "Active"}</span><ChevronDown className="acc-company-picker-chevron" size={16} aria-hidden="true" /></>}><option value="active">Active</option><option value="draft">Draft</option><option value="completed">Completed</option><option value="all">All statuses</option></Select></div></div>
     </>}
-    {landing === "schemes" && <AnomalyReviewCard review={buildAnomalyReview({ today: today(), schemes, cycles })} onNavigate={() => setLanding("bids")} />}
+    {landing === "schemes" && <AnomalyReviewCard review={buildAnomalyReview({ today: today(), schemes, cycles })} onNavigate={() => openFirstActiveScheme("bids")} />}
     {busy && !schemes.length && <Spinner label="Loading Chit Fund schemes" />}
     {enriching && !!schemes.length && landing === "schemes" && <p className="small spacer ft-loading-note"><Spinner size="sm" label="Loading" />Updating current bids and member counts</p>}
+    {landing === "schemes" && schemeFilter === "active" && schemes.some(item => item.status === "draft") && (
+      <p className="small spacer">Draft schemes are hidden here. Switch the filter to Draft to activate a new scheme.</p>
+    )}
     {landing === "schemes" && <>
     <ChitSchemeDashboardSection kind="auction" rows={visibleRows.filter(row => (row.scheme.chit_type || CHIT_TYPES.AUCTION) === CHIT_TYPES.AUCTION)} busy={busy} open={setSelected} edit={canWrite ? editScheme : null} activate={canWrite ? requestActivate : null} />
     <ChitSchemeDashboardSection kind="fixed" rows={visibleRows.filter(row => row.scheme.chit_type === CHIT_TYPES.FIXED)} busy={busy} open={setSelected} edit={canWrite ? editScheme : null} activate={canWrite ? requestActivate : null} />
     <ChitSchemeDashboardSection kind="predefined" rows={visibleRows.filter(row => row.scheme.chit_type === CHIT_TYPES.FIXED_PREDEFINED_BID)} busy={busy} open={setSelected} edit={canWrite ? editScheme : null} activate={canWrite ? requestActivate : null} />
     </>}
-    {landing === "members" && <div className="card"><strong>Members</strong><p className="small">Open a scheme to enroll members, record payments, or run bids. This list is across all schemes.</p><div className="table spacer"><table><thead><tr><th>Scheme</th><th>Ticket</th><th>Member</th><th></th></tr></thead><tbody>{pagedMembers.items.map(item => { const scheme = schemes.find(row => row.id === item.scheme_id); return <tr key={item.id}><td>{scheme?.name || "Scheme"}</td><td>{item.ticket_number}</td><td>{item.chit_members?.full_name || "Member"}</td><td><Button onClick={() => setSelected(scheme || null)}>Open scheme</Button></td></tr>; })}{!enrollments.length && <tr><td colSpan="4">No members enrolled yet.</td></tr>}</tbody></table><AccPager page={pagedMembers.page} pages={pagedMembers.pages} total={pagedMembers.total} from={pagedMembers.from} to={pagedMembers.to} onPage={pagedMembers.setPage} noun="members" /></div></div>}
-    {landing === "bids" && <div className="card"><strong>Bids</strong><p className="small">Auction bid history across schemes. Open a scheme to record a monthly bid or start live bidding.</p><div className="table spacer"><table><thead><tr><th>Scheme</th><th>Month</th><th>Bid date</th><th>Lift amount</th></tr></thead><tbody>{pagedBids.items.map(cycle => { const scheme = schemes.find(row => row.id === cycle.scheme_id); return <tr key={cycle.id}><td>{scheme?.name || "Scheme"}</td><td>Month {cycle.cycle_number}</td><td>{cycle.cycle_date}</td><td>{money(cycle.winning_bid_amount)}</td></tr>; })}{!cycles.length && <tr><td colSpan="4">No bids recorded yet.</td></tr>}</tbody></table><AccPager page={pagedBids.page} pages={pagedBids.pages} total={pagedBids.total} from={pagedBids.from} to={pagedBids.to} onPage={pagedBids.setPage} noun="bids" /></div></div>}
-    {landing === "payments" && <div className="card spacer"><p className="copy">Upcoming Chit Fund dues are listed above. Open a scheme to record a payment, dividend, or lift.</p></div>}
     {landing === "reports" && <ChitLandingReports token={token} schemes={schemes} cycles={cycles} fixedLifts={fixedLifts} predefinedSchedule={predefinedSchedule} enrollments={enrollments} aiEnabled={isModuleEnabled(orgSettings, "ai")} openScheme={id => onNavigate?.({ schemeId: id, schemeTab: "payments" })} />}
     {modal === "choose-type" && <ChitTypeChooser close={() => setModal(null)} choose={type => { setSchemeForm(emptySchemeForm(type)); setModal("scheme"); }} />}
     {(modal === "scheme" || modal === "edit-scheme") && (schemeForm.chitType === CHIT_TYPES.FIXED_PREDEFINED_BID
-      ? <PredefinedBidSchemeForm onChangeType={changeSchemeType} form={schemeForm} setForm={setSchemeForm} busy={busy} error={error} onClose={() => { setModal(null); if (modal !== "edit-scheme") setSchemeForm(emptySchemeForm()); }} onSubmit={submitScheme} />
+      ? <PredefinedBidSchemeForm onChangeType={changeSchemeType} title={modal === "edit-scheme" ? "Edit Fixed Predefined Bid scheme" : "Create Fixed Predefined Bid scheme"} form={schemeForm} setForm={setSchemeForm} busy={busy} error={error} onClose={() => { setModal(null); if (modal !== "edit-scheme") setSchemeForm(emptySchemeForm()); }} onSubmit={submitScheme} submitLabel={modal === "edit-scheme" ? "Save changes" : "Create draft"} />
       : schemeForm.chitType === CHIT_TYPES.FIXED
         ? <FixedChitSchemeForm onChangeType={changeSchemeType} title={modal === "edit-scheme" ? "Edit Fixed Chit scheme" : "Create Fixed Chit scheme"} form={schemeForm} setForm={setSchemeForm} busy={busy} error={error} onClose={() => { setModal(null); if (modal !== "edit-scheme") setSchemeForm(emptySchemeForm()); }} onSubmit={submitScheme} submitLabel={modal === "edit-scheme" ? "Save changes" : "Create draft"} />
         : <ChitSchemeForm onChangeType={changeSchemeType} title={modal === "edit-scheme" ? "Edit Auction Chit scheme" : "Create Auction Chit scheme"} form={schemeForm} setForm={setSchemeForm} busy={busy} error={error} onClose={() => { setModal(null); if (modal !== "edit-scheme") setSchemeForm(emptySchemeForm()); }} onSubmit={submitScheme} submitLabel={modal === "edit-scheme" ? "Save changes" : "Create draft"} />)}

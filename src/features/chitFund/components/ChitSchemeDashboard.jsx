@@ -20,9 +20,9 @@ export function ChitSchemeDetails(props) {
   return <AuctionChitSchemeDetails {...props} />;
 }
 const CHIT_BOARD = {
-  auction: { title: "Auction Chits", bidType: "Auction", icon: "◎", currentLabel: "Current lift" },
-  fixed: { title: "Fixed Chits", bidType: "Fixed lift", icon: "▣", currentLabel: "Current lift" },
-  predefined: { title: "Fixed Predefined Bid Chits", bidType: "Predefined bid", icon: "◈", currentLabel: "Current lift" },
+  auction: { title: "Auction Chits", bidType: "Auction Chit", icon: "◎", currentLabel: "Current lift", installmentLabel: "Monthly installment" },
+  fixed: { title: "Fixed Chits", bidType: "Fixed Chit", icon: "▣", currentLabel: "Current lift", installmentLabel: "Monthly contribution" },
+  predefined: { title: "Fixed Predefined Bid Chits", bidType: "Fixed Predefined Bid", icon: "◈", currentLabel: "Current bid", installmentLabel: "Monthly installment" },
 };
 function ChitSchemeCard({ kind, row, open, edit, activate }) {
   const { scheme, current, members, winner, fixedCurrent, fixedWinner, predefinedCurrent, predefinedWinner } = row;
@@ -44,7 +44,7 @@ function ChitSchemeCard({ kind, row, open, edit, activate }) {
     <div className="chit-scheme-value">{money(scheme.chit_value)}</div>
     <p className="chit-scheme-value-label">Chit value</p>
     <div className="chit-scheme-stats">
-      <div><span>Contribution</span><strong>{money(scheme.installment_amount)}</strong></div>
+      <div><span>{meta.installmentLabel}</span><strong>{money(scheme.installment_amount)}</strong></div>
       <div><span>Duration</span><strong>{scheme.duration_months} months</strong></div>
       <div><span>Members</span><strong>{members.length}/{scheme.member_count}</strong></div>
       <div><span>Current month</span><strong>{monthText}</strong></div>

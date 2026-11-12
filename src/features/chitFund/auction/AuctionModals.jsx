@@ -7,6 +7,7 @@ import { today, enrollmentName } from "../model/chitFormat.js";
 import { fireChitLiftWhatsApp } from "../io/chitNotifications.js";
 import { Button, Field } from "../../../components/ui.jsx";
 import { Modal } from "../components/ChitUi.jsx";
+import { ChitPaymentForm } from "../components/ChitPaymentForm.jsx";
 
 export function ChitBidModal({ token, scheme, enrollments, nextMonth, close, done, orgSettings = {}, workspace = {} }) {
   const [f, setF] = useState({ month: nextMonth, date: today(), winner: "", amount: "", notes: "" });
@@ -82,5 +83,8 @@ export function ChitPaymentModal({ token, installment, memberName, memberPhone, 
     } catch (err) { setError(err.message || "Could not save payment."); }
     finally { setBusy(false); }
   };
-  return <Modal close={close}><h2 className="title">{installment.amount_paid ? "Edit payment" : "Record payment"}</h2><div className="form spacer"><Field label="Member"><input disabled value={memberName || "Member"} /></Field><Field label="Payment date"><input type="date" value={f.date} onChange={e => set("date", e.target.value)} /></Field><Field label="Payment mode"><Select value={f.mode} onChange={e => set("mode", e.target.value)}><option value="cash">Cash</option><option value="upi">UPI</option><option value="bank">Bank</option><option value="cash_upi">Cash + UPI</option></Select></Field><Field className="span" label="Amount paid (₹)"><input type="number" min="0.01" step="0.01" value={f.amount} onChange={e => set("amount", e.target.value)} /></Field>{f.mode === "cash_upi" && <><Field label="Cash amount (₹)"><input type="number" min="0" value={f.cash} onChange={e => set("cash", e.target.value)} /></Field><Field label="UPI amount (₹)"><input type="number" min="0" value={f.upi} onChange={e => set("upi", e.target.value)} /></Field></>}<Field label="UPI / bank reference"><input value={f.ref} onChange={e => set("ref", e.target.value)} /></Field><Field label="Notes"><input value={f.notes} onChange={e => set("notes", e.target.value)} /></Field></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button className="primary" disabled={busy} onClick={submit}>{busy ? "Saving…" : "Save payment"}</Button></div></Modal>;
+  const cycleMonth = installment.payment_month || installment.cycle_number || "";
+  const expected = Number(installment.net_amount_due || 0);
+  const paidAlready = Number(installment.amount_paid || 0);
+  return <Modal close={close}><h2 className="title">{installment.amount_paid ? "Edit payment" : "Record payment"}</h2><ChitPaymentForm memberName={memberName} paymentMonth={cycleMonth} amountDue={expected} amountDueLabel="Expected" previouslyPaid={paidAlready} outstanding={Math.max(0, expected - paidAlready)} amount={f.amount} onAmount={value => set("amount", value)} date={f.date} onDate={value => set("date", value)} mode={f.mode} onMode={value => set("mode", value)} cash={f.cash} onCash={value => set("cash", value)} upi={f.upi} onUpi={value => set("upi", value)} reference={f.ref} onReference={value => set("ref", value)} notes={f.notes} onNotes={value => set("notes", value)} error={error} busy={busy} onSubmit={submit} onCancel={close} /></Modal>;
 }
