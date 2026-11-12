@@ -963,12 +963,8 @@ export const FEATURES = [
       "Restore does not silently overwrite without a checkpoint",
       "Nightly copies do not pile up forever",
     ],
-    sections: [
-      {
-        title: "What a restore does",
-        text: "Restore replaces the live records for the modules in that backup. A safety checkpoint is the live workspace just before the restore, so you can undo. Only the owner of this business can create or restore a backup. Another organisation’s data is never part of this file.",
-      },
-    ],
+    noteTitle: "What a restore does",
+    note: "Restore replaces the live records for the modules in that backup. A safety checkpoint is the live workspace just before the restore, so you can undo. Only the owner of this business can create or restore a backup. Another organisation’s data is never part of this file.",
     related: ["dashboard", "cashbook", "accounts-overview", "period-locking"],
     appPath: "/settings/backup",
     icon: "ArchiveRestore",

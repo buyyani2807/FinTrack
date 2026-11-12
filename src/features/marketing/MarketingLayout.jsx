@@ -25,6 +25,7 @@ function moduleCurrent(item, pathname) {
   const href = moduleHref(item);
   if (pathname === href) return "page";
   if (item.end) return undefined;
+  if (pathname.startsWith(`${href}/features/`)) return "true";
   const slug = pathname.startsWith("/features/") ? pathname.slice("/features/".length).split("/")[0] : null;
   return slug && moduleForFeature(slug) === item.slug ? "true" : undefined;
 }

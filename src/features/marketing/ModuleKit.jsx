@@ -5,7 +5,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "..
 import { Reveal } from "../../components/ui/Reveal.jsx";
 import { APP_MODULES, MODULE_FEATURES, featureBySlug, moduleForFeature } from "./catalog.js";
 import { FAQ } from "./faq.js";
-import { usePartLink } from "./moduleParts.js";
+import { useFeaturePath, usePartLink } from "./moduleParts.js";
 import { featurePath, marketingPaths } from "./paths.js";
 import { ProductCta } from "./ProductCta.jsx";
 import { ProductPreview } from "./ProductPreview.jsx";
@@ -46,6 +46,7 @@ export function SectionHead({ eyebrow, title }) {
 export function Tile({ slug, tag, size = "", title, children }) {
   const feature = slug ? featureBySlug(slug) : null;
   const openPart = usePartLink(slug);
+  const to = useFeaturePath(slug);
   const className = `fx-tile${size ? ` fx-t-${size}` : ""}${slug ? "" : " is-static"}`;
   const body = <>
     <div className="fx-visual" aria-hidden="true">{children}</div>
@@ -56,7 +57,7 @@ export function Tile({ slug, tag, size = "", title, children }) {
     </div>
   </>;
   return slug
-    ? <Reveal as={Link} to={featurePath(slug)} className={className} onClick={openPart} aria-haspopup={openPart ? "dialog" : undefined}>{body}</Reveal>
+    ? <Reveal as={Link} to={to} className={className} onClick={openPart} aria-haspopup={openPart ? "dialog" : undefined}>{body}</Reveal>
     : <Reveal as="article" className={className}>{body}</Reveal>;
 }
 
@@ -67,6 +68,7 @@ export function ModeSwitch({ label, modes }) {
   const tabs = useRef({});
   const mode = modes.find(item => item.key === key);
   const feature = featureBySlug(mode.slug);
+  const to = useFeaturePath(mode.slug);
   const onKeyDown = event => {
     if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
     event.preventDefault();
@@ -86,7 +88,7 @@ export function ModeSwitch({ label, modes }) {
         <ol className="fx-steps">
           {feature.how.map((step, index) => <li key={step}><span aria-hidden="true">{index + 1}</span>{step}</li>)}
         </ol>
-        {mode.link === false ? null : <Link className="fx-link" to={featurePath(mode.slug)} onClick={openPart} aria-haspopup={openPart ? "dialog" : undefined}>Explore {feature.name} <ArrowRight size={16} aria-hidden="true" /></Link>}
+        {mode.link === false ? null : <Link className="fx-link" to={to} onClick={openPart} aria-haspopup={openPart ? "dialog" : undefined}>Explore {feature.name} <ArrowRight size={16} aria-hidden="true" /></Link>}
       </div>
       <div key={`${key}-shot`} className="fx-book-shot"><ProductPreview scene={mode.scene} /></div>
     </div>
@@ -131,8 +133,8 @@ export function ModuleClosing({ title, appPath, points, lead }) {
 }
 
 // At the end of a feature page that belongs to a module: the previous and next parts.
-export function ModulePager({ current }) {
-  const module = moduleForFeature(current);
+export function ModulePager({ current, parent }) {
+  const module = parent && (MODULE_FEATURES[parent] || []).includes(current) ? parent : moduleForFeature(current);
   if (!module || module === current) return null;
   const label = APP_MODULES.find(item => item.slug === module)?.label || featureBySlug(module)?.name;
   const parts = MODULE_FEATURES[module].map(featureBySlug).filter(Boolean);
@@ -141,14 +143,14 @@ export function ModulePager({ current }) {
   const next = parts[index + 1];
   return <nav className="mkt-section fx-pager" aria-label={`More in ${label}`}>
     <div className="mkt-wrap fx-pager-grid">
-      {prev ? <Link className="fx-pager-card" to={featurePath(prev.slug)}>
+      {prev ? <Link className="fx-pager-card" to={featurePath(prev.slug, module)}>
         <span className="fx-pager-dir"><ArrowLeft size={16} aria-hidden="true" /> Previous</span>
         <strong>{prev.name}</strong>
       </Link> : <Link className="fx-pager-card" to={featurePath(module)}>
         <span className="fx-pager-dir"><ArrowLeft size={16} aria-hidden="true" /> Back to</span>
         <strong>{label}</strong>
       </Link>}
-      {next ? <Link className="fx-pager-card is-next" to={featurePath(next.slug)}>
+      {next ? <Link className="fx-pager-card is-next" to={featurePath(next.slug, module)}>
         <span className="fx-pager-dir">Next <ArrowRight size={16} aria-hidden="true" /></span>
         <strong>{next.name}</strong>
       </Link> : <Link className="fx-pager-card is-next" to={featurePath(module)}>
