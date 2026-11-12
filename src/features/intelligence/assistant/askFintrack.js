@@ -461,7 +461,7 @@ function chitMissed(context) {
     summary: "Member installment history is not loaded in Ask, so no member is listed.",
     sourceModule: "Chit Fund",
     report: "Installments",
-    link: context.allowChit ? { path: "/chit-fund/payments", label: "Chit payments" } : null,
+    link: context.allowChit ? { path: "/chit-fund/schemes", label: "Chit schemes" } : null,
     filters: scopeFilters(context),
     warning: "Insufficient installment history in this panel. Open Chit Fund payments. Names are not guessed.",
     today: context.today,

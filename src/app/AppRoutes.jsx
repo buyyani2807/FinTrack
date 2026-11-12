@@ -94,7 +94,10 @@ export function AppRoutes() {
           <Route path="/monthly-finance/*" element={<Navigate to="/monthly-finance/todays-collections" replace />} />
 
           <Route path="/chit-fund" element={<Navigate to="/chit-fund/schemes" replace />} />
-          {/* :tab = schemes | members | bids | payments | reports */}
+          <Route path="/chit-fund/members" element={<Navigate to="/chit-fund/schemes" replace />} />
+          <Route path="/chit-fund/bids" element={<Navigate to="/chit-fund/schemes" replace />} />
+          <Route path="/chit-fund/payments" element={<Navigate to="/chit-fund/schemes" replace />} />
+          {/* :tab = schemes | reports */}
           <Route path="/chit-fund/:tab" element={<RequireModule module="chit"><ChitFundRoute /></RequireModule>} />
           {/* :schemeTab = overview | members | payments, plus bids | dividends | live (auction) or schedule (fixed) */}
           <Route path="/chit-fund/schemes/:schemeId/:schemeTab?" element={<RequireModule module="chit"><ChitFundRoute /></RequireModule>} />

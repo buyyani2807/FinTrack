@@ -401,7 +401,7 @@ test.describe("Nested routes", () => {
   test("tabs and sub-tabs of every module are URLs", async ({ page }) => {
     await mockAccountsWorkspace(page);
     for (const [path, active] of [
-      ["/chit-fund/members", "Members"],
+      ["/chit-fund/reports", "Reports"],
       ["/cashbook/expenses", "Expenses"],
       ["/settings/whatsapp", "WhatsApp messages"],
       ["/accounting/documents/purchase_order", "Purchase orders"],
