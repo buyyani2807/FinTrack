@@ -100,11 +100,11 @@ function ChitDeleteSchemeControl({ token, scheme, memberCount = 0, onDeleted }) 
     </ConfirmDangerModal>}
   </>;
 }
-export function ChitSchemeHeaderActions({ token, scheme, memberCount, onAddMember, onSchemeDeleted, extra }) {
-  const canAdd = onAddMember && ["draft", "active"].includes(scheme.status) && Number(memberCount) < Number(scheme.member_count || 0);
+export function ChitSchemeHeaderActions({ token, scheme, memberCount, onAddMember, onSchemeDeleted, extra, canWrite = true }) {
+  const canAdd = canWrite && onAddMember && ["draft", "active"].includes(scheme.status) && Number(memberCount) < Number(scheme.member_count || 0);
   return <div className="row">
     {extra}
     {canAdd && <Button className="primary" onClick={onAddMember}>+ Add member</Button>}
-    <ChitDeleteSchemeControl token={token} scheme={scheme} memberCount={memberCount} onDeleted={onSchemeDeleted} />
+    {canWrite && onSchemeDeleted ? <ChitDeleteSchemeControl token={token} scheme={scheme} memberCount={memberCount} onDeleted={onSchemeDeleted} /> : null}
   </div>;
 }

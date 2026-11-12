@@ -45,7 +45,7 @@ export function WorkspaceLayout() {
     [baseOrgSettings, moduleState],
   );
   const moduleAccess = workspaceModuleAccess(orgSettings, workspace || {}, moduleState);
-  // Owner gets full chrome. Finance partners get Daily/Monthly view-only. Accounts-team gets Accounts only.
+  // Owner gets full chrome. Finance partners inherit every unlocked module, view-only. Accounts-team gets Accounts only.
   const access = showOwnerChrome
     ? moduleAccess
     : moduleAccess.isFinancePartner
@@ -53,12 +53,7 @@ export function WorkspaceLayout() {
         ...moduleAccess,
         isOwner: false,
         canWriteFinance: false,
-        chit: false,
-        accounts: false,
-        showChit: false,
-        showAccounts: false,
-        // Cashbook stays open when the finance pack includes it (view-only in the UI).
-        locked: { ...moduleAccess.locked, chit: false, accounts: false, counter: false },
+        locked: { ...moduleAccess.locked, daily: false, monthly: false, chit: false, cashbook: false, accounts: false, counter: false },
       }
       : moduleAccess.isAccountsUser
         ? {
@@ -116,13 +111,14 @@ export function WorkspaceLayout() {
   }, [subscriptionLocked, token, refreshModuleEntitlements]);
 
   useEffect(() => {
-    if (subscriptionLocked || !showOwnerChrome || !token) return undefined;
+    const canLoadChit = showOwnerChrome || (moduleAccess.isFinancePartner && moduleAccess.chit);
+    if (subscriptionLocked || !canLoadChit || !token) return undefined;
     let cancelled = false;
     loadActiveChitSchemes(token)
       .then(schemes => { if (!cancelled) setChitSchemes(schemes || []); })
       .catch(() => { if (!cancelled) setChitSchemes([]); });
     return () => { cancelled = true; };
-  }, [subscriptionLocked, showOwnerChrome, token]);
+  }, [subscriptionLocked, showOwnerChrome, moduleAccess.isFinancePartner, moduleAccess.chit, token]);
 
   // CA top bar: show the Acc company they can open (e.g. Buyyani's), not the MyFinTracker org name.
   useEffect(() => {
@@ -257,7 +253,7 @@ export function WorkspaceLayout() {
       context={{
         today: todayIso(),
         orgSettings,
-        isOwner: Boolean(access.canViewOwnerFinance),
+        isOwner: Boolean(access.isOwner),
         agentId: workspace?.id || "",
         agentName: workspace?.fullName || "",
         collectionScope: workspace?.collectionScope || "",

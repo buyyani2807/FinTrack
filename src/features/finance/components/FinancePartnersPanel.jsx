@@ -2,13 +2,16 @@ import { useEffect, useState } from "react";
 import { Button, Field, Modal } from "../../../components/ui.jsx";
 import { createFinancePartner, listFinancePartners, updateFinancePartner } from "../../../lib/financeRepository.js";
 
-export function FinancePartnersPanel({ token }) {
+export function FinancePartnersPanel({ token, visibleModules = [] }) {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState({ fullName: "", email: "" });
   const [created, setCreated] = useState(null);
+  const moduleList = visibleModules.length
+    ? visibleModules.join(", ")
+    : "whatever modules this workspace has unlocked";
 
   const refresh = async () => {
     setLoading(true);
@@ -61,10 +64,19 @@ export function FinancePartnersPanel({ token }) {
     <section className="card settings-section">
       <header className="settings-section-head">
         <div>
-          <h2>Finance partners (view only)</h2>
-          <p>Sleeping partners sign in with Owner sign-in. They see Daily and Monthly Finance plus Cashbook in view-only mode, and cannot record payments, add cashbook entries, or change settings.</p>
+          <h2>View-only partners</h2>
+          <p>
+            Sleeping partners sign in with Owner sign-in. They can view every module unlocked in this workspace, and cannot record payments, post vouchers, or change settings.
+          </p>
         </div>
       </header>
+      {visibleModules.length ? (
+        <ul className="partner-module-chips" aria-label="Modules this partner will see">
+          {visibleModules.map(label => <li key={label}>{label}</li>)}
+        </ul>
+      ) : (
+        <p className="small">Unlock at least one module for partners to have something to view.</p>
+      )}
       <div className="form spacer">
         <Field label="Partner name"><input value={draft.fullName} onChange={event => setDraft(current => ({ ...current, fullName: event.target.value }))} placeholder="e.g. Ramesh Partner" /></Field>
         <Field label="Email"><input type="email" value={draft.email} onChange={event => setDraft(current => ({ ...current, email: event.target.value }))} placeholder="partner@example.com" /></Field>
@@ -72,7 +84,7 @@ export function FinancePartnersPanel({ token }) {
       </div>
       {error ? <p className="red small" role="alert">{error}</p> : null}
       {loading ? <p className="small">Loading partners…</p> : null}
-      {!loading && !members.length ? <p className="small">No finance partners yet.</p> : null}
+      {!loading && !members.length ? <p className="small">No view-only partners yet.</p> : null}
       {members.length ? (
         <div className="table spacer">
           <table>
@@ -100,7 +112,7 @@ export function FinancePartnersPanel({ token }) {
           <p className="copy">Share these privately. {created.fullName || "Your partner"} uses Owner sign-in.</p>
           <p className="small"><strong>Email</strong><br />{created.email}</p>
           <p className="small"><strong>Temporary password</strong><br />{created.temporaryPassword}</p>
-          <p className="notice">{created.message || "They can see Daily and Monthly Finance only, in view-only mode."}</p>
+          <p className="notice">{created.message || `They can view ${moduleList} in view-only mode.`}</p>
           <div className="row spacer"><Button className="primary" onClick={() => setCreated(null)}>Done</Button></div>
         </Modal>
       ) : null}

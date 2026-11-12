@@ -48,7 +48,7 @@ export function ChitMemberPage({
 }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [standingChange, setStandingChange] = useState(null);
-  const isOwner = workspace?.role !== "staff";
+  const isOwner = workspace?.role === "owner";
   const portalId = enrollmentPortalId(enrollment);
   const standing = memberStanding(enrollment);
   const standingMeta = MEMBER_STANDINGS[standing];

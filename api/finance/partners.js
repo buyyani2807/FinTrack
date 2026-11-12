@@ -1,5 +1,5 @@
 /* global process */
-// Owner creates a sleeping partner (finance_partner) login: Owner sign-in, Daily/Monthly/Cashbook view-only.
+// Owner creates a sleeping partner (finance_partner) login: Owner sign-in, view-only on every unlocked workspace module.
 import { temporaryAuthPassword } from "../_lib/agentPortal.js";
 
 const readEnv = (...keys) => {
@@ -221,7 +221,7 @@ export default async function handler(req, res) {
       email: emailAddress,
       fullName: name,
       temporaryPassword: password,
-      message: "Share the email and temporary password with your partner. They use Owner sign-in and see Daily Finance, Monthly Finance, and Cashbook in view-only mode.",
+      message: "Share the email and temporary password with your partner. They use Owner sign-in and can view every module unlocked in this workspace, in view-only mode.",
     });
   } catch (error) {
     return json(res, 500, { error: error.message || "Could not manage finance partners." });

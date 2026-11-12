@@ -20,6 +20,8 @@ export function useFinTrackSession() {
   const [dataError, setDataError] = useState("");
   const sessionGen = useRef(0);
   const userRoleRef = useRef(null);
+  // Login already loaded workspace; skip the immediate re-fetch on the same auth token.
+  const skipNextWorkspaceRefresh = useRef(false);
   const beginSession = () => { sessionGen.current += 1; return sessionGen.current; };
   const isCurrentSession = gen => gen === sessionGen.current;
   const canApplyWorkspace = next => {
@@ -119,6 +121,7 @@ export function useFinTrackSession() {
     setFinanceLoaded(false);
     setDataError("");
     userRoleRef.current = session.role;
+    if (nextWorkspace) skipNextWorkspaceRefresh.current = true;
     flushSync(() => {
       setWorkspace(nextWorkspace || null);
       setUser(session);
@@ -143,6 +146,10 @@ export function useFinTrackSession() {
   };
   useEffect(() => {
     if (!user?.authToken) return undefined;
+    if (skipNextWorkspaceRefresh.current) {
+      skipNextWorkspaceRefresh.current = false;
+      return undefined;
+    }
     const gen = sessionGen.current;
     let cancelled = false;
     loadWorkspace(user.authToken)

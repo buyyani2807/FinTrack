@@ -300,6 +300,8 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [pendingBankMatch, setPendingBankMatch] = useState(null);
   const [accountsAccessRole, setAccountsAccessRole] = useState(() => {
     if (workspace?.role === "owner") return "owner";
+    // View-only partners inherit Accounts as viewers (migration 140).
+    if (workspace?.role === "finance_partner") return "viewer";
     // Remember last Accounts-team role so cashier chrome is Counter-only on first paint
     // (role RPC otherwise arrives a tick later and used to flash the full tab strip).
     if (workspace?.role === "accounts" && workspace?.id && typeof sessionStorage !== "undefined") {
@@ -471,8 +473,11 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
           try { sessionStorage.setItem(`ft-acc-access-role:${workspace.id}`, role); } catch { /* ignore */ }
         }
       } else if (workspace?.role === "owner") setAccountsAccessRole("owner");
+      else if (workspace?.role === "finance_partner") setAccountsAccessRole("viewer");
     }).catch(() => {
-      if (!cancelled && workspace?.role === "owner") setAccountsAccessRole("owner");
+      if (cancelled) return;
+      if (workspace?.role === "owner") setAccountsAccessRole("owner");
+      else if (workspace?.role === "finance_partner") setAccountsAccessRole("viewer");
     });
     return () => { cancelled = true; };
   }, [token, workspace?.role, workspace?.id]);

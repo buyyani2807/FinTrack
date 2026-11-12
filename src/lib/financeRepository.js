@@ -108,6 +108,8 @@ export async function loadWorkspace(token) {
   let businessName = organization?.name || "My Finance Business";
   let collectionScope = "";
   let accountsCompanyId = "";
+  // Start subscription while staff extras load so login is not profile → subscription waterfall.
+  const subscriptionPromise = loadSubscription(token);
   if (profile.role === "staff") {
     try {
       const [self] = await supabase.query(`/rest/v1/profiles?id=eq.${profile.id}&select=collection_scope,accounts_company_id&limit=1`, token);
@@ -133,7 +135,7 @@ export async function loadWorkspace(token) {
     active: profile?.is_active !== false,
     id: profile?.id || "",
     organizationSettings: mapOrganizationSettings(organization),
-    subscription: await loadSubscription(token),
+    subscription: await subscriptionPromise,
   };
 }
 

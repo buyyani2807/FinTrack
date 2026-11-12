@@ -75,18 +75,39 @@ export function Financier({
   const [confirmationLogState, setConfirmationLogState] = useState([]);
   const [statementLoan, setStatementLoan] = useState(null);
   const [chitAttention, setChitAttention] = useState([]);
+  const [dashboardExtrasReady, setDashboardExtrasReady] = useState(false);
   // Partners see the same Daily/Monthly views as the owner; only owners can write.
   const canWrite = role === "owner";
   const isOwner = role === "owner" || role === "partner";
   const isPartner = role === "partner";
   const detailId = detail?.id || null;
   useEffect(() => {
-    if (!authToken) return;
+    if (!authToken) {
+      setDashboardExtrasReady(false);
+      return undefined;
+    }
+    let cancelled = false;
+    const arm = () => { if (!cancelled) setDashboardExtrasReady(true); };
+    // Let the dashboard paint first; reminder/cashbook/chit work can wait a tick.
+    const idleId = typeof window !== "undefined" && typeof window.requestIdleCallback === "function"
+      ? window.requestIdleCallback(arm, { timeout: 1500 })
+      : window.setTimeout(arm, 0);
+    return () => {
+      cancelled = true;
+      if (typeof window !== "undefined" && typeof window.cancelIdleCallback === "function" && typeof idleId === "number") {
+        window.cancelIdleCallback(idleId);
+      } else {
+        window.clearTimeout(idleId);
+      }
+    };
+  }, [authToken]);
+  useEffect(() => {
+    if (!authToken || !dashboardExtrasReady) return;
     loadPaymentReminderLog(authToken).then(setReminderLogState).catch(() => setReminderLogState([]));
     loadTransactionConfirmationLog(authToken).then(setConfirmationLogState).catch(() => setConfirmationLogState([]));
-  }, [authToken, detailId]);
+  }, [authToken, detailId, dashboardExtrasReady]);
   useEffect(() => {
-    if (!canWrite || !authToken) {
+    if (!canWrite || !authToken || !dashboardExtrasReady) {
       setChitAttention(current => (current.length ? [] : current));
       return undefined;
     }
@@ -99,7 +120,7 @@ export function Financier({
         if (!cancelled) setChitAttention([]);
       });
     return () => { cancelled = true; };
-  }, [canWrite, authToken, activeChitSchemes]);
+  }, [canWrite, authToken, activeChitSchemes, dashboardExtrasReady]);
   const runFinanceConfirmation = async (loanLike, { resend = false } = {}) => {
     const eventType = eventTypeForFinanceLoan(loanLike);
     const variables = eventType === CONFIRMATION_EVENTS.monthly
@@ -294,7 +315,7 @@ export function Financier({
         if (href.detailId) { const target = loans.find(loan => loan.id === href.detailId); if (target) openAccount(target); }
         else navigateTo(modulePath(href.panel));
       }
-    }} />}{isOwner && <AnomalyReviewCard review={buildAnomalyReview({ today: today(), loans: [...dailyCustomers, ...monthlyCustomers] })} onNavigate={href => { if (href?.panel === "daily" || href?.panel === "monthly") navigateTo(collectionsPath(href.panel)); }} />}{isOwner && authToken && <AccountsSummaryCard token={authToken} moneyFmt={money} onOpen={() => navigateTo(workspacePaths.cashbook)} />}{authToken && workspace?.collectionScope !== "finance" && !isPartner && <RouteCollectionsEntryCard token={authToken} onOpen={() => navigateTo(workspacePaths.routeCollections)} />}{(isOwner || !accountsCollector) && !showDaily && !showMonthly && <section className="card"><p className="copy">No Daily or Monthly Finance customers are assigned to you yet.</p></section>}{showDaily && <DashboardFinanceSection title="Daily Finance" customerLabel="Active Daily Customers" kind="daily" loans={dailyCustomers} customersOpen={dashboardCustomersOpen.daily} onToggleCustomers={() => setDashboardCustomersOpen(current => ({ ...current, daily: !current.daily }))} onView={openAccount} canReorder={canWrite} showPnl={isOwner} draggedId={draggedId} setDraggedId={setDraggedId} onReorder={id => reorderDashboard("daily", id)} startTouchDrag={startTouchDrag} moveTouchDrag={moveTouchDrag} finishTouchDrag={finishTouchDrag} cancelTouchDrag={() => { touchTargetId.current = null; setDraggedId(null); }} />}{showMonthly && <DashboardFinanceSection title="Monthly Finance" customerLabel="Active Monthly Customers" kind="monthly" loans={monthlyCustomers} customersOpen={dashboardCustomersOpen.monthly} onToggleCustomers={() => setDashboardCustomersOpen(current => ({ ...current, monthly: !current.monthly }))} onView={openAccount} canReorder={canWrite} showPnl={isOwner} draggedId={draggedId} setDraggedId={setDraggedId} onReorder={id => reorderDashboard("monthly", id)} startTouchDrag={startTouchDrag} moveTouchDrag={moveTouchDrag} finishTouchDrag={finishTouchDrag} cancelTouchDrag={() => { touchTargetId.current = null; setDraggedId(null); }} />}{portalNotice}{receiptSuccess && <ReceiptSuccessModal receipt={receiptSuccess} settings={orgSettings} token={authToken} onLogAction={onLogReceipt} close={() => setReceiptSuccess(null)} />}</main>;
+    }} />}{isOwner && <AnomalyReviewCard review={buildAnomalyReview({ today: today(), loans: [...dailyCustomers, ...monthlyCustomers] })} onNavigate={href => { if (href?.panel === "daily" || href?.panel === "monthly") navigateTo(collectionsPath(href.panel)); }} />}{isOwner && authToken && dashboardExtrasReady && <AccountsSummaryCard token={authToken} moneyFmt={money} onOpen={() => navigateTo(workspacePaths.cashbook)} />}{authToken && dashboardExtrasReady && workspace?.collectionScope !== "finance" && !isPartner && <RouteCollectionsEntryCard token={authToken} onOpen={() => navigateTo(workspacePaths.routeCollections)} />}{(isOwner || !accountsCollector) && !showDaily && !showMonthly && <section className="card"><p className="copy">No Daily or Monthly Finance customers are assigned to you yet.</p></section>}{showDaily && <DashboardFinanceSection title="Daily Finance" customerLabel="Active Daily Customers" kind="daily" loans={dailyCustomers} customersOpen={dashboardCustomersOpen.daily} onToggleCustomers={() => setDashboardCustomersOpen(current => ({ ...current, daily: !current.daily }))} onView={openAccount} canReorder={canWrite} showPnl={isOwner} draggedId={draggedId} setDraggedId={setDraggedId} onReorder={id => reorderDashboard("daily", id)} startTouchDrag={startTouchDrag} moveTouchDrag={moveTouchDrag} finishTouchDrag={finishTouchDrag} cancelTouchDrag={() => { touchTargetId.current = null; setDraggedId(null); }} />}{showMonthly && <DashboardFinanceSection title="Monthly Finance" customerLabel="Active Monthly Customers" kind="monthly" loans={monthlyCustomers} customersOpen={dashboardCustomersOpen.monthly} onToggleCustomers={() => setDashboardCustomersOpen(current => ({ ...current, monthly: !current.monthly }))} onView={openAccount} canReorder={canWrite} showPnl={isOwner} draggedId={draggedId} setDraggedId={setDraggedId} onReorder={id => reorderDashboard("monthly", id)} startTouchDrag={startTouchDrag} moveTouchDrag={moveTouchDrag} finishTouchDrag={finishTouchDrag} cancelTouchDrag={() => { touchTargetId.current = null; setDraggedId(null); }} />}{portalNotice}{receiptSuccess && <ReceiptSuccessModal receipt={receiptSuccess} settings={orgSettings} token={authToken} onLogAction={onLogReceipt} close={() => setReceiptSuccess(null)} />}</main>;
   }
   if (dedicatedModule && isOwner && moduleSection === "reports") {
     return <main className={`shell finance-module-shell ${module}`}>{moduleHeader}{moduleToolbar}{moduleNav}<PortfolioReport loans={loans.filter(loan => loan.kind === module)} token={authToken} lockedKind={module} showChit={false} embedded title={`${module === "monthly" ? "Monthly" : "Daily"} Reports`} />{canWrite && modal === "new" && <NewFinance kind={module} close={() => setModal(null)} save={createAccount} />}{portalNotice}</main>;

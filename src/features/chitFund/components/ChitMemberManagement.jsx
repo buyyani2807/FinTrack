@@ -60,7 +60,7 @@ export function ChitMembersToolbar({ scheme, enrollments, onAddMember, token, ch
     <strong>Members</strong>
     <div className="row">
       {canEnrollMoreMembers(scheme, enrollments) && onAddMember && <Button className="primary" onClick={onAddMember}>+ Add member</Button>}
-      <ChitMemberManager token={token} scheme={scheme} enrollments={enrollments} changed={changed} />
+      {onAddMember ? <ChitMemberManager token={token} scheme={scheme} enrollments={enrollments} changed={changed} /> : null}
     </div>
   </div>;
 }

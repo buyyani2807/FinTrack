@@ -892,6 +892,8 @@ html[data-ft-role="accounts"] .accounts-dashboard { margin-left: 0 !important; }
 .settings-section-head { display: flex; align-items: flex-start; gap: 14px; }
 .settings-section-head h2 { margin: 0 0 4px; font-size: var(--ft-type-lead) !important; line-height: 24px; }
 .settings-section-head p { max-width: 72ch; margin: 0; color: var(--ft-muted); font-size: var(--ft-type-label); line-height: 20px; }
+.partner-module-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.partner-module-chips li { padding: 6px 12px; border: 1px solid var(--ft-border); border-radius: 999px; background: var(--ft-surface); color: var(--ft-text); font-size: var(--ft-type-label); font-weight: 600; }
 .settings-section-head .ft-icon-tile { background: var(--ft-primary-soft); color: var(--ft-primary); }
 .settings-grid { margin: 0 !important; }
 /* variables */

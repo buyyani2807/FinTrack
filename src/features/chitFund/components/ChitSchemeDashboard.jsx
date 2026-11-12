@@ -54,9 +54,9 @@ function ChitSchemeCard({ kind, row, open, edit, activate }) {
       <div><span>Current member</span><strong>{activeMember ? enrollmentName(activeMember) : "—"}</strong></div>
       {predefined && <div className="chit-scheme-current-wide"><span>Lift amount</span><strong>{activeRow ? money(activeRow.net_receivable) : "—"}</strong></div>}
     </div>
-    {scheme.status === "draft" && <div className="chit-scheme-actions" onClick={event => event.stopPropagation()}>
-      {!predefined && <Button onClick={() => edit(scheme)}>Edit</Button>}
-      <Button className="primary" onClick={() => activate(scheme)}>Activate</Button>
+    {scheme.status === "draft" && (edit || activate) && <div className="chit-scheme-actions" onClick={event => event.stopPropagation()}>
+      {!predefined && edit ? <Button onClick={() => edit(scheme)}>Edit</Button> : null}
+      {activate ? <Button className="primary" onClick={() => activate(scheme)}>Activate</Button> : null}
     </div>}
   </article>;
 }
