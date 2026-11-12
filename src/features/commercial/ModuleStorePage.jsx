@@ -84,8 +84,8 @@ export function ModuleStorePage() {
     <main className="ft-module-store">
       <div className="ft-mod">
         <header className="ft-mod-head">
-          <p className="ft-mod-kicker">Modules</p>
-          <h1>Pay for the modules you need.</h1>
+          <p className="ft-mod-kicker">Subscriptions</p>
+          <h1>Active plans and new subscriptions.</h1>
         </header>
 
         <div className="ft-mod-bill" role="tablist" aria-label="Billing period">

@@ -75,7 +75,7 @@ export function FinancierNav({ access, orgSettings = {}, businessName = "", logo
     {access.showAccounts && <Button className={itemClass(isActive(workspacePaths.accounts), access.locked?.accounts)} onClick={() => openEntitled("accounts", workspacePaths.accounts)}><NavLabel icon={BookOpenText} long={<>Accounts{access.locked?.accounts ? <LockedHint /> : null}</>} short="Accounts" /></Button>}
     {access.isOwner && <Button className={itemClass(isActive(workspacePaths.collectionStaff))} onClick={() => go(workspacePaths.collectionStaff)}><NavLabel icon={Users} long="Collection Staff" short="Staff" /></Button>}
     {access.isOwner && <Button className={itemClass(isActive(workspacePaths.settings))} onClick={() => go(workspacePaths.settings)}><NavLabel icon={Settings} long="Settings" short="Settings" /></Button>}
-    {access.isOwner && <Button className={itemClass(isActive(workspacePaths.subscribe) || isActive(workspacePaths.moduleStore))} onClick={() => go(workspacePaths.moduleStore)}><NavLabel icon={Lock} long="Modules" short="Unlock" /></Button>}
+    {access.isOwner && <Button className={itemClass(isActive(workspacePaths.subscribe) || isActive(workspacePaths.moduleStore))} onClick={() => go(workspacePaths.moduleStore)}><NavLabel icon={Lock} long="Subscriptions" short="Plans" /></Button>}
     {askEnabled && onAsk ? <Button onClick={() => { closeDrawer(); onAsk(); }}><NavLabel icon={MessageCircle} long={ASK_LABEL} short="Ask" /></Button> : null}
     <div className="nav-footer">
       <ThemeToggle className="nav-theme" />

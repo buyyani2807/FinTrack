@@ -35,7 +35,7 @@ export function SubscribePage() {
             ? ended.preservation
             : trial
               ? `${trial.detail} After the trial, unlock only the modules you need. Your records stay.`
-              : "See which modules are active for this business. To pay and unlock more, open Modules."}
+              : "See which modules are active for this business. To pay and unlock more, open Subscriptions."}
         </p>
         {(started || ends) && <p className="ft-sub-dates">
           {started ? <span>Trial started {started}</span> : null}
@@ -59,7 +59,7 @@ export function SubscribePage() {
 
       <section className="ft-mod-review">
         {isOwner ? (
-          <Link className="btn primary" to="/subscribe/modules">Unlock modules</Link>
+          <Link className="btn primary" to="/subscribe/modules">Manage subscriptions</Link>
         ) : (
           <p className="ft-mod-empty">The business owner unlocks modules.</p>
         )}
