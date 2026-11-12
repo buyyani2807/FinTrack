@@ -10,9 +10,19 @@ export default defineConfig(({ mode }) => {
   // /api/* runs as Vercel functions, which `vite dev` cannot serve, so forward it to a deployed backend.
   // Set API_PROXY_TARGET in .env.local to point at a different deployment.
   const apiTarget = env.API_PROXY_TARGET || DEFAULT_API_TARGET
+  // Absolute origin for Open Graph / Twitter cards (crawlers need full URLs).
+  const appOrigin = String(env.VITE_APP_ORIGIN || DEFAULT_API_TARGET).trim().replace(/\/$/, '')
 
   return {
-    plugins: [react()],
+    plugins: [
+      react(),
+      {
+        name: 'ft-html-app-origin',
+        transformIndexHtml(html) {
+          return html.replaceAll('%FT_APP_ORIGIN%', appOrigin)
+        },
+      },
+    ],
     server: {
       proxy: {
         '/api': {
