@@ -1013,8 +1013,10 @@ html[data-theme="dark"] .hm-home .mkt-btn:not(.primary):not(.light) { border-col
 .hm-chit-bid strong { display: block; margin: 4px 0; font-size: clamp(36px, 4vw, 48px); font-weight: 800; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; animation: hm-pop 0.4s cubic-bezier(.2, .7, .2, 1.4); }
 .hm-chit-bid span { font-size: var(--ft-type-secondary); font-weight: 600; }
 @keyframes hm-pop { from { opacity: 0; transform: translateY(10px) scale(0.92); } }
-.hm-bids { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.hm-bids li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 12px; border: 2px dashed var(--hm-paper); border-radius: 12px; font-size: var(--ft-type-secondary); font-variant-numeric: tabular-nums; }
+.hm-bids { --hm-bid-row: calc(1.3 * var(--ft-type-secondary) + 20px); display: grid; grid-auto-rows: var(--hm-bid-row); align-content: start; gap: 6px; height: calc(4 * var(--hm-bid-row) + 18px); margin: 0; padding: 0; list-style: none; }
+.hm-bids li { box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 12px; height: var(--hm-bid-row); padding: 8px 12px; border: 2px dashed var(--hm-paper); border-radius: 12px; font-size: var(--ft-type-secondary); line-height: 1.3; font-variant-numeric: tabular-nums; }
+.hm-bids li span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-bids li strong { flex: none; }
 .hm-bids li.is-top { border-style: solid; background: var(--hm-paper); color: var(--hm-tx, var(--hm-ink)); font-weight: 800; animation: hm-pop 0.4s cubic-bezier(.2, .7, .2, 1.4); }
 .hm-chit-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: auto; padding-top: 18px; border-top: 2px solid var(--hm-paper); font-weight: 800; font-variant-numeric: tabular-nums; }
 .hm-chit-facts small { display: block; font-size: var(--ft-type-caption); font-weight: 600; }
