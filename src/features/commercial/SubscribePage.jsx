@@ -1,13 +1,19 @@
 import { useMemo } from "react";
 import { Link, useOutletContext } from "react-router";
 import { catalogWithPurchaseState } from "./moduleAccess.js";
-import { priceForPeriod, priceForProduct } from "./moduleProducts.js";
+import { priceForProduct } from "./moduleProducts.js";
 import {
   formatTrialDate,
   subscriptionLockCopy,
   trialBannerCopy,
   workspaceAccessAllowed,
 } from "./trial.js";
+
+const QUESTIONS = [
+  ["Will my records be removed?", "No. Customers, collections, chit records, and accounts stay in this workspace."],
+  ["Can I still sign in?", "Yes. Sign-in, this page, company settings, and log out stay available."],
+  ["When does the trial start?", "After the workspace is created, for 14 days. Opening the signup page does not start it."],
+];
 
 export function SubscribePage() {
   const { workspace, logout, moduleState, access } = useOutletContext() || {};
@@ -18,57 +24,55 @@ export function SubscribePage() {
   const started = formatTrialDate(subscription?.startedAt);
   const ends = formatTrialDate(subscription?.endsAt);
   const modules = useMemo(() => catalogWithPurchaseState(moduleState), [moduleState]);
-  const monthly = priceForPeriod("monthly");
-  const annual = priceForPeriod("annual");
-  const posMonthly = priceForProduct("accounts_pos", "monthly");
 
   return <main className="ft-subscribe">
-    <p className="ft-kicker">Subscription</p>
-    <h1>{ended ? ended.title : trial ? "Your 14-day free trial is running" : "Unlock modules"}</h1>
-    {ended ? <p className="ft-subscribe-lead">{ended.preservation}</p> : <p className="ft-subscribe-lead">
-      {trial
-        ? `${trial.detail} After the trial, unlock only the modules you need.`
-        : "Unlock Daily + Monthly Finance, Chit Fund, Accounts, or Accounts + POS for this business."}
-      {" "}Your records stay either way.
-    </p>}
-    {(started || ends) && <p className="ft-subscribe-dates">
-      {started ? <>Trial started {started}. </> : null}
-      {ends ? <>Trial ends {ends}.</> : null}
-    </p>}
+    <div className="ft-sub">
+      <header className="ft-mod-head">
+        <p className="ft-mod-kicker">Subscription</p>
+        <h1>{ended ? ended.title : trial ? "Your 14-day free trial is running" : "Unlock modules"}</h1>
+        <p className="ft-sub-lead">
+          {ended
+            ? ended.preservation
+            : trial
+              ? `${trial.detail} After the trial, unlock only the modules you need. Your records stay.`
+              : "Unlock Daily + Monthly Finance, Chit Fund, Accounts, or Accounts + POS for this business. Your records stay either way."}
+        </p>
+        {(started || ends) && <p className="ft-sub-dates">
+          {started ? <span>Trial started {started}</span> : null}
+          {ends ? <span>Trial ends {ends}</span> : null}
+        </p>}
+      </header>
 
-    <section className="ft-subscribe-modules">
-      <h2>{ended ? "Modules" : "Your modules"}</h2>
-      <p className="small">
-        Standard modules: {monthly.breakdown} monthly, or {annual.breakdown} yearly.
-        Accounts + POS: {posMonthly.breakdown}. No lifetime plan.
-      </p>
-      <ul className="ft-module-billing-list">
+      <div className="ft-sub-grid">
         {modules.map(product => {
           const price = priceForProduct(product, "monthly");
-          return (
-          <li key={product.key} className={product.owned ? "is-owned" : "is-locked"}>
-            <strong>{product.name}</strong>
-            <span>{product.owned ? "Active" : "Locked"} · {price.totalLabel}/mo</span>
-          </li>
-          );
+          return <article key={product.key} className={`ft-sub-card${product.owned ? " is-owned" : ""}`}>
+            <p className={`ft-mod-state${product.owned ? " is-owned" : ""}`}>{product.owned ? "Active" : "Locked"}</p>
+            <div className="ft-mod-title">
+              <h2>{product.name}</h2>
+              <p className="ft-mod-price"><strong>{price.baseLabel}</strong><span>/ month + GST</span></p>
+            </div>
+            <p className="ft-mod-desc">{product.description}</p>
+          </article>;
         })}
-      </ul>
-      {isOwner ? (
-        <p><Link className="btn primary" to="/subscribe/modules">Unlock modules</Link></p>
-      ) : (
-        <p>The business owner unlocks modules.</p>
-      )}
-    </section>
+      </div>
 
-    <section className="ft-subscribe-help">
-      <h2>Payment</h2>
-      <p>Card payment is not connected yet. Unlock does not charge a card until Razorpay is configured on the server. Modules unlock only after a verified payment event.</p>
-      <h2>Questions</h2>
-      <p>Will my records be removed? No. Customers, collections, chit records, and accounts stay in this workspace.</p>
-      <p>Can I still sign in? Yes. Sign-in, this page, company settings, and log out stay available.</p>
-      <p>When does the trial start? After the workspace is created, for 14 days. Opening the signup page does not start it.</p>
-      {workspaceAccessAllowed(subscription) ? <p><Link to="/dashboard">Back to the workspace</Link></p> : null}
-      <button type="button" className="btn" onClick={logout}>Log out</button>
-    </section>
+      <section className="ft-mod-review">
+        {isOwner ? (
+          <Link className="btn primary" to="/subscribe/modules">Unlock modules</Link>
+        ) : (
+          <p className="ft-mod-empty">The business owner unlocks modules.</p>
+        )}
+        <p className="ft-mod-note">Card payment is not connected yet. Unlock does not charge a card until Razorpay is configured on the server. Modules unlock only after a verified payment event.</p>
+        <dl className="ft-sub-qa">
+          {QUESTIONS.map(([question, answer]) => <div key={question}>
+            <dt>{question}</dt>
+            <dd>{answer}</dd>
+          </div>)}
+        </dl>
+        {workspaceAccessAllowed(subscription) ? <p className="ft-mod-back"><Link to="/dashboard">Back to the workspace</Link></p> : null}
+        <button type="button" className="btn" onClick={logout}>Log out</button>
+      </section>
+    </div>
   </main>;
 }
