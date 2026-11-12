@@ -17,7 +17,17 @@ function withLazy(importer, exportName, fallback) {
   };
 }
 
-const marketingFallback = null;
+function MarketingPageFallback() {
+  return <div className="mkt-page-loading" role="status" aria-live="polite">
+    <div className="mkt-coin-roll" aria-hidden="true">
+      <span className="mkt-coin-shadow" />
+      <span className="mkt-coin"><span className="mkt-coin-face">₹</span></span>
+    </div>
+    <span className="ft-sr-only">Loading page</span>
+  </div>;
+}
+
+const marketingFallback = <MarketingPageFallback />;
 const workspaceFallback = <LoadingScreen />;
 const pageFallback = <div className="shell"><Spinner label="Loading" /></div>;
 

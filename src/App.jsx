@@ -1,6 +1,6 @@
 // MyFinTracker MVP. This browser-only build is for testing; add a secure backend,
 // authentication, audit trails, and local compliance review before production.
-import { useEffect, useLayoutEffect } from "react";
+import { useLayoutEffect } from "react";
 import { BrowserRouter, useLocation } from "react-router";
 import { AppRoutes } from "./app/AppRoutes.jsx";
 import { AppShell } from "./app/AppShell.jsx";
@@ -10,7 +10,7 @@ import { applyDocumentTheme } from "./lib/theme.js";
 // Links with a hash (e.g. /features#accounts) scroll to their section instead.
 function ScrollToTop() {
   const { pathname, hash } = useLocation();
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!hash) window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
   return null;
