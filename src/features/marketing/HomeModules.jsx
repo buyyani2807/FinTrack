@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
-import { ArchiveRestore, ArrowRight, BookOpenText, CalendarDays, CalendarRange, Check, Coins, FileText, Gavel, HandCoins, Package, Printer, Receipt, Scale, Users, Wallet } from "lucide-react";
+import { ArchiveRestore, ArrowRight, BookOpenText, CalendarDays, CalendarRange, Check, Coins, FileText, Gavel, HandCoins, MessageCircle, Package, PenLine, Printer, Receipt, Scale, ScanLine, Sparkles, Users, Wallet } from "lucide-react";
 import { useInView } from "../../components/ui/useInView.js";
 import { featurePath } from "./paths.js";
 
@@ -355,6 +355,25 @@ function AccountsModule() {
   </article></Section>;
 }
 
+const AI_SIGNALS = [
+  { icon: MessageCircle, label: "Ask Finny" },
+  { icon: PenLine, label: "Tell Finny" },
+  { icon: ScanLine, label: "Bill scan" },
+  { icon: Sparkles, label: "AI Review" },
+];
+
+function AiSignal() {
+  return <Section id="ai" flip><article className="hm-ai">
+    <Tag icon={Sparkles}>AI</Tag>
+    <h3>Built with AI. Not a normal books app.</h3>
+    <p className="hm-module-lead">MyFinTracker reads your own records and points out what needs a look: who to collect, cash that may run short, a bill to draft, a scheme that is slipping. You still post, approve, and send. Nothing is filed or sent by itself.</p>
+    <ul className="hm-ai-signals">
+      {AI_SIGNALS.map(item => <li key={item.label}><item.icon size={16} aria-hidden="true" />{item.label}</li>)}
+    </ul>
+    <More to={featurePath("ai")}>See how AI works</More>
+  </article></Section>;
+}
+
 const BACKUP_MODULES = [
   { icon: HandCoins, label: "Finance" },
   { icon: Coins, label: "Chit Fund" },
@@ -371,7 +390,6 @@ function BackupModule() {
       {BACKUP_MODULES.map(item => <li key={item.label}><item.icon size={16} aria-hidden="true" />{item.label}</li>)}
     </ul>
     <Points items={["Manual copy or nightly at midnight IST", "Restore takes a safety checkpoint first", "Copies older than 14 days are removed"]} />
-    <More to={featurePath("workspace-backup")}>Read backup & restore</More>
   </article></Section>;
 }
 
@@ -382,6 +400,7 @@ export function HomeModules() {
     <ChitModule />
     <CashbookModule />
     <AccountsModule />
+    <AiSignal />
     <BackupModule />
   </>;
 }

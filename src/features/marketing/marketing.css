@@ -1084,12 +1084,17 @@ html[data-theme="dark"] .hm-home .mkt-btn:not(.primary):not(.light) { border-col
 .hm-accounts-foot .hm-points { grid-auto-flow: column; gap: 28px; margin: 0; }
 .hm-accounts-foot .hm-module-link { margin-top: 0; }
 
-/* Workspace backup sits after the modules, not inside Accounts. */
+/* AI band, then the workspace backup block. */
+.hm-ai { max-width: 760px; margin: 0 auto; text-align: center; }
+.hm-ai .hm-module-lead { max-width: 52ch; margin-left: auto; margin-right: auto; }
+.hm-ai-signals { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 28px 0 0; padding: 0; list-style: none; }
+.hm-ai-signals li { display: inline-flex; align-items: center; gap: 8px; min-width: 0; padding: 10px 16px; border: 2px solid var(--hm-ink); border-radius: 999px; font-size: var(--ft-type-secondary); font-weight: 700; }
+.hm-ai .hm-module-link { margin-top: 28px; }
+
 .hm-backup { max-width: 760px; margin: 0 auto; text-align: center; }
 .hm-backup-mods { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 28px 0 0; padding: 0; list-style: none; }
 .hm-backup-mods li { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border: 2px solid var(--hm-ink); border-radius: 999px; font-size: var(--ft-type-secondary); font-weight: 700; }
-.hm-backup .hm-points { max-width: 42ch; margin-left: auto; margin-right: auto; text-align: left; }
-.hm-backup .hm-module-link { margin-top: 28px; }
+.hm-backup .hm-points { width: fit-content; max-width: 100%; margin-left: auto; margin-right: auto; text-align: left; }
 
 /* Ask Finny keeps its own layout; only the section spacing follows the page. */
 .hm-ask { padding: 104px 0; background: var(--hm-paper); }
