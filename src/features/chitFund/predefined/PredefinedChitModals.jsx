@@ -15,6 +15,7 @@ import { today, money, enrollmentName } from "../model/chitFormat.js";
 import { fireChitLiftWhatsApp } from "../io/chitNotifications.js";
 import { Button, Field, Metric } from "../../../components/ui.jsx";
 import { Modal } from "../components/ChitUi.jsx";
+import { ChitPaymentForm } from "../components/ChitPaymentForm.jsx";
 
 function predefinedLiftSaveError(err) {
   const message = String(err?.message || "");
@@ -105,8 +106,9 @@ export function PredefinedPaymentModal({ token, payment, memberName, memberPhone
       }
       done();
     }
-    catch (err) { setError(err.message || "Could not save this payment."); }
+    catch (err) { setError(err.message || "Could not save payment."); }
     finally { setBusy(false); }
   };
-  return <Modal close={close}><h2 className="title">{payment.amount_paid ? "Edit" : "Record"} EMI payment</h2><form onSubmit={submit}><div className="form spacer"><Field label="Member"><input disabled value={memberName || "Member"} /></Field><Field label="Expected EMI"><input disabled value={money(amountDue)} /></Field><Field label="Amount paid (₹)"><input required type="number" min="0.01" max={amountDue} step="0.01" value={form.amountPaid} onChange={e => set("amountPaid", e.target.value)} /></Field><Field label="Payment date"><input required type="date" value={form.paidDate} onChange={e => set("paidDate", e.target.value)} /></Field><Field label="Payment mode"><Select value={form.paymentMode} onChange={e => set("paymentMode", e.target.value)}><option value="cash">Cash</option><option value="upi">UPI</option><option value="bank">Bank</option><option value="cash_upi">Cash + UPI</option></Select></Field>{form.paymentMode === "cash_upi" && <><Field label="Cash amount (₹)"><input type="number" min="0" value={form.cash} onChange={e => set("cash", e.target.value)} /></Field><Field label="UPI amount (₹)"><input type="number" min="0" value={form.upi} onChange={e => set("upi", e.target.value)} /></Field></>}<Field label="Reference"><input value={form.paymentReference} onChange={e => set("paymentReference", e.target.value)} /></Field><Field label="Notes"><input value={form.notes} onChange={e => set("notes", e.target.value)} /></Field></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button className="primary" disabled={busy} type="submit">{busy ? "Saving…" : "Save payment"}</Button></div></form></Modal>;
+  const paidAlready = Number(payment.amount_paid || 0);
+  return <Modal close={close}><h2 className="title">{payment.amount_paid ? "Edit payment" : "Record payment"}</h2><ChitPaymentForm memberName={memberName} paymentMonth={payment.payment_month} amountDue={amountDue} amountDueLabel="Expected" previouslyPaid={paidAlready} outstanding={Math.max(0, Number(amountDue) - paidAlready)} amount={form.amountPaid} onAmount={value => set("amountPaid", value)} date={form.paidDate} onDate={value => set("paidDate", value)} mode={form.paymentMode} onMode={value => set("paymentMode", value)} cash={form.cash} onCash={value => set("cash", value)} upi={form.upi} onUpi={value => set("upi", value)} reference={form.paymentReference} onReference={value => set("paymentReference", value)} notes={form.notes} onNotes={value => set("notes", value)} error={error} busy={busy} onSubmit={submit} onCancel={close} /></Modal>;
 }

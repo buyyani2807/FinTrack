@@ -13,7 +13,7 @@ function ConfirmDangerModal({ title, children, confirmLabel, busy, error, onCanc
     {children}
     {error && <p className="red small">{error}</p>}
     <div className="row spacer">
-      
+      <Button type="button" disabled={busy} onClick={onCancel}>Cancel</Button>
       <Button className="danger" disabled={busy} onClick={onConfirm}>{busy ? "Working…" : confirmLabel}</Button>
     </div>
   </Modal>;
@@ -49,7 +49,7 @@ export function ChitActivateSchemeModal({ scheme, memberCount, busy, error, onCa
     <p className="notice">Members enrolled: {memberCount} / {scheme.member_count}</p>
     {error && <p className="red small">{error}</p>}
     <div className="row spacer">
-      
+      <Button type="button" disabled={busy} onClick={onCancel}>Cancel</Button>
       <Button className="primary" disabled={busy} onClick={onConfirm}>{busy ? "Activating…" : "Activate scheme"}</Button>
     </div>
   </Modal>;
@@ -104,7 +104,7 @@ export function ChitSchemeHeaderActions({ token, scheme, memberCount, onAddMembe
   const canAdd = canWrite && onAddMember && ["draft", "active"].includes(scheme.status) && Number(memberCount) < Number(scheme.member_count || 0);
   return <div className="row">
     {extra}
-    {canAdd && <Button className="primary" onClick={onAddMember}>+ Add member</Button>}
+    {canAdd && <Button className="primary" onClick={onAddMember}>Add member</Button>}
     {canWrite && onSchemeDeleted ? <ChitDeleteSchemeControl token={token} scheme={scheme} memberCount={memberCount} onDeleted={onSchemeDeleted} /> : null}
   </div>;
 }

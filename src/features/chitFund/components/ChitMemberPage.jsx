@@ -68,7 +68,7 @@ export function ChitMemberPage({
       <div className="tabs">
         <Button onClick={onStatement}>Customer Statement</Button>
         {isOwner && <Button aria-label="More actions" onClick={() => setMoreOpen(true)}>More</Button>}
-        {recordPayment && nextOpen && <Button className="primary" onClick={() => recordPayment(nextOpen)}>+ Record payment</Button>}
+        {recordPayment && nextOpen && <Button className="primary" onClick={() => recordPayment(nextOpen)}>Record payment</Button>}
       </div>
     </div>
     {notice && <p className="notice">{notice}</p>}
