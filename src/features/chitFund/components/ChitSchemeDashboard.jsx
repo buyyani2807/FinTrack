@@ -110,7 +110,7 @@ export function ChitLandingReports({ token, schemes, cycles = [], fixedLifts = [
       <Button className={`tab ${report === "profit" ? "active" : ""}`} onClick={() => setReport("profit")}>Profit &amp; Loss</Button>
       {aiEnabled && <Button className={`tab ${report === "health" ? "active" : ""}`} onClick={() => setReport("health")}>Scheme health</Button>}
     </div>
-    {report === "health" && aiEnabled && <div className="card">
+    {report === "health" && aiEnabled && <div className="card spacer">
       <strong>Scheme health</strong>
       <div className="form spacer">
         <Field label="Scheme"><Select value={schemeId} onChange={event => setSchemeId(event.target.value)}>{schemes.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</Select></Field>
@@ -120,7 +120,7 @@ export function ChitLandingReports({ token, schemes, cycles = [], fixedLifts = [
       {!schemes.length && <p className="small spacer">No Chit Fund schemes yet.</p>}
     </div>}
     {report === "profit" && <ChitProfitLossReport schemes={schemes} cycles={cycles} fixedLifts={fixedLifts} predefinedSchedule={predefinedSchedule} enrollments={enrollments} />}
-    {report === "statement" && <div className="card">
+    {report === "statement" && <div className="card spacer">
     <strong>Chit Fund reports</strong>
     <p className="copy">Scheme collection, member dues, bid history, and outstanding for the selected month. Open a scheme for dividends and live bid detail.</p>
     <div className="form spacer">
