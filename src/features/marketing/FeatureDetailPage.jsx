@@ -1,7 +1,13 @@
 import { useEffect } from "react";
 import { Link, Navigate, useParams } from "react-router";
 import { Reveal, RevealProvider } from "../../components/ui/Reveal.jsx";
-import { featureBySlug, featuresInCategory, relatedFeatures } from "./catalog.js";
+import { APP_MODULES, featureBySlug, relatedFeatures } from "./catalog.js";
+import { AccountsPage } from "./AccountsPage.jsx";
+import { AiPage } from "./AiPage.jsx";
+import { ChitPage } from "./ChitPage.jsx";
+import { FinancePage } from "./FinancePage.jsx";
+import { ModulePager } from "./ModuleKit.jsx";
+import { PosPage } from "./PosPage.jsx";
 import { FeatureIcon } from "./icons.jsx";
 import { featurePath, marketingPaths } from "./paths.js";
 import { ProductCta } from "./ProductCta.jsx";
@@ -10,7 +16,8 @@ import { ProductPreview, sceneForFeature } from "./ProductPreview.jsx";
 export function FeatureDetailPage() {
   const { slug } = useParams();
   const feature = featureBySlug(slug);
-  useEffect(() => { document.title = feature ? `${feature.name} — MyFinTracker` : "Feature — MyFinTracker"; }, [feature]);
+  const moduleLabel = APP_MODULES.find(item => item.slug === feature?.slug)?.label || feature?.name;
+  useEffect(() => { document.title = feature ? `${moduleLabel} — MyFinTracker` : "Feature — MyFinTracker"; }, [feature, moduleLabel]);
   if (!feature) {
     return <Reveal intent="content" className="mkt-empty">
       <h1>That feature is not on this site.</h1>
@@ -19,11 +26,16 @@ export function FeatureDetailPage() {
     </Reveal>;
   }
   if (feature.slug !== slug) return <Navigate to={featurePath(feature.slug)} replace />;
+  if (feature.slug === "finance") return <FinancePage feature={feature} />;
+  if (feature.slug === "auction-chit") return <ChitPage feature={feature} />;
+  if (feature.slug === "accounts-overview") return <AccountsPage feature={feature} />;
+  if (feature.slug === "counter-pos") return <PosPage feature={feature} />;
+  if (feature.slug === "ai") return <AiPage feature={feature} />;
   const related = relatedFeatures(feature);
   return <RevealProvider intent="landing">
     <header className="mkt-page-hero">
       <div className="mkt-wrap">
-        <Reveal as="p" className="mkt-kicker"><FeatureIcon name={feature.icon} size={16} /> {feature.name}</Reveal>
+        <Reveal as="p" className="mkt-kicker"><FeatureIcon name={feature.icon} size={16} /> {moduleLabel}</Reveal>
         <Reveal as="h1" index={1}>{feature.summary}</Reveal>
         {feature.advisory && <Reveal as="p" className="mkt-note" index={2}>Advisory. A forecast is an estimate shown with its assumptions. It is not a guarantee, and it is never written into the books.</Reveal>}
       </div>
@@ -83,18 +95,6 @@ export function FeatureDetailPage() {
       </div>
       </div>
     </section>
-    {feature.slug === "accounts-overview" && <section className="mkt-section mkt-tint">
-      <div className="mkt-wrap">
-        <Reveal as="h2">Inside Accounts</Reveal>
-        <Reveal as="p" className="mkt-lead" index={1}>These are the parts a small or medium business opens after login. Each one stays on the company you have selected.</Reveal>
-        <div className="mkt-grid three">
-          {featuresInCategory("accounts").filter(item => item.slug !== "accounts-overview").map((item, index) => <Reveal as={Link} key={item.slug} to={featurePath(item.slug)} className="mkt-card mkt-card-link" index={index % 3}>
-            <div className="mkt-icon"><FeatureIcon name={item.icon} /></div>
-            <h3>{item.name}</h3>
-            <p>{item.summary}</p>
-          </Reveal>)}
-        </div>
-      </div>
-    </section>}
+    <ModulePager current={feature.slug} />
   </RevealProvider>;
 }

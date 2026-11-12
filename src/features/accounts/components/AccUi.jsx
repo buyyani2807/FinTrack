@@ -5,28 +5,6 @@ import { CloseButton, LabeledField, ModalScroll } from "../../../components/ui.j
 import { useDialogDismiss } from "../../../components/useDialogDismiss.js";
 
 /**
- * Shared Accounts UI primitives (presentation only).
- * Keep handlers/business logic in the parent screen.
- */
-
-export function AccButtonGroup({ children, className = "", align = "start" }) {
-  return (
-    <div className={`acc-btn-group align-${align} ${className}`.trim()} role="group">
-      {children}
-    </div>
-  );
-}
-
-export function AccToolbar({ start = null, end = null, className = "" }) {
-  return (
-    <div className={`acc-toolbar ${className}`.trim()}>
-      <div className="acc-toolbar-start">{start}</div>
-      <div className="acc-toolbar-end">{end}</div>
-    </div>
-  );
-}
-
-/**
  * items: [{ id?, label, onClick, danger?, disabled? }]
  * Renders nothing when items is empty.
  */

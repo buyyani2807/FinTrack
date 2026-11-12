@@ -1,10 +1,21 @@
-// Applies the saved (or system) theme before first paint; src/lib/theme.js keeps it in sync afterwards.
+// Applies the saved theme before first paint on signed-in app URLs, and light on the public site.
+// Keep the path list in sync with isGuestThemePath in src/features/marketing/paths.js.
 // Loaded as a file because the Content-Security-Policy does not allow inline scripts.
 (function () {
-  var theme;
-  try { theme = localStorage.getItem("fintrack-theme"); } catch { theme = null; }
-  if (theme !== "light" && theme !== "dark") theme = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  var path = (location.pathname || "/").replace(/\/+$/, "") || "/";
+  var guestRoots = ["/features", "/solutions", "/how-it-works", "/security", "/pricing", "/about", "/founder", "/contact", "/login", "/pay"];
+  var guest = path === "/" || guestRoots.some(function (root) {
+    return path === root || path.indexOf(root + "/") === 0;
+  });
+  var theme = "light";
+  if (!guest) {
+    try { theme = localStorage.getItem("fintrack-theme"); } catch (error) { theme = null; }
+    if (theme !== "light" && theme !== "dark") theme = "light";
+  }
   document.documentElement.dataset.theme = theme;
   document.documentElement.style.colorScheme = theme;
-  if (theme === "dark") document.querySelector('meta[name="theme-color"]').setAttribute("content", "#111315");
+  if (theme === "dark") {
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", "#111315");
+  }
 })();

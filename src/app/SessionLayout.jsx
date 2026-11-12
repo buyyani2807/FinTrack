@@ -1,8 +1,9 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useLayoutEffect } from "react";
 import { Navigate, Outlet, useLocation } from "react-router";
 import { PageReveal } from "../components/ui/PageReveal.jsx";
 import { RevealProvider } from "../components/ui/Reveal.jsx";
 import { isMarketingPath, normalizePath } from "../features/marketing/paths.js";
+import { applyDocumentTheme, storedTheme } from "../lib/theme.js";
 import { LoadingScreen } from "./AppShell.jsx";
 import { useFinTrackSession } from "./useFinTrackSession.js";
 
@@ -21,6 +22,12 @@ export function SessionLayout() {
   const { legalView, isLoading, isPasswordRecovery, user, customerLoan, enterSession, enterCustomerSession, enterChitCustomerSession, logout } = session;
   const path = normalizePath(location.pathname);
   const workspaceUser = user?.role === "financier" || user?.role === "agent";
+  useLayoutEffect(() => {
+    const guestUrl = isMarketingPath(path) || path === "/login";
+    if (!user && isLoading && !guestUrl && !isPasswordRecovery) return;
+    const guestScreen = isPasswordRecovery || !user || (workspaceUser && guestUrl);
+    applyDocumentTheme(guestScreen ? "light" : (storedTheme() || "light"));
+  }, [user, isLoading, isPasswordRecovery, path, workspaceUser]);
   const screen = node => <RevealProvider intent="functional"><PageReveal routeKey={`${path}${location.search}`}>{node}</PageReveal></RevealProvider>;
   const boot = node => <Suspense fallback={<LoadingScreen />}>{node}</Suspense>;
   const signIn = boot(screen(<FinancierAuth onLogin={enterSession} onCustomerLogin={enterCustomerSession} onChitCustomerLogin={enterChitCustomerSession} />));

@@ -26,12 +26,11 @@ const FeaturesPage = withLazy(() => import("../features/marketing/FeaturesPage.j
 const FeatureDetailPage = withLazy(() => import("../features/marketing/FeatureDetailPage.jsx"), "FeatureDetailPage", marketingFallback);
 const SolutionsPage = withLazy(() => import("../features/marketing/SitePages.jsx"), "SolutionsPage", marketingFallback);
 const HowItWorksPage = withLazy(() => import("../features/marketing/SitePages.jsx"), "HowItWorksPage", marketingFallback);
-const SecurityPage = withLazy(() => import("../features/marketing/SitePages.jsx"), "SecurityPage", marketingFallback);
+const SecurityPage = withLazy(() => import("../features/marketing/SecurityPage.jsx"), "SecurityPage", marketingFallback);
 const PricingPage = withLazy(() => import("../features/marketing/SitePages.jsx"), "PricingPage", marketingFallback);
 const AboutPage = withLazy(() => import("../features/marketing/SitePages.jsx"), "AboutPage", marketingFallback);
 const FounderPage = withLazy(() => import("../features/marketing/SitePages.jsx"), "FounderPage", marketingFallback);
 const ContactPage = withLazy(() => import("../features/marketing/SitePages.jsx"), "ContactPage", marketingFallback);
-const ResourcesPage = withLazy(() => import("../features/marketing/SitePages.jsx"), "ResourcesPage", marketingFallback);
 
 const WorkspaceLayout = withLazy(() => import("../features/workspace/WorkspaceLayout.jsx"), "WorkspaceLayout", workspaceFallback);
 const FinanceRoute = withLazy(() => import("../features/workspace/routes/FinanceRoute.jsx"), "FinanceRoute", pageFallback);
@@ -68,7 +67,6 @@ export function AppRoutes() {
           <Route path="/about" element={<AboutPage />} />
           <Route path="/founder" element={<FounderPage />} />
           <Route path="/contact" element={<ContactPage />} />
-          <Route path="/resources" element={<ResourcesPage />} />
         </Route>
         <Route path="/login" element={<Navigate to="/dashboard" replace />} />
 

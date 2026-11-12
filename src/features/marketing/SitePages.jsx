@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
+import { Check } from "lucide-react";
 import { Reveal, RevealProvider } from "../../components/ui/Reveal.jsx";
 import { MODULE_PRODUCT_LIST, priceForPeriod, priceForProduct } from "../commercial/moduleProducts.js";
-import { SECURITY_POINTS, SECURITY_TRUST, SOLUTIONS, featureBySlug } from "./catalog.js";
+import { SOLUTIONS, featureBySlug } from "./catalog.js";
 import { featurePath, marketingPaths } from "./paths.js";
 import { InstallGuide } from "./InstallGuide.jsx";
 import { ProductCta } from "./ProductCta.jsx";
@@ -66,87 +67,52 @@ export function HowItWorksPage() {
   </RevealProvider>;
 }
 
-export function SecurityPage() {
-  return <RevealProvider intent="content">
-  <section className="mkt-section">
-    <PageTitle title="MyFinTracker security" />
-    <Reveal>
-      <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Security</p>
-      <h1>Access, isolation, and review.</h1>
-    </Reveal>
-    <Reveal className="mkt-grid two">
-      {SECURITY_POINTS.map(point => <article key={point.title} className="mkt-card">
-        <h2>{point.title}</h2>
-        <p>{point.text}</p>
-      </article>)}
-    </Reveal>
-  </section>
-  <section className="mkt-security-trust" aria-labelledby="mkt-security-trust-title">
-    <div className="mkt-wrap">
-      <Reveal as="p" className="mkt-security-trust-kicker" id="mkt-security-trust-title">Security &amp; trust</Reveal>
-      <Reveal className="mkt-grid four">
-        {SECURITY_TRUST.map((point, index) => <article key={point.title} className="mkt-security-trust-card" style={{ "--reveal-i": index }}>
-          <div className="mkt-icon"><FeatureIcon name={point.icon} /></div>
-          <h2>{point.title}</h2>
-          <p>{point.text}</p>
-        </article>)}
-      </Reveal>
+function PriceCard({ product, period, index }) {
+  const price = priceForProduct(product, period);
+  const yearly = period === "annual";
+  return <Reveal as="article" className="pc-card" index={index % 2}>
+    <header className="pc-head">
+      <h2>{product.name}</h2>
+      <p className="pc-amount"><strong>{price.baseLabel}</strong><span>{yearly ? "/ year" : "/ month"} + GST</span></p>
+    </header>
+    <p className="pc-desc">{product.description}</p>
+    <div className="pc-includes">
+      <p className="pc-label">Includes</p>
+      <ul>
+        {product.includes.map(item => <li key={item}><span aria-hidden="true"><Check size={15} strokeWidth={2.5} /></span>{item}</li>)}
+      </ul>
     </div>
-  </section>
-  <PageClose />
-  </RevealProvider>;
+  </Reveal>;
 }
 
 export function PricingPage() {
-  const monthly = priceForPeriod("monthly");
-  const annual = priceForPeriod("annual");
-  const posMonthly = priceForProduct("accounts_pos", "monthly");
-  return <RevealProvider intent="landing"><section className="mkt-section">
-    <PageTitle title="MyFinTracker pricing" />
-    <Reveal as="p" className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Pricing</Reveal>
-    <Reveal as="h1" index={1}>Pay for the modules you need.</Reveal>
-    <Reveal as="p" className="mkt-lead" index={2}>
-      Finance, Chit Fund, and Accounts are {monthly.baseLabel} + GST {monthly.gstPercentLabel} ({monthly.totalLabel} per month),
-      or {annual.baseLabel} + GST {annual.gstPercentLabel} ({annual.totalLabel} per year).
-      Accounts + POS is {posMonthly.baseLabel} + GST ({posMonthly.totalLabel} / month) — ₹100 more for Counter.
-      There is no lifetime plan. Unlock after a 14-day free trial of the full workspace.
-    </Reveal>
-    <Reveal className="mkt-plan-prices mkt-plan-prices-rate" index={3}>
-      <div>
-        <p className="mkt-muted">Standard modules / month</p>
-        <p className="mkt-price">{monthly.totalLabel} <span>/ month</span></p>
-        <p className="mkt-muted">{monthly.breakdown}</p>
+  const [period, setPeriod] = useState("monthly");
+  useEffect(() => { document.title = "Pricing — MyFinTracker"; }, []);
+  const yearly = period === "annual";
+  return <RevealProvider intent="content"><div className="hm-home fx fx-pricing">
+    <section className="fx-sec hm-flip">
+      <div className="mkt-wrap">
+        <header className="fx-head">
+          <Reveal as="p" className="fx-eyebrow">Pricing</Reveal>
+          <Reveal as="h1" index={1}>Pay for the modules you need.</Reveal>
+        </header>
+        <div className="fx-segment sec-bill" role="tablist" aria-label="Billing period">
+          <button type="button" role="tab" aria-selected={!yearly} onClick={() => setPeriod("monthly")}>Monthly</button>
+          <button type="button" role="tab" aria-selected={yearly} onClick={() => setPeriod("annual")}>Yearly</button>
+        </div>
+        <div className="sec-modules">
+          {MODULE_PRODUCT_LIST.map((product, index) => <PriceCard key={product.key} product={product} period={period} index={index} />)}
+        </div>
+        <div className="sec-plan-end">
+          <div className="mkt-cta-row">
+            <ProductCta primary label="Start free trial" />
+            <Link className="mkt-btn" to={marketingPaths.contact}>Request a demo</Link>
+          </div>
+          <p className="sec-plan-note">A new workspace includes 14 days with every module open. Signing up does not charge a card. After the trial, unlock only what you need. Your records stay.</p>
+        </div>
       </div>
-      <div>
-        <p className="mkt-muted">Accounts + POS / month</p>
-        <p className="mkt-price">{posMonthly.totalLabel} <span>/ month</span></p>
-        <p className="mkt-muted">{posMonthly.breakdown}</p>
-      </div>
-    </Reveal>
-    <div className="mkt-module-price-grid">
-      {MODULE_PRODUCT_LIST.map((product, index) => {
-        const productMonthly = priceForProduct(product, "monthly");
-        const productAnnual = priceForProduct(product, "annual");
-        return (
-        <Reveal as="article" key={product.key} className="mkt-card mkt-module-price-card" index={index % 4}>
-          <h2>{product.name}</h2>
-          <p>{product.description}</p>
-          <ul className="mkt-ticks">{product.includes.map(item => <li key={item}>{item}</li>)}</ul>
-          <p className="mkt-module-price-line"><strong>{productMonthly.totalLabel}</strong> <span>/ month</span></p>
-          <p className="mkt-muted">or {productAnnual.totalLabel} / year · GST included in totals</p>
-        </Reveal>
-        );
-      })}
-    </div>
-    <Reveal className="mkt-cta-row" index={4}>
-      <ProductCta primary />
-      <Link className="mkt-btn" to={marketingPaths.contact}>Request a demo</Link>
-    </Reveal>
-    <Reveal as="p" className="mkt-note" index={5}>
-      A new workspace includes 14 days with every module open. Signing up does not charge a card.
-      After the trial, unlock only what you need. Your records stay.
-    </Reveal>
-  </section></RevealProvider>;
+    </section>
+  </div></RevealProvider>;
 }
 
 export function PageClose() {
@@ -180,7 +146,7 @@ const ABOUT_SIGN_INS = [
 export function AboutPage() {
   return <RevealProvider intent="landing">
   <PageTitle title="About MyFinTracker" />
-  <section className="mkt-hero">
+  <section className="mkt-hero mkt-tint">
     <div className="mkt-wrap mkt-hero-copy">
       <Reveal as="p" className="mkt-kicker">About MyFinTracker</Reveal>
       <Reveal as="h1" index={1}>One login for the books, the collections, and the chit.</Reveal>
@@ -298,30 +264,4 @@ export function ContactPage() {
       </article>
     </Reveal>
   </section></RevealProvider>;
-}
-
-export function ResourcesPage() {
-  const links = [
-    [`${marketingPaths.how}#install`, "Install on iPhone or Android", "Add MyFinTracker to the home screen and open it from its own icon."],
-    [marketingPaths.how, "How it works", "The path from sign-in to a record you confirm."],
-    [marketingPaths.features, "Feature directory", "Every module currently in the product."],
-    [marketingPaths.security, "Security", "Roles, companies, locks, and review."],
-    [marketingPaths.pricing, "Pricing", "Modules from ₹498 + GST 18% per month; Accounts + POS ₹598 + GST. 14-day free trial."],
-    [marketingPaths.about, "About MyFinTracker", "What MyFinTracker stands for and who uses it."],
-    [marketingPaths.founder, "CEO and Founder", "Sudheer Kumar Buyyani, and the experience behind MyFinTracker."],
-    [marketingPaths.contact, "Request a demo", "A local note until contact is connected."],
-  ];
-  return <RevealProvider intent="content">
-  <section className="mkt-section">
-    <PageTitle title="MyFinTracker resources" />
-    <Reveal>
-      <p className="mkt-kicker" style={{ color: "var(--mkt-accent)" }}>Resources</p>
-      <h1>Read the product before you sign in.</h1>
-    </Reveal>
-    <Reveal className="mkt-grid three">
-      {links.map(([to, title, text]) => <Link key={to} to={to} className="mkt-card"><h2>{title}</h2><p>{text}</p></Link>)}
-    </Reveal>
-  </section>
-  <PageClose />
-  </RevealProvider>;
 }

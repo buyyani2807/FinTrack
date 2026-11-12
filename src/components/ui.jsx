@@ -2,7 +2,7 @@ import { Children, cloneElement, isValidElement, useEffect, useId, useRef, useSt
 import { useDialogDismiss } from "./useDialogDismiss.js";
 import { Select } from "./Select.jsx";
 import { Reveal } from "./ui/Reveal.jsx";
-import { ArrowLeft, ChevronRight, Download, Eye, EyeOff, Inbox, Search, X } from "lucide-react";
+import { ArrowLeft, Download, Eye, EyeOff, Inbox, Search, X } from "lucide-react";
 
 // Shared presentational building blocks used across the finance app.
 export const Button = ({
@@ -180,36 +180,6 @@ export function CloseButton({ onClick, label = "Close" }) {
   return <button type="button" className="ft-icon-btn ft-dialog-close" aria-label={label} title={label} onClick={onClick}><X size={22} strokeWidth={2} aria-hidden="true" /></button>;
 }
 
-/* Finebank page patterns ------------------------------------------------- */
-
-// Grey section title above a card (Finebank "Total Balance", "Recent Transaction" …), with an optional action on the right.
-export function SectionCard({ title, action = null, children, className = "", bodyClassName = "" }) {
-  return <section className={`ft-section${className ? ` ${className}` : ""}`}>
-    <div className="ft-section-head"><h2 className="ft-section-title">{title}</h2>{action}</div>
-    <div className={`card ft-section-body${bodyClassName ? ` ${bodyClassName}` : ""}`}>{children}</div>
-  </section>;
-}
-
-// "View All ›" style link button used in section headers.
-export function ViewAllLink({ onClick, children = "View All" }) {
-  return <button type="button" className="ft-view-all" onClick={onClick}>{children}<ChevronRight size={16} aria-hidden="true" /></button>;
-}
-
-// List row: icon tile, title + subtitle on the left, amount + meta on the right. Renders a button when clickable.
-export function ListRow({ icon = null, title, subtitle = "", amount = null, meta = "", tone = "", onClick, className = "" }) {
-  const Tag = onClick ? "button" : "div";
-  return <Tag {...(onClick ? { type: "button", onClick } : {})} className={`ft-list-row${onClick ? " clickable" : ""}${className ? ` ${className}` : ""}`}>
-    {icon && <span className="ft-icon-tile" aria-hidden="true">{icon}</span>}
-    <span className="ft-list-row-main"><strong>{title}</strong>{subtitle && <span>{subtitle}</span>}</span>
-    {(amount !== null || meta) && <span className="ft-list-row-side"><strong className={tone}>{amount}</strong>{meta && <span>{meta}</span>}</span>}
-  </Tag>;
-}
-
-// Month/day tile (Finebank "Upcoming Bill").
-export function DateTile({ month, day }) {
-  return <span className="ft-date-tile"><span>{month}</span><strong>{day}</strong></span>;
-}
-
 export function EmptyState({ title, copy = "", action = null, icon = <Inbox size={28} strokeWidth={1.6} /> }) {
   return <div className="ft-empty" role="status">
     <span className="ft-empty-icon" aria-hidden="true">{icon}</span>
@@ -226,10 +196,6 @@ export function Spinner({ label = "Loading", size = "md", className = "" }) {
     <span className="ft-spinner" aria-hidden="true" />
     <span className="ft-sr-only">{label}</span>
   </span>;
-}
-
-export function LoadingState({ label = "Loading" }) {
-  return <Spinner label={label} />;
 }
 
 // Password field with a show/hide toggle. Passes every input prop through, so Field can label it.

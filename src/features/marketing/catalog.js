@@ -24,6 +24,61 @@ export const FEATURES = [
     icon: "LayoutDashboard",
   },
   {
+    slug: "ai",
+    category: "intelligence",
+    name: "AI",
+    summary: "MyFinTracker reads your own records and points out what needs a look: cash that may run short, costs that rose, GST details to fix, bank lines to match, and stock to reorder.",
+    problem: "Cash that may run short, costs that rose, GST details to fix, bank lines to match, and stock to reorder are easy to miss until they cost money.",
+    how: [
+      "Open AI Review in Accounts, or ask Finny a question from any screen.",
+      "Read each suggestion with its reason, its confidence, and a link to the record.",
+      "You post the voucher, approve the match, and send the message.",
+    ],
+    capabilities: [
+      "Ask Finny questions about your own records",
+      "Tell Finny what happened and get a balanced draft",
+      "Bill scanning from a photo or PDF",
+      "Cash-flow forecast for 7, 30, and 60 days",
+      "Expense and supplier price changes",
+      "Who to collect first",
+      "Unusual activity",
+      "GST review",
+      "Month-end readiness",
+      "Bank matching",
+      "Stock forecast",
+      "Chit scheme health",
+    ],
+    benefits: ["Included in the plan", "Every suggestion shows its reason, its confidence, and a link to the record", "A forecast is shown apart from actual figures and is never posted into the books", "Nothing is filed, locked, reversed, or sent by itself"],
+    related: ["ai-review", "ask-finny", "ai-bookkeeper"],
+    appPath: "/accounting/ai-review",
+    icon: "Sparkles",
+  },
+  {
+    slug: "finance",
+    category: "finance",
+    name: "Finance",
+    summary: "Daily and monthly lending accounts, collections, and the profit on the lending book in one place.",
+    problem: "Daily receipts, monthly interest, and who still owes money end up in separate notebooks, so nobody sees the whole lending book.",
+    how: [
+      "Open a daily or monthly account for the customer with the amount and term you agree.",
+      "Record each collection against that account. A monthly receipt records the interest, principal, and penalty it covered.",
+      "See today’s collection list, what is still outstanding, and the Daily or Monthly P&L.",
+    ],
+    capabilities: [
+      "Daily customer accounts and today’s collection list",
+      "Monthly interest accounts with due amounts",
+      "Each monthly receipt split into interest, principal, and penalty",
+      "Balances, paid amounts, and customer history",
+      "Daily and Monthly collection reports and P&L",
+      "Who to collect first, with a reminder draft you confirm",
+      "Upcoming payment reminders",
+    ],
+    benefits: ["Daily and monthly lending stay in one login", "Today’s list matches the collections you record", "Each receipt shows what it covered", "Staff record only the accounts assigned to them", "Profit on the lending book is visible without a separate sheet"],
+    related: ["daily-finance", "monthly-finance", "finance-reports"],
+    appPath: "/daily-finance/todays-collections",
+    icon: "HandCoins",
+  },
+  {
     slug: "daily-finance",
     category: "finance",
     name: "Daily Finance",
@@ -316,24 +371,6 @@ export const FEATURES = [
       "Setup by answering a few questions, and migration from Tally, Zoho Books, Book Keeper, or Excel",
     ],
     benefits: ["One company book for a small or medium business", "The numbers that matter are on the first screen", "You always see the company you opened", "A voucher, a bank match, and a period lock wait for you"],
-    sections: [
-      {
-        title: "Your numbers on the first screen",
-        text: "The overview opens with sales and purchase for today, this month, or the financial year, what customers owe and what you owe suppliers, and the cash, bank, and UPI balances. Below that, a monthly chart shows income against expenses for the last six months with the net profit line, and a spending chart shows where the money went by expense ledger. A receivables and payables chart puts what customers owe next to what you owe suppliers, grouped by how long each amount has been unpaid. Expenses in the monthly chart allow for the change in stock, so they agree with the profit and loss report. Tap a figure to open the report behind it.",
-      },
-      {
-        title: "Who Accounts is for",
-        text: "Accounts is for a small or medium business: a shop, a trading firm, a service business, or a finance company that also keeps formal books. The owner opens a company, posts the day’s vouchers, and reads the statements. A second company stays separate until you switch to it. Shops can also bill from Counter, the POS till inside Accounts.",
-      },
-      {
-        title: "The books a growing business needs",
-        text: "Start from a chart of accounts. Record receipts, payments, journals, sales, and purchases. Quote and take orders before the invoice. Bill walk-in customers from Counter when you need a till. See what customers still owe and what you owe suppliers. Keep items, stock, and the profit on each item with those sales and purchases. Pay staff from the same books. Prepare GST from the vouchers you posted, then file the return in your own process. Hand the month to your accountant from For the CA. Import a bank statement and accept the matches you agree with. Read the trial balance, profit and loss, balance sheet, and cash flow for the company you have open.",
-      },
-      {
-        title: "Review stays with you",
-        text: "A bill photograph, a bank suggestion, and Ask Finny can offer a draft. You post the voucher. Debit has to equal credit. A locked month stays locked until you reopen it. The cashbook can stand on its own; its lines enter the finance company only when integration is on and you sync.",
-      },
-    ],
     related: ["counter-pos", "vouchers", "ai-bookkeeper", "ai-migration", "gst-preparation"],
     appPath: "/accounting/overview",
     icon: "Building2",
@@ -1301,6 +1338,39 @@ export const FEATURES = [
   },
 ];
 
+// Public nav. Home is the site root. The other items are the modules a visitor can read about.
+export const APP_MODULES = [
+  { slug: "home", label: "Home", to: "/", end: true },
+  { slug: "finance", label: "Finance" },
+  { slug: "auction-chit", label: "Chit Fund" },
+  { slug: "accounts-overview", label: "Accounts" },
+  { slug: "counter-pos", label: "POS" },
+  { slug: "ai", label: "AI" },
+];
+
+// The parts of each module, in the order its page and module bar list them. Keys are the module page slugs.
+export const MODULE_FEATURES = {
+  finance: ["daily-finance", "monthly-finance", "finance-reports", "customers", "collections", "collection-staff", "customer-statements", "digital-receipts", "whatsapp-reminders", "credit-score"],
+  "auction-chit": ["auction-chit", "fixed-chit", "chit-members", "chit-payments", "live-bidding", "dividends", "chit-statements", "chit-reports"],
+  "accounts-overview": [
+    "chart-of-accounts", "ledger", "vouchers", "trade-documents", "receivables", "party-profiles", "payables",
+    "cashbook", "bank-reconciliation", "trial-balance", "profit-and-loss", "expenses", "payroll", "balance-sheet", "cash-flow",
+    "inventory", "item-profit", "gst-preparation", "audit-trail", "period-locking", "for-the-ca",
+  ],
+  "counter-pos": [],
+  ai: [
+    "ask-finny", "ai-bookkeeper", "bill-scanning", "ai-review", "forecasting", "expense-insights", "collection-priorities",
+    "anomaly-detection", "gst-review", "month-end-readiness", "bank-matching", "stock-forecast", "chit-scheme-health",
+    "credit-score", "ai-setup", "ai-migration", "bulk-import", "business-insights", "attention-center", "bookkeeping-suggestions",
+  ],
+};
+
+// The module a feature page belongs to (a module page belongs to itself), or null.
+export function moduleForFeature(slug) {
+  if (slug in MODULE_FEATURES) return slug;
+  return Object.keys(MODULE_FEATURES).find(module => MODULE_FEATURES[module].includes(slug)) || null;
+}
+
 export function featuresInCategory(categoryId) {
   return FEATURES.filter(feature => feature.category === categoryId);
 }
@@ -1321,27 +1391,6 @@ export function relatedFeatures(feature) {
   if (!feature) return [];
   return feature.related.map(slug => featureBySlug(slug)).filter(Boolean);
 }
-
-export const PILLARS = [
-  {
-    slug: "daily-finance",
-    eyebrow: "Collections",
-    title: "Finance and collection workflow",
-    text: "Daily and monthly accounts, today’s list, receipts, and the staff who collect — with the customer’s own portal when you enable it.",
-  },
-  {
-    slug: "accounts-overview",
-    eyebrow: "Books",
-    title: "Accounts for small and medium businesses",
-    text: "Shops, trading firms, service businesses, and finance companies keep a company book here: Counter POS billing, balanced vouchers, stock, payroll, GST preparation, bank matches, and a page to hand the month to the accountant. You open the company, and you confirm the voucher.",
-  },
-  {
-    slug: "live-bidding",
-    eyebrow: "Chit Fund",
-    title: "Chit Fund workflow",
-    text: "Schemes, members, live bidding, dividends, and statements. The owner starts the month. Members bid from their portal. You confirm the close.",
-  },
-];
 
 export const SOLUTIONS = [
   {

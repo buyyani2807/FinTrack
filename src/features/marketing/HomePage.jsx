@@ -1,67 +1,20 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { ArrowRight, BadgeCheck, Check, Gavel, MessageCircle, Smartphone, Sparkles, TrendingUp } from "lucide-react";
 import { ChevronDown } from "lucide-react";
-import { Link, useOutletContext } from "react-router";
-import { FrequentlyAskedQuestions } from "../../components/ui/FrequentlyAskedQuestions.jsx";
+import { Link } from "react-router";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../../components/ui/Accordion.jsx";
 import { Reveal, RevealProvider } from "../../components/ui/Reveal.jsx";
 import { TypewriterText } from "../../components/ui/TypewriterText.jsx";
 import "../intelligence/assistant/assistant.css";
 import { FeatureIcon } from "./icons.jsx";
+import { ASK_LABEL, PRODUCT_NAME } from "../../lib/brand.js";
+import { priceForPeriod } from "../commercial/moduleProducts.js";
+import { FAQ } from "./faq.js";
+import { HomeModules } from "./HomeModules.jsx";
 import { featurePath, marketingPaths } from "./paths.js";
 import { ProductCta } from "./ProductCta.jsx";
 import { ProductPreview } from "./ProductPreview.jsx";
-
-const VALUES = [
-  { icon: "Landmark", title: "Accounting", text: "Counter POS, vouchers, stock, GST preparation, and statements for the company you open." },
-  { icon: "HandCoins", title: "Collections", text: "See who is due and record what was received." },
-  { icon: "CalendarDays", title: "Finance", text: "Daily collections and monthly repayments on the customer account." },
-  { icon: "Gavel", title: "Chit Funds", text: "Schemes, members, auctions, and dividends." },
-  { icon: "Receipt", title: "Payments", text: "Receipts, a cash and UPI split, and a WhatsApp draft you send." },
-  { icon: "Sparkles", title: "AI review", text: "Cash-flow outlook, expense and GST checks, month-end readiness, bank matching, and stock forecasts from your own records." },
-];
-
-const PILLARS = [
-  {
-    id: "accounts",
-    title: "Accounting",
-    text: "The company book for a shop, a trader, a service business, or a finance company.",
-    items: ["Counter POS till for walk-in and khata sales", "Chart of accounts and ledgers", "Sales, purchases, receipts, and payments", "Contra, journal, and credit and debit notes", "Quotations, orders, delivery challans, and goods receipts", "Inventory, item profit, and GST preparation", "Payroll, attendance, leave, and payslips", "Receivables, payables, and bank reconciliation", "Customer profiles with a MyFinTracker credit score", "Expenses by month and category, with every entry", "Day book, trial balance, profit and loss, balance sheet, and cash flow", "For the CA: the month’s books, GST checks, unmatched bank lines, and stock to review", "Move in from Tally, Zoho Books, Book Keeper, or Excel"],
-    to: "accounts-overview",
-    link: "Explore Accounting",
-  },
-  {
-    id: "finance",
-    title: "Daily and monthly finance",
-    text: "Customer finance and the collections that follow it.",
-    items: ["Customer accounts", "Daily collections and monthly repayments", "Interest and overdue follow-up", "Collection report and Daily and Monthly P&L", "Statements and payment history", "Collection staff and their assignments"],
-    to: "daily-finance",
-    link: "Explore Finance",
-  },
-  {
-    id: "chit",
-    title: "Chit funds",
-    text: "Schemes, members, and the auction you open and close.",
-    items: ["Schemes and members", "Installments and payments", "Live bidding and winning bids", "Dividends and statements", "Month statement PDF and commission Profit & Loss", "Scheme health: collection rate and members falling behind"],
-    to: "auction-chit",
-    link: "Explore Chit Funds",
-  },
-];
-
-const AI = [
-  { slug: "ai-bookkeeper", title: "Tell Finny", text: "“I bought a laptop for ₹85,000 using HDFC” becomes a balanced draft, explained in plain words. You post it." },
-  { slug: "ai-setup", title: "AI setup", text: "Say what kind of business you run and answer a few questions. MyFinTracker sets up ledgers, banks, GST, and stock categories." },
-  { slug: "ai-migration", title: "Move from Tally or Excel", text: "Upload your old books. MyFinTracker maps the accounts, finds duplicate parties, and asks only about the exceptions." },
-  { slug: "forecasting", title: "Cash-flow forecast", text: "Where cash may stand today, in 7, 30, and 60 days, with the invoices and bills that drive it." },
-  { slug: "expense-insights", title: "Expense and supplier prices", text: "Which costs rose against last month, the 3-month average, and last year, and which supplier raised a price." },
-  { slug: "collection-priorities", title: "Who to collect first", text: "Ranked customers with the risk, the reason, and a reminder draft in five languages that you confirm." },
-  { slug: "anomaly-detection", title: "Unusual activity", text: "Possible duplicates, bills above a supplier’s average, backdated entries, and odd collection days." },
-  { slug: "gst-review", title: "GST review", text: "GSTIN errors, missing HSN codes, and tax that does not match the rate, before you prepare the return." },
-  { slug: "month-end-readiness", title: "Month-end readiness", text: "A readiness score and a checklist of what is left before you lock the month." },
-  { slug: "bank-matching", title: "Bank matching", text: "Party, invoice, and ledger suggested for each bank line, with a confidence score. You approve." },
-  { slug: "stock-forecast", title: "Stock forecast", text: "Which items may run out, when, and how much to consider buying." },
-  { slug: "chit-scheme-health", title: "Chit scheme health", text: "Collection rate, overdue members, and members paying later each month." },
-  { slug: "ai-review", title: "AI Review", text: "Eight reviews in one Accounts tab, each with its reason, confidence, and a link to the record." },
-  { slug: "credit-score", title: "Customer credit score", text: "A score from each customer’s own payment history, with the reasons." },
-];
+import { ModuleClosing } from "./ModuleKit.jsx";
 
 const FY = "FY 2026–27";
 
@@ -329,85 +282,153 @@ function AskGrid() {
   </div>;
 }
 
-const AUDIENCES = [
-  { title: "Finance businesses", text: "Customers, financing, collections, and agents.", to: "daily-finance" },
-  { title: "Chit fund operators", text: "Schemes, auctions, members, and dividends.", to: "auction-chit" },
-  { title: "Shops and traders", text: "Counter POS, stock, and customer balances.", to: "counter-pos" },
-  { title: "Service businesses", text: "Invoices, expenses, payments, and profit.", to: "vouchers" },
-  { title: "Small and medium businesses", text: "Accounting, GST preparation, banking, and payables.", to: "accounts-overview" },
+const MONTHLY = priceForPeriod("monthly");
+
+const PROOF = [
+  { icon: BadgeCheck, title: "5 modules", text: "in one login" },
+  { icon: Smartphone, title: "iPhone and Android", text: "installs from the browser" },
+  { icon: TrendingUp, title: "GST-ready books", text: "with a pack for your CA" },
+  { icon: Sparkles, title: "AI that waits", text: "for you to confirm" },
 ];
 
-const FAQ = [
-  { question: "What is MyFinTracker?", answer: "One login for accounting, daily and monthly finance, collections, chit funds, payments, and AI suggestions from those records." },
-  { question: "Can I use it only for accounting?", answer: "Yes. Accounts can stand on its own: Counter POS billing, vouchers, inventory, payroll, GST preparation, banking, receivables, payables, and the statements, including a page to hand the month to your accountant." },
-  { question: "Does it have a POS / billing counter?", answer: "Yes. Counter inside Accounts is the till for walk-in and khata sales. Charge posts the sale into the company books and stock. You can print a thermal receipt or share a WhatsApp receipt when you choose. Cashiers can open Counter without the rest of Accounts." },
-  { question: "Can a finance business use it?", answer: "Yes. Daily Finance and Monthly Finance keep customer accounts, repayments, and collections." },
-  { question: "Does it support chit funds?", answer: "Yes. Schemes, members, live bidding, payments, dividends, and reports." },
-  { question: "Does it support GST?", answer: "It prepares GST summaries from posted vouchers. Filing stays outside MyFinTracker." },
-  { question: "Can I send WhatsApp messages?", answer: "MyFinTracker opens WhatsApp with a reminder, receipt, or statement. You send the message." },
-  { question: "Does it have AI?", answer: "Yes, included in the plan. AI Review in Accounts gives a cash-flow forecast, expense and supplier price changes, collection priorities, unusual activity alerts, GST checks, month-end readiness, bank matching suggestions, and stock forecasts. Chit Fund has scheme health. Ask Finny answers questions from this workspace, and Tell Finny turns a plain sentence into an entry. AI also sets up new books from a few questions and maps data brought in from Tally, Zoho Books, or Excel. Every suggestion shows its reason and waits for you to act." },
-  { question: "What is Ask Finny?", answer: "A question box on every screen. Ask “Who has not paid today?”, “Why did profit decrease?”, or “Which expenses increased this month?” and the answer comes from this workspace’s records, with the period and the report it used. It is read-only and does not guess figures it cannot find." },
-  { question: "Does the AI change my books?", answer: "No. It does not post vouchers, file GST, lock a period, reverse an entry, create a purchase order, or send a message. A bank match is posted only when you approve it, a Tell Finny draft only when you choose Post, and imported data only when you choose Import. A locked period cannot be changed from a suggestion." },
-  { question: "Can I move my books from Tally or Excel?", answer: "Yes. Upload a Tally XML export, or Excel and CSV files from Zoho Books, Book Keeper, or your own sheets. MyFinTracker shows how many customers, suppliers, ledgers, and transactions it found, how many accounts it mapped automatically, and the exceptions for you to review before anything is imported." },
-  { question: "What reports are included?", answer: "Daily and Monthly Finance have a collection report for any date and a Daily or Monthly P&L for the lending book. Chit Fund has a month statement PDF, a commission Profit & Loss by scheme, and scheme health. Accounts has the Day Book, Trial Balance, Profit & Loss, Balance Sheet, Cash Flow, GST, item profit, receivables, payables, and stock reports, with CSV, Excel, and PDF export. For the CA gathers the month’s books, GST invoices to check, unmatched bank lines, and stock rows that need review." },
-  { question: "Can I install it on my phone?", answer: "Yes. MyFinTracker is the mobile app: add it to the home screen from Safari on iPhone or iPad, or from Chrome on Android. It opens from its own icon. Sign in the same way you do in the browser." },
-  { question: "How is this different from Tally?", answer: "MyFinTracker keeps accounting, daily and monthly collections, and chit funds in one login, and it installs on the phone. You record the day’s work there." },
+function HeroVisual() {
+  return <div className="hm-hero-visual">
+    <div className="hm-stage">
+      <ProductPreview scene="dashboard" />
+    </div>
+    <div className="hm-float hm-float-a" aria-hidden="true">
+      <span className="hm-float-icon"><TrendingUp size={16} /></span>
+      <span><small>Collected today</small><strong>₹42,600</strong></span>
+      <em>+12%</em>
+    </div>
+    <div className="hm-float hm-float-b" aria-hidden="true">
+      <span className="hm-float-icon is-chit"><Gavel size={16} /></span>
+      <span><small>Chit auction</small><strong>Month 6 · Live</strong></span>
+    </div>
+    <div className="hm-float hm-float-c" aria-hidden="true">
+      <span className="hm-float-icon is-ok"><Check size={16} /></span>
+      <span><small>GST pack</small><strong>Ready for your CA</strong></span>
+    </div>
+  </div>;
+}
+
+const FAQ_TOPICS = [
+  { id: "all", label: "All questions" },
+  { id: "start", label: "Getting started" },
+  { id: "finance", label: "Finance and chit" },
+  { id: "accounts", label: "Accounts and GST" },
+  { id: "ai", label: "AI" },
 ];
+
+function HomeFaq() {
+  const [topic, setTopic] = useState("all");
+  const [thread, setThread] = useState(() => [FAQ[0]]);
+  const [typing, setTyping] = useState(null);
+  const bodyRef = useRef(null);
+  const chatRef = useRef(null);
+  const timerRef = useRef(0);
+  const items = FAQ.filter(item => topic === "all" || item.topic === topic);
+  const asked = new Set(thread.map(item => item.question));
+
+  useEffect(() => () => clearTimeout(timerRef.current), []);
+  useEffect(() => {
+    const body = bodyRef.current;
+    if (body) body.scrollTo({ top: body.scrollHeight, behavior: "smooth" });
+  }, [thread, typing]);
+
+  const ask = item => {
+    if (typing) return;
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    setTyping(item);
+    // On phones the chat sits below the questions, so bring it into view.
+    if (window.matchMedia?.("(max-width: 980px)").matches) chatRef.current?.scrollIntoView({ block: "nearest", behavior: reduced ? "auto" : "smooth" });
+    timerRef.current = setTimeout(() => {
+      setThread(current => [...current.filter(entry => entry.question !== item.question), item].slice(-3));
+      setTyping(null);
+    }, reduced ? 0 : 700);
+  };
+
+  return <section className="hm-faq" id="faq">
+    <div className="mkt-wrap hm-faq-grid">
+      <div className="hm-faq-side">
+        <Reveal as="p" className="hm-eyebrow">FAQ</Reveal>
+        <Reveal as="h2" index={1}>Questions, answered.</Reveal>
+        <Reveal as="p" className="hm-faq-lead" index={2}>Tap a question. The answer describes what is in the product today.</Reveal>
+        <div className="hm-faq-topics" role="group" aria-label="Question topics">
+          {FAQ_TOPICS.map(item => <button key={item.id} type="button" aria-pressed={topic === item.id} onClick={() => setTopic(item.id)}>{item.label}</button>)}
+        </div>
+        <ul className="hm-faq-chips">
+          {items.map(item => <li key={item.question}>
+            <button type="button" data-asked={asked.has(item.question)} disabled={Boolean(typing)} onClick={() => ask(item)}>
+              {asked.has(item.question) ? <Check size={14} strokeWidth={3} aria-hidden="true" /> : null}{item.question}
+            </button>
+          </li>)}
+        </ul>
+        {/* Phones: the same questions as a tap-to-open list. The chat layout stays for wider screens. */}
+        <div className="hm-faq-mobile">
+          <Accordion collapsible key={topic}>
+            {items.map(item => <AccordionItem key={item.question} value={item.question}>
+              <AccordionTrigger>{item.question}</AccordionTrigger>
+              <AccordionContent>{item.answer}</AccordionContent>
+            </AccordionItem>)}
+          </Accordion>
+          <p className="hm-faq-mobile-contact">Still have a question? <Link to={marketingPaths.contact}>Contact us</Link></p>
+        </div>
+      </div>
+      <div ref={chatRef} className="hm-chat">
+        <header className="hm-chat-head">
+          <span className="hm-chat-avatar" aria-hidden="true"><MessageCircle size={20} /></span>
+          <span><strong>{PRODUCT_NAME}</strong><small>Answers about the product</small></span>
+        </header>
+        <div ref={bodyRef} className="hm-chat-body" aria-live="polite">
+          {thread.map(item => <div key={item.question} className="hm-chat-pair">
+            <p className="hm-bubble is-you">{item.question}</p>
+            <p className="hm-bubble is-bot">{item.answer}</p>
+          </div>)}
+          {typing ? <div className="hm-chat-pair">
+            <p className="hm-bubble is-you">{typing.question}</p>
+            <p className="hm-bubble is-bot is-typing" aria-label={`${PRODUCT_NAME} is typing`}><i /><i /><i /></p>
+          </div> : null}
+        </div>
+        <footer className="hm-chat-foot">
+          <span>Still have a question?</span>
+          <Link className="mkt-btn primary" to={marketingPaths.contact}>Contact us</Link>
+        </footer>
+      </div>
+    </div>
+  </section>;
+}
 
 export function HomePage() {
-  const { signedIn = false } = useOutletContext() || {};
-  useEffect(() => { document.title = "MyFinTracker — Accounting and collections on your phone"; }, []);
+  useEffect(() => { document.title = `${PRODUCT_NAME} — Accounting and collections on your phone`; }, []);
 
-  return <RevealProvider intent="landing">
-    <section className="mkt-hero">
-      <div className="mkt-wrap mkt-hero-grid">
-        <div className="mkt-hero-copy">
-          <Reveal as="p" className="mkt-kicker">A mobile app for the books</Reveal>
-          <Reveal as="h1" index={1}>Your Tally on mobile.</Reveal>
-          <Reveal as="p" index={2}>MyFinTracker installs on iPhone and Android and opens from its own icon. Collections, company accounts, and chit funds are in that app.</Reveal>
-          <Reveal className="mkt-cta-row" index={3}>
-            {signedIn ? <ProductCta primary /> : null}
-            <Link className="mkt-btn" to={`${marketingPaths.how}#install`}>Install on iPhone or Android</Link>
-            <Link className="mkt-btn ghost" to={marketingPaths.contact}>Request a demo</Link>
+  return <RevealProvider intent="landing"><div className="hm-home">
+    <section className="hm-hero hm-flip">
+      <div className="mkt-wrap hm-hero-grid">
+        <div className="hm-hero-copy">
+          <Reveal as="a" href="#ask-finny" className="hm-pill">
+            <span className="hm-pill-tag">New</span> {ASK_LABEL} answers from your books <ArrowRight size={14} aria-hidden="true" />
           </Reveal>
+          <Reveal as="h1" index={1}>Collections, chits, and company books.</Reveal>
+          <Reveal as="p" className="hm-hero-lead" index={2}>{PRODUCT_NAME} runs daily and monthly finance, chit funds, the cashbook, and GST-ready accounts together, on the web and on your phone.</Reveal>
+          <Reveal className="hm-cta-row" index={3}>
+            <ProductCta primary label="Start free trial" />
+            <Link className="mkt-btn ghost" to={marketingPaths.contact}>Book a demo</Link>
+          </Reveal>
+          <Reveal as="p" className="hm-hero-note" index={4}>{["14 days free", "No payment to start", `Modules from ${MONTHLY.baseLabel} per month`].map(item => <span key={item}><Check size={14} aria-hidden="true" />{item}</span>)}</Reveal>
         </div>
-        <Reveal index={2} duration={1.1} style={{ minWidth: 0 }}><ProductPreview scene="accounts-overview" /></Reveal>
+        <Reveal index={2} duration={1.1} style={{ minWidth: 0 }}><HeroVisual /></Reveal>
       </div>
-    </section>
-
-    <section className="mkt-section">
       <div className="mkt-wrap">
-        <div className="mkt-section-head">
-          <Reveal as="h2">One platform. Several kinds of work.</Reveal>
-        </div>
-        <div className="mkt-grid six">
-          {VALUES.map((item, index) => <Reveal as="article" key={item.title} className="mkt-card" index={index % 3}>
-            <div className="mkt-icon"><FeatureIcon name={item.icon} /></div>
-            <h3>{item.title}</h3>
-            <p>{item.text}</p>
-          </Reveal>)}
-        </div>
+        <ul className="hm-proof">
+          {PROOF.map(item => <li key={item.title}><item.icon size={20} aria-hidden="true" /><span><strong>{item.title}</strong> {item.text}</span></li>)}
+        </ul>
       </div>
     </section>
 
-    <section className="mkt-section mkt-tint">
-      <div className="mkt-wrap">
-        <div className="mkt-section-head">
-          <Reveal as="h2">The books, the collections, and the chit.</Reveal>
-          <Reveal as="p" className="mkt-lead" index={1}>Accounting in one app, collections in another, and customers in a spreadsheet is the work MyFinTracker puts in one login.</Reveal>
-        </div>
-        <div className="mkt-grid three">
-          {PILLARS.map((pillar, index) => <Reveal as="article" key={pillar.id} id={pillar.id} className="mkt-card" index={index % 3}>
-            <h3>{pillar.title}</h3>
-            <p>{pillar.text}</p>
-            <ul className="mkt-ticks">{pillar.items.map(item => <li key={item}>{item}</li>)}</ul>
-            <Link className="mkt-text-link" to={featurePath(pillar.to)}>{pillar.link}</Link>
-          </Reveal>)}
-        </div>
-      </div>
-    </section>
+    <HomeModules />
 
-    <section className="mkt-section mkt-tint" id="ask-finny">
+    <section className="home-mod hm-ask hm-flip" id="ask-finny">
       <div className="mkt-wrap">
         <div className="mkt-section-head">
           <Reveal as="p" className="mkt-kicker"><FeatureIcon name="MessageCircle" size={16} /> Ask Finny</Reveal>
@@ -419,63 +440,14 @@ export function HomePage() {
       </div>
     </section>
 
-    <section className="mkt-section" id="intelligence">
-      <div className="mkt-wrap">
-        <div className="mkt-section-head">
-          <Reveal as="h2">AI that reviews the books with you.</Reveal>
-          <Reveal as="p" className="mkt-lead" index={1}>MyFinTracker reads your own records and points out what needs a look: cash that may run short, costs that rose, GST details to fix, bank lines to match, and stock to reorder. Every suggestion shows its reason, its confidence, and a link to the record. You post the voucher, approve the match, and send the message.</Reveal>
-        </div>
-        <div className="mkt-grid three">
-          {AI.map((item, index) => <Reveal as={Link} key={item.slug} to={featurePath(item.slug)} className="mkt-card mkt-card-link" index={index % 3}>
-            <h3>{item.title}</h3>
-            <p>{item.text}</p>
-          </Reveal>)}
-        </div>
-        <Reveal as="p" className="mkt-lead">AI Review is a tab in Accounts, included in the plan. A forecast is shown apart from actual figures and is never posted into the books. Nothing is filed, locked, reversed, or sent by itself. <Link className="mkt-text-link" to={featurePath("ai-review")}>Read about AI Review</Link></Reveal>
-      </div>
-    </section>
+    <HomeFaq />
 
-    <section className="mkt-section mkt-tint">
-      <div className="mkt-wrap">
-        <div className="mkt-section-head">
-          <Reveal as="h2">Built around the business you run.</Reveal>
-        </div>
-        <div className="mkt-grid three">
-          {AUDIENCES.map((item, index) => <Reveal as={Link} key={item.title} to={featurePath(item.to)} className="mkt-card mkt-card-link" index={index % 3}>
-            <h3>{item.title}</h3>
-            <p>{item.text}</p>
-          </Reveal>)}
-        </div>
-      </div>
-    </section>
-
-    <section className="mkt-section">
-      <div className="mkt-wrap">
-        <Reveal as="h2">The books, on your phone.</Reveal>
-        <Reveal as="p" className="mkt-lead" index={1}>Add MyFinTracker from the browser and record the day’s work on the phone. The owner signs in with email. A collection agent, a customer, or a chit member uses a portal ID and PIN.</Reveal>
-        <Reveal className="mkt-cta-row" index={2}>
-          <Link className="mkt-btn" to={`${marketingPaths.how}#install`}>Install on iPhone or Android</Link>
-        </Reveal>
-      </div>
-    </section>
-
-    <FrequentlyAskedQuestions
-      className="mkt-tint"
-      description="Short answers about what is in the product today. If you don't find what you need,"
-      contact={<Link to={marketingPaths.contact}>contact us</Link>}
-      data={FAQ}
-    />
-
-    <section className="mkt-band">
-      <div className="mkt-wrap">
-        <Reveal as="h2">Bring the books and the collections together.</Reveal>
-        <Reveal as="p" index={1}>Start free opens signup for a 14-day trial. No payment is required to start. Request a demo if you want a walkthrough first.</Reveal>
-        <Reveal className="mkt-cta-row" index={2}>
-          <ProductCta primary />
-          <Link className="mkt-btn light" to={marketingPaths.contact}>Request a demo</Link>
-          {signedIn ? <Link className="mkt-btn light" to="/dashboard">Open MyFinTracker</Link> : null}
-        </Reveal>
-      </div>
-    </section>
-  </RevealProvider>;
+    <div className="fx hm-trial">
+      <ModuleClosing
+        title="Start your 14-day free trial today."
+        lead={`Every module included. No payment to start. Then modules start from ${MONTHLY.baseLabel} per month.`}
+        points={["14 days free", "No payment to start", `Modules from ${MONTHLY.baseLabel} per month`]}
+      />
+    </div>
+  </div></RevealProvider>;
 }

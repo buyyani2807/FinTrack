@@ -1,30 +1,37 @@
-import { useEffect, useId, useRef, useState } from "react";
-import { Link, NavLink, Outlet, useLocation, useNavigate, useOutletContext } from "react-router";
-import { ArrowRight, BookOpen, Building2, ChevronDown, Gift, House, LayoutGrid, Menu, ShieldCheck, Tag, X } from "lucide-react";
-import { ThemeToggle } from "../../components/ThemeToggle.jsx";
-import { FEATURE_CATEGORIES, featureBySlug } from "./catalog.js";
+import { useEffect, useId, useState } from "react";
+import { Link, NavLink, Outlet, useLocation, useOutletContext } from "react-router";
+import { BookOpenText, Coins, HandCoins, House, IndianRupee, Menu, Shield, ShoppingCart, Sparkles, X } from "lucide-react";
+import { APP_MODULES, moduleForFeature } from "./catalog.js";
 import marketingStyles from "./marketing.css?inline";
-import { ASK_LABEL, OPEN_PRODUCT, PRODUCT_NAME } from "../../lib/brand.js";
+import { OPEN_PRODUCT, PRODUCT_NAME } from "../../lib/brand.js";
 import { featurePath, marketingPaths } from "./paths.js";
 
-const LINKS = [
-  { to: marketingPaths.home, label: "Home", icon: House, end: true },
-  { to: marketingPaths.features, label: "Features", icon: LayoutGrid },
-  { to: marketingPaths.solutions, label: "Solutions", icon: Building2 },
-  { to: marketingPaths.security, label: "Security", icon: ShieldCheck },
-  { to: marketingPaths.pricing, label: "Pricing", icon: Tag },
-  { to: marketingPaths.resources, label: "Resources", icon: BookOpen },
-];
+const MODULE_ICONS = {
+  home: House,
+  finance: HandCoins,
+  "auction-chit": Coins,
+  "accounts-overview": BookOpenText,
+  "counter-pos": ShoppingCart,
+  ai: Sparkles,
+};
 
-function NavIcon({ item, size = 15 }) {
-  const Icon = item.icon;
-  return <Icon size={size} aria-hidden="true" />;
+function moduleHref(item) {
+  return item.to || featurePath(item.slug);
 }
 
-const MENU_MODULES = {
-  accounts: ["accounts-overview", "payroll", "trade-documents", "inventory", "item-profit", "for-the-ca"],
-  intelligence: ["bill-scanning", "ask-finny", "ai-review", "forecasting", "bank-matching", "gst-review"],
-};
+// "page" on a module's own page; "true" on one of its feature pages, so the parent stays highlighted.
+function moduleCurrent(item, pathname) {
+  const href = moduleHref(item);
+  if (pathname === href) return "page";
+  if (item.end) return undefined;
+  const slug = pathname.startsWith("/features/") ? pathname.slice("/features/".length).split("/")[0] : null;
+  return slug && moduleForFeature(slug) === item.slug ? "true" : undefined;
+}
+
+function ModuleIcon({ slug, size = 16 }) {
+  const Icon = MODULE_ICONS[slug] || House;
+  return <Icon size={size} aria-hidden="true" />;
+}
 
 const COMPANY_LINKS = [
   { to: marketingPaths.how, label: "How it works" },
@@ -33,39 +40,6 @@ const COMPANY_LINKS = [
   { to: marketingPaths.contact, label: "Contact" },
 ];
 
-const TRIAL_BAR_KEY = "fintrack-trial-bar-dismissed";
-
-function trialBarDismissed() {
-  try {
-    return localStorage.getItem(TRIAL_BAR_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
-function TrialBar() {
-  const [dismissed, setDismissed] = useState(trialBarDismissed);
-  if (dismissed) return null;
-  const dismiss = () => {
-    setDismissed(true);
-    try { localStorage.setItem(TRIAL_BAR_KEY, "1"); } catch { /* private mode: hide for this visit */ }
-  };
-  return <div className="mkt-trial-bar" role="region" aria-label="Free trial">
-    <Link className="mkt-trial-link" to={marketingPaths.signup}>
-      <span className="mkt-trial-icon" aria-hidden="true"><Gift size={14} /></span>
-      <span className="mkt-trial-text">
-        <strong>14-day free trial</strong>
-        <span className="mkt-trial-detail">Every module included, no payment to start</span>
-        <span className="mkt-trial-price">Then modules from ₹498 + GST / month</span>
-      </span>
-      <span className="mkt-trial-cta">Start free <ArrowRight size={14} aria-hidden="true" /></span>
-    </Link>
-    <button type="button" className="mkt-trial-close" aria-label="Dismiss the free trial message" onClick={dismiss}>
-      <X size={16} aria-hidden="true" />
-    </button>
-  </div>;
-}
-
 function Brand({ onClick }) {
   return <Link to={marketingPaths.home} className="mkt-brand" aria-label={`${PRODUCT_NAME} home`} onClick={onClick}>MyFin<span>Tracker</span></Link>;
 }
@@ -73,73 +47,21 @@ function Brand({ onClick }) {
 export function MarketingLayout() {
   const { signedIn = false } = useOutletContext() || {};
   const [open, setOpen] = useState(false);
-  const [productOpen, setProductOpen] = useState(false);
-  const [drawerFeaturesOpen, setDrawerFeaturesOpen] = useState(false);
   const menuId = useId();
-  const productId = useId();
-  const drawerFeaturesId = useId();
-  const productRef = useRef(null);
-  const productPanelRef = useRef(null);
-  const productTapOpens = useRef(false);
-  const location = useLocation();
-  const navigate = useNavigate();
-  const onFeaturesPage = location.pathname === marketingPaths.features || location.pathname.startsWith(`${marketingPaths.features}/`);
+  const { pathname } = useLocation();
   const close = () => setOpen(false);
-  const openDrawer = () => {
-    setDrawerFeaturesOpen(onFeaturesPage);
-    setOpen(true);
-  };
-  // Touch has no hover: the first tap on Features opens the menu, a second tap opens the page.
-  const onFeaturesPointerDown = event => { productTapOpens.current = event.pointerType !== "mouse" && !productOpen; };
-  const onFeaturesClick = event => {
-    if (!productTapOpens.current) return;
-    productTapOpens.current = false;
-    event.preventDefault();
-    setProductOpen(true);
-  };
-  const openModule = (event, id) => {
-    setProductOpen(false);
-    close();
-    const node = document.getElementById(id);
-    if (!node) return;
-    event.preventDefault();
-    node.scrollIntoView({ behavior: "smooth", block: "start" });
-    navigate({ pathname: marketingPaths.features, hash: id });
-  };
-  const isCurrentCategory = id => location.pathname === marketingPaths.features && location.hash === `#${id}`;
-  const onProductBlur = event => {
-    if (!productRef.current?.contains(event.relatedTarget)) setProductOpen(false);
-  };
-  useEffect(() => {
-    if (!open && !productOpen) return undefined;
-    const onKey = event => {
-      if (event.key === "Escape") {
-        setOpen(false);
-        setProductOpen(false);
-      }
-    };
-    const onPointer = event => {
-      if (productRef.current && !productRef.current.contains(event.target)) setProductOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    window.addEventListener("pointerdown", onPointer);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      window.removeEventListener("pointerdown", onPointer);
-    };
-  }, [open, productOpen]);
   useEffect(() => {
     if (!open) return undefined;
+    const onKey = event => { if (event.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", onKey);
     const root = document.documentElement;
     const previous = root.style.overflow;
     root.style.overflow = "hidden";
-    return () => { root.style.overflow = previous; };
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      root.style.overflow = previous;
+    };
   }, [open]);
-  useEffect(() => {
-    const panel = productPanelRef.current;
-    const current = panel?.querySelector("[aria-current]");
-    if (current) panel.scrollTop = current.offsetTop - (panel.clientHeight - current.offsetHeight) / 2;
-  }, [productOpen]);
 
   const login = signedIn
     ? <Link className="mkt-btn" to="/dashboard">{OPEN_PRODUCT}</Link>
@@ -155,35 +77,18 @@ export function MarketingLayout() {
     <header className="mkt-nav">
       <Brand />
       <nav className="mkt-links" aria-label="Primary">
-        <NavLink className="mkt-nav-item" to={marketingPaths.home} end><NavIcon item={LINKS[0]} />Home</NavLink>
-        <div
-          className="mkt-product"
-          ref={productRef}
-          onMouseEnter={() => setProductOpen(true)}
-          onMouseLeave={() => setProductOpen(false)}
-          onFocus={() => setProductOpen(true)}
-          onBlur={onProductBlur}
-        >
-          <NavLink className="mkt-nav-item" to={marketingPaths.features} aria-expanded={productOpen} aria-controls={productId} onPointerDown={onFeaturesPointerDown} onClick={onFeaturesClick}><NavIcon item={LINKS[1]} />Features</NavLink>
-          {productOpen && <div id={productId} ref={productPanelRef} className="mkt-product-panel">
-            {FEATURE_CATEGORIES.map(category => <div key={category.id} className="mkt-product-group">
-              <Link to={`${marketingPaths.features}#${category.id}`} aria-current={isCurrentCategory(category.id) ? "location" : undefined} onClick={event => openModule(event, category.id)}><strong>{category.label}</strong></Link>
-              {(MENU_MODULES[category.id] || []).map(featureBySlug).filter(Boolean).map(feature => <NavLink key={feature.slug} to={featurePath(feature.slug)} onClick={() => setProductOpen(false)}>{feature.name}</NavLink>)}
-            </div>)}
-          </div>}
-        </div>
-        {LINKS.filter(link => link.to !== marketingPaths.home && link.to !== marketingPaths.features).map(link => <NavLink className="mkt-nav-item" key={link.to} to={link.to}><NavIcon item={link} />{link.label}</NavLink>)}
+        {APP_MODULES.map(item => <Link className="mkt-nav-item" key={item.slug} to={moduleHref(item)} aria-current={moduleCurrent(item, pathname)}><ModuleIcon slug={item.slug} />{item.label}</Link>)}
+        <Link className="mkt-nav-item" to={marketingPaths.security} aria-current={pathname === marketingPaths.security ? "page" : undefined}><Shield size={16} aria-hidden="true" />Security</Link>
+        <Link className="mkt-nav-item" to={marketingPaths.pricing} aria-current={pathname === marketingPaths.pricing ? "page" : undefined}><IndianRupee size={16} aria-hidden="true" />Pricing</Link>
       </nav>
       <div className="mkt-nav-end">
-        <ThemeToggle compact />
-        {login}
-        {signedIn ? start : null}
-        <button type="button" className="mkt-burger" aria-label="Open menu" aria-expanded={open} aria-controls={menuId} onClick={openDrawer}>
+        {signedIn ? null : login}
+        {start}
+        <button type="button" className="mkt-burger" aria-label="Open menu" aria-expanded={open} aria-controls={menuId} onClick={() => setOpen(true)}>
           <Menu size={22} aria-hidden="true" />
         </button>
       </div>
     </header>
-    {!signedIn && <TrialBar />}
     </div>
     {open && <div className="mkt-drawer" onClick={close}>
       <div id={menuId} className="mkt-drawer-panel" role="dialog" aria-modal="true" aria-label="Menu" onClick={event => event.stopPropagation()}>
@@ -192,31 +97,13 @@ export function MarketingLayout() {
           <button type="button" className="mkt-drawer-close" aria-label="Close menu" onClick={close} autoFocus><X size={20} aria-hidden="true" /></button>
         </div>
         <nav className="mkt-drawer-body" aria-label="Menu">
-          <NavLink className="mkt-drawer-link" to={marketingPaths.home} end onClick={close}><span className="mkt-nav-label"><NavIcon item={LINKS[0]} size={18} />Home</span></NavLink>
-          <button
-            type="button"
-            className={`mkt-drawer-link mkt-drawer-toggle${onFeaturesPage ? " is-current" : ""}`}
-            aria-expanded={drawerFeaturesOpen}
-            aria-controls={drawerFeaturesId}
-            onClick={() => setDrawerFeaturesOpen(value => !value)}
-          >
-            <span className="mkt-nav-label"><NavIcon item={LINKS[1]} size={18} />Features</span> <ChevronDown size={18} aria-hidden="true" />
-          </button>
-          <div id={drawerFeaturesId} className="mkt-drawer-sub" data-state={drawerFeaturesOpen ? "open" : "closed"} inert={!drawerFeaturesOpen}>
-            <div>
-              <Link to={marketingPaths.features} aria-current={location.pathname === marketingPaths.features && !location.hash ? "page" : undefined} onClick={close}>All features</Link>
-              {FEATURE_CATEGORIES.map(category => <div key={category.id} className="mkt-drawer-cat">
-                <Link to={`${marketingPaths.features}#${category.id}`} aria-current={isCurrentCategory(category.id) ? "location" : undefined} onClick={event => openModule(event, category.id)}>{category.label}</Link>
-                {(MENU_MODULES[category.id] || []).map(featureBySlug).filter(Boolean).map(feature => <NavLink key={feature.slug} className="mkt-drawer-module" to={featurePath(feature.slug)} onClick={close}>{feature.name}</NavLink>)}
-              </div>)}
-            </div>
-          </div>
-          {LINKS.filter(link => link.to !== marketingPaths.home && link.to !== marketingPaths.features).map(link => <NavLink key={link.to} className="mkt-drawer-link" to={link.to} onClick={close}><span className="mkt-nav-label"><NavIcon item={link} size={18} />{link.label}</span></NavLink>)}
+          {APP_MODULES.map(item => <Link key={item.slug} className="mkt-drawer-link" to={moduleHref(item)} aria-current={moduleCurrent(item, pathname)} onClick={close}><span className="mkt-nav-label"><ModuleIcon slug={item.slug} size={18} />{item.label}</span></Link>)}
+          <Link className="mkt-drawer-link" to={marketingPaths.security} aria-current={pathname === marketingPaths.security ? "page" : undefined} onClick={close}><span className="mkt-nav-label"><Shield size={18} aria-hidden="true" />Security</span></Link>
+          <Link className="mkt-drawer-link" to={marketingPaths.pricing} aria-current={pathname === marketingPaths.pricing ? "page" : undefined} onClick={close}><span className="mkt-nav-label"><IndianRupee size={18} aria-hidden="true" />Pricing</span></Link>
           <p className="mkt-drawer-label">Company</p>
           {COMPANY_LINKS.map(link => <NavLink key={link.to} className="mkt-drawer-link minor" to={link.to} onClick={close}>{link.label}</NavLink>)}
         </nav>
         <div className="mkt-drawer-foot">
-          <div className="mkt-drawer-theme"><span>Appearance</span><ThemeToggle /></div>
           <div className="mkt-drawer-cta">
             {signedIn ? null : <Link className="mkt-btn" to={marketingPaths.login} onClick={close}>Login</Link>}
             {signedIn
@@ -231,19 +118,14 @@ export function MarketingLayout() {
     </main>
     <footer className="mkt-footer">
       <div className="mkt-wrap mkt-footer-grid">
-      <div>
+      <div className="mkt-footer-brand">
         <Brand />
         <p>Accounting, finance, collections, chit funds, and AI in one login. Suggestions wait until you confirm.</p>
+        <p className="mkt-footer-badges"><span>Web</span><span>iPhone</span><span>Android</span></p>
       </div>
       <div>
         <h2>Product</h2>
-        <Link to="/features/accounts-overview">Accounting</Link>
-        <Link to="/features/daily-finance">Finance</Link>
-        <Link to="/features/auction-chit">Chit Funds</Link>
-        <Link to="/features/cashbook">Cashbook</Link>
-        <Link to="/features/bill-scanning">Bill scan</Link>
-        <Link to="/features/ask-finny">{ASK_LABEL}</Link>
-        <Link to="/features/ai-review">AI Review</Link>
+        {APP_MODULES.map(item => <Link key={item.slug} to={moduleHref(item)}>{item.label}</Link>)}
       </div>
       <div>
         <h2>Company</h2>
@@ -262,6 +144,9 @@ export function MarketingLayout() {
         <Link to="/?view=privacy">Privacy</Link>
         <Link to="/?view=terms">Terms</Link>
       </div>
+      </div>
+      <div className="mkt-wrap mkt-footer-bottom">
+        <p>© {new Date().getFullYear()} {PRODUCT_NAME}. Built for finance businesses, chit fund operators, and traders in India.</p>
       </div>
     </footer>
   </div>;
