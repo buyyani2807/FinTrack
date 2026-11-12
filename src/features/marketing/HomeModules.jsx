@@ -88,8 +88,8 @@ function DailyModule() {
     <div className="hm-module-copy">
       <Tag icon={CalendarDays}>Daily Finance</Tag>
       <h3>Every daily collection on one list.</h3>
-      <p className="hm-module-lead">Open a 100-day style account once. Each day MyFinTracker shows who has paid, who is still due, and who to visit first.</p>
-      <Points items={["Today’s collection list with what is still due", "Who to collect first, ranked with the reason", "Digital receipts and WhatsApp reminders you send", "Daily collection report and Daily P&L"]} />
+      <p className="hm-module-lead">Open a 100-day style account once. Each day MyFinTracker shows who has paid, who is still due, who to visit first, and a credit score from that customer’s payments.</p>
+      <Points items={["MyFinTracker credit score from each customer’s payments", "Today’s collection list with what is still due", "Who to collect first, ranked with the reason", "Daily collection report and Daily P&L"]} />
       <More to={featurePath("daily-finance")}>Explore Daily Finance</More>
     </div>
     <div className="hm-daily-stage" aria-hidden="true">
@@ -184,8 +184,8 @@ function MonthlyModule() {
     <div className="hm-module-copy">
       <Tag icon={CalendarRange}>Monthly Finance</Tag>
       <h3>Interest, principal, and penalty never mix.</h3>
-      <p className="hm-module-lead">Every receipt on a monthly account records what it covered, so the balance and the interest you earned are always clear.</p>
-      <Points items={["Monthly interest accounts with due amounts", "Each receipt split into interest, principal, and penalty", "Monthly P&L from interest and penalty received", "Upcoming payment reminders"]} />
+      <p className="hm-module-lead">Every receipt on a monthly account records what it covered, so the balance, the interest you earned, and a credit score from how they paid stay clear.</p>
+      <Points items={["MyFinTracker credit score from how they paid", "Monthly interest accounts with due amounts", "Each receipt split into interest, principal, and penalty", "Monthly P&L from interest and penalty received"]} />
       <More to={featurePath("monthly-finance")}>Explore Monthly Finance</More>
     </div>
   </article></Section>;

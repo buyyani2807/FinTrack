@@ -15,6 +15,7 @@ const LIST = [
 const MODES = [
   { key: "daily", label: "Daily", slug: "daily-finance", scene: "finance-overview", line: "For 100-day style lending, collected every day." },
   { key: "monthly", label: "Monthly", slug: "monthly-finance", scene: "monthly", line: "For interest accounts, collected every month." },
+  { key: "score", label: "Score", slug: "credit-score", scene: "credit", line: "A 300–900 score from this customer’s payments in your books, not a bureau." },
 ];
 
 export function FinancePage({ feature }) {
@@ -40,7 +41,18 @@ export function FinancePage({ feature }) {
               </ul>
             </div>
           </Tile>
-          <Tile slug="customers" size="wide" title="Every account and its history, for each customer.">
+          <Tile slug="credit-score" size="wide" title="A 300–900 score from this customer’s payments — not a credit bureau.">
+            <div className="fx-card fx-rows">
+              <p>Lakshmi Devi · Daily</p>
+              <div className="fx-gauge">
+                <svg viewBox="0 0 120 70"><path className="fx-gauge-track" d="M10,62 A50,50 0 0 1 110,62" /><path className="fx-gauge-value" d="M10,62 A50,50 0 0 1 96,30" /></svg>
+                <strong>742</strong>
+              </div>
+              <p><span>Band</span><b className="fx-pill is-on">Good</b></p>
+              <p><span>From recorded payments</span><strong>Not a bureau</strong></p>
+            </div>
+          </Tile>
+          <Tile slug="customers" title="Every account and its history, for each customer.">
             <div className="fx-card fx-customer">
               <span className="fx-avatar is-lg">LD</span>
               <div className="fx-customer-name"><strong>Lakshmi Devi</strong><span>Daily account · Route 2</span></div>
@@ -79,24 +91,18 @@ export function FinancePage({ feature }) {
           <Tile slug="customer-statements" title="A statement the customer can review.">
             <div className="fx-card fx-doc"><FileText size={18} /><i /><i /><i /><i /><span>PDF</span></div>
           </Tile>
-          <Tile slug="credit-score" title="A score from the customer’s payment history.">
-            <div className="fx-gauge">
-              <svg viewBox="0 0 120 70"><path className="fx-gauge-track" d="M10,62 A50,50 0 0 1 110,62" /><path className="fx-gauge-value" d="M10,62 A50,50 0 0 1 96,30" /></svg>
-              <strong>742</strong>
-            </div>
-          </Tile>
         </div>
       </div>
     </section>
 
     <section className="fx-sec hm-flip">
       <div className="mkt-wrap">
-        <SectionHead eyebrow="Two lending books" title="Daily or monthly. Switch and see how each works." />
+        <SectionHead eyebrow="Inside the lending book" title="Daily collection, monthly interest, and a score from how they paid." />
         <ModeSwitch label="Lending book" modes={MODES} />
       </div>
     </section>
 
-    <ModuleFaq title="Finance, answered." questions={["Can a finance business use it?", "What reports are included?", "Can I send WhatsApp messages?", "Can I install it on my phone?"]} />
-    <ModuleClosing title="Put the whole lending book in one login." appPath={feature.appPath} points={["Daily and monthly accounts", "Collection staff access", "Daily and Monthly P&L"]} />
+    <ModuleFaq title="Finance, answered." questions={["Can a finance business use it?", "Does it have a credit score?", "What reports are included?", "Can I send WhatsApp messages?"]} />
+    <ModuleClosing title="Put the whole lending book in one login." appPath={feature.appPath} points={["Daily and monthly accounts", "MyFinTracker credit score from payments", "Daily and Monthly P&L"]} />
   </div></ModuleParts></RevealProvider>;
 }
