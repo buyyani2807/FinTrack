@@ -41,9 +41,10 @@ export function SolutionsPage() {
 
 const STEPS = [
   { title: "Open one workspace", text: "Owner sign-in opens the business workspace, or create the business account when signup is open. A CA uses the same Owner sign-in for assigned Accounts companies only. A collection agent, a customer, and a chit member each sign in on the same screen with their own ID and PIN." },
-  { title: "Record the work", text: "Add daily or monthly customers, enroll a chit scheme, or post a voucher on the company you have open. Scan a supplier bill from a photo or a PDF and review the draft before you save." },
-  { title: "Review what MyFinTracker highlights", text: "Insights, unusual days, bill drafts, and bank suggestions are there to read. You record the payment, accept the match, or save the voucher." },
+  { title: "Record the work", text: "Add daily or monthly customers, enroll a chit scheme, or post a voucher on the company you have open. Scan a supplier bill from a photo or a PDF, keep the bill as proof on the expense, and review the draft before you save." },
+  { title: "Review what MyFinTracker highlights", text: "Insights, unusual days, bill drafts, stock that may run out or expire, till alerts, and bank suggestions are there to read. You record the payment, accept the match, or save the voucher." },
   { title: "Share only when you mean to", text: "Download a receipt or statement, or open WhatsApp with a draft. The message is sent when you send it. Portals show a customer or member their own records." },
+  { title: "Keep a copy", text: "The owner can back up the whole workspace and restore it. Nightly copies run at midnight India time and are kept for 14 days." },
 ];
 
 export function HowItWorksPage() {
@@ -226,7 +227,7 @@ export function FounderPage() {
       <div className="mkt-grid two">
         <article className="mkt-card">
           <h2>Experience</h2>
-          <p>More than 15 years of experience in the IT industry across the United States, Ireland, and India, including roles as a Database Administrator, Cloud Architect, and DevOps Engineer at Deloitte and Oracle Corporation.</p>
+          <p>Twenty years in IT across the United States, Ireland, and India — Database Administrator, Cloud Architect, and DevOps Engineer at multinational companies. As a Cloud Architect, he designed and implemented ERP systems and ecommerce websites on Amazon Web Services (AWS), Microsoft Azure, Google Cloud Platform (GCP), and Oracle Cloud Infrastructure (OCI).</p>
         </article>
         <article className="mkt-card">
           <h2>Education</h2>

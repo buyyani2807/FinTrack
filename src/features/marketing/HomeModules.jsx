@@ -321,7 +321,7 @@ function AccountsModule() {
     <header className="hm-accounts-head">
       <Tag icon={BookOpenText}>Accounts</Tag>
       <h3>Full company books, with a billing counter built in.</h3>
-      <p className="hm-module-lead">Bill from Counter POS, post vouchers, keep stock and payroll, and hand a GST-ready month to your CA.</p>
+      <p className="hm-module-lead">Bill from Counter POS, post vouchers, keep stock and payroll, attach bill proofs, back up the workspace, and hand a GST-ready month to your CA.</p>
     </header>
     <div className="hm-accounts-stage" aria-hidden="true">
       <ul className="hm-chips">
@@ -349,7 +349,7 @@ function AccountsModule() {
       </div>
     </div>
     <div className="hm-accounts-foot">
-      <Points items={["Counter POS with thermal and WhatsApp receipts", "Trial balance, P&L, balance sheet, and cash flow"]} />
+      <Points items={["Counter POS with till alerts, thermal, and WhatsApp receipts", "Bill proofs on expenses and workspace backup", "Expired stock alerts with inventory and the books", "Trial balance, P&L, balance sheet, and cash flow"]} />
       <More to={featurePath("accounts-overview")}>Explore Accounts</More>
     </div>
   </article></Section>;

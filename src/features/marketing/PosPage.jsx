@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Check, Lock, MessageCircle, Printer, Search, WifiOff } from "lucide-react";
+import { AlertTriangle, Check, Lock, MessageCircle, Printer, Search, WifiOff } from "lucide-react";
 import { RevealProvider } from "../../components/ui/Reveal.jsx";
 import { ModuleParts } from "./ModuleParts.jsx";
 import { ModeSwitch, ModuleClosing, ModuleFaq, ModuleHero, SectionHead, Tile } from "./ModuleKit.jsx";
@@ -21,7 +21,7 @@ export function PosPage({ feature }) {
     <ModuleHero
       name="POS"
       title="A billing counter that posts straight into your books."
-      lead="A till for walk-in and khata sales. Charge posts the sale, updates stock, and prints or shares the receipt."
+      lead="A till for walk-in and khata sales. Charge posts the sale, updates stock, and prints or shares the receipt. The till flags short stock, expiry, and khata risk before you charge."
       appPath={feature.appPath}
       scene="accounts-counter"
       frameLabel="Counter · Till"
@@ -93,6 +93,14 @@ export function PosPage({ feature }) {
               <div><span>Toor Dal 1kg<b className="fx-pill">Low</b></span><i><em style={{ width: "16%" }} /></i></div>
             </div>
           </Tile>
+          <Tile slug="counter-ai" title="Short stock, expiry, and khata risk on the till before you charge.">
+            <div className="fx-card fx-rows fx-flags">
+              <p><AlertTriangle size={14} /> Till alerts</p>
+              <p><span>Toor Dal: bill exceeds stock</span></p>
+              <p><span>Milk: expires tomorrow</span></p>
+              <p><span>Ravi Stores: near khata limit</span></p>
+            </div>
+          </Tile>
         </div>
       </div>
     </section>
@@ -104,7 +112,7 @@ export function PosPage({ feature }) {
       </div>
     </section>
 
-    <ModuleFaq title="POS, answered." questions={["Does it have a POS / billing counter?", "Does it support GST?", "Can I use it only for accounting?", "Can I install it on my phone?"]} />
-    <ModuleClosing title="Open the counter in MyFinTracker." appPath={feature.appPath} points={["Cash, UPI, and khata", "Thermal and WhatsApp receipts", "Stock moves with every sale"]} />
+    <ModuleFaq title="POS, answered." questions={["Does it have a POS / billing counter?", "Does it have AI?", "Does it support GST?", "Can I use it only for accounting?"]} />
+    <ModuleClosing title="Open the counter in MyFinTracker." appPath={feature.appPath} points={["Cash, UPI, and khata", "Till alerts before you charge", "Stock moves with every sale"]} />
   </div></ModuleParts></RevealProvider>;
 }
