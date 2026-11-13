@@ -162,4 +162,26 @@ Owner decision: a cashier only uses the Counter; staff details are seen only by 
 - Cashier can no longer read audit log, payroll, bank statements, trade documents, filings, recurring templates, period locks, team invites, routes, attachments or e-invoice payloads. The cashier still reads vouchers, parties, items, stock and chart of accounts because the Counter uses them (stock check, prices, khata credit limit).
 - `profiles`: the owner reads every staff row; everyone else reads only their own. "Collected by" names on payments are blank for non-owners unless they collected the payment.
 
-Checked on a local Postgres (PGlite) with stand-in tables and roles: 28 of 28 cases behave as intended, and the migration runs twice without error. `tests/cashierCounterOnly.test.js`: 6 tests. Not yet applied to staging.
+Checked on a local Postgres (PGlite) with stand-in tables and roles. `tests/cashierCounterOnly.test.js` covers the rules.
+
+### 142 regression and fix — migration 143
+
+142 allowed `voucher_type in ('sale', 'credit_note')`, but the `acc_vouchers` check constraint names a sale `sales`. On staging, every Counter sale by a cashier was refused after 142 ("A cashier can only post Counter sales and returns"); returns still worked. The first local check missed it because the stand-in table had no voucher-type constraint. `supabase/143_fix_cashier_counter_sales_type.sql` replaces the trigger function with `('sales', 'credit_note')`. The local check now uses the real constraint (28 of 28 pass), and `tests/cashierCounterOnly.test.js` asserts every allowed type exists in that constraint.
+
+### Re-test on staging after 142 + 143
+
+| Check | Result |
+| --- | --- |
+| Cashier posts a Counter sale (`sales`, `pos_counter`) | 200, posted |
+| Cashier posts a Counter return (`credit_note`, `pos_counter`) | 200, posted |
+| Cashier voids a Counter sale / return | 204, status `cancelled` |
+| Cashier closes the till day | 200 |
+| Cashier posts a journal, a non-Counter sale, a receipt tagged `pos_counter` | Refused |
+| Cashier voids a non-Counter voucher | Refused: "A cashier can only change Counter bills" |
+| Cashier creates a party | Refused: "A cashier can only use the Counter" |
+| Cashier reads audit log, payroll runs and profiles, bank statements, recurring templates, period locks | 0 rows each |
+| Cashier reads vouchers, parties, chart of accounts (Counter needs them) | Visible |
+| Cashier signs in through the app | Lands on Counter, no errors |
+| `profiles` for accountant, viewer, cashier, partner, both agents | 1 row each (own) |
+| Accountant posts a journal and a non-Counter sale, reads the audit log | Allowed, as before |
+| Owner reads all staff profiles | Not checked on staging (no owner session in the test browser) |
