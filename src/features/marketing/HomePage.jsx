@@ -285,7 +285,7 @@ function AskGrid() {
 const MONTHLY = priceForPeriod("monthly");
 
 const PROOF = [
-  { icon: BadgeCheck, title: "5 modules", text: "in one login" },
+  { icon: BadgeCheck, title: "Credit score", text: "from recorded payments" },
   { icon: WifiOff, title: "Offline billing", text: "48 hours, then sync" },
   { icon: TrendingUp, title: "GST-ready books", text: "with a pack for your CA" },
   { icon: Sparkles, title: "AI that waits", text: "for you to confirm" },

@@ -42,6 +42,7 @@ export function SessionLayout() {
   }
   if (isMarketingPath(path)) {
     if (isLoading && !workspaceUser) return <LoadingScreen />;
+    if (workspaceUser && path === "/chit-fund") return <Navigate to="/chit-fund/schemes" replace />;
     if (workspaceUser) return <Navigate to="/dashboard" replace />;
     return <Outlet context={{ signedIn: false }} />;
   }
