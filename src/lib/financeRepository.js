@@ -2,6 +2,7 @@ import { grandfatheredSubscription, normalizeSubscription } from "../features/co
 import { supabase } from "./supabase";
 import { CHIT_TYPES } from "../features/chitFund/model/fixedChit.js";
 import { flattenSchemePaymentsForReminders } from "../features/receipts/model/upcomingPayments.js";
+import { portalResult } from "./portalResult.js";
 
 const asNumber = value => Number(value || 0);
 const memberDisplayName = row => row?.chit_members?.full_name || row?.full_name || "";
@@ -496,7 +497,8 @@ export async function deleteFinanceAccount(token, accountId) {
 }
 export const resetCustomerPortalPin = (token, accountId, pin) => supabase.rpc("reset_customer_portal_pin", { account_id: accountId, new_pin: pin }, token);
 export const enableCustomerPortal = (token, accountId, pin) => supabase.rpc("enable_customer_portal", { account_id: accountId, new_pin: pin }, token);
-export const customerPortalLogin = (portalId, pin) => supabase.rpc("customer_portal_login", { input_portal_id: portalId, input_pin: pin });
+export const customerPortalLogin = async (portalId, pin) =>
+  portalResult(await supabase.rpc("customer_portal_login", { input_portal_id: portalId, input_pin: pin }));
 export const loadCustomerKyc = (token, accountId) => supabase.rpc("get_customer_kyc", { account_id: accountId }, token);
 export const saveCustomerKyc = (token, accountId, aadhaar, pan) => supabase.rpc("save_customer_kyc", { account_id: accountId, aadhaar, pan }, token);
 export const updatePaymentNotes = (token, paymentId, notes) => supabase.rpc("update_payment_notes", { payment_id: paymentId, payment_notes: notes }, token);
@@ -762,7 +764,8 @@ export const endChitLiveAuction = (token, auctionId, payout = {}) => supabase.rp
 }, token);
 export const enableChitMemberPortal = (token, enrollmentId, pin) => supabase.rpc("enable_chit_member_portal", { input_enrollment_id: enrollmentId, new_pin: pin }, token);
 export const resetChitMemberPortalPin = (token, enrollmentId, pin) => supabase.rpc("reset_chit_member_portal_pin", { input_enrollment_id: enrollmentId, new_pin: pin }, token);
-export const chitCustomerPortalLogin = (portalId, pin) => supabase.rpc("chit_customer_portal_login", { input_portal_id: portalId, input_pin: pin });
+export const chitCustomerPortalLogin = async (portalId, pin) =>
+  portalResult(await supabase.rpc("chit_customer_portal_login", { input_portal_id: portalId, input_pin: pin }));
 export const chitCustomerLiveState = sessionToken => supabase.rpc("chit_customer_live_state", { input_session_token: sessionToken });
 export const chitCustomerPaymentHistory = sessionToken => supabase.rpc("chit_customer_payment_history", { input_session_token: sessionToken });
 export const chitCustomerSelectMembership = (sessionToken, enrollmentId) => supabase.rpc("chit_customer_select_membership", {
