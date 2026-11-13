@@ -129,3 +129,37 @@ Viewer and partner see "+ Account" and "+ Add Party" in Setup; partner sees "Rec
 1. As the finance agent: `acc_create_company` and `acc_set_integration` must be refused.
 2. As the accountant: `acc_set_integration` must be refused.
 3. Five wrong PINs on `FT-80A3D301`, `CF-DF0B1228` and `AG-17BC7997` must lock for 15 minutes; the sixth try with the right PIN must say "Too many attempts".
+
+## Re-test after deploy — 13 Nov 2026, afternoon
+
+Staging bundle `index-B6jEmrQt.js` contains the portal `{ error }` handling; `CashbookRoute-CsTUcDLV.js` contains the negative-balance notice. Migration 141 is applied: both agents now get `false` (was NULL) from `can_accounts_admin`, `can_accounts_write` and `can_accounts_read`.
+
+| Defect | Result |
+| --- | --- |
+| P1-1 Agents pass owner-only checks | **Fixed.** Both agents: `acc_create_company`, `acc_set_integration`, GST, period lock all refused ("Only the business owner…"). Posting refused. |
+| P1-2 PIN lockout | **Fixed.** Customer `FT-80A3D301`: locked on the 5th wrong PIN; right PIN then refused with "Too many attempts". Agent `AG-67908751`: 5 × 401, then 403 "Too many attempts", right PIN refused. Chit member `CF-DF0B1228`: locked on the 4th wrong PIN in this run (one failure was already counted before the run started), right PIN refused. Sign-in screen shows "Invalid portal ID or PIN" and stays on the form for customer and chit member. |
+| P2-1 Accountant / cashier switch integration | **Fixed.** Refused for accountant, cashier, viewer, partner and both agents. Integration stayed off. |
+| P2-2 Cashier posts any journal | Open, as expected (not in 141). Cashier journal in A → 200. |
+| P2-3 All roles read all staff profiles | Open, as expected. Still 14 rows for every role. |
+
+Regression: accountant still posts in company A; every other write in the matrix is refused as before; company B is still invisible to the A-scoped roles; the finance agent still sees only its 1 assigned loan; partner reads are unchanged.
+
+New observations:
+
+- Wrong-PIN replies from `customer_portal_login` and `chit_customer_portal_login` are now HTTP 200 with `{ error }` (the lock check itself still returns 400). Monitoring that counts 4xx will no longer see failed portal logins. Low.
+- Anyone who knows a portal ID can now lock that customer or member out for 15 minutes by entering 5 wrong PINs. This is the usual trade-off of a lockout; consider a longer PIN or an owner "unlock" button if it becomes a support issue.
+- A chit-member tab left open for about 50 minutes across a deploy stayed on "Loading your chit dashboard" until it was reloaded. Not reproduced; possibly a lazy chunk from the previous build that no longer exists.
+
+The test portals `FT-80A3D301`, `CF-DF0B1228` and agent `AG-67908751` were locked for 15 minutes by this run.
+
+## Fix for P2-2 and P2-3 — migration 142
+
+Owner decision: a cashier only uses the Counter; staff details are seen only by the owner.
+
+`supabase/142_cashier_counter_only_and_owner_only_staff.sql`:
+
+- Cashier may post only `sale` / `credit_note` vouchers with `source_type = 'pos_counter'`, void Counter bills and close the till day. Every other Accounts write is refused by triggers, which also fire inside the RPCs.
+- Cashier can no longer read audit log, payroll, bank statements, trade documents, filings, recurring templates, period locks, team invites, routes, attachments or e-invoice payloads. The cashier still reads vouchers, parties, items, stock and chart of accounts because the Counter uses them (stock check, prices, khata credit limit).
+- `profiles`: the owner reads every staff row; everyone else reads only their own. "Collected by" names on payments are blank for non-owners unless they collected the payment.
+
+Checked on a local Postgres (PGlite) with stand-in tables and roles: 28 of 28 cases behave as intended, and the migration runs twice without error. `tests/cashierCounterOnly.test.js`: 6 tests. Not yet applied to staging.
