@@ -78,8 +78,11 @@ export function AppRoutes() {
           <Route path="/ai/features/:slug" element={<FeatureDetailPage />} />
           <Route path="/finance" element={<FeatureDetailPage />} />
           <Route path="/auction-chit" element={<FeatureDetailPage />} />
+          <Route path="/chit-fund" element={<FeatureDetailPage />} />
           <Route path="/accounts-overview" element={<FeatureDetailPage />} />
+          <Route path="/accounts" element={<FeatureDetailPage />} />
           <Route path="/counter-pos" element={<FeatureDetailPage />} />
+          <Route path="/pos" element={<FeatureDetailPage />} />
           <Route path="/ai" element={<FeatureDetailPage />} />
           <Route path="/solutions" element={<SolutionsPage />} />
           <Route path="/how-it-works" element={<HowItWorksPage />} />
@@ -112,7 +115,7 @@ export function AppRoutes() {
           <Route path="/monthly-finance/reports" element={<FinanceRoute module="monthly" section="reports" />} />
           <Route path="/monthly-finance/*" element={<Navigate to="/monthly-finance/todays-collections" replace />} />
 
-          <Route path="/chit-fund" element={<Navigate to="/chit-fund/schemes" replace />} />
+          {/* /chit-fund is the public Chit Fund page. Signed-in users are sent to schemes from SessionLayout. */}
           <Route path="/chit-fund/members" element={<Navigate to="/chit-fund/schemes" replace />} />
           <Route path="/chit-fund/bids" element={<Navigate to="/chit-fund/schemes" replace />} />
           <Route path="/chit-fund/payments" element={<Navigate to="/chit-fund/schemes" replace />} />

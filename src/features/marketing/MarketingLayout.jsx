@@ -25,7 +25,7 @@ function moduleCurrent(item, pathname) {
   const href = moduleHref(item);
   if (pathname === href) return "page";
   if (item.end) return undefined;
-  if (pathname.startsWith(`${href}/features/`)) return "true";
+  if (pathname.startsWith(`${href}/features/`) || pathname.startsWith(`/${item.slug}/features/`)) return "true";
   const slug = pathname.startsWith("/features/") ? pathname.slice("/features/".length).split("/")[0] : null;
   return slug && moduleForFeature(slug) === item.slug ? "true" : undefined;
 }
@@ -128,7 +128,7 @@ export function MarketingLayout() {
       <div className="mkt-footer-brand">
         <Brand />
         <p>Accounting, finance, collections, chit funds, and AI in one login. Suggestions wait until you confirm.</p>
-        <p className="mkt-footer-badges"><span>Web</span><span>iPhone</span><span>Android</span></p>
+        <p className="mkt-footer-badges"><span>Web</span><span>PWA for phones</span></p>
       </div>
       <div>
         <h2>Product</h2>

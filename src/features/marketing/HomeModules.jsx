@@ -90,7 +90,7 @@ function DailyModule() {
       <h3>Every daily collection on one list.</h3>
       <p className="hm-module-lead">Open a 100-day style account once. Each day MyFinTracker shows who has paid, who is still due, who to visit first, and a credit score from that customer’s payments.</p>
       <Points items={["MyFinTracker credit score from each customer’s payments", "Today’s collection list with what is still due", "Who to collect first, ranked with the reason", "Daily collection report and Daily P&L"]} />
-      <More to={featurePath("daily-finance")}>Explore Daily Finance</More>
+      <More to={featurePath("finance")}>Explore Finance</More>
     </div>
     <div className="hm-daily-stage" aria-hidden="true">
       <div className="hm-phone">
@@ -186,7 +186,7 @@ function MonthlyModule() {
       <h3>Interest, principal, and penalty never mix.</h3>
       <p className="hm-module-lead">Every receipt on a monthly account records what it covered, so the balance, the interest you earned, and a credit score from how they paid stay clear.</p>
       <Points items={["MyFinTracker credit score from how they paid", "Monthly interest accounts with due amounts", "Each receipt split into interest, principal, and penalty", "Monthly P&L from interest and penalty received"]} />
-      <More to={featurePath("monthly-finance")}>Explore Monthly Finance</More>
+      <More to={featurePath("finance")}>Explore Finance</More>
     </div>
   </article></Section>;
 }
@@ -277,7 +277,7 @@ function CashbookModule() {
       <h3>Cash, bank, and UPI, closed every day.</h3>
       <p className="hm-module-lead">Write the day’s cash, expense, bank, and transfer lines in a cashbook that can stand on its own.</p>
       <Points items={["Cash, bank, and UPI balances at a glance", "Expense and transfer lines kept apart", "Moves into the finance company only when you Sync"]} />
-      <More to={featurePath("cashbook")}>Explore Cashbook</More>
+      <More to={`${featurePath("accounts-overview")}?part=cashbook`}>Explore Cashbook</More>
     </div>
     {CASH_TILES.map((tile, index) => <CashTile key={tile.key} tile={tile} live={live} reduced={reduced} index={index} />)}
     <div className="hm-cash-feed" aria-hidden="true">

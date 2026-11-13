@@ -9,7 +9,7 @@ import { FinancePage } from "./FinancePage.jsx";
 import { ModulePager } from "./ModuleKit.jsx";
 import { PosPage } from "./PosPage.jsx";
 import { FeatureIcon } from "./icons.jsx";
-import { featurePath, marketingPaths, normalizePath } from "./paths.js";
+import { featurePath, marketingPaths, moduleSlugFromPath, normalizePath } from "./paths.js";
 import { ProductCta } from "./ProductCta.jsx";
 import { ProductPreview, sceneForFeature } from "./ProductPreview.jsx";
 
@@ -17,7 +17,7 @@ export function FeatureDetailPage() {
   const params = useParams();
   const location = useLocation();
   const nested = location.pathname.match(/^\/(finance|auction-chit|accounts-overview|counter-pos|ai)\/features\/([^/]+)/);
-  const slug = params.slug || (nested ? nested[2] : normalizePath(location.pathname).slice(1));
+  const slug = params.slug || (nested ? nested[2] : moduleSlugFromPath(location.pathname) || normalizePath(location.pathname).slice(1));
   const parent = nested ? nested[1] : null;
   const feature = featureBySlug(slug);
   const moduleLabel = APP_MODULES.find(item => item.slug === feature?.slug)?.label || feature?.name;

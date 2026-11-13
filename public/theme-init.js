@@ -3,8 +3,8 @@
 // Loaded as a file because the Content-Security-Policy does not allow inline scripts.
 (function () {
   var path = (location.pathname || "/").replace(/\/+$/, "") || "/";
-  var guestRoots = ["/features", "/finance", "/auction-chit", "/accounts-overview", "/counter-pos", "/ai", "/solutions", "/how-it-works", "/security", "/pricing", "/about", "/founder", "/contact", "/privacy", "/terms", "/login", "/pay"];
-  var guest = path === "/" || guestRoots.some(function (root) {
+  var guestRoots = ["/features", "/finance", "/auction-chit", "/accounts-overview", "/accounts", "/counter-pos", "/pos", "/ai", "/solutions", "/how-it-works", "/security", "/pricing", "/about", "/founder", "/contact", "/privacy", "/terms", "/login", "/pay"];
+  var guest = path === "/" || path === "/chit-fund" || guestRoots.some(function (root) {
     return path === root || path.indexOf(root + "/") === 0;
   });
   var theme = "light";
