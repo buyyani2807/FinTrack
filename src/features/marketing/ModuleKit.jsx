@@ -97,21 +97,20 @@ export function ModeSwitch({ label, modes }) {
 
 export function ModuleFaq({ title, questions }) {
   const items = questions.map(question => FAQ.find(item => item.question === question)).filter(Boolean);
-  return <section className="fx-sec">
-    <div className="mkt-wrap fx-faq">
-      <div>
+  if (!items.length) return null;
+  return <section className="fx-sec fx-faq-sec">
+    <div className="mkt-wrap">
+      <div className="fx-faq-head">
         <Reveal as="p" className="fx-eyebrow">Questions</Reveal>
         <Reveal as="h2" index={1}>{title}</Reveal>
-        <Reveal as="p" className="fx-faq-note" index={2}>Something else on your mind? <Link to={marketingPaths.contact}>Contact us</Link></Reveal>
       </div>
-      <Reveal className="fx-faq-list" index={1}>
-        <Accordion collapsible defaultValue="q-0">
-          {items.map((item, index) => <AccordionItem key={item.question} value={`q-${index}`}>
-            <AccordionTrigger>{item.question}</AccordionTrigger>
-            <AccordionContent>{item.answer}</AccordionContent>
-          </AccordionItem>)}
-        </Accordion>
-      </Reveal>
+      <Accordion className="fx-faq-list" collapsible defaultValue="q-0">
+        {items.map((item, index) => <AccordionItem key={item.question} value={`q-${index}`}>
+          <AccordionTrigger>{item.question}</AccordionTrigger>
+          <AccordionContent>{item.answer}</AccordionContent>
+        </AccordionItem>)}
+      </Accordion>
+      <p className="fx-faq-note">Something else on your mind? <Link to={marketingPaths.contact}>Contact us</Link></p>
     </div>
   </section>;
 }

@@ -462,8 +462,6 @@ html[data-theme="dark"] .mkt-section h2 { color: #fff; }
     width: min(100%, 860px);
     height: auto;
   }
-  .mkt.mkt-wide .fx-faq-list .ui-accordion-trigger { font-size: var(--ft-type-title); }
-  .mkt.mkt-wide .fx-faq-list .ui-accordion-content { font-size: var(--ft-type-card); }
   .mkt.mkt-wide .hm-bubble,
   .mkt.mkt-wide .hm-faq-chips button { font-size: var(--ft-type-body); }
   .mkt.mkt-wide .mkt-ask-tile h3 { font-size: var(--ft-type-card); }
@@ -1704,15 +1702,18 @@ html[data-theme="dark"] .mkt .fx-pager-card:hover, html[data-theme="dark"] .mkt 
 .fx-book-shot { padding: 14px; border-radius: 22px; background: var(--hm-ink); animation: hm-print 0.4s ease; }
 .fx-book-shot .mkt-shot { border: 0; border-radius: 12px; box-shadow: none; }
 
-/* FAQ */
-.fx-faq { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 64px; align-items: start; }
-.mkt .fx-faq-note { margin: 16px 0 0; color: var(--hm-text, inherit); font-size: var(--ft-type-lead); }
-.mkt .fx-faq-note a { font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
-.fx-faq-list .ui-accordion-item { border-bottom: 2px solid var(--hm-ink); }
-.fx-faq-list .ui-accordion-item:first-child { border-top: 2px solid var(--hm-ink); }
-.mkt .fx-faq-list .ui-accordion-trigger { padding: 22px 0; color: var(--hm-tx, var(--hm-ink)); font-size: 18px; font-weight: 800; }
-.mkt .fx-faq-list .ui-accordion-content { color: var(--hm-text, inherit); font-size: var(--ft-type-body); line-height: 1.65; }
-.fx-faq-list .ui-accordion-content-body { padding-bottom: 22px; }
+/* FAQ: one column. A question, then its answer. The band keeps it separate from the section above. */
+.fx-faq-sec { padding: 80px 0; background: color-mix(in srgb, var(--hm-ink) 8%, var(--hm-paper)); border-top: 2px solid var(--hm-ink); }
+.fx-faq-head { margin-bottom: 28px; }
+.fx-faq-head h2 { max-width: 16ch; }
+.fx-faq-list { border-top: 1px solid color-mix(in srgb, var(--hm-ink) 20%, transparent); }
+.fx-faq-list .ui-accordion-item { border-bottom: 1px solid color-mix(in srgb, var(--hm-ink) 20%, transparent); }
+.mkt .fx-faq-list .ui-accordion-trigger { padding: 18px 0; color: var(--hm-tx, var(--hm-ink)); font-size: var(--ft-type-card); font-weight: 700; }
+.mkt .fx-faq-list .ui-accordion-trigger:hover > span { text-decoration: none; }
+.mkt .fx-faq-list .ui-accordion-content { color: var(--hm-text, inherit); font-size: var(--ft-type-body); line-height: var(--ft-leading-body); }
+.fx-faq-list .ui-accordion-content-body { max-width: 72ch; padding-bottom: 18px; }
+.mkt .fx-faq-note { margin: 20px 0 0; font-size: var(--ft-type-ui); }
+.mkt .fx-faq-note a { font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 
 /* Closing */
 .fx-end { padding: 104px 0; border-bottom: 1px solid var(--hm-ink); background: var(--hm-paper); color: var(--hm-tx, var(--hm-ink)); text-align: center; }
@@ -1730,7 +1731,7 @@ html[data-theme="dark"] .mkt :is(.fx-segment button[aria-selected="true"], .fx-p
 @media (max-width: 980px) {
   .fx-bento { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(280px, auto); }
   .fx-t-lg { grid-row: auto; }
-  .fx-book, .fx-faq { grid-template-columns: 1fr; gap: 36px; }
+  .fx-book { grid-template-columns: 1fr; gap: 36px; }
   .fx-frame-wrap { margin-bottom: -120px; }
   .fx-bento-sec { padding-top: calc(120px + 72px); }
 }
