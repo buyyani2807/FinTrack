@@ -105,6 +105,88 @@ export const aggregateOverview = (ledgers, entries, range) => {
   };
 };
 
+const isOpeningEntry = entry =>
+  entry.sourceType === "opening_balance" || entry.transactionType === "opening_balance";
+
+const roundPaise = value => Math.round(Number(value || 0) * 100) / 100;
+
+/**
+ * For every cash, bank or UPI account whose running balance is below zero,
+ * split the balance into the parts that produced it so the owner can see why:
+ * opening + money in - money out + transfers in - transfers out = balance.
+ * Read-only: it never changes or invents an entry.
+ */
+export function explainNegativeBalances(ledgers = [], entries = [], { topOut = 3 } = {}) {
+  const positiveNames = [];
+  const negatives = [];
+  for (const ledger of ledgers || []) {
+    const own = (entries || []).filter(entry => entry.ledgerAccountId === ledger.id);
+    const parts = { opening: 0, moneyIn: 0, moneyOut: 0, transfersIn: 0, transfersOut: 0 };
+    let hasOpening = false;
+    for (const entry of own) {
+      const moneyIn = Number(entry.moneyIn || 0);
+      const moneyOut = Number(entry.moneyOut || 0);
+      if (isOpeningEntry(entry)) {
+        hasOpening = true;
+        parts.opening += moneyIn - moneyOut;
+      } else if (isInternalTransfer(entry) || entry.sourceType === "transfer") {
+        parts.transfersIn += moneyIn;
+        parts.transfersOut += moneyOut;
+      } else {
+        parts.moneyIn += moneyIn;
+        parts.moneyOut += moneyOut;
+      }
+    }
+    const balance = roundPaise(parts.opening + parts.moneyIn - parts.moneyOut + parts.transfersIn - parts.transfersOut);
+    if (balance > 0) positiveNames.push(ledger.name);
+    if (balance >= 0) continue;
+    const largestOut = own
+      .filter(entry => Number(entry.moneyOut || 0) > 0 && !isOpeningEntry(entry))
+      .sort((a, b) => Number(b.moneyOut || 0) - Number(a.moneyOut || 0)
+        || `${b.entryDate}${b.id || ""}`.localeCompare(`${a.entryDate}${a.id || ""}`))
+      .slice(0, topOut)
+      .map(entry => ({
+        id: entry.id,
+        entryDate: entry.entryDate,
+        description: entry.description || entry.category || "Money out",
+        category: entry.category || "",
+        amount: Number(entry.moneyOut || 0),
+      }));
+    negatives.push({
+      id: ledger.id,
+      name: ledger.name,
+      accountType: ledger.accountType,
+      balance,
+      hasOpening,
+      opening: roundPaise(parts.opening),
+      moneyIn: roundPaise(parts.moneyIn),
+      moneyOut: roundPaise(parts.moneyOut),
+      transfersIn: roundPaise(parts.transfersIn),
+      transfersOut: roundPaise(parts.transfersOut),
+      largestOut,
+    });
+  }
+  return negatives.map(item => ({
+    ...item,
+    reasons: negativeBalanceReasons(item, positiveNames.filter(name => name !== item.name)),
+  }));
+}
+
+function negativeBalanceReasons(item, otherPositive) {
+  const reasons = [];
+  if (!item.hasOpening || item.opening === 0) {
+    reasons.push(`No opening balance is recorded for ${item.name}. Money that was already there before you started using the cashbook is not counted.`);
+  }
+  if (otherPositive.length) {
+    reasons.push(`Payouts may have been recorded on ${item.name} while the matching collections arrived in ${otherPositive.join(", ")}. If you moved money between them, record a transfer.`);
+  }
+  if (item.transfersOut > item.transfersIn && item.transfersOut > 0) {
+    reasons.push(`More was transferred out of ${item.name} than into it.`);
+  }
+  reasons.push(`Otherwise an amount may be entered on the wrong account or missing. Check the largest money-out entries below.`);
+  return reasons;
+}
+
 export const runningBalancesForLedger = (entries, ledgerId) =>
   withRunningBalances(entries.filter(entry => entry.ledgerAccountId === ledgerId));
 

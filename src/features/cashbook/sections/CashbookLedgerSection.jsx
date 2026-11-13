@@ -8,6 +8,7 @@ import { money } from "../cashbookConfig.js";
 import { EmptyState } from "../components/CashbookUi.jsx";
 import { PeriodPills } from "../components/PeriodPills.jsx";
 import { CashbookOverview } from "../components/CashbookOverview.jsx";
+import { NegativeBalanceNotice } from "../components/NegativeBalanceNotice.jsx";
 
 const DIRECTION_OPTIONS = [
   { id: "all", label: "All types" },
@@ -42,6 +43,9 @@ export function CashbookLedgerSection({
   loanById,
   removeManual,
   canWrite = true,
+  negativeBalances = [],
+  onShowAccount,
+  openTransfer,
 }) {
   const filtersActive = Boolean(search) || accountFilter !== "all" || sourceFilter !== "all" || directionFilter !== "all";
   const pagedRows = usePagedList(cashbookRows, `${period}|${periodStart}|${search}|${accountFilter}|${sourceFilter}|${directionFilter}`);
@@ -49,6 +53,7 @@ export function CashbookLedgerSection({
   return (
     <div className="accounts-panel">
       <CashbookOverview balances={allTimeOverview} movement={periodOverview} period={period} />
+      <NegativeBalanceNotice items={negativeBalances} onShowAccount={onShowAccount} openTransfer={openTransfer} canWrite={canWrite} />
       <div className="card accounts-filter-card cashbook-filters spacer">
         <div className="cashbook-filters-scope">
           <PeriodPills {...periodProps} />

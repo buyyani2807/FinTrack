@@ -20,6 +20,7 @@ import {
   buildTransferHistory,
   cashbookPeriodRows,
   dateRangeForFilter,
+  explainNegativeBalances,
   todayIso,
 } from "./cashbookModel.js";
 import { SECTIONS, emptyManualForm, emptyExpenseForm, emptyTransferForm, emptyClosingForm } from "./cashbookConfig.js";
@@ -99,6 +100,7 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
     () => aggregateOverview(ledgers, entries, { from: "1970-01-01", to: "2099-12-31" }),
     [ledgers, entries],
   );
+  const negativeBalances = useMemo(() => explainNegativeBalances(ledgers, entries), [ledgers, entries]);
   const periodOverview = useMemo(() => aggregateOverview(ledgers, entries, range), [ledgers, entries, range]);
   const rangedEntries = useMemo(
     () => entries.filter(entry => entry.entryDate >= range.from && entry.entryDate <= range.to),
@@ -325,6 +327,9 @@ export function CashbookWorkspace({ token, loans = [], section: routeSection = "
         loanById={loanById}
         removeManual={removeManual}
         canWrite={canWrite}
+        negativeBalances={negativeBalances}
+        onShowAccount={id => { setAccountFilter(id); setPeriod("all"); }}
+        openTransfer={openTransfer}
       />}
       {section === "expenses" && <ExpensesSection openExpense={openExpense} periodProps={periodProps} expenseRows={expenseRows} canWrite={canWrite} />}
       {section === "bank" && <BankAccountsSection

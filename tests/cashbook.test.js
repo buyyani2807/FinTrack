@@ -6,6 +6,7 @@ import {
   cashbookPeriodRows,
   cashbookSourceKind,
   dateRangeForFilter,
+  explainNegativeBalances,
   filterCashbookEntries,
   formatIstDateTime,
   ledgerBalance,
@@ -175,4 +176,40 @@ test("cashbook today and period filters use Asia/Kolkata, not UTC", () => {
   assert.deepEqual(dateRangeForFilter("yesterday", undefined, undefined, lateUtc), { from: "2026-08-31", to: "2026-08-31" });
   assert.deepEqual(dateRangeForFilter("month", undefined, undefined, lateUtc), { from: "2026-09-01", to: "2026-09-01" });
   assert.equal(dateRangeForFilter("week", undefined, undefined, lateUtc).from, "2026-08-30");
+});
+
+test("explainNegativeBalances splits a negative cash balance into its parts", () => {
+  const books = [
+    { id: "cash", accountType: "cash", name: "Cash" },
+    { id: "upi", accountType: "upi", name: "UPI" },
+  ];
+  const rows = [
+    { id: "o1", ledgerAccountId: "cash", entryDate: "2026-10-01", moneyIn: 5000, moneyOut: 0, transactionType: "opening_balance", sourceType: "opening_balance" },
+    { id: "d1", ledgerAccountId: "cash", entryDate: "2026-10-02", moneyIn: 0, moneyOut: 50000, description: "Paid to customer", sourceType: "finance_disbursement" },
+    { id: "c1", ledgerAccountId: "cash", entryDate: "2026-10-03", moneyIn: 1000, moneyOut: 0, sourceType: "finance_payment" },
+    { id: "t1", ledgerAccountId: "cash", entryDate: "2026-10-04", moneyIn: 0, moneyOut: 2000, transactionType: "transfer_out", sourceType: "transfer", sourceId: "x" },
+    { id: "t2", ledgerAccountId: "upi", entryDate: "2026-10-04", moneyIn: 2000, moneyOut: 0, transactionType: "transfer_in", sourceType: "transfer", sourceId: "x" },
+    { id: "u1", ledgerAccountId: "upi", entryDate: "2026-10-05", moneyIn: 60000, moneyOut: 0, sourceType: "finance_payment" },
+  ];
+  const result = explainNegativeBalances(books, rows);
+  assert.equal(result.length, 1);
+  const cash = result[0];
+  assert.equal(cash.id, "cash");
+  assert.equal(cash.balance, -46000);
+  assert.equal(cash.opening + cash.moneyIn - cash.moneyOut + cash.transfersIn - cash.transfersOut, cash.balance);
+  assert.deepEqual([cash.opening, cash.moneyIn, cash.moneyOut, cash.transfersIn, cash.transfersOut], [5000, 1000, 50000, 0, 2000]);
+  assert.equal(cash.largestOut[0].id, "d1");
+  assert.ok(cash.reasons.some(reason => reason.includes("UPI")));
+  assert.ok(cash.reasons.some(reason => reason.includes("transferred out")));
+  assert.ok(!cash.reasons.some(reason => reason.includes("No opening balance")));
+});
+
+test("explainNegativeBalances flags a missing opening and ignores positive accounts", () => {
+  const books = [{ id: "bank", accountType: "bank", name: "HDFC" }];
+  const rows = [{ id: "e1", ledgerAccountId: "bank", entryDate: "2026-10-02", moneyIn: 0, moneyOut: 78900, description: "Rent" }];
+  const [bank] = explainNegativeBalances(books, rows);
+  assert.equal(bank.balance, -78900);
+  assert.equal(bank.hasOpening, false);
+  assert.ok(bank.reasons[0].startsWith("No opening balance is recorded for HDFC"));
+  assert.deepEqual(explainNegativeBalances(books, [{ id: "e2", ledgerAccountId: "bank", entryDate: "2026-10-02", moneyIn: 10, moneyOut: 0 }]), []);
 });
