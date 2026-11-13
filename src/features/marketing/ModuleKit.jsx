@@ -81,8 +81,8 @@ export function ModeSwitch({ label, modes }) {
     {modes.length > 1 ? <div className="fx-segment" role="tablist" aria-label={label} onKeyDown={onKeyDown}>
       {modes.map(item => <button key={item.key} ref={node => { tabs.current[item.key] = node; }} type="button" role="tab" id={`fx-tab-${item.key}`} aria-selected={item.key === key} aria-controls="fx-mode" tabIndex={item.key === key ? 0 : -1} onClick={() => setKey(item.key)}>{item.label}</button>)}
     </div> : null}
-    <div className="fx-book" id="fx-mode" {...(modes.length > 1 ? { role: "tabpanel", "aria-labelledby": `fx-tab-${key}` } : {})}>
-      <div key={key} className="fx-book-copy">
+    <div className="fx-book">
+      <div key={key} className="fx-book-copy" id="fx-mode" {...(modes.length > 1 ? { role: "tabpanel", "aria-labelledby": `fx-tab-${key}` } : {})}>
         <h3>{feature.name}</h3>
         <p className="fx-book-line">{mode.line}</p>
         <ol className="fx-steps">

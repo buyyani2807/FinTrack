@@ -77,7 +77,7 @@ export function MarketingLayout() {
     ? <Link className="mkt-btn primary" to="/dashboard">{OPEN_PRODUCT}</Link>
     : <Link className="mkt-btn primary" to={marketingPaths.signup}>Start free</Link>;
 
-  return <div className="mkt">
+  return <div className="mkt mkt-wide">
     <style>{marketingStyles}</style>
     <a className="mkt-skip" href="#mkt-main">Skip to content</a>
     <div className="mkt-nav-bar">

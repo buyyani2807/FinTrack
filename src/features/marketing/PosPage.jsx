@@ -106,7 +106,7 @@ export function PosPage({ feature }) {
     </section>
 
     <section className="fx-sec hm-flip">
-      <div className="mkt-wrap">
+      <div className="mkt-wrap fx-modes">
         <SectionHead eyebrow="How a sale works" title="Three steps from item to receipt." />
         <ModeSwitch label="Sale" modes={MODES} />
       </div>

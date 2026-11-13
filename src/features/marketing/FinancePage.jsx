@@ -96,7 +96,7 @@ export function FinancePage({ feature }) {
     </section>
 
     <section className="fx-sec hm-flip">
-      <div className="mkt-wrap">
+      <div className="mkt-wrap fx-modes">
         <SectionHead eyebrow="Inside the lending book" title="Daily collection, monthly interest, and a score from how they paid." />
         <ModeSwitch label="Lending book" modes={MODES} />
       </div>

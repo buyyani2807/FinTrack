@@ -378,6 +378,107 @@ html[data-theme="dark"] .mkt-section h2 { color: #fff; }
 @keyframes mkt-drawer-in { from { transform: translateX(100%); } }
 
 .mkt-wrap { width: min(1160px, calc(100% - 48px)); margin: 0 auto; }
+/* Every public page. Below 1280 the existing gutters are unchanged. From a laptop up, the
+   column grows with the screen until 1600px, with a margin that starts at the current header
+   inset and opens up so large displays are not edge-to-edge. Header, sections, and footer
+   share one measure. */
+@media (min-width: 1280px) {
+  .mkt.mkt-wide {
+    --mkt-page: min(1600px, calc(100% - clamp(40px, calc(35vw - 408px), 200px)));
+  }
+  .mkt.mkt-wide :is(.mkt-wrap, .mkt-nav) {
+    width: var(--mkt-page);
+    max-width: none;
+  }
+  .mkt.mkt-wide .mkt-nav { padding-inline: 0; }
+  /* Home hero: the copy stays at the measure it was written for. The extra width goes to
+     the product, and the proof line keeps each point on one line. */
+  .mkt.mkt-wide .hm-hero-grid { grid-template-columns: minmax(0, 640px) minmax(0, 1fr); gap: 64px; }
+  .mkt.mkt-wide .hm-hero-lead { max-width: none; }
+  .mkt.mkt-wide .hm-proof { grid-template-columns: repeat(4, max-content); justify-content: space-between; }
+  /* AI band: keep the copy on its original measure and give the spare width to the reader,
+     up to the point where the card would look empty. Type steps up with the wider card. */
+  .mkt.mkt-wide .hm-ai { grid-template-columns: minmax(0, 540px) minmax(0, 1fr); gap: 72px; }
+  .mkt.mkt-wide .hm-ai-copy .hm-module-lead { max-width: none; }
+  .mkt.mkt-wide .hm-ai-stage { width: 100%; max-width: 820px; justify-self: end; padding: 32px; gap: 22px; }
+  .mkt.mkt-wide .hm-ai-card { padding: 20px 22px; }
+  .mkt.mkt-wide .hm-ai-you p,
+  .mkt.mkt-wide .hm-ai-out strong { font-size: var(--ft-type-title); }
+  .mkt.mkt-wide .hm-ai-spine em,
+  .mkt.mkt-wide .hm-ai-out b { font-size: var(--ft-type-ui); }
+  .mkt.mkt-wide .hm-ai-you small,
+  .mkt.mkt-wide .hm-ai-live,
+  .mkt.mkt-wide .hm-ai-out small { font-size: var(--ft-type-secondary); }
+  /* Cards that span more than one column grow with the tile. Type steps up with them
+     so the copy still fills the card the way it did in the narrower layout. */
+  .mkt.mkt-wide .fx-t-lg .fx-list { max-width: 100%; }
+  .mkt.mkt-wide .fx-t-lg :is(.fx-pos, .fx-qa) { max-width: 100%; }
+  .mkt.mkt-wide .fx-t-wide :is(.fx-tickets, .fx-voucher, .fx-tender, .fx-tell) { max-width: 100%; }
+  .mkt.mkt-wide .fx-t-wide .fx-rows { max-width: min(100%, 480px); }
+  .mkt.mkt-wide .fx-t-wide .fx-gauge { width: min(100%, 240px); margin-inline: auto; }
+  .mkt.mkt-wide .fx .fx-tile h3 { font-size: var(--ft-type-title); }
+  .mkt.mkt-wide .fx .fx-t-lg h3 { font-size: var(--ft-type-page); }
+  .mkt.mkt-wide .fx-list li { font-size: var(--ft-type-card); }
+  .mkt.mkt-wide .fx-list-head span { font-size: var(--ft-type-label); }
+  .mkt.mkt-wide .fx-list-head strong,
+  .mkt.mkt-wide .fx-gauge strong { font-size: var(--ft-type-page); }
+  .mkt.mkt-wide .fx-rows p,
+  .mkt.mkt-wide .fx-pill { font-size: var(--ft-type-ui); }
+  .mkt.mkt-wide .fx-t-wide .fx-rows p { font-size: var(--ft-type-body); }
+  .mkt.mkt-wide .fx-tickets-head { font-size: var(--ft-type-ui); }
+  .mkt.mkt-wide .fx-tickets-head strong,
+  .mkt.mkt-wide .fx-voucher-head strong { font-size: var(--ft-type-card); }
+  .mkt.mkt-wide .fx-ticket-grid span { height: 36px; font-size: var(--ft-type-label); }
+  .mkt.mkt-wide .fx-voucher-grid { font-size: var(--ft-type-ui); }
+  .mkt.mkt-wide .fx-pos-search,
+  .mkt.mkt-wide .fx-pos li,
+  .mkt.mkt-wide .fx-qa-sum,
+  .mkt.mkt-wide .fx-qa-a li { font-size: var(--ft-type-ui); }
+  .mkt.mkt-wide .fx-pos-items span { font-size: var(--ft-type-label); }
+  .mkt.mkt-wide .fx-tender dt { font-size: var(--ft-type-label); }
+  .mkt.mkt-wide .fx-tender dd,
+  .mkt.mkt-wide .fx-qa-title { font-size: var(--ft-type-card); }
+  .mkt.mkt-wide .fx-qa-q { font-size: var(--ft-type-body); }
+  /* Finance lending-book switch: the screenshot sits beside the heading and the steps,
+     instead of leaving an empty band above it. */
+  .mkt.mkt-wide .fx-modes {
+    display: grid;
+    grid-template-columns: minmax(0, 560px) minmax(0, 1fr);
+    column-gap: 56px;
+    row-gap: 28px;
+    align-items: start;
+  }
+  .mkt.mkt-wide .fx-modes .fx-head { grid-column: 1; grid-row: 1; max-width: none; margin-bottom: 0; }
+  .mkt.mkt-wide .fx-modes :is(.fx-switch, .fx-book) { display: contents; }
+  .mkt.mkt-wide .fx-modes .fx-segment { grid-column: 1; grid-row: 2; justify-self: start; margin-bottom: 0; }
+  .mkt.mkt-wide .fx-modes .fx-book-copy { grid-column: 1; grid-row: 2; }
+  .mkt.mkt-wide .fx-modes:has(.fx-segment) .fx-book-copy { grid-row: 3; }
+  .mkt.mkt-wide .fx-modes .fx-book-shot {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    width: min(100%, 860px);
+    justify-self: end;
+    align-self: start;
+  }
+  .mkt.mkt-wide .fx-modes:has(.fx-segment) .fx-book-shot { grid-row: 1 / span 3; align-self: center; }
+  /* One mode, as on POS. The screenshot stays in the section, and only the
+     space below the steps grows, so the feature title does not pick up a gap. */
+  .mkt.mkt-wide .fx-modes:not(:has(.fx-segment)) {
+    grid-template-rows: max-content minmax(max-content, 1fr);
+  }
+  .mkt.mkt-wide .fx-modes:not(:has(.fx-segment)) .fx-book-shot {
+    position: static;
+    width: min(100%, 860px);
+    height: auto;
+  }
+  .mkt.mkt-wide .fx-faq-list .ui-accordion-trigger { font-size: var(--ft-type-title); }
+  .mkt.mkt-wide .fx-faq-list .ui-accordion-content { font-size: var(--ft-type-card); }
+  .mkt.mkt-wide .hm-bubble,
+  .mkt.mkt-wide .hm-faq-chips button { font-size: var(--ft-type-body); }
+  .mkt.mkt-wide .mkt-ask-tile h3 { font-size: var(--ft-type-card); }
+  .mkt.mkt-wide .hm-module-lead { font-size: var(--ft-type-card); }
+  .mkt.mkt-wide .hm-cash-tile strong { font-size: var(--ft-type-page); }
+}
 .mkt-hero {
   padding: 56px 0 28px;
   border-bottom: 1px solid var(--mkt-line);

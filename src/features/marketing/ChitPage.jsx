@@ -102,7 +102,7 @@ export function ChitPage({ feature }) {
     </section>
 
     <section className="fx-sec hm-flip">
-      <div className="mkt-wrap">
+      <div className="mkt-wrap fx-modes">
         <SectionHead eyebrow="Two kinds of scheme" title="Auction or fixed. Switch and see how each runs." />
         <ModeSwitch label="Scheme type" modes={MODES} />
       </div>

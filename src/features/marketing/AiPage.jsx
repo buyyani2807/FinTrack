@@ -142,7 +142,7 @@ export function AiPage({ feature }) {
     </section>
 
     <section className="fx-sec hm-flip">
-      <div className="mkt-wrap">
+      <div className="mkt-wrap fx-modes">
         <SectionHead eyebrow="Three ways to use it" title="Ask, tell, and review." />
         <ModeSwitch label="AI" modes={MODES} />
       </div>

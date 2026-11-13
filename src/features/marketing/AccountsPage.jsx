@@ -138,7 +138,7 @@ export function AccountsPage({ feature }) {
     </section>
 
     <section className="fx-sec hm-flip">
-      <div className="mkt-wrap">
+      <div className="mkt-wrap fx-modes">
         <SectionHead eyebrow="A day in Accounts" title="Sell, post, and close the month." />
         <ModeSwitch label="Daily work" modes={MODES} />
       </div>
