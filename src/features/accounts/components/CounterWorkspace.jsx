@@ -23,7 +23,8 @@ import {
   sellUnitChoices,
 } from "../model/inventoryModel.js";
 import { resolveItemRate } from "../model/priceLists.js";
-import { cancelVoucher, postVoucher, upsertCounterDayClose } from "../data/accountingRepository.js";
+import { cancelVoucher, postVoucher, requestCounterOverride, upsertCounterDayClose } from "../data/accountingRepository.js";
+import { SupervisorPinDialog } from "./SupervisorPinDialog.jsx";
 import {
   listOfflineBills,
   loadCounterCatalogCache,
@@ -130,6 +131,7 @@ export function CounterWorkspace({
   token,
   canWrite = false,
   canManage = false,
+  needsSupervisor = false,
   saving = false,
   accounts = [],
   items = [],
@@ -151,6 +153,15 @@ export function CounterWorkspace({
   workspace = null,
 }) {
   const searchRef = useRef(null);
+  const [pinPrompt, setPinPrompt] = useState(null);
+  // Cashier voids and returns need a supervisor PIN (migration 144). Resolves with the PIN or null.
+  const askSupervisorPin = (title, note) => new Promise(resolve => setPinPrompt({ title, note, resolve }));
+  const approveWithSupervisor = async ({ action, voucherId = null, reason = null, title, note }) => {
+    const pin = await askSupervisorPin(title, note);
+    if (pin == null) return false;
+    await requestCounterOverride(token, { pin, action, voucherId, reason });
+    return true;
+  };
   const [query, setQuery] = useState("");
   const [lines, setLines] = useState([]);
   const [partyId, setPartyId] = useState(CASH_PARTY_ID);
@@ -1040,6 +1051,19 @@ export function CounterWorkspace({
         return;
       }
     }
+    if (isReturn && needsSupervisor) {
+      try {
+        const approved = await approveWithSupervisor({
+          action: "return",
+          title: "Supervisor PIN for return",
+          note: `Return of ${money(totals.total)}. A supervisor must enter the PIN before the refund is posted.`,
+        });
+        if (!approved) return;
+      } catch (err) {
+        setError(err?.message || "The supervisor PIN was not accepted.");
+        return;
+      }
+    }
     const payMode = useCredit ? "cash" : moneyMode;
     const moneyParts = !useCredit && payMode === "cash_upi"
       ? { cash: Number(receivedCash || 0), upi: Number(receivedUpi || 0) }
@@ -1201,11 +1225,21 @@ export function CounterWorkspace({
   }, [query]);
 
   const voidBill = bill => {
-    if (!canManage || !askReason || !bill?.id) return;
+    if (!(canManage || needsSupervisor) || !askReason || !bill?.id) return;
     askReason("Void counter bill", "Void bill", reason => (async () => {
-      setBusy(true);
       setError("");
       try {
+        if (needsSupervisor) {
+          const approved = await approveWithSupervisor({
+            action: "void",
+            voucherId: bill.id,
+            reason: reason || "Counter void",
+            title: "Supervisor PIN to void",
+            note: `Void ${bill.reference || bill.voucherNumber || "this bill"} (${money(billTotal(bill))}). A supervisor must enter the PIN.`,
+          });
+          if (!approved) return;
+        }
+        setBusy(true);
         await cancelVoucher(token, bill.id, reason || "Counter void");
         onRefresh?.();
       } catch (err) {
@@ -1267,6 +1301,14 @@ export function CounterWorkspace({
 
   return (
     <div className="acc-panel counter-workspace">
+      {pinPrompt ? (
+        <SupervisorPinDialog
+          title={pinPrompt.title}
+          note={pinPrompt.note}
+          onSubmit={pin => { pinPrompt.resolve(pin); setPinPrompt(null); }}
+          onCancel={() => { pinPrompt.resolve(null); setPinPrompt(null); }}
+        />
+      ) : null}
       <div className="counter-head">
         <div className="counter-head-main">
           <p className="counter-eyebrow">Point of sale</p>
@@ -1705,7 +1747,7 @@ export function CounterWorkspace({
             <div>
               <h2 className="acc-subsection-title">Today · {tillLabel}</h2>
               <p className="small">
-                Reprint a receipt{canManage ? " or void a mistake" : ""}. Day totals stay on Day report.
+                Reprint a receipt{canManage ? " or void a mistake" : needsSupervisor ? " or void a mistake with the supervisor PIN" : ""}. Day totals stay on Day report.
               </p>
             </div>
             <button type="button" className="btn" onClick={() => setPanel("bill")}>Back to till</button>
@@ -1732,7 +1774,7 @@ export function CounterWorkspace({
                       >
                         Print
                       </button>
-                      {canManage ? (
+                      {canManage || needsSupervisor ? (
                         <button
                           type="button"
                           className="btn counter-void"

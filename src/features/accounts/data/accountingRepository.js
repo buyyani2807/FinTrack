@@ -1451,6 +1451,24 @@ const dayCloseMigrationError = err => {
 };
 
 /** Persist Counter day-close / Z snapshot for a company till. Falls back to caller local save if migration missing. */
+// Counter supervisor PIN (migration 144). Overrides return { error } on a wrong PIN.
+export const setCounterSupervisorPin = (token, pin) =>
+  wrap(accRpc("acc_set_counter_supervisor_pin", { input_pin: String(pin || "") }, token));
+
+export const loadCounterSupervisorPinStatus = token =>
+  accRpc("acc_counter_supervisor_pin_status", {}, token).catch(() => ({ set: false, unavailable: true }));
+
+export const requestCounterOverride = async (token, { pin, action, voucherId = null, reason = null }) => {
+  const result = await wrap(accRpc("acc_counter_override", {
+    input_pin: String(pin || ""),
+    input_action: action,
+    input_voucher_id: voucherId,
+    input_reason: reason,
+  }, token));
+  if (result && typeof result === "object" && typeof result.error === "string") throw new Error(result.error);
+  return result?.overrideId || null;
+};
+
 export const upsertCounterDayClose = (token, payload = {}) =>
   wrap(accRpc("acc_upsert_counter_day_close", {
     input_company_id: payload.companyId || activeCompanyId,

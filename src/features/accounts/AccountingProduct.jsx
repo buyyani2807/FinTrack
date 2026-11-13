@@ -2702,6 +2702,7 @@ const openVoucher = () => {
           token={token}
           canWrite={canWrite}
           canManage={false}
+          needsSupervisor
           saving={saving}
           accounts={accountsForCounterPay(visibleAccounts, counterSettings.paymentMap)}
           items={items}

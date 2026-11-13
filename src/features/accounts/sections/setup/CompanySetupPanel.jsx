@@ -4,6 +4,7 @@ import { Select } from "../../../../components/Select.jsx";
 import { todayIso } from "../../../../lib/dates.js";
 import { gstStatusLabel } from "../../accountsFormat.js";
 import { emptyCounterSettings } from "../../model/counterSettings.js";
+import { CounterSupervisorPinSetup } from "./CounterSupervisorPinSetup.jsx";
 
 function companyDetailsChanged(form, company) {
   if (!company?.id) return true;
@@ -204,6 +205,7 @@ export function CompanySetupPanel({
                 <span className="small">Stops overselling products. Turn off only if you allow negative stock at this till.</span>
               </span>
             </label>
+            <CounterSupervisorPinSetup token={token} canAdmin={canAdmin} companyId={activeCompanyId} setError={setError} />
           </div>
         </div>
       ) : null}
