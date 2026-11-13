@@ -185,3 +185,102 @@ Checked on a local Postgres (PGlite) with stand-in tables and roles. `tests/cash
 | `profiles` for accountant, viewer, cashier, partner, both agents | 1 row each (own) |
 | Accountant posts a journal and a non-Counter sale, reads the audit log | Allowed, as before |
 | Owner reads all staff profiles | Not checked on staging (no owner session in the test browser) |
+
+## Supervisor PIN for cashier voids and returns — migration 144
+
+Owner decision: a cashier may not void a completed Counter bill or post a Counter return without a supervisor. The owner sets a 4–8 digit supervisor PIN per company (Accounts → Setup → Counter). The cashier's Counter asks for it on Void and on charging a Return. Each approval is single-use, tied to the cashier, valid for 2 minutes, and written to the audit trail. Five wrong PINs lock it for 15 minutes; changing the PIN clears the lock. Owner and accountant are unaffected.
+
+Local check (PGlite with the real voucher-type constraint and pgcrypto): 34 of 34 cases pass. `tests/counterSupervisorOverride.test.js`: 5 tests.
+
+### Staging, after deploy (PIN set by owner on company A)
+
+| Check | Result |
+| --- | --- |
+| Cashier Counter sale | Posted, no PIN needed |
+| Cashier return without PIN | Refused: "A Counter return needs the supervisor PIN" |
+| Cashier void without PIN | Refused: "Voiding a Counter bill needs the supervisor PIN" |
+| Wrong PIN | "Wrong supervisor PIN" (API and on screen); bill unchanged |
+| Right PIN → return | Posted |
+| Same approval reused for a second return | Refused |
+| Void approval for bill X used on bill Y | Refused; bill X then voided with it |
+| Void approval for a non-Counter voucher | Refused: "That Counter bill was not found or is already voided" |
+| UI: cashier Today list → Void → reason → PIN dialog → right PIN | SALE-000005 `cancelled`, removed from Today; SALE-000003 untouched |
+| 5 wrong PINs | 5th returns "Too many wrong PINs…"; right PIN then refused; status shows `lockedUntil` |
+| Cashier reads the PIN table / writes an approval row / sets the PIN | Refused (403 / owner-only) |
+| Cashier reads the approval log | 0 rows |
+| Accountant return without PIN | Posted |
+| Accountant reads the approval log | Visible |
+
+Not run in the browser: a cashier return through the till screen, because company A has no items. The server rule it depends on is covered above.
+
+## Product decision — one business per workspace (13 Nov 2026)
+
+"Existing owner cannot register a second business" (P1-2 in the 9 Nov staging report) is not a defect. Owner decision: each finance / chit business is a separate paid workspace. Inside one workspace an owner may add any number of Accounts companies (shops, trading firms); Daily / Monthly Finance, Chit Fund, Cashbook, staff, portals and the subscription are one per workspace.
+
+Today a second workspace needs a different sign-in email, because a login belongs to one workspace. If that becomes a sales problem, the follow-up is one login that can switch between several separately billed workspaces.
+
+## Remaining QA, UI fixes and error tracking — 13 Nov 2026, evening
+
+### Cross-organization isolation (second owner)
+
+A second business was created on staging through the public sign-up (`e2e.test.20261113.owner2@example.com`, workspace "E2E_TEST_20261113 Second Business").
+
+| Check (second owner against Sudheer Finance) | Result |
+| --- | --- |
+| Read 19 tables (loans, payments, customers, cashbook, chit, profiles, Accounts companies, vouchers, parties, audit, roles, overrides…) | Only its own org's rows; 0 rows when filtered to your org id or sent with your company ids in `x-acc-company-id` |
+| Post / cancel a voucher, create a party, set the supervisor PIN in your companies | Refused: "Accounts company not found" |
+| Pay, close, enable the portal on your loan; enroll in your chit; reset your member's PIN | Refused: "Account not found" / "Scheme not found" / "Member not found" |
+| PATCH your loan, your organization row, or move its own profile into your org | 0 rows changed; your loan unchanged |
+| Owner-only APIs (team-user, agents, partners, backups) | 200 with only its own (empty) data |
+
+### Collection agent records a collection (second business)
+
+Setup: one daily loan assigned to a new finance agent, one unassigned, both started yesterday so a collection is due today.
+
+| Check | Result |
+| --- | --- |
+| Agent records ₹10 on the assigned loan (API) | Posted; receipt number issued; `collected_by` = agent; cashbook "Finance Collection" ₹10 |
+| Second collection the same day | Refused: "A collection is already recorded for this account on this date" |
+| Collection on the unassigned loan / on a loan in your org | Refused: "Account not found or not assigned to you" |
+| Agent sees loans | Only the 1 assigned |
+| **Agent records a collection in the app** | **Defect P1-3 (below): not possible.** |
+
+**P1-3 — Collection agents cannot record a collection in the app.** Two regressions combine:
+1. `5476059` (28 Oct) limited Daily / Monthly Finance pages to the owner (later owner + partner). A finance agent's "View" on a customer, and `/daily-finance/*`, redirect back to the dashboard.
+2. `01124c5` (10 Nov, view-only partners) gated Collect and the payment form behind `role === "owner"`, so agents lost them too.
+The database allows the collection; only the app hides it. **Fix:** `workspaceModuleAccess` opens Daily / Monthly for finance-scope agents (route agents stay on Route collections); `FinancierDashboard` uses `canCollect = owner || staff` for Collect and the payment form, while new account, edit, KYC, portal and delete stay owner-only. Tests: `tests/finance.workspaceAccess.test.js` (+1), `tests/financeAgentCollect.test.js`. Re-test in the browser after deploy.
+
+### Chit member live bid (second business)
+
+| Check | Result |
+| --- | --- |
+| Member portal shows the open auction, limits (above ₹100, up to ₹600) | Yes |
+| Bid ₹50 (below commission) | Blocked in the browser (field minimum) |
+| Bid ₹150 through the portal screen | Posted; leading bid ₹150, lift ₹1,850; shown under Live bids |
+| Other member: ₹150 (equal), ₹120 (lower), ₹700 (above 30%), ₹100 (= commission) | Each refused with a clear reason |
+| Other member: ₹200 | Posted; becomes leading |
+| Bid with a made-up session token | Refused: "Your Chit session has expired" |
+| Owner ends the auction | Cycle 1 settled: discount ₹200, commission ₹100, distributable ₹100, dividend ₹50 per member, payout ₹1,800 cash to the ₹200 bidder; cashbook "Chit Payout" ₹1,800 |
+
+P3-6 — A scheme can be created with a payout band no bid can satisfy (tested with min/max payout 5%–30% while the bid cap is 30%). Every member bid then fails with "payout outside the scheme payout limits". The create-scheme RPC should reject a band that does not overlap the bid range.
+
+### Phone layout (375 × 812, Chromium; Safari not available here)
+
+No page wider than the screen: sign-in, chit member portal, customer portal, cashier Counter, and (as partner, owner layout) dashboard, Daily collections, Monthly overview, Chit Fund, Cashbook, Accounts overview, trial balance, Setup.
+
+**P2-4 — Agent dashboard on a phone:** the trial banner squeezed its text to one letter per line (banner 1,201 px tall) because the agent's longer "Ask the business owner…" note took the row; a long business name also pushed Light / Log out 55 px off-screen. **Fix** in `src/styles/finebank.css` (text gets a 220 px basis and wraps; header title may shrink). Verified live by injecting the same CSS: banner 105 px, page width 375 px.
+
+### UI fixes from the role QA
+
+- Viewer / partner no longer see "+ Account", "+ Add Party", "Import CSV", or "Record sale" / "Add expense" quick actions.
+- Viewer is no longer left on the Counter after sign-in (moved to Overview once the role is known).
+- Dashboard tile reads "Paid to customers" (daily) / "Principal lent" (monthly) instead of "Amount financed" for the cash paid out.
+- Customer portal shows "Your portal ID: FT-…" instead of the internal account UUID.
+- Partner sign-in copy lists the modules partners actually get. Partner's "Today's actions" shows "View" instead of "Collect".
+- Migration 145: partners can read Chit Fund (schemes, members, enrollments, cycles, bids, installments, payouts, deposits, live auctions, fixed / predefined tables); portal credentials and sessions stay owner-only. Checked on PGlite: partner reads own org only, cannot read credentials, cannot update.
+
+### Error tracking
+
+`@sentry/react` loads only when `VITE_SENTRY_DSN` is set (separate 455 KB chunk; without a DSN nothing is bundled and the main bundle grows < 1 KB). Events are scrubbed of phone numbers, emails, PAN, Aadhaar, JWTs, secret-named keys and URL query strings; no IP, cookies or replay; user tagged by id and role only. A crash screen with Reload wraps the app. CSP allows Sentry ingest hosts. `tests/monitoring.test.js`: 4 tests.
+
+`npm test`: 634 pass, 5 fail (the same 5 as on `e31c9a1`), 2 skipped. Lint unchanged on edited files. Build passes.

@@ -193,6 +193,7 @@ export function OverviewSection({
         items={items}
         stockMovements={stockMovements}
         attention={accountsAttention}
+        canWrite={canWrite}
         onOpenCollections={close}
         onNavigate={target => {
           if (typeof target === "string") openSection(target);

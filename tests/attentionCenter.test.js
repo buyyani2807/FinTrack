@@ -76,3 +76,15 @@ test("daily finance created today is not flagged unpaid in attention center", ()
   });
   assert.equal(center.items.some(item => item.id === "daily-unpaid-d-today"), false);
 });
+
+test("view-only partners see View instead of Collect in Today's actions", async () => {
+  const { buildTodaysActionList } = await import("../src/features/intelligence/attentionCenter.js");
+  const loan = { id: "l1", kind: "daily", customerName: "Ravi", startDate: "2026-11-01", dailyCollection: 10, collectionAmount: 1000, disbursedAmount: 900, transactions: [], status: "active" };
+  const owner = buildTodaysActionList({ dailyLoans: [loan], monthlyLoans: [], today: "2026-11-13" });
+  const partner = buildTodaysActionList({ canCollect: false, dailyLoans: [loan], monthlyLoans: [], today: "2026-11-13" });
+  const labels = list => list.items.filter(item => item.module === "daily").map(item => item.actionLabel);
+  if (labels(owner).length) {
+    assert.ok(labels(owner).every(label => label !== "View"));
+    assert.ok(labels(partner).every(label => label !== "Collect"));
+  }
+});

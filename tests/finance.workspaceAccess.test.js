@@ -65,3 +65,15 @@ test("finance books load only for daily/monthly roles", () => {
   assert.equal(sessionNeedsFinanceBooks({ role: "staff", collectionScope: "accounts" }), false);
   assert.equal(sessionNeedsFinanceBooks(null), false);
 });
+
+test("finance collection agents can open Daily and Monthly to collect; route agents cannot", () => {
+  const agent = workspaceModuleAccess({ featurePacks: ["full"] }, { role: "staff", collectionScope: "finance" });
+  assert.equal(agent.daily, true);
+  assert.equal(agent.monthly, true);
+  assert.equal(agent.chit, false);
+  assert.equal(agent.cashbook, false);
+  assert.equal(agent.canWriteFinance, false);
+  const routeAgent = workspaceModuleAccess({ featurePacks: ["full"] }, { role: "staff", collectionScope: "accounts" });
+  assert.equal(routeAgent.daily, false);
+  assert.equal(routeAgent.monthly, false);
+});

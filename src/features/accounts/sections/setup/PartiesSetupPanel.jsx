@@ -20,13 +20,14 @@ export function PartiesSetupPanel({
   outstandingByParty,
   partyActions,
   setListPage,
+  canWrite = true,
 }) {
   return (
     <AccSetupSection
       icon="P"
       title="Parties"
       copy="Customers, suppliers, agents, and others used only by Accounts. Employees are added in Payroll. They do not have to exist in Daily Finance, Monthly Finance, or Chit Fund."
-      actions={<div className="acc-btn-group"><label className="btn">Import CSV<input type="file" accept=".csv,text/csv" hidden onChange={importParties} /></label><button type="button" className="btn primary" onClick={() => openParty()}>+ Add Party</button></div>}
+      actions={canWrite ? <div className="acc-btn-group"><label className="btn">Import CSV<input type="file" accept=".csv,text/csv" hidden onChange={importParties} /></label><button type="button" className="btn primary" onClick={() => openParty()}>+ Add Party</button></div> : null}
       collapsible
       summary={`${parties.length} ${parties.length === 1 ? "party" : "parties"}`}
     >
@@ -56,7 +57,7 @@ export function PartiesSetupPanel({
       </p>
       {partyImportStatus && <p className="small accounts-notice-ok" role="status">{partyImportStatus}</p>}
       {!parties.length ? (
-        <AccEmpty title="No parties yet" copy="Add customers and suppliers to start managing your accounting relationships." actionLabel="+ Add Party" onAction={() => openParty()} />
+        <AccEmpty title="No parties yet" copy={canWrite ? "Add customers and suppliers to start managing your accounting relationships." : "No customers or suppliers have been added yet."} actionLabel={canWrite ? "+ Add Party" : undefined} onAction={canWrite ? () => openParty() : undefined} />
       ) : !setupParties.length ? (
         <AccEmpty
           title={PARTY_TYPE_FILTERS.find(item => item.id === partyTypeFilter)?.emptyTitle || "No parties found"}

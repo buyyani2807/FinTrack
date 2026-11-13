@@ -76,6 +76,8 @@ const SEVERITY_RANK = { high: 0, medium: 1, low: 2 };
  */
 export function buildTodaysActionList(input = {}) {
   const center = buildAttentionCenter(input);
+  // View-only partners open the customer; only owners and agents record collections.
+  const collectLabel = input.canCollect === false ? "View" : "Collect";
   const dailyItems = center.items.filter(item => item.module === "daily");
   const otherItems = center.items.filter(item => item.module !== "daily");
   const dailyCap = 5;
@@ -93,12 +95,12 @@ export function buildTodaysActionList(input = {}) {
     });
     items.push(...dailyItems.slice(0, dailyCap).map(item => ({
       ...item,
-      actionLabel: "Collect",
+      actionLabel: collectLabel,
     })));
   } else {
     items.push(...dailyItems.map(item => ({
       ...item,
-      actionLabel: item.actionLabel === "Open Daily Finance" ? "Collect" : item.actionLabel,
+      actionLabel: item.actionLabel === "Open Daily Finance" ? collectLabel : item.actionLabel,
     })));
   }
 

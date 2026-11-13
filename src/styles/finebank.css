@@ -1893,7 +1893,13 @@ button.upcoming-payments-toggle:focus-visible { outline: 2px solid var(--ft-prim
 }
 .ft-trial-banner p,
 .ft-trial-lockbar strong { margin: 0; min-width: 0; }
-.ft-trial-banner p { flex: 1; }
+/* Text gets a real basis so a long right-hand note (agents: "Ask the business owner…")
+   wraps below it on phones instead of squeezing the text to one letter per line. */
+.ft-trial-banner p { flex: 1 1 220px; }
+.ft-trial-banner > span,
+.ft-trial-banner > a { flex: 0 1 auto; }
+/* Long business names wrap instead of pushing Light / Log out off a phone screen. */
+.top > :first-child { min-width: 0; overflow-wrap: anywhere; }
 @media (width >= 1051px) {
   .ft-trial-banner,
   .ft-trial-lockbar {

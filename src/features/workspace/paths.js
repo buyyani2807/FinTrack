@@ -61,8 +61,11 @@ export function workspaceModuleAccess(orgSettings = {}, workspace = {}, moduleSt
   const packOpen = moduleId => (moduleState
     ? isAppModuleOpen(moduleState, moduleId)
     : isModuleEnabled(orgSettings, moduleId));
-  const dailyOpen = canViewOwnerFinance && packOpen("daily");
-  const monthlyOpen = canViewOwnerFinance && packOpen("monthly");
+  // Finance collection agents open Daily / Monthly to collect from their assigned customers
+  // (Accounts route agents use Route collections instead).
+  const isFinanceAgent = workspace?.role === "staff" && workspace?.collectionScope !== "accounts";
+  const dailyOpen = (canViewOwnerFinance || isFinanceAgent) && packOpen("daily");
+  const monthlyOpen = (canViewOwnerFinance || isFinanceAgent) && packOpen("monthly");
   const chitOpen = canViewOwnerFinance && packOpen("chit");
   const cashbookOpen = canViewOwnerFinance && packOpen("cashbook");
   const accountsOpen = (isOwner || isAccountsUser || isFinancePartner) && packOpen("accounts");

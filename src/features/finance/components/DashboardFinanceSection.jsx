@@ -54,7 +54,8 @@ export function DashboardFinanceSection({
       </div>
     </div>
     <div className="grid metrics dashboard-finance-metrics">
-      <Metric index={0} label="Amount financed" value={money(financed)} color="gold" />
+      {/* investedAmount is the cash paid out: for daily loans that is less than the amount financed. */}
+      <Metric index={0} label={kind === "daily" ? "Paid to customers" : "Principal lent"} value={money(financed)} color="gold" />
       <Metric index={1} label="Amounts received" value={money(received)} color="green" />
       <Metric index={2} label="Outstanding" value={money(outstanding)} color="red" />
       {showPnl && <Metric index={3} label="Profit / loss" value={`${money(profit)} / ${money(loss)}`} color={loss ? "red" : "green"} />}

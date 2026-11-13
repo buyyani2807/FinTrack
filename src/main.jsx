@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './styles/index.css'
 import App from './App.jsx'
 import { initMonitoring } from './lib/monitoring.js'
+import { ErrorBoundary } from './components/ErrorBoundary.jsx'
 
 initMonitoring()
 
@@ -12,6 +13,8 @@ if ("serviceWorker" in navigator) {
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </StrictMode>,
 )

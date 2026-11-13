@@ -5,7 +5,7 @@ Use this checklist after deploying to Vercel + Supabase and before onboarding re
 ## Monitoring
 
 1. **Uptime** — Add a free monitor (Better Stack, UptimeRobot, or Vercel Analytics) on your production URL and `/api/auth/session`.
-2. **Errors** — Optional: set `VITE_SENTRY_DSN` and add `@sentry/react` when you are ready for client error tracking. Until then, watch the Vercel function logs and Supabase logs daily during pilot.
+2. **Errors** — Set `VITE_SENTRY_DSN` on Vercel (Preview/staging and Production) and redeploy. `@sentry/react` is installed and loads only when the DSN is set. Events are scrubbed of phone numbers, emails, PAN, Aadhaar, tokens and URL query strings, and carry only the user id and role. Serverless (`/api/*`) errors still go to Vercel function logs.
 3. **Supabase dashboard** — Review Auth signups, API 4xx/5xx rates, and database CPU weekly.
 
 ## Backups

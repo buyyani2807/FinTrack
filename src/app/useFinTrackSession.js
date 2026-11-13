@@ -5,6 +5,7 @@ import { financePartnerChromeAllowed, financeRolesAligned, ownerChromeAllowed, s
 import { legalViewFromLocation } from "../features/legal/LegalPage.jsx";
 import { loadFinanceAccounts, loadWorkspace } from "../lib/financeRepository";
 import { supabase } from "../lib/supabase";
+import { setMonitoringContext } from "../lib/monitoring.js";
 import { useFinanceActions } from "./financeActions.js";
 
 // Session, workspace and finance-account state for the whole app.
@@ -16,6 +17,10 @@ export function useFinTrackSession() {
   const [loans, setLoans] = useState([]);
   const [financeLoaded, setFinanceLoaded] = useState(false);
   const [workspace, setWorkspace] = useState(null);
+  // Error reports carry only the user id and role (see lib/monitoring.js).
+  useEffect(() => {
+    setMonitoringContext(workspace?.id ? { userId: workspace.id, role: workspace.role } : null);
+  }, [workspace?.id, workspace?.role]);
   const navigate = useNavigate();
   const [dataError, setDataError] = useState("");
   const sessionGen = useRef(0);

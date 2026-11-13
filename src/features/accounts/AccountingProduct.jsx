@@ -512,12 +512,25 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     setCounterEnabled(readCounterEnabled(activeCompanyId, readIndustry(activeCompanyId)));
     setCounterSettings(readCounterSettings(activeCompanyId));
   }, [activeCompanyId]);
+  // Set when the role-loading guard below parked an Accounts-team user on Counter.
+  const parkedOnCounterRef = useRef(false);
   useEffect(() => {
     // Cashiers (and Accounts-team while role is loading) stay on Counter — never bounce
     // through Overview while counterEnabled catches up from the active company.
     if (cashierNav) {
-      if (section !== "counter") go({ section: "counter", reportTab: "daybook" });
+      if (section !== "counter") {
+        if (accountsRolePending) parkedOnCounterRef.current = true;
+        go({ section: "counter", reportTab: "daybook" });
+      }
       return;
+    }
+    // Viewer / accountant: once the role is known, leave the Counter we parked them on.
+    if (parkedOnCounterRef.current) {
+      parkedOnCounterRef.current = false;
+      if (section === "counter") {
+        go({ section: "overview", reportTab: "daybook" });
+        return;
+      }
     }
     // Read Counter enablement synchronously. Depending on counterEnabled state raced:
     // company id arrived one tick before setCounterEnabled(true), and owners were sent to Overview.

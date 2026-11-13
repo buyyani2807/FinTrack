@@ -44,15 +44,17 @@ export function AccMoneyTiles({ metrics, periodLabel, onNavigate }) {
   </section>;
 }
 
-export function AccountsBusinessPulse({ metrics, receivables, payables, items, stockMovements, onNavigate, onOpenCollections }) {
+export function AccountsBusinessPulse({ metrics, receivables, payables, items, stockMovements, onNavigate, onOpenCollections, canWrite = true }) {
   const lowStockCount = useMemo(() => (items || []).filter(item => {
     const current = Number(item.current_stock ?? item.stock ?? item.quantity ?? 0);
     const reorder = Number(item.reorder_level ?? item.reorderPoint ?? 0);
     return reorder > 0 && current <= reorder;
   }).length, [items]);
   const actions = [
-    { label: "Record sale", section: "vouchers", tone: "green" },
-    { label: "Add expense", section: "vouchers", tone: "red" },
+    ...(canWrite ? [
+      { label: "Record sale", section: "vouchers", tone: "green" },
+      { label: "Add expense", section: "vouchers", tone: "red" },
+    ] : []),
     { label: "View receivables", section: "receivables", tone: "blue" },
     { label: "View payables", section: "payables", tone: "gold" },
   ];

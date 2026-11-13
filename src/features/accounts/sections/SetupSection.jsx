@@ -133,6 +133,7 @@ export function SetupSection({
         vouchers={vouchers}
         saving={saving}
         removeCoa={removeCoa}
+        canWrite={canWrite}
       />
       {(openSetupAssistant || setUpNewCompany) && (
         <AccSetupSection
@@ -186,6 +187,7 @@ export function SetupSection({
         outstandingByParty={outstandingByParty}
         partyActions={partyActions}
         setListPage={setListPage}
+        canWrite={canWrite}
       />
       <ProductionReadinessPanel downloadCompanyBackup={downloadCompanyBackup} />
       <SubscriptionMonitoringPanel orgSettings={orgSettings} companyId={activeCompanyId} />

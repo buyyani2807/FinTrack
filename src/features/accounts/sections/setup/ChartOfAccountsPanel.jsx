@@ -2,13 +2,13 @@ import { AccSetupSection, AccTable } from "../../components/AccUi.jsx";
 import { ledgerHasPostedLines } from "../../model/accountingModel.js";
 import { money } from "../../accountsFormat.js";
 
-export function ChartOfAccountsPanel({ settings, openCoa, visibleAccounts, vouchers, saving, removeCoa }) {
+export function ChartOfAccountsPanel({ settings, openCoa, visibleAccounts, vouchers, saving, removeCoa, canWrite = true }) {
   return (
     <AccSetupSection
       icon="#"
       title="Chart of accounts"
       copy={`Opening debit and credit sides across the chart should balance. System accounts can be renamed and given openings, but not deleted.${settings?.integrationEnabled ? "" : " Daily Finance, Monthly Finance, and Chit Fund ledgers stay hidden while integration is off."}`}
-      actions={<button type="button" className="btn" onClick={() => openCoa(null)}>+ Account</button>}
+      actions={canWrite ? <button type="button" className="btn" onClick={() => openCoa(null)}>+ Account</button> : null}
       collapsible
       summary={`${visibleAccounts.length} ${visibleAccounts.length === 1 ? "account" : "accounts"}`}
     >
