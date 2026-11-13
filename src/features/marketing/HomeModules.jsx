@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
-import { ArchiveRestore, ArrowRight, BookOpenText, CalendarDays, CalendarRange, Check, Coins, FileText, Gavel, HandCoins, MessageCircle, Package, PenLine, Printer, Receipt, Scale, ScanLine, Sparkles, Users, Wallet } from "lucide-react";
+import { ArchiveRestore, ArrowRight, BookOpenText, CalendarDays, CalendarRange, Check, ClipboardCheck, Coins, FilePenLine, FileText, Gavel, HandCoins, MessageCircle, MessageCircleQuestionMark, Package, PenLine, Printer, Receipt, ReceiptText, Scale, ScanLine, Sparkles, Users, Wallet } from "lucide-react";
 import { useInView } from "../../components/ui/useInView.js";
 import { featurePath } from "./paths.js";
 
@@ -355,48 +355,125 @@ function AccountsModule() {
   </article></Section>;
 }
 
-const AI_SCENES = [
-  { icon: MessageCircle, label: "Ask Finny", you: "You asked", input: "Who has not paid today?", read: "From today’s collections", out: "An answer you can open", guard: "Asking never posts" },
-  { icon: PenLine, label: "Tell Finny", you: "You wrote", input: "Paid shop rent ₹25,000 by UPI", read: "Drafts a balanced entry", out: "Ready for you to post", guard: "Nothing is saved until you post" },
-  { icon: ScanLine, label: "Bill scan", you: "You added", input: "A supplier bill, photo or PDF", read: "Reads the bill into a draft", out: "A purchase draft", guard: "You save it" },
-  { icon: Sparkles, label: "AI Review", you: "It checked", input: "Cash, expenses, GST, and stock", read: "Reason, confidence, and a link", out: "What needs a look", guard: "You decide what happens next" },
+// Same examples the AI page already shows: Ask Finny's answer, the bookkeeper draft, a bill scan, and review notes.
+const AI_JOBS = [
+  {
+    key: "ask",
+    icon: MessageCircle,
+    label: "Ask",
+    you: "You asked",
+    input: "Who has not paid today?",
+    aside: "The answer comes from this workspace.",
+    title: "Not paid today",
+    rows: [
+      { label: "Customer 1", detail: "2 recent misses", amount: "₹41,000" },
+      { label: "Customer 2", detail: "2 recent misses", amount: "₹40,500" },
+      { label: "Customer 3", detail: "2 recent misses", amount: "₹40,500" },
+    ],
+    source: "Daily Finance · Today’s collection",
+    guard: "Asking never posts",
+  },
+  {
+    key: "tell",
+    icon: PenLine,
+    label: "Tell",
+    you: "You wrote",
+    input: "I bought a laptop for ₹85,000 using HDFC",
+    aside: "Finny drafts a balanced entry.",
+    title: "Draft · Purchase",
+    rows: [
+      { label: "Fixed Assets", detail: "Debit", amount: "₹85,000" },
+      { label: "HDFC Bank", detail: "Credit", amount: "₹85,000" },
+      { label: "Status", detail: "Waiting for you", amount: "Balanced" },
+    ],
+    source: "Nothing is saved until you post",
+    guard: "You post it",
+  },
+  {
+    key: "scan",
+    icon: ScanLine,
+    label: "Scan",
+    you: "You added",
+    input: "A supplier bill, photo or PDF",
+    aside: "Finny reads it into a draft purchase.",
+    bill: true,
+    title: "Draft purchase",
+    rows: [
+      { label: "Supplier", detail: "Read from the bill" },
+      { label: "Items", detail: "Read from the bill" },
+      { label: "Tax", detail: "Read from the bill" },
+    ],
+    source: "You check the draft before it is saved",
+    guard: "You save it",
+  },
+  {
+    key: "review",
+    icon: Sparkles,
+    label: "Review",
+    you: "It checked",
+    input: "Cash, expenses, GST, and stock",
+    aside: "Each note has a reason. You decide.",
+    title: "What needs a look",
+    rows: [
+      { label: "Possible duplicate payment", detail: "Unusual activity" },
+      { label: "GSTIN is invalid", detail: "GST review" },
+      { label: "Basmati Rice 5kg", detail: "May run out" },
+    ],
+    source: "Accounts · AI Review",
+    guard: "You decide",
+  },
 ];
 
 function AiSignal() {
-  const [ref, live] = useLive();
-  const step = useLoop(live, AI_SCENES.length, 2600, 2600);
-  const scene = AI_SCENES[step];
-  const Icon = scene.icon;
+  const [ref, live, reduced] = useLive();
+  const [chosen, setChosen] = useState(null);
+  const auto = useLoop(live && chosen === null, AI_JOBS.length, 3800, 3800);
+  const step = chosen ?? (reduced ? 0 : auto);
+  const job = AI_JOBS[step];
+  const Icon = job.icon;
   return <Section id="ai" flip><article ref={ref} className="hm-module hm-ai" data-live={live}>
-    <div className="hm-ai-stage" aria-hidden="true">
-      <div className="hm-ai-top">
-        <span className="hm-ai-live"><i /> {scene.label}</span>
-        <ol className="hm-ai-dots">
-          {AI_SCENES.map((item, index) => <li key={item.label} data-on={index === step ? "true" : "false"} />)}
-        </ol>
+    <div className="hm-ai-stage">
+      <header className="hm-ai-top">
+        <span className="hm-ai-mark" aria-hidden="true"><Sparkles size={18} /></span>
+        <span className="hm-ai-who"><strong>Finny</strong><small>From your books</small></span>
+        <span className="hm-ai-live"><i /> {job.label}</span>
+      </header>
+      <div className="hm-ai-jobs" role="group" aria-label="What Finny can do">
+        {AI_JOBS.map((item, index) => <button key={item.key} type="button" aria-pressed={index === step} onClick={() => setChosen(index)}>
+          <item.icon size={15} aria-hidden="true" />{item.label}
+        </button>)}
       </div>
-      <div className="hm-ai-flow">
-        <div className="hm-ai-card hm-ai-you" key={scene.input}>
-          <small><Icon size={14} /> {scene.you}</small>
-          <p>{scene.input}</p>
+      <div className="hm-ai-desk" key={job.key}>
+        <div className="hm-ai-you">
+          {job.bill ? <div className="hm-ai-bill" aria-hidden="true"><FileText size={20} /><i /><i /><i /><span>Bill</span></div> : null}
+          <div className="hm-ai-you-copy">
+            <small><Icon size={14} aria-hidden="true" /> {job.you}</small>
+            <p>{job.input}</p>
+          </div>
+          <span className="hm-ai-aside">{job.aside}</span>
         </div>
-        <div className="hm-ai-spine">
-          <i /><span><Sparkles size={14} /></span><i />
-          <em>{scene.read}</em>
-        </div>
-        <div className="hm-ai-card hm-ai-out">
-          <span key={scene.out}>
-            <strong>{scene.out}</strong>
-            <small>{scene.guard}</small>
-          </span>
-          <b>You confirm</b>
+        <div className="hm-ai-out">
+          <div className="hm-ai-out-head">
+            <strong>{job.title}</strong>
+            <b>{job.guard}</b>
+          </div>
+          <ul className="hm-ai-rows">
+            {job.rows.map(row => <li key={row.label}>
+              <span><strong>{row.label}</strong><small>{row.detail}</small></span>
+              {row.amount ? <b>{row.amount}</b> : null}
+            </li>)}
+          </ul>
+          <small className="hm-ai-src">{job.source}</small>
         </div>
       </div>
     </div>
     <div className="hm-ai-copy">
       <Tag icon={Sparkles}>AI</Tag>
-      <h3>Built with AI. Not a normal books app.</h3>
+      <h3>Built with AI. <span>Not a normal books app.</span></h3>
       <p className="hm-module-lead">MyFinTracker reads your own records and points out what needs a look: who to collect, cash that may run short, a bill to draft, a scheme that is slipping. You still post, approve, and send. Nothing is filed or sent by itself.</p>
+      <ul className="hm-ai-points">
+        {[[MessageCircleQuestionMark, "Ask in plain English, answered from your records"], [FilePenLine, "A sentence becomes a draft you post"], [ReceiptText, "A bill photo becomes a draft purchase"], [ClipboardCheck, "Each review shows its reason"]].map(([Icon, text]) => <li key={text}><span aria-hidden="true"><Icon size={18} strokeWidth={2} /></span>{text}</li>)}
+      </ul>
       <More to={featurePath("ai")}>See how AI works</More>
     </div>
   </article></Section>;
