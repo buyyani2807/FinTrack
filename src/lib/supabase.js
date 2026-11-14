@@ -45,6 +45,7 @@ async function authApi(path, options = {}) {
   if (!response.ok) {
     const error = new Error(body?.error || "Authentication request failed");
     error.status = response.status;
+    error.code = body?.code || null;
     throw error;
   }
   return body;
@@ -64,6 +65,8 @@ async function directSignupGrant(email, password) {
     method: "POST",
     body: JSON.stringify({ email, password }),
   });
+  // Confirm email is on: Supabase sent a confirmation link and returned no session.
+  if (!session?.access_token) return { confirmation_required: true, email };
   rememberAccessToken(session.access_token);
   return session;
 }
@@ -124,6 +127,8 @@ export const supabase = {
             inviteCode: workspace.inviteCode || workspace.invite_code || "",
           }),
         });
+        // Confirm email is on: nothing to remember until the owner opens the link and signs in.
+        if (session.confirmation_required) return session;
         rememberAccessToken(session.access_token);
         clearLegacyStorage();
         return session;
@@ -155,6 +160,15 @@ export const supabase = {
       return request("/auth/v1/recover", {
         method: "POST",
         body: JSON.stringify({ email, redirect_to: `${origin}?reset-password=1` }),
+      });
+    },
+    /** Send the signup confirmation email again. Supabase allows one per minute per address. */
+    resendConfirmation: email => {
+      const origin = authRedirectOrigin();
+      const redirect = origin ? `?redirect_to=${encodeURIComponent(`${origin}/login?confirmed=1`)}` : "";
+      return request(`/auth/v1/resend${redirect}`, {
+        method: "POST",
+        body: JSON.stringify({ type: "signup", email }),
       });
     },
     updatePassword: (password, accessToken) => request("/auth/v1/user", {

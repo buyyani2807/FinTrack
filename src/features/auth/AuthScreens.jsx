@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { AlertCircle, ArrowRight, ArrowUpRight, Briefcase, Building2, CheckCircle2, Coins, IdCard, Info, KeyRound, LockKeyhole, Mail, Route, ShieldCheck, Ticket, UserRound } from "lucide-react";
 import { Button, Field, IconInput, PasswordInput } from "../../components/ui.jsx";
@@ -36,7 +36,7 @@ const friendlyError = text => {
   if (/email not confirmed/i.test(message)) return "This email address has not been confirmed yet. Open the confirmation email, then sign in.";
   if (/user already registered|already exists/i.test(message)) return "An account with this email already exists. Sign in instead, or use Forgot password.";
   if (/failed to fetch|network|load failed/i.test(message)) return `${PRODUCT_NAME} could not be reached. Check your internet connection and try again.`;
-  if (/rate limit|too many/i.test(message)) return "Too many attempts. Wait a minute, then try again.";
+  if (/rate limit|too many|only request this after/i.test(message)) return "Too many attempts. Wait a minute, then try again.";
   return message;
 };
 
@@ -49,8 +49,24 @@ function AuthNotice({ notice }) {
   const Icon = NOTICE_ICONS[notice.tone] || Info;
   return <div className={`ft-auth-notice is-${notice.tone}`} role={notice.tone === "error" ? "alert" : "status"}>
     <Icon className="ft-auth-notice-icon" size={20} aria-hidden="true" />
-    <div>{notice.title && <strong>{notice.title}</strong>}<p>{notice.text}</p></div>
+    <div>
+      {notice.title && <strong>{notice.title}</strong>}<p>{notice.text}</p>
+      {notice.action && <button type="button" className="link-button" onClick={notice.action.onClick}>{notice.action.label}</button>}
+    </div>
   </div>;
+}
+
+// What the signup confirmation link brought back: Supabase adds the result to the URL hash.
+function confirmationLinkNotice(params) {
+  if (typeof window === "undefined") return null;
+  const hash = new URLSearchParams(window.location.hash.slice(1));
+  if (hash.get("error") || hash.get("error_code")) {
+    return { tone: "error", title: "This confirmation link no longer works", text: "The link has expired or was already used. Sign in with your email and password; if the email still needs confirming, you can ask for a new link there." };
+  }
+  if (params.get("confirmed") === "1") {
+    return { tone: "success", title: "Email confirmed", text: "Sign in with your email and password to open your workspace." };
+  }
+  return null;
 }
 
 // MyFinTracker mark + wordmark (Poppins), optional product suffix such as "Accounts".
@@ -107,7 +123,15 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
   const [fullName, setFullName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [portalId, setPortalId] = useState("");
-  const [notice, setNotice] = useState(null);
+  const [notice, setNotice] = useState(() => confirmationLinkNotice(params));
+  // The confirmation link carries tokens in the URL hash. Sign-in uses the password, so drop them.
+  useEffect(() => {
+    const hash = new URLSearchParams(window.location.hash.slice(1));
+    if (hash.get("type") === "recovery") return;
+    if (hash.has("access_token") || hash.has("error") || hash.has("error_code")) {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+  }, []);
   // Fields to outline in red after a submit that left them empty.
   const [invalid, setInvalid] = useState({});
   const formRef = useRef(null);
@@ -120,6 +144,16 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
     setInvalid(Object.fromEntries(fields.map(field => [field, true])));
     setNotice({ tone: "error", title, text });
     requestAnimationFrame(() => formRef.current?.querySelector('[aria-invalid="true"]')?.focus());
+  };
+  const resendConfirmation = async address => {
+    setBusy(true);
+    try {
+      await supabase.auth.resendConfirmation(address);
+      setNotice({ tone: "success", title: "Confirmation email sent", text: `We sent a new link to ${address}. Open it, then sign in. Check the spam folder if it does not arrive in a few minutes.` });
+    } catch (error) {
+      setNotice({ tone: "error", title: "Couldn't send the confirmation email", text: friendlyError(error.message) || "Unable to send the confirmation email.", action: { label: "Try again", onClick: () => resendConfirmation(address) } });
+    }
+    finally { setBusy(false); }
   };
   const signInAndEnter = async () => {
     const result = await supabase.auth.signIn(email, password);
@@ -161,8 +195,13 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
         if (!businessName || !fullName) throw new Error("Enter your business name and your name.");
         if (!validateSignupInvite(inviteCode)) throw new Error("Enter a valid invite code.");
         const result = await supabase.auth.signUp(email, password, { businessName, fullName, inviteCode });
-        if (!result.access_token) {
-          throw new Error("Your account could not be signed in automatically. In Supabase, turn off Confirm email under Authentication → Providers → Email, then try again.");
+        if (result.confirmation_required || !result.access_token) {
+          // Confirm email is on. The workspace (and the 14-day trial) is created on the first sign-in after confirming.
+          const address = String(email).trim();
+          setMode("signIn");
+          setPassword("");
+          setNotice({ tone: "success", title: "Check your inbox", text: `We sent a confirmation link to ${address}. Open it to confirm your email, then sign in here. Your 14-day trial starts at that first sign-in.`, action: { label: "Resend email", onClick: () => resendConfirmation(address) } });
+          return;
         }
         // API signup already runs provision_financier and deletes the Auth user on failure.
         // Direct (local) signup still needs client-side provisioning.
@@ -186,7 +225,9 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
       }
     } catch (error) {
       const title = mode === "signUp" ? "Couldn't create your account" : mode === "customer" || mode === "chitCustomer" ? "Couldn't open your dashboard" : "Couldn't sign you in";
-      setNotice({ tone: "error", title, text: friendlyError(error.message) || "Unable to sign in." });
+      const unconfirmed = mode === "signIn" && (error.code === "email_not_confirmed" || /email not confirmed/i.test(error.message || ""));
+      const address = String(email || "").trim();
+      setNotice({ tone: "error", title: unconfirmed ? "Confirm your email first" : title, text: friendlyError(error.message) || "Unable to sign in.", ...(unconfirmed && address ? { action: { label: "Resend confirmation email", onClick: () => resendConfirmation(address) } } : {}) });
     }
     finally { setBusy(false); }
   };

@@ -1,6 +1,7 @@
 /* global process */
 import { setRefreshCookie } from "../_lib/authCookies.js";
-import { deleteAuthUser, signupGrant } from "../_lib/supabaseAuth.js";
+import { CLEARED_PENDING_WORKSPACE, confirmationRedirect, pendingWorkspaceMetadata, signupOutcome } from "../_lib/signupConfirmation.js";
+import { deleteAuthUser, provisionWorkspace, signupGrant, updateUserMetadata } from "../_lib/supabaseAuth.js";
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const anonKey = process.env.VITE_SUPABASE_ANON_KEY;
@@ -30,7 +31,21 @@ export default async function handler(req, res) {
     if (!inviteOk(inviteCode)) return res.status(400).json({ error: "Enter a valid invite code." });
     if (password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters" });
 
-    const session = await signupGrant(email.trim(), password);
+    const workspace = { businessName, fullName, inviteCode };
+    const session = await signupGrant(email.trim(), password, {
+      data: pendingWorkspaceMetadata(workspace),
+      redirectTo: confirmationRedirect(process.env.VITE_APP_ORIGIN || req.headers.origin),
+    });
+    const outcome = signupOutcome(session);
+    if (outcome === "exists") {
+      return res.status(400).json({ error: "An account with this email already exists. Sign in instead, or use Forgot password." });
+    }
+    if (outcome === "confirm") {
+      // Confirm email is on: no session yet. The workspace is created on the first
+      // sign-in after the owner opens the link (see api/auth/login.js).
+      return res.status(200).json({ confirmation_required: true, email: email.trim() });
+    }
+
     createdUserId = session.user?.id || session.id || null;
     if (!createdUserId && session.access_token) {
       const who = await fetch(`${supabaseUrl}/auth/v1/user`, {
@@ -42,25 +57,13 @@ export default async function handler(req, res) {
       }
     }
 
-    const provision = await fetch(`${supabaseUrl}/rest/v1/rpc/provision_financier`, {
-      method: "POST",
-      headers: {
-        apikey: anonKey,
-        Authorization: `Bearer ${session.access_token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        workspace_name: businessName.trim(),
-        display_name: fullName.trim(),
-        invite_code: inviteCode?.trim() || null,
-      }),
-    });
+    const provision = await provisionWorkspace(session.access_token, workspace);
     if (!provision.ok) {
-      const body = await provision.json().catch(() => ({}));
       if (createdUserId) await deleteAuthUser(createdUserId);
       createdUserId = null;
-      throw new Error(body.message || body.hint || body.error || "Could not create the business workspace");
+      throw new Error(provision.message);
     }
+    await updateUserMetadata(session.access_token, CLEARED_PENDING_WORKSPACE);
 
     setRefreshCookie(res, session.refresh_token);
     return res.status(200).json({
