@@ -2479,3 +2479,52 @@ html[data-theme="dark"] .ft-trial-banner.is-urgent { background: #3a2222; color:
   .air-factor-list .air-datechip { width: 40px; }
   .air-factor-list .air-factor-amount { grid-column: 2; justify-self: start; }
 }
+
+/* Chit Fund — one page frame, section headings, forms and dialogs for every scheme type. */
+.chit-page-nav { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 14px; min-height: 40px; margin: -12px 0 20px; padding: 0 0 10px; border-bottom: 1px solid var(--ft-border); }
+.chit-page-nav .ft-back-bar { margin: 0; padding: 0; border: 0; min-height: 0; }
+.chit-breadcrumb ol { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; padding: 0; list-style: none; color: var(--ft-muted); font-size: var(--ft-type-caption); }
+.chit-breadcrumb li { display: inline-flex; align-items: center; min-width: 0; }
+.chit-breadcrumb li:not(:last-child)::after { content: "›"; margin-left: 6px; color: var(--ft-muted); }
+.chit-breadcrumb li:last-child { color: var(--ft-text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40ch; }
+.chit-breadcrumb-link { border: 0; background: none; padding: 4px 2px; color: var(--ft-muted); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.chit-breadcrumb-link:hover, .chit-breadcrumb-link:focus-visible { color: var(--ft-primary); }
+.chit-scheme-head { align-items: flex-start; }
+.chit-scheme-toolbar { flex-wrap: wrap; }
+.chit-scheme-filters { flex: 0 1 auto; flex-wrap: wrap; justify-content: flex-end; min-width: 0; max-width: 100%; }
+@media (width > 700px) { .chit-scheme-filters { flex: none; flex-wrap: nowrap; } }
+.chit-scheme-actions-bar { flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.chit-section-head { align-items: flex-end; flex-wrap: wrap; gap: 12px; }
+.chit-section-head .field { min-width: 160px; margin: 0; }
+.chit-overview-block { margin-top: 6px; }
+.chit-overview-block + .chit-overview-block { margin-top: 18px; }
+.chit-scheme-tabs + * { margin-top: 0; }
+.chit-scheme-tabs .tab { white-space: nowrap; flex: none; }
+.chit-overview-title { margin: 8px 0 8px; font-size: var(--ft-type-label); font-weight: 700; color: var(--ft-text-2); }
+.chit-row-actions { display: flex; flex-wrap: nowrap; gap: 6px; align-items: center; }
+/* Keep screen-reader-only headers and receipt buttons inside the scrolling table. */
+.chit-scheme-page .table, .chit-member-page .table { position: relative; }
+.chit-scheme-page .table .receipt-actions, .chit-member-page .table .receipt-actions { flex-wrap: nowrap; }
+.chit-members-table table, .chit-scheme-page .table table { min-width: 720px; }
+.chit-loading-value { color: var(--ft-muted); }
+.chit-form-section { margin: 14px 0 0; padding: 0; border: 0; min-width: 0; }
+.chit-form-section > legend { padding: 0; margin: 0 0 6px; font-size: var(--ft-type-label); font-weight: 700; color: var(--ft-text-2); }
+.chit-form-section + .chit-form-section { border-top: 1px solid var(--ft-divider); padding-top: 12px; }
+.chit-calculated output { display: flex; align-items: center; min-height: 40px; padding: 8px 12px; border: 1px dashed var(--ft-border); border-radius: 10px; background: var(--ft-surface-subtle); color: var(--ft-text); font-variant-numeric: tabular-nums; font-weight: 600; }
+.chit-calculated-label { display: flex; align-items: center; gap: 8px; }
+.chit-calculated-tag { padding: 1px 6px; border-radius: 999px; background: var(--ft-surface-muted); color: var(--ft-muted); font-size: var(--ft-type-micro); font-weight: 600; }
+.chit-form-context { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px 16px; margin: 0; padding: 12px 14px; border: 1px solid var(--ft-border); border-radius: 12px; background: var(--ft-surface-subtle); }
+.chit-form-context div { min-width: 0; }
+.chit-form-context dt { color: var(--ft-muted); font-size: var(--ft-type-caption); }
+.chit-form-context dd { margin: 2px 0 0; color: var(--ft-text); font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.chit-form-calculated { border-style: dashed; }
+.chit-split-total { margin: 0; }
+@media (width <= 680px) {
+  .chit-breadcrumb { display: none; }
+  .chit-scheme-head { flex-direction: column; align-items: stretch; }
+  .chit-scheme-actions-bar { justify-content: flex-start; }
+  .chit-scheme-actions-bar > .btn { flex: 1 1 auto; }
+  .chit-section-head { align-items: stretch; }
+  .chit-section-head > .row, .chit-section-head .field { width: 100%; }
+  .chit-row-actions .btn { min-height: 44px; }
+}

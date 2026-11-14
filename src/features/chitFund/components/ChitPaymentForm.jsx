@@ -1,11 +1,18 @@
 import { Select } from "../../../components/Select.jsx";
 import { Button, Field } from "../../../components/ui.jsx";
 import { CHIT_PAYMENT_MODES } from "../model/chitLabels.js";
-import { money } from "../model/chitFormat.js";
+import { money, formatChitDate } from "../model/chitFormat.js";
 
-/** Shared Record / Edit payment fields. Callers keep their own save APIs. */
+/**
+ * Shared Record / Edit payment fields for every Chit type. Callers keep their own save APIs and validation.
+ * Read-only context (scheme, member, month, due date, amounts) comes first and is shown as calculated values;
+ * the editable payment fields follow.
+ */
 export function ChitPaymentForm({
+  schemeName,
   memberName,
+  dueDate,
+  recordedBy,
   paymentMonth,
   amountDue,
   amountDueLabel = "Expected",
@@ -32,13 +39,18 @@ export function ChitPaymentForm({
 }) {
   return (
     <form onSubmit={onSubmit}>
+      <dl className="chit-form-context spacer" aria-label="Payment details">
+        {schemeName ? <div><dt>Scheme</dt><dd>{schemeName}</dd></div> : null}
+        <div><dt>Member</dt><dd>{memberName || "Member"}</dd></div>
+        {paymentMonth ? <div><dt>Payment month</dt><dd>Month {paymentMonth}</dd></div> : null}
+        {dueDate ? <div><dt>Due date</dt><dd>{formatChitDate(dueDate)}</dd></div> : null}
+        {amountDue != null && amountDue !== "" ? <div><dt>{amountDueLabel}</dt><dd>{money(amountDue)}</dd></div> : null}
+        {previouslyPaid != null && previouslyPaid !== "" ? <div><dt>Previously paid</dt><dd>{money(previouslyPaid)}</dd></div> : null}
+        {outstanding != null && outstanding !== "" ? <div><dt>Outstanding</dt><dd className={Number(outstanding) > 0 ? "red" : ""}>{money(outstanding)}</dd></div> : null}
+        {recordedBy ? <div><dt>Recorded by</dt><dd>{recordedBy}</dd></div> : null}
+      </dl>
       <div className="form spacer">
-        <Field label="Member"><input disabled value={memberName || "Member"} /></Field>
-        {paymentMonth ? <Field label="Payment month"><input disabled value={`Month ${paymentMonth}`} /></Field> : null}
-        {amountDue != null && amountDue !== "" ? <Field label={amountDueLabel}><input disabled value={money(amountDue)} /></Field> : null}
-        {previouslyPaid != null && previouslyPaid !== "" ? <Field label="Previously paid"><input disabled value={money(previouslyPaid)} /></Field> : null}
-        {outstanding != null && outstanding !== "" ? <Field label="Outstanding"><input disabled value={money(outstanding)} /></Field> : null}
-        <Field className="span" label="Amount paid (₹)">
+        <Field className="span" label="Total paid for this month (₹)">
           <input type="number" min="0.01" step="0.01" required value={amount} onChange={event => onAmount(event.target.value)} />
         </Field>
         <Field label="Payment date">
@@ -52,6 +64,7 @@ export function ChitPaymentForm({
         {mode === "cash_upi" ? <>
           <Field label="Cash amount (₹)"><input type="number" min="0" value={cash} onChange={event => onCash(event.target.value)} /></Field>
           <Field label="UPI amount (₹)"><input type="number" min="0" value={upi} onChange={event => onUpi(event.target.value)} /></Field>
+          <p className={`small span chit-split-total${Math.abs(Number(cash || 0) + Number(upi || 0) - Number(amount || 0)) > 0.001 ? " red" : ""}`} aria-live="polite">Cash {money(Number(cash || 0))} + UPI {money(Number(upi || 0))} = {money(Number(cash || 0) + Number(upi || 0))} of {money(Number(amount || 0))}</p>
         </> : null}
         <Field label="Reference"><input value={reference} onChange={event => onReference(event.target.value)} /></Field>
         <Field className="span" label="Notes"><input value={notes} onChange={event => onNotes(event.target.value)} /></Field>

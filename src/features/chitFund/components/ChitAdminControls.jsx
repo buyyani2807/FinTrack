@@ -100,11 +100,12 @@ function ChitDeleteSchemeControl({ token, scheme, memberCount = 0, onDeleted }) 
     </ConfirmDangerModal>}
   </>;
 }
-export function ChitSchemeHeaderActions({ token, scheme, memberCount, onAddMember, onSchemeDeleted, extra, canWrite = true }) {
-  const canAdd = canWrite && onAddMember && ["draft", "active"].includes(scheme.status) && Number(memberCount) < Number(scheme.member_count || 0);
-  return <div className="row">
+// Same placement for every type: the main lift action, then any type-specific action, then Delete scheme.
+// Adding members lives on the Members tab next to the member list.
+export function ChitSchemeHeaderActions({ token, scheme, memberCount, onSchemeDeleted, primaryAction = null, extra = null, canWrite = true }) {
+  return <div className="row chit-scheme-actions-bar">
+    {primaryAction}
     {extra}
-    {canAdd && <Button className="primary" onClick={onAddMember}>Add member</Button>}
     {canWrite && onSchemeDeleted ? <ChitDeleteSchemeControl token={token} scheme={scheme} memberCount={memberCount} onDeleted={onSchemeDeleted} /> : null}
   </div>;
 }

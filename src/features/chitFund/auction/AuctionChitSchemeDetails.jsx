@@ -1,30 +1,25 @@
 import { useEffect, useState } from "react";
 import { deleteChitInstallmentPayment, loadChitSchemeDetails } from "../../../lib/financeRepository";
 import { CustomerStatementPage } from "../../statements/CustomerStatementPage.jsx";
-import { cycleNumberInRange, enrollmentPortalId, latestInRangeCycle, nextOpenChitMonth, winsForEnrollment } from "../model/liveBidding";
-import { filterPaymentsForMonth, memberPaymentsForEnrollment } from "../model/memberPayments";
+import { cycleNumberInRange, latestInRangeCycle, nextOpenChitMonth, winsForEnrollment } from "../model/liveBidding";
+import { memberPaymentsForEnrollment } from "../model/memberPayments";
 import {
   money,
   formatChitDate,
   enrollmentName,
   nextAvailableTicket,
-  paymentsByMemberName,
 } from "../model/chitFormat.js";
 import { Button, Metric } from "../../../components/ui.jsx";
-import { AccPager } from "../../accounts/components/AccUi.jsx";
-import { usePagedList } from "../../accounts/model/usePagedList.js";
-import { ChitDeletePaymentButton, ChitDeleteMemberControl } from "../components/ChitAdminControls.jsx";
 import { ChitSchemeShell } from "../components/ChitSchemeChrome.jsx";
-import { CHIT_SCHEME_TABS, chitPaymentActionLabel } from "../model/chitSchemeChrome.js";
-import { ChitPaymentStatus, ChitPaymentMonthPicker } from "../components/ChitMemberParts.jsx";
-import { ChitMemberPage, ChitStandingTag } from "../components/ChitMemberPage.jsx";
-import { ChitAddMemberModal, ChitMembersToolbar } from "../components/ChitMemberManagement.jsx";
+import { CHIT_SCHEME_TABS, chitSchemeTabIds } from "../model/chitSchemeChrome.js";
+import { chitLiftTimeline } from "../model/chitSchemeView.js";
+import { ChitMemberPage } from "../components/ChitMemberPage.jsx";
+import { ChitAddMemberModal } from "../components/ChitMemberManagement.jsx";
+import { ChitSchemeMembersTable, ChitSchemeOverview, ChitSchemePaymentsTable, ChitSchemeReports, ChitSectionHead } from "../components/ChitSchemeSections.jsx";
 import { ChitBidModal, ChitPaymentModal } from "./AuctionModals.jsx";
 import { ChitLiveBidding } from "./ChitLiveBidding.jsx";
-import { buildChitSchemeHealth } from "../model/chitSchemeHealth.js";
-import { todayIso } from "../../../lib/dates.js";
 
-function ChitMemberDetails({ token, scheme, enrollment, cycles, bids, installments = [], back, recordPayment, deletePayment, onPortalChange, onDeleted, orgSettings = {}, workspace = {}, onLogReceipt }) {
+function ChitMemberDetails({ token, scheme, enrollment, cycles, bids, installments = [], back, toSchemes, recordPayment, deletePayment, onPortalChange, onDeleted, orgSettings = {}, workspace = {}, onLogReceipt }) {
   const wins = winsForEnrollment(cycles, bids, enrollment.id, scheme.chit_value);
   const [showStatement, setShowStatement] = useState(false);
   const payments = memberPaymentsForEnrollment(installments, enrollment.id).map(item => {
@@ -40,12 +35,11 @@ function ChitMemberDetails({ token, scheme, enrollment, cycles, bids, installmen
     />;
   }
   const win = wins[0];
-  const liftSection = wins.length ? <div className="card spacer"><strong>Lift history</strong><div className="table spacer"><table><thead><tr><th>Lift month</th><th>Discount bid</th><th>Lift amount</th><th>Lift date</th><th>Lift status</th></tr></thead><tbody>{wins.map(row => <tr key={row.month}><td>Month {row.month}</td><td>{money(row.discountBid)}</td><td>{money(row.payoutAmount)}</td><td>{formatChitDate(row.bidDate)}</td><td>{row.status === "Winner" ? "Lifted" : row.status}</td></tr>)}</tbody></table></div></div> : <p className="notice">This member has not been assigned a lift in this scheme.</p>;
+  const lift = win ? { month: win.month, date: win.bidDate, amount: win.payoutAmount, details: [["Discount bid", money(win.discountBid)]] } : null;
   return <ChitMemberPage
     token={token} scheme={scheme} enrollment={enrollment} payments={payments} liveBidding
-    metrics={[["Lift month", win ? `Month ${win.month}` : "Not assigned", "blue"], ["Lift amount", win ? money(win.payoutAmount) : "—", "gold"], ["Discount bid", win ? money(win.discountBid) : "—"]]}
-    liftSection={liftSection}
-    back={back} recordPayment={recordPayment} deletePayment={deletePayment}
+    lift={lift}
+    back={back} toSchemes={toSchemes} recordPayment={recordPayment} deletePayment={deletePayment}
     onPortalChange={onPortalChange} onDeleted={onDeleted} onStatement={() => setShowStatement(true)}
     orgSettings={orgSettings} workspace={workspace} onLogReceipt={onLogReceipt}
   />;
@@ -56,13 +50,12 @@ export function AuctionChitSchemeDetails({ token, scheme, back, tab: routeTab = 
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   // The open tab and member page come from the URL (/chit-fund/schemes/:schemeId/:tab, …/members/:memberId).
-  const tab = ["overview", "members", "bids", "payments", "dividends", "live"].includes(routeTab) ? routeTab : "overview";
+  const tab = chitSchemeTabIds("auction").includes(routeTab) ? routeTab : "overview";
   const setTab = next => onTabChange?.(next);
   const member = memberId ? data.enrollments.find(item => item.id === memberId) || null : null;
   const setMember = next => { const id = next?.id || null; if (id !== memberId) onMemberChange?.(id); };
   const [payment, setPayment] = useState(null);
-  const [paymentMonth, setPaymentMonth] = useState(null);
-  const [bidOpen, setBidOpen] = useState(false);
+  const [bidMonth, setBidMonth] = useState(null);
   const [memberOpen, setMemberOpen] = useState(false);
   const [finalized, setFinalized] = useState(null);
   const refresh = () => loadChitSchemeDetails(token, scheme.id).then(payload => { setData(payload); setError(""); setBusy(false); }).catch(err => { setError(err.message || "Could not load scheme details."); setBusy(false); });
@@ -72,11 +65,9 @@ export function AuctionChitSchemeDetails({ token, scheme, back, tab: routeTab = 
     return () => { ignore = true; };
   }, [scheme.id, token]);
   const current = latestInRangeCycle(data.cycles, scheme.duration_months);
-  const winner = data.enrollments.find(item => item.id === current?.winning_enrollment_id);
+  const nextMonth = nextOpenChitMonth(data.cycles, scheme.duration_months);
   const eligibleForManualBid = data.enrollments.filter(item => !data.bids.some(bid => bid.enrollment_id === item.id && bid.status === "winner"));
   const nextTicket = nextAvailableTicket(data.enrollments, scheme.member_count);
-  const selectedPaymentMonth = paymentMonth ?? Number(current?.cycle_number || 1);
-  const visibleAuctionPayments = paymentsByMemberName(filterPaymentsForMonth(data.installments, selectedPaymentMonth, data.cycles), data.enrollments, data.cycles);
   const openAuctionPayment = item => {
     const owner = data.enrollments.find(row => row.id === item.enrollment_id);
     setPayment({
@@ -85,22 +76,17 @@ export function AuctionChitSchemeDetails({ token, scheme, back, tab: routeTab = 
       memberPhone: owner?.chit_members?.phone || "",
     });
   };
-  const calc = current ? {
-    winningBid: current.winning_bid_amount,
-    discount: current.discount_amount,
-    commission: current.commission_amount,
-    distributable: current.distributable_amount,
-    dividend: current.dividend_per_member,
-  } : null;
-  const schemeHealth = buildChitSchemeHealth({ scheme, details: data, asOf: todayIso() });
-  const health = { collectionRate: schemeHealth.collectionRate ?? null, delayedMembers: schemeHealth.overdueMembers || 0, insights: schemeHealth.insights || [] };
   const remove = async (id, reason) => {
     try { await deleteChitInstallmentPayment(token, id, reason); await refresh(); }
     catch (err) { setError(err.message || "Could not delete payment."); throw err; }
   };
-  const pagedMembers = usePagedList(data.enrollments, `${scheme.id}|${tab}|members`);
-  const pagedPayments = usePagedList(visibleAuctionPayments, `${scheme.id}|${selectedPaymentMonth}|payments`);
-  if (member) return <><ChitMemberDetails token={token} scheme={scheme} enrollment={member} cycles={data.cycles} bids={data.bids} installments={data.installments} back={() => setMember(null)} recordPayment={canWrite ? openAuctionPayment : null} deletePayment={canWrite ? remove : null} orgSettings={orgSettings} workspace={workspace} onLogReceipt={onLogReceipt} onPortalChange={canWrite ? async () => { const details = await loadChitSchemeDetails(token, scheme.id); setData(details); setMember(details.enrollments.find(item => item.id === member.id) || member); } : null} onDeleted={canWrite ? async removed => { setMember(null); setNotice(`${enrollmentName(removed)} was removed from ${scheme.name}.`); await refresh(); } : null} />{payment && canWrite && <ChitPaymentModal token={token} installment={payment} memberName={payment.memberName} memberPhone={payment.memberPhone} scheme={scheme} close={() => setPayment(null)} done={async () => { setPayment(null); await refresh(); }} orgSettings={orgSettings} workspace={workspace} onReceipt={onReceipt} />}</>;
+  const memberRemoved = async removed => { setNotice(`${enrollmentName(removed)} was removed from ${scheme.name}.`); await refresh(); };
+  const commissionAmount = Number(scheme.chit_value || 0) * Number(scheme.commission_percent || 0) / 100;
+  // Months 1…duration in order (pending ones included), then any month recorded outside the scheme length.
+  const timeline = chitLiftTimeline(scheme, data);
+  const outside = data.cycles.filter(cycle => !cycleNumberInRange(cycle.cycle_number, scheme.duration_months));
+  const liftAction = nextMonth && eligibleForManualBid.length ? <Button className="primary" onClick={() => setBidMonth(nextMonth)}>Lift Chit — Month {nextMonth}</Button> : null;
+  if (member) return <><ChitMemberDetails token={token} scheme={scheme} enrollment={member} cycles={data.cycles} bids={data.bids} installments={data.installments} back={() => setMember(null)} toSchemes={back} recordPayment={canWrite ? openAuctionPayment : null} deletePayment={canWrite ? remove : null} orgSettings={orgSettings} workspace={workspace} onLogReceipt={onLogReceipt} onPortalChange={canWrite ? async () => { const details = await loadChitSchemeDetails(token, scheme.id); setData(details); setMember(details.enrollments.find(item => item.id === member.id) || member); } : null} onDeleted={canWrite ? async removed => { setMember(null); setNotice(`${enrollmentName(removed)} was removed from ${scheme.name}.`); await refresh(); } : null} />{payment && canWrite && <ChitPaymentModal token={token} installment={payment} memberName={payment.memberName} memberPhone={payment.memberPhone} scheme={scheme} close={() => setPayment(null)} done={async () => { setPayment(null); await refresh(); }} orgSettings={orgSettings} workspace={workspace} onReceipt={onReceipt} />}</>;
   return <ChitSchemeShell
     scheme={scheme}
     workspace={workspace}
@@ -111,26 +97,47 @@ export function AuctionChitSchemeDetails({ token, scheme, back, tab: routeTab = 
     back={back}
     canWrite={canWrite}
     onAddMember={() => setMemberOpen(true)}
+    liftAction={liftAction}
     onSchemeDeleted={onSchemeDeleted}
-    extra={canWrite && scheme.status === "active" ? <Button className="primary" onClick={() => setTab("live")}>Start live bidding</Button> : null}
+    extra={canWrite && scheme.status === "active" && tab !== "live" ? <Button onClick={() => setTab("live")}>Live bidding</Button> : null}
     token={token}
     error={error}
     notice={notice}
+    onClearError={() => setError("")}
+    onClearNotice={() => setNotice("")}
     busy={busy}
     overlays={<>
-      {canWrite && memberOpen && <ChitAddMemberModal token={token} scheme={scheme} nextTicket={nextTicket} close={() => setMemberOpen(false)} done={async () => { setMemberOpen(false); await refresh(); }} />}
-      {canWrite && bidOpen && <ChitBidModal token={token} scheme={scheme} enrollments={eligibleForManualBid} nextMonth={nextOpenChitMonth(data.cycles, scheme.duration_months) || ""} orgSettings={orgSettings} workspace={workspace} close={() => setBidOpen(false)} done={async toast => { setBidOpen(false); if (toast) setNotice(toast); await refresh(); }} />}
-      {canWrite && payment && <ChitPaymentModal token={token} installment={payment} memberName={payment.memberName} memberPhone={payment.memberPhone} scheme={scheme} close={() => setPayment(null)} done={async () => { setPayment(null); await refresh(); }} orgSettings={orgSettings} workspace={workspace} onReceipt={onReceipt} />}
+      {canWrite && memberOpen && <ChitAddMemberModal token={token} scheme={scheme} nextTicket={nextTicket} close={() => setMemberOpen(false)} done={async () => { setMemberOpen(false); setNotice("Member added."); await refresh(); }} />}
+      {canWrite && bidMonth && <ChitBidModal token={token} scheme={scheme} enrollments={eligibleForManualBid} nextMonth={bidMonth} orgSettings={orgSettings} workspace={workspace} close={() => setBidMonth(null)} done={async toast => { setBidMonth(null); setNotice(toast || "Lift recorded."); await refresh(); }} />}
+      {canWrite && payment && <ChitPaymentModal token={token} installment={payment} memberName={payment.memberName} memberPhone={payment.memberPhone} scheme={scheme} close={() => setPayment(null)} done={async () => { setPayment(null); setNotice("Payment saved."); await refresh(); }} orgSettings={orgSettings} workspace={workspace} onReceipt={onReceipt} />}
     </>}
   >
     {<>
-      {tab === "overview" && <><div className="grid metrics"><Metric label="Chit value" value={money(scheme.chit_value)} color="gold" /><Metric label="Monthly installment" value={money(scheme.installment_amount)} /><Metric label="Current month" value={current ? `Month ${current.cycle_number}` : "Not started"} color="blue" /><Metric label="Latest lift" value={current ? money(current.winning_bid_amount) : "—"} color="gold" /><Metric label="Lift member" value={winner ? enrollmentName(winner) : "—"} color="green" /></div>{calc && <div className="grid metrics"><Metric label="Lift amount" value={money(calc.winningBid)} color="gold" /><Metric label="Discount" value={money(calc.discount)} color="blue" /><Metric label="Commission" value={money(calc.commission)} /><Metric label="Distributable" value={money(calc.distributable)} /><Metric label="Dividend / member" value={money(calc.dividend)} color="green" /></div>}<section className="card spacer" aria-label="AI scheme health"><span className="eyebrow">AI ADVISORY</span><h3>Scheme health</h3><p className="small">Collection rate: {health.collectionRate == null ? "Insufficient payment history" : `${health.collectionRate}%`} · Delayed members: {health.delayedMembers}</p>{health.insights.map(row => <p className="small" key={row.id}><strong>{row.title}:</strong> {row.explanation}</p>)}</section></>}
-      {tab === "members" && <div className="card"><ChitMembersToolbar scheme={scheme} enrollments={data.enrollments} onAddMember={canWrite ? () => setMemberOpen(true) : null} token={token} changed={refresh} /><div className="table spacer"><table><thead><tr><th>Ticket</th><th>Member</th><th>Phone</th><th>Lift</th><th>Portal</th><th></th></tr></thead><tbody>{pagedMembers.items.map(item => { const wins = winsForEnrollment(data.cycles, data.bids, item.id, scheme.chit_value); return <tr key={item.id}><td>{item.ticket_number}</td><td>{enrollmentName(item)}<ChitStandingTag enrollment={item} /></td><td>{item.chit_members?.phone || "—"}</td><td>{wins.length ? `Yes · Month ${wins.map(win => win.month).join(", ")}` : "No"}</td><td>{enrollmentPortalId(item) || "Not enabled"}</td><td><Button onClick={() => setMember(item)}>View details</Button>{canWrite ? <ChitDeleteMemberControl token={token} scheme={scheme} enrollment={item} onDeleted={async removed => { setNotice(`${enrollmentName(removed)} was removed from ${scheme.name}.`); await refresh(); }} /> : null}</td></tr>; })}</tbody></table><AccPager page={pagedMembers.page} pages={pagedMembers.pages} total={pagedMembers.total} from={pagedMembers.from} to={pagedMembers.to} onPage={pagedMembers.setPage} noun="members" />{!data.enrollments.length && <p className="small">No members in this scheme yet.</p>}</div></div>}
-      {tab === "bids" && <div className="card"><div className="toolbar"><strong>Monthly bids</strong>{canWrite && scheme.status === "active" && <Button onClick={() => setBidOpen(true)}>Lift Chit</Button>}</div><p className="small">Each month is stored separately. Recording a new month does not change previous months.</p><div className="table spacer"><table><thead><tr><th>Month</th><th>Bid date</th><th>Lift member</th><th>Lift amount</th><th>Discount</th><th>Commission</th><th>Dividend / member</th></tr></thead><tbody>{data.cycles.map(cycle => { const won = data.enrollments.find(item => item.id === cycle.winning_enrollment_id); const monthLabel = cycleNumberInRange(cycle.cycle_number, scheme.duration_months) ? `Month ${cycle.cycle_number}` : `Month ${cycle.cycle_number} (outside scheme length)`; return <tr key={cycle.id}><td>{monthLabel}</td><td>{formatChitDate(cycle.cycle_date)}</td><td>{won ? `Ticket ${won.ticket_number} · ${enrollmentName(won)}` : "—"}</td><td>{money(cycle.winning_bid_amount)}</td><td>{money(cycle.discount_amount)}</td><td>{money(cycle.commission_amount)}</td><td>{money(cycle.dividend_per_member)}</td></tr>; })}</tbody></table>{!data.cycles.length && <p className="small">No monthly bids recorded yet.</p>}</div></div>}
-      {tab === "payments" && <div className="card"><div className="toolbar"><strong>Payments — Month {selectedPaymentMonth}</strong><ChitPaymentMonthPicker duration={scheme.duration_months} value={selectedPaymentMonth} onChange={setPaymentMonth} /></div><div className="table spacer chit-member-payments"><table><thead><tr><th>Member</th><th>Ticket</th><th>Month</th><th>Due date</th><th>Payment date</th><th>Expected</th><th>Paid</th><th>Balance</th><th>Late fee</th><th>Reference</th><th>Status</th><th></th></tr></thead><tbody>{pagedPayments.items.map(item => { const owner = data.enrollments.find(row => row.id === item.enrollment_id); const cycle = data.cycles.find(row => row.id === item.cycle_id); return <tr key={item.id}><td>{enrollmentName(owner)}</td><td>{owner?.ticket_number || "—"}</td><td>{cycle ? `Month ${cycle.cycle_number}` : "—"}</td><td>{formatChitDate(item.due_date)}</td><td>{formatChitDate(item.paid_date)}</td><td>{money(item.net_amount_due)}</td><td>{money(item.amount_paid)}</td><td className="red">{money(Math.max(0, Number(item.net_amount_due) - Number(item.amount_paid)))}</td><td>{item.late_penalty ? money(item.late_penalty) : "—"}</td><td>{item.payment_reference || "—"}</td><td><ChitPaymentStatus row={item} /></td><td>{canWrite ? <Button onClick={() => openAuctionPayment(item)}>{chitPaymentActionLabel(item.amount_paid)}</Button> : null}{canWrite && item.amount_paid > 0 && <ChitDeletePaymentButton allowed memberName={enrollmentName(owner)} schemeName={scheme.name} amount={money(item.amount_paid)} paidDate={formatChitDate(item.paid_date)} mode={item.payment_mode} reference={item.payment_reference} onConfirm={reason => remove(item.id, reason)} />}</td></tr>; })}</tbody></table><AccPager page={pagedPayments.page} pages={pagedPayments.pages} total={pagedPayments.total} from={pagedPayments.from} to={pagedPayments.to} onPage={pagedPayments.setPage} noun="payments" />{!visibleAuctionPayments.length && <p className="small">No payments are scheduled for Month {selectedPaymentMonth}. Record a monthly bid first to create member installments.</p>}</div></div>}
-      {tab === "dividends" && <div className="card"><strong>Dividends</strong><p className="small">discount = chit value − lift amount · commission = chit value × commission % · distributable = discount − commission · dividend = distributable ÷ members</p><div className="table spacer"><table><thead><tr><th>Month</th><th>Lift amount</th><th>Discount</th><th>Commission</th><th>Distributable</th><th>Dividend / member</th></tr></thead><tbody>{data.cycles.map(cycle => <tr key={cycle.id}><td>Month {cycle.cycle_number}</td><td>{money(cycle.winning_bid_amount)}</td><td>{money(cycle.discount_amount)}</td><td>{money(cycle.commission_amount)}</td><td>{money(cycle.distributable_amount)}</td><td>{money(cycle.dividend_per_member)}</td></tr>)}</tbody></table>{!data.cycles.length && <p className="small">No dividend records yet.</p>}</div></div>}
+      {tab === "overview" && <ChitSchemeOverview
+        scheme={scheme}
+        details={data}
+        commissionText={`${Number(scheme.commission_percent || 0)}% (${money(commissionAmount)})`}
+        typeTitle={current ? `Auction result — Month ${current.cycle_number}` : "Auction result"}
+        typeMetrics={current ? [
+          ["Lift amount", money(current.winning_bid_amount), "gold"],
+          ["Discount bid", money(current.discount_amount), "blue"],
+          ["Commission", money(current.commission_amount)],
+          ["Distributable", money(current.distributable_amount)],
+          ["Dividend / member", money(current.dividend_per_member), "green"],
+        ] : [["Status", "No month lifted yet"]]}
+        typeNote={<p className="small spacer">Live bids start above the {money(commissionAmount)} commission and go up to 30% of the chit value. The highest discount bid wins; the lift amount is the chit value minus that bid, within the scheme's payout limits of {Number(scheme.min_bid_percent)}–{Number(scheme.max_bid_percent)}%.</p>}
+      />}
+      {tab === "members" && <ChitSchemeMembersTable
+        token={token} scheme={scheme} details={data} canWrite={canWrite}
+        onAddMember={() => setMemberOpen(true)} onView={setMember} onDeleted={memberRemoved} changed={refresh}
+        extraColumns={[{ header: "Discount bid", numeric: true, cell: item => { const win = winsForEnrollment(data.cycles, data.bids, item.id, scheme.chit_value)[0]; return win ? money(win.discountBid) : "—"; } }]}
+      />}
+      {tab === "bids" && <div className="card"><ChitSectionHead title="Bids & lifts" note="Each month is stored separately. Recording a month does not change earlier months.">{canWrite && liftAction}</ChitSectionHead><div className="table spacer"><table><thead><tr><th>Month</th><th>Lift date</th><th>Lift member</th><th className="num">Lift amount</th><th className="num">Discount bid</th><th className="num">Commission</th><th className="num">Dividend / member</th><th>Status</th><th><span className="ft-sr-only">Actions</span></th></tr></thead><tbody>{timeline.map(row => { const cycle = row.raw; const won = cycle ? data.enrollments.find(item => item.id === cycle.winning_enrollment_id) : null; return <tr key={row.id}><td>Month {row.month}</td><td>{cycle ? formatChitDate(cycle.cycle_date) : "—"}</td><td>{won ? `Ticket ${won.ticket_number} · ${enrollmentName(won)}` : "—"}</td><td className="num">{cycle ? money(cycle.winning_bid_amount) : "—"}</td><td className="num">{cycle ? money(cycle.discount_amount) : "—"}</td><td className="num">{cycle ? money(cycle.commission_amount) : "—"}</td><td className="num">{cycle ? money(cycle.dividend_per_member) : "—"}</td><td><span className={`badge ${cycle ? "completed" : ""}`}>{cycle ? "Lifted" : row.month === nextMonth ? "Next" : "Pending"}</span></td><td className="chit-row-actions">{canWrite && !cycle && scheme.status === "active" && eligibleForManualBid.length > 0 && <Button onClick={() => setBidMonth(row.month)}>Lift Chit</Button>}</td></tr>; })}{outside.map(cycle => { const won = data.enrollments.find(item => item.id === cycle.winning_enrollment_id); return <tr key={cycle.id}><td>Month {cycle.cycle_number} (outside scheme length)</td><td>{formatChitDate(cycle.cycle_date)}</td><td>{won ? `Ticket ${won.ticket_number} · ${enrollmentName(won)}` : "—"}</td><td className="num">{money(cycle.winning_bid_amount)}</td><td className="num">{money(cycle.discount_amount)}</td><td className="num">{money(cycle.commission_amount)}</td><td className="num">{money(cycle.dividend_per_member)}</td><td><span className="badge completed">Lifted</span></td><td /></tr>; })}</tbody></table>{!timeline.length && !outside.length && <p className="small spacer">No months in this scheme.</p>}</div></div>}
+      {tab === "payments" && <ChitSchemePaymentsTable token={token} scheme={scheme} details={data} canWrite={canWrite} onRecord={openAuctionPayment} onDelete={remove} orgSettings={orgSettings} workspace={workspace} onLogReceipt={onLogReceipt} emptyNote={month => `No installments for Month ${month} yet. They are created when that month's lift is recorded.`} />}
+      {tab === "dividends" && <div className="card"><ChitSectionHead title="Dividends" note="discount = chit value − lift amount · commission = chit value × commission % · distributable = discount − commission · dividend = distributable ÷ members" /><div className="table spacer"><table><thead><tr><th>Month</th><th className="num">Lift amount</th><th className="num">Discount</th><th className="num">Commission</th><th className="num">Distributable</th><th className="num">Dividend / member</th></tr></thead><tbody>{data.cycles.map(cycle => <tr key={cycle.id}><td>Month {cycle.cycle_number}</td><td className="num">{money(cycle.winning_bid_amount)}</td><td className="num">{money(cycle.discount_amount)}</td><td className="num">{money(cycle.commission_amount)}</td><td className="num">{money(cycle.distributable_amount)}</td><td className="num">{money(cycle.dividend_per_member)}</td></tr>)}</tbody></table>{!data.cycles.length && <p className="small spacer">No dividend records yet. Dividends appear once a month's lift is recorded.</p>}</div></div>}
       {tab === "live" && <ChitLiveBidding token={token} scheme={scheme} data={data} orgSettings={orgSettings} workspace={workspace} canWrite={canWrite} onFinalized={async toast => { const details = await loadChitSchemeDetails(token, scheme.id); setData(details); const last = latestInRangeCycle(details.cycles, scheme.duration_months); if (last) setFinalized(last); if (toast) setNotice(toast); }} />}
-      {finalized && <div className="card spacer"><strong>Latest finalized bid</strong><div className="grid metrics"><Metric label="Lift amount" value={money(finalized.winning_bid_amount)} color="gold" /><Metric label="Discount" value={money(finalized.discount_amount)} color="blue" /><Metric label="Commission" value={money(finalized.commission_amount)} /><Metric label="Distributable" value={money(finalized.distributable_amount)} /><Metric label="Dividend / member" value={money(finalized.dividend_per_member)} color="green" /></div></div>}
+      {tab === "reports" && <ChitSchemeReports scheme={scheme} details={data} />}
+      {finalized && tab === "live" && <div className="card spacer"><strong>Latest finalized bid — Month {finalized.cycle_number}</strong><div className="grid metrics"><Metric label="Lift amount" value={money(finalized.winning_bid_amount)} color="gold" /><Metric label="Discount" value={money(finalized.discount_amount)} color="blue" /><Metric label="Commission" value={money(finalized.commission_amount)} /><Metric label="Distributable" value={money(finalized.distributable_amount)} /><Metric label="Dividend / member" value={money(finalized.dividend_per_member)} color="green" /></div></div>}
     </>}
   </ChitSchemeShell>;
 }

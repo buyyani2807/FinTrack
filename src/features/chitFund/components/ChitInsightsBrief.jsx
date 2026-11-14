@@ -3,6 +3,7 @@ import { loadUpcomingChitPayments } from "../../../lib/financeRepository.js";
 import { today } from "../../finance/model/loanState.js";
 import { ModuleInsightsCard } from "../../intelligence/ModuleInsightsCard.jsx";
 import { buildChitIntelligence } from "../model/chitIntelligence.js";
+import { Spinner } from "../../../components/ui.jsx";
 
 export function ChitInsightsBrief({
   schemes = [],
@@ -13,9 +14,11 @@ export function ChitInsightsBrief({
   token,
   asOf,
   onViewMembers,
+  loading = false,
 }) {
   const [nonce, setNonce] = useState(0);
-  const [upcomingRows, setUpcomingRows] = useState([]);
+  // null until the upcoming installments have loaded, so the card never shows zeros that are not real.
+  const [upcomingRows, setUpcomingRows] = useState(null);
 
   useEffect(() => {
     if (!token) return undefined;
@@ -45,13 +48,19 @@ export function ChitInsightsBrief({
         cycles,
         fixedLifts,
         predefinedSchedule,
-        upcomingRows,
+        upcomingRows: upcomingRows || [],
         asOf: asOf || today(),
       });
     } catch {
       return { failed: true };
     }
   }, [schemes, enrollments, cycles, fixedLifts, predefinedSchedule, upcomingRows, asOf, nonce]);
+
+  if (loading || (token && upcomingRows === null)) {
+    return <section className="card module-intel" aria-label="AI chit fund insights" aria-busy="true">
+      <p className="small ft-loading-note"><Spinner size="sm" label="Loading" />Loading chit fund insights…</p>
+    </section>;
+  }
 
   return (
     <ModuleInsightsCard

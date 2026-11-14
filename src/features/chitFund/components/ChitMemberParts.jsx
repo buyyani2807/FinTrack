@@ -7,6 +7,7 @@ import { enrollmentPortalId } from "../model/liveBidding";
 import { chitPaymentDisplayStatus, normalizeMemberPayment } from "../model/memberPayments";
 import { chitTypeLabel, membershipEnrollmentId, portalMemberships } from "../model/memberPortal";
 import { today, money, formatChitDate, enrollmentName, paymentStatusClass } from "../model/chitFormat.js";
+import { chitStatusText } from "../model/chitSchemeView.js";
 import { Button, Field } from "../../../components/ui.jsx";
 import { AccPager } from "../../accounts/components/AccUi.jsx";
 import { usePagedList } from "../../accounts/model/usePagedList.js";
@@ -35,7 +36,7 @@ export function ChitReceiptCell({ source, paymentRow, memberName, memberPhone, s
 }
 export const ChitPaymentStatus = ({ row, asOfDate = today() }) => {
   const status = chitPaymentDisplayStatus(row, asOfDate);
-  return <span className={`badge ${paymentStatusClass(status)}`}>{status}</span>;
+  return <span className={`badge ${paymentStatusClass(status)}`}>{chitStatusText(status)}</span>;
 };
 export const ChitMemberPaymentHistory = ({ title, rows, empty }) => {
   const payments = (rows || []).map(normalizeMemberPayment).sort((a, b) => a.month - b.month);

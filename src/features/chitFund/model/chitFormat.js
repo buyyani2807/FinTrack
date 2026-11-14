@@ -1,4 +1,4 @@
-import { CHIT_TYPES } from "./fixedChit";
+import { CHIT_TYPES } from "./fixedChit.js";
 import { formatInr } from "../../../lib/formatMoney.js";
 
 const indiaCalendarDate = date => {
