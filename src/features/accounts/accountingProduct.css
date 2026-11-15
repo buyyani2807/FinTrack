@@ -8340,7 +8340,8 @@
   .accounts-dashboard .counter-workspace.is-full {
     position: fixed;
     inset: 0;
-    z-index: 35;
+    /* Above page chrome (20), below dialogs (30) so receipts and prompts opened by the page still show. */
+    z-index: 25;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -8389,4 +8390,55 @@
   .accounts-dashboard .counter-workspace.is-full .counter-pay-foot {
     bottom: -16px;
   }
+}
+
+/* ── Counter: camera barcode scan and most-sold label ────────────────────────────────────────── */
+
+.accounts-dashboard .counter-search-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  min-width: 0;
+}
+
+.accounts-dashboard .counter-search-row .counter-search {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.accounts-dashboard .counter-scan-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  border-radius: 14px;
+}
+
+.accounts-dashboard .counter-browse-label {
+  margin: 0;
+  font-weight: 650;
+  color: var(--ft-text-2);
+}
+
+.counter-scan {
+  display: grid;
+  gap: 10px;
+}
+
+.counter-scan-video {
+  width: 100%;
+  max-height: 55vh;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border: 1px solid var(--ft-border);
+  border-radius: 12px;
+  background: var(--ft-showcase-bg);
+}
+
+.counter-scan-status {
+  margin: 0;
+  font-size: var(--ft-type-ui);
+  font-weight: 650;
+  color: var(--ft-text);
 }
