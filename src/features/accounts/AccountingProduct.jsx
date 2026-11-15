@@ -2644,9 +2644,9 @@ const openVoucher = () => {
     }, 0);
   };
 
-  const askReason = (title, confirmLabel, onConfirm) => {
+  const askReason = (title, confirmLabel, onConfirm, label = "Reason") => {
     setReasonText("");
-    setReasonDialog({ title, confirmLabel, onConfirm });
+    setReasonDialog({ title, confirmLabel, onConfirm, label });
   };
 
   const submitReason = () => {
@@ -3407,7 +3407,7 @@ const openVoucher = () => {
       />}
       {reasonDialog && <ReasonModal
         title={reasonDialog.title}
-        label="Reason"
+        label={reasonDialog.label}
         value={reasonText}
         onChange={setReasonText}
         confirmLabel={reasonDialog.confirmLabel}

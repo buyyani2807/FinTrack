@@ -591,6 +591,19 @@ export const queueEinvoicePayload = (token, voucherId, payload) =>
     input_payload: payload,
   }, token));
 
+export const queueEwaybillPayload = (token, voucherId, payload) =>
+  wrap(accRpc("acc_queue_ewaybill_payload", {
+    input_voucher_id: voucherId,
+    input_payload: payload,
+  }, token));
+
+export const recordEwaybillNumber = (token, voucherId, ebn, validUntil = null) =>
+  wrap(accRpc("acc_record_ewaybill_number", {
+    input_voucher_id: voucherId,
+    input_ebn: ebn,
+    input_valid_until: validUntil,
+  }, token));
+
 export const setVoucherDueDate = (token, id, dueDate) =>
   ignoreMissing(accRpc("acc_set_voucher_due", {
     input_voucher_id: id,

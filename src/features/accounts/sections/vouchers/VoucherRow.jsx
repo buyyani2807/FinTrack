@@ -1,5 +1,7 @@
-import { cancelVoucher, queueEinvoicePayload, reverseVoucher } from "../../data/accountingRepository.js";
-import { buildEinvoiceOutboundPayload } from "../../io/gstPrepExport.js";
+import { useState } from "react";
+import { cancelVoucher, queueEinvoicePayload, queueEwaybillPayload, recordEwaybillNumber, reverseVoucher } from "../../data/accountingRepository.js";
+import { Field, Modal } from "../../components/AccUi.jsx";
+import { buildEinvoiceOutboundPayload, buildEwayBillOutboundPayload } from "../../io/gstPrepExport.js";
 import { attachmentDownloadHref, VOUCHER_ATTACHMENT_MAX_BYTES } from "../../data/voucherAttachments.js";
 import { VOUCHER_TYPES, voucherTotals } from "../../model/accountingModel.js";
 import { todayIso } from "../../../../lib/dates.js";
@@ -54,6 +56,7 @@ export function VoucherExpandPanel({
   saving,
   run,
   token,
+  askReason,
   shownVouchers,
   showAdjacentVoucher,
   parties,
@@ -68,7 +71,24 @@ export function VoucherExpandPanel({
   onDeleteAttachment,
 }) {
   const party = parties.find(item => item.id === voucher.partyId) || null;
+  const [transportDraft, setTransportDraft] = useState(null);
+  const openTransportDraft = () => setTransportDraft({ vehicleNumber: "", transporterName: "", transporterId: "", transMode: "1", transDistance: "", transDocNo: "" });
+  const generateEwayBill = transport => run(async () => {
+    const payload = buildEwayBillOutboundPayload({ voucher, party, company: activeCompany, workspace, transport });
+    await queueEwaybillPayload(token, voucher.id, payload);
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `fintrack-ewaybill-payload-${voucher.voucherNumber || voucher.id}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setTransportDraft(null);
+  }, transport
+    ? "E-way bill payload prepared (not submitted) with Part B, and downloaded. Upload it on the portal, then record the e-way bill number here once you have it."
+    : "E-way bill payload prepared (not submitted) and downloaded. Add Part B on the portal, then record the e-way bill number here once you have it.");
   return (
+    <>
     <div className="acc-tx-detail">
       <div className="acc-voucher-nav">
         <button type="button" className="btn" disabled={shownVouchers.findIndex(item => item.id === voucher.id) <= 0} onClick={() => showAdjacentVoucher(voucher.id, -1)}>Previous</button>
@@ -111,6 +131,26 @@ export function VoucherExpandPanel({
               }, "E-invoice payload queued (not submitted) and downloaded.")}
             >
               Queue e-invoice payload
+            </button>
+          )}
+          {canWrite && activeCompany?.gstRegistration === "regular" && (
+            <button type="button" className="btn" disabled={saving} onClick={openTransportDraft}>
+              Prepare e-way bill JSON
+            </button>
+          )}
+          {canWrite && activeCompany?.gstRegistration === "regular" && askReason && (
+            <button
+              type="button"
+              className="btn"
+              disabled={saving}
+              onClick={() => askReason(
+                "Record e-way bill number",
+                "Save",
+                ebn => run(() => recordEwaybillNumber(token, voucher.id, ebn), "E-way bill number recorded."),
+                "E-way bill number (EBN)",
+              )}
+            >
+              Record e-way bill number
             </button>
           )}
         </div>
@@ -169,5 +209,33 @@ export function VoucherExpandPanel({
         </ul>
       </div>
     </div>
+    {transportDraft && (
+      <Modal
+        title="E-way bill: vehicle and transporter (Part B)"
+        close={() => !saving && setTransportDraft(null)}
+        actions={<div className="tabs spacer">
+          <button type="button" className="btn" disabled={saving} onClick={() => generateEwayBill(null)}>Skip Part B, prepare anyway</button>
+          <button type="button" className="btn primary" disabled={saving} onClick={() => generateEwayBill(transportDraft)}>Generate e-way bill JSON</button>
+        </div>}
+      >
+        <p className="copy">Optional. Fill these in if you have them now — the government portal also lets you add or change them later, before the e-way bill is valid for movement.</p>
+        <div className="form">
+          <Field className="span" label="Vehicle number"><input placeholder="e.g. KA01AB1234" value={transportDraft.vehicleNumber} onChange={event => setTransportDraft(current => ({ ...current, vehicleNumber: event.target.value }))} /></Field>
+          <Field label="Transporter name"><input value={transportDraft.transporterName} onChange={event => setTransportDraft(current => ({ ...current, transporterName: event.target.value }))} /></Field>
+          <Field label="Transporter ID (GSTIN, if any)"><input value={transportDraft.transporterId} onChange={event => setTransportDraft(current => ({ ...current, transporterId: event.target.value }))} /></Field>
+          <Field label="Mode of transport">
+            <select value={transportDraft.transMode} onChange={event => setTransportDraft(current => ({ ...current, transMode: event.target.value }))}>
+              <option value="1">Road</option>
+              <option value="2">Rail</option>
+              <option value="3">Air</option>
+              <option value="4">Ship</option>
+            </select>
+          </Field>
+          <Field label="Approx. distance (km)"><input type="number" min="0" value={transportDraft.transDistance} onChange={event => setTransportDraft(current => ({ ...current, transDistance: event.target.value }))} /></Field>
+          <Field label="Transport document number"><input value={transportDraft.transDocNo} onChange={event => setTransportDraft(current => ({ ...current, transDocNo: event.target.value }))} /></Field>
+        </div>
+      </Modal>
+    )}
+    </>
   );
 }
