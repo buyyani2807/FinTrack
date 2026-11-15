@@ -8235,3 +8235,158 @@
     padding-bottom: 4px;
   }
 }
+
+/* ── Counter: item finder list, pinned total, full-screen till ───────────────────────────────── */
+
+/* The finder lists items from the top of the panel instead of centring a prompt in empty space. */
+.accounts-dashboard .counter-browse {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  min-width: 0;
+  min-height: 0;
+}
+
+.accounts-dashboard .counter-browse-hint {
+  margin: 0;
+  color: var(--ft-text-3);
+}
+
+.accounts-dashboard .counter-browse .counter-category-chips {
+  justify-content: flex-start;
+  max-width: none;
+  margin-top: 0;
+}
+
+.accounts-dashboard .counter-browse-list {
+  grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+}
+
+.accounts-dashboard .counter-item-per {
+  font-size: var(--ft-type-caption);
+  font-weight: 500;
+  color: var(--ft-text-3);
+}
+
+.accounts-dashboard .counter-item-out {
+  justify-self: start;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--ft-warning-soft);
+  color: var(--ft-warning);
+  font-size: var(--ft-type-micro);
+  font-weight: 650;
+}
+
+.accounts-dashboard .counter-charge-reason {
+  margin: 0;
+  color: var(--ft-warning);
+}
+
+/* Function-key hints mean nothing on a touch screen. */
+@media (hover: none) and (pointer: coarse) {
+  .accounts-dashboard .counter-keys-hint,
+  .accounts-dashboard .counter-kbd {
+    display: none;
+  }
+}
+
+/* Phone keeps its own sticky pay bar; the foot wrapper does nothing there. */
+.accounts-dashboard .counter-pay-foot {
+  display: contents;
+}
+
+.accounts-dashboard .counter-full-toggle {
+  display: none;
+}
+
+@media (min-width: 721px) {
+  /* Total and Charge stay on screen together; checkout fields scroll behind them. */
+  .accounts-dashboard .counter-pay-foot {
+    display: grid;
+    gap: 10px;
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    margin-inline: -16px;
+    margin-bottom: -16px;
+    padding: 10px 16px 16px;
+    border-top: 1px solid var(--ft-border);
+    border-radius: 0 0 16px 16px;
+    background: var(--ft-surface);
+  }
+
+  .accounts-dashboard .counter-pay-foot .counter-totals {
+    position: static;
+    margin-top: 0;
+  }
+
+  /* The note sits under the pinned foot in source order; keep it clear of the negative margin. */
+  .accounts-dashboard .counter-pay-foot + .counter-pay-note {
+    display: none;
+  }
+}
+
+@media (min-width: 1101px) {
+  .accounts-dashboard .counter-full-toggle {
+    display: inline-flex;
+  }
+
+  html.counter-till-full {
+    overflow: hidden;
+  }
+
+  /* Full-screen till: covers the sidebar and the Accounts header, three panels fill the window. */
+  .accounts-dashboard .counter-workspace.is-full {
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px 16px;
+    overflow: auto;
+    background: var(--ft-bg);
+  }
+
+  .accounts-dashboard .counter-workspace.is-full > * {
+    flex: 0 0 auto;
+  }
+
+  .accounts-dashboard .counter-workspace.is-full .counter-head {
+    padding: 8px 14px;
+    align-items: center;
+  }
+
+  .accounts-dashboard .counter-workspace.is-full .counter-eyebrow {
+    display: none;
+  }
+
+  .accounts-dashboard .counter-workspace.is-full .counter-head-main {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 16px;
+  }
+
+  .accounts-dashboard .counter-workspace.is-full .counter-grid {
+    flex: 1 1 0;
+    min-height: 24rem;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(300px, 0.85fr);
+  }
+
+  .accounts-dashboard .counter-workspace.is-full .counter-panel.card {
+    min-height: 0;
+    overflow: auto;
+  }
+
+  .accounts-dashboard .counter-workspace.is-full .counter-item-list,
+  .accounts-dashboard .counter-workspace.is-full .counter-line-list {
+    max-height: none;
+  }
+
+  /* The panel scrolls here, so the foot sits on the panel's bottom edge, over its padding. */
+  .accounts-dashboard .counter-workspace.is-full .counter-pay-foot {
+    bottom: -16px;
+  }
+}

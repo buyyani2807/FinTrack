@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, Trash2, Pause, Play, Plus, ShoppingCart, RotateCcw, Landmark, ScrollText, Star, History, Share2, MessageCircleQuestion } from "lucide-react";
+import { Search, Trash2, Pause, Play, Plus, ShoppingCart, RotateCcw, Landmark, ScrollText, Star, History, Share2, MessageCircleQuestion, Maximize2, Minimize2 } from "lucide-react";
 import { Select } from "../../../components/Select.jsx";
 import { money } from "../accountsFormat.js";
 import { formatIstTime, todayIso } from "../../../lib/dates.js";
@@ -127,6 +127,11 @@ function billTotal(voucher) {
  * Retail Counter (POS) — Phase 2: holds, history/void, day-close, shortcuts.
  * Charge posts into the same Accounts sale vouchers + stock.
  */
+const TILL_FULL_KEY = "ft.counter.tillFull";
+
+/** Per-unit price text for the item finder, e.g. "/ Bag". Services have no stock unit. */
+const itemUnitLabel = item => (item.itemType === "service" ? "" : item.unit || "Nos");
+
 export function CounterWorkspace({
   token,
   canWrite = false,
@@ -188,6 +193,21 @@ export function CounterWorkspace({
   const [error, setError] = useState("");
   const [lastBill, setLastBill] = useState(null);
   const [panel, setPanel] = useState("bill"); // bill | today | close | report
+  // Full-screen till: hides the sidebar and Accounts header on this device. Laptop and desktop only (CSS).
+  const [tillFull, setTillFull] = useState(() => {
+    try { return window.localStorage.getItem(TILL_FULL_KEY) === "1"; } catch { return false; }
+  });
+  const toggleTillFull = () => setTillFull(current => {
+    const next = !current;
+    try { window.localStorage.setItem(TILL_FULL_KEY, next ? "1" : "0"); } catch { /* private mode */ }
+    return next;
+  });
+  useEffect(() => {
+    if (!tillFull || !canWrite) return undefined;
+    const root = document.documentElement;
+    root.classList.add("counter-till-full");
+    return () => root.classList.remove("counter-till-full");
+  }, [tillFull, canWrite]);
   const [openingFloat, setOpeningFloat] = useState("");
   const [countedCash, setCountedCash] = useState("");
   const [closeReason, setCloseReason] = useState("");
@@ -567,6 +587,27 @@ export function CounterWorkspace({
       })
       .slice(0, 40);
   }, [workingItems, categoryFilter, categoryNameById]);
+  // With no search text the finder lists the chosen category, or the first items of the catalog.
+  const browseItems = useMemo(() => {
+    if (categoryFilter) return categoryItems;
+    return (workingItems || []).filter(item => item.isActive !== false).slice(0, 40);
+  }, [categoryFilter, categoryItems, workingItems]);
+  // Why Charge is off, in the same order the button checks.
+  const chargeBlockReason = !lines.length || busy || saving
+    ? ""
+    : closed
+      ? "Today’s till is closed."
+      : offlineBlock.blocked
+        ? offlineBlock.reason || "Sync the offline bills before charging again."
+        : !workingAccounts.length
+          ? "Catalog is not ready. Connect once online to cache the till."
+          : creditAdvice?.level === "block"
+            ? "This customer’s khata is blocked for new credit."
+            : blockOversell && oversellLines.length > 0
+              ? "Fix the short stock lines to charge."
+              : cashTenderMissing
+                ? `Enter cash tendered of ${money(totals.total)} or more to charge.`
+                : "";
   const expectedCash = useMemo(() => {
     // Drawer cash = opening float + cash portion of Counter tenders (not full Cash+UPI bills).
     const cashSales = todayCloseReport.tender.cash;
@@ -1300,7 +1341,7 @@ export function CounterWorkspace({
   }
 
   return (
-    <div className="acc-panel counter-workspace">
+    <div className={`acc-panel counter-workspace${tillFull ? " is-full" : ""}`}>
       {pinPrompt ? (
         <SupervisorPinDialog
           title={pinPrompt.title}
@@ -1346,6 +1387,16 @@ export function CounterWorkspace({
           </div>
         </div>
         <div className="counter-head-actions">
+          <button
+            type="button"
+            className={`btn counter-full-toggle${tillFull ? " primary" : ""}`}
+            aria-pressed={tillFull}
+            onClick={toggleTillFull}
+          >
+            {tillFull ? <Minimize2 size={16} aria-hidden="true" /> : <Maximize2 size={16} aria-hidden="true" />}
+            {" "}
+            {tillFull ? "Exit full screen" : "Full screen"}
+          </button>
           <button
             type="button"
             className={`btn${askOpen ? " primary" : ""}`}
@@ -1847,10 +1898,11 @@ export function CounterWorkspace({
               </p>
             </div>
           ) : !String(query || "").trim() ? (
-            <div className="counter-empty-stage">
-              <Search size={28} aria-hidden="true" className="counter-empty-icon" />
-              <p className="counter-empty-title">Scan or search to start</p>
-              <p className="small">Barcode, SKU, brand, or name — Enter adds. Esc clears · Hold F4 · Charge F9.</p>
+            <div className="counter-browse">
+              <p className="small counter-browse-hint">
+                Barcode, SKU, brand, or name — Enter adds.
+                <span className="counter-keys-hint"> Esc clears · Hold F4 · Charge F9.</span>
+              </p>
               {categoryChips.length ? (
                 <div className="counter-category-chips" role="list" aria-label="Categories">
                   {categoryChips.map(label => (
@@ -1866,21 +1918,26 @@ export function CounterWorkspace({
                   ))}
                 </div>
               ) : null}
-              {categoryFilter && categoryItems.length ? (
-                <ul className="counter-item-list counter-category-list">
-                  {categoryItems.map(item => {
+              {browseItems.length ? (
+                <ul className="counter-item-list counter-browse-list">
+                  {browseItems.map(item => {
                     const stock = Number(stockByItem[item.id] ?? 0);
                     const low = item.itemType !== "service" && stock <= 0;
+                    const unit = itemUnitLabel(item);
                     return (
                       <li key={item.id} className={`counter-item${low ? " is-low" : ""}`}>
                         <div className="counter-item-copy">
                           <span className="counter-item-name">{item.name}</span>
                           <span className="small">
-                            {[item.sku || "No SKU", item.itemType !== "service" ? `Stock ${stock}` : ""].filter(Boolean).join(" · ")}
+                            {[item.sku ? `SKU ${item.sku}` : "No SKU", unit ? `Stock ${stock} ${unit}` : ""].filter(Boolean).join(" · ")}
                           </span>
+                          {low ? <span className="counter-item-out">Out of stock</span> : null}
                         </div>
-                        <strong className="counter-item-price">{money(item.sellingPrice || 0)}</strong>
-                        <button type="button" className="btn counter-item-add" onClick={() => addItem(item)}>
+                        <strong className="counter-item-price">
+                          {money(item.sellingPrice || 0)}
+                          {unit ? <span className="counter-item-per"> / {unit}</span> : null}
+                        </strong>
+                        <button type="button" className="btn counter-item-add" onClick={() => addItem(item)} aria-label={`Add ${item.name} to bill`}>
                           <Plus size={16} aria-hidden="true" /> Add
                         </button>
                       </li>
@@ -1919,14 +1976,18 @@ export function CounterWorkspace({
                       <span className="small">
                         {[
                           item.brand,
-                          item.sku || "No SKU",
+                          item.sku ? `SKU ${item.sku}` : "No SKU",
                           item.batchNo ? `Batch ${item.batchNo}` : "",
                           itemExpiryStatus(item.expiryDate, { today }).label,
-                          item.itemType !== "service" ? `Stock ${stock}` : "",
+                          itemUnitLabel(item) ? `Stock ${stock} ${itemUnitLabel(item)}` : "",
                         ].filter(Boolean).join(" · ")}
                       </span>
+                      {low ? <span className="counter-item-out">Out of stock</span> : null}
                     </div>
-                    <strong className="counter-item-price">{money(item.sellingPrice || 0)}</strong>
+                    <strong className="counter-item-price">
+                      {money(item.sellingPrice || 0)}
+                      {itemUnitLabel(item) ? <span className="counter-item-per"> / {itemUnitLabel(item)}</span> : null}
+                    </strong>
                     <button
                       type="button"
                       className={`btn counter-fav-toggle${fav ? " is-on" : ""}`}
@@ -2275,6 +2336,7 @@ export function CounterWorkspace({
             </p>
           ) : null}
 
+          <div className="counter-pay-foot">
           <div className="counter-totals">
             {discountOff > 0 ? (
               <div className="counter-discount-row">
@@ -2318,6 +2380,8 @@ export function CounterWorkspace({
                 : `${tillMode === "return" ? "Refund" : settlement === "credit" ? "Post khata" : online ? "Charge" : "Charge offline"} ${money(totals.total)}`}
             </button>
           </div>
+          {chargeBlockReason ? <p className="small counter-charge-reason" role="status">{chargeBlockReason}</p> : null}
+          </div>
           <p className="small counter-pay-note">
             {settlement === "credit"
               ? "Khata posts to the customer ledger."
@@ -2331,6 +2395,7 @@ export function CounterWorkspace({
           <div className="counter-mobile-paybar-total">
             <span className="small">{tillMode === "return" ? "Refund" : "Due"}</span>
             <strong>{money(totals.total)}</strong>
+            {chargeBlockReason ? <span className="small counter-charge-reason">{chargeBlockReason}</span> : null}
           </div>
           <button
             type="button"
