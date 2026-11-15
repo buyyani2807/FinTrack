@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Counter theme preview</title>
+  <link rel="stylesheet" href="/src/styles/colors.css" />
+  <link rel="stylesheet" href="/src/styles/fonts.css" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--ft-font);
+      background: var(--ft-bg);
+      color: var(--ft-text);
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 220px 1fr;
+    }
+    .nav {
+      background: var(--ft-sidebar-bg);
+      color: var(--ft-sidebar-text);
+      padding: 24px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border-right: 1px solid var(--ft-sidebar-line);
+    }
+    .brand {
+      color: var(--ft-sidebar-text-strong);
+      font-family: var(--ft-font-brand);
+      font-weight: 700;
+      font-size: var(--ft-type-title);
+      letter-spacing: var(--ft-tracking-tight);
+      margin: 0 0 18px;
+    }
+    .nav button {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      text-align: left;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font: 600 var(--ft-type-secondary)/var(--ft-leading-tight) var(--ft-font);
+    }
+    .nav button.is-active {
+      background: var(--ft-sidebar-chip);
+      color: var(--ft-sidebar-text-strong);
+    }
+    .main { padding: 20px 24px 32px; min-width: 0; }
+    .head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    .eyebrow {
+      margin: 0;
+      font-size: var(--ft-type-label);
+      letter-spacing: var(--ft-tracking-label);
+      text-transform: uppercase;
+      color: var(--ft-text-3);
+    }
+    h1 {
+      margin: 4px 0 0;
+      font-size: var(--ft-type-page);
+      line-height: var(--ft-leading-tight);
+      letter-spacing: var(--ft-tracking-tight);
+      font-weight: 700;
+    }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .chip, .btn {
+      border: 1px solid var(--ft-border);
+      background: var(--ft-surface);
+      color: var(--ft-text);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font: 600 var(--ft-type-label)/1.2 var(--ft-font);
+    }
+    .btn.primary {
+      background: var(--ft-primary);
+      border-color: var(--ft-primary);
+      color: var(--ft-on-primary);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(260px, 0.9fr);
+      gap: 12px;
+      align-items: start;
+    }
+    .card {
+      background: var(--ft-surface);
+      border: 1px solid var(--ft-border);
+      border-radius: 10px;
+      padding: 14px;
+      min-width: 0;
+    }
+    .checkout {
+      box-shadow: 0 10px 28px color-mix(in srgb, var(--ft-text) 12%, transparent);
+    }
+    .panel-title {
+      margin: 0 0 10px;
+      font-size: var(--ft-type-ui);
+      font-weight: 700;
+    }
+    .search {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      border: 1px solid var(--ft-input-border);
+      background: var(--ft-surface-muted);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+    }
+    .search input, .field input, .field select {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: var(--ft-text);
+      font: 500 var(--ft-type-ui)/1.2 var(--ft-font);
+      outline: none;
+    }
+    .field {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .field label {
+      font-size: var(--ft-type-label);
+      letter-spacing: var(--ft-tracking-label);
+      text-transform: uppercase;
+      color: var(--ft-text-3);
+    }
+    .field .box {
+      border: 1px solid var(--ft-input-border);
+      background: var(--ft-surface-muted);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .item, .line {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 0;
+      border-top: 1px solid var(--ft-divider);
+    }
+    .item:first-of-type, .line:first-of-type { border-top: 0; }
+    .name { font-weight: 650; font-size: var(--ft-type-secondary); }
+    .meta { color: var(--ft-text-3); font-size: var(--ft-type-caption); }
+    .amount {
+      font-variant-numeric: var(--ft-numeric);
+      font-weight: 700;
+      font-size: var(--ft-type-ui);
+    }
+    .qty {
+      width: 4.5rem;
+      border: 1px solid var(--ft-input-border);
+      background: var(--ft-surface-muted);
+      border-radius: 8px;
+      padding: 8px;
+      font-variant-numeric: var(--ft-numeric);
+      font: 600 var(--ft-type-ui)/1.2 var(--ft-font);
+      color: var(--ft-text);
+    }
+    .totals { display: grid; gap: 8px; margin: 12px 0; }
+    .totals div {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: var(--ft-type-secondary);
+      color: var(--ft-text-2);
+    }
+    .totals .due {
+      color: var(--ft-text);
+      font-size: var(--ft-type-card);
+      font-weight: 700;
+    }
+    .totals .due strong, .totals span:last-child {
+      font-variant-numeric: var(--ft-numeric);
+    }
+    .charge {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 8px;
+      border: 0;
+      background: var(--ft-primary);
+      color: var(--ft-on-primary);
+      font: 700 var(--ft-type-ui)/1.2 var(--ft-font);
+    }
+    @media (max-width: 1100px) {
+      .grid { grid-template-columns: 1fr 1fr; }
+      .checkout { grid-column: 1 / -1; }
+    }
+    @media (max-width: 720px) {
+      body { grid-template-columns: 1fr; }
+      .nav { display: none; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <aside class="nav" aria-label="Sidebar">
+    <p class="brand">FinTrack</p>
+    <button type="button">Dashboard</button>
+    <button type="button">Daily Finance</button>
+    <button type="button" class="is-active">Accounts</button>
+    <button type="button">Ask FinTrack</button>
+  </aside>
+  <main class="main">
+    <header class="head">
+      <div>
+        <p class="eyebrow">Point of sale</p>
+        <h1>Counter</h1>
+      </div>
+      <div class="chips">
+        <span class="chip">Till · Till 1</span>
+        <span class="chip">Cashier · Priya</span>
+        <button type="button" class="btn" id="themeBtn">Dark</button>
+      </div>
+    </header>
+    <div class="grid">
+      <section class="card">
+        <h2 class="panel-title">Find items</h2>
+        <div class="search"><input value="toor" readonly aria-label="Search" /></div>
+        <div class="item">
+          <div>
+            <div class="name">Toor Dal</div>
+            <div class="meta">TD-1 · Stock 210 Kg</div>
+          </div>
+          <strong class="amount">₹125</strong>
+          <button type="button" class="btn primary">Add</button>
+        </div>
+        <div class="item">
+          <div>
+            <div class="name">Chana Dal</div>
+            <div class="meta">CD-1 · Stock 98 Kg</div>
+          </div>
+          <strong class="amount">₹150</strong>
+          <button type="button" class="btn">Add</button>
+        </div>
+      </section>
+      <section class="card">
+        <h2 class="panel-title">Bill · 2 lines</h2>
+        <div class="line">
+          <div>
+            <div class="name">Toor Dal</div>
+            <div class="meta">₹125 / Kg</div>
+          </div>
+          <input class="qty" value="9" readonly aria-label="Qty" />
+          <strong class="amount">₹1,125</strong>
+        </div>
+        <div class="line">
+          <div>
+            <div class="name">Chana Dal</div>
+            <div class="meta">₹150 / Kg</div>
+          </div>
+          <input class="qty" value="4" readonly aria-label="Qty" />
+          <strong class="amount">₹600</strong>
+        </div>
+      </section>
+      <section class="card checkout">
+        <h2 class="panel-title">Checkout</h2>
+        <div class="field">
+          <label>Settlement</label>
+          <div class="box"><input value="Paid now" readonly /></div>
+        </div>
+        <div class="field">
+          <label>Customer</label>
+          <div class="box"><input value="Cash (walk-in)" readonly /></div>
+        </div>
+        <div class="field">
+          <label>Cash tendered</label>
+          <div class="box"><input value="2000" readonly /></div>
+        </div>
+        <div class="totals">
+          <div><span>Taxable</span><span>₹1,725</span></div>
+          <div class="due"><span>Total due</span><strong>₹1,725</strong></div>
+          <div><span>Change</span><span>₹275</span></div>
+        </div>
+        <button type="button" class="charge">Charge ₹1,725</button>
+      </section>
+    </div>
+  </main>
+  <script>
+    const root = document.documentElement;
+    const btn = document.getElementById("themeBtn");
+    btn.addEventListener("click", () => {
+      const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      root.setAttribute("data-theme", next);
+      btn.textContent = next === "dark" ? "Light" : "Dark";
+    });
+  </script>
+</body>
+</html>

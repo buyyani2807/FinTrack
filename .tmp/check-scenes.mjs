@@ -1,0 +1,11 @@
+import { readFileSync, existsSync, readdirSync } from "node:fs";
+const src = readFileSync("src/features/marketing/ProductPreview.jsx", "utf8");
+const shotsBlock = src.slice(src.indexOf("const SHOTS"), src.indexOf("const FEATURE_SCENE"));
+const shots = [...shotsBlock.matchAll(/^\s+"?([a-z-]+)"?:/gm)].map(m => m[1]);
+const { FEATURES } = await import("../src/features/marketing/catalog.js");
+const { sceneForFeature } = await import("data:text/javascript," + encodeURIComponent(src.replace(/export function ProductPreview[\s\S]*$/, "")));
+const missing = shots.filter(name => !existsSync(`public/product/${name}.webp`));
+const unused = readdirSync("public/product").map(f => f.replace(".webp", "")).filter(n => !shots.includes(n));
+const bad = FEATURES.filter(f => !shots.includes(sceneForFeature(f)));
+console.log({ shots: shots.length, features: FEATURES.length, missing, unused, bad: bad.map(f => f.slug) });
+console.log(FEATURES.map(f => `${f.slug} -> ${sceneForFeature(f)}`).join("\n"));

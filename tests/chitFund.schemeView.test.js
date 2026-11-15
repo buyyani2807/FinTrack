@@ -191,3 +191,18 @@ test("scheme forms share one structure: Scheme details, the type's terms, then C
     assert.match(body, /<FormFooter/, name);
   }
 });
+
+test("add member shows the saved profile the server will reuse for a mobile number", async () => {
+  const { findSavedChitMember } = await import("../src/features/chitFund/model/chitSchemeView.js");
+  const members = [
+    { id: "new", full_name: "Later Copy", phone: "+91 91607 10101", created_at: "2026-11-10T00:00:00Z" },
+    { id: "old", full_name: "Amogha", phone: "9160710101", address: "Hyd", created_at: "2026-10-01T00:00:00Z" },
+  ];
+  assert.equal(findSavedChitMember(members, "9160710101")?.id, "old");
+  assert.equal(findSavedChitMember(members, "91607-10101")?.id, "old");
+  assert.equal(findSavedChitMember(members, "91607"), null); // under 8 digits: server creates a new profile
+  assert.equal(findSavedChitMember(members, "9999999999"), null);
+  const modal = read("src/features/chitFund/components/ChitMemberManagement.jsx");
+  assert.match(modal, /findSavedChitMember\(savedMembers, f\.phone\)/);
+  assert.match(modal, /already saved as/);
+});

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    :root { --sidebar:#191919; --bg:#f4f5f7; --surface:#fff; --text:#191919; --muted:#666; --border:#e8e8e8; --primary:#217d73; --font:Inter,system-ui,sans-serif; }
+    *{box-sizing:border-box} body{margin:0;width:2720px;height:1720px;overflow:hidden;font-family:var(--font);background:var(--bg);color:var(--text);display:grid;grid-template-columns:256px 1fr}
+    .nav{background:var(--sidebar);color:rgba(255,255,255,.7);padding:28px 16px;display:flex;flex-direction:column;gap:8px}
+    .brand{color:#fff;font-weight:800;letter-spacing:.08em;font-size:18px;margin:8px 12px 28px}.brand span{color:rgba(255,255,255,.55);font-weight:600}
+    .nav button{display:flex;width:100%;border:0;background:transparent;color:inherit;text-align:left;padding:12px 14px;border-radius:10px;font:600 15px/1.2 var(--font)}
+    .nav button.active{background:var(--primary);color:#fff}.nav .spacer{flex:1}.nav .foot{padding:16px 14px;border-top:1px solid rgba(255,255,255,.08);font-size:13px}
+    .main{padding:36px 44px;display:grid;gap:18px;align-content:start}
+    h1{margin:0;font-size:36px;letter-spacing:-.04em}
+    .meta{color:var(--muted);font-size:13px}
+    .tabs{display:flex;gap:4px;border-bottom:1px solid var(--border)}
+    .tab{padding:12px 14px;border:0;background:transparent;color:var(--muted);font:600 14px/1.2 var(--font);border-bottom:2px solid transparent;margin-bottom:-1px}
+    .tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+    .sub{display:flex;gap:8px;margin-top:8px}
+    .pill{padding:8px 14px;border-radius:999px;border:1px solid transparent;background:transparent;color:var(--muted);font:600 13px/1.2 var(--font)}
+    .pill.active{background:rgba(41,157,145,.1);border-color:rgba(41,157,145,.35);color:var(--primary)}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px}
+    table{width:100%;border-collapse:collapse;font-size:14px}
+    th{text-align:left;color:var(--muted);font-size:12px;padding:10px 8px;border-bottom:1px solid var(--border)}
+    td{padding:14px 8px;border-bottom:1px solid #f3f3f3}
+    .btn{display:inline-flex;min-height:40px;padding:8px 16px;border:1px solid var(--border);border-radius:10px;background:var(--surface);font:600 14px/1.2 var(--font)}
+    .btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+    .status{display:inline-flex;padding:4px 8px;border-radius:999px;background:#eef8f5;color:var(--primary);font:600 12px/1 var(--font)}
+  </style>
+</head>
+<body>
+  <aside class="nav">
+    <div class="brand">MyFin<span>Tracker</span></div>
+    <button type="button">Dashboard</button>
+    <button type="button">Daily Finance</button>
+    <button type="button">Monthly Finance</button>
+    <button type="button">Chit Fund</button>
+    <button type="button">Cashbook</button>
+    <button type="button" class="active">Accounts</button>
+    <div class="spacer"></div>
+    <div class="foot">Shiva Traders<br/>Owner workspace</div>
+  </aside>
+  <main class="main">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h1>Accounts</h1>
+      <button class="btn primary" type="button">New quotation</button>
+    </div>
+    <div class="meta">Shiva Traders · FY 2026–27 · Period 1 Apr 2026 – 31 Mar 2027</div>
+    <div class="tabs">
+      <button class="tab" type="button">Overview</button>
+      <button class="tab" type="button">Counter</button>
+      <button class="tab" type="button">Transactions</button>
+      <button class="tab active" type="button">Documents</button>
+      <button class="tab" type="button">Inventory</button>
+      <button class="tab" type="button">Reports</button>
+    </div>
+    <div class="sub">
+      <span class="pill active">Quotations</span>
+      <span class="pill">Sales orders</span>
+      <span class="pill">Delivery challans</span>
+      <span class="pill">Purchase orders</span>
+      <span class="pill">Goods receipts</span>
+    </div>
+    <div class="card">
+      <table>
+        <thead><tr><th>Number</th><th>Party</th><th>Date</th><th>Amount</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          <tr><td>QT-000118</td><td>Sai Traders</td><td>6 Nov 2026</td><td>₹23,500</td><td><span class="status">Open</span></td><td>Convert</td></tr>
+          <tr><td>QT-000117</td><td>Ravi Stores</td><td>5 Nov 2026</td><td>₹8,400</td><td><span class="status">Open</span></td><td>Convert</td></tr>
+          <tr><td>QT-000116</td><td>Kumar Kirana</td><td>4 Nov 2026</td><td>₹12,750</td><td><span class="status">Ordered</span></td><td>View</td></tr>
+          <tr><td>QT-000115</td><td>Balaji Oils</td><td>2 Nov 2026</td><td>₹41,200</td><td><span class="status">Invoiced</span></td><td>View</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</body>
+</html>

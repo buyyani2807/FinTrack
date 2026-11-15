@@ -140,3 +140,16 @@ export function chitStatusText(status) {
   const text = String(status || "").trim();
   return text ? text.charAt(0).toUpperCase() + text.slice(1) : "—";
 }
+
+/**
+ * The saved Chit member the server will reuse for this mobile number, if any.
+ * Same rule as chit_create_member (migration 033): compare digits only, at least 8 digits,
+ * oldest profile first. Display only; the server still decides.
+ */
+export function findSavedChitMember(members = [], phone = "") {
+  const digits = String(phone || "").replace(/\D/g, "");
+  if (digits.length < 8) return null;
+  return [...(members || [])]
+    .filter(member => String(member.phone || "").replace(/\D/g, "") === digits)
+    .sort((a, b) => String(a.created_at || "").localeCompare(String(b.created_at || "")))[0] || null;
+}

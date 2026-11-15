@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { createChitMember, enableChitMemberPortal, enrollChitMember, updateEnrolledChitMember } from "../../../lib/financeRepository";
+import { createChitMember, enableChitMemberPortal, enrollChitMember, loadChitMembers, updateEnrolledChitMember } from "../../../lib/financeRepository";
+import { findSavedChitMember } from "../model/chitSchemeView.js";
 import { enrollmentName, canEnrollMoreMembers } from "../model/chitFormat.js";
 import { Button, Field } from "../../../components/ui.jsx";
 import { Modal } from "./ChitUi.jsx";
@@ -10,12 +11,21 @@ export function ChitAddMemberModal({ token, scheme, nextTicket, close, done }) {
   const [error, setError] = useState("");
   useEffect(() => { setF(current => ({ ...current, ticket: String(nextTicket || "") })); }, [nextTicket]);
   const [busy, setBusy] = useState(false);
+  // Saved Chit members of this business. A mobile number that matches one is enrolled with that saved
+  // profile (the server reuses it), so the dialog says so and shows the saved name and address.
+  const [savedMembers, setSavedMembers] = useState([]);
+  useEffect(() => {
+    let ignore = false;
+    loadChitMembers(token).then(rows => { if (!ignore) setSavedMembers(rows || []); }).catch(() => {});
+    return () => { ignore = true; };
+  }, [token]);
+  const saved = findSavedChitMember(savedMembers, f.phone);
   const set = (key, value) => setF(current => ({ ...current, [key]: value }));
   const submit = async event => {
     event.preventDefault();
     setBusy(true); setError("");
     try {
-      const memberId = await createChitMember(token, { name: f.name, phone: f.phone, address: f.address });
+      const memberId = await createChitMember(token, { name: saved ? saved.full_name : f.name, phone: f.phone, address: saved ? saved.address : f.address });
       const enrollmentId = await enrollChitMember(token, {
         schemeId: scheme.id, memberId, ticketNumber: f.ticket, guarantorName: f.guarantorName,
         guarantorPhone: f.guarantorPhone, guarantorAddress: f.guarantorAddress, securityDeposit: f.deposit,
@@ -26,7 +36,7 @@ export function ChitAddMemberModal({ token, scheme, nextTicket, close, done }) {
     } catch (err) { setError(err.message || "Could not add member to this scheme."); }
     finally { setBusy(false); }
   };
-  return <Modal close={close}><h2 className="title">Add member to {scheme.name}</h2><p className="copy">If this mobile number already belongs to a Chit member, they are enrolled in this scheme with their existing profile and can use the same portal login.</p><form onSubmit={submit}><div className="form spacer"><Field label="Member name"><input required value={f.name} onChange={e => set("name", e.target.value)} /></Field><Field label="Mobile number"><input required value={f.phone} onChange={e => set("phone", e.target.value)} /></Field><Field className="span" label="Address"><input value={f.address} onChange={e => set("address", e.target.value)} /></Field><Field label="Ticket number"><input required type="number" min="1" value={f.ticket} onChange={e => set("ticket", e.target.value)} /></Field><Field label="Guarantor name"><input required value={f.guarantorName} onChange={e => set("guarantorName", e.target.value)} /></Field><Field label="Guarantor phone"><input required value={f.guarantorPhone} onChange={e => set("guarantorPhone", e.target.value)} /></Field><Field className="span" label="Guarantor address"><input value={f.guarantorAddress} onChange={e => set("guarantorAddress", e.target.value)} /></Field><Field label="Security deposit (₹)"><input type="number" min="0" value={f.deposit} onChange={e => set("deposit", e.target.value)} /></Field></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button type="button" disabled={busy} onClick={close}>Cancel</Button><Button className="primary" disabled={busy} type="submit">{busy ? "Saving…" : "Add member"}</Button></div></form></Modal>;
+  return <Modal close={close}><h2 className="title">Add member to {scheme.name}</h2><p className="copy">Enter the mobile number first. If it already belongs to a saved Chit member, their saved name and address are used.</p><form onSubmit={submit}><div className="form spacer"><Field label="Mobile number"><input required inputMode="tel" value={f.phone} onChange={e => set("phone", e.target.value)} /></Field><Field label="Member name"><input required={!saved} disabled={Boolean(saved)} value={saved ? saved.full_name : f.name} onChange={e => set("name", e.target.value)} /></Field><Field className="span" label="Address"><input disabled={Boolean(saved)} value={saved ? (saved.address || "") : f.address} onChange={e => set("address", e.target.value)} /></Field>{saved && <p className="notice span" role="status">This mobile number is already saved as <strong>{saved.full_name}</strong>{saved.address ? ` (${saved.address})` : ""}. They will be added to this scheme with that saved profile and can use the same Chit portal login. To change the name or address, edit the member after adding.</p>}<Field label="Ticket number"><input required type="number" min="1" value={f.ticket} onChange={e => set("ticket", e.target.value)} /></Field><Field label="Guarantor name"><input required value={f.guarantorName} onChange={e => set("guarantorName", e.target.value)} /></Field><Field label="Guarantor phone"><input required value={f.guarantorPhone} onChange={e => set("guarantorPhone", e.target.value)} /></Field><Field className="span" label="Guarantor address"><input value={f.guarantorAddress} onChange={e => set("guarantorAddress", e.target.value)} /></Field><Field label="Security deposit (₹)"><input type="number" min="0" value={f.deposit} onChange={e => set("deposit", e.target.value)} /></Field></div>{error && <p className="red small">{error}</p>}<div className="row spacer"><Button type="button" disabled={busy} onClick={close}>Cancel</Button><Button className="primary" disabled={busy} type="submit">{busy ? "Saving…" : "Add member"}</Button></div></form></Modal>;
 }
 function ChitEditMemberModal({ token, enrollment, close, done }) {
   const [form, setForm] = useState({

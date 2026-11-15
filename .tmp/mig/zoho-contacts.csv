@@ -1,0 +1,6 @@
+Display Name,Company Name,Contact Type,GST Identification Number (GSTIN),Mobile Phone,EMail ID,Place of Supply,Opening Balance
+"Gupta Traders, Mysuru",Gupta Traders,customer,,9876543210,gupta@example.com,KA,"12,000.00"
+Sharma Kirana and Sons,,customer,,,,Karnataka,0
+Polycab Wires,Polycab India Ltd,vendor,27AAACP1234A1Z5,,,Maharashtra,45000
+"Note ""quoted""
+Name",,customer,,,,,

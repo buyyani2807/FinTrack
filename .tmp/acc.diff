@@ -1,0 +1,606 @@
+diff --git a/src/features/accounts/AccOnboardingWizard.jsx b/src/features/accounts/AccOnboardingWizard.jsx
+index 5eec487..3dbe19e 100644
+--- a/src/features/accounts/AccOnboardingWizard.jsx
++++ b/src/features/accounts/AccOnboardingWizard.jsx
+@@ -10,6 +10,25 @@ const STEPS = [
+   { id: "done", title: "Done" },
+ ];
+ 
++export const INDUSTRY_TEMPLATES = [
++  { id: "retail", label: "Retail shop", hint: "Sales, stock, cash and customer balances", features: ["Sales invoices", "Fast stock lookup", "Cash and UPI receipts"] },
++  { id: "wholesale", label: "Wholesale / distribution", hint: "Credit sales, suppliers and inventory movement", features: ["Customer credit", "Supplier balances", "Bulk inventory"] },
++  { id: "hardware", label: "Hardware store", hint: "Fast-moving inventory, suppliers and credit sales", features: ["Item categories", "Supplier purchases", "Receivables"] },
++  { id: "jewellery", label: "Jewellery business", hint: "High-value items, customer balances and detailed sales", features: ["Item details", "Customer ledger", "High-value sales"] },
++  { id: "manufacturing", label: "Manufacturing", hint: "Raw materials, production costs, finished goods and stock", features: ["Raw materials", "Work in progress", "Finished goods", "Production costing"] },
++  { id: "services", label: "Service business", hint: "Projects, invoices, expenses and receivables", features: ["Service invoices", "Project expenses", "Receivables"] },
++  { id: "finance", label: "Finance / collections", hint: "Customer repayments, collection staff and finance accounts", features: ["Daily finance", "Monthly interest", "Collection staff"] },
++  { id: "chit", label: "Chit Fund operator", hint: "Schemes, members, auctions, dividends and payouts", features: ["Schemes", "Monthly auctions", "Dividends and payouts"] },
++  { id: "school", label: "School / coaching centre", hint: "Student fees, expenses and outstanding balances", features: ["Student parties", "Fee receipts", "Outstanding fees"] },
++  { id: "medical", label: "Medical / pharmacy", hint: "Item stock, purchases, sales and expiry-aware workflows", features: ["Stock items", "Purchase tracking", "Sales and receivables"] },
++];
++
++const industryStorageKey = companyId => `fintrack-accounts-industry-v1:${companyId || "none"}`;
++const readIndustry = companyId => {
++  if (!companyId || typeof localStorage === "undefined") return "retail";
++  try { return localStorage.getItem(industryStorageKey(companyId)) || "retail"; } catch { return "retail"; }
++};
++
+ const stepStorageKey = companyId => `fintrack-accounts-onboarding-step-v1:${companyId || "none"}`;
+ 
+ const readStoredStep = companyId => {
+@@ -59,6 +78,7 @@ export function AccOnboardingWizard({
+   const companyId = company?.id || "";
+   const [stepIndex, setStepIndex] = useState(() => readStoredStep(companyId));
+   const [companyName, setCompanyName] = useState(company?.name || "");
++  const [industry, setIndustry] = useState(() => readIndustry(companyId));
+   const [booksStartedOn, setBooksStartedOn] = useState(company?.booksStartedOn || "2026-04-01");
+   const [gstRegistration, setGstRegistration] = useState(company?.gstRegistration || "unregistered");
+   const [gstin, setGstin] = useState(company?.gstin || "");
+@@ -77,6 +97,7 @@ export function AccOnboardingWizard({
+ 
+   const step = STEPS[stepIndex] || STEPS[0];
+   const progress = useMemo(() => `${stepIndex + 1} of ${STEPS.length}`, [stepIndex]);
++  const selectedTemplate = INDUSTRY_TEMPLATES.find(template => template.id === industry) || INDUSTRY_TEMPLATES[0];
+ 
+   const goNext = () => {
+     setLocalError("");
+@@ -98,7 +119,8 @@ export function AccOnboardingWizard({
+     try {
+       if (step.id === "company") {
+         if (!String(companyName || "").trim()) throw new Error("Business name is required.");
+-        if (onSaveCompany) await onSaveCompany({ companyName: companyName.trim(), booksStartedOn });
++        try { localStorage.setItem(industryStorageKey(companyId), industry); } catch { /* ignore */ }
++        if (onSaveCompany) await onSaveCompany({ companyName: companyName.trim(), booksStartedOn, industry });
+       }
+       if (step.id === "gst" && canAdmin && onSaveGst) {
+         await onSaveGst({
+@@ -153,6 +175,13 @@ export function AccOnboardingWizard({
+           <label className="accounts-filter-field"><span className="small">Books start date</span>
+             <input type="date" value={booksStartedOn} onChange={event => setBooksStartedOn(event.target.value)} />
+           </label>
++          <label className="accounts-filter-field span"><span className="small">Industry template</span>
++            <select value={industry} onChange={event => setIndustry(event.target.value)}>
++              {INDUSTRY_TEMPLATES.map(template => <option key={template.id} value={template.id}>{template.label}</option>)}
++            </select>
++            <span className="small">{INDUSTRY_TEMPLATES.find(template => template.id === industry)?.hint}</span>
++            <span className="accounts-template-features">{selectedTemplate.features.map(feature => <span key={feature}>{feature}</span>)}</span>
++          </label>
+         </div>
+       )}
+ 
+diff --git a/src/features/accounts/AccountingProduct.jsx b/src/features/accounts/AccountingProduct.jsx
+index b85518b..1fd1377 100644
+--- a/src/features/accounts/AccountingProduct.jsx
++++ b/src/features/accounts/AccountingProduct.jsx
+@@ -21,6 +21,7 @@ import {
+   loadBankStatements,
+   loadChartOfAccounts,
+   loadParties,
++  loadPartyPipeline,
+   loadPeriodLocks,
+   loadVoucherAttachments,
+   loadVouchers,
+@@ -37,6 +38,7 @@ import {
+   saveAccountingSettings,
+   saveGstSettings,
+   setAccountingIntegration,
++  setPartyPipelineStage,
+   setActiveAccountsCompanyId,
+   setAccountsUserRole,
+   setItemActive,
+@@ -64,6 +66,105 @@ import {
+   isAccountsOnboardingDone,
+   markAccountsOnboardingDone,
+ } from "./AccOnboardingWizard.jsx";
++import { INDUSTRY_TEMPLATES } from "./AccOnboardingWizard.jsx";
++
++function IndustryTemplateCard({ companyId }) {
++  const [industry, setIndustry] = useState("retail");
++  useEffect(() => {
++    if (!companyId) return;
++    try {
++      setIndustry(localStorage.getItem(`fintrack-accounts-industry-v1:${companyId}`) || "retail");
++    } catch { /* ignore storage access errors */ }
++  }, [companyId]);
++  const template = INDUSTRY_TEMPLATES.find(item => item.id === industry) || INDUSTRY_TEMPLATES[0];
++  return <div className="card accounts-industry-card">
++    <div className="accounts-industry-head"><div><span className="small">Industry setup</span><h2>{template.label}</h2></div><span className="accounts-industry-badge">Template</span></div>
++    <p className="copy">Recommended workflows for this company.</p>
++    <div className="accounts-template-features">{template.features.map(feature => <span key={feature}>{feature}</span>)}</div>
++  </div>;
++}
++
++function parsePartyCsv(text) {
++  const rows = String(text || "").split(/\r?\n/).map(row => row.trim()).filter(Boolean);
++  if (!rows.length) return [];
++  const cells = row => row.match(/(?:"(?:[^"]|"")*"|[^,])+/g)?.map(value => value.trim().replace(/^"|"$/g, "").replace(/""/g, '"')) || [];
++  const headers = cells(rows[0]).map(value => value.toLowerCase().replace(/[^a-z0-9]+/g, ""));
++  const index = name => headers.findIndex(value => value === name || value.includes(name));
++  const at = (values, names) => { const position = names.map(index).find(value => value >= 0); return position >= 0 ? values[position] || "" : ""; };
++  return rows.slice(1).map(row => {
++    const values = cells(row);
++    return { partyType: (at(values, ["type", "partytype"]) || "customer").toLowerCase(), name: at(values, ["name", "partyname"]), phone: at(values, ["phone", "mobile"]), email: at(values, ["email"]), address: at(values, ["address"]), gstin: at(values, ["gstin"]), notes: at(values, ["notes", "note"]) };
++  }).filter(row => row.name.trim());
++}
++
++const CRM_STAGES = ["Lead", "Contacted", "Quoted", "Won", "Lost"];
++function CustomerPipeline({ companyId, parties = [], pipeline = {}, onStageChange, saving = false }) {
++  const stages = pipeline;
++  const customers = parties.filter(party => party.partyType === "customer" && party.isActive !== false);
++  const setStage = (id, stage) => onStageChange?.(id, stage);
++  return <div className="acc-panel acc-crm-panel">
++    <div className="accounts-panel-head"><div><h1 className="accounts-panel-title">Customer pipeline</h1><p className="copy">Track customer conversations from first contact to won or lost. Pipeline stages never change accounting balances.</p></div><span className="accounts-industry-badge">CRM</span></div>
++    <div className="crm-pipeline-grid">{CRM_STAGES.map(stage => {
++      const rows = customers.filter(customer => (stages[customer.id] || "Lead") === stage);
++      return <section className="card crm-stage" key={stage}><div className="crm-stage-head"><strong>{stage}</strong><span>{rows.length}</span></div>{rows.map(customer => <article className="crm-customer-card" key={customer.id}><strong>{customer.name}</strong><span className="small">{customer.phone || customer.email || "No contact details"}</span><select disabled={saving} value={stage} onChange={event => setStage(customer.id, event.target.value)} aria-label={`Stage for ${customer.name}`}>{CRM_STAGES.map(option => <option key={option}>{option}</option>)}</select></article>)}{!rows.length && <p className="small">No customers here.</p>}</section>;
++    })}</div>
++  </div>;
++}
++
++function SubscriptionMonitoringPanel({ orgSettings = {}, companyId }) {
++  const entitlements = resolveEntitlements(orgSettings);
++  const [monitorUrl, setMonitorUrl] = useState("");
++  useEffect(() => { try { setMonitorUrl(localStorage.getItem(`fintrack-monitor-url:${companyId}`) || ""); } catch { setMonitorUrl(""); } }, [companyId]);
++  const saveMonitorUrl = () => { try { localStorage.setItem(`fintrack-monitor-url:${companyId}`, monitorUrl.trim()); } catch { /* ignore */ } };
++  const blueprint = SAAS_TIER_BLUEPRINT[entitlements.plan] || SAAS_TIER_BLUEPRINT.pro;
++  return <>
++    <AccSetupSection icon="$" title="Subscription & plan" copy="Your current entitlement is shown here. Billing checkout is not connected yet, so no charges are created from this screen." collapsible summary={entitlements.plan}>
++      <div className="commercial-status-grid"><div className="card"><span className="small">Current plan</span><strong>{entitlements.plan}</strong><p className="small">{blueprint.note || "Configured workspace entitlement"}</p></div><div className="card"><span className="small">Feature packs</span><strong>{entitlements.packs.join(", ")}</strong><p className="small">{entitlements.modules.length} modules enabled</p></div><div className="card"><span className="small">Billing status</span><strong>Configuration only</strong><p className="small">Connect a payment provider before accepting paid subscriptions.</p></div></div>
++    </AccSetupSection>
++    <AccSetupSection icon="♥" title="External monitoring & alerts" copy="Configure an external uptime/alerting service to watch your deployed FinTrack URL. FinTrack does not claim a monitoring service is active until you configure one." collapsible summary="Optional">
++      <div className="form"><Field className="span" label="External monitor URL"><input value={monitorUrl} placeholder="https://your-monitor.example/check" onChange={event => setMonitorUrl(event.target.value)} /></Field></div>
++      <div className="acc-form-actions"><button type="button" className="btn primary" onClick={saveMonitorUrl}>Save monitoring reference</button><span className="small">Use this as a reference for your uptime provider; no credentials are stored.</span></div>
++    </AccSetupSection>
++  </>;
++}
++
++function AccountsBusinessPulse({ metrics, receivables, payables, items, stockMovements, attention, onNavigate, onOpenCollections }) {
++  const lowStockCount = useMemo(() => (items || []).filter(item => {
++    const current = Number(item.current_stock ?? item.stock ?? item.quantity ?? 0);
++    const reorder = Number(item.reorder_level ?? item.reorderPoint ?? 0);
++    return reorder > 0 && current <= reorder;
++  }).length, [items]);
++  const actions = [
++    { label: "Record sale", section: "vouchers", tone: "green" },
++    { label: "Add expense", section: "vouchers", tone: "red" },
++    { label: "View receivables", section: "receivables", tone: "blue" },
++    { label: "View payables", section: "payables", tone: "gold" },
++  ];
++  return <section className="acc-section accounts-business-pulse">
++    <div className="accounts-business-pulse-head">
++      <div><span className="small">Business pulse</span><h2 className="acc-section-title">Today at a glance</h2></div>
++      <span className="small">Live from your books</span>
++    </div>
++    <div className="accounts-business-kpis">
++      <AccMetric label="Cash in hand" value={money(metrics?.cash)} tone="gold" />
++      <AccMetric label="Receivables due" value={money(receivables?.total)} tone="blue" onClick={() => onNavigate("receivables")} />
++      <AccMetric label="Payables due" value={money(payables?.total)} tone="red" onClick={() => onNavigate("payables")} />
++      <AccMetric label="Profit this period" value={money(metrics?.netProfit)} tone={Number(metrics?.netProfit) < 0 ? "red" : "green"} onClick={() => onNavigate("pnl")} />
++      <AccMetric label="Low-stock items" value={String(lowStockCount)} tone={lowStockCount ? "red" : "green"} onClick={() => onNavigate("setup")} />
++      <AccMetric label="Stock movements" value={String((stockMovements || []).length)} tone="blue" onClick={() => onNavigate("setup")} />
++    </div>
++    <div className="accounts-business-actions" aria-label="Quick actions">
++      <span className="small">Quick actions</span>
++      {actions.map(action => <button key={action.label} type="button" className={`accounts-business-action ${action.tone}`} onClick={() => onNavigate(action.section)}>{action.label}<span aria-hidden="true">→</span></button>)}
++      {onOpenCollections && <button type="button" className="accounts-business-action purple" onClick={onOpenCollections}>Open collections<span aria-hidden="true">→</span></button>}
++    </div>
++    {attention?.count > 0 && <div className="accounts-business-alert" role="status">
++      <span className="accounts-business-alert-icon" aria-hidden="true">!</span>
++      <div><strong>{attention.summary}</strong><span className="small"> Review the most urgent item to keep your books moving.</span></div>
++      <button type="button" className="btn" onClick={() => onNavigate(attention.items?.[0]?.href || "reports")}>Review now →</button>
++    </div>}
++  </section>;
++}
+ import { AccMoreMenu, AccToolbar } from "./AccUi.jsx";
+ import {
+   BANK_IMPORT_FIELDS,
+@@ -91,6 +192,8 @@ import {
+ import { buildAccountsAttentionItems } from "../intelligence/attentionCenter.js";
+ import { AttentionCenterCard } from "../intelligence/AttentionCenterCard.jsx";
+ import { trackProductEvent } from "../commercial/productAnalytics.js";
++import { resolveEntitlements } from "../commercial/entitlements.js";
++import { SAAS_TIER_BLUEPRINT } from "../commercial/featurePacks.js";
+ import {
+   assertVoucherAttachmentMeta,
+   attachmentDownloadHref,
+@@ -887,12 +990,14 @@ function ReportRangeBar({ fy, lastFy, from, to, onChange }) {
+ 
+ const SECTIONS = [
+   { id: "overview", label: "Overview", group: "Books" },
++  { id: "manufacturing", label: "Manufacturing", group: "Industry" },
+   { id: "ledger", label: "Ledger", group: "Books" },
+   { id: "vouchers", label: "Transactions", group: "Books" },
+   { id: "cashbook", label: "Cashbook", group: "Books" },
+   { id: "receivables", label: "Receivables", group: "Parties" },
+   { id: "payables", label: "Payables", group: "Parties" },
+   { id: "parties", label: "Party Ledger", group: "Parties" },
++  { id: "crm", label: "Customer Pipeline", group: "Parties" },
+   { id: "reports", label: "Reports", group: "Reports" },
+   { id: "bank", label: "Bank Reconciliation", group: "Reports" },
+   { id: "pnl", label: "Profit & Loss", group: "Reports" },
+@@ -920,24 +1025,74 @@ const REPORT_TABS = [
+ ];
+ 
+ const MOBILE_TABS = [
+-  { id: "overview", label: "Overview" },
+-  { id: "vouchers", label: "Transactions" },
++  { id: "overview", label: "Home" },
++  { id: "vouchers", label: "Books" },
+   { id: "parties", label: "Parties" },
+   { id: "reports", label: "Reports" },
+   { id: "more", label: "More" },
+ ];
+ 
++const REPORT_HUB_CARDS = [
++  { id: "daybook", label: "Day Book", copy: "Every sale, purchase, receipt and payment in the period." },
++  { id: "receivables", label: "Receivables", copy: "Who still owes you — overdue first." },
++  { id: "payables", label: "Payables", copy: "What you owe suppliers." },
++  { id: "pnl", label: "Profit & Loss", copy: "Income and expenses for the selected dates." },
++  { id: "balance", label: "Balance Sheet", copy: "Assets, liabilities and equity snapshot." },
++  { id: "trial", label: "Trial Balance", copy: "Check that debits still equal credits." },
++  { id: "gst", label: "GST books", copy: "Calculated GST for review — not portal filing." },
++  { id: "cashflow", label: "Cash Flow", copy: "Money in and out (simplified)." },
++];
++
++function ManufacturingWorkspace({ items = [], stockMovements = [], onItems, onTransactions, onAdjustStock, saving = false }) {
++  const rawMaterials = items.filter(item => /raw|material/i.test(`${item.name} ${item.categoryName || ""}`)).length;
++  const finishedGoods = items.filter(item => /finished|product/i.test(`${item.name} ${item.categoryName || ""}`)).length;
++  const [run, setRun] = useState({ date: todayIso(), materialId: "", materialQty: "", outputId: "", outputQty: "", note: "" });
++  const [runOpen, setRunOpen] = useState(false);
++  const products = items.filter(item => item.itemType === "product" && item.isActive !== false);
++  const submitRun = async () => {
++    if (!run.materialId || !run.outputId || Number(run.materialQty) <= 0 || Number(run.outputQty) <= 0 || run.materialId === run.outputId) return;
++    const note = run.note.trim() || "Production run";
++    await onAdjustStock?.({ itemId: run.materialId, date: run.date, quantityDelta: -Math.abs(Number(run.materialQty)), reasonNote: `${note} · material consumed` });
++    await onAdjustStock?.({ itemId: run.outputId, date: run.date, quantityDelta: Math.abs(Number(run.outputQty)), reasonNote: `${note} · finished goods produced` });
++    setRun({ date: todayIso(), materialId: "", materialQty: "", outputId: "", outputQty: "", note: "" });
++    setRunOpen(false);
++  };
++  return <div className="acc-panel manufacturing-workspace">
++    <div className="accounts-panel-head"><div><h1 className="accounts-panel-title">Manufacturing</h1><p className="copy">Plan production, control materials, and track finished goods.</p></div><span className="accounts-industry-badge">Manufacturing template</span></div>
++    <div className="acc-metric-grid three spacer"><AccMetric label="Raw material items" value={rawMaterials} /><AccMetric label="Finished goods" value={finishedGoods} /><AccMetric label="Stock movements" value={stockMovements.length} /></div>
++    <div className="manufacturing-flow-grid spacer">
++      <button type="button" className="card manufacturing-flow-card" onClick={() => onItems?.()}><span className="manufacturing-flow-icon">▦</span><strong>1. Materials & items</strong><p className="copy">Create raw materials, WIP, and finished-goods items.</p></button>
++      <button type="button" className="card manufacturing-flow-card" onClick={() => onTransactions?.()}><span className="manufacturing-flow-icon">▣</span><strong>2. Purchases & costs</strong><p className="copy">Record material purchases, labour, power, and production expenses.</p></button>
++      <button type="button" className="card manufacturing-flow-card" onClick={() => setRunOpen(true)}><span className="manufacturing-flow-icon">→</span><strong>3. Production run</strong><p className="copy">Record material consumption and finished-goods output together.</p></button>
++      <button type="button" className="card manufacturing-flow-card" onClick={() => onTransactions?.()}><span className="manufacturing-flow-icon">₹</span><strong>4. Sell & analyse</strong><p className="copy">Invoice finished goods and review margin, stock, and production costs.</p></button>
++    </div>
++    <div className="notice">Production runs use the existing auditable stock-movement workflow. Ledger posting and costing remain unchanged.</div>
++    {runOpen && <Modal title="Record production run" close={() => !saving && setRunOpen(false)} actions={<div className="tabs spacer"><button type="button" className="btn" disabled={saving} onClick={() => setRunOpen(false)}>Cancel</button><button type="button" className="btn primary" disabled={saving || !run.materialId || !run.outputId || Number(run.materialQty) <= 0 || Number(run.outputQty) <= 0 || run.materialId === run.outputId} onClick={submitRun}>{saving ? "Saving…" : "Save production run"}</button></div>}>
++      <p className="copy">This records one material consumption and one finished-goods increase. Use a separate run for each batch.</p>
++      <div className="form">
++        <Field label="Date"><input type="date" value={run.date} onChange={event => setRun(current => ({ ...current, date: event.target.value }))} /></Field>
++        <Field label="Material consumed"><select value={run.materialId} onChange={event => setRun(current => ({ ...current, materialId: event.target.value }))}><option value="">Select material</option>{products.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
++        <Field label="Material quantity"><input type="number" min="0" step="0.001" value={run.materialQty} onChange={event => setRun(current => ({ ...current, materialQty: event.target.value }))} /></Field>
++        <Field label="Finished goods produced"><select value={run.outputId} onChange={event => setRun(current => ({ ...current, outputId: event.target.value }))}><option value="">Select output</option>{products.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
++        <Field label="Output quantity"><input type="number" min="0" step="0.001" value={run.outputQty} onChange={event => setRun(current => ({ ...current, outputQty: event.target.value }))} /></Field>
++        <Field className="span" label="Batch note"><input value={run.note} placeholder="e.g. Batch 24 · 100 units" onChange={event => setRun(current => ({ ...current, note: event.target.value }))} /></Field>
++      </div>
++    </Modal>}
++  </div>;
++}
++
+ const MORE_LINKS = [
+-  ["ledger", "Ledger"],
+-  ["receivables", "Receivables"],
+-  ["payables", "Payables"],
+-  ["bank", "Bank Reconciliation"],
+-  ["trial", "Trial Balance"],
+-  ["pnl", "Profit & Loss"],
+-  ["balance", "Balance Sheet"],
+-  ["cashbook", "Cashbook"],
+-  ["gst", "GST"],
+-  ["setup", "Setup"],
++  ["ledger", "Ledger", "One account’s full movement"],
++  ["receivables", "Receivables", "Customer outstanding"],
++  ["payables", "Payables", "Supplier outstanding"],
++  ["bank", "Bank Reconciliation", "Match statement lines"],
++  ["trial", "Trial Balance", "Debit vs credit check"],
++  ["pnl", "Profit & Loss", "Income and expenses"],
++  ["balance", "Balance Sheet", "Assets and liabilities"],
++  ["cashbook", "Cashbook", "Operational cash"],
++  ["crm", "Customer Pipeline", "Follow up customer opportunities"],
++  ["gst", "GST", "Books preparation only"],
++  ["setup", "Setup", "Company, GST, locks, backup"],
+ ];
+ 
+ function Modal({ title, close, children, actions }) {
+@@ -1439,6 +1594,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
+   const [salesInvoiceView, setSalesInvoiceView] = useState(null);
+   const [accounts, setAccounts] = useState([]);
+   const [parties, setParties] = useState([]);
++  const [partyPipeline, setPartyPipeline] = useState({});
+   const [vouchers, setVouchers] = useState([]);
+   const [items, setItems] = useState([]);
+   const [itemCategories, setItemCategories] = useState([]);
+@@ -1473,6 +1629,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
+   const [simpleRequestId, setSimpleRequestId] = useState(() => newClientRequestId());
+   const [lines, setLines] = useState([emptyLine(), emptyLine()]);
+   const [partyForm, setPartyForm] = useState(emptyPartyForm);
++  const [partyImportStatus, setPartyImportStatus] = useState("");
+   const [coaForm, setCoaForm] = useState(emptyCoaForm);
+   const [setupForm, setSetupForm] = useState({ companyName: "", booksStartedOn: todayIso() });
+   const [lockForm, setLockForm] = useState({ from: fy.from, to: fy.to, reason: "" });
+@@ -1491,6 +1648,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
+   const [accountsAccessRole, setAccountsAccessRole] = useState(workspace?.role === "owner" ? "owner" : null);
+   const [roleDraft, setRoleDraft] = useState({ userId: "", role: "accountant" });
+   const [inviteDraft, setInviteDraft] = useState({ email: "", role: "viewer", note: "" });
++  const [inviteEmailDraft, setInviteEmailDraft] = useState(null);
+   const [teamInvites, setTeamInvites] = useState([]);
+   const [recurringTemplates, setRecurringTemplates] = useState([]);
+   const [recurringDraft, setRecurringDraft] = useState(() => emptyRecurringDraft());
+@@ -1516,7 +1674,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
+   const [companies, setCompanies] = useState([]);
+   const [activeCompanyId, setActiveCompanyId] = useState("");
+   const [showCreateCompany, setShowCreateCompany] = useState(false);
+-  const [companyDraft, setCompanyDraft] = useState({ name: "", booksStartedOn: todayIso() });
++  const [companyDraft, setCompanyDraft] = useState({ name: "", booksStartedOn: todayIso(), industry: "retail" });
+   const [gstForm, setGstForm] = useState({ gstRegistration: "unregistered", gstin: "", legalName: "", stateCode: "" });
+   const [listPage, setListPage] = useState(1);
+   const [expandedVoucherId, setExpandedVoucherId] = useState(null);
+@@ -1566,10 +1724,11 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
+         setActiveAccountsCompanyId(null);
+         setActiveCompanyId("");
+       }
+-      const [nextSettings, nextAccounts, nextParties, nextVouchers, nextItems, nextCategories, nextMovements, nextVoucherItemLines] = await Promise.all([
++      const [nextSettings, nextAccounts, nextParties, nextPipeline, nextVouchers, nextItems, nextCategories, nextMovements, nextVoucherItemLines] = await Promise.all([
+         loadAccountingSettings(token),
+         loadChartOfAccounts(token),
+         loadParties(token),
++        loadPartyPipeline(token).catch(err => { if (err.code === "MIGRATION_REQUIRED") return []; throw err; }),
+         loadVouchers(token),
+         loadItems(token).catch(err => { if (err.code === "MIGRATION_REQUIRED") return []; throw err; }),
+         loadItemCategories(token).catch(err => { if (err.code === "MIGRATION_REQUIRED") return []; throw err; }),
+@@ -1586,6 +1745,7 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
+       setSettings(Object.keys(mergedSettings).length ? mergedSettings : nextSettings);
+       setAccounts(nextAccounts);
+       setParties(nextParties);
++      setPartyPipeline(Object.fromEntries((nextPipeline || []).map(row => [row.partyId, row.stage])));
+       setVouchers(nextVouchers);
+       setItems(nextItems || []);
+       setItemCategories(nextCategories || []);
+@@ -1595,26 +1755,9 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
+       if (mergedSettings.companyName || mergedSettings.booksStartedOn) {
+         setSetupForm({ companyName: mergedSettings.companyName, booksStartedOn: mergedSettings.booksStartedOn || todayIso() });
+       }
+-      if (sectionRef.current === "setup") {
+-        const [nextAudit, nextLocks, nextRoles, nextInvites, nextRecurring] = await Promise.all([
+-          loadAuditLog(token),
+-          loadPeriodLocks(token),
+-          loadAccountsRoles(token).catch(() => []),
+-          listTeamInvites(token).catch(() => []),
+-          loadRecurringTemplates(token).catch(() => []),
+-        ]);
+-        if (gen !== refreshGen.current) return;
+-        setAudit(nextAudit);
+-        setLocks(nextLocks);
+-        setAccountsRoles(nextRoles || []);
+-        setTeamInvites(nextInvites || []);
+-        setRecurringTemplates(nextRecurring || []);
+-      }
+-      if (sectionRef.current === "bank" || sectionRef.current === "overview") {
+-        const nextStatements = await loadBankStatements(token).catch(() => []);
+-        if (gen !== refreshGen.current) return;
+-        setStatements(nextStatements || []);
+-      }
++      // Audit/lock and bank-statement data are loaded by the section-specific
++      // effect below. Keeping them out of the core refresh prevents duplicate
++      // requests whenever the Accounts shell mounts or changes company.
+       if (sectionRef.current === "overview" || sectionRef.current === "bank") {
+         const nextRecurring = await loadRecurringTemplates(token).catch(() => []);
+         if (gen !== refreshGen.current) return;
+@@ -1666,6 +1809,10 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
+   const canWrite = accountsAccessRole === "owner" || accountsAccessRole === "accountant";
+   const canAdmin = accountsAccessRole === "owner";
+   const readOnly = Boolean(accountsAccessRole) && !canWrite;
++  const manufacturingEnabled = (() => {
++    if (!activeCompanyId || typeof localStorage === "undefined") return false;
++    try { return localStorage.getItem(`fintrack-accounts-industry-v1:${activeCompanyId}`) === "manufacturing"; } catch { return false; }
++  })();
+   // Keep the wizard mounted across refresh()/loading so Continue does not
+   // unmount mid-flow (that looked like “Step 1/6 finishes in 2 steps”).
+   const showOnboarding = Boolean(
+@@ -2022,9 +2169,12 @@ export function AccountsModule({ token, close, logout, workspace = {}, orgSettin
+       setError("");
+       setNotice("");
+       try {
+-        await work();
++        const workResult = await work();
++        // Only a returned company UUID is meaningful to the refresh helper.
++        // Other save actions may return payloads for their own callers.
++        const preferredCompanyId = typeof workResult === "string" && workResult ? workResult : undefined;
+         setNotice(success);
+-        await refresh();
++        await refresh(preferredCompanyId || undefined);
+         ok = true;
+       } catch (err) {
+         setError(err.message || "Could not save.");
+@@ -2305,6 +2455,23 @@ const openVoucher = () => {
+     }, partyForm.id ? "Party updated successfully" : createdLabel);
+   };
+ 
++  const importParties = async event => {
++    const file = event.target.files?.[0];
++    event.target.value = "";
++    if (!file) return;
++    const rows = parsePartyCsv(await file.text());
++    if (!rows.length) { setError("No valid party rows found. Use a CSV with a Name column."); return; }
++    setPartyImportStatus(`Importing ${rows.length} parties…`);
++    try {
++      for (const row of rows) await createParty(token, { ...emptyPartyForm(), ...row, partyType: ["customer", "supplier", "employee", "agent", "other"].includes(row.partyType) ? row.partyType : "customer" });
++      setPartyImportStatus(`${rows.length} parties imported.`);
++      await refresh();
++    } catch (err) {
++      setError(err?.message || "Could not import parties.");
++      setPartyImportStatus("");
++    }
++  };
++
+   const requestDeleteParty = party => {
+     if (!party?.id) return;
+     if (partyHasAccountingUse(party.id, vouchers)) setPartyDeleteDialog({ mode: "blocked", party });
+@@ -2881,7 +3048,7 @@ const openVoucher = () => {
+           companies={companies}
+           activeId={activeCompanyId}
+           onSelect={switchCompany}
+-          onCreate={() => { setCompanyDraft({ name: "", booksStartedOn: todayIso() }); setShowCreateCompany(true); }}
++          onCreate={() => { setCompanyDraft({ name: "", booksStartedOn: todayIso(), industry: "retail" }); setShowCreateCompany(true); }}
+           gstLabel={gstStatusLabel(activeCompany)}
+           fyLabel={fy?.label || ""}
+           booksStartedOn={activeCompany?.booksStartedOn || settings?.booksStartedOn || ""}
+@@ -2984,6 +3151,25 @@ const openVoucher = () => {
+             integrationEnabled={Boolean(settings?.integrationEnabled)}
+           />
+ 
++          <IndustryTemplateCard companyId={activeCompanyId} />
++
++          <AccountsBusinessPulse
++            metrics={metrics}
++            receivables={overviewArAging}
++            payables={overviewApAging}
++            items={items}
++            stockMovements={stockMovements}
++            attention={accountsAttention}
++            onOpenCollections={close}
++            onNavigate={target => {
++              if (typeof target === "string") openSection(target);
++              else if (target?.section) {
++                openSection(target.section);
++                if (target.reportTab) setReportTab(target.reportTab);
++              }
++            }}
++          />
++
+           {accountsAttention?.count > 0 && <AttentionCenterCard attention={accountsAttention} onNavigate={href => {
+             trackProductEvent("accounts_attention_navigate", { section: href?.section || "" });
+             if (href?.section) openSection(href.section);
+@@ -3427,9 +3613,12 @@ const openVoucher = () => {
+           </> : <AccEmpty title="No customers or suppliers yet" copy="Accounts parties are independent of Daily Finance customers and Chit Fund members." actionLabel={canWrite ? "+ Add party" : ""} onAction={canWrite ? openParty : undefined} />}
+         </div>}
+ 
++        {section === "manufacturing" && manufacturingEnabled && <ManufacturingWorkspace items={items} stockMovements={stockMovements} saving={saving} onItems={() => openSection("setup")} onTransactions={() => openSection("vouchers")} onAdjustStock={payload => run(() => adjustStock(token, payload), "Production stock movement saved.")} />}
++
+         {section === "more" && <div className="acc-panel">
+           <p className="copy">Ledger, banking, statements and setup. Day-to-day work stays on Home, Transactions, Parties and Reports.</p>
+           <div className="acc-landing-grid spacer">
++            {manufacturingEnabled && <button type="button" className="card acc-landing-card manufacturing-landing-card" onClick={() => openSection("manufacturing")}><strong>Manufacturing</strong><p className="small">Materials, production flow and finished goods</p></button>}
+             {moreLinks.map(([id, title]) => (
+               <button key={id} type="button" className="card acc-landing-card" onClick={() => openSection(id)}>
+                 <strong>{title}</strong>
+@@ -3781,6 +3970,11 @@ const openVoucher = () => {
+           {!statements.length && <AccEmpty title="No bank statements yet" copy="Add opening, closing, and statement lines above. Matching never changes the books." />}
+         </div>}
+ 
++        {section === "crm" && <CustomerPipeline companyId={activeCompanyId} parties={parties} pipeline={partyPipeline} saving={saving} onStageChange={(partyId, stage) => run(async () => {
++          await setPartyPipelineStage(token, partyId, stage);
++          setPartyPipeline(current => ({ ...current, [partyId]: stage }));
++        }, "Pipeline stage saved.")} />}
++
+         {section === "setup" && <div className="acc-panel acc-setup">
+           <p className="copy acc-setup-lead">Books, chart, parties, GST, and locks for {activeCompany?.name || "this Accounts company"} only. Daily Finance, Monthly Finance, and Chit Fund stay on the Finance workspace.</p>
+           <AccSetupSection icon="FY" title="Company / financial year" copy="Indian financial year is 1 April to 31 March. Saving the name here updates the current Accounts company, not Finance.">
+@@ -3838,7 +4032,7 @@ const openVoucher = () => {
+                   )}
+                 </div>
+               ))}
+-              {canAdmin && <button type="button" className="btn" onClick={() => { setCompanyDraft({ name: "", booksStartedOn: todayIso() }); setShowCreateCompany(true); }}>+ Create company</button>}
++              {canAdmin && <button type="button" className="btn" onClick={() => { setCompanyDraft({ name: "", booksStartedOn: todayIso(), industry: "retail" }); setShowCreateCompany(true); }}>+ Create company</button>}
+               {!canAdmin && <p className="small">Only the owner can create or archive Accounts companies.</p>}
+             </div>
+           </AccSetupSection>
+@@ -3899,7 +4093,7 @@ const openVoucher = () => {
+             icon="P"
+             title="Parties"
+             copy="Customers, suppliers, employees, agents, and others used only by Accounts. They do not have to exist in Daily Finance, Monthly Finance, or Chit Fund."
+-            actions={<button type="button" className="btn primary" onClick={() => openParty()}>+ Add Party</button>}
++            actions={<div className="acc-btn-group"><label className="btn">Import CSV<input type="file" accept=".csv,text/csv" hidden onChange={importParties} /></label><button type="button" className="btn primary" onClick={() => openParty()}>+ Add Party</button></div>}
+             collapsible
+             summary={`${parties.length} ${parties.length === 1 ? "party" : "parties"}`}
+           >
+@@ -3932,6 +4126,7 @@ const openVoucher = () => {
+                 ? `${setupParties.length} of ${parties.length} ${parties.length === 1 ? "party" : "parties"}`
+                 : `${parties.length} ${parties.length === 1 ? "party" : "parties"}`}
+             </p>
++            {partyImportStatus && <p className="small accounts-notice-ok" role="status">{partyImportStatus}</p>}
+             {!parties.length ? (
+               <AccEmpty title="No parties yet" copy="Add customers and suppliers to start managing your accounting relationships." actionLabel="+ Add Party" onAction={() => openParty()} />
+             ) : !setupParties.length ? (
+@@ -3983,6 +4178,15 @@ const openVoucher = () => {
+               <AccPager page={pagedSetupParties.page} pages={pagedSetupParties.pages} total={pagedSetupParties.total} onPage={setListPage} noun="parties" />
+             </>}
+           </AccSetupSection>
++          <AccSetupSection icon="✓" title="Production readiness" copy="A practical checklist for running FinTrack safely in production." collapsible summary="Operational safeguards">
++            <div className="production-readiness-grid">
++              <div className="card"><strong>Backups</strong><p className="small">Download a company backup after each important month-end and store it outside the browser.</p><button type="button" className="btn" onClick={downloadCompanyBackup}>Download backup now</button></div>
++              <div className="card"><strong>Restore drill</strong><p className="small">Test restore in a separate empty company before relying on a backup. Existing restore safeguards prevent overwriting posted books.</p><span className="acc-chip ok">Protected workflow</span></div>
++              <div className="card"><strong>Period control</strong><p className="small">Lock completed periods so posted vouchers cannot be changed accidentally.</p><button type="button" className="btn" onClick={() => document.getElementById("accounts-period-lock")?.scrollIntoView({ behavior: "smooth" })}>Open period locks</button></div>
++              <div className="card"><strong>Scale safely</strong><p className="small">Use date filters, company separation, and regular exports as transaction volume grows.</p><span className="acc-chip">Company isolated</span></div>
++            </div>
++          </AccSetupSection>
++          <SubscriptionMonitoringPanel orgSettings={orgSettings} companyId={activeCompanyId} />
+           <AccSetupSection
+             icon="↔"
+             title="Accounting integration"
+@@ -4017,7 +4221,7 @@ const openVoucher = () => {
+               onAdjustStock={payload => run(() => adjustStock(token, payload), "Stock adjustment saved.")}
+             />
+           </AccSetupSection>
+-          <AccSetupSection icon="L" title="Period locking" copy="Lock a closed period so posted vouchers in that range cannot be changed. Owner only.">
++          <div id="accounts-period-lock"><AccSetupSection icon="L" title="Period locking" copy="Lock a closed period so posted vouchers in that range cannot be changed. Owner only.">
+             {!canAdmin && <p className="small">Only the business owner can lock or reopen periods.</p>}
+             {canAdmin && <>
+             <div className="form">
+@@ -4038,7 +4242,7 @@ const openVoucher = () => {
+               {locks.map(lock => <tr key={lock.id}><td>{lock.periodFrom} to {lock.periodTo}</td><td>{lock.isLocked ? "Locked" : "Reopened"}</td></tr>)}
+               {!locks.length && <tr><td colSpan="2">No period locks yet.</td></tr>}
+             </tbody></table></div>}
+-          </AccSetupSection>
++          </AccSetupSection></div>
+           {canAdmin && <AccSetupSection
+             icon="R"
+             title="Accounts access roles"
+@@ -4046,6 +4250,10 @@ const openVoucher = () => {
+             collapsible
+             summary={`${accountsRoles.length} assigned · ${teamInvites.filter(row => row.status === "pending").length} pending`}
+           >
++            <div className="accounts-collab-guide">
++              <div><strong>Recommended collaboration setup</strong><p className="small">Give your accountant <b>Accountant</b> access to post and reconcile. Give an external reviewer <b>Viewer</b> access. The owner remains the only user who can manage roles, lock periods, or change company settings.</p></div>
++              <span className="acc-chip ok">Owner controlled</span>
++            </div>
+             <h4 className="acc-subsection-title">Invite by email</h4>
+             <div className="form">
+               <Field label="Email"><input type="email" value={inviteDraft.email} onChange={event => setInviteDraft(current => ({ ...current, email: event.target.value }))} placeholder="ca@example.com" /></Field>
+@@ -4063,11 +4271,13 @@ const openVoucher = () => {
+                 setInviteDraft({ email: "", role: "viewer", note: "" });
+                 setTeamInvites(await listTeamInvites(token));
+                 setAccountsRoles(await loadAccountsRoles(token));
++                if (result?.status === "pending") setInviteEmailDraft({ email: result.email, role: result.role, expiresAt: result.expiresAt });
+                 if (result?.status === "assigned") {
+                   setNotice(`Assigned ${result.role} to ${result.email}.`);
+                 }
+               }, inviteDraft.email ? `Invite processed for ${inviteDraft.email.trim()}.` : "Invite saved.")}>{saving ? "Saving…" : "Send invite"}</button>
+             </div>
++            {inviteEmailDraft && <div className="notice accounts-invite-email" role="status"><strong>Invite recorded for {inviteEmailDraft.email}</strong><p className="small">The current backend does not send email automatically. Use your email client to send the instructions below; after the user signs up with this email, the invite is claimed automatically.</p><button type="button" className="btn" onClick={() => { const subject = encodeURIComponent(`FinTrack Accounts access · ${inviteEmailDraft.role}`); const body = encodeURIComponent(`You have been invited to FinTrack Accounts as ${inviteEmailDraft.role}. Sign up or sign in using this email address. Your Accounts access will be activated automatically after sign-in.`); window.location.href = `mailto:${inviteEmailDraft.email}?subject=${subject}&body=${body}`; }}>Open email draft</button><button type="button" className="btn" onClick={() => setInviteEmailDraft(null)}>Dismiss</button></div>}
+             <div className="table spacer acc-table-wrap"><table><thead><tr><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody>
+               {teamInvites.map(row => (
+                 <tr key={row.id}>
+@@ -4217,14 +4427,17 @@ const openVoucher = () => {
+         <VoucherForm accounts={visibleAccounts} parties={parties} voucherType={voucherType} setVoucherType={setVoucherType} form={voucherForm} setForm={setVoucherForm} lines={lines} setLines={setLines} onSubmit={submitVoucher} saving={saving} maxDate={todayIso()} />
+       </Modal>}
+       {showCreateCompany && <Modal title="Create company" close={() => !saving && setShowCreateCompany(false)} actions={<div className="tabs spacer"><button type="button" className="btn" disabled={saving} onClick={() => setShowCreateCompany(false)}>Cancel</button><button type="button" className="btn primary" disabled={saving || !String(companyDraft.name || "").trim()} onClick={() => run(async () => {
+-        const id = await createAccountsCompany(token, companyDraft);
++        const created = await createAccountsCompany(token, companyDraft);
++        const id = Array.isArray(created) ? created[0] : created;
+         setShowCreateCompany(false);
+-        await refresh(id);
++        return typeof id === "string" ? id : undefined;
+       }, "Company created. This company’s books start empty.")}>{saving ? "Saving…" : "Create company"}</button></div>}>
+         <p className="copy">A new company has its own chart, parties, vouchers, bank, GST, and locks. It does not copy SriHitha Infra or any other company.</p>
+         <div className="form">
+           <Field required label="Company name"><input value={companyDraft.name} onChange={event => setCompanyDraft(current => ({ ...current, name: event.target.value }))} placeholder="e.g. ABC Traders" /></Field>
+           <Field label="Books start date"><input type="date" value={companyDraft.booksStartedOn} onChange={event => setCompanyDraft(current => ({ ...current, booksStartedOn: event.target.value }))} /></Field>
++          <Field label="Industry template"><select value={companyDraft.industry || "retail"} onChange={event => setCompanyDraft(current => ({ ...current, industry: event.target.value }))}>{INDUSTRY_TEMPLATES.map(template => <option key={template.id} value={template.id}>{template.label}</option>)}</select><span className="small">{INDUSTRY_TEMPLATES.find(template => template.id === (companyDraft.industry || "retail"))?.hint}</span></Field>
++          <div className="accounts-template-features span">{(INDUSTRY_TEMPLATES.find(template => template.id === (companyDraft.industry || "retail"))?.features || []).map(feature => <span key={feature}>{feature}</span>)}</div>
+         </div>
+       </Modal>}
+       {showSimple && <Modal title={SIMPLE_ENTRY_KINDS.find(item => item.id === simpleKind)?.label || "Entry"} close={closeSimple}>

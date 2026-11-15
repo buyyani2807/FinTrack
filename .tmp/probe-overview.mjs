@@ -1,0 +1,25 @@
+import { chromium } from "@playwright/test";
+import { mockAccountsWorkspace } from "../e2e/fixtures/accountsMocks.js";
+import { richRows, richRpc } from "./capture-data.mjs";
+const browser = await chromium.launch({ channel: "chrome" });
+const page = await browser.newPage({ viewport: { width: 1360, height: 860 } });
+await mockAccountsWorkspace(page);
+await page.route("**/rest/v1/**", route => {
+  const url = route.request().url();
+  const rpc = url.match(/\/rest\/v1\/rpc\/([a-z_0-9]+)/);
+  const body = rpc ? richRpc(rpc[1]) : richRows(url);
+  if (body === undefined) return route.fallback();
+  return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+});
+page.on("pageerror", e => console.log("PAGEERROR", e.message));
+const pending = new Map();
+page.on("request", r => pending.set(r, r.url()));
+page.on("requestfinished", r => pending.delete(r));
+page.on("requestfailed", r => { console.log("FAILED", r.url().slice(0, 160), r.failure()?.errorText); pending.delete(r); });
+setTimeout(() => console.log("PENDING", [...pending.values()].map(u => u.slice(0, 160))), 11000);
+page.on("console", m => m.type() === "error" && console.log("CONSOLE", m.text().slice(0, 300)));
+await page.goto("http://127.0.0.1:5175/accounting/overview", { waitUntil: "domcontentloaded" });
+await page.waitForTimeout(40000);
+console.log("h1 count", await page.locator("h1").count(), "url", page.url());
+await page.screenshot({ path: ".tmp/tiles/probe.png" });
+await browser.close();

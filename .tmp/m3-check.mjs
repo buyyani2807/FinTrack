@@ -1,0 +1,20 @@
+import { chromium } from "@playwright/test";
+import { mockAccountsWorkspace } from "../e2e/fixtures/accountsMocks.js";
+
+const browser = await chromium.launch();
+const page = await browser.newPage();
+await mockAccountsWorkspace(page);
+await page.goto("http://127.0.0.1:4174/accounting");
+await page.getByRole("button", { name: "New", exact: true }).click({ timeout: 15000 });
+await page.getByRole("menuitem", { name: "Sale", exact: true }).click();
+const dialog = page.locator(".modal-bg").last();
+const unit = dialog.locator(".acc-item-line-card").getByRole("combobox", { name: "Unit" });
+await unit.click();
+await page.getByRole("textbox", { name: "Search options" }).fill("m3");
+const names = (await page.getByRole("option").allTextContents()).map(text => text.trim()).filter(Boolean);
+if (names.join(",") !== "M3") throw new Error(`expected only M3, got ${names.join(", ")}`);
+await page.getByRole("option", { name: "M3", exact: true }).click();
+const shown = (await unit.innerText()).trim();
+if (shown !== "M3") throw new Error(`selected ${shown}`);
+console.log("Sale unit", shown);
+await browser.close();
