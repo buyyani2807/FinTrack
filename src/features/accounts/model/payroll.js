@@ -22,6 +22,22 @@ export const DAY_BASIS = [
   { id: 30, label: "30 days" },
 ];
 
+export const PAY_TYPES = [
+  { id: "monthly", label: "Monthly salary" },
+  { id: "daily", label: "Daily wage" },
+  { id: "hourly", label: "Hourly wage" },
+];
+
+// Ledger for money given to staff ahead of pay. Created the first time an advance is recorded.
+export const STAFF_ADVANCE_CODE = "1210";
+export const GRATUITY_CODE = "5015";
+
+const PAY_TYPE_IDS = new Set(PAY_TYPES.map(row => row.id));
+
+export function payTypeOf(profile) {
+  return PAY_TYPE_IDS.has(profile?.payType) ? profile.payType : "monthly";
+}
+
 const STATUS_IDS = new Set(DAY_STATUSES.map(row => row.id));
 const LEAVE_IDS = new Set(LEAVE_TYPES.map(row => row.id));
 
@@ -113,12 +129,34 @@ export function leaveCovering(leaves, partyId, date) {
   return (leaves || []).find(row => row.partyId === partyId && row.fromDate <= date && row.toDate >= date) || null;
 }
 
-export function resolveDay({ partyId, date, weekday, days, leaves }) {
+export function isHoliday(holidays, date) {
+  return (holidays || []).some(row => row.date === date);
+}
+
+// A company holiday is a paid day off until someone marks the day differently.
+export function defaultDayStatus(weekday, date, holidays) {
+  return isHoliday(holidays, date) ? "holiday" : defaultStatus(weekday);
+}
+
+const dayHours = value => {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? Math.min(24, number) : 0;
+};
+
+export function resolveDay({ partyId, date, weekday, days, leaves, holidays }) {
   const leave = leaveCovering(leaves, partyId, date);
-  if (leave) return { status: "leave", leaveType: leave.leaveType, source: "leave" };
+  if (leave) return { status: "leave", leaveType: leave.leaveType, source: "leave", hours: 0, overtimeHours: 0 };
   const marked = (days || []).find(row => row.partyId === partyId && row.workDate === date);
-  if (marked && STATUS_IDS.has(marked.status)) return { status: marked.status, leaveType: null, source: "marked" };
-  return { status: defaultStatus(weekday), leaveType: null, source: "default" };
+  if (marked && STATUS_IDS.has(marked.status)) {
+    return {
+      status: marked.status,
+      leaveType: null,
+      source: "marked",
+      hours: dayHours(marked.hours),
+      overtimeHours: dayHours(marked.overtimeHours),
+    };
+  }
+  return { status: defaultDayStatus(weekday, date, holidays), leaveType: null, source: "default", hours: 0, overtimeHours: 0 };
 }
 
 export function lopUnits(resolved) {
@@ -135,6 +173,11 @@ export function emptyProfile(partyId) {
     hra: 0,
     allowance: 0,
     dayBasis: 0,
+    payType: "monthly",
+    rate: 0,
+    overtimeRate: 0,
+    paidLeaveQuota: 0,
+    sickLeaveQuota: 0,
     pf: 0,
     esi: 0,
     professionalTax: 0,
@@ -199,47 +242,145 @@ export function deductionTotal(parts) {
   return roundMoney(row.pf + row.esi + row.professionalTax + row.tds + row.otherDeduction);
 }
 
-export function buildPayLine({ partyId, month, profile, days, leaves, deductions }) {
+const positive = value => {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? roundMoney(number) : 0;
+};
+
+// One-off pay for a single month. overtimeAmount stays null until someone types an amount,
+// so the hours on the attendance sheet decide it.
+export function payExtras(source) {
+  const typed = source?.overtimeAmount;
+  const overtimeAmount = typed === null || typed === undefined || typed === "" ? null : positive(typed);
+  return { bonus: positive(source?.bonus), incentive: positive(source?.incentive), overtimeAmount };
+}
+
+export function advanceOutstanding(advance) {
+  return roundMoney(Math.max(0, Number(advance?.amount || 0) - Number(advance?.recovered || 0)));
+}
+
+// What comes out of this month's pay for money already given to the employee.
+// A loan recovers its instalment. An advance with no instalment recovers in full.
+// Recovery never takes pay below zero: what does not fit stays outstanding for next month.
+export function planRecoveries({ advances, partyId, month, available, overrides }) {
+  const end = monthEnd(month);
+  let left = roundMoney(Math.max(0, Number(available) || 0));
+  const open = (advances || [])
+    .filter(row => row.partyId === partyId && row.status === "open" && row.givenOn <= end && advanceOutstanding(row) > 0)
+    .sort((a, b) => (a.givenOn === b.givenOn ? String(a.id).localeCompare(String(b.id)) : a.givenOn < b.givenOn ? -1 : 1));
+  const plan = [];
+  for (const advance of open) {
+    const outstanding = advanceOutstanding(advance);
+    const typed = overrides?.[advance.id];
+    const wanted = typed === undefined || typed === null || typed === ""
+      ? (Number(advance.emi) > 0 ? Math.min(Number(advance.emi), outstanding) : outstanding)
+      : Math.min(positive(typed), outstanding);
+    const amount = roundMoney(Math.min(wanted, left));
+    left = roundMoney(left - amount);
+    plan.push({ advanceId: advance.id, kind: advance.kind || "advance", outstanding, amount });
+  }
+  return plan;
+}
+
+export function buildPayLine({ partyId, month, profile, days, leaves, deductions, holidays, extras, advances, recoveryOverrides }) {
   const dates = monthDates(month);
-  const basis = Number(profile?.dayBasis) > 0 ? Number(profile.dayBasis) : dates.length;
+  const payType = payTypeOf(profile);
+  const rate = positive(profile?.rate);
   let halves = 0;
   let paidHalves = 0;
+  let workedHalves = 0;
+  let hours = 0;
+  let overtimeHours = 0;
   for (const day of dates) {
-    const resolved = resolveDay({ partyId, date: day.date, weekday: day.weekday, days, leaves });
+    const resolved = resolveDay({ partyId, date: day.date, weekday: day.weekday, days, leaves, holidays });
     const lost = lopUnits(resolved);
     halves += lost;
     paidHalves += resolved.status === "half" ? 1 : lost > 0 ? 0 : 2;
+    if (resolved.status === "present") workedHalves += 2;
+    else if (resolved.status === "half") workedHalves += 1;
+    else if (resolved.status === "leave" && resolved.leaveType !== "unpaid") workedHalves += 2;
+    if (resolved.status === "present" || resolved.status === "half") hours += resolved.hours;
+    overtimeHours += resolved.overtimeHours;
   }
-  const lopDays = halves / 2;
-  const paidDays = paidHalves / 2;
-  const gross = monthlyGross(profile);
-  const lossAmount = basis > 0 ? roundMoney(gross * lopDays / basis) : 0;
-  const earned = roundMoney(Math.max(0, gross - lossAmount));
+  hours = Math.round(hours * 100) / 100;
+  overtimeHours = Math.round(overtimeHours * 100) / 100;
+  const workedDays = workedHalves / 2;
+  let basis = Number(profile?.dayBasis) > 0 ? Number(profile.dayBasis) : dates.length;
+  let lopDays = halves / 2;
+  let paidDays = paidHalves / 2;
+  let gross;
+  let baseEarned;
+  if (payType === "daily") {
+    // Paid for the days worked and for paid leave. Weekly offs and holidays are not paid.
+    gross = roundMoney(rate * workedDays);
+    baseEarned = gross;
+    basis = dates.length;
+    lopDays = 0;
+    paidDays = workedDays;
+  } else if (payType === "hourly") {
+    gross = roundMoney(rate * hours);
+    baseEarned = gross;
+    basis = dates.length;
+    lopDays = 0;
+    paidDays = workedDays;
+  } else {
+    gross = monthlyGross(profile);
+    const lossAmount = basis > 0 ? roundMoney(gross * lopDays / basis) : 0;
+    baseEarned = roundMoney(Math.max(0, gross - lossAmount));
+  }
+  const extra = payExtras(extras);
+  const overtime = extra.overtimeAmount === null
+    ? roundMoney(positive(profile?.overtimeRate) * overtimeHours)
+    : extra.overtimeAmount;
+  const earned = roundMoney(baseEarned + overtime + extra.bonus + extra.incentive);
   const parts = deductionParts(deductions || profile);
   const held = deductionTotal(parts);
+  const recoveries = held > earned ? [] : planRecoveries({
+    advances,
+    partyId,
+    month,
+    available: earned - held,
+    overrides: recoveryOverrides,
+  }).filter(row => row.amount > 0);
+  const advanceRecovery = roundMoney(recoveries.reduce((sum, row) => sum + row.amount, 0));
   const error = held > earned ? "Deductions are more than the salary earned." : "";
-  const net = error ? 0 : roundMoney(earned - held);
+  const net = error ? 0 : roundMoney(earned - held - advanceRecovery);
   return {
     partyId,
+    payType,
+    rate,
     paidDays,
     lopDays,
+    workedDays,
+    hours,
+    overtimeHours,
     basis,
     gross,
+    baseEarned,
+    overtime,
+    bonus: extra.bonus,
+    incentive: extra.incentive,
+    extras: extra,
     earned,
     deductions: parts,
     deductionTotal: held,
+    recoveries,
+    advanceRecovery,
     net,
     error,
     voucherId: null,
   };
 }
 
+// The pay on record: a monthly salary, or the rate for someone paid by the day or the hour.
 const recordedMonthly = (profile, saved) => {
+  if (profile && payTypeOf(profile) !== "monthly") return positive(profile.rate);
   if (profile) return monthlyGross(profile);
+  if (saved?.payType && saved.payType !== "monthly") return positive(saved.rate);
   return roundMoney(Number(saved?.basic || 0) + Number(saved?.hra || 0) + Number(saved?.allowance || 0));
 };
 
-export function payrollRows({ employees, month, profiles, days, leaves, overrides = {}, run = null }) {
+export function payrollRows({ employees, month, profiles, days, leaves, overrides = {}, run = null, holidays = [], advances = [], extrasByParty = {} }) {
   const posted = run?.status === "posted";
   const stored = run?.lines || [];
   const people = [...(employees || [])];
@@ -258,6 +399,7 @@ export function payrollRows({ employees, month, profiles, days, leaves, override
       if (!unfinished) {
         return {
           ...saved,
+          payType: saved.payType || "monthly",
           deductions: deductionParts(saved.deductions),
           name: person.name || saved.name || "Employee",
           error: "",
@@ -277,12 +419,17 @@ export function payrollRows({ employees, month, profiles, days, leaves, override
       };
     }
     const source = profile || emptyProfile(person.id);
+    const typed = posted ? null : (extrasByParty[person.id] || saved?.extras || null);
     const line = buildPayLine({
       partyId: person.id,
       month,
       profile: source,
       days,
       leaves,
+      holidays,
+      advances,
+      extras: typed,
+      recoveryOverrides: typed?.recoveries || null,
       deductions: posted ? source : (overrides[person.id] || saved?.deductions || source),
     });
     return {
@@ -296,6 +443,12 @@ export function payrollRows({ employees, month, profiles, days, leaves, override
   });
 }
 
+// Pay lost to absence. Lines saved before overtime and bonus existed have no baseEarned.
+export function lossOfPay(row) {
+  const base = row?.baseEarned === undefined || row?.baseEarned === null ? row?.earned : row.baseEarned;
+  return roundMoney(Math.max(0, Number(row?.gross || 0) - Number(base || 0)));
+}
+
 export function payrollSummary(rows) {
   const list = rows || [];
   let monthly = 0;
@@ -305,13 +458,15 @@ export function payrollSummary(rows) {
   let inMonth = 0;
   for (const row of list) {
     const gross = Number(row.monthly || 0);
-    monthly = roundMoney(monthly + gross);
+    // A daily or hourly rate is not a month's pay: count what the attendance earned instead.
+    const waged = row.payType && row.payType !== "monthly";
+    monthly = roundMoney(monthly + (waged ? Number(row.gross || 0) : gross));
     if (gross > 0) recorded += 1;
     if (row.inRun === false) continue;
     inMonth += 1;
     monthNet = roundMoney(monthNet + Number(row.net || 0));
-    const loss = Math.max(0, Number(row.gross || 0) - Number(row.earned || 0));
-    monthDeductions = roundMoney(monthDeductions + Number(row.deductionTotal || 0) + loss);
+    const loss = lossOfPay(row);
+    monthDeductions = roundMoney(monthDeductions + Number(row.deductionTotal || 0) + Number(row.advanceRecovery || 0) + loss);
   }
   return {
     employees: list.length,
@@ -348,13 +503,14 @@ export function payState({ posted, inRun, monthly, error }) {
   return "ready";
 }
 
-export function payrollVoucherLines({ accounts, payAccountId, earned, deductionTotal: held, partyId, description }) {
+export function payrollVoucherLines({ accounts, payAccountId, earned, deductionTotal: held, advanceRecovery = 0, partyId, description }) {
   const salary = findAccount(accounts, { code: SYSTEM_CODES.salary });
   if (!salary) throw new Error("Add a Salary ledger before posting pay.");
   const gross = roundMoney(earned);
   const deductions = roundMoney(held);
-  const net = roundMoney(gross - deductions);
-  if (gross < 0 || deductions < 0 || net < 0) throw new Error("Deductions are more than the salary earned.");
+  const recovered = roundMoney(advanceRecovery);
+  const net = roundMoney(gross - deductions - recovered);
+  if (gross < 0 || deductions < 0 || recovered < 0 || net < 0) throw new Error("Deductions are more than the salary earned.");
   const lines = [{
     coaId: salary.id,
     code: salary.code,
@@ -371,6 +527,18 @@ export function payrollVoucherLines({ accounts, payAccountId, earned, deductionT
       code: payable.code,
       debit: 0,
       credit: deductions,
+      description,
+    });
+  }
+  if (recovered > 0) {
+    const advances = findAccount(accounts, { code: STAFF_ADVANCE_CODE });
+    if (!advances) throw new Error("Add the Staff advances ledger before recovering an advance.");
+    lines.push({
+      coaId: advances.id,
+      code: advances.code,
+      partyId,
+      debit: 0,
+      credit: recovered,
       description,
     });
   }
@@ -406,22 +574,45 @@ export function inclusiveDays(from, to) {
   return Math.round((end - start) / 86400000) + 1;
 }
 
-export function attendanceMarks({ partyId, month, days, leaves }) {
+export function attendanceMarks({ partyId, month, days, leaves, holidays }) {
   const marks = {};
   for (const day of monthDates(month)) {
-    const resolved = resolveDay({ partyId, date: day.date, weekday: day.weekday, days, leaves });
+    const resolved = resolveDay({ partyId, date: day.date, weekday: day.weekday, days, leaves, holidays });
     if (resolved.source !== "leave") marks[day.date] = resolved.status;
   }
   return marks;
 }
 
-export function attendanceExceptions({ partyId, month, marks, leaves }) {
+// Hours typed on the attendance sheet, by date.
+export function attendanceHours({ partyId, month, days }) {
+  const start = monthStart(month);
+  const end = monthEnd(month);
+  const hours = {};
+  for (const row of days || []) {
+    if (row.partyId !== partyId || row.workDate < start || row.workDate > end) continue;
+    const worked = dayHours(row.hours);
+    const overtime = dayHours(row.overtimeHours);
+    if (worked > 0 || overtime > 0) hours[row.workDate] = { hours: worked, overtimeHours: overtime };
+  }
+  return hours;
+}
+
+// Only the days that differ from the default are stored, plus any day with hours on it.
+export function attendanceExceptions({ partyId, month, marks, leaves, holidays, hours }) {
   const rows = [];
   for (const day of monthDates(month)) {
     if (leaveCovering(leaves, partyId, day.date)) continue;
-    const status = marks?.[day.date] || defaultStatus(day.weekday);
+    const usual = defaultDayStatus(day.weekday, day.date, holidays);
+    const status = marks?.[day.date] || usual;
     if (!STATUS_IDS.has(status)) continue;
-    if (status !== defaultStatus(day.weekday)) rows.push({ date: day.date, status });
+    const worked = dayHours(hours?.[day.date]?.hours);
+    const overtime = dayHours(hours?.[day.date]?.overtimeHours);
+    if (status !== usual || worked > 0 || overtime > 0) {
+      const row = { date: day.date, status };
+      if (worked > 0) row.hours = worked;
+      if (overtime > 0) row.overtimeHours = overtime;
+      rows.push(row);
+    }
   }
   return rows;
 }
