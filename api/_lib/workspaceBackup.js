@@ -180,6 +180,14 @@ async function exportAccountsCompany(company) {
     payroll_days,
     payroll_leave,
     payroll_runs,
+    payroll_holidays,
+    payroll_staff,
+    payroll_revisions,
+    payroll_advances,
+    payroll_advance_recoveries,
+    payroll_settlements,
+    payroll_punches,
+    payroll_leave_requests,
   ] = await Promise.all([
     restGetAll(`acc_coa?company_id=eq.${companyId}&select=*`).catch(() => []),
     restGetAll(`acc_parties?company_id=eq.${companyId}&select=*`).catch(() => []),
@@ -202,6 +210,16 @@ async function exportAccountsCompany(company) {
     restGetAll(`acc_payroll_days?company_id=eq.${companyId}&select=*`).catch(() => []),
     restGetAll(`acc_payroll_leave?company_id=eq.${companyId}&select=*`).catch(() => []),
     restGetAll(`acc_payroll_runs?company_id=eq.${companyId}&select=*`).catch(() => []),
+    // Payroll phase 1 and 3 (migrations 149, 150). Restored by 151.
+    // Staff PIN hashes, sessions and punch selfies are left out on purpose: the restore keeps them in the database.
+    restGetAll(`acc_payroll_holidays?company_id=eq.${companyId}&select=*`).catch(() => []),
+    restGetAll(`acc_payroll_staff?company_id=eq.${companyId}&select=*`).catch(() => []),
+    restGetAll(`acc_payroll_revisions?company_id=eq.${companyId}&select=*`).catch(() => []),
+    restGetAll(`acc_payroll_advances?company_id=eq.${companyId}&select=*`).catch(() => []),
+    restGetAll(`acc_payroll_advance_recoveries?company_id=eq.${companyId}&select=*`).catch(() => []),
+    restGetAll(`acc_payroll_settlements?company_id=eq.${companyId}&select=*`).catch(() => []),
+    restGetAll(`acc_payroll_punches?company_id=eq.${companyId}&select=*`).catch(() => []),
+    restGetAll(`acc_payroll_leave_requests?company_id=eq.${companyId}&select=*`).catch(() => []),
   ]);
   return {
     company,
@@ -226,6 +244,14 @@ async function exportAccountsCompany(company) {
     acc_payroll_days: payroll_days,
     acc_payroll_leave: payroll_leave,
     acc_payroll_runs: payroll_runs,
+    acc_payroll_holidays: payroll_holidays,
+    acc_payroll_staff: payroll_staff,
+    acc_payroll_revisions: payroll_revisions,
+    acc_payroll_advances: payroll_advances,
+    acc_payroll_advance_recoveries: payroll_advance_recoveries,
+    acc_payroll_settlements: payroll_settlements,
+    acc_payroll_punches: payroll_punches,
+    acc_payroll_leave_requests: payroll_leave_requests,
   };
 }
 
