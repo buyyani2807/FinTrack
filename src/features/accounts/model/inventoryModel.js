@@ -389,7 +389,10 @@ export function parseLineDiscount(input, grossAmount) {
 
 export function validateItemForm(form = {}) {
   if (!String(form.name || "").trim()) return "Item name is required.";
-  if (!String(form.sku || "").trim()) return "Item code / SKU is required.";
+  // Barcoded shop goods only have a barcode; loose / unbranded goods only have an SKU. Either works.
+  if (!String(form.sku || "").trim() && !String(form.barcode || "").trim()) {
+    return "Enter a barcode or an item code / SKU.";
+  }
   if (!ITEM_TYPES.some(type => type.id === form.itemType)) return "Choose product or service.";
   if (!ITEM_UNITS.includes(form.unit) && !String(form.unit || "").trim()) return "Unit is required.";
   if (Number(form.sellingPrice || 0) < 0 || Number(form.purchasePrice || 0) < 0) return "Prices cannot be negative.";

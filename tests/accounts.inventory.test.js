@@ -50,7 +50,9 @@ const accounts = [
 
 test("item form validation requires name and sku", () => {
   assert.match(validateItemForm({ name: "", sku: "CEM" }), /name/i);
-  assert.match(validateItemForm({ name: "Cement", sku: "" }), /SKU/i);
+  // SKU is only required when no barcode is set; a scanned barcode is enough identity on its own.
+  assert.match(validateItemForm({ name: "Cement", sku: "", barcode: "" }), /barcode or an item code/i);
+  assert.equal(validateItemForm({ name: "Cement", sku: "", barcode: "8901030865278", itemType: "product", unit: "Bag", openingStock: "0", reorderLevel: "0" }), "");
   assert.equal(validateItemForm({
     name: "Cement 50kg",
     sku: "CEM-50",
