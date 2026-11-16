@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, Trash2, Pause, Play, Plus, ShoppingCart, RotateCcw, Landmark, ScrollText, Star, History, Share2, MessageCircleQuestion, Maximize2, Minimize2 } from "lucide-react";
+import { Search, Trash2, Pause, Play, Plus, ShoppingCart, RotateCcw, Landmark, ScrollText, Star, History, Share2, MessageCircleQuestion, Maximize2, Minimize2, ScanBarcode } from "lucide-react";
 import { Select } from "../../../components/Select.jsx";
 import { money } from "../accountsFormat.js";
 import { formatIstTime, todayIso } from "../../../lib/dates.js";
@@ -25,6 +25,8 @@ import {
 import { resolveItemRate } from "../model/priceLists.js";
 import { cancelVoucher, postVoucher, requestCounterOverride, upsertCounterDayClose } from "../data/accountingRepository.js";
 import { SupervisorPinDialog } from "./SupervisorPinDialog.jsx";
+import { CounterCameraScanner } from "./CounterCameraScanner.jsx";
+import { cameraScanSupported } from "../model/cameraScan.js";
 import {
   listOfflineBills,
   loadCounterCatalogCache,
@@ -58,10 +60,12 @@ import {
   tillNeedle,
 } from "../model/counterDayReport.js";
 import {
+  counterBrowseItems,
   counterDayCloseBrief,
   counterDayCloseCoach,
   counterDayTopItems,
   counterKhataRisk,
+  counterSaleCounts,
   counterSessionAdvisories,
 } from "../model/counterAi.js";
 import { askCounter, COUNTER_ASK_PROMPTS } from "../model/counterAsk.js";
@@ -186,6 +190,7 @@ export function CounterWorkspace({
   const [tenderedCash, setTenderedCash] = useState("");
   const [paymentRef, setPaymentRef] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [scanOpen, setScanOpen] = useState(false);
   const [holds, setHolds] = useState([]);
   const [holdsReady, setHoldsReady] = useState(false);
   const [draftReady, setDraftReady] = useState(false);
@@ -587,11 +592,13 @@ export function CounterWorkspace({
       })
       .slice(0, 40);
   }, [workingItems, categoryFilter, categoryNameById]);
-  // With no search text the finder lists the chosen category, or the first items of the catalog.
+  // With no search text the finder lists the chosen category, or the most sold items of the last 14 days.
+  const saleCounts = useMemo(() => counterSaleCounts(stockMovements, { today }), [stockMovements, today]);
   const browseItems = useMemo(() => {
     if (categoryFilter) return categoryItems;
-    return (workingItems || []).filter(item => item.isActive !== false).slice(0, 40);
-  }, [categoryFilter, categoryItems, workingItems]);
+    return counterBrowseItems(workingItems, saleCounts);
+  }, [categoryFilter, categoryItems, workingItems, saleCounts]);
+  const browseHasBestSellers = !categoryFilter && browseItems.some(item => saleCounts[item.id] > 0);
   // Why Charge is off, in the same order the button checks.
   const chargeBlockReason = !lines.length || busy || saving
     ? ""
@@ -780,6 +787,19 @@ export function CounterWorkspace({
     if (catalog.length === 1) {
       addItem(catalog[0]);
     }
+  };
+
+  // Camera scan: add the item with this barcode or SKU and say what happened.
+  const addScannedCode = code => {
+    const item = findCounterItemByCode(workingItems, code);
+    if (!item) return `No item has the code ${code}.`;
+    const lots = fefoLotsForItem(item, workingItems, { today });
+    addItem(item);
+    if (lots.length > 1) {
+      setScanOpen(false);
+      return "";
+    }
+    return `Added ${item.name}.`;
   };
 
   const patchLine = (index, patch) => {
@@ -1871,6 +1891,7 @@ export function CounterWorkspace({
               <AccShortcutsPanel variant="counter" />
             </div>
           </div>
+          <div className="counter-search-row">
           <label className="counter-search">
             <Search size={20} aria-hidden="true" />
             <input
@@ -1888,6 +1909,13 @@ export function CounterWorkspace({
               autoFocus
             />
           </label>
+          {cameraScanSupported() && workingItems.length ? (
+            <button type="button" className="btn counter-scan-btn" onClick={() => setScanOpen(true)} aria-label="Scan a barcode with the camera">
+              <ScanBarcode size={18} aria-hidden="true" /> Scan
+            </button>
+          ) : null}
+          </div>
+          {scanOpen ? <CounterCameraScanner onCode={addScannedCode} onClose={() => setScanOpen(false)} /> : null}
           {!workingItems.length ? (
             <div className="counter-empty-stage">
               <p className="counter-empty-title">No products yet</p>
@@ -1918,6 +1946,7 @@ export function CounterWorkspace({
                   ))}
                 </div>
               ) : null}
+              {browseHasBestSellers ? <p className="small counter-browse-label">Most sold in the last 14 days</p> : null}
               {browseItems.length ? (
                 <ul className="counter-item-list counter-browse-list">
                   {browseItems.map(item => {
