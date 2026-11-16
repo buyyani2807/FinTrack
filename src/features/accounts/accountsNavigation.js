@@ -24,6 +24,8 @@ export const NAV_TREE = [
       { id: "payroll", label: "Pay" },
       { id: "attendance", label: "Attendance" },
       { id: "leave", label: "Leave" },
+      { id: "advances", label: "Advances" },
+      { id: "staffapp", label: "Staff app" },
     ],
   },
   {
@@ -44,7 +46,7 @@ export const NAV_TREE = [
   { id: "cashbook", label: "Cashbook", glyph: "◇" },
   { id: "setup", label: "Setup", glyph: "⚙" },
 ];
-const SECTION_PARENT = { party: "parties", attendance: "payroll", leave: "payroll" };
+const SECTION_PARENT = { party: "parties", attendance: "payroll", leave: "payroll", advances: "payroll", staffapp: "payroll" };
 export const navItemIsActive = (item, section) => item.children?.some(child => child.id === section) || item.id === section || item.id === SECTION_PARENT[section];
 export function sectionTrail(section, reportTab) {
   if (section === "overview") return ["Overview"];
@@ -55,6 +57,8 @@ export function sectionTrail(section, reportTab) {
   if (section === "payroll") return ["Payroll", "Pay"];
   if (section === "attendance") return ["Payroll", "Attendance"];
   if (section === "leave") return ["Payroll", "Leave"];
+  if (section === "advances") return ["Payroll", "Advances"];
+  if (section === "staffapp") return ["Payroll", "Staff app"];
   if (section === "parties") return ["Parties", "Party Ledger"];
   if (section === "party") return ["Parties", "Party profile"];
   if (section === "receivables") return ["Parties", "Receivables"];
@@ -86,6 +90,8 @@ export const SECTIONS = [
   { id: "payroll", label: "Pay", group: "Books" },
   { id: "attendance", label: "Attendance", group: "Books" },
   { id: "leave", label: "Leave", group: "Books" },
+  { id: "advances", label: "Advances", group: "Books" },
+  { id: "staffapp", label: "Staff app", group: "Books" },
   { id: "cashbook", label: "Cashbook", group: "Books" },
   { id: "receivables", label: "Receivables", group: "Parties" },
   { id: "payables", label: "Payables", group: "Parties" },

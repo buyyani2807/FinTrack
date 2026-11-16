@@ -3012,7 +3012,7 @@ const openVoucher = () => {
           onAttachProof={(row, file) => onAttachVoucherFile({ id: row.voucherId, status: row.status }, file)}
           onViewProof={viewExpenseProof}
         />}
-        {(section === "payroll" || section === "attendance" || section === "leave") && <PayrollSection
+        {["payroll", "attendance", "leave", "advances", "staffapp"].includes(section) && <PayrollSection
           key={activeCompanyId || "company"}
           tab={section}
           token={token}
@@ -3022,6 +3022,7 @@ const openVoucher = () => {
           companyName={activeCompany?.name || settings?.companyName || ""}
           booksStartedOn={activeCompany?.booksStartedOn || settings?.booksStartedOn || ""}
           canWrite={canWrite}
+          canAdmin={canAdmin}
           onRefresh={() => refresh()}
           onOpenSection={openSection}
         />}
