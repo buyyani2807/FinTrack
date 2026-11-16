@@ -190,6 +190,8 @@ export function CounterWorkspace({
   const [walkInName, setWalkInName] = useState("");
   const [walkInPhone, setWalkInPhone] = useState("");
   const [billDiscount, setBillDiscount] = useState("");
+  // Round-off at the till: round the bill to the nearest rupee and post the paisa to Round off.
+  const [roundOff, setRoundOff] = useState(false);
   const [lotPicker, setLotPicker] = useState(null);
   const [printNotice, setPrintNotice] = useState("");
   const [askOpen, setAskOpen] = useState(false);
@@ -339,6 +341,7 @@ export function CounterWorkspace({
       setMoneyMode(draft.moneyMode || "cash");
       setSettlement(draft.settlement || "paid");
       setBillDiscount(draft.billDiscount || "");
+      setRoundOff(Boolean(draft.roundOff));
       setTillMode(draft.tillMode === "return" ? "return" : "sale");
       setReceivedCash(draft.receivedCash || "");
       setReceivedUpi(draft.receivedUpi || "");
@@ -386,6 +389,7 @@ export function CounterWorkspace({
     receivedCard,
     tenderedCash,
     paymentRef,
+    roundOff,
     walkInName,
     walkInPhone,
   };
@@ -418,6 +422,7 @@ export function CounterWorkspace({
     receivedCard,
     tenderedCash,
     paymentRef,
+    roundOff,
     walkInName,
     walkInPhone,
   ]);
@@ -536,21 +541,27 @@ export function CounterWorkspace({
     () => billDiscountAmount(billLines, billDiscount),
     [billLines, billDiscount],
   );
+  // Round-off (sale only, not returns): round the bill to the nearest rupee.
+  const roundOffActive = tillMode !== "return" && roundOff && totals.total > 0;
+  const roundedTotal = roundOffActive ? Math.round(totals.total) : totals.total;
+  const roundOffDiff = roundOffActive ? roundMoney(roundedTotal - totals.total) : 0;
+  // Everything downstream from the total (Charge amount, UPI QR, cash tendered, split status) uses this.
+  const chargeTotal = roundedTotal;
   const upiLink = useMemo(() => {
     if (tillMode === "return") return "";
     if (settlement !== "paid" || (moneyMode !== "upi" && moneyMode !== "cash_upi" && moneyMode !== "split")) return "";
     if (!isValidUpiId(branding?.upiId) || branding?.showUpiQr === false) return "";
-    if (!(totals.total > 0)) return "";
+    if (!(chargeTotal > 0)) return "";
     // A split bill shows the QR for its UPI part only, once that part is typed.
     const upiPart = Number(receivedUpi);
     if (moneyMode === "split" && !(upiPart > 0)) return "";
     return upiPayLink({
       upiId: branding.upiId,
       payeeName: branding.upiPayeeName || branding.companyName || "",
-      amount: moneyMode === "split" ? upiPart : totals.total,
+      amount: moneyMode === "split" ? upiPart : chargeTotal,
       note: `Counter ${tillLabel}`,
     });
-  }, [tillMode, settlement, moneyMode, branding, totals.total, tillLabel, receivedUpi]);
+  }, [tillMode, settlement, moneyMode, branding, chargeTotal, tillLabel, receivedUpi]);
   const khataRisk = useMemo(() => {
     if (settlement !== "credit" || !selectedParty) return null;
     return counterKhataRisk({
@@ -566,8 +577,8 @@ export function CounterWorkspace({
   const creditAdvice = khataRisk?.advice || null;
   const changeDue = useMemo(() => {
     if (tillMode === "return" || settlement !== "paid" || moneyMode !== "cash") return null;
-    return cashChangeDue(tenderedCash, totals.total);
-  }, [tillMode, settlement, moneyMode, tenderedCash, totals.total]);
+    return cashChangeDue(tenderedCash, chargeTotal);
+  }, [tillMode, settlement, moneyMode, tenderedCash, chargeTotal]);
   // Paid cash sales need tendered ≥ total before Charge (returns / khata / UPI-card skip this).
   const cashTenderMissing = tillMode !== "return"
     && settlement === "paid"
@@ -576,8 +587,8 @@ export function CounterWorkspace({
   // Split payment (sale only): cash, UPI and card parts must add up to the bill.
   const splitActive = tillMode !== "return" && settlement === "paid" && moneyMode === "split";
   const splitStatus = useMemo(
-    () => counterSplitStatus(totals.total, { cash: receivedCash, upi: receivedUpi, card: receivedCard }),
-    [totals.total, receivedCash, receivedUpi, receivedCard],
+    () => counterSplitStatus(chargeTotal, { cash: receivedCash, upi: receivedUpi, card: receivedCard }),
+    [chargeTotal, receivedCash, receivedUpi, receivedCard],
   );
   const splitInvalid = splitActive && !splitStatus.ok;
   const oversellLines = useMemo(
@@ -641,7 +652,7 @@ export function CounterWorkspace({
             : blockOversell && oversellLines.length > 0
               ? "Fix the short stock lines to charge."
               : cashTenderMissing
-                ? `Enter cash tendered of ${money(totals.total)} or more to charge.`
+                ? `Enter cash tendered of ${money(chargeTotal)} or more to charge.`
                 : splitInvalid
                   ? (splitStatus.remaining > 0
                     ? `${money(splitStatus.remaining)} still to collect across cash, UPI and card.`
@@ -884,6 +895,7 @@ export function CounterWorkspace({
     setMoneyMode("cash");
     setSettlement("paid");
     setBillDiscount("");
+    setRoundOff(false);
     setReceivedCash("");
     setReceivedUpi("");
     setReceivedCard("");
@@ -932,6 +944,7 @@ export function CounterWorkspace({
       receivedCash,
       receivedUpi,
       receivedCard,
+      roundOff,
     };
     setHolds(current => [hold, ...current]);
     clearBill();
@@ -949,6 +962,7 @@ export function CounterWorkspace({
     setMoneyMode(hold.moneyMode || "cash");
     setSettlement(hold.settlement || "paid");
     setBillDiscount(hold.billDiscount || "");
+    setRoundOff(Boolean(hold.roundOff));
     setTillMode(hold.tillMode === "return" ? "return" : "sale");
     setReceivedCash(hold.receivedCash || "");
     setReceivedUpi(hold.receivedUpi || "");
@@ -1186,7 +1200,7 @@ export function CounterWorkspace({
       if (!splitStatus.ok) {
         setError(
           splitStatus.remaining > 0
-            ? `${money(splitStatus.remaining)} is still to collect. The cash, UPI and card amounts must add up to ${money(totals.total)}.`
+            ? `${money(splitStatus.remaining)} is still to collect. The cash, UPI and card amounts must add up to ${money(chargeTotal)}.`
             : splitStatus.remaining < 0
               ? `The payments are ${money(Math.abs(splitStatus.remaining))} more than the bill.`
               : "Enter at least two payment amounts for a split payment.",
@@ -1239,6 +1253,7 @@ export function CounterWorkspace({
         intra,
         taxInclusive: false,
         gstEnabled,
+        roundOffAdjustment: roundOffDiff,
       });
       if (!online) {
         await queueOfflineSale({ draft, moneyParts, clientRequestId });
@@ -2407,6 +2422,18 @@ export function CounterWorkspace({
               <p className="small counter-discount-hint">{money(discountOff)} off this bill</p>
             ) : null}
           </FieldBlock>
+          {tillMode === "sale" ? (
+            <label className="counter-roundoff-toggle">
+              <input
+                type="checkbox"
+                checked={roundOff}
+                onChange={event => setRoundOff(event.target.checked)}
+                disabled={busy || !lines.length}
+                aria-label="Round off"
+              />
+              <span>Round off to the nearest rupee</span>
+            </label>
+          ) : null}
           {settlement === "paid" ? (
             <>
               <FieldBlock label="Payment">
@@ -2499,7 +2526,7 @@ export function CounterWorkspace({
                   {lines.length ? (
                     <p className={`small counter-split-status${splitStatus.ok ? " is-ok" : ""}`} role="status">
                       {splitStatus.ok
-                        ? `Adds up to ${money(totals.total)}.`
+                        ? `Adds up to ${money(chargeTotal)}.`
                         : splitStatus.remaining > 0
                           ? `${money(splitStatus.remaining)} still to collect.`
                           : splitStatus.remaining < 0
@@ -2523,7 +2550,7 @@ export function CounterWorkspace({
               {upiLink ? (
                 <div className="counter-upi-qr">
                   <QrSvg text={upiLink} size={120} label="UPI QR for this bill" />
-                  <p className="small">Scan to pay {money(moneyMode === "split" ? Number(receivedUpi) || 0 : totals.total)} via UPI</p>
+                  <p className="small">Scan to pay {money(moneyMode === "split" ? Number(receivedUpi) || 0 : chargeTotal)} via UPI</p>
                 </div>
               ) : null}
             </>
@@ -2547,7 +2574,13 @@ export function CounterWorkspace({
             ) : null}
             <div><span>Taxable</span><strong>{money(totals.taxable)}</strong></div>
             {gstEnabled ? <div><span>{totals.taxLabel || "GST"}</span><strong>{money(totals.tax)}</strong></div> : null}
-            <div className="counter-total-due"><span>{tillMode === "return" ? "Refund" : "Total due"}</span><strong>{money(totals.total)}</strong></div>
+            {roundOffActive ? (
+              <div className="counter-roundoff-row">
+                <span>Round off</span>
+                <strong>{roundOffDiff >= 0 ? `+${money(roundOffDiff)}` : `−${money(Math.abs(roundOffDiff))}`}</strong>
+              </div>
+            ) : null}
+            <div className="counter-total-due"><span>{tillMode === "return" ? "Refund" : "Total due"}</span><strong>{money(chargeTotal)}</strong></div>
             {changeDue != null ? (
               <div className={changeDue < 0 ? "counter-change is-short" : "counter-change"}>
                 <span>{changeDue < 0 ? "Short" : "Change"}</span>
@@ -2579,7 +2612,7 @@ export function CounterWorkspace({
             >
               {busy
                 ? (online ? "Posting…" : "Saving offline…")
-                : `${tillMode === "return" ? "Refund" : settlement === "credit" ? "Post khata" : online ? "Charge" : "Charge offline"} ${money(totals.total)}`}
+                : `${tillMode === "return" ? "Refund" : settlement === "credit" ? "Post khata" : online ? "Charge" : "Charge offline"} ${money(chargeTotal)}`}
             </button>
           </div>
           {chargeBlockReason ? <p className="small counter-charge-reason" role="status">{chargeBlockReason}</p> : null}
@@ -2596,7 +2629,7 @@ export function CounterWorkspace({
         <div className="counter-mobile-paybar" aria-label="Charge bar">
           <div className="counter-mobile-paybar-total">
             <span className="small">{tillMode === "return" ? "Refund" : "Due"}</span>
-            <strong>{money(totals.total)}</strong>
+            <strong>{money(chargeTotal)}</strong>
             {chargeBlockReason ? <span className="small counter-charge-reason">{chargeBlockReason}</span> : null}
           </div>
           <button

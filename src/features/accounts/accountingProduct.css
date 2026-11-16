@@ -8571,3 +8571,23 @@
   outline-offset: 2px;
   border-radius: 6px;
 }
+
+/* ── Counter: Round off ──────────────────────────────────────────────────────────────────────── */
+.accounts-dashboard .counter-roundoff-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: -2px;
+  padding: 6px 2px;
+  color: var(--ft-text-2);
+  font-size: var(--ft-type-secondary);
+  cursor: pointer;
+}
+.accounts-dashboard .counter-roundoff-toggle input {
+  accent-color: var(--ft-primary);
+  width: 16px;
+  height: 16px;
+}
+.accounts-dashboard .counter-roundoff-row strong {
+  color: var(--ft-text-2);
+}
