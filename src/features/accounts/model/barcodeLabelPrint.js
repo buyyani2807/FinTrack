@@ -85,7 +85,9 @@ export function printItemLabels(items = [], { companyName = "" } = {}) {
 </style></head><body><div class="sheet">${cards}</div>
 <script>window.onload=function(){window.print();}</script></body></html>`;
 
-  const popup = window.open("", "_blank", "noopener,noreferrer,width=900,height=700");
+  // Note: noopener / noreferrer are left off on purpose — Chrome returns null (or a document-less stub)
+  // for an opener-less window, and we need to write the label HTML into this new window.
+  const popup = window.open("", "_blank", "width=900,height=700");
   if (!popup) throw new Error("Allow pop-ups to print labels.");
   popup.document.open();
   popup.document.write(html);
