@@ -203,6 +203,7 @@ export function AccItemsSetup({
       {detail && (
         <ItemDetailDialog
           detail={detail}
+          companyName={companyName}
           setDetailId={setDetailId}
           stockByItem={stockByItem}
           detailValue={detailValue}

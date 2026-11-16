@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { AccTable } from "../AccUi.jsx";
 import { stockReasonLabel, stockStatus } from "../../model/inventoryModel.js";
 import { DialogModal } from "../../../../components/ui.jsx";
 import { money } from "../../accountsFormat.js";
+import { printItemLabels } from "../../model/barcodeLabelPrint.js";
 
 export function ItemDetailDialog({
   detail,
@@ -12,7 +14,18 @@ export function ItemDetailDialog({
   detailSales,
   detailPurchases,
   openEdit,
+  companyName = "",
 }) {
+  const [labelCopies, setLabelCopies] = useState("1");
+  const [printError, setPrintError] = useState("");
+  const printLabel = () => {
+    setPrintError("");
+    try {
+      printItemLabels([detail], { companyName, copies: Number(labelCopies) || 1 });
+    } catch (err) {
+      setPrintError(err?.message || "Could not print the label.");
+    }
+  };
   return (
     <DialogModal className="acc-modal" title={detail.name} close={() => setDetailId(null)}>
       <p className="copy">{[detail.brand, detail.sku, detail.barcode, detail.batchNo && `Batch ${detail.batchNo}`, detail.expiryDate && `Exp ${detail.expiryDate}`, detail.itemType, detail.unit].filter(Boolean).join(" · ")}</p>
@@ -28,6 +41,22 @@ export function ItemDetailDialog({
         {detailMoves.map(row => <tr key={row.id}><td>{row.movementDate}</td><td>{stockReasonLabel(row.reason)}</td><td className="acc-num">{row.quantityDelta > 0 ? `+${row.quantityDelta}` : row.quantityDelta}</td><td>{row.voucherNumber || "—"}</td></tr>)}
       </AccTable>
       <p className="small">Sales lines: {detailSales.length} · Purchase lines: {detailPurchases.length}</p>
+      <div className="acc-item-label-print">
+        <label className="acc-item-label-copies">
+          <span className="small">Copies</span>
+          <input
+            type="number"
+            inputMode="numeric"
+            min="1"
+            max="200"
+            value={labelCopies}
+            onChange={event => setLabelCopies(event.target.value.replace(/\D/g, ""))}
+            aria-label="Number of label copies"
+          />
+        </label>
+        <button type="button" className="btn" onClick={printLabel}>Print label</button>
+      </div>
+      {printError ? <p className="acc-form-error" role="alert">{printError}</p> : null}
       <div className="tabs spacer"><button type="button" className="btn" onClick={() => openEdit(detail)}>Edit</button><button type="button" className="btn primary" onClick={() => setDetailId(null)}>Done</button></div>
     </DialogModal>
   );

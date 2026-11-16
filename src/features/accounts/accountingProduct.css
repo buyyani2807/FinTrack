@@ -8524,3 +8524,25 @@
 .accounts-dashboard .counter-split-status.is-ok {
   color: var(--ft-success);
 }
+
+/* ── Item detail: print one label for this item ───────────────────────────────────────────────── */
+.acc-item-label-print {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+.acc-item-label-copies {
+  display: grid;
+  gap: 2px;
+}
+.acc-item-label-copies input {
+  width: 6rem;
+  padding: 6px 10px;
+  border: 1px solid var(--ft-input-border);
+  border-radius: 8px;
+  background: var(--ft-surface);
+  color: var(--ft-text);
+  font: inherit;
+}
