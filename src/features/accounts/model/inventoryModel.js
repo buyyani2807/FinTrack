@@ -1,4 +1,4 @@
-import { prepareGstAmount, roundMoney, gstDocumentLine, saleLines, purchaseLines, creditNoteLines, debitNoteLines, assertVoucherDateNotFuture, addDaysIso, assertMoneyModeSplit, entryPartyId } from "./accountingModel.js";
+import { applyRoundOffToLines, prepareGstAmount, roundMoney, gstDocumentLine, saleLines, purchaseLines, creditNoteLines, debitNoteLines, assertVoucherDateNotFuture, addDaysIso, assertMoneyModeSplit, entryPartyId } from "./accountingModel.js";
 
 export const ITEMIZED_KINDS = {
   sale: { voucherType: "sales", partyLabel: "customer", returnKind: false },
@@ -584,6 +584,7 @@ export function itemizedEntryDraft({
   intra = true,
   taxInclusive = false,
   gstEnabled = false,
+  roundOffAdjustment = 0,
 } = {}) {
   partyId = entryPartyId(partyId);
   assertVoucherDateNotFuture(date, today);
@@ -636,6 +637,10 @@ export function itemizedEntryDraft({
     const split = moneyParts ? assertMoneyModeSplit(moneyMode, totalForMoney, moneyParts) : null;
     const buildLines = kind === "sale" ? saleLines : purchaseLines;
     lines = buildLines({ accounts, amount, settlement, moneyMode, moneyParts: split, partyId, description, gst: gstForLines });
+  }
+
+  if (kind === "sale" && Math.abs(Number(roundOffAdjustment) || 0) >= 0.005) {
+    lines = applyRoundOffToLines(lines, { accounts, adjustment: roundOffAdjustment, description: `${description || "Counter sale"} · Round off` });
   }
 
   return {

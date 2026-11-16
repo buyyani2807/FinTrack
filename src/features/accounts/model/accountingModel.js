@@ -113,6 +113,7 @@ export const SYSTEM_CODES = {
   chitCommission: "4200",
   sales: "4300",
   serviceIncome: "4310",
+  roundOff: "4150",
   purchase: "5110",
   professionalFees: "5120",
   otherExpense: "5990",
@@ -247,6 +248,7 @@ export const DEFAULT_CHART_OF_ACCOUNTS = [
   { code: "3200", name: "Retained Earnings", groupType: "equity", accountType: "retained", isSystem: true },
   { code: "4000", name: "Interest Income", groupType: "income", accountType: "income", isSystem: true },
   { code: "4100", name: "Other Income", groupType: "income", accountType: "income", isSystem: true },
+  { code: "4150", name: "Round off", groupType: "income", accountType: "income", isSystem: true },
   { code: "4200", name: "Chit Commission", groupType: "income", accountType: "income", isSystem: true },
   { code: "4300", name: "Sales", groupType: "income", accountType: "income", isSystem: true },
   { code: "4310", name: "Service Income", groupType: "income", accountType: "income", isSystem: false },
@@ -1379,3 +1381,47 @@ export const auditEvent = ({ entityType, entityId, action, actorId, oldValue, ne
   reason: reason || "",
   createdAt: new Date().toISOString(),
 });
+
+/**
+ * Apply bill-level rounding to a paid-sale voucher. The money lines (cash/UPI/card)
+ * — or the receivable line on a khata sale — move by `adjustment`, and a Round-off
+ * line is appended to keep debits == credits.
+ *
+ *   adjustment > 0  → shop collected a few paisa more than the invoice. Round off is income (credit).
+ *   adjustment < 0  → shop collected a few paisa less. Round off is a loss (debit).
+ *
+ * If the chart has no Round off account (older companies), falls back to Other income
+ * or Other expense so the voucher still balances. If no money / receivable line can
+ * carry the move, the lines are returned unchanged.
+ */
+export function applyRoundOffToLines(lines = [], { accounts = [], adjustment = 0, description = "" } = {}) {
+  const diff = roundMoney(Number(adjustment) || 0);
+  if (!Number.isFinite(diff) || Math.abs(diff) < 0.005) return lines;
+  const byId = Object.fromEntries((accounts || []).map(account => [account.id, account]));
+  const typeOf = line => byId[line.coaId]?.accountType || findAccount(accounts, { code: line.code })?.accountType || "";
+  const moneyPriority = ["cash", "upi", "bank", "receivable"];
+  let indexToPatch = -1;
+  for (const type of moneyPriority) {
+    indexToPatch = lines.findIndex(line => typeOf(line) === type && Number(line.debit || 0) > 0);
+    if (indexToPatch !== -1) break;
+  }
+  if (indexToPatch === -1) return lines;
+  const patched = lines.slice();
+  const target = patched[indexToPatch];
+  const nextDebit = roundMoney(Number(target.debit || 0) + diff);
+  if (!(nextDebit > 0)) return lines;
+  patched[indexToPatch] = { ...target, debit: nextDebit };
+  const roundOffAccount = findAccount(accounts, { code: SYSTEM_CODES.roundOff })
+    || findAccount(accounts, { code: diff > 0 ? SYSTEM_CODES.otherIncome : SYSTEM_CODES.otherExpense });
+  if (!roundOffAccount) return lines;
+  const extra = diff > 0
+    ? { debit: 0, credit: diff }
+    : { debit: -diff, credit: 0 };
+  patched.push({
+    coaId: roundOffAccount.id,
+    code: roundOffAccount.code,
+    description: description || "Round off",
+    ...extra,
+  });
+  return patched;
+}
