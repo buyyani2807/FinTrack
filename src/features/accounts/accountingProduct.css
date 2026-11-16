@@ -8591,3 +8591,22 @@
 .accounts-dashboard .counter-roundoff-row strong {
   color: var(--ft-text-2);
 }
+
+/* ── Item form: barcode input + camera scan button ───────────────────────────────────────────── */
+.acc-item-barcode-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  min-width: 0;
+}
+.acc-item-barcode-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.acc-item-barcode-scan {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}

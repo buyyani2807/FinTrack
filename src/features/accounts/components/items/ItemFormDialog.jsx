@@ -1,5 +1,9 @@
+import { useState } from "react";
+import { ScanBarcode } from "lucide-react";
 import { FilterField as Field } from "../AccUi.jsx";
 import { Select } from "../../../../components/Select.jsx";
+import { CounterCameraScanner } from "../CounterCameraScanner.jsx";
+import { cameraScanSupported } from "../../model/cameraScan.js";
 import {
   ITEM_TYPES,
   PACK_CONTAINS_UNITS,
@@ -45,6 +49,14 @@ export function ItemFormDialog({
   const categoryOptions = itemCategoryChoices(categories);
   const skuConflict = findSkuConflict(items, form.sku, form.id || null);
   const showPackContains = !isService && canSetPackContains(form.unit);
+  const [scanOpen, setScanOpen] = useState(false);
+  const onScan = code => {
+    const value = String(code || "").trim();
+    if (!value) return "";
+    setForm(current => ({ ...current, barcode: value }));
+    setScanOpen(false);
+    return `Added ${value}.`;
+  };
   const defaultPackUnit = ["Bag", "Pack", "Box", "Tin", "Carton", "Packet", "Bundle", "Case"].includes(form.unit)
     ? "Kg"
     : "";
@@ -79,7 +91,20 @@ export function ItemFormDialog({
             </span>
           ) : null}
         </Field>
-        <Field label="Barcode"><input value={form.barcode || ""} onChange={event => setForm(current => ({ ...current, barcode: event.target.value }))} placeholder="Optional — scan or type" /></Field>
+        <Field label="Barcode">
+          <div className="acc-item-barcode-row">
+            <input
+              value={form.barcode || ""}
+              onChange={event => setForm(current => ({ ...current, barcode: event.target.value }))}
+              placeholder="Optional — scan or type"
+            />
+            {cameraScanSupported() ? (
+              <button type="button" className="btn acc-item-barcode-scan" onClick={() => setScanOpen(true)} aria-label="Scan a barcode with the camera">
+                <ScanBarcode size={16} aria-hidden="true" /> Scan
+              </button>
+            ) : null}
+          </div>
+        </Field>
         <Field label="Brand"><input value={form.brand || ""} onChange={event => setForm(current => ({ ...current, brand: event.target.value }))} placeholder="Optional" /></Field>
         <Field label="Category">
           <Select value={form.categoryId} onChange={event => setForm(current => ({ ...current, categoryId: event.target.value }))}>
@@ -153,6 +178,7 @@ export function ItemFormDialog({
           {saving ? "Saving…" : "Save item"}
         </button>
       </div>
+      {scanOpen ? <CounterCameraScanner onCode={onScan} onClose={() => setScanOpen(false)} /> : null}
     </DialogModal>
   );
 }
