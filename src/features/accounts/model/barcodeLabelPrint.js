@@ -54,8 +54,16 @@ function code128Svg(text, { height = 48, module = 1.4 } = {}) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${x.toFixed(2)}" height="${height}" viewBox="0 0 ${x.toFixed(2)} ${height}" aria-hidden="true">${bars.join("")}</svg>`;
 }
 
-export function printItemLabels(items = [], { companyName = "" } = {}) {
-  const rows = (items || []).filter(item => item && item.isActive !== false).slice(0, 200);
+export function printItemLabels(items = [], { companyName = "", copies = 1 } = {}) {
+  // Each printable label is one copy of one item. "Print labels" from the list prints each active
+  // item once; "Print label" on a single item prints `copies` copies of that item.
+  const active = (items || []).filter(item => item && item.isActive !== false);
+  const safeCopies = Math.max(1, Math.min(200, Math.floor(Number(copies) || 1)));
+  const expanded = [];
+  for (const item of active) {
+    for (let index = 0; index < safeCopies; index += 1) expanded.push(item);
+  }
+  const rows = expanded.slice(0, 200);
   if (!rows.length) throw new Error("No active items to print.");
   const cards = rows.map(item => {
     const code = String(item.barcode || item.sku || "").trim();
