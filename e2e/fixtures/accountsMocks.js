@@ -28,6 +28,7 @@ const PARTIES = [
   { id: "p1", party_type: "customer", name: "Ravi Stores", phone: "9876543210", email: "", address: "MG Road", gstin: "", state_code: "29", gst_registration: "unregistered", notes: "", is_active: true },
   { id: "p2", party_type: "supplier", name: "Sri Wholesale", phone: "9876500000", email: "", address: "", gstin: "", state_code: "29", gst_registration: "unregistered", notes: "", is_active: true },
   { id: "p3", party_type: "employee", name: "Anita Rao", phone: "9845011122", email: "", address: "", gstin: "", state_code: "29", gst_registration: "unregistered", notes: "", is_active: true },
+  { id: "p9", party_type: "employee", name: "Ravi Kumar", phone: "9845033344", email: "", address: "", gstin: "", state_code: "29", gst_registration: "unregistered", notes: "", is_active: true },
 ];
 
 const voucher = (id, voucher_type, voucher_number, voucher_date, party_id, narration, due_date = null) => ({
@@ -112,10 +113,31 @@ const rpcResult = name => {
   if (name === "acc_list_companies") return [{ id: "co1", name: "E2E Traders", is_primary: true, books_started_on: "2026-04-01", fy_start_month: 4, status: "active" }];
   if (name === "accounts_access_role") return "owner";
   if (name === "acc_payroll_bundle") return {
-    profiles: [{ party_id: "p3", basic: 18000, hra: 6000, allowance: 0, day_basis: 30, pf: 1800, esi: 0, professional_tax: 200, tds: 0, other_deduction: 0 }],
-    days: [{ party_id: "p3", work_date: "2026-09-02", status: "absent" }],
+    phase: 1,
+    profiles: [
+      { party_id: "p3", basic: 18000, hra: 6000, allowance: 0, day_basis: 30, pay_type: "monthly", rate: 0, overtime_rate: 100, paid_leave_quota: 12, sick_leave_quota: 6, pf: 1800, esi: 0, professional_tax: 200, tds: 0, other_deduction: 0 },
+      { party_id: "p9", basic: 0, hra: 0, allowance: 0, day_basis: 0, pay_type: "daily", rate: 600, overtime_rate: 0, paid_leave_quota: 0, sick_leave_quota: 0, pf: 0, esi: 0, professional_tax: 0, tds: 0, other_deduction: 0 },
+    ],
+    days: [
+      { party_id: "p3", work_date: "2026-09-02", status: "absent", hours: 0, overtime_hours: 0 },
+      { party_id: "p3", work_date: "2026-09-05", status: "present", hours: 0, overtime_hours: 2 },
+    ],
     leave: [{ id: "lv1", party_id: "p3", leave_type: "paid", from_date: "2026-09-10", to_date: "2026-09-11", note: "Family function" }],
+    leave_used: [{ party_id: "p3", leave_type: "paid", days: 2 }],
+    holidays: [{ date: "2026-09-15", name: "Founders day" }],
+    advances: [{ id: "adv1", party_id: "p3", kind: "loan", given_on: "2026-08-10", amount: 10000, emi: 2500, note: "Festival loan", post_to_books: true, voucher_id: "v-adv1", status: "open", recovered: 2500 }],
     run: null,
+  };
+  if (name === "acc_payroll_phase3_bundle") return {
+    staff: [{ party_id: "p3", joined_on: "2020-04-01", left_on: null, fixed_term: false, bank_holder: "Anita Rao", bank_account: "001234567890", bank_ifsc: "HDFC0001234", bank_name: "HDFC Bank" }],
+    revisions: [
+      { id: "rv1", party_id: "p3", effective_from: "2000-01-01", pay_type: "monthly", basic: 15000, hra: 5000, allowance: 0, rate: 0, note: "Starting pay", created_at: "2026-04-01T00:00:00Z" },
+      { id: "rv2", party_id: "p3", effective_from: "2026-08-01", pay_type: "monthly", basic: 18000, hra: 6000, allowance: 0, rate: 0, note: "Annual raise", created_at: "2026-08-01T00:00:00Z" },
+    ],
+    settlements: [],
+    logins: [{ party_id: "p3", staff_id: "ST-1A2B3C4D", enabled: true, locked: false }],
+    punches: [{ id: "pn1", party_id: "p3", work_date: "2026-09-29", in_at: "2026-09-29T03:35:00Z", in_lat: 12.9716, in_lng: 77.5946, in_accuracy: 12, out_at: "2026-09-29T12:40:00Z", out_lat: 12.9716, out_lng: 77.5946, out_accuracy: 15, has_in_photo: true, has_out_photo: true }],
+    requests: [{ id: "rq1", party_id: "p3", leave_type: "sick", from_date: "2026-09-22", to_date: "2026-09-22", note: "Fever", status: "pending", created_at: "2026-09-21T10:00:00Z" }],
   };
   return [];
 };
