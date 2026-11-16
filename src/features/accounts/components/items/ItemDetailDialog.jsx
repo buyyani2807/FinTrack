@@ -41,22 +41,27 @@ export function ItemDetailDialog({
         {detailMoves.map(row => <tr key={row.id}><td>{row.movementDate}</td><td>{stockReasonLabel(row.reason)}</td><td className="acc-num">{row.quantityDelta > 0 ? `+${row.quantityDelta}` : row.quantityDelta}</td><td>{row.voucherNumber || "—"}</td></tr>)}
       </AccTable>
       <p className="small">Sales lines: {detailSales.length} · Purchase lines: {detailPurchases.length}</p>
-      <div className="acc-item-label-print">
-        <label className="acc-item-label-copies">
-          <span className="small">Copies</span>
-          <input
-            type="number"
-            inputMode="numeric"
-            min="1"
-            max="200"
-            value={labelCopies}
-            onChange={event => setLabelCopies(event.target.value.replace(/\D/g, ""))}
-            aria-label="Number of label copies"
-          />
-        </label>
-        <button type="button" className="btn" onClick={printLabel}>Print label</button>
-      </div>
-      {printError ? <p className="acc-form-error" role="alert">{printError}</p> : null}
+      <section className="acc-item-label-print" aria-label="Print a label for this item">
+        <h3 className="acc-item-label-title">Print a label for this item</h3>
+        <div className="acc-item-label-row">
+          <label className="acc-item-label-copies">
+            <span className="small">Copies</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min="1"
+              max="200"
+              value={labelCopies}
+              onChange={event => setLabelCopies(event.target.value.replace(/\D/g, ""))}
+              aria-label="Number of label copies"
+            />
+          </label>
+          <button type="button" className="btn primary" onClick={printLabel}>
+            Print {Number(labelCopies) > 1 ? `${Number(labelCopies)} labels` : "label"}
+          </button>
+        </div>
+        {printError ? <p className="acc-form-error" role="alert">{printError}</p> : null}
+      </section>
       <div className="tabs spacer"><button type="button" className="btn" onClick={() => openEdit(detail)}>Edit</button><button type="button" className="btn primary" onClick={() => setDetailId(null)}>Done</button></div>
     </DialogModal>
   );
