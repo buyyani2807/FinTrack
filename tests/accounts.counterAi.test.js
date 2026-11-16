@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  counterBrowseItems,
+  counterSaleCounts,
   counterDayCloseCoach,
   counterStockAlerts,
   counterTillAnomalies,
@@ -91,4 +93,30 @@ test("day-close coach keeps UPI and card out of the drawer explanation", () => {
   assert.ok(tips.some(row => row.id === "close-summary" && /UPI/.test(row.detail) && /Card/.test(row.detail)));
   assert.ok(tips.some(row => row.id === "close-short"));
   assert.equal(tips.some(row => /fraud|theft/i.test(`${row.title} ${row.detail}`)), false);
+});
+
+test("sale counts cover the last 14 days of sales and deliveries only", () => {
+  const counts = counterSaleCounts([
+    { itemId: "i1", movementDate: "2026-11-10", reason: "sale", quantityDelta: -2 },
+    { itemId: "i1", movementDate: "2026-11-12", reason: "delivery", quantityDelta: -1 },
+    { itemId: "i1", movementDate: "2026-10-01", reason: "sale", quantityDelta: -9 },
+    { itemId: "i2", movementDate: "2026-11-11", reason: "purchase", quantityDelta: 50 },
+    { itemId: "i2", movementDate: "2026-11-11", reason: "sale", quantityDelta: 0 },
+    { itemId: "i2", movementDate: "2026-11-16", reason: "sale", quantityDelta: -1 },
+  ], { today: "2026-11-15" });
+  assert.deepEqual(counts, { i1: 2 });
+  assert.deepEqual(counterSaleCounts([{ itemId: "i1", movementDate: "2026-11-10", reason: "sale", quantityDelta: -2 }]), {});
+});
+
+test("default Counter list puts the most sold items first and keeps catalog order for the rest", () => {
+  const catalog = [
+    { id: "a", name: "Atta" },
+    { id: "b", name: "Besan" },
+    { id: "c", name: "Chana", isActive: false },
+    { id: "d", name: "Dal" },
+    { id: "e", name: "Elaichi" },
+  ];
+  const listed = counterBrowseItems(catalog, { d: 5, e: 5, c: 9, b: 1 });
+  assert.deepEqual(listed.map(item => item.id), ["d", "e", "b", "a"]);
+  assert.deepEqual(counterBrowseItems(catalog, {}, { limit: 2 }).map(item => item.id), ["a", "b"]);
 });

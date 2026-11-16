@@ -8442,3 +8442,85 @@
   font-weight: 650;
   color: var(--ft-text);
 }
+
+/* ── Counter: cash in / out dialog ───────────────────────────────────────────────────────────── */
+
+.counter-cash-list-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin-top: 16px;
+}
+
+.counter-cash-list-head p,
+.counter-cash-list-head h3 {
+  margin: 0;
+}
+
+.counter-cash-list {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.counter-cash-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--ft-border);
+  border-radius: 10px;
+  background: var(--ft-surface-subtle);
+}
+
+.counter-cash-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.counter-cash-amount {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.counter-cash-amount.is-in {
+  color: var(--ft-success);
+}
+
+.counter-cash-amount.is-out {
+  color: var(--ft-danger);
+}
+
+.counter-cash-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.counter-cash-actions .ft-select {
+  flex: 1 1 12rem;
+  width: auto;
+}
+
+/* ── Counter: split payment (cash / UPI / card) ──────────────────────────────────────────────── */
+
+.accounts-dashboard .counter-split.counter-split-three {
+  grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
+}
+
+.accounts-dashboard .counter-split-status {
+  margin: 0;
+  color: var(--ft-warning);
+}
+
+.accounts-dashboard .counter-split-status.is-ok {
+  color: var(--ft-success);
+}

@@ -1,7 +1,7 @@
 /** Counter offline billing helpers — Phase 1 (paid till queue, 48h window). */
 import { formatInr } from "../../../lib/formatMoney.js";
 import { roundMoney } from "./accountingModel.js";
-import { counterPayLabel } from "./counterDayReport.js";
+import { counterPayLabel, counterTenderLabel } from "./counterDayReport.js";
 
 export const OFFLINE_MAX_MS = 48 * 60 * 60 * 1000;
 export const OFFLINE_MAX_LABEL = "2 days";
@@ -89,7 +89,7 @@ export function buildOfflineReceiptInvoice({
     soldAt: bill.createdAt || "",
     showSaleTime: true,
     dueDate: "",
-    settlement: counterPayLabel(bill.moneyMode),
+    settlement: bill.moneyMode === "split" ? counterTenderLabel(bill.moneyParts || {}) || "Split" : counterPayLabel(bill.moneyMode),
     customerName,
     customerPhone,
     customerGstin: "",

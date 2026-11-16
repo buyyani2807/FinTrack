@@ -12,7 +12,17 @@ export const COUNTER_PAY_MODES = [
   { id: "upi", label: "UPI" },
   { id: "cash_upi", label: "Cash + UPI" },
   { id: "bank", label: "Card" },
+  { id: "split", label: "Split (cash / UPI / card)" },
 ];
+
+/** "Cash + Card", "UPI + Card", "Cash + UPI + Card" — the parts that were actually paid. */
+export function counterTenderLabel(parts = {}) {
+  return [
+    roundMoney(parts.cash || 0) > 0 ? "Cash" : "",
+    roundMoney(parts.upi || 0) > 0 ? "UPI" : "",
+    roundMoney(parts.card ?? parts.bank ?? 0) > 0 ? "Card" : "",
+  ].filter(Boolean).join(" + ");
+}
 
 export function counterPayLabel(mode) {
   return COUNTER_PAY_MODES.find(item => item.id === mode)?.label || mode || "Cash";
@@ -60,6 +70,7 @@ export function counterModeFromTender(tender = {}, narration = "") {
   const cash = roundMoney(tender.cash || 0);
   const upi = roundMoney(tender.upi || 0);
   const card = roundMoney(tender.card || 0);
+  if (card > 0 && (cash > 0 || upi > 0)) return { id: "split", label: counterTenderLabel({ cash, upi, card }) };
   if (cash > 0 && upi > 0) return { id: "cash_upi", label: "Cash + UPI" };
   if (card > 0 && cash <= 0 && upi <= 0) return { id: "bank", label: "Card" };
   if (upi > 0 && cash <= 0 && card <= 0) return { id: "upi", label: "UPI" };
