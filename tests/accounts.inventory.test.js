@@ -118,6 +118,14 @@ test("stock is opening plus movements and flags low stock", () => {
   ]), 130);
   assert.equal(stockStatus(35, 50), "low");
   assert.equal(stockStatus(130, 50), "normal");
+  // Out of stock is always "low", even when the owner set no reorder level.
+  assert.equal(stockStatus(0, 0), "low");
+  assert.equal(stockStatus(-2, 0), "low");
+  assert.equal(stockStatus(0, 5), "low");
+  // At the reorder level ("at or below") the item is low too.
+  assert.equal(stockStatus(50, 50), "low");
+  // A service item (null stock) is unchanged.
+  assert.equal(stockStatus(null, 0), "service");
   assert.equal(currentStockForItem({ id: "s1", itemType: "service" }, []), null);
   const map = stockOnHandByItem(
     [item, { id: "s1", itemType: "service" }, { id: "i2", itemType: "product", openingStock: 10 }],

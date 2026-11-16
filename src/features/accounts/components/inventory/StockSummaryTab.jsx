@@ -24,7 +24,7 @@ export function StockSummaryTab({ asOf, setAsOf, search, setSearch, exportSummar
       {profitStrip}
       <AccTable columns={["Item", "SKU", { label: "Quantity", num: true }, { label: "Avg cost", num: true }, { label: "Value", num: true }, "Status"]}>
         {paged.items.map(row => {
-          const status = row.quantity < 0 ? "Negative" : stockStatus(row.quantity, row.reorderLevel) === "low" ? "Low stock" : row.quantity === 0 ? "Out of stock" : "";
+          const status = row.quantity < 0 ? "Negative" : row.quantity === 0 ? "Out of stock" : stockStatus(row.quantity, row.reorderLevel) === "low" ? "Low stock" : "";
           return <tr key={row.itemId}><td>{row.name}</td><td>{row.sku}</td><td className="acc-num">{qty(row.quantity, row.unit)}</td><td className="acc-num">{money(row.averageCost)}</td><td className="acc-num">{money(row.value)}</td><td className={row.quantity < 0 ? "red" : ""}>{status}</td></tr>;
         })}
         {!valuation.rows.length && <tr><td colSpan="6">No products yet. Add items or import them from a CSV.</td></tr>}
