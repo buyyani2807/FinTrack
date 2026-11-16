@@ -8610,3 +8610,15 @@
   gap: 6px;
   white-space: nowrap;
 }
+
+/* ── Item form: duplicate barcode / SKU notice ──────────────────────────────────────────────── */
+.acc-item-duplicate {
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+}
+.acc-item-duplicate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

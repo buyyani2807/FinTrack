@@ -197,6 +197,7 @@ export function AccItemsSetup({
           saveItem={saveItem}
           industry={industry}
           items={items}
+          onEditItem={openEdit}
         />
       )}
 
