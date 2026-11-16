@@ -40,6 +40,7 @@ export function ItemFormDialog({
   saveItem,
   industry = "",
   items = [],
+  onEditItem = null,
 }) {
   const suggestion = suggestHsn(form.name);
   const suggestionDiffers = suggestion && (String(form.hsnSac || "") !== suggestion.hsn || Number(form.gstRate) !== suggestion.rate);
@@ -50,12 +51,20 @@ export function ItemFormDialog({
   const skuConflict = findSkuConflict(items, form.sku, form.id || null);
   const showPackContains = !isService && canSetPackContains(form.unit);
   const [scanOpen, setScanOpen] = useState(false);
+  const [duplicateMatch, setDuplicateMatch] = useState(null);
   const onScan = code => {
     const value = String(code || "").trim();
     if (!value) return "";
     setForm(current => ({ ...current, barcode: value }));
+    // If this code already belongs to another item in this company, offer to open that item instead.
+    const needle = value.toLowerCase();
+    const match = (items || []).find(item => item.id !== form.id && (
+      String(item.barcode || "").trim().toLowerCase() === needle
+      || String(item.sku || "").trim().toLowerCase() === needle
+    ));
+    setDuplicateMatch(match || null);
     setScanOpen(false);
-    return `Added ${value}.`;
+    return match ? `Already used by ${match.name}.` : `Added ${value}.`;
   };
   const defaultPackUnit = ["Bag", "Pack", "Box", "Tin", "Carton", "Packet", "Bundle", "Case"].includes(form.unit)
     ? "Kg"
@@ -105,6 +114,23 @@ export function ItemFormDialog({
             ) : null}
           </div>
         </Field>
+        {duplicateMatch ? (
+          <div className="acc-item-duplicate span notice" role="status">
+            <span>
+              {duplicateMatch.name} already uses this {String(duplicateMatch.barcode || "").trim() === String(form.barcode || "").trim() ? "barcode" : "SKU"}.
+              {duplicateMatch.brand ? ` · ${duplicateMatch.brand}` : ""}
+              {" "}· Selling ₹{Number(duplicateMatch.sellingPrice || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+            </span>
+            <div className="acc-item-duplicate-actions">
+              {onEditItem ? (
+                <button type="button" className="btn primary" onClick={() => { setDuplicateMatch(null); setShowForm(false); onEditItem(duplicateMatch); }}>
+                  Open {duplicateMatch.name}
+                </button>
+              ) : null}
+              <button type="button" className="btn" onClick={() => setDuplicateMatch(null)}>Keep as new item</button>
+            </div>
+          </div>
+        ) : null}
         <Field label="Brand"><input value={form.brand || ""} onChange={event => setForm(current => ({ ...current, brand: event.target.value }))} placeholder="Optional" /></Field>
         <Field label="Category">
           <Select value={form.categoryId} onChange={event => setForm(current => ({ ...current, categoryId: event.target.value }))}>
