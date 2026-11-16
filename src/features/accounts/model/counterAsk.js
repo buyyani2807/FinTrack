@@ -7,6 +7,8 @@ import { roundMoney, voucherTotals } from "./accountingModel.js";
 import { counterDayReport, isCounterTillVoucher } from "./counterDayReport.js";
 import { matchCounterItems, normalizeCounterQuery } from "./counterSearch.js";
 import { currentStockForItem, stockStatus } from "./inventoryModel.js";
+import { recentDailySalesQty } from "./counterAi.js";
+import { invoiceRegister } from "./accountingReports.js";
 
 const money = formatInr;
 
@@ -16,6 +18,9 @@ export const COUNTER_ASK_PROMPTS = [
   { id: "khataToday", label: "Khata today?", question: "Khata sales today" },
   { id: "topItems", label: "Top items today?", question: "Top items today" },
   { id: "lowStock", label: "Low stock?", question: "Low stock" },
+  { id: "reorder", label: "What should I reorder?", question: "What should I reorder" },
+  { id: "topKhata", label: "Who owes me the most?", question: "Who owes me the most" },
+  { id: "drawer", label: "Cash in drawer?", question: "Cash in drawer" },
 ];
 
 const norm = value => normalizeCounterQuery(value);
@@ -53,7 +58,16 @@ function matchItemInQuestion(question, items = []) {
 function parseIntent(question) {
   const q = norm(question);
   if (!q) return { id: "help" };
-  if (/\b(low stock|reorder|running out)\b/.test(q)) return { id: "lowStock" };
+  if (/\b(what should i reorder|reorder list|order (list|now)|need to order|buy from supplier|what to buy)\b/.test(q)) {
+    return { id: "reorder" };
+  }
+  if (/\b(who owes|owes me (the )?most|top khata|biggest khata|highest outstanding|outstanding (customers?|parties)|whose balance is highest)\b/.test(q)) {
+    return { id: "topKhata" };
+  }
+  if (/\b(cash in (the )?drawer|cash drawer|drawer cash|drawer balance|drawer total|expected cash)\b/.test(q)) {
+    return { id: "drawer" };
+  }
+  if (/\b(low stock|running out)\b/.test(q)) return { id: "lowStock" };
   if (/\b(top items?|best sellers?|sold most)\b/.test(q)) return { id: "topItems" };
   if (/\b(khata|credit sales?|on credit)\b/.test(q)) return { id: "khataToday" };
   if (/\bupi\b/.test(q)) return { id: "upiToday" };
@@ -96,11 +110,15 @@ export function askCounter(question, input = {}) {
     accounts = [],
     vouchers = [],
     items = [],
+    parties = [],
     stockByItem = {},
     stockMovements = [],
     voucherItemLines = [],
     tillLabel = "",
     today,
+    openingFloat = 0,
+    cashIn = 0,
+    cashOut = 0,
   } = input;
   const day = String(today || "").slice(0, 10);
   const intent = parseIntent(question);
@@ -212,9 +230,107 @@ export function askCounter(question, input = {}) {
     };
   }
 
+  if (intent.id === "reorder") {
+    // Low-stock items + a suggested order quantity from last 14 days of sales.
+    const rows = (items || [])
+      .filter(item => item?.isActive !== false && item.itemType !== "service")
+      .map(item => {
+        const stock = stockByItem[item.id] != null
+          ? Number(stockByItem[item.id])
+          : currentStockForItem(item, stockMovements);
+        const reorderLevel = Number(item.reorderLevel || 0);
+        return { item, stock, reorderLevel };
+      })
+      .filter(row => stockStatus(row.stock, row.reorderLevel) === "low")
+      .map(row => {
+        const { daily, samples } = recentDailySalesQty(stockMovements, row.item.id, { today: day, days: 14 });
+        // A fortnight of cover beyond the reorder level, or 2× reorder level if we have no sales history.
+        const target = Math.max(
+          roundMoney(row.reorderLevel * 2),
+          roundMoney(daily * 14 + row.reorderLevel),
+        );
+        const suggest = Math.max(0, roundMoney(target - row.stock));
+        return { ...row, dailyRate: daily, samples, suggest };
+      })
+      .sort((a, b) => b.suggest - a.suggest)
+      .slice(0, 8);
+    return {
+      title: "Reorder list",
+      summary: rows.length
+        ? `${rows.length} item${rows.length === 1 ? "" : "s"} to reorder.`
+        : "Nothing to reorder right now.",
+      lines: rows.map(row => ({
+        label: row.item.name,
+        detail: `Have ${row.stock}${row.item.unit ? ` ${row.item.unit}` : ""} · reorder at ${row.reorderLevel}${row.samples ? ` · sells ~${roundMoney(row.dailyRate)}/day` : ""}`,
+        amount: row.suggest > 0 ? Number(row.suggest.toFixed(3)) : 0,
+      })),
+      source: "From inventory on-hand and the last 14 days of sales. Read-only.",
+      link: null,
+    };
+  }
+
+  if (intent.id === "topKhata") {
+    const open = invoiceRegister(accounts, vouchers, parties, { kind: "receivable", today: day, outstandingOnly: true });
+    // Sum open balance per party and rank by rupees owed.
+    const byParty = new Map();
+    for (const invoice of open) {
+      if (!invoice.partyId) continue;
+      const bucket = byParty.get(invoice.partyId) || {
+        partyId: invoice.partyId,
+        name: invoice.partyName || "Unknown",
+        outstanding: 0,
+        bills: 0,
+        oldestDays: 0,
+      };
+      bucket.outstanding = roundMoney(bucket.outstanding + Number(invoice.outstanding || 0));
+      bucket.bills += 1;
+      bucket.oldestDays = Math.max(bucket.oldestDays, Number(invoice.daysOutstanding || 0));
+      byParty.set(invoice.partyId, bucket);
+    }
+    const rows = [...byParty.values()]
+      .sort((a, b) => b.outstanding - a.outstanding)
+      .slice(0, 8);
+    const total = roundMoney(rows.reduce((sum, row) => sum + row.outstanding, 0));
+    return {
+      title: "Khata balances",
+      summary: rows.length
+        ? `${rows.length} customer${rows.length === 1 ? "" : "s"} owe ${money(total)}.`
+        : "No one owes money right now.",
+      lines: rows.map(row => ({
+        label: row.name,
+        detail: `${row.bills} bill${row.bills === 1 ? "" : "s"}${row.oldestDays ? ` · oldest ${row.oldestDays}d` : ""}`,
+        amount: row.outstanding,
+      })),
+      source: "From receivables as of today. Read-only.",
+      link: null,
+    };
+  }
+
+  if (intent.id === "drawer") {
+    // Drawer = opening float + cash sales for the day + cash in - cash out.
+    const cashSales = roundMoney(report.tender?.cash || 0);
+    const inflow = roundMoney(Number(cashIn || 0));
+    const outflow = roundMoney(Number(cashOut || 0));
+    const float = roundMoney(Number(openingFloat || 0));
+    const total = roundMoney(float + cashSales + inflow - outflow);
+    return {
+      title: "Cash in drawer",
+      summary: `${money(total)} expected in ${tillLabel || "the till"} right now.`,
+      lines: [
+        { label: "Opening float", detail: "", amount: float },
+        { label: "Cash bills today", detail: `${report.billCount || 0} bill${report.billCount === 1 ? "" : "s"}`, amount: cashSales },
+        { label: "Cash in", detail: "", amount: inflow },
+        { label: "Cash out", detail: "", amount: -outflow },
+        { label: "Expected", detail: "", amount: total },
+      ],
+      source: "Opening float + cash bills today + cash in − cash out. Read-only.",
+      link: null,
+    };
+  }
+
   return {
     title: "Ask Counter",
-    summary: "Try cash sales today, UPI today, khata today, top items, low stock, or “how much toor dal left”.",
+    summary: "Try cash sales today, UPI today, khata today, top items, low stock, what should I reorder, who owes me the most, cash in drawer, or “how much toor dal left”.",
     lines: [],
     source: "Answers use this company’s Counter and stock. Nothing is posted or sent.",
     link: null,

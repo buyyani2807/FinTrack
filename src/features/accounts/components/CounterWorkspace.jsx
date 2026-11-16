@@ -758,11 +758,15 @@ export function CounterWorkspace({
       accounts: workingAccounts,
       vouchers,
       items: workingItems,
+      parties,
       stockByItem,
       stockMovements,
       voucherItemLines,
       tillLabel,
       today,
+      openingFloat: Number(openingFloat || closed?.openingFloat || 0),
+      cashIn: cashTotals.cashIn,
+      cashOut: cashTotals.cashOut,
     }));
   };
 
