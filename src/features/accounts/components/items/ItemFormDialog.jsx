@@ -88,7 +88,7 @@ export function ItemFormDialog({
         }}>{ITEM_TYPES.map(type => <option key={type.id} value={type.id}>{type.label}</option>)}</Select></Field>
         <Field label="Name"><input value={form.name} onChange={event => setForm(current => ({ ...current, name: event.target.value }))} /></Field>
         {suggestionDiffers ? <p className="small span">Suggested for {suggestion.label}: HSN {suggestion.hsn}, GST {suggestion.rate}%. {suggestion.note} <button type="button" className="btn" onClick={() => setForm(current => ({ ...current, hsnSac: suggestion.hsn, gstRate: String(suggestion.rate) }))}>Use this</button></p> : null}
-        <Field label="SKU / Code">
+        <Field label={String(form.barcode || "").trim() ? "SKU / Code (optional)" : "SKU / Code"}>
           <input
             value={form.sku}
             aria-invalid={Boolean(skuConflict)}
