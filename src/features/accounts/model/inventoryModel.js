@@ -715,7 +715,12 @@ export function stockOnHandByItem(items = [], movements = []) {
 
 export function stockStatus(current, reorderLevel) {
   if (current == null) return "service";
-  if (Number(reorderLevel || 0) > 0 && Number(current) < Number(reorderLevel)) return "low";
+  const stock = Number(current);
+  const level = Number(reorderLevel || 0);
+  // Out of stock is always "low" — a shop needs to see the gap even if no reorder level was set.
+  if (stock <= 0) return "low";
+  // "At or below reorder" — including the moment stock drops to the reorder level.
+  if (level > 0 && stock <= level) return "low";
   return "normal";
 }
 
