@@ -43,6 +43,7 @@ const ContactPage = withLazy(() => import("../features/marketing/SitePages.jsx")
 const PrivacyPage = withLazy(() => import("../features/marketing/SitePages.jsx"), "PrivacyPage", marketingFallback);
 const TermsPage = withLazy(() => import("../features/marketing/SitePages.jsx"), "TermsPage", marketingFallback);
 
+const StaffPortalPage = withLazy(() => import("../features/staffPortal/StaffPortalPage.jsx"), "StaffPortalPage", pageFallback);
 const WorkspaceLayout = withLazy(() => import("../features/workspace/WorkspaceLayout.jsx"), "WorkspaceLayout", workspaceFallback);
 const FinanceRoute = withLazy(() => import("../features/workspace/routes/FinanceRoute.jsx"), "FinanceRoute", pageFallback);
 const CashbookRoute = withLazy(() => import("../features/workspace/routes/CashbookRoute.jsx"), "CashbookRoute", pageFallback);
@@ -65,6 +66,8 @@ export function AppRoutes() {
     <Routes>
       {/* Public UPI payment link sent to customers; no sign-in */}
       <Route path="/pay" element={<PayPage />} />
+      {/* Staff app: employees sign in with a Staff ID and PIN, not a workspace account */}
+      <Route path="/staff" element={<StaffPortalPage />} />
 
       <Route element={<SessionLayout />}>
         <Route element={<MarketingLayout />}>

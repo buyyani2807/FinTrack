@@ -1366,6 +1366,11 @@ const mapPayrollProfile = row => ({
   hra: Number(row.hra || 0),
   allowance: Number(row.allowance || 0),
   dayBasis: Number(row.day_basis || 0),
+  payType: row.pay_type || "monthly",
+  rate: Number(row.rate || 0),
+  overtimeRate: Number(row.overtime_rate || 0),
+  paidLeaveQuota: Number(row.paid_leave_quota || 0),
+  sickLeaveQuota: Number(row.sick_leave_quota || 0),
   pf: Number(row.pf || 0),
   esi: Number(row.esi || 0),
   professionalTax: Number(row.professional_tax || 0),
@@ -1379,12 +1384,35 @@ const mapPayrollBundle = data => {
     try { body = JSON.parse(body); } catch { body = null; }
   }
   if (!body || typeof body !== "object" || Array.isArray(body)) {
-    return { profiles: [], days: [], leave: [], run: null };
+    return { phase: 0, profiles: [], days: [], leave: [], leaveUsed: [], holidays: [], advances: [], run: null };
   }
   const run = body.run && typeof body.run === "object" ? body.run : null;
   return {
     profiles: (body.profiles || []).map(mapPayrollProfile),
-    days: (body.days || []).map(row => ({ partyId: row.party_id, workDate: row.work_date, status: row.status })),
+    // 1 once migration 149 is in: advances, holidays, hours and leave balances are available.
+    phase: Number(body.phase || 0),
+    days: (body.days || []).map(row => ({
+      partyId: row.party_id,
+      workDate: row.work_date,
+      status: row.status,
+      hours: Number(row.hours || 0),
+      overtimeHours: Number(row.overtime_hours || 0),
+    })),
+    leaveUsed: (body.leave_used || []).map(row => ({ partyId: row.party_id, leaveType: row.leave_type, days: Number(row.days || 0) })),
+    holidays: (body.holidays || []).map(row => ({ date: row.date, name: row.name || "Holiday" })),
+    advances: (body.advances || []).map(row => ({
+      id: row.id,
+      partyId: row.party_id,
+      kind: row.kind || "advance",
+      givenOn: row.given_on,
+      amount: Number(row.amount || 0),
+      emi: Number(row.emi || 0),
+      note: row.note || "",
+      postToBooks: row.post_to_books !== false,
+      voucherId: row.voucher_id || null,
+      status: row.status || "open",
+      recovered: Number(row.recovered || 0),
+    })),
     leave: (body.leave || []).map(row => ({
       id: row.id,
       partyId: row.party_id,
@@ -1406,11 +1434,137 @@ const mapPayrollBundle = data => {
   };
 };
 
-export const loadPayroll = (token, month) =>
-  payrollCall(accRpc("acc_payroll_bundle", { input_month: month }, token)).then(mapPayrollBundle);
+const migrationNeeded = (file, feature, cause) => {
+  const error = new Error(`Run migration ${file} in the Supabase SQL editor to use ${feature}.`, cause ? { cause } : undefined);
+  error.code = "MIGRATION_REQUIRED";
+  return error;
+};
+const phaseMigration = (file, feature) => err => {
+  if (!isMissing(err)) throw err;
+  throw migrationNeeded(file, feature, err);
+};
+const PHASE1_FILE = "149_accounts_payroll_phase1.sql";
+const PHASE1_FEATURE = "advances, overtime, holidays and wage staff";
+const phase1Call = promise => promise.catch(phaseMigration(PHASE1_FILE, PHASE1_FEATURE));
+const phase3Call = promise => promise.catch(phaseMigration("150_accounts_payroll_phase3.sql", "staff details, the staff app and settlements"));
 
-export const savePayrollProfile = (token, profile) =>
-  payrollCall(accRpc("acc_save_payroll_profile", {
+const emptyPhase3 = () => ({ ready: false, staff: [], revisions: [], settlements: [], logins: [], punches: [], requests: [] });
+
+const mapPhase3 = data => {
+  let body = data;
+  if (typeof body === "string") {
+    try { body = JSON.parse(body); } catch { body = null; }
+  }
+  if (!body || typeof body !== "object" || Array.isArray(body)) return emptyPhase3();
+  return {
+    ready: true,
+    staff: (body.staff || []).map(row => ({
+      partyId: row.party_id,
+      joinedOn: row.joined_on || "",
+      leftOn: row.left_on || "",
+      fixedTerm: Boolean(row.fixed_term),
+      bankHolder: row.bank_holder || "",
+      bankAccount: row.bank_account || "",
+      bankIfsc: row.bank_ifsc || "",
+      bankName: row.bank_name || "",
+    })),
+    revisions: (body.revisions || []).map(row => ({
+      id: row.id,
+      partyId: row.party_id,
+      effectiveFrom: row.effective_from,
+      payType: row.pay_type || "monthly",
+      basic: Number(row.basic || 0),
+      hra: Number(row.hra || 0),
+      allowance: Number(row.allowance || 0),
+      rate: Number(row.rate || 0),
+      note: row.note || "",
+      createdAt: row.created_at || "",
+    })),
+    settlements: (body.settlements || []).map(row => ({
+      id: row.id,
+      partyId: row.party_id,
+      name: row.party_name || "Employee",
+      lastDay: row.last_day,
+      payDate: row.pay_date || "",
+      unpaidSalary: Number(row.unpaid_salary || 0),
+      leaveDays: Number(row.leave_days || 0),
+      leaveEncashment: Number(row.leave_encashment || 0),
+      gratuity: Number(row.gratuity || 0),
+      otherPay: Number(row.other_pay || 0),
+      advanceRecovery: Number(row.advance_recovery || 0),
+      otherDeduction: Number(row.other_deduction || 0),
+      net: Number(row.net || 0),
+      note: row.note || "",
+      voucherId: row.voucher_id || null,
+      status: row.status || "draft",
+    })),
+    logins: (body.logins || []).map(row => ({ partyId: row.party_id, staffId: row.staff_id, enabled: row.enabled !== false, locked: Boolean(row.locked) })),
+    punches: (body.punches || []).map(row => ({
+      id: row.id,
+      partyId: row.party_id,
+      workDate: row.work_date,
+      inAt: row.in_at || "",
+      inLat: row.in_lat,
+      inLng: row.in_lng,
+      outAt: row.out_at || "",
+      outLat: row.out_lat,
+      outLng: row.out_lng,
+      hasInPhoto: Boolean(row.has_in_photo),
+      hasOutPhoto: Boolean(row.has_out_photo),
+    })),
+    requests: (body.requests || []).map(row => ({
+      id: row.id,
+      partyId: row.party_id,
+      leaveType: row.leave_type,
+      fromDate: row.from_date,
+      toDate: row.to_date,
+      note: row.note || "",
+      status: row.status || "pending",
+    })),
+  };
+};
+
+// Payroll opens on the 101 schema alone. `phase` and `extra.ready` say which newer parts are installed.
+export const loadPayroll = async (token, month) => {
+  const [bundle, extra] = await Promise.all([
+    payrollCall(accRpc("acc_payroll_bundle", { input_month: month }, token)).then(mapPayrollBundle),
+    accRpc("acc_payroll_phase3_bundle", { input_month: month }, token).then(mapPhase3).catch(err => {
+      if (isMissing(err)) return emptyPhase3();
+      throw err;
+    }),
+  ]);
+  return { ...bundle, extra };
+};
+
+const profileArgs = profile => ({
+  pay_type: profile.payType || "monthly",
+  basic: Number(profile.basic || 0),
+  hra: Number(profile.hra || 0),
+  allowance: Number(profile.allowance || 0),
+  rate: Number(profile.rate || 0),
+  overtime_rate: Number(profile.overtimeRate || 0),
+  day_basis: Number(profile.dayBasis || 0),
+  paid_leave_quota: Number(profile.paidLeaveQuota || 0),
+  sick_leave_quota: Number(profile.sickLeaveQuota || 0),
+  pf: Number(profile.pf || 0),
+  esi: Number(profile.esi || 0),
+  professional_tax: Number(profile.professionalTax || 0),
+  tds: Number(profile.tds || 0),
+  other_deduction: Number(profile.otherDeduction || 0),
+  effective_from: profile.effectiveFrom || null,
+  revision_note: profile.revisionNote || null,
+});
+
+// Before 149 only a plain monthly salary can be saved, through the original call.
+export const savePayrollProfile = (token, profile, { phase = 0 } = {}) => {
+  if (phase >= 1) {
+    return phase1Call(accRpc("acc_save_payroll_profile_v2", { input_party_id: profile.partyId, input_profile: profileArgs(profile) }, token));
+  }
+  if ((profile.payType || "monthly") !== "monthly" || Number(profile.overtimeRate || 0) > 0
+    || Number(profile.paidLeaveQuota || 0) > 0 || Number(profile.sickLeaveQuota || 0) > 0) {
+    return Promise.reject(migrationNeeded(PHASE1_FILE, PHASE1_FEATURE));
+  }
+  return payrollCall(accRpc("acc_save_payroll_profile", {
     input_party_id: profile.partyId,
     input_basic: Number(profile.basic || 0),
     input_hra: Number(profile.hra || 0),
@@ -1422,6 +1576,86 @@ export const savePayrollProfile = (token, profile) =>
     input_tds: Number(profile.tds || 0),
     input_other_deduction: Number(profile.otherDeduction || 0),
   }, token));
+};
+
+export const savePayrollHoliday = (token, { date, name }) =>
+  phase1Call(accRpc("acc_save_payroll_holiday", { input_date: date, input_name: name }, token));
+
+export const deletePayrollHoliday = (token, date) =>
+  phase1Call(accRpc("acc_delete_payroll_holiday", { input_date: date }, token));
+
+export const savePayrollAdvance = (token, advance) =>
+  phase1Call(accRpc("acc_save_payroll_advance", {
+    input_advance: {
+      id: advance.id,
+      party_id: advance.partyId,
+      kind: advance.kind || "advance",
+      given_on: advance.givenOn,
+      amount: Number(advance.amount || 0),
+      emi: Number(advance.emi || 0),
+      note: advance.note || "",
+      post_to_books: advance.postToBooks !== false,
+      voucher_id: advance.voucherId || null,
+    },
+  }, token));
+
+export const cancelPayrollAdvance = (token, id) =>
+  phase1Call(accRpc("acc_cancel_payroll_advance", { input_id: id }, token));
+
+export const setAdvanceRecovery = (token, { advanceId, month, amount, source = "salary" }) =>
+  phase1Call(accRpc("acc_set_advance_recovery", {
+    input_advance_id: advanceId,
+    input_month: month,
+    input_amount: Number(amount || 0),
+    input_source: source,
+  }, token));
+
+export const savePayrollStaff = (token, staff) =>
+  phase3Call(accRpc("acc_save_payroll_staff", {
+    input_party_id: staff.partyId,
+    input_staff: {
+      joined_on: staff.joinedOn || null,
+      fixed_term: Boolean(staff.fixedTerm),
+      bank_holder: staff.bankHolder || "",
+      bank_account: staff.bankAccount || "",
+      bank_ifsc: staff.bankIfsc || "",
+      bank_name: staff.bankName || "",
+    },
+  }, token));
+
+export const savePayrollSettlement = (token, settlement) =>
+  phase3Call(accRpc("acc_save_payroll_settlement", {
+    input_settlement: {
+      id: settlement.id,
+      party_id: settlement.partyId,
+      last_day: settlement.lastDay,
+      pay_date: settlement.payDate || null,
+      unpaid_salary: Number(settlement.unpaidSalary || 0),
+      leave_days: Number(settlement.leaveDays || 0),
+      leave_encashment: Number(settlement.leaveEncashment || 0),
+      gratuity: Number(settlement.gratuity || 0),
+      other_pay: Number(settlement.otherPay || 0),
+      advance_recovery: Number(settlement.advanceRecovery || 0),
+      other_deduction: Number(settlement.otherDeduction || 0),
+      net: Number(settlement.net || 0),
+      note: settlement.note || "",
+      voucher_id: settlement.voucherId || null,
+      finish: Boolean(settlement.finish),
+    },
+  }, token));
+
+export const issueStaffPortal = (token, partyId) =>
+  phase3Call(accRpc("acc_issue_staff_portal", { input_party_id: partyId }, token))
+    .then(body => ({ staffId: body?.staff_id || "", pin: body?.pin || "" }));
+
+export const disableStaffPortal = (token, partyId) =>
+  phase3Call(accRpc("acc_disable_staff_portal", { input_party_id: partyId }, token));
+
+export const loadPunchPhoto = (token, punchId, kind) =>
+  phase3Call(accRpc("acc_punch_photo", { input_punch_id: punchId, input_kind: kind }, token));
+
+export const decideLeaveRequest = (token, id, approve) =>
+  phase3Call(accRpc("acc_decide_leave_request", { input_id: id, input_approve: Boolean(approve) }, token));
 
 export const savePayrollDays = (token, { partyId, month, days }) =>
   payrollCall(accRpc("acc_set_payroll_days", {

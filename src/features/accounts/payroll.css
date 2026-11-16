@@ -108,3 +108,31 @@
   body.pay-slip-print .pay-slip { position: absolute; left: 0; top: 0; width: 100%; border: 0; border-radius: 0; background: #fff; color: #1c2834; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body.pay-slip-print .pay-slip-actions { display: none !important; }
 }
+
+/* Payroll phase 1 and 3: employee panel, advances, holidays, punches, staff app */
+.pay-tabs { margin-bottom: 12px; }
+.pay-subhead { margin: 16px 0 6px; font-size: 1rem; }
+.pay-block { margin-top: 20px; }
+.pay-block h3 { margin: 0 0 6px; font-size: 1.05rem; }
+.pay-block-alert { margin: 0 0 16px; padding: 12px; border: 1px solid var(--ft-warning); border-radius: 12px; }
+.pay-check { display: flex; align-items: center; gap: 8px; min-height: 40px; }
+.pay-check input { width: auto; min-height: 0; }
+.pay-warn { color: var(--ft-warning); }
+.pay-over { color: var(--ft-danger); font-weight: 650; }
+.pay-notice { padding: 10px 12px; border: 1px solid var(--ft-border); border-radius: 10px; background: var(--ft-surface); }
+.pay-preview { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 14px; margin: 14px 0 8px; padding: 12px; border: 1px solid var(--ft-border); border-radius: 12px; background: var(--ft-surface-2, var(--ft-bg)); }
+.pay-preview dt { margin: 0; color: var(--ft-text-3); font-size: var(--ft-type-micro); font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; }
+.pay-preview dd { margin: 2px 0 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pay-chip-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.pay-chip-list li { display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 12px; border: 1px solid var(--ft-border); border-radius: 999px; background: var(--ft-surface); }
+.pay-chip-list .btn { min-height: 30px; padding: 2px 10px; }
+.pay-hours { width: 100%; min-height: 30px; font-size: var(--ft-type-caption); }
+.pay-day > span small { font-weight: 500; }
+.pay-punch-photo { display: block; max-width: 100%; margin: 0 auto; border-radius: 12px; }
+.pay-login-card { display: grid; gap: 10px; margin: 8px 0 0; }
+.pay-login-card dt { margin: 0; color: var(--ft-text-3); font-size: var(--ft-type-micro); font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; }
+.pay-login-card dd { margin: 2px 0 0; font-size: 1.15rem; font-weight: 700; letter-spacing: 0.04em; overflow-wrap: anywhere; }
+.pay-slip-actions { gap: 8px; flex-wrap: wrap; }
+@media (max-width: 720px) {
+  .pay-preview { grid-template-columns: 1fr; }
+}
