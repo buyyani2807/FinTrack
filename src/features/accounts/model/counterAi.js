@@ -66,6 +66,41 @@ export function recentDailySalesQty(stockMovements = [], itemId, { today, days =
 }
 
 /**
+ * How many times each item was sold in the last `days` (one stock movement per bill line).
+ * Counts sales, not quantity, so a bag of rice and a single pen compare fairly.
+ */
+export function counterSaleCounts(stockMovements = [], { today, days = 14 } = {}) {
+  const counts = {};
+  if (!today) return counts;
+  const end = String(today).slice(0, 10);
+  const date = new Date(`${end}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() - Number(days || 14));
+  const since = date.toISOString().slice(0, 10);
+  for (const move of stockMovements || []) {
+    if (!move?.itemId) continue;
+    const day = String(move.movementDate || "").slice(0, 10);
+    if (!day || day < since || day > end) continue;
+    const reason = String(move.reason || "");
+    if (reason !== "sale" && reason !== "delivery") continue;
+    if (!(Math.abs(n(move.quantityDelta)) > 0)) continue;
+    counts[move.itemId] = (counts[move.itemId] || 0) + 1;
+  }
+  return counts;
+}
+
+/**
+ * Active items for the Counter's default list: most sold first, then the rest in catalog order.
+ */
+export function counterBrowseItems(items = [], saleCounts = {}, { limit = 40 } = {}) {
+  return (items || [])
+    .filter(item => item && item.isActive !== false)
+    .map((item, index) => ({ item, index, sold: saleCounts[item.id] || 0 }))
+    .sort((a, b) => b.sold - a.sold || a.index - b.index)
+    .slice(0, limit)
+    .map(row => row.item);
+}
+
+/**
  * Stock advisories for the open bill. Does not block charge.
  */
 export function counterStockAlerts({

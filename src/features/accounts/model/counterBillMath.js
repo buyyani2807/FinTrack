@@ -14,6 +14,30 @@ export function cashChangeDue(tendered, total) {
 }
 
 /**
+ * Split payment at the till: any mix of cash, UPI and card that adds up to the bill.
+ * `ok` is true only when at least two parts are entered and nothing is left or over.
+ */
+export function counterSplitStatus(total, { cash = 0, upi = 0, card = 0 } = {}) {
+  const due = roundMoney(Number(total) || 0);
+  const part = value => {
+    const amount = Number(value);
+    return Number.isFinite(amount) && amount > 0 ? roundMoney(amount) : 0;
+  };
+  const parts = { cash: part(cash), upi: part(upi), bank: part(card) };
+  const paid = roundMoney(parts.cash + parts.upi + parts.bank);
+  const remaining = roundMoney(due - paid);
+  const used = [parts.cash, parts.upi, parts.bank].filter(amount => amount > 0).length;
+  const negative = [cash, upi, card].some(value => Number(value) < 0);
+  let message = "";
+  if (negative) message = "Payment amounts cannot be negative.";
+  else if (!(due > 0)) message = "";
+  else if (remaining > 0) message = `${remaining} still to collect.`;
+  else if (remaining < 0) message = `${Math.abs(remaining)} more than the bill. Reduce a payment.`;
+  else if (used < 2) message = "Enter at least two payment amounts, or pick a single payment mode.";
+  return { parts, paid, remaining, ok: due > 0 && !negative && remaining === 0 && used >= 2, message };
+}
+
+/**
  * Lines whose billed base qty exceeds on-hand stock (services skipped).
  * Used for optional hard-block on Charge.
  */

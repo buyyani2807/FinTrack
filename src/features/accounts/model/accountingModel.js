@@ -873,6 +873,15 @@ export function moneyByMode(mode, amount, parts = {}) {
     }
     return { cash, upi, bank: 0 };
   }
+  if (mode === "split") {
+    const cash = roundMoney(parts.cash ?? 0);
+    const upi = roundMoney(parts.upi ?? 0);
+    const bank = roundMoney(parts.bank ?? 0);
+    if (value > 0 && cash <= 0 && upi <= 0 && bank <= 0) {
+      return { cash: value, upi: 0, bank: 0 };
+    }
+    return { cash, upi, bank };
+  }
   return {
     cash: mode === "cash" ? value : 0,
     upi: mode === "upi" ? value : 0,
@@ -905,6 +914,20 @@ export function salePaymentSummary({ invoiceTotal = 0, amountReceived = 0 } = {}
 
 export function assertMoneyModeSplit(moneyMode, amount, parts = {}) {
   const value = roundMoney(amount);
+  if (moneyMode === "split" && value > 0) {
+    // Any mix of cash, UPI and bank (card). At least two parts, and they add up to the amount.
+    const cash = roundMoney(parts.cash ?? 0);
+    const upi = roundMoney(parts.upi ?? 0);
+    const bank = roundMoney(parts.bank ?? 0);
+    if (cash < 0 || upi < 0 || bank < 0) throw new Error("Payment amounts cannot be negative");
+    if ([cash, upi, bank].filter(part => part > 0).length < 2) {
+      throw new Error("Enter at least two payment amounts for a split payment");
+    }
+    if (roundMoney(cash + upi + bank) !== value) {
+      throw new Error("The payments must add up to the total amount");
+    }
+    return { cash, upi, bank };
+  }
   if (moneyMode !== "cash_upi" || !(value > 0)) return moneyByMode(moneyMode, value, parts);
   const cash = roundMoney(parts.cash ?? 0);
   const upi = roundMoney(parts.upi ?? 0);

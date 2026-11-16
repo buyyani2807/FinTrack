@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, Trash2, Pause, Play, Plus, ShoppingCart, RotateCcw, Landmark, ScrollText, Star, History, Share2, MessageCircleQuestion, Maximize2, Minimize2, ScanBarcode } from "lucide-react";
+import { Search, Trash2, Pause, Play, Plus, ShoppingCart, RotateCcw, Landmark, ScrollText, Star, History, Share2, MessageCircleQuestion, Maximize2, Minimize2, ScanBarcode, Banknote } from "lucide-react";
 import { Select } from "../../../components/Select.jsx";
 import { money } from "../accountsFormat.js";
 import { formatIstTime, todayIso } from "../../../lib/dates.js";
@@ -23,9 +23,16 @@ import {
   sellUnitChoices,
 } from "../model/inventoryModel.js";
 import { resolveItemRate } from "../model/priceLists.js";
-import { cancelVoucher, postVoucher, requestCounterOverride, upsertCounterDayClose } from "../data/accountingRepository.js";
+import { cancelVoucher, listCounterCashMovements, postVoucher, requestCounterOverride, upsertCounterDayClose } from "../data/accountingRepository.js";
 import { SupervisorPinDialog } from "./SupervisorPinDialog.jsx";
 import { CounterCameraScanner } from "./CounterCameraScanner.jsx";
+import { CounterCashDialog } from "./CounterCashDialog.jsx";
+import {
+  cashMovementTotals,
+  expectedDrawerCash,
+  mapCashMovementRow,
+  tillCashMovements,
+} from "../model/counterCashMovements.js";
 import { cameraScanSupported } from "../model/cameraScan.js";
 import {
   listOfflineBills,
@@ -47,6 +54,7 @@ import {
   billDiscountAmount,
   buildCounterWhatsAppReceipt,
   cashChangeDue,
+  counterSplitStatus,
   counterEstimateTotal,
   counterLineNet,
   counterOversellLines,
@@ -57,6 +65,7 @@ import {
   counterDayReport,
   counterDayReportAll,
   counterPayLabel,
+  counterTenderLabel,
   tillNeedle,
 } from "../model/counterDayReport.js";
 import {
@@ -118,6 +127,7 @@ function emptyHold() {
     tillMode: "sale",
     receivedCash: "",
     receivedUpi: "",
+    receivedCard: "",
     tenderedCash: "",
     paymentRef: "",
   };
@@ -187,10 +197,15 @@ export function CounterWorkspace({
   const [askAnswer, setAskAnswer] = useState(null);
   const [receivedCash, setReceivedCash] = useState("");
   const [receivedUpi, setReceivedUpi] = useState("");
+  const [receivedCard, setReceivedCard] = useState("");
   const [tenderedCash, setTenderedCash] = useState("");
   const [paymentRef, setPaymentRef] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [scanOpen, setScanOpen] = useState(false);
+  // Cash in / out for today (migration 148). A cashier's list holds only their own entries.
+  const [cashOpen, setCashOpen] = useState(false);
+  const [cashMovements, setCashMovements] = useState([]);
+  const [cashUnavailable, setCashUnavailable] = useState("");
   const [holds, setHolds] = useState([]);
   const [holdsReady, setHoldsReady] = useState(false);
   const [draftReady, setDraftReady] = useState(false);
@@ -327,6 +342,7 @@ export function CounterWorkspace({
       setTillMode(draft.tillMode === "return" ? "return" : "sale");
       setReceivedCash(draft.receivedCash || "");
       setReceivedUpi(draft.receivedUpi || "");
+      setReceivedCard(draft.receivedCard || "");
       setTenderedCash(draft.tenderedCash || "");
       setPaymentRef(draft.paymentRef || "");
       setWalkInName(draft.walkInName || "");
@@ -367,6 +383,7 @@ export function CounterWorkspace({
     billDiscount,
     receivedCash,
     receivedUpi,
+    receivedCard,
     tenderedCash,
     paymentRef,
     walkInName,
@@ -398,6 +415,7 @@ export function CounterWorkspace({
     billDiscount,
     receivedCash,
     receivedUpi,
+    receivedCard,
     tenderedCash,
     paymentRef,
     walkInName,
@@ -520,16 +538,19 @@ export function CounterWorkspace({
   );
   const upiLink = useMemo(() => {
     if (tillMode === "return") return "";
-    if (settlement !== "paid" || (moneyMode !== "upi" && moneyMode !== "cash_upi")) return "";
+    if (settlement !== "paid" || (moneyMode !== "upi" && moneyMode !== "cash_upi" && moneyMode !== "split")) return "";
     if (!isValidUpiId(branding?.upiId) || branding?.showUpiQr === false) return "";
     if (!(totals.total > 0)) return "";
+    // A split bill shows the QR for its UPI part only, once that part is typed.
+    const upiPart = Number(receivedUpi);
+    if (moneyMode === "split" && !(upiPart > 0)) return "";
     return upiPayLink({
       upiId: branding.upiId,
       payeeName: branding.upiPayeeName || branding.companyName || "",
-      amount: totals.total,
+      amount: moneyMode === "split" ? upiPart : totals.total,
       note: `Counter ${tillLabel}`,
     });
-  }, [tillMode, settlement, moneyMode, branding, totals.total, tillLabel]);
+  }, [tillMode, settlement, moneyMode, branding, totals.total, tillLabel, receivedUpi]);
   const khataRisk = useMemo(() => {
     if (settlement !== "credit" || !selectedParty) return null;
     return counterKhataRisk({
@@ -552,6 +573,13 @@ export function CounterWorkspace({
     && settlement === "paid"
     && moneyMode === "cash"
     && (changeDue == null || changeDue < 0);
+  // Split payment (sale only): cash, UPI and card parts must add up to the bill.
+  const splitActive = tillMode !== "return" && settlement === "paid" && moneyMode === "split";
+  const splitStatus = useMemo(
+    () => counterSplitStatus(totals.total, { cash: receivedCash, upi: receivedUpi, card: receivedCard }),
+    [totals.total, receivedCash, receivedUpi, receivedCard],
+  );
+  const splitInvalid = splitActive && !splitStatus.ok;
   const oversellLines = useMemo(
     () => (tillMode === "return" ? [] : counterOversellLines(chargeLines, stockByItem, workingItems)),
     [tillMode, chargeLines, stockByItem, workingItems],
@@ -614,12 +642,47 @@ export function CounterWorkspace({
               ? "Fix the short stock lines to charge."
               : cashTenderMissing
                 ? `Enter cash tendered of ${money(totals.total)} or more to charge.`
-                : "";
+                : splitInvalid
+                  ? (splitStatus.remaining > 0
+                    ? `${money(splitStatus.remaining)} still to collect across cash, UPI and card.`
+                    : splitStatus.remaining < 0
+                      ? `The payments are ${money(Math.abs(splitStatus.remaining))} more than the bill.`
+                      : "Enter at least two payment amounts for a split payment.")
+                  : "";
+  const loadCashMovements = async () => {
+    if (!token || !companyId || !isBrowserOnline()) return;
+    try {
+      const rows = await listCounterCashMovements(token, { from: today, to: today });
+      setCashMovements((rows || []).map(mapCashMovementRow));
+      setCashUnavailable("");
+    } catch (err) {
+      setCashMovements([]);
+      setCashUnavailable(err?.code === "MIGRATION_REQUIRED" ? err.message : "");
+    }
+  };
+  const loadCashMovementsRef = useRef(loadCashMovements);
+  useEffect(() => {
+    loadCashMovementsRef.current = loadCashMovements;
+  });
+  useEffect(() => {
+    loadCashMovementsRef.current();
+  }, [token, companyId, today, online]);
+  const tillCash = useMemo(
+    () => tillCashMovements(cashMovements, { date: today, tillId: activeTillId }),
+    [cashMovements, today, activeTillId],
+  );
+  const cashTotals = useMemo(() => cashMovementTotals(tillCash), [tillCash]);
   const expectedCash = useMemo(() => {
-    // Drawer cash = opening float + cash portion of Counter tenders (not full Cash+UPI bills).
+    // Drawer cash = opening float + cash portion of Counter tenders (not full Cash+UPI bills)
+    // + cash put into the till − cash taken out of it.
     const cashSales = todayCloseReport.tender.cash;
-    return roundMoney(Number(openingFloat || closed?.openingFloat || 0) + cashSales);
-  }, [todayCloseReport, openingFloat, closed]);
+    return expectedDrawerCash({
+      openingFloat: Number(openingFloat || closed?.openingFloat || 0),
+      cashSales,
+      cashIn: cashTotals.cashIn,
+      cashOut: cashTotals.cashOut,
+    });
+  }, [todayCloseReport, openingFloat, closed, cashTotals]);
   const variance = roundMoney(Number(countedCash || 0) - expectedCash);
   const sessionTips = useMemo(
     () => counterSessionAdvisories({
@@ -823,6 +886,7 @@ export function CounterWorkspace({
     setBillDiscount("");
     setReceivedCash("");
     setReceivedUpi("");
+    setReceivedCard("");
     setTenderedCash("");
     setPaymentRef("");
     setWalkInName("");
@@ -867,6 +931,7 @@ export function CounterWorkspace({
       tillMode,
       receivedCash,
       receivedUpi,
+      receivedCard,
     };
     setHolds(current => [hold, ...current]);
     clearBill();
@@ -887,6 +952,7 @@ export function CounterWorkspace({
     setTillMode(hold.tillMode === "return" ? "return" : "sale");
     setReceivedCash(hold.receivedCash || "");
     setReceivedUpi(hold.receivedUpi || "");
+    setReceivedCard(hold.receivedCard || "");
     setHolds(current => current.filter(row => row.id !== holdId));
     setError("");
   };
@@ -1112,6 +1178,22 @@ export function CounterWorkspace({
         return;
       }
     }
+    if (!isReturn && !useCredit && moneyMode === "split") {
+      if (!online) {
+        setError("Split payment needs the network. Use Cash + UPI offline.");
+        return;
+      }
+      if (!splitStatus.ok) {
+        setError(
+          splitStatus.remaining > 0
+            ? `${money(splitStatus.remaining)} is still to collect. The cash, UPI and card amounts must add up to ${money(totals.total)}.`
+            : splitStatus.remaining < 0
+              ? `The payments are ${money(Math.abs(splitStatus.remaining))} more than the bill.`
+              : "Enter at least two payment amounts for a split payment.",
+        );
+        return;
+      }
+    }
     if (isReturn && needsSupervisor) {
       try {
         const approved = await approveWithSupervisor({
@@ -1125,10 +1207,16 @@ export function CounterWorkspace({
         return;
       }
     }
-    const payMode = useCredit ? "cash" : moneyMode;
-    const moneyParts = !useCredit && payMode === "cash_upi"
-      ? { cash: Number(receivedCash || 0), upi: Number(receivedUpi || 0) }
-      : null;
+    // Returns refund in one mode; a split choice left over from a sale falls back to cash.
+    const payMode = useCredit || (isReturn && moneyMode === "split") ? "cash" : moneyMode;
+    const moneyParts = useCredit
+      ? null
+      : payMode === "cash_upi"
+        ? { cash: Number(receivedCash || 0), upi: Number(receivedUpi || 0) }
+        : payMode === "split"
+          ? splitStatus.parts
+          : null;
+    const payLabel = payMode === "split" ? counterTenderLabel(moneyParts) : counterPayLabel(payMode);
     const clientRequestId = newClientRequestId();
     setBusy(true);
     try {
@@ -1143,7 +1231,7 @@ export function CounterWorkspace({
         narration: [
           isReturn ? `Counter return · ${tillLabel}` : `Counter sale · ${tillLabel}`,
           cashierName ? `Cashier ${cashierName}` : "",
-          useCredit ? "Khata" : counterPayLabel(payMode),
+          useCredit ? "Khata" : payLabel,
           selectedParty?.name ? selectedParty.name : "",
           String(paymentRef || "").trim() ? `Ref ${String(paymentRef).trim()}` : "",
         ].filter(Boolean).join(" · "),
@@ -1176,7 +1264,7 @@ export function CounterWorkspace({
           offlineRef: printBill.offlineRef,
           receiptLines: chargeLines,
           receiptTotals: totals,
-          payLabel: useCredit ? "Khata" : counterPayLabel(payMode),
+          payLabel: useCredit ? "Khata" : payLabel,
           customerName: customer.name,
           customerPhone: customer.phone,
         });
@@ -1189,7 +1277,7 @@ export function CounterWorkspace({
           /* Post already succeeded — refresh can retry from Day Book. */
         }
       } catch (err) {
-        if (isLikelyNetworkError(err) && !useCredit && !isReturn) {
+        if (isLikelyNetworkError(err) && !useCredit && !isReturn && payMode !== "split") {
           setOnline(false);
           await queueOfflineSale({ draft, moneyParts, clientRequestId });
           return;
@@ -1335,6 +1423,8 @@ export function CounterWorkspace({
         tender: todayCloseReport.tender,
         billCount: todayCloseReport.billCount,
         salesTotal: todayCloseReport.tender?.total || 0,
+        cashIn: cashTotals.cashIn,
+        cashOut: cashTotals.cashOut,
       },
     };
     saveDayClose(companyId, today, payload, activeTillId);
@@ -1429,6 +1519,17 @@ export function CounterWorkspace({
           </button>
           <button
             type="button"
+            className="btn"
+            disabled={!online}
+            title={!online ? "Cash in / out needs the internet" : undefined}
+            onClick={() => { setCashOpen(true); loadCashMovements(); }}
+          >
+            <Banknote size={16} aria-hidden="true" />
+            {" "}
+            Cash in / out{tillCash.length ? ` · ${tillCash.length}` : ""}
+          </button>
+          <button
+            type="button"
             className={`btn${panel === "today" ? " primary" : ""}`}
             onClick={() => setPanel(current => (current === "today" ? "bill" : "today"))}
           >
@@ -1457,6 +1558,24 @@ export function CounterWorkspace({
         </div>
       </div>
 
+      {cashOpen ? (
+        <CounterCashDialog
+          token={token}
+          online={online}
+          canManage={canManage}
+          closed={Boolean(closed)}
+          unavailable={cashUnavailable}
+          date={today}
+          tillId={activeTillId}
+          tillLabel={tillLabel}
+          cashierName={cashierName}
+          accounts={workingAccounts}
+          movements={tillCash}
+          onChanged={loadCashMovements}
+          onPosted={() => onPosted?.()}
+          onClose={() => setCashOpen(false)}
+        />
+      ) : null}
       {error ? <p className="acc-form-error" role="alert">{error}</p> : null}
       {printNotice ? (
         <div className="notice counter-print-bar is-active" role="status">
@@ -1775,8 +1894,11 @@ export function CounterWorkspace({
                 placeholder="0.00"
               />
             </FieldBlock>
-            <FieldBlock label="Expected cash (float + cash bills)">
+            <FieldBlock label="Expected cash (float + cash bills + cash in − cash out)">
               <input readOnly value={expectedCash} />
+            </FieldBlock>
+            <FieldBlock label="Cash in / out today">
+              <input readOnly value={`+${cashTotals.cashIn} / −${cashTotals.cashOut}`} aria-label="Cash in and cash out today" />
             </FieldBlock>
             <FieldBlock label="Counted cash">
               <input
@@ -2163,7 +2285,7 @@ export function CounterWorkspace({
           </div>
           <div className="counter-mode-toggle" role="group" aria-label="Sale or return">
             <button type="button" className={`btn${tillMode === "sale" ? " primary" : ""}`} disabled={busy} onClick={() => setTillMode("sale")}>Sale</button>
-            <button type="button" className={`btn${tillMode === "return" ? " primary" : ""}`} disabled={busy} onClick={() => { setTillMode("return"); setSettlement("paid"); setPartyId(CASH_PARTY_ID); }}>Return</button>
+            <button type="button" className={`btn${tillMode === "return" ? " primary" : ""}`} disabled={busy} onClick={() => { setTillMode("return"); setSettlement("paid"); setPartyId(CASH_PARTY_ID); if (moneyMode === "split") setMoneyMode("cash"); }}>Return</button>
           </div>
           {tillMode === "sale" ? (
             <FieldBlock label="Settlement">
@@ -2295,7 +2417,7 @@ export function CounterWorkspace({
                   onChange={event => setMoneyMode(event.target.value)}
                   disabled={busy}
                 >
-                  {PAY_MODES.filter(mode => online || mode.id !== "bank").map(mode => (
+                  {PAY_MODES.filter(mode => (online || (mode.id !== "bank" && mode.id !== "split")) && (tillMode !== "return" || mode.id !== "split")).map(mode => (
                     <option key={mode.id} value={mode.id}>{mode.label}</option>
                   ))}
                 </Select>
@@ -2337,7 +2459,57 @@ export function CounterWorkspace({
                   </FieldBlock>
                 </div>
               ) : null}
-              {moneyMode === "upi" || moneyMode === "bank" || moneyMode === "cash_upi" ? (
+              {splitActive ? (
+                <>
+                  <div className="counter-split counter-split-three">
+                    <FieldBlock label="Cash">
+                      <input
+                        inputMode="decimal"
+                        autoComplete="off"
+                        value={receivedCash}
+                        onChange={event => setReceivedCash(event.target.value)}
+                        aria-label="Cash amount"
+                        placeholder="0.00"
+                        disabled={busy || !lines.length}
+                      />
+                    </FieldBlock>
+                    <FieldBlock label="UPI">
+                      <input
+                        inputMode="decimal"
+                        autoComplete="off"
+                        value={receivedUpi}
+                        onChange={event => setReceivedUpi(event.target.value)}
+                        aria-label="UPI amount"
+                        placeholder="0.00"
+                        disabled={busy || !lines.length}
+                      />
+                    </FieldBlock>
+                    <FieldBlock label="Card">
+                      <input
+                        inputMode="decimal"
+                        autoComplete="off"
+                        value={receivedCard}
+                        onChange={event => setReceivedCard(event.target.value)}
+                        aria-label="Card amount"
+                        placeholder="0.00"
+                        disabled={busy || !lines.length}
+                      />
+                    </FieldBlock>
+                  </div>
+                  {lines.length ? (
+                    <p className={`small counter-split-status${splitStatus.ok ? " is-ok" : ""}`} role="status">
+                      {splitStatus.ok
+                        ? `Adds up to ${money(totals.total)}.`
+                        : splitStatus.remaining > 0
+                          ? `${money(splitStatus.remaining)} still to collect.`
+                          : splitStatus.remaining < 0
+                            ? `${money(Math.abs(splitStatus.remaining))} more than the bill.`
+                            : "Enter at least two amounts."}
+                    </p>
+                  ) : null}
+                </>
+              ) : null}
+              {moneyMode === "upi" || moneyMode === "bank" || moneyMode === "cash_upi" || moneyMode === "split" ? (
                 <FieldBlock label="Payment ref (optional)">
                   <input
                     value={paymentRef}
@@ -2351,7 +2523,7 @@ export function CounterWorkspace({
               {upiLink ? (
                 <div className="counter-upi-qr">
                   <QrSvg text={upiLink} size={120} label="UPI QR for this bill" />
-                  <p className="small">Scan to pay {money(totals.total)} via UPI</p>
+                  <p className="small">Scan to pay {money(moneyMode === "split" ? Number(receivedUpi) || 0 : totals.total)} via UPI</p>
                 </div>
               ) : null}
             </>
@@ -2401,6 +2573,7 @@ export function CounterWorkspace({
                 || creditAdvice?.level === "block"
                 || (blockOversell && oversellLines.length > 0)
                 || cashTenderMissing
+                || splitInvalid
               }
               onClick={charge}
             >
@@ -2439,6 +2612,7 @@ export function CounterWorkspace({
               || creditAdvice?.level === "block"
               || (blockOversell && oversellLines.length > 0)
               || cashTenderMissing
+              || splitInvalid
             }
             onClick={charge}
           >

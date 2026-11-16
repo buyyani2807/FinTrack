@@ -1498,6 +1498,49 @@ export const upsertCounterDayClose = (token, payload = {}) =>
     input_report_json: payload.reportJson || {},
   }, token)).catch(err => { throw dayCloseMigrationError(err); });
 
+// Counter cash in / out (migration 148). A till record, not a voucher: see counterCashMovements.js.
+const cashMovementMigrationError = err => {
+  const message = String(err?.message || err?.details || err?.cause?.message || "");
+  if (err?.code === "MIGRATION_REQUIRED" || /acc_(record|list|cancel|mark)_counter_cash_movement|acc_counter_cash_movements/i.test(message)) {
+    const error = new Error("Run migration 148_counter_cash_movements.sql in the Supabase SQL editor to use Counter cash in / out.");
+    error.code = "MIGRATION_REQUIRED";
+    error.cause = err;
+    return error;
+  }
+  return err;
+};
+
+export const recordCounterCashMovement = (token, payload = {}) =>
+  wrap(accRpc("acc_record_counter_cash_movement", {
+    input_direction: payload.direction,
+    input_amount: Number(payload.amount || 0),
+    input_reason: payload.reason || "",
+    input_note: payload.note || "",
+    input_till_id: payload.tillId || "till-1",
+    input_till_label: payload.tillLabel || "Till 1",
+    input_cashier_name: payload.cashierName || "",
+    input_movement_date: payload.date,
+    input_client_request_id: payload.clientRequestId || null,
+  }, token)).catch(err => { throw cashMovementMigrationError(err); });
+
+export const listCounterCashMovements = (token, { from = null, to = null } = {}) =>
+  wrap(accRpc("acc_list_counter_cash_movements", {
+    input_from: from,
+    input_to: to,
+  }, token)).catch(err => { throw cashMovementMigrationError(err); });
+
+export const cancelCounterCashMovement = (token, { id, reason = null } = {}) =>
+  wrap(accRpc("acc_cancel_counter_cash_movement", {
+    input_id: id,
+    input_reason: reason,
+  }, token)).catch(err => { throw cashMovementMigrationError(err); });
+
+export const markCounterCashMovementPosted = (token, { id, voucherId } = {}) =>
+  wrap(accRpc("acc_mark_counter_cash_movement_posted", {
+    input_id: id,
+    input_voucher_id: voucherId,
+  }, token)).catch(err => { throw cashMovementMigrationError(err); });
+
 export const listCounterDayCloses = (token, { companyId = null, from = null, to = null } = {}) =>
   wrap(accRpc("acc_list_counter_day_closes", {
     input_company_id: companyId || activeCompanyId,
