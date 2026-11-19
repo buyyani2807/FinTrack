@@ -16,6 +16,77 @@ import { suggestBankEntry, textHasPhrase } from "./bookSuggestions.js";
 
 const inRange = (date, from, to) => (!from || date >= from) && (!to || date <= to);
 
+const openingOf = account => roundMoney(
+  Number(account.openingDebit || (account.openingSide === "debit" ? account.openingBalance : 0) || 0)
+  - Number(account.openingCredit || (account.openingSide === "credit" ? account.openingBalance : 0) || 0),
+);
+
+/**
+ * For every cash, bank or UPI ledger whose balance is below zero, split the balance into
+ * the parts that produced it, so the owner can see why instead of reading a bare minus.
+ * Mirrors the Cashbook explainer: opening + money in - money out = balance.
+ * Read-only: it never changes or invents an entry.
+ */
+export function explainNegativeMoneyBalances(accounts = [], vouchers = [], range = {}, { topOut = 3 } = {}) {
+  const withOpening = ledgerBalances(accounts, vouchers, range);
+  const byId = new Map(withOpening.map(row => [row.id || row.code, row]));
+  const movement = ledgerBalances(accounts, vouchers, { ...range, includeOpening: false });
+  const periodById = new Map(movement.map(row => [row.id || row.code, row]));
+  const moneyRows = withOpening.filter(row => isMoneyAccount(row));
+  const positiveNames = moneyRows.filter(row => row.balance > 0).map(row => row.name);
+
+  return moneyRows.filter(row => row.balance < 0).map(row => {
+    const key = row.id || row.code;
+    const period = periodById.get(key) || { debit: 0, credit: 0 };
+    const moneyIn = roundMoney(period.debit || 0);
+    const moneyOut = roundMoney(period.credit || 0);
+    const opening = openingOf(byId.get(key) || row);
+    const largestOut = [];
+    for (const voucher of vouchers || []) {
+      if (!affectsLedgers(voucher)) continue;
+      if (!inRange(voucher.date, range.from, range.to)) continue;
+      for (const line of voucher.lines || []) {
+        if ((line.coaId || line.code) !== key) continue;
+        const amount = roundMoney(Number(line.credit || 0));
+        if (!(amount > 0)) continue;
+        largestOut.push({
+          id: `${voucher.id || voucher.voucherNumber}:${line.id || line.lineNo || largestOut.length}`,
+          date: voucher.date,
+          voucherNumber: voucher.voucherNumber || "",
+          description: line.description || voucher.narration || "Money out",
+          amount,
+        });
+      }
+    }
+    largestOut.sort((a, b) => b.amount - a.amount || `${b.date}`.localeCompare(`${a.date}`));
+    return {
+      id: key,
+      name: row.name,
+      code: row.code,
+      accountType: row.accountType,
+      balance: row.balance,
+      opening,
+      moneyIn,
+      moneyOut,
+      hasOpening: opening !== 0,
+      largestOut: largestOut.slice(0, topOut),
+      reasons: negativeMoneyReasons({ name: row.name, opening, moneyIn, moneyOut }, positiveNames.filter(other => other !== row.name)),
+    };
+  });
+}
+
+function negativeMoneyReasons(item, otherPositive) {
+  const reasons = [];
+  if (item.opening === 0) {
+    reasons.push(`No opening balance is recorded for ${item.name}. Money that was already there before your books started on MyFinTracker is not counted.`);
+  }
+  if (otherPositive.length) {
+    reasons.push(`Payments may have been recorded on ${item.name} while the matching receipts landed in ${otherPositive.join(", ")}. If you moved money between them, post a contra entry.`);
+  }
+  reasons.push("Otherwise an amount may be posted to the wrong ledger, or a receipt may be missing. Check the largest payments out below.");
+  return reasons;
+}
+
 const compareVoucherChronology = (a, b) => {
   const dateCmp = String(a?.date || "").localeCompare(String(b?.date || ""));
   if (dateCmp) return dateCmp;

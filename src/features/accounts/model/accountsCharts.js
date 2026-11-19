@@ -29,7 +29,12 @@ export function monthlyIncomeExpense({ accounts, vouchers, items = [], movements
       month: `${year}-${pad(month)}`,
       label: `${MONTH_NAMES[month - 1]} ${String(year).slice(2)}`,
       income: pnl.totalIncome,
-      expenses: roundMoney(pnl.totalExpense - pnl.stockAdjustment),
+      // Plot what the P&L calls Total expenses. Subtracting the stock movement here was
+      // an attempt at cost of goods sold, but a month that buys stock without selling it
+      // drives the figure negative (Sept 2026: 3,28,213.22 - 11,70,120 = -8,41,906.78) and
+      // the chart clamps a negative bar to nothing, hiding real expenses. The net line
+      // already adds the stock movement back, so the bar must not take it out again.
+      expenses: pnl.totalExpense,
       net: pnl.net,
     });
   }

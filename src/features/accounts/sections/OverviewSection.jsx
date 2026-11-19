@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+import { explainNegativeMoneyBalances } from "../model/accountingReports.js";
 import {
   createChartAccount,
   initializeAccounting,
@@ -81,6 +83,11 @@ export function OverviewSection({
   setupKeepsCompany = false,
 }) {
   const result = profitResult(metrics?.netProfit);
+  // A bare negative cash/bank/UPI figure needs its arithmetic shown, as the Cashbook does.
+  const negativeMoney = useMemo(
+    () => (settings ? explainNegativeMoneyBalances(visibleAccounts, vouchers, range) : []),
+    [settings, visibleAccounts, vouchers, range],
+  );
   const finishOnboarding = () => {
     markAccountsOnboardingDone(activeCompanyId);
     setOnboardingDismissed(true);
@@ -141,6 +148,7 @@ export function OverviewSection({
 
       {settings && metrics && <AccMoneyTiles
         metrics={metrics}
+        negativeMoney={negativeMoney}
         periodLabel={rangeFrom === fy.from && rangeTo === fy.to ? "This FY" : rangeFrom === lastFy.from && rangeTo === lastFy.to ? "Last FY" : "Period"}
         onNavigate={target => {
           if (typeof target === "string") openSection(target);

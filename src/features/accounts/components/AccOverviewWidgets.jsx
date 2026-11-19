@@ -11,7 +11,7 @@ const MoneyRow = ({ label, value, tone, onClick }) => {
     : <div className="acc-money-row">{content}</div>;
 };
 
-export function AccMoneyTiles({ metrics, periodLabel, onNavigate }) {
+export function AccMoneyTiles({ metrics, periodLabel, onNavigate, negativeMoney = [] }) {
   const [span, setSpan] = useState("month");
   const sales = { today: metrics?.todaySales, month: metrics?.monthSales, period: metrics?.periodSales }[span];
   const purchases = { today: metrics?.todayPurchases, month: metrics?.monthPurchases, period: metrics?.periodPurchases }[span];
@@ -40,8 +40,41 @@ export function AccMoneyTiles({ metrics, periodLabel, onNavigate }) {
       <MoneyRow label="Cash" value={metrics?.cash} />
       <MoneyRow label="Bank" value={metrics?.bank} />
       <MoneyRow label="UPI" value={metrics?.upi} />
+      <NegativeMoneyNotice items={negativeMoney} />
     </article>
   </section>;
+}
+
+/**
+ * A bare "Bank: -78,900" reads as a bug to an owner. Show the arithmetic behind it,
+ * the way the Cashbook already does for its own ledgers.
+ */
+function NegativeMoneyNotice({ items = [] }) {
+  const [open, setOpen] = useState(false);
+  if (!items.length) return null;
+  const names = items.map(item => item.name).join(", ");
+  return <div className="notice acc-money-negative" role="status">
+    <p className="small">
+      <strong>{items.length === 1 ? `${names} is below zero.` : `${names} are below zero.`}</strong>{" "}
+      A ledger goes negative when more money is recorded leaving it than arriving. The arithmetic is right; something is likely missing.
+    </p>
+    <button type="button" className="btn acc-money-negative-toggle" onClick={() => setOpen(value => !value)} aria-expanded={open}>
+      {open ? "Hide the breakdown" : "Show me why"}
+    </button>
+    {open && items.map(item => <div key={item.id} className="acc-money-negative-item">
+      <strong>{item.name}</strong>
+      <p className="small">
+        Opening {money(item.opening)} + money in {money(item.moneyIn)} − money out {money(item.moneyOut)} = {money(item.balance)}
+      </p>
+      <ul className="small">{item.reasons.map(reason => <li key={reason}>{reason}</li>)}</ul>
+      {item.largestOut.length > 0 && <>
+        <p className="small">Largest payments out of this ledger:</p>
+        <ul className="small">{item.largestOut.map(row => <li key={row.id}>
+          {row.date} · {row.voucherNumber ? `${row.voucherNumber} · ` : ""}{row.description} · {money(row.amount)}
+        </li>)}</ul>
+      </>}
+    </div>)}
+  </div>;
 }
 
 export function AccountsBusinessPulse({ metrics, receivables, payables, items, stockMovements, onNavigate, onOpenCollections, canWrite = true }) {
