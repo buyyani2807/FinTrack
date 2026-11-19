@@ -150,20 +150,30 @@ export function downloadSalesInvoicePdf(invoice, options = {}) {
   downloadPdf(renderSalesInvoicePdf(invoice, options), `${invoice.invoiceNumber || "sales-invoice"}.pdf`);
 }
 
+// "thermal" is the pre-58mm-support value; older saved invoices/offline bills may still
+// carry it, and it has always meant the 80 mm slip.
+function thermalWidthMm(template) {
+  if (template === "thermal58") return 58;
+  if (template === "thermal80" || template === "thermal") return 80;
+  return null;
+}
+
 function isThermalPrint(invoice, options = {}) {
   const template = options.template || invoice?.documentTemplate || "a4";
-  return template === "thermal" || Boolean(invoice?.posSlip);
+  return thermalWidthMm(template) != null || Boolean(invoice?.posSlip);
 }
 
 /**
- * Print a receipt. Thermal / Counter slips use HTML (80 mm) so ESC/POS printers
- * do not dump PDF→PostScript source. A4 invoices still print from PDF.
+ * Print a receipt. Thermal / Counter slips use HTML (80 mm or 58 mm) so ESC/POS printers
+ * do not dump PDF→PostScript source. Regular A4/A5 invoices still print from PDF.
  * Call only from a Print click — browsers block this after async Charge alone.
  */
 export function printSalesInvoicePdf(invoice, options = {}) {
   if (typeof window === "undefined") return false;
   if (isThermalPrint(invoice, options)) {
-    return printThermalReceiptHtml(salesInvoicePdfModel(invoice), invoice);
+    const template = options.template || invoice?.documentTemplate || "thermal80";
+    const widthMm = thermalWidthMm(template) || 80;
+    return printThermalReceiptHtml(salesInvoicePdfModel(invoice), invoice, { widthMm });
   }
   if (typeof URL === "undefined") return false;
   const binary = renderSalesInvoicePdf(invoice, options);

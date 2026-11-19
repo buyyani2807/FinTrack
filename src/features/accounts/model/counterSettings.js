@@ -2,6 +2,31 @@
 
 const COUNTER_INDUSTRIES = new Set(["retail", "kirana", "medical", "hardware", "jewellery"]);
 
+/**
+ * Which printer the Counter prints a bill to. "thermal80"/"thermal58" print an HTML slip
+ * sized for that paper width (ESC/POS thermal printers). "a4"/"a5" print the same bill as a
+ * PDF on a regular inkjet/laser printer, like Accounts invoices already do.
+ */
+export const COUNTER_PRINT_FORMATS = [
+  { id: "thermal80", label: "Thermal · 80 mm", kind: "thermal", widthMm: 80 },
+  { id: "thermal58", label: "Thermal · 58 mm", kind: "thermal", widthMm: 58 },
+  { id: "a4", label: "Regular · A4", kind: "regular" },
+  { id: "a5", label: "Regular · A5", kind: "regular" },
+];
+const COUNTER_PRINT_FORMAT_IDS = new Set(COUNTER_PRINT_FORMATS.map(format => format.id));
+export const DEFAULT_COUNTER_PRINT_FORMAT = "thermal80";
+
+export function counterPrintFormatSpec(formatId) {
+  return COUNTER_PRINT_FORMATS.find(format => format.id === formatId) || COUNTER_PRINT_FORMATS[0];
+}
+
+function normalizePrintFormat(value) {
+  const id = String(value || "").trim();
+  // Legacy value from before 58 mm / regular-printer support existed.
+  if (id === "thermal") return DEFAULT_COUNTER_PRINT_FORMAT;
+  return COUNTER_PRINT_FORMAT_IDS.has(id) ? id : DEFAULT_COUNTER_PRINT_FORMAT;
+}
+
 const storageKey = companyId => `fintrack-accounts-counter-v1:${companyId || "none"}`;
 const settingsKey = companyId => `fintrack-accounts-counter-settings-v1:${companyId || "none"}`;
 const dayCloseKey = (companyId, date, tillId) => (
@@ -46,6 +71,7 @@ export function emptyCounterSettings() {
     favouriteItemIds: [],
     /** When true, Charge blocks product lines that exceed on-hand stock. */
     blockOversell: true,
+    printFormat: DEFAULT_COUNTER_PRINT_FORMAT,
   };
 }
 
@@ -89,6 +115,7 @@ export function readCounterSettings(companyId) {
       },
       favouriteItemIds,
       blockOversell: parsed?.blockOversell !== false,
+      printFormat: normalizePrintFormat(parsed?.printFormat),
     };
   } catch {
     return fallback;
@@ -122,6 +149,7 @@ export function saveCounterSettings(companyId, next) {
       },
       favouriteItemIds,
       blockOversell: next?.blockOversell != null ? Boolean(next.blockOversell) : current.blockOversell !== false,
+      printFormat: next?.printFormat != null ? normalizePrintFormat(next.printFormat) : (current.printFormat || DEFAULT_COUNTER_PRINT_FORMAT),
     };
     localStorage.setItem(settingsKey(companyId), JSON.stringify(merged));
     return merged;

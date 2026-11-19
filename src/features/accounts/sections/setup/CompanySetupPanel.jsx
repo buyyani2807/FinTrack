@@ -5,7 +5,7 @@ import { Field, AccSetupSection, AccReveal } from "../../components/AccUi.jsx";
 import { Select } from "../../../../components/Select.jsx";
 import { todayIso } from "../../../../lib/dates.js";
 import { gstStatusLabel } from "../../accountsFormat.js";
-import { emptyCounterSettings } from "../../model/counterSettings.js";
+import { COUNTER_PRINT_FORMATS, DEFAULT_COUNTER_PRINT_FORMAT, emptyCounterSettings } from "../../model/counterSettings.js";
 import { CounterSupervisorPinSetup } from "./CounterSupervisorPinSetup.jsx";
 
 function companyDetailsChanged(form, company) {
@@ -219,6 +219,20 @@ export function CompanySetupPanel({
                 <span className="small">Stops overselling products. Turn off only if you allow negative stock at this till.</span>
               </span>
             </label>
+            <Field className="span" label="Counter printer">
+              <Select
+                value={settings.printFormat || DEFAULT_COUNTER_PRINT_FORMAT}
+                disabled={!canAdmin}
+                onChange={event => patchSettings({ printFormat: event.target.value })}
+              >
+                {COUNTER_PRINT_FORMATS.map(format => (
+                  <option key={format.id} value={format.id}>{format.label}</option>
+                ))}
+              </Select>
+              <span className="small">
+                Thermal prints a narrow ESC/POS slip; Regular prints the same bill as a PDF on an A4/A5 inkjet or laser printer. This device remembers your choice next time you print from the till.
+              </span>
+            </Field>
             <CounterSupervisorPinSetup token={token} canAdmin={canAdmin} companyId={activeCompanyId} setError={setError} />
           </div>
         </div>

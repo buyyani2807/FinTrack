@@ -42,10 +42,17 @@ function qrSvg(link, { module = 2 } = {}) {
 /**
  * @param {object} model - from salesInvoicePdfModel(invoice)
  * @param {object} [invoice] - original invoice for UPI / money helpers
- * @param {{ autoPrint?: boolean }} [options]
+ * @param {{ autoPrint?: boolean, widthMm?: 80 | 58 }} [options]
  */
 export function buildThermalReceiptHtml(model, invoice = null, options = {}) {
   const autoPrint = options.autoPrint !== false;
+  // 58 mm printers (common on small handheld POS units) take ~48 mm of printable area,
+  // versus ~72 mm on an 80 mm roll. Scale the slip and its item-row columns to fit.
+  const widthMm = options.widthMm === 58 ? 58 : 80;
+  const slipMm = widthMm === 58 ? 48 : 72;
+  const qtyColMm = widthMm === 58 ? 7 : 9;
+  const rateColMm = widthMm === 58 ? 10 : 13;
+  const amountColMm = widthMm === 58 ? 11 : 15;
   const sellerLines = (model.seller?.lines || []).filter(Boolean).map(line => `<div class="c muted">${escapeHtml(line)}</div>`).join("");
   const partyLines = (model.party?.lines || []).filter(Boolean).map(line => `<div>${escapeHtml(line)}</div>`).join("");
   const metaRows = (model.meta || [])
@@ -109,20 +116,20 @@ export function buildThermalReceiptHtml(model, invoice = null, options = {}) {
   <title>${escapeHtml(model.title || "Receipt")}</title>
   <style>
     /* 80 mm slip. Drivers that ignore @page still get a narrow body. */
-    @page { size: 80mm auto; margin: 2mm; }
+    @page { size: ${widthMm}mm auto; margin: 2mm; }
     * { box-sizing: border-box; }
     html, body {
       margin: 0;
       padding: 0;
-      width: 80mm;
-      max-width: 80mm;
+      width: ${widthMm}mm;
+      max-width: ${widthMm}mm;
       color: #000;
       background: #fff;
       font: 11px/1.35 "Courier New", Courier, ui-monospace, monospace;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-    .slip { width: 72mm; max-width: 100%; margin: 0 auto; padding: 1mm 2mm 6mm; }
+    .slip { width: ${slipMm}mm; max-width: 100%; margin: 0 auto; padding: 1mm 2mm 6mm; }
     .c { text-align: center; }
     .bold { font-weight: 700; }
     .muted { font-size: 10px; }
@@ -133,7 +140,7 @@ export function buildThermalReceiptHtml(model, invoice = null, options = {}) {
     .row > span:last-child { text-align: right; white-space: nowrap; }
     .head {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 9mm 13mm 15mm;
+      grid-template-columns: minmax(0, 1fr) ${qtyColMm}mm ${rateColMm}mm ${amountColMm}mm;
       gap: 2px;
       font-weight: 700;
       font-size: 10px;
@@ -143,7 +150,7 @@ export function buildThermalReceiptHtml(model, invoice = null, options = {}) {
     .item { margin: 3px 0; }
     .item-grid {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 9mm 13mm 15mm;
+      grid-template-columns: minmax(0, 1fr) ${qtyColMm}mm ${rateColMm}mm ${amountColMm}mm;
       gap: 2px;
       align-items: start;
     }
@@ -153,11 +160,11 @@ export function buildThermalReceiptHtml(model, invoice = null, options = {}) {
     .pay > span:nth-child(2) { text-align: center; }
     .pay > span:last-child { text-align: right; }
     .qr { text-align: center; margin: 4px 0; }
-    .qr svg { max-width: 36mm; height: auto; }
+    .qr svg { max-width: ${widthMm === 58 ? 30 : 36}mm; height: auto; }
     .foot { margin-top: 4px; font-weight: 700; }
     @media print {
-      html, body { width: 80mm !important; max-width: 80mm !important; }
-      .slip { width: 72mm; }
+      html, body { width: ${widthMm}mm !important; max-width: ${widthMm}mm !important; }
+      .slip { width: ${slipMm}mm; }
     }
   </style>
 </head>
@@ -249,16 +256,18 @@ function printViaPopup(html) {
 }
 
 /**
- * Open the system print dialog for an 80 mm Counter slip.
+ * Open the system print dialog for a Counter slip.
  * Prefer iframe (PWA / phone / Windows / Mac). Pop-up only if iframe fails.
  * @param {object} model - from salesInvoicePdfModel(invoice)
  * @param {object} [invoice]
+ * @param {{ widthMm?: 80 | 58 }} [options]
  */
-export function printThermalReceiptHtml(model, invoice = null) {
+export function printThermalReceiptHtml(model, invoice = null, options = {}) {
   if (typeof window === "undefined" || !model) return false;
+  const widthMm = options.widthMm === 58 ? 58 : 80;
   // Host calls print() — do not double-fire via embedded onload on iframe path.
-  const iframeHtml = buildThermalReceiptHtml(model, invoice, { autoPrint: false });
+  const iframeHtml = buildThermalReceiptHtml(model, invoice, { autoPrint: false, widthMm });
   if (printViaIframe(iframeHtml)) return true;
-  const popupHtml = buildThermalReceiptHtml(model, invoice, { autoPrint: true });
+  const popupHtml = buildThermalReceiptHtml(model, invoice, { autoPrint: true, widthMm });
   return printViaPopup(popupHtml);
 }

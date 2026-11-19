@@ -41,6 +41,7 @@ import {
   saveCounterCatalogCache,
 } from "../data/counterOfflineStore.js";
 import {
+  counterPrintFormatSpec,
   itemExpiryStatus,
   readCounterSession,
   readDayClose,
@@ -1013,20 +1014,25 @@ export function CounterWorkspace({
 
   const printOfflineBill = bill => {
     const company = activeCompany || cachedCatalog?.company || {};
+    const printFormat = counterSettings?.printFormat || "thermal80";
     const invoice = buildOfflineReceiptInvoice({
       bill,
       companyName: company.name || branding?.companyName || "MyFinTracker",
       companyAddress: company.documentSettings?.businessAddress || branding?.companyAddress || "",
       companyGstin: company.gstin || branding?.companyGstin || "",
       companyPhone: company.documentSettings?.businessPhone || branding?.companyPhone || "",
+      printFormat,
     });
     if (!invoice) {
       setPrintNotice("Could not build the receipt. Try Print again.");
       return false;
     }
-    const ok = printSalesInvoicePdf(invoice, { template: "thermal" });
+    const ok = printSalesInvoicePdf(invoice);
+    const formatSpec = counterPrintFormatSpec(printFormat);
     setPrintNotice(ok
-      ? "Print dialog opened — pick your thermal printer and ~80 mm paper (phone, Windows, or Mac). Don’t choose Save as PDF for the shop printer."
+      ? (formatSpec.kind === "regular"
+        ? `Print dialog opened — pick your regular printer and ${formatSpec.label.split("· ")[1] || "paper"} (phone, Windows, or Mac).`
+        : `Print dialog opened — pick your thermal printer and ~${formatSpec.widthMm} mm paper (phone, Windows, or Mac). Don’t choose Save as PDF for the shop printer.`)
       : "Could not open print. Tap Print again, or allow pop-ups if your browser asks.");
     window.setTimeout(() => setPrintNotice(""), 10000);
     return ok;

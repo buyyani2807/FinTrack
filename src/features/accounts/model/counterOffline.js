@@ -56,6 +56,7 @@ export function buildOfflineReceiptInvoice({
   companyAddress = "",
   companyGstin = "",
   companyPhone = "",
+  printFormat = "thermal80",
 } = {}) {
   if (!bill) return null;
   const rawLines = bill.payload?.itemLines || bill.itemLines || [];
@@ -118,7 +119,7 @@ export function buildOfflineReceiptInvoice({
       ? "Thank You & Visit Again..!"
       : "Thank You & Visit Again..! Offline — final bill no. after sync.",
     receiptTerms: "",
-    documentTemplate: "thermal",
+    documentTemplate: printFormat || "thermal80",
     autoPrint: true,
     posSlip: true,
     money: formatInr,

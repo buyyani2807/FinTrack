@@ -74,7 +74,8 @@ test("offline receipt invoice uses provisional number and no due date", () => {
   });
   assert.equal(invoice.invoiceNumber, "OFF-20261103-0002");
   assert.equal(invoice.dueDate, "");
-  assert.equal(invoice.documentTemplate, "thermal");
+  // "thermal80" is the (equivalent) 80mm default now that 58mm / regular-printer choices exist.
+  assert.equal(invoice.documentTemplate, "thermal80");
   assert.equal(invoice.taxable, 3857.14);
   assert.equal(invoice.cgst, 96.43);
   assert.equal(invoice.sgst, 96.43);

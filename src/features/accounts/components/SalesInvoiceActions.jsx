@@ -7,13 +7,17 @@ import { downloadPartyStatementPdf } from "../io/partyStatementPdf.js";
 import { CloseButton, ModalScroll } from "../../../components/ui.jsx";
 import { useDialogDismiss } from "../../../components/useDialogDismiss.js";
 
-/** Counter / POS receipts use thermal 80 mm; Accounts credit invoices keep company template. */
-export function withCounterReceiptPrint(invoice) {
+/**
+ * Counter / POS receipts print to whichever printer the business picked under Counter
+ * setup — a thermal slip (80 mm / 58 mm) by default, or a regular A4/A5 printer. Accounts
+ * credit invoices (not built through here) keep the company's own template.
+ */
+export function withCounterReceiptPrint(invoice, printFormat = "thermal80") {
   if (!invoice) return invoice;
   const isReturn = /return/i.test(String(invoice.narration || "")) || /return/i.test(String(invoice.title || ""));
   return {
     ...invoice,
-    documentTemplate: "thermal",
+    documentTemplate: printFormat || "thermal80",
     autoPrint: true,
     posSlip: true,
     title: isReturn ? "RETURN BILL" : (invoice.tax > 0 && invoice.companyGstin ? "TAX INVOICE" : "BILL"),
@@ -162,8 +166,8 @@ export function SalesInvoiceViewerModal({ invoice, close, onSettle }) {
   const m = invoice.money;
   const moneyOnly = invoice.kind === "receipt" || invoice.kind === "payment";
   const printInvoice = () => {
-    if (invoice?.documentTemplate === "thermal") {
-      printSalesInvoicePdf(invoice, { template: "thermal" });
+    if (/^thermal/.test(String(invoice?.documentTemplate || ""))) {
+      printSalesInvoicePdf(invoice);
       return;
     }
     printDocument();
@@ -300,12 +304,12 @@ export function SalesInvoiceSuccessModal({ invoice, settings = {}, close }) {
   useEffect(() => {
     if (!counterReceipt || !invoice) return undefined;
     const timer = window.setTimeout(() => {
-      printSalesInvoicePdf(invoice, { template: "thermal" });
+      printSalesInvoicePdf(invoice);
     }, 250);
     return () => window.clearTimeout(timer);
   }, [counterReceipt, invoice?.voucherId, invoice?.invoiceNumber]);
 
-  const printThermalAgain = () => printSalesInvoicePdf(invoice, { template: "thermal" });
+  const printThermalAgain = () => printSalesInvoicePdf(invoice);
 
   return (
     <>

@@ -611,10 +611,10 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       itemLines: voucherItemLines.filter(line => line.voucherId === voucher.id),
     });
     if (!built) return;
-    printSalesInvoicePdf(withCounterReceiptPrint(built), { template: "thermal" });
+    printSalesInvoicePdf(withCounterReceiptPrint(built, counterSettings.printFormat));
     setNotice("Receipt opened — use the browser print dialog if it appears.");
     setPendingCounterPrintId(null);
-  }, [pendingCounterPrintId, vouchers, parties, accounts, companies, activeCompanyId, workspace, voucherItemLines, documentSettings]);
+  }, [pendingCounterPrintId, vouchers, parties, accounts, companies, activeCompanyId, workspace, voucherItemLines, documentSettings, counterSettings.printFormat]);
 
   useEffect(() => {
     if (!token || !expandedVoucherId || migrationRequired) {
