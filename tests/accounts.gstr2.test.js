@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { buildGstr2Report, gstr2ExportRows, supplierInvoiceNumber } from "../src/features/accounts/model/gstr2Report.js";
 import { gstBooksReport } from "../src/features/accounts/model/accountingReports.js";
-import { accountsViewFromPath, accountsPath, REPORT_TABS } from "../src/features/accounts/accountsNavigation.js";
+import { accountsViewFromPath, REPORT_TABS } from "../src/features/accounts/accountsNavigation.js";
 
 const REG_INTRA = "36AAAAA0000A1Z3"; // Telangana, valid checksum
 const REG_INTER = "27AAPFU0939F1ZV"; // Maharashtra, valid checksum
@@ -165,21 +165,25 @@ test("empty books give an empty, well-formed report", () => {
   assert.ok(gstr2ExportRows(empty).length > 5);
 });
 
-test("GSTR-2 has its own report URL with common spellings", () => {
-  assert.ok(REPORT_TABS.some(tab => tab.id === "gstr2"));
-  assert.equal(accountsPath({ section: "reports", reportTab: "gstr2" }), "/accounting/reports/gstr2");
-  assert.equal(accountsViewFromPath("reports", "gstr2").reportTab, "gstr2");
-  for (const slug of ["gstr-2", "GSTR-2", "gstr2-purchases"]) {
+test("GSTR-2 lives inside the GST tab, and old standalone-tab links still land there", () => {
+  // GSTR-2 is a subsection of the "gst" tab (next to GSTR-1 / GSTR-3B), not its own top-level
+  // report tab — so there is no separate "gstr2" entry in REPORT_TABS.
+  assert.ok(!REPORT_TABS.some(tab => tab.id === "gstr2"));
+  assert.ok(REPORT_TABS.some(tab => tab.id === "gst"));
+  for (const slug of ["gstr2", "gstr-2", "GSTR-2", "gstr2-purchases"]) {
     const view = accountsViewFromPath("reports", slug);
-    assert.equal(view.reportTab, "gstr2", slug);
+    assert.equal(view.reportTab, "gst", slug);
   }
 });
 
-test("Reports page renders GSTR-2 and exports it", () => {
+test("GST tab renders GSTR-2 as a subsection and exports it alongside the GST books", () => {
   const section = readFileSync(new URL("../src/features/accounts/sections/ReportsSection.jsx", import.meta.url), "utf8");
   const product = readFileSync(new URL("../src/features/accounts/AccountingProduct.jsx", import.meta.url), "utf8");
-  assert.match(section, /reportTab === "gstr2" && \(/);
-  assert.match(section, /<Gstr2Report/);
-  assert.match(product, /if \(active === "gstr2"\)/);
-  assert.match(product, /gstr2ExportRows\(report/);
+  const gstBlock = section.slice(section.indexOf('reportTab === "gst" &&'), section.indexOf('reportTab === "ledger"'));
+  assert.match(gstBlock, /<GstReport/);
+  assert.match(gstBlock, /<Gstr2Report/);
+  assert.match(product, /if \(active === "gst"\)/);
+  assert.match(product, /gstr2ExportRows\(gstr2/);
+  // The old standalone "gstr2" export branch is gone — one Export now covers both.
+  assert.doesNotMatch(product, /if \(active === "gstr2"\)/);
 });
