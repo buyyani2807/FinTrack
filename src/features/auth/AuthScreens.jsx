@@ -25,7 +25,7 @@ const MODE_GUIDE = {
   agent: "Your owner shares your agent ID (it starts with AG-) and a 6-digit PIN when they add you under Collection Staff.",
   customer: "Your owner shares your portal ID (it starts with FT-) and a 6-digit PIN when they open your customer portal.",
   chitCustomer: "Your chit manager shares your portal ID (it starts with CF-) and a 6-digit PIN when you join a scheme.",
-  signUp: "The 14 days start when the workspace is created. Opening this page does not start the trial. After 14 days you can still sign in, your records stay, and recording waits until you choose a plan. CAs should not create a business here — ask the owner to Add CA in Accounts Setup.",
+  signUp: "The 3 months start when the workspace is created. Opening this page does not start the trial. After 3 months you can still sign in, your records stay, and recording waits until you choose a plan. CAs should not create a business here — ask the owner to Add CA in Accounts Setup.",
 };
 
 // Plain-language versions of common sign-in errors; anything else is shown as it comes.
@@ -196,11 +196,11 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
         if (!validateSignupInvite(inviteCode)) throw new Error("Enter a valid invite code.");
         const result = await supabase.auth.signUp(email, password, { businessName, fullName, inviteCode });
         if (result.confirmation_required || !result.access_token) {
-          // Confirm email is on. The workspace (and the 14-day trial) is created on the first sign-in after confirming.
+          // Confirm email is on. The workspace (and the 3-month trial) is created on the first sign-in after confirming.
           const address = String(email).trim();
           setMode("signIn");
           setPassword("");
-          setNotice({ tone: "success", title: "Check your inbox", text: `We sent a confirmation link to ${address}. Open it to confirm your email, then sign in here. Your 14-day trial starts at that first sign-in.`, action: { label: "Resend email", onClick: () => resendConfirmation(address) } });
+          setNotice({ tone: "success", title: "Check your inbox", text: `We sent a confirmation link to ${address}. Open it to confirm your email, then sign in here. Your 3-month trial starts at that first sign-in.`, action: { label: "Resend email", onClick: () => resendConfirmation(address) } });
           return;
         }
         // API signup already runs provision_financier and deletes the Auth user on failure.
@@ -259,7 +259,7 @@ export function FinancierAuth({ onLogin, onCustomerLogin, onChitCustomerLogin })
           <Wordmark />
           {brandName !== PRODUCT_NAME && <span className="ft-auth-product">{brandName.replace(new RegExp(`^${PRODUCT_NAME}\\s*`), "")}</span>}
         </div>
-        <h1 className={`ft-auth-title${mode === "signUp" ? " is-one-line" : ""}`}>{mode === "signUp" ? "Start your 14-day free trial" : "Welcome back"}</h1>
+        <h1 className={`ft-auth-title${mode === "signUp" ? " is-one-line" : ""}`}>{mode === "signUp" ? "Start your 3-month free trial" : "Welcome back"}</h1>
         <p className="sub ft-auth-sub">{brandSub}</p>
 
         {mode !== "signUp" && <div className="ft-auth-modes" role="group" aria-label="Sign in as">

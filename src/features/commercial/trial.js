@@ -142,7 +142,7 @@ export function trialBannerCopy(subscription) {
   const days = resolveDaysRemaining(subscription);
   const endLabel = formatTrialDate(subscription.endsAt);
   const endText = endLabel ? ` Ends ${endLabel}.` : "";
-  let detail = `Your 14-day free trial is active.${endText}`;
+  let detail = `Your 3-month free trial is active.${endText}`;
   let tone = "info";
   if (days === 0) {
     detail = `Trial expires today.${endText}`;
@@ -161,7 +161,7 @@ export function trialBannerCopy(subscription) {
     tone = days < 7 ? "warning" : "info";
   }
   return {
-    title: "14-day free trial",
+    title: "3-month free trial",
     detail: detail.trim(),
     tone,
     daysRemaining: days,
@@ -173,7 +173,7 @@ export function subscriptionLockCopy(subscription) {
   if (workspaceAccessAllowed(subscription)) return null;
   const trialEnded = !subscription || subscription.status === "expired" || subscription.status === "trialing";
   return {
-    title: trialEnded ? "Your 14-day free trial has ended" : "Choose a plan to keep recording",
+    title: trialEnded ? "Your 3-month free trial has ended" : "Choose a plan to keep recording",
     started: formatTrialDate(subscription?.startedAt),
     ended: formatTrialDate(subscription?.endsAt),
     preservation: "Your customers, collections, chit records, and accounts are still here. Nothing is deleted.",

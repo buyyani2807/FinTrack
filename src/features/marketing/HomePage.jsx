@@ -415,7 +415,7 @@ export function HomePage() {
             <ProductCta primary label="Start free trial" />
             <Link className="mkt-btn ghost" to={marketingPaths.contact}>Book a demo</Link>
           </Reveal>
-          <Reveal as="p" className="hm-hero-note" index={4}>{["14 days free", "No payment to start", `Modules from ${MONTHLY.baseLabel} per month`].map(item => <span key={item}><Check size={14} aria-hidden="true" />{item}</span>)}</Reveal>
+          <Reveal as="p" className="hm-hero-note" index={4}>{["3 months free", "No payment to start", `Modules from ${MONTHLY.baseLabel} per month`].map(item => <span key={item}><Check size={14} aria-hidden="true" />{item}</span>)}</Reveal>
         </div>
         <Reveal index={2} duration={1.1} style={{ minWidth: 0 }}><HeroVisual /></Reveal>
       </div>
@@ -444,9 +444,9 @@ export function HomePage() {
 
     <div className="fx hm-trial">
       <ModuleClosing
-        title="Start your 14-day free trial today."
+        title="Start your 3-month free trial today."
         lead={`Every module included. No payment to start. Then modules start from ${MONTHLY.baseLabel} per month.`}
-        points={["14 days free", "No payment to start", `Modules from ${MONTHLY.baseLabel} per month`]}
+        points={["3 months free", "No payment to start", `Modules from ${MONTHLY.baseLabel} per month`]}
       />
     </div>
   </div></RevealProvider>;

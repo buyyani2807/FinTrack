@@ -176,7 +176,7 @@ export function ModuleStorePage() {
             <p className="ft-mod-empty">The business owner purchases modules.</p>
           )}
           {notice ? <p className="ft-subscribe-note" role="status">{notice}</p> : null}
-          <p className="ft-mod-note">Your 14-day free trial still opens every module. After the trial, only what you unlock stays open. Your records stay.</p>
+          <p className="ft-mod-note">Your 3-month free trial still opens every module. After the trial, only what you unlock stays open. Your records stay.</p>
           <p className="ft-mod-back"><Link to="/dashboard">Back to the workspace</Link></p>
         </section>
       </div>

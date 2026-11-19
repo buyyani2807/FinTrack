@@ -3,7 +3,7 @@
  *
  * Safety rules (must not break existing customers):
  * 1. Grandfathered orgs (subscription.grandfathered) → full access via feature packs.
- * 2. Active 14-day trial → full access (free trial continues).
+ * 2. Active 3-month trial → full access (free trial continues).
  * 3. Orgs with no module entitlement rows → legacy feature_packs (default "full").
  * 4. Orgs with entitlement rows (module commerce) → only purchased products (+ trial override).
  */

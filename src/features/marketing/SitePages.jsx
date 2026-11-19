@@ -110,7 +110,7 @@ export function PricingPage() {
             <ProductCta primary label="Start free trial" />
             <Link className="mkt-btn" to={marketingPaths.contact}>Request a demo</Link>
           </div>
-          <p className="sec-plan-note">A new workspace includes 14 days with every module open. Signing up does not charge a card. After the trial, unlock only what you need. Your records stay.</p>
+          <p className="sec-plan-note">A new workspace includes 3 months with every module open. Signing up does not charge a card. After the trial, unlock only what you need. Your records stay.</p>
         </div>
       </div>
     </section>
@@ -123,7 +123,7 @@ export function PageClose() {
     <Reveal className="mkt-wrap">
       <h2>Start free, then unlock modules.</h2>
       <p>
-        A 14-day trial opens the full workspace. After that, each module is {monthly.baseLabel} + GST {monthly.gstPercentLabel} per month
+        A 3-month trial opens the full workspace. After that, each module is {monthly.baseLabel} + GST {monthly.gstPercentLabel} per month
         (or yearly). Start free does not charge a card.
       </p>
       <div className="mkt-cta-row"><ProductCta primary /><Link className="mkt-btn light" to={marketingPaths.contact}>Talk to us</Link></div>

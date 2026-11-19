@@ -12,7 +12,7 @@ import {
 const QUESTIONS = [
   ["Will my records be removed?", "No. Customers, collections, chit records, and accounts stay in this workspace."],
   ["Can I still sign in?", "Yes. Sign-in, this page, company settings, and log out stay available."],
-  ["When does the trial start?", "After the workspace is created, for 14 days. Opening the signup page does not start it."],
+  ["When does the trial start?", "After the workspace is created, for 3 months. Opening the signup page does not start it."],
 ];
 
 export function SubscribePage() {
@@ -29,7 +29,7 @@ export function SubscribePage() {
     <div className="ft-sub">
       <header className="ft-mod-head">
         <p className="ft-mod-kicker">Subscription</p>
-        <h1>{ended ? ended.title : trial ? "Your 14-day free trial is running" : "Subscription status"}</h1>
+        <h1>{ended ? ended.title : trial ? "Your 3-month free trial is running" : "Subscription status"}</h1>
         <p className="ft-sub-lead">
           {ended
             ? ended.preservation

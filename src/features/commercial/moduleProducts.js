@@ -7,7 +7,7 @@
  * - Accounts + POS: ₹598 + GST 18% / month, ₹7,176 + GST 18% / year (+₹100 vs Accounts)
  * - No lifetime membership
  * - Currency INR
- * - Free 14-day org trial still grants full module access
+ * - Free 3-month org trial still grants full module access
  *
  * Scope: organization (MyFinTracker business workspace). Daily / Monthly / Chit are org-wide;
  * Accounts companies inherit the org’s Accounts / Accounts+POS entitlements.
