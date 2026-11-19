@@ -43,6 +43,28 @@ const accOpts = () => ({
 const accRpc = (name, args, token) => supabase.rpc(name, { ...args, ...(activeCompanyId ? { input_company_id: activeCompanyId } : {}) }, token, companyHeaders());
 const accQuery = (path, token) => supabase.query(path, token, accOpts());
 
+// PostgREST caps each response page, so a company with more rows than one page used to
+// silently lose its oldest vouchers/lines from every report. `pagedQuery` fetches a path
+// (already built with select/order/filters but WITHOUT its own limit/offset) in pages of
+// `pageSize` until a short page tells us we have reached the end, so callers always get the
+// company's complete data regardless of how many vouchers it has accumulated.
+const PAGE_SIZE = 2000;
+// Supabase's own project-level "Max Rows" API setting can cap a page below the `limit` we
+// ask for, so we can't treat "got fewer rows than requested" as "reached the end" — that
+// would silently drop everything past the first page again, just at a different count. We
+// advance `offset` by what we actually got back and only stop on a genuinely empty page.
+const pagedQuery = async (path, token, pageSize = PAGE_SIZE) => {
+  const rows = [];
+  for (let offset = 0; ; ) {
+    const page = await accQuery(`${path}&limit=${pageSize}&offset=${offset}`, token);
+    const batch = Array.isArray(page) ? page : [];
+    if (!batch.length) break;
+    rows.push(...batch);
+    offset += batch.length;
+  }
+  return rows;
+};
+
 const wrap = promise => promise.catch(err => {
   if (isMissing(err)) {
     const error = new Error("Run migrations 052–076 in the Supabase SQL editor to enable MyFinTracker Accounts companies, GST, attachments, items, QA hardening, bill-wise settlements, team invites, and recurring templates.");
@@ -309,13 +331,13 @@ export const setPartyPipelineStage = (token, partyId, stage) => wrap(
 
 export const loadVouchers = token => wrap(
   Promise.all([
-    accQuery(`/rest/v1/acc_vouchers?select=id,voucher_type,voucher_number,voucher_date,narration,status,party_id,source_module,source_type,source_transaction_id,cancel_reason,due_date,settlements,created_at,posted_at&order=voucher_date.desc,voucher_number.desc&limit=2000${companyEq()}`, token)
+    pagedQuery(`/rest/v1/acc_vouchers?select=id,voucher_type,voucher_number,voucher_date,narration,status,party_id,source_module,source_type,source_transaction_id,cancel_reason,due_date,settlements,created_at,posted_at&order=voucher_date.desc,voucher_number.desc${companyEq()}`, token)
       .catch(err => {
         if (!isMissing(err) && !/settlements/i.test(String(err?.message || ""))) throw err;
-        return accQuery(`/rest/v1/acc_vouchers?select=id,voucher_type,voucher_number,voucher_date,narration,status,party_id,source_module,source_type,source_transaction_id,cancel_reason,due_date,created_at,posted_at&order=voucher_date.desc,voucher_number.desc&limit=2000${companyEq()}`, token);
+        return pagedQuery(`/rest/v1/acc_vouchers?select=id,voucher_type,voucher_number,voucher_date,narration,status,party_id,source_module,source_type,source_transaction_id,cancel_reason,due_date,created_at,posted_at&order=voucher_date.desc,voucher_number.desc${companyEq()}`, token);
       }),
-    accQuery(`/rest/v1/acc_voucher_lines?select=id,voucher_id,line_no,coa_id,party_id,debit,credit,description,acc_coa(code,name)&order=line_no.asc&limit=20000${companyEq()}`, token),
-    accQuery(`/rest/v1/acc_gst_lines?select=id,voucher_id,line_no,hsn_sac,description,taxable_amount,rate,cgst_amount,sgst_amount,igst_amount,supply_type,itc_eligible&order=line_no.asc&limit=20000${companyEq()}`, token).catch(() => []),
+    pagedQuery(`/rest/v1/acc_voucher_lines?select=id,voucher_id,line_no,coa_id,party_id,debit,credit,description,acc_coa(code,name)&order=line_no.asc${companyEq()}`, token),
+    pagedQuery(`/rest/v1/acc_gst_lines?select=id,voucher_id,line_no,hsn_sac,description,taxable_amount,rate,cgst_amount,sgst_amount,igst_amount,supply_type,itc_eligible&order=line_no.asc${companyEq()}`, token).catch(() => []),
   ]).then(([vouchers, lines, gstLines]) => assembleVouchers(vouchers, lines, gstLines || [])),
 );
 
@@ -888,29 +910,29 @@ export const saveInventorySettings = (token, { allowNegativeStock }) =>
     .catch(err => { throw migration080Error(err); });
 
 const VOUCHER_ITEM_LINE_COLUMNS = "id,voucher_id,line_no,item_id,item_name,item_sku,item_type,unit,quantity,rate,amount,gst_rate,hsn_sac,taxable_amount,cgst_amount,sgst_amount,igst_amount";
-const voucherItemLinesPath = columns => `/rest/v1/acc_voucher_item_lines?select=${columns}&order=line_no.asc&limit=20000${companyEq()}`;
+const voucherItemLinesPath = columns => `/rest/v1/acc_voucher_item_lines?select=${columns}&order=line_no.asc${companyEq()}`;
 
 export const loadVoucherItemLines = token => wrap(
-  accQuery(voucherItemLinesPath(`${VOUCHER_ITEM_LINE_COLUMNS},discount_amount,source_document_line_id`), token)
+  pagedQuery(voucherItemLinesPath(`${VOUCHER_ITEM_LINE_COLUMNS},discount_amount,source_document_line_id`), token)
     .catch(err => {
       if (!/source_document_line_id/i.test(String(err?.message || ""))) throw err;
-      return accQuery(voucherItemLinesPath(`${VOUCHER_ITEM_LINE_COLUMNS},discount_amount`), token);
+      return pagedQuery(voucherItemLinesPath(`${VOUCHER_ITEM_LINE_COLUMNS},discount_amount`), token);
     })
     .catch(err => {
       if (!/discount_amount/i.test(String(err?.message || ""))) throw err;
-      return accQuery(voucherItemLinesPath(VOUCHER_ITEM_LINE_COLUMNS), token);
+      return pagedQuery(voucherItemLinesPath(VOUCHER_ITEM_LINE_COLUMNS), token);
     })
     .then(rows => (rows || []).map(mapVoucherItemLine)),
 );
 
 const STOCK_MOVEMENT_COLUMNS = "id,item_id,movement_date,quantity_delta,reason,note,voucher_id,voucher_item_line_id,voucher_number,created_at,created_by";
-const stockMovementsPath = columns => `/rest/v1/acc_stock_movements?select=${columns}&order=movement_date.desc,created_at.desc&limit=20000${companyEq()}`;
+const stockMovementsPath = columns => `/rest/v1/acc_stock_movements?select=${columns}&order=movement_date.desc,created_at.desc${companyEq()}`;
 
 export const loadStockMovements = token => wrap(
-  accQuery(stockMovementsPath(`${STOCK_MOVEMENT_COLUMNS},document_id,document_line_id`), token)
+  pagedQuery(stockMovementsPath(`${STOCK_MOVEMENT_COLUMNS},document_id,document_line_id`), token)
     .catch(err => {
       if (!/document_id|document_line_id/i.test(String(err?.message || ""))) throw err;
-      return accQuery(stockMovementsPath(STOCK_MOVEMENT_COLUMNS), token);
+      return pagedQuery(stockMovementsPath(STOCK_MOVEMENT_COLUMNS), token);
     })
     .then(rows => (rows || []).map(mapStockMovement)),
 );
