@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Modal } from "./AccUi.jsx";
+import { loadBarcodeDetector } from "../model/cameraScan.js";
 
 const WANTED_FORMATS = ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39", "itf", "qr_code"];
 /** The same label held in front of the camera is read many times a second; add it once. */
@@ -30,9 +31,10 @@ export function CounterCameraScanner({ onCode, onClose }) {
 
     const start = async () => {
       try {
-        const supported = await window.BarcodeDetector.getSupportedFormats();
+        const Detector = await loadBarcodeDetector();
+        const supported = await Detector.getSupportedFormats();
         const formats = WANTED_FORMATS.filter(format => supported.includes(format));
-        const detector = new window.BarcodeDetector(formats.length ? { formats } : undefined);
+        const detector = new Detector(formats.length ? { formats } : undefined);
         stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: { ideal: "environment" } },
           audio: false,
