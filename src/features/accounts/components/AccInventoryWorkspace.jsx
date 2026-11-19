@@ -46,6 +46,7 @@ export function AccInventoryWorkspace({
   vouchers = [],
   salesLines = [],
   onOpenItemProfit,
+  industry = "",
 }) {
   // The open tab is the URL (/accounting/inventory/:tab).
   const tab = TABS.some(item => item.id === routeTab) ? routeTab : "summary";
@@ -250,6 +251,8 @@ export function AccInventoryWorkspace({
         setImportPlan={setImportPlan}
         runImport={runImport}
         importStatus={importStatus}
+        items={items}
+        industry={industry}
       />}
 
       {tab === "settings" && <InventorySettingsTab

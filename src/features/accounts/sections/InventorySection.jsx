@@ -43,6 +43,7 @@ export function InventorySection({
         vouchers={vouchers}
         salesLines={voucherItemLines}
         onOpenItemProfit={onOpenItemProfit}
+        industry={industry}
         itemsSetup={<AccItemsSetup
           items={items}
           categories={itemCategories}

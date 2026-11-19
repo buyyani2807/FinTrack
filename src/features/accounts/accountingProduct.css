@@ -8622,3 +8622,40 @@
   flex-wrap: wrap;
   gap: 8px;
 }
+
+/* Starter item catalogue (Items → Import) */
+.accounts-dashboard .acc-starter-catalog .acc-starter-search {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+.accounts-dashboard .acc-starter-group {
+  border: 0;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 4px 16px;
+}
+.accounts-dashboard .acc-starter-group legend {
+  grid-column: 1 / -1;
+  padding: 0 0 4px;
+}
+.accounts-dashboard .acc-starter-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 8px;
+  align-items: start;
+  padding: 6px 0;
+  cursor: pointer;
+}
+.accounts-dashboard .acc-starter-item .small {
+  grid-column: 2;
+}
+.accounts-dashboard .acc-starter-item.is-owned {
+  opacity: 0.6;
+  cursor: default;
+}
+.accounts-dashboard .acc-gstr2-checks {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}

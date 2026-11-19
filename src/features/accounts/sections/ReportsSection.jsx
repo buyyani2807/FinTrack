@@ -23,6 +23,7 @@ import { BalanceSheetReport } from "./reports/BalanceSheetReport.jsx";
 import { DayBookReport } from "./reports/DayBookReport.jsx";
 import { DateSortedVoucherTable } from "./reports/DateSortedVoucherTable.jsx";
 import { GstReport } from "./reports/GstReport.jsx";
+import { Gstr2Report } from "./reports/Gstr2Report.jsx";
 import { LedgerReport } from "./reports/LedgerReport.jsx";
 import { ItemProfitReport } from "./reports/ItemProfitReport.jsx";
 import { PurchaseMatchReport } from "./reports/PurchaseMatchReport.jsx";
@@ -209,6 +210,18 @@ export function ReportsSection({
             canWrite={canWrite}
             saving={saving}
             markGstFiled={markGstFiled}
+          />
+        </>
+      )}
+      {section === "reports" && reportTab === "gstr2" && (
+        <>
+          <ReportPlainSpeak reportId="gstr2" />
+          <Gstr2Report
+            vouchers={vouchers}
+            parties={parties}
+            range={range}
+            activeCompany={activeCompany}
+            onViewDocument={onViewDocument}
           />
         </>
       )}

@@ -206,6 +206,7 @@ import { AccRoutesWorkspace } from "./components/AccRoutesWorkspace.jsx";
 import { AccAiReviewWorkspace } from "./components/AccAiReviewWorkspace.jsx";
 import { isModuleEnabled } from "../commercial/featurePacks.js";
 import { counterIncludedInPlan } from "../commercial/moduleAccess.js";
+import { buildGstr2Report, gstr2ExportRows } from "./model/gstr2Report.js";
 import { creditCheck, documentFulfilment, documentLabel, pendingOrderRows } from "./model/tradeDocumentModel.js";
 import { receivablePositions } from "./model/routeCollectionsModel.js";
 import { buildOwnerDailyBrief, reorderPurchaseOrderLines } from "./model/ownerDailyBrief.js";
@@ -2568,6 +2569,10 @@ const openVoucher = () => {
           ["", "", "", "Net GST payable", "", "", "", "", gstReport.netPayable, ""],
         ],
       };
+    }
+    if (active === "gstr2") {
+      const report = buildGstr2Report({ vouchers, parties, range, companyStateCode: activeCompany?.stateCode || "" });
+      return { filename: `fintrack-gstr2-purchases-${stamp}`, rows: gstr2ExportRows(report, { companyName }) };
     }
     if (active === "item_sales") {
       return {

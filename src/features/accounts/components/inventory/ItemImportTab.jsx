@@ -1,10 +1,18 @@
 import { downloadAccountsCsv } from "../../io/accountingExport.js";
-import { ITEM_CSV_TEMPLATE } from "../../io/itemCsvImport.js";
+import { ITEM_CSV_TEMPLATE, planItemImport } from "../../io/itemCsvImport.js";
 import { AccTable } from "../AccUi.jsx";
+import { StarterCatalogPicker } from "./StarterCatalogPicker.jsx";
 
-export function ItemImportTab({ canEdit, saving, readImportFile, importPlan, setImportPlan, runImport, importStatus }) {
+export function ItemImportTab({ canEdit, saving, readImportFile, importPlan, setImportPlan, runImport, importStatus, items = [], industry = "" }) {
   return (
     <>
+      {!importPlan && <StarterCatalogPicker
+        industry={industry}
+        items={items}
+        canEdit={canEdit}
+        saving={saving}
+        onPrepare={rows => setImportPlan(planItemImport(rows, items))}
+      />}
       <p className="copy spacer">
         Import a product list from MyFinTracker’s template or from another POS (Focus, Vyapar, Marg, Excel export, etc.).
         Name is required. SKU is preferred; if missing, barcode is used, otherwise a code is generated from the name.
@@ -24,8 +32,8 @@ export function ItemImportTab({ canEdit, saving, readImportFile, importPlan, set
         {importPlan.invalid.length > 0 && <ul className="small">
           {importPlan.invalid.slice(0, 8).map(row => <li key={row.rowNumber}>Row {row.rowNumber}: {row.error}</li>)}
         </ul>}
-        {importPlan.toCreate.length > 0 && <AccTable columns={["Name", "SKU", "Type", "Unit", { label: "Opening", num: true }, { label: "Rate", num: true }]}>
-          {importPlan.toCreate.slice(0, 20).map(row => <tr key={row.rowNumber}><td>{row.name}</td><td>{row.sku}</td><td>{row.itemType}</td><td>{row.unit}</td><td className="acc-num">{row.openingStock}</td><td className="acc-num">{row.openingRate || row.purchasePrice}</td></tr>)}
+        {importPlan.toCreate.length > 0 && <AccTable columns={["Name", "SKU", "Type", "Unit", "HSN", { label: "GST %", num: true }, { label: "Opening", num: true }, { label: "Rate", num: true }]}>
+          {importPlan.toCreate.slice(0, 20).map(row => <tr key={row.rowNumber}><td>{row.name}</td><td>{row.sku}</td><td>{row.itemType}</td><td>{row.unit}</td><td>{row.hsnSac || "—"}</td><td className="acc-num">{row.gstRate}</td><td className="acc-num">{row.openingStock}</td><td className="acc-num">{row.openingRate || row.purchasePrice}</td></tr>)}
         </AccTable>}
         <div className="tabs spacer">
           <button type="button" className="btn" onClick={() => setImportPlan(null)}>Cancel</button>

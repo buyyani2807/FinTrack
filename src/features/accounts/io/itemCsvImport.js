@@ -4,7 +4,7 @@ import { ITEM_UNITS, validateItemForm } from "../model/inventoryModel.js";
 
 export const ITEM_CSV_TEMPLATE = [
   "Name,SKU,Barcode,Brand,Batch,Expiry,Type,Unit,Category,Selling price,Purchase price,GST %,HSN/SAC,Opening stock,Opening rate,Opening date,Reorder level",
-  "Cement 50kg,CEM-50,8901234567890,UltraTech,B1,,product,Bag,Construction,420,350,28,2523,100,340,2026-04-01,20",
+  "Cement 50kg,CEM-50,8901234567890,UltraTech,B1,,product,Bag,Construction,420,350,18,2523,100,340,2026-04-01,20",
   "Delivery charge,DLV,,,,,service,Nos,,150,0,18,9965,,,,",
 ].join("\n");
 
