@@ -154,3 +154,64 @@ test("a return (credit note) ignores round-off", () => {
   });
   assert.equal(draft.lines.some(line => line.coaId === "roundoff"), false);
 });
+
+test("a refund rounds the money leg it actually has: the credit side", () => {
+  // Credit note for the rounded ₹931 sale: Dr Sales/GST 931.02, Cr Cash 931.02.
+  // Rounding the refund to ₹931 must move the CASH CREDIT, not look for a debit.
+  const lines = [
+    { coaId: "sales", code: "4300", debit: 789, credit: 0 },
+    { coaId: "ocgst", code: "2210", debit: 71.01, credit: 0 },
+    { coaId: "osgst", code: "2211", debit: 71.01, credit: 0 },
+    { coaId: "cash", code: "1000", debit: 0, credit: 931.02 },
+  ];
+  const patched = applyRoundOffToLines(lines, { accounts, adjustment: -0.02 });
+  assert.equal(patched.length, 5);
+  const cash = patched.find(line => line.coaId === "cash");
+  assert.equal(cash.credit, 931);
+  assert.equal(cash.debit, 0);
+  // Paying out 2p less is money the shop keeps, so the round-off leg is a credit.
+  const round = patched.find(line => line.coaId === "roundoff");
+  assert.equal(round.credit, 0.02);
+  assert.equal(round.debit, 0);
+  const totals = voucherTotals(patched);
+  assert.equal(totals.debit, totals.credit);
+});
+
+test("sale and refund of the same rounded bill net to zero round-off", () => {
+  const sale = applyRoundOffToLines([
+    { coaId: "cash", code: "1000", debit: 931.02, credit: 0 },
+    { coaId: "sales", code: "4300", debit: 0, credit: 931.02 },
+  ], { accounts, adjustment: -0.02 });
+  const refund = applyRoundOffToLines([
+    { coaId: "sales", code: "4300", debit: 931.02, credit: 0 },
+    { coaId: "cash", code: "1000", debit: 0, credit: 931.02 },
+  ], { accounts, adjustment: -0.02 });
+  const cashIn = sale.find(line => line.coaId === "cash").debit;
+  const cashOut = refund.find(line => line.coaId === "cash").credit;
+  // Before the fix the refund paid 931.02 against 931.00 collected: a 2p loss per return.
+  assert.equal(cashIn, 931);
+  assert.equal(cashOut, 931);
+  const saleRound = sale.find(line => line.coaId === "roundoff");
+  const refundRound = refund.find(line => line.coaId === "roundoff");
+  assert.equal(saleRound.debit, 0.02);
+  assert.equal(refundRound.credit, 0.02);
+  assert.equal(saleRound.debit - refundRound.credit, 0);
+});
+
+test("a refund with no round-off ledger falls back on the correct side", () => {
+  const lines = [
+    { coaId: "sales", code: "4300", debit: 500.4, credit: 0 },
+    { coaId: "cash", code: "1000", debit: 0, credit: 500.4 },
+  ];
+  // Refund rounded DOWN: the shop gains, so it must land in Other Income, not Other Expenses.
+  const down = applyRoundOffToLines(lines, { accounts: otherIncome, adjustment: -0.4 });
+  assert.equal(down.at(-1).code, "4100");
+  assert.equal(down.at(-1).credit, 0.4);
+  // Refund rounded UP: the shop pays more, so it is an expense.
+  const up = applyRoundOffToLines([
+    { coaId: "sales", code: "4300", debit: 500.6, credit: 0 },
+    { coaId: "cash", code: "1000", debit: 0, credit: 500.6 },
+  ], { accounts: otherExpense, adjustment: 0.4 });
+  assert.equal(up.at(-1).code, "5990");
+  assert.equal(up.at(-1).debit, 0.4);
+});

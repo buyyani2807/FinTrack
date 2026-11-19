@@ -148,7 +148,9 @@ export function cashMovementVoucherDraft({ accounts = [], movement, targetAccoun
     partyId: null,
     narration,
     lines,
-    clientRequestId: `counter-cash-${movement.id}`,
+    // acc_post_voucher takes input_client_request_id as a uuid; the movement's own
+    // id is already unique per movement and gives identical idempotency.
+    clientRequestId: movement.id,
     sourceModule: "accounts",
     sourceType: "counter_cash",
     sourceTransactionId: movement.id,

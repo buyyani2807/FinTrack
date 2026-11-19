@@ -95,6 +95,34 @@ test("day-close coach keeps UPI and card out of the drawer explanation", () => {
   assert.equal(tips.some(row => /fraud|theft/i.test(`${row.title} ${row.detail}`)), false);
 });
 
+test("the day-close explainer states an equation that actually adds up", () => {
+  const tips = counterDayCloseCoach({
+    report: { sales: 931, tender: { cash: 931, upi: 0, card: 0, total: 931 } },
+    openingFloat: 0,
+    countedCash: 881,
+    cashIn: 0,
+    cashOut: 50,
+  });
+  const summary = tips.find(row => row.id === "close-summary");
+  // Previously read "0 + 931 = 881", contradicting the field label right below it.
+  assert.match(summary.detail, /Opening float 0 \+ cash tenders 931 \u2212 cash out 50 = expected 881\./);
+  assert.equal(summary.detail.includes("cash in"), false);
+});
+
+test("expected cash derives from float, tenders and cash in/out when not supplied", () => {
+  const tips = counterDayCloseCoach({
+    report: { sales: 1000, tender: { cash: 600, upi: 400, card: 0, total: 1000 } },
+    openingFloat: 500,
+    countedCash: 1180,
+    cashIn: 100,
+    cashOut: 20,
+  });
+  const summary = tips.find(row => row.id === "close-summary");
+  // 500 + 600 + 100 - 20 = 1180
+  assert.match(summary.detail, /\+ cash in 100 \u2212 cash out 20 = expected 1180\./);
+  assert.ok(tips.some(row => row.id === "close-ok"));
+});
+
 test("sale counts cover the last 14 days of sales and deliveries only", () => {
   const counts = counterSaleCounts([
     { itemId: "i1", movementDate: "2026-11-10", reason: "sale", quantityDelta: -2 },

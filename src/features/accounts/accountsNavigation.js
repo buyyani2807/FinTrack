@@ -153,6 +153,36 @@ const SECTION_SLUGS = { vouchers: "transactions", bank: "banking", crm: "pipelin
 const PARTY_SLUGS = { parties: "ledger", receivables: "receivables", payables: "payables", routes: "routes", party: "profile" };
 const PARTY_SUB_SECTIONS = ["routes", "party"];
 const STATEMENTS = ["trial", "pnl", "balance"];
+// Hyphenated spellings people type or bookmark. An unrecognised report slug used to
+// render the Day Book while the URL still claimed another report, so a mistyped or
+// stale link showed plausible-but-wrong figures with no notice.
+const REPORT_SLUG_ALIASES = {
+  "trial-balance": "trial",
+  "trialbalance": "trial",
+  "tb": "trial",
+  "balance-sheet": "balance",
+  "balancesheet": "balance",
+  "bs": "balance",
+  "profit-and-loss": "pnl",
+  "profit-loss": "pnl",
+  "p-and-l": "pnl",
+  "pl": "pnl",
+  "p-l": "pnl",
+  "day-book": "daybook",
+  "daybooks": "daybook",
+  "cash-flow": "cashflow",
+  "stock-movement": "stock_moves",
+  "stock-moves": "stock_moves",
+  "item-sales": "item_sales",
+  "item-purchases": "item_purchases",
+  "item-profit": "item_profit",
+  "purchase-match": "purchase_match",
+  "po-match": "purchase_match",
+  "customer-pipeline": "crm",
+  "pipeline": "crm",
+  "gst-returns": "gst",
+};
+export const reportSlugAlias = slug => REPORT_SLUG_ALIASES[String(slug || "").toLowerCase().replace(/_/g, "-")] || "";
 const fromSlug = (map, slug) => Object.keys(map).find(key => map[key] === slug);
 
 export function accountsPath({ section = "overview", reportTab = "daybook", sub = null } = {}) {
@@ -179,9 +209,13 @@ export function accountsViewFromPath(area, sub, subsub) {
   }
   if (area === "reports") {
     if (sub === "expired_stock") return { section: "inventory", reportTab: "daybook", sub: "expired" };
-    const report = REPORT_TABS.some(item => item.id === sub) ? sub : "daybook";
-    if (report === "crm") return { section: "crm", reportTab: "crm", sub: null };
-    return { section: STATEMENTS.includes(report) ? report : "reports", reportTab: report, sub: null };
+    const known = REPORT_TABS.some(item => item.id === sub);
+    const report = known ? sub : reportSlugAlias(sub) || "daybook";
+    // `redirect` tells AccountsRoute to rewrite the address, so the URL and the report
+    // on screen always agree. Bare /accounting/reports keeps its silent default.
+    const redirect = Boolean(sub) && !known;
+    if (report === "crm") return { section: "crm", reportTab: "crm", sub: null, redirect };
+    return { section: STATEMENTS.includes(report) ? report : "reports", reportTab: report, sub: null, redirect };
   }
   if (area === "more") return { section: "overview", reportTab: "daybook", sub: null };
   const section = fromSlug(SECTION_SLUGS, area) || area;

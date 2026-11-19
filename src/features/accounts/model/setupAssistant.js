@@ -7,7 +7,7 @@ import {
   panFromGstin,
   panValidationMessage,
 } from "./accountingGst.js";
-import { ledgerHasPostedLines } from "./accountingModel.js";
+import { SYSTEM_CODES, ledgerHasPostedLines } from "./accountingModel.js";
 import { freeLedgerCode, shortDate } from "./bookkeeper.js";
 
 export const SETUP_INDUSTRIES = ["retail", "kirana", "wholesale", "hardware", "jewellery", "manufacturing", "services", "finance", "chit", "school", "medical"];
@@ -388,6 +388,22 @@ export function buildSetupPlan(answers = {}, { profile = null, accounts = [], ca
     else addLedger(name, "expense", "expense", "5130", `Common for ${activeProfile.label}`);
   }
   if (!sellsProducts) addLedger("Service Income", "income", "income", "4310", "Income from services");
+
+  // Counter bill rounding posts to Round off (4150). Companies whose chart predates it
+  // fall back to Other expenses, which mixes paise rounding into real expenses, so add
+  // the ledger at its exact system code when that code is still free.
+  const roundOffTaken = planned.some(account => String(account.code || "") === SYSTEM_CODES.roundOff);
+  if (!roundOffTaken && !hasLedger("Round off")) {
+    const ledger = {
+      code: SYSTEM_CODES.roundOff,
+      name: "Round off",
+      groupType: "income",
+      accountType: "income",
+      why: "Keeps bill rounding out of your real expenses",
+    };
+    planned.push(ledger);
+    ledgers.push(ledger);
+  }
 
   const haveCategories = new Set((categories || []).map(category => normName(category.name)));
   const newCategories = keepsStock

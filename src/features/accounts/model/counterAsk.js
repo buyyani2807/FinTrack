@@ -249,7 +249,10 @@ export function askCounter(question, input = {}) {
           roundMoney(row.reorderLevel * 2),
           roundMoney(daily * 14 + row.reorderLevel),
         );
-        const suggest = Math.max(0, roundMoney(target - row.stock));
+        // With no reorder level and thin sales history the target collapses to under a
+        // unit, which is useless advice for an item that is already out of stock.
+        const floor = row.stock <= 0 ? Math.max(1, roundMoney(daily * 14)) : 0;
+        const suggest = Math.max(0, roundMoney(Math.max(target, floor) - row.stock));
         return { ...row, dailyRate: daily, samples, suggest };
       })
       .sort((a, b) => b.suggest - a.suggest)
@@ -261,8 +264,9 @@ export function askCounter(question, input = {}) {
         : "Nothing to reorder right now.",
       lines: rows.map(row => ({
         label: row.item.name,
-        detail: `Have ${row.stock}${row.item.unit ? ` ${row.item.unit}` : ""} · reorder at ${row.reorderLevel}${row.samples ? ` · sells ~${roundMoney(row.dailyRate)}/day` : ""}`,
-        amount: row.suggest > 0 ? Number(row.suggest.toFixed(3)) : 0,
+        // amount is money-formatted by the renderer, so an order quantity belongs in detail.
+        detail: `Order ~${Number(row.suggest.toFixed(3))}${row.item.unit ? ` ${row.item.unit}` : ""} · have ${row.stock}${row.item.unit ? ` ${row.item.unit}` : ""} · reorder at ${row.reorderLevel}${row.reorderLevel > 0 ? "" : " (not set)"}${row.samples ? ` · sells ~${roundMoney(row.dailyRate)}/day` : ""}`,
+        amount: null,
       })),
       source: "From inventory on-hand and the last 14 days of sales. Read-only.",
       link: null,
@@ -320,7 +324,7 @@ export function askCounter(question, input = {}) {
         { label: "Opening float", detail: "", amount: float },
         { label: "Cash bills today", detail: `${report.billCount || 0} bill${report.billCount === 1 ? "" : "s"}`, amount: cashSales },
         { label: "Cash in", detail: "", amount: inflow },
-        { label: "Cash out", detail: "", amount: -outflow },
+        { label: "Cash out", detail: outflow ? "Taken out of the drawer" : "", amount: outflow },
         { label: "Expected", detail: "", amount: total },
       ],
       source: "Opening float + cash bills today + cash in − cash out. Read-only.",

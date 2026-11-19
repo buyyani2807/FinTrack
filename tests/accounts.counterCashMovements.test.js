@@ -109,7 +109,10 @@ test("cash out posts a balanced payment: debit the ledger, credit cash", () => {
   assert.equal(totals.debit, totals.credit);
   assert.equal(draft.sourceType, "counter_cash");
   assert.equal(draft.sourceTransactionId, move().id);
-  assert.equal(draft.clientRequestId, `counter-cash-${move().id}`);
+  // acc_post_voucher declares input_client_request_id as uuid, so the draft must carry
+  // a bare uuid. A prefixed string is rejected by Postgres at post time.
+  assert.equal(draft.clientRequestId, move().id);
+  assert.match(draft.clientRequestId, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
   assert.match(draft.narration, /Counter cash out · Till 1 · Tea \/ snacks · Cashier Priya/);
 });
 

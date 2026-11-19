@@ -542,7 +542,7 @@ export function CounterWorkspace({
     [billLines, billDiscount],
   );
   // Round-off (sale only, not returns): round the bill to the nearest rupee.
-  const roundOffActive = tillMode !== "return" && roundOff && totals.total > 0;
+  const roundOffActive = roundOff && totals.total > 0;
   const roundedTotal = roundOffActive ? Math.round(totals.total) : totals.total;
   const roundOffDiff = roundOffActive ? roundMoney(roundedTotal - totals.total) : 0;
   // Everything downstream from the total (Charge amount, UPI QR, cash tendered, split status) uses this.
@@ -713,10 +713,12 @@ export function CounterWorkspace({
       report: todayCloseReport,
       openingFloat: Number(openingFloat || closed?.openingFloat || 0),
       countedCash: Number(countedCash || 0),
+      cashIn: cashTotals.cashIn,
+      cashOut: cashTotals.cashOut,
       expectedCash,
       variance,
     }),
-    [todayCloseReport, openingFloat, countedCash, expectedCash, variance, closed],
+    [todayCloseReport, openingFloat, countedCash, cashTotals, expectedCash, variance, closed],
   );
   const dayCloseTopItems = useMemo(
     () => counterDayTopItems({ vouchers, voucherItemLines, today, tillLabel }),
@@ -2426,18 +2428,18 @@ export function CounterWorkspace({
               <p className="small counter-discount-hint">{money(discountOff)} off this bill</p>
             ) : null}
           </FieldBlock>
-          {tillMode === "sale" ? (
-            <label className="counter-roundoff-toggle">
-              <input
-                type="checkbox"
-                checked={roundOff}
-                onChange={event => setRoundOff(event.target.checked)}
-                disabled={busy || !lines.length}
-                aria-label="Round off"
-              />
-              <span>Round off to the nearest rupee</span>
-            </label>
-          ) : null}
+          <label className="counter-roundoff-toggle">
+            <input
+              type="checkbox"
+              checked={roundOff}
+              onChange={event => setRoundOff(event.target.checked)}
+              disabled={busy || !lines.length}
+              aria-label={tillMode === "return" ? "Round off the refund" : "Round off"}
+            />
+            <span>{tillMode === "return"
+              ? "Round the refund to the nearest rupee (match the original bill)"
+              : "Round off to the nearest rupee"}</span>
+          </label>
           {settlement === "paid" ? (
             <>
               <FieldBlock label="Payment">

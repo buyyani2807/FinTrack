@@ -18,6 +18,9 @@ export function AccountsRoute() {
   // An unknown section goes to Overview. Expired stock used to live under Reports.
   if (report === "expired_stock") return <Navigate to={accountsPath({ section: "inventory", sub: "expired" })} replace />;
   if (view.section === "overview" && area !== "overview") return <Navigate to={accountsPath(view)} replace />;
+  // An unknown or hyphenated report slug resolves to the nearest real report; send the
+  // address there too rather than showing one report under another report's URL.
+  if (view.redirect) return <Navigate to={accountsPath(view)} replace />;
   return <div className="accounts-dashboard">
     <Suspense fallback={<div className="shell"><Spinner label="Loading Accounts" /></div>}>
       <AccountsModule

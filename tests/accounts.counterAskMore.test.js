@@ -40,9 +40,25 @@ test("reorder lists low items with a sales-based suggestion, biggest shortfall f
   // Toor is further below and sells ~0.5/day, so it should come first.
   assert.equal(answer.lines[0].label, "Toor Dal");
   assert.equal(answer.lines[1].label, "Salt");
-  // Suggestion amounts are positive and shown as rupee-less quantities (amount on the line).
-  assert.ok(answer.lines[0].amount > 0);
+  // A reorder suggestion is a QUANTITY, and the answer renderer money-formats `amount`.
+  // It must therefore stay out of `amount` and be spelled out in `detail` with its unit.
+  assert.equal(answer.lines[0].amount, null);
+  assert.match(answer.lines[0].detail, /^Order ~[\d.]+ Kg · have 2 Kg · reorder at 10/);
   assert.match(answer.lines[0].detail, /sells ~/);
+});
+
+test("an out-of-stock item with no reorder level still gets a usable order quantity", () => {
+  const answer = askCounter("what should I reorder", {
+    items: [{ id: "coat", name: "China Coat", unit: "Litre", itemType: "product", isActive: true, reorderLevel: 0 }],
+    stockByItem: { coat: 0 },
+    stockMovements: [sale("2026-11-15", 1, "coat")],
+    today: "2026-11-16",
+  });
+  assert.equal(answer.lines.length, 1);
+  // reorderLevel 0 collapses the formula to max(0, 0.07*14) = 0.98 — a floor keeps the
+  // advice whole-unit sensible for something that is already out of stock.
+  assert.match(answer.lines[0].detail, /^Order ~1 Litre · have 0 Litre · reorder at 0 \(not set\)/);
+  assert.equal(answer.lines[0].amount, null);
 });
 
 test("reorder with no items at low stock returns an empty list", () => {
@@ -117,6 +133,10 @@ test("cash in drawer = opening float + cash bills today + cash in - cash out", (
   const expectedLine = answer.lines.find(line => line.label === "Expected");
   assert.equal(expectedLine.amount, 1800);
   assert.match(answer.summary, /1,800/);
+  // The row label already says "Cash out"; a negative amount rendered it as "₹-50".
+  const outLine = answer.lines.find(line => line.label === "Cash out");
+  assert.equal(outLine.amount, 50);
+  assert.match(outLine.detail, /Taken out of the drawer/);
 });
 
 test("the three new prompts are recognised by their exact wording", () => {

@@ -1401,22 +1401,33 @@ export function applyRoundOffToLines(lines = [], { accounts = [], adjustment = 0
   const typeOf = line => byId[line.coaId]?.accountType || findAccount(accounts, { code: line.code })?.accountType || "";
   const moneyPriority = ["cash", "upi", "bank", "receivable"];
   let indexToPatch = -1;
+  let side = "";
   for (const type of moneyPriority) {
     indexToPatch = lines.findIndex(line => typeOf(line) === type && Number(line.debit || 0) > 0);
-    if (indexToPatch !== -1) break;
+    if (indexToPatch !== -1) { side = "debit"; break; }
+  }
+  if (indexToPatch === -1) {
+    // A credit note pays money OUT, so its cash/bank leg is a credit. Without this a
+    // rounded sale could be refunded in full and the shop lost the rounding every time.
+    for (const type of moneyPriority) {
+      indexToPatch = lines.findIndex(line => typeOf(line) === type && Number(line.credit || 0) > 0);
+      if (indexToPatch !== -1) { side = "credit"; break; }
+    }
   }
   if (indexToPatch === -1) return lines;
   const patched = lines.slice();
   const target = patched[indexToPatch];
-  const nextDebit = roundMoney(Number(target.debit || 0) + diff);
-  if (!(nextDebit > 0)) return lines;
-  patched[indexToPatch] = { ...target, debit: nextDebit };
+  const nextMoney = roundMoney(Number(target[side] || 0) + diff);
+  if (!(nextMoney > 0)) return lines;
+  patched[indexToPatch] = { ...target, [side]: nextMoney };
+  // The balancing leg sits opposite whichever side moved, so a refund rounded DOWN is
+  // income to the shop just as a sale rounded UP is.
+  const extra = side === "debit"
+    ? (diff > 0 ? { debit: 0, credit: diff } : { debit: -diff, credit: 0 })
+    : (diff > 0 ? { debit: diff, credit: 0 } : { debit: 0, credit: -diff });
   const roundOffAccount = findAccount(accounts, { code: SYSTEM_CODES.roundOff })
-    || findAccount(accounts, { code: diff > 0 ? SYSTEM_CODES.otherIncome : SYSTEM_CODES.otherExpense });
+    || findAccount(accounts, { code: extra.credit > 0 ? SYSTEM_CODES.otherIncome : SYSTEM_CODES.otherExpense });
   if (!roundOffAccount) return lines;
-  const extra = diff > 0
-    ? { debit: 0, credit: diff }
-    : { debit: -diff, credit: 0 };
   patched.push({
     coaId: roundOffAccount.id,
     code: roundOffAccount.code,

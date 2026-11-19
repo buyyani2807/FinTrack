@@ -273,6 +273,8 @@ export function counterDayCloseCoach({
   report = null,
   openingFloat = 0,
   countedCash = 0,
+  cashIn = 0,
+  cashOut = 0,
   expectedCash = null,
   variance = null,
 } = {}) {
@@ -282,7 +284,11 @@ export function counterDayCloseCoach({
   const upi = roundMoney(report?.tender?.upi || 0);
   const card = roundMoney(report?.tender?.card || 0);
   const sales = roundMoney(report?.sales || 0);
-  const expected = expectedCash == null ? roundMoney(float + cashTender) : roundMoney(expectedCash);
+  const inflow = roundMoney(n(cashIn));
+  const outflow = roundMoney(n(cashOut));
+  const expected = expectedCash == null
+    ? roundMoney(float + cashTender + inflow - outflow)
+    : roundMoney(expectedCash);
   const counted = roundMoney(n(countedCash));
   const gap = variance == null ? roundMoney(counted - expected) : roundMoney(variance);
 
@@ -290,7 +296,10 @@ export function counterDayCloseCoach({
     id: "close-summary",
     severity: "info",
     title: "How expected cash is built",
-    detail: `Opening float ${roundMoney(float)} + cash tenders ${roundMoney(cashTender)} = expected ${roundMoney(expected)}. UPI ${roundMoney(upi)} and Card ${roundMoney(card)} stay out of the drawer.`,
+    detail: `Opening float ${roundMoney(float)} + cash tenders ${roundMoney(cashTender)}`
+      + (inflow ? ` + cash in ${inflow}` : "")
+      + (outflow ? ` \u2212 cash out ${outflow}` : "")
+      + ` = expected ${roundMoney(expected)}. UPI ${roundMoney(upi)} and Card ${roundMoney(card)} stay out of the drawer.`,
   });
 
   if (sales > 0 && cashTender + upi + card < sales - 0.05) {
