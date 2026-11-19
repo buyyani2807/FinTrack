@@ -1,3 +1,5 @@
+import { Link } from "react-router";
+import { workspacePaths } from "../../../workspace/paths.js";
 import { saveAccountingSettings } from "../../data/accountingRepository.js";
 import { Field, AccSetupSection, AccReveal } from "../../components/AccUi.jsx";
 import { Select } from "../../../../components/Select.jsx";
@@ -38,6 +40,7 @@ export function CompanySetupPanel({
   setCompanyDraft,
   setShowCreateCompany,
   counterEnabled = false,
+  counterInPlan = true,
   onCounterEnabledChange = null,
   counterSettings = null,
   onCounterSettingsChange = null,
@@ -81,7 +84,18 @@ export function CompanySetupPanel({
         )}
       </div>
       {!canAdmin && <p className="small">Only the business owner can change company name / books start settings.</p>}
-      {onCounterEnabledChange ? (
+      {onCounterEnabledChange && !counterInPlan ? (
+        <label className="acc-counter-enable">
+          <input type="checkbox" checked={false} disabled readOnly />
+          <span>
+            <strong>Enable Counter (POS billing)</strong>
+            <span className="small">
+              The Counter is part of <strong>Accounts + POS</strong>, not Accounts on its own.{" "}
+              {canAdmin ? <Link to={workspacePaths.moduleStore}>Upgrade to Accounts + POS</Link> : "Ask the business owner to upgrade."}
+            </span>
+          </span>
+        </label>
+      ) : onCounterEnabledChange ? (
         <label className="acc-counter-enable">
           <input
             type="checkbox"

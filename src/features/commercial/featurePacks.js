@@ -14,12 +14,14 @@ export const FEATURE_PACKS = {
   business: {
     id: "business",
     label: "MyFinTracker Business",
-    modules: ["dashboard", "accounts", "cashbook", "reports", "receipts", "ai"],
+    // Counter (POS) is part of the legacy Business pack; paid workspaces need accounts_pos.
+    modules: ["dashboard", "accounts", "counter", "cashbook", "reports", "receipts", "ai"],
   },
   full: {
     id: "full",
     label: "MyFinTracker Full",
-    modules: ["dashboard", "daily", "monthly", "chit", "accounts", "cashbook", "reports", "receipts", "ai"],
+    // Trial and grandfathered workspaces get everything, Counter (POS) included.
+    modules: ["dashboard", "daily", "monthly", "chit", "accounts", "counter", "cashbook", "reports", "receipts", "ai"],
   },
 };
 

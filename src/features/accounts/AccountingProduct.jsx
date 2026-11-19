@@ -205,6 +205,7 @@ import { AccDocumentsWorkspace } from "./components/AccDocumentsWorkspace.jsx";
 import { AccRoutesWorkspace } from "./components/AccRoutesWorkspace.jsx";
 import { AccAiReviewWorkspace } from "./components/AccAiReviewWorkspace.jsx";
 import { isModuleEnabled } from "../commercial/featurePacks.js";
+import { counterIncludedInPlan } from "../commercial/moduleAccess.js";
 import { creditCheck, documentFulfilment, documentLabel, pendingOrderRows } from "./model/tradeDocumentModel.js";
 import { receivablePositions } from "./model/routeCollectionsModel.js";
 import { buildOwnerDailyBrief, reorderPurchaseOrderLines } from "./model/ownerDailyBrief.js";
@@ -503,6 +504,10 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
       ? readCounterEnabled(activeCompanyId, readIndustry(activeCompanyId))
       : true
   ));
+  // Counter (POS) is sold as Accounts + POS. The per-company switch above only matters
+  // when the workspace's plan includes it; an Accounts-only workspace never sees the till.
+  const counterInPlan = counterIncludedInPlan(orgSettings);
+  const counterOn = counterInPlan && counterEnabled;
   const [counterSettings, setCounterSettings] = useState(() => readCounterSettings(activeCompanyId));
   useEffect(() => {
     if (!activeCompanyId) {
@@ -536,10 +541,10 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     // company id arrived one tick before setCounterEnabled(true), and owners were sent to Overview.
     if (!activeCompanyId) return;
     const enabled = readCounterEnabled(activeCompanyId, readIndustry(activeCompanyId));
-    if (!enabled && section === "counter") {
+    if ((!enabled || !counterInPlan) && section === "counter") {
       go({ section: "overview", reportTab: "daybook" });
     }
-  }, [section, cashierNav, activeCompanyId]);
+  }, [section, cashierNav, activeCompanyId, counterInPlan]);
   // Keep the wizard mounted across refresh()/loading so Continue does not
   // unmount mid-flow (that looked like “Step 1/6 finishes in 2 steps”).
   const showOnboarding = Boolean(
@@ -2670,7 +2675,7 @@ const openVoucher = () => {
         copy={`${activeCompany?.name || settings?.companyName || workspace.businessName || "Your business"} · ${fy.label} · ${range.from} to ${range.to}`}
         tabs={cashierNav
           ? <AccSectionTabs section="counter" reportTab={reportTab} onNavigate={openSection} openReport={openReport} counterEnabled cashierMode />
-          : <AccSectionTabs section={section} reportTab={reportTab} onNavigate={openSection} openReport={openReport} aiEnabled={aiEnabled} manufacturingEnabled={manufacturingEnabled} counterEnabled={counterEnabled} />}
+          : <AccSectionTabs section={section} reportTab={reportTab} onNavigate={openSection} openReport={openReport} aiEnabled={aiEnabled} manufacturingEnabled={manufacturingEnabled} counterEnabled={counterOn} />}
         companyBar={cashierNav ? null : <AccCompanyBar
           companies={companies}
           activeId={activeCompanyId}
@@ -2711,7 +2716,9 @@ const openVoucher = () => {
       )}
       {migrationRequired && <div className="notice">Run <strong>052</strong> through <strong>076_fix_ambiguous_item_type.sql</strong> in the Supabase SQL editor (including <strong>059</strong>, <strong>064–067</strong>, <strong>070–076</strong>), then refresh. Cashbook, Daily Finance, Monthly Finance, and Chit Fund keep working without them.</div>}
       {loading && !settings ? <Spinner label="Loading Accounts" /> : accountsRolePending ? <Spinner label="Loading Accounts" /> : cashierMode ? (
-        counterEnabled ? <CounterWorkspace
+        !counterInPlan ? <div className="notice" role="status">
+          The Counter is not part of this workspace's plan. Ask the business owner to upgrade to <strong>Accounts + POS</strong>.
+        </div> : counterEnabled ? <CounterWorkspace
           token={token}
           canWrite={canWrite}
           canManage={false}
@@ -2923,7 +2930,7 @@ const openVoucher = () => {
 
         {section === "manufacturing" && manufacturingEnabled && <ManufacturingWorkspace items={items} stockMovements={stockMovements} saving={saving} onItems={() => openSection("inventory")} onTransactions={() => openSection("vouchers")} onProductionRun={recordProductionRun} />}
 
-        {section === "counter" && counterEnabled && <CounterWorkspace
+        {section === "counter" && counterOn && <CounterWorkspace
           token={token}
           canWrite={canWrite}
           canManage={canManageCounter}
@@ -3242,7 +3249,8 @@ const openVoucher = () => {
             setSetupAfterCreate(true);
             setShowCreateCompany(true);
           } : null}
-          counterEnabled={counterEnabled}
+          counterEnabled={counterOn}
+          counterInPlan={counterInPlan}
           onCounterEnabledChange={enabled => {
             if (!activeCompanyId) return;
             saveCounterEnabled(activeCompanyId, enabled);

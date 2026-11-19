@@ -80,6 +80,7 @@ export function SetupSection({
   openSetupAssistant = null,
   setUpNewCompany = null,
   counterEnabled = false,
+  counterInPlan = true,
   onCounterEnabledChange = null,
   counterSettings = null,
   onCounterSettingsChange = null,
@@ -111,6 +112,7 @@ export function SetupSection({
         setCompanyDraft={setCompanyDraft}
         setShowCreateCompany={setShowCreateCompany}
         counterEnabled={counterEnabled}
+        counterInPlan={counterInPlan}
         onCounterEnabledChange={onCounterEnabledChange}
         counterSettings={counterSettings}
         onCounterSettingsChange={onCounterSettingsChange}

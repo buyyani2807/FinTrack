@@ -135,6 +135,16 @@ export function orgSettingsWithModuleState(orgSettings = {}, state) {
   };
 }
 
+/**
+ * Whether the workspace's plan includes the Counter (POS).
+ * Pass the orgSettings produced by orgSettingsWithModuleState: a paid workspace with only
+ * the Accounts product gets false; Accounts + POS, trial, grandfathered and legacy get true.
+ * The per-company "Enable Counter" switch only matters when this is true.
+ */
+export function counterIncludedInPlan(orgSettings = {}) {
+  return isModuleEnabled(orgSettings || {}, "counter");
+}
+
 export function assertAppModuleOpen(state, moduleId) {
   if (isAppModuleOpen(state, moduleId)) return true;
   const info = moduleLockInfo(state, moduleId);
