@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { TabScroller } from "../../components/TabScroller.jsx";
-import { Bell, Building2, CalendarDays, CalendarRange, Check, ChevronDown, Coins, MessageCircle, Plus, ReceiptText, RotateCcw } from "lucide-react";
+import { Bell, Building2, CalendarDays, CalendarRange, Check, ChevronDown, Coins, Image as ImageIcon, MessageCircle, Plus, ReceiptText, RotateCcw, Upload } from "lucide-react";
 import { DEFAULT_WHATSAPP_TEMPLATES } from "./model/templateEngine.js";
 import { defaultConfirmationSettings } from "./io/transactionConfirmations.js";
 import { loadOrganizationSettings, saveOrganizationSettings } from "../../lib/financeRepository.js";
 import { LabeledField as Field } from "../../components/ui.jsx";
 import { FinancePartnersPanel } from "../finance/components/FinancePartnersPanel.jsx";
 import { WorkspaceBackupPanel } from "../workspace/backup/WorkspaceBackupPanel.jsx";
+import { readLogoFile } from "../../lib/logoUpload.js";
 
 
 const defaultReminderSettings = () => ({
@@ -72,8 +73,10 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved, tab: routeT
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
-  // A logo URL that failed to load shows the initials instead (until the URL changes).
+  // A logo that fails to load (e.g. a dead external URL saved before upload existed) shows
+  // the initials instead, until a new logo is uploaded.
   const [logoFailed, setLogoFailed] = useState("");
+  const [logoError, setLogoError] = useState("");
   const tab = SETTINGS_TABS.some(item => item.id === routeTab) ? routeTab : "company";
   const setTab = next => onTabChange?.(next);
   // The settings as last loaded or saved, to show when there are unsaved changes.
@@ -158,8 +161,23 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved, tab: routeT
     ...(form.reminderSettings?.confirmations || {}),
   };
 
-  const logoOk = /^https?:\/\/\S+$/i.test(form.companyLogoUrl || "") && logoFailed !== form.companyLogoUrl;
+  // companyLogoUrl is a data: URL from Upload logo below. An http(s) link saved before
+  // upload existed is still shown here, but never embeds in a generated PDF (see
+  // documentPdf.js's decodeJpegDataUrl) — only a data: URL does.
+  const logoOk = Boolean(form.companyLogoUrl) && logoFailed !== form.companyLogoUrl;
   const dirty = baseline !== null && JSON.stringify(form) !== baseline;
+  const chooseLogo = async event => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    setLogoError("");
+    if (!file) return;
+    try {
+      set("companyLogoUrl", await readLogoFile(file));
+      setLogoFailed("");
+    } catch (err) {
+      setLogoError(err.message);
+    }
+  };
   const insertVariable = variable => {
     const target = lastTemplate.current;
     if (!target) return;
@@ -193,8 +211,19 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved, tab: routeT
           </section>
           <SettingsSection icon={Building2} title="Business details" copy="Your name, contact and logo, shown on receipts, statements and WhatsApp messages.">
             <div className="settings-logo-row">
-              <span className="settings-logo-tile" aria-hidden="true">{logoOk ? <img src={form.companyLogoUrl} alt="" onError={() => setLogoFailed(form.companyLogoUrl)} /> : initialsOf(form.companyName)}</span>
-              <Field className="settings-logo-field" label="Logo URL"><input type="url" value={form.companyLogoUrl} onChange={e => set("companyLogoUrl", e.target.value.trim())} placeholder="https://yourbusiness.in/logo.png" /></Field>
+              <span className="settings-logo-tile" aria-hidden="true">
+                {logoOk ? <img src={form.companyLogoUrl} alt="" onError={() => setLogoFailed(form.companyLogoUrl)} /> : (form.companyName ? initialsOf(form.companyName) : <ImageIcon size={22} aria-hidden="true" />)}
+              </span>
+              <div className="settings-logo-field">
+                <span className="small">{logoError ? <span className="red">{logoError}</span> : "PNG, JPG or WebP. Shown on receipts, statements and WhatsApp messages."}</span>
+                <div className="settings-logo-actions">
+                  <label className="btn">
+                    <Upload size={15} aria-hidden="true" />{form.companyLogoUrl ? "Change logo" : "Upload logo"}
+                    <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={chooseLogo} />
+                  </label>
+                  {form.companyLogoUrl && <button type="button" className="btn ghost" onClick={() => { set("companyLogoUrl", ""); setLogoFailed(""); setLogoError(""); }}>Remove</button>}
+                </div>
+              </div>
             </div>
             <div className="form settings-grid">
               <Field className="span" label="Company / Financer name"><input value={form.companyName} onChange={e => set("companyName", e.target.value)} placeholder="e.g. Sri Lakshmi Finance" /></Field>

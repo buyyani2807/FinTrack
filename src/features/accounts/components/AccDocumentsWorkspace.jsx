@@ -28,6 +28,7 @@ import { downloadTradeDocumentPdf } from "../io/tradeDocumentPdf.js";
 import { PDF_TEMPLATES } from "../io/documentPdf.js";
 import { buildSalesInvoice } from "../model/salesInvoiceModel.js";
 import { downloadSalesInvoicePdf } from "../io/salesInvoicePdf.js";
+import { readLogoFile } from "../../../lib/logoUpload.js";
 import { isValidUpiId, upiPayLink } from "../model/upiPay.js";
 import { QrSvg } from "../PayPage.jsx";
 import { AccMoreMenu, AccPager, DateSortTh, Modal } from "./AccUi.jsx";
@@ -39,7 +40,6 @@ import { resolveItemRate } from "../model/priceLists.js";
 
 const money = formatInr;
 const qty = (value, unit) => `${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 3 })}${unit ? ` ${unit}` : ""}`;
-const LOGO_MAX_CHARS = 400000;
 
 const TABS = [
   { id: "quotation", label: "Quotations" },
@@ -92,38 +92,6 @@ const formFromDocument = doc => ({
     sourceLineId: line.sourceLineId || null,
   })),
 });
-
-function readLogoFile(file) {
-  return new Promise((resolve, reject) => {
-    if (!/^image\/(png|jpe?g|webp)$/i.test(file.type)) {
-      reject(new Error("Choose a PNG, JPG or WebP image."));
-      return;
-    }
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Could not read this image."));
-    reader.onload = () => {
-      const image = new Image();
-      image.onerror = () => reject(new Error("Could not read this image."));
-      image.onload = () => {
-        const scale = Math.min(1, 320 / Math.max(image.width, image.height));
-        const width = Math.max(1, Math.round(image.width * scale));
-        const height = Math.max(1, Math.round(image.height * scale));
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        const context = canvas.getContext("2d");
-        context.fillStyle = "#ffffff";
-        context.fillRect(0, 0, width, height);
-        context.drawImage(image, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
-        if (dataUrl.length > LOGO_MAX_CHARS) reject(new Error("This logo is too large. Use a smaller image."));
-        else resolve(dataUrl);
-      };
-      image.src = String(reader.result || "");
-    };
-    reader.readAsDataURL(file);
-  });
-}
 
 function DocumentForm({ form, setForm, parties, items, stockByItem, gstCompany, fulfilment, documents, saving, onSave, onClose, error, priceLists = [] }) {
   const config = DOCUMENT_TYPES[form.docType];
