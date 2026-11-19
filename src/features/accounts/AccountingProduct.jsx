@@ -2554,8 +2554,11 @@ const openVoucher = () => {
       return { filename: `fintrack-item-profit-${stamp}`, rows: [["Item", "SKU", "Qty sold", "Revenue", "Cost", "Gross profit", "Margin %", "Current stock", "Stock value"]] };
     }
     if (active === "gst") {
+      // GSTR-2 (Purchases) lives as a subsection of this same tab, so one Export covers both:
+      // the GST books rows first, then the GSTR-2 tables below them in the same file.
+      const gstr2 = buildGstr2Report({ vouchers, parties, range, companyStateCode: activeCompany?.stateCode || "" });
       return {
-        filename: `fintrack-gst-books-${stamp}`,
+        filename: `fintrack-gst-${stamp}`,
         rows: [
           ["GST books (for review — not portal filing)"],
           [companyName],
@@ -2567,12 +2570,11 @@ const openVoucher = () => {
           ["", "", "", "Output GST", "", "", "", "", gstReport.outputTax, ""],
           ["", "", "", "Eligible ITC", "", "", "", "", gstReport.inputTax, ""],
           ["", "", "", "Net GST payable", "", "", "", "", gstReport.netPayable, ""],
+          [],
+          [],
+          ...gstr2ExportRows(gstr2, { companyName }),
         ],
       };
-    }
-    if (active === "gstr2") {
-      const report = buildGstr2Report({ vouchers, parties, range, companyStateCode: activeCompany?.stateCode || "" });
-      return { filename: `fintrack-gstr2-purchases-${stamp}`, rows: gstr2ExportRows(report, { companyName }) };
     }
     if (active === "item_sales") {
       return {

@@ -118,7 +118,6 @@ export const REPORT_TABS = [
   { id: "sales", label: "Sales" },
   { id: "purchases", label: "Purchases" },
   { id: "gst", label: "GST" },
-  { id: "gstr2", label: "GSTR-2 (Purchases)" },
   { id: "ledger", label: "Ledger" },
   { id: "item_sales", label: "Item Sales" },
   { id: "item_purchases", label: "Item Purchases" },
@@ -141,8 +140,7 @@ const REPORT_HUB_CARDS = [
   { id: "pnl", label: "Profit & Loss", copy: "Income and expenses for the selected dates." },
   { id: "balance", label: "Balance Sheet", copy: "Assets, liabilities and equity snapshot." },
   { id: "trial", label: "Trial Balance", copy: "Check that debits still equal credits." },
-  { id: "gst", label: "GST books", copy: "Calculated GST for review — not portal filing." },
-  { id: "gstr2", label: "GSTR-2 (Purchases)", copy: "Purchases and ITC by GSTR-2 table, before GSTR-2B matching." },
+  { id: "gst", label: "GST books", copy: "GSTR-1, GSTR-2 (Purchases) and GSTR-3B prep — calculated for review, not portal filing." },
   { id: "cashflow", label: "Cash Flow", copy: "Money in and out (simplified)." },
   { id: "crm", label: "Customer Pipeline", copy: "Follow up customer opportunities." },
 ];
@@ -183,10 +181,13 @@ const REPORT_SLUG_ALIASES = {
   "customer-pipeline": "crm",
   "pipeline": "crm",
   "gst-returns": "gst",
-  "gstr-2": "gstr2",
-  "gstr2-purchases": "gstr2",
-  "gstr-2-purchases": "gstr2",
-  "gstr-2-purchase": "gstr2",
+  // GSTR-2 moved from its own tab into the GST tab (next to GSTR-1 / GSTR-3B), so a bookmark
+  // or link to the old standalone tab still lands somewhere sensible.
+  "gstr2": "gst",
+  "gstr-2": "gst",
+  "gstr2-purchases": "gst",
+  "gstr-2-purchases": "gst",
+  "gstr-2-purchase": "gst",
 };
 export const reportSlugAlias = slug => REPORT_SLUG_ALIASES[String(slug || "").toLowerCase().replace(/_/g, "-")] || "";
 const fromSlug = (map, slug) => Object.keys(map).find(key => map[key] === slug);

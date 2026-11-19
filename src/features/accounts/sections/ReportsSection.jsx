@@ -211,10 +211,7 @@ export function ReportsSection({
             saving={saving}
             markGstFiled={markGstFiled}
           />
-        </>
-      )}
-      {section === "reports" && reportTab === "gstr2" && (
-        <>
+          <h3 className="acc-routes-subhead">GSTR-2 (Purchases)</h3>
           <ReportPlainSpeak reportId="gstr2" />
           <Gstr2Report
             vouchers={vouchers}
