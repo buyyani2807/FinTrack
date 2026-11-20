@@ -124,7 +124,7 @@ import {
 } from "./sections/reports/reportStatementRows.js";
 import { loadOrganizationSettings } from "../../lib/financeRepository.js";
 import { buildSalesInvoice, buildVoucherDocument, canOpenVoucherDocument } from "./model/salesInvoiceModel.js";
-import { SalesInvoiceSuccessModal, SalesInvoiceViewerModal, withCounterReceiptPrint } from "./components/SalesInvoiceActions.jsx";
+import { SalesInvoiceSuccessModal, SalesInvoiceViewerModal, sendSalesInvoiceOnWhatsApp, withCounterReceiptPrint } from "./components/SalesInvoiceActions.jsx";
 import { printSalesInvoicePdf } from "./io/salesInvoicePdf.js";
 import { periodStockValues } from "./model/inventoryValuation.js";
 import { expenseBreakdown, monthlyIncomeExpense } from "./model/accountsCharts.js";
@@ -229,6 +229,7 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
   const [orgSettings, setOrgSettings] = useState(orgSettingsProp || {});
   const [pendingSalesInvoiceId, setPendingSalesInvoiceId] = useState(null);
   const [pendingCounterPrintId, setPendingCounterPrintId] = useState(null);
+  const [pendingCounterWhatsAppId, setPendingCounterWhatsAppId] = useState(null);
   const [salesInvoiceSuccess, setSalesInvoiceSuccess] = useState(null);
   const [salesInvoiceView, setSalesInvoiceView] = useState(null);
   const [accounts, setAccounts] = useState(cached?.accounts ?? []);
@@ -615,6 +616,27 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     setNotice("Receipt opened — use the browser print dialog if it appears.");
     setPendingCounterPrintId(null);
   }, [pendingCounterPrintId, vouchers, parties, accounts, companies, activeCompanyId, workspace, voucherItemLines, documentSettings, counterSettings.printFormat]);
+
+  // Today's sales list: share any of today's Counter bills on WhatsApp, not just the one just charged.
+  useEffect(() => {
+    if (!pendingCounterWhatsAppId) return;
+    const voucher = vouchers.find(item => item.id === pendingCounterWhatsAppId);
+    if (!voucher || voucher.sourceType !== "pos_counter") { setPendingCounterWhatsAppId(null); return; }
+    if (voucher.voucherType !== "sales" && voucher.voucherType !== "credit_note") { setPendingCounterWhatsAppId(null); return; }
+    const party = parties.find(item => item.id === voucher.partyId) || null;
+    const company = companies.find(item => item.id === activeCompanyId) || companies[0] || null;
+    const built = buildSalesInvoice({
+      voucher,
+      party,
+      accounts,
+      company: company ? { ...company, documentSettings } : null,
+      workspace,
+      itemLines: voucherItemLines.filter(line => line.voucherId === voucher.id),
+    });
+    setPendingCounterWhatsAppId(null);
+    if (!built) { setNotice("Could not build this bill for WhatsApp."); return; }
+    sendSalesInvoiceOnWhatsApp(withCounterReceiptPrint(built, counterSettings.printFormat));
+  }, [pendingCounterWhatsAppId, vouchers, parties, accounts, companies, activeCompanyId, workspace, voucherItemLines, documentSettings, counterSettings.printFormat]);
 
   useEffect(() => {
     if (!token || !expandedVoucherId || migrationRequired) {
@@ -2749,6 +2771,7 @@ const openVoucher = () => {
             setCounterSettings(saveCounterSettings(activeCompanyId, next));
           }}
           onReprint={voucherId => setPendingCounterPrintId(voucherId)}
+          onWhatsAppShare={voucherId => setPendingCounterWhatsAppId(voucherId)}
           askReason={askReason}
           onRefresh={() => refresh()}
           onPosted={async () => { await refresh(); }}
@@ -2960,6 +2983,7 @@ const openVoucher = () => {
             setCounterSettings(saveCounterSettings(activeCompanyId, next));
           }}
           onReprint={voucherId => setPendingCounterPrintId(voucherId)}
+          onWhatsAppShare={voucherId => setPendingCounterWhatsAppId(voucherId)}
           askReason={askReason}
           onRefresh={() => refresh()}
           onPosted={async () => { await refresh(); }}

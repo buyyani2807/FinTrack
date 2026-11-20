@@ -166,6 +166,7 @@ export function CounterWorkspace({
   onCounterSettingsChange = null,
   onPosted = null,
   onReprint = null,
+  onWhatsAppShare = null,
   onRefresh = null,
   askReason = null,
   documentSettings = null,
@@ -1855,6 +1856,9 @@ export function CounterWorkspace({
                         {onReprint ? (
                           <button type="button" className="btn" onClick={() => onReprint(bill.id)}>Print</button>
                         ) : null}
+                        {onWhatsAppShare ? (
+                          <button type="button" className="btn whatsapp" onClick={() => onWhatsAppShare(bill.id)} title="Share this bill on WhatsApp">WhatsApp</button>
+                        ) : null}
                       </td>
                     </tr>
                   ))}
@@ -2027,6 +2031,16 @@ export function CounterWorkspace({
                       >
                         Print
                       </button>
+                      {onWhatsAppShare ? (
+                        <button
+                          type="button"
+                          className="btn whatsapp"
+                          onClick={() => onWhatsAppShare(bill.id)}
+                          title="Share this bill on WhatsApp"
+                        >
+                          WhatsApp
+                        </button>
+                      ) : null}
                       {canManage || needsSupervisor ? (
                         <button
                           type="button"

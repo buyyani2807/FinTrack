@@ -38,7 +38,8 @@ function sendInvoiceMessage(invoice) {
   openManualWhatsAppShare({ phone: invoice.customerPhone, message });
 }
 
-function sendSalesInvoiceOnWhatsApp(invoice) {
+/** Also used for the Counter "Today" bills list, so a bill that's dropped off-screen can still be shared. */
+export function sendSalesInvoiceOnWhatsApp(invoice) {
   const file = salesInvoicePdfFile(invoice);
   const canGivePdfToWhatsApp = Boolean(
     file
