@@ -92,7 +92,7 @@ import {
   pendingOfflineBills,
 } from "../model/counterOffline.js";
 import { syncOfflineCounterBills } from "../model/counterOfflineSync.js";
-import { printSalesInvoicePdf } from "../io/salesInvoicePdf.js";
+import { invoicePdfShareOnThisDevice, printSalesInvoicePdf, salesInvoicePdfFile } from "../io/salesInvoicePdf.js";
 import { formatReceiptDateTime } from "../../receipts/model/receiptModel.js";
 import { openManualWhatsAppShare } from "../../receipts/io/receiptWhatsApp.js";
 import { accountsCompanyBranding } from "../model/salesInvoiceModel.js";
@@ -1012,10 +1012,13 @@ export function CounterWorkspace({
     },
   });
 
-  const printOfflineBill = bill => {
+  // Shared with shareLastReceipt: the same receipt-shaped invoice object feeds
+  // both the print PDF and the WhatsApp PDF attachment, so what prints matches
+  // what's shared.
+  const billToInvoice = bill => {
     const company = activeCompany || cachedCatalog?.company || {};
     const printFormat = counterSettings?.printFormat || "thermal80";
-    const invoice = buildOfflineReceiptInvoice({
+    return buildOfflineReceiptInvoice({
       bill,
       companyName: company.name || branding?.companyName || "MyFinTracker",
       companyAddress: company.documentSettings?.businessAddress || branding?.companyAddress || "",
@@ -1023,6 +1026,11 @@ export function CounterWorkspace({
       companyPhone: company.documentSettings?.businessPhone || branding?.companyPhone || "",
       printFormat,
     });
+  };
+
+  const printOfflineBill = bill => {
+    const printFormat = counterSettings?.printFormat || "thermal80";
+    const invoice = billToInvoice(bill);
     if (!invoice) {
       setPrintNotice("Could not build the receipt. Try Print again.");
       return false;
@@ -1354,6 +1362,31 @@ export function CounterWorkspace({
       total: receiptTotals.total || lastBill.total,
       date: lastBill.printBill?.date || today,
     });
+
+    // Same as the "+ New sale" Sales Invoice WhatsApp button: on a phone/tablet, hand
+    // WhatsApp the actual receipt PDF via the native share sheet instead of text only.
+    if (lastBill.printBill && invoicePdfShareOnThisDevice(navigator.userAgent, navigator.maxTouchPoints)) {
+      const invoice = billToInvoice(lastBill.printBill);
+      const file = invoice ? salesInvoicePdfFile(invoice) : null;
+      const canGivePdfToWhatsApp = Boolean(
+        file
+        && typeof navigator.canShare === "function"
+        && navigator.canShare({ files: [file] }),
+      );
+      if (canGivePdfToWhatsApp) {
+        if (!window.confirm("Share this receipt as a PDF on WhatsApp? Nothing is sent until you choose a chat and tap send.")) {
+          return;
+        }
+        try {
+          await navigator.share({ files: [file], title: file.name });
+          return;
+        } catch (error) {
+          if (error?.name === "AbortError") return;
+          // Any other failure falls through to the text-message share below.
+        }
+      }
+    }
+
     if (partyPhone) {
       if (!window.confirm("Open WhatsApp with this receipt for the customer? Nothing is sent until you tap send in WhatsApp.")) {
         return;
