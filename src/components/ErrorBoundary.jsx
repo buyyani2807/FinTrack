@@ -1,5 +1,13 @@
 import { Component } from "react";
+import { isChunkLoadFailure } from "./chunkLoadFailure.js";
 import { reportError } from "../lib/monitoring.js";
+
+// A reload fetches a fresh index.html with matching chunk hashes, which is exactly why
+// "reload fixes it" for a stale-chunk crash (see chunkLoadFailure.js). Reload once
+// automatically for that specific shape instead of showing a dead-end screen for
+// something the user would just reload away anyway. RELOAD_FLAG stops a reload loop if
+// the deploy itself is broken and every chunk genuinely 404s.
+const RELOAD_FLAG = "ft_chunk_reload_once";
 
 /** Last-resort crash screen. Reports the error (scrubbed) and offers a reload. */
 export class ErrorBoundary extends Component {
@@ -13,6 +21,11 @@ export class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, info) {
+    if (isChunkLoadFailure(error) && !sessionStorage.getItem(RELOAD_FLAG)) {
+      sessionStorage.setItem(RELOAD_FLAG, "1");
+      window.location.reload();
+      return;
+    }
     reportError(error, { componentStack: info?.componentStack || "" });
   }
 
