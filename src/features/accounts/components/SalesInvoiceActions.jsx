@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { formatReceiptDate, formatReceiptDateTime } from "../../receipts/model/receiptModel.js";
-import { canWhatsAppShare, openManualWhatsAppShare, openWhatsAppWeb } from "../../receipts/io/receiptWhatsApp.js";
+import { canWhatsAppShare, openManualWhatsAppShare } from "../../receipts/io/receiptWhatsApp.js";
 import { buildArReminderMessage, buildOutstandingSummaryMessage, buildPartyStatementMessage, buildPaymentAdviceMessage, buildPurchaseDocumentMessage, salesInvoicePresentation } from "../model/salesInvoiceModel.js";
 import { downloadSalesInvoicePdf, invoicePdfShareOnThisDevice, printSalesInvoicePdf, salesInvoicePdfFile, salesInvoiceWhatsAppText } from "../io/salesInvoicePdf.js";
 import { downloadPartyStatementPdf } from "../io/partyStatementPdf.js";
@@ -27,13 +27,15 @@ export function withCounterReceiptPrint(invoice, printFormat = "thermal80") {
   };
 }
 
+/**
+ * wa.me, not web.whatsapp.com: on a counter PC with the WhatsApp Desktop app installed,
+ * the OS hands wa.me straight to that app (instant, already signed in) instead of paying
+ * for a fresh browser tab to boot web.whatsapp.com. Falls back to web.whatsapp.com itself
+ * when nothing claims the link, so nothing is lost on a machine without the desktop app.
+ */
 function sendInvoiceMessage(invoice) {
   const message = salesInvoiceWhatsAppText(invoice);
-  if (invoicePdfShareOnThisDevice(navigator.userAgent, navigator.maxTouchPoints)) {
-    openManualWhatsAppShare({ phone: invoice.customerPhone, message });
-    return;
-  }
-  openWhatsAppWeb({ phone: invoice.customerPhone, message });
+  openManualWhatsAppShare({ phone: invoice.customerPhone, message });
 }
 
 function sendSalesInvoiceOnWhatsApp(invoice) {
