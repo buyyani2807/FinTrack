@@ -53,6 +53,8 @@ const RouteCollectionsRoute = withLazy(() => import("../features/workspace/route
 const SettingsRoute = withLazy(() => import("../features/workspace/routes/SettingsRoute.jsx"), "SettingsRoute", pageFallback);
 const ModuleStorePage = withLazy(() => import("../features/commercial/ModuleStorePage.jsx"), "ModuleStorePage", pageFallback);
 const SubscribePage = withLazy(() => import("../features/commercial/SubscribePage.jsx"), "SubscribePage", pageFallback);
+// Not linked from any menu — see src/features/admin/AdminStatsPage.jsx for why.
+const AdminStatsPage = withLazy(() => import("../features/admin/AdminStatsPage.jsx"), "AdminStatsPage", pageFallback);
 
 // Every URL in the app and the component it shows. Paths match `workspacePaths` in features/workspace/paths.js,
 // which the rest of the code uses to navigate.
@@ -157,6 +159,9 @@ export function AppRoutes() {
           {/* :tab = company | whatsapp | reminders */}
           <Route path="/settings/:tab" element={<RequireModule module="isOwner"><SettingsRoute /></RequireModule>} />
           <Route path="/settings/*" element={<Navigate to="/settings/company" replace />} />
+
+          {/* Not in any nav menu; access is enforced server-side (see supabase/153_admin_platform_stats.sql). */}
+          <Route path="/admin/platform-stats" element={<AdminStatsPage />} />
 
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
