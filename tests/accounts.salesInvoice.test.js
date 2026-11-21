@@ -375,12 +375,38 @@ test("sales invoice sheet groups HSN tax and spells the amount", () => {
   assert.match(sheet.amountWords, /Sixty One Thousand Five Hundred/);
   assert.match(sheet.taxWords, /Nine Thousand Three Hundred Eighty One and Thirty Four Paise/);
   assert.match(sheet.declaration, /actual price of the goods/);
+  // On paper the sales invoice uses the Counter bill layout, wording and colours.
   const pdf = renderSalesInvoicePdf(invoice);
-  assert.match(pdf, /Amount chargeable/);
-  assert.match(pdf, /HSN\/SAC/);
-  assert.match(pdf, /Authorised Signatory/);
-  assert.match(pdf, /computer generated invoice/);
-  assert.match(pdf, /320901090/);
+  for (const text of ["(TAX INVOICE)", "(ORIGINAL FOR RECIPIENT)", "(Invoice No.)", "(Invoice Date)", "(Bill To)", "(Kukatpally)",
+    "(GSTIN: 36BBBBB0000B1Z5)", "(SUBTOTAL)", "(HSN/SAC)", "(Taxable Value)", "(CGST %)", "(9%)", "(Round Off)", "(Total Amount)",
+    "(Received Amount)", "(Balance)", "(Total Amount \\(in words\\))", "(Signature)", "(Thank You & Visit Again..!)"]) {
+    assert.ok(pdf.includes(text), `missing ${text}`);
+  }
+  assert.match(pdf, /HSN 320901090 - GST 18%/);
+  for (const old of ["Amount chargeable", "Authorised Signatory", "computer generated invoice", "E. & O.E."]) {
+    assert.ok(!pdf.includes(old), `still has ${old}`);
+  }
+  assert.ok(renderSalesInvoicePdf(invoice, { template: "a5" }).includes("(ORIGINAL FOR RECIPIENT)"));
   const thermal = renderSalesInvoicePdf(invoice, { template: "thermal" });
   assert.match(thermal, /Amount chargeable/);
+});
+
+test("sales invoice on paper shows received and balance from what is still owed", async () => {
+  const { salesInvoicePdfModel } = await import("../src/features/accounts/io/salesInvoicePdf.js");
+  const voucher = (debitAccount) => ({
+    id: "v-rb", voucherNumber: "SALE-000025", date: "2026-11-21", narration: "", voucherType: "sales", status: "posted",
+    lines: [{ coaId: debitAccount, debit: 1575, credit: 0 }, { coaId: "sales", debit: 0, credit: 1575 }],
+    gstLines: [{ taxable: 1500, cgst: 37.5, sgst: 37.5, igst: 0, rate: 5 }],
+  });
+  const company = { name: "Buyyani's Sports", gstin: "36AEWPB6794G1ZW", stateName: "Telangana", stateCode: "36" };
+  const cash = salesInvoicePdfModel(buildSalesInvoice({ voucher: voucher("cash"), accounts, company }));
+  assert.equal(cash.retailLayout, true);
+  assert.equal(cash.retail.received, "₹1,575");
+  assert.equal(cash.retail.balance, "₹0");
+  const credit = salesInvoicePdfModel(buildSalesInvoice({ voucher: voucher("ar"), accounts, company, outstanding: 575 }));
+  assert.equal(credit.retail.received, "₹1,000");
+  assert.equal(credit.retail.balance, "₹575");
+  const unpaid = salesInvoicePdfModel(buildSalesInvoice({ voucher: voucher("ar"), accounts, company }));
+  assert.equal(unpaid.retail.received, "₹0");
+  assert.equal(unpaid.retail.balance, "₹1,575");
 });

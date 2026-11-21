@@ -139,8 +139,16 @@ export function salesInvoicePdfModel(invoice) {
       ].filter(Boolean),
     bankLines: isPos ? [] : (invoice.bankLines || []),
     upi: showQr ? { link: invoice.upiLink, caption: upiCaption(invoice, invoice.payableAmount, m) } : null,
-    footer: invoice.receiptFooter || (isPos ? "Thank You & Visit Again..!" : "Thank you for your business."),
-    retail: isPos ? retailBillModel(invoice, { dateValue, hasGst, qtyTotal }) : null,
+    footer: taxSheet
+      ? RETAIL_FOOTER
+      : invoice.receiptFooter || (isPos ? RETAIL_FOOTER : "Thank you for your business."),
+    // Sales invoices on paper use the same bordered layout, wording and colours as Counter bills.
+    retailLayout: Boolean(taxSheet),
+    retail: isPos
+      ? retailBillModel(invoice, { dateValue, hasGst, qtyTotal })
+      : taxSheet
+        ? retailBillModel(invoice, { dateValue, hasGst, qtyTotal, taxSheet })
+        : null,
   };
 }
 
@@ -149,29 +157,54 @@ export function salesInvoicePdfModel(invoice) {
  * header with phone and address, Bill To, items with units, totals with received and
  * balance, amount in words, bank details and a signature box.
  */
-function retailBillModel(invoice, { dateValue, hasGst, qtyTotal }) {
+const RETAIL_FOOTER = "Thank You & Visit Again..!";
+
+// Custom invoice terms the shop typed in settings; the generated "Issued by ..." line is not shown.
+const customTerms = terms => {
+  const text = String(terms || "").trim();
+  return text && !text.startsWith("Issued by ") ? text : "";
+};
+
+function retailBillModel(invoice, { dateValue, hasGst, qtyTotal, taxSheet = null }) {
   const m = invoice.money;
+  const isInvoice = Boolean(taxSheet);
   const amount = Number(invoice.amount || 0);
   const onCredit = /credit|khata/i.test(String(invoice.settlement || ""));
-  const balance = onCredit ? amount : Math.max(0, Number(invoice.outstanding || 0));
+  // A Counter bill is settled at the till unless it went on credit. A sales invoice is paid
+  // in full when it was a cash/UPI/bank sale; on credit, the balance is what is still owed.
+  const balance = isInvoice
+    ? (onCredit ? Math.min(amount, Math.max(0, Number(invoice.outstanding ?? amount))) : 0)
+    : (onCredit ? amount : Math.max(0, Number(invoice.outstanding || 0)));
   const itemTotal = (invoice.itemLines || []).reduce((sum, line) => sum + Number(line.amount || 0), 0);
+  const roundOff = taxSheet?.totals?.find(row => row.label === "Round off");
   return {
     phone: String(invoice.companyPhone || "").trim(),
     address: String(invoice.companyAddress || "").trim(),
+    legalName: isInvoice ? String(invoice.companyLegalName || "").trim() : "",
     gstin: String(invoice.companyGstin || "").trim(),
     email: String(invoice.companyEmail || "").trim(),
-    meta: [
-      ["Bill No.", invoice.invoiceNumber],
-      ["Bill Date", dateValue],
-      invoice.tillLabel ? ["Till", invoice.tillLabel] : null,
-      invoice.cashier ? ["Cashier", invoice.cashier] : null,
-    ].filter(Boolean),
+    meta: isInvoice
+      ? [
+        [invoice.numberLabel ? `${String(invoice.numberLabel).replace(/\.$/, "")}.` : "Invoice No.", invoice.invoiceNumber],
+        ["Invoice Date", dateValue],
+        invoice.dueDate ? ["Due Date", formatReceiptDate(invoice.dueDate)] : null,
+      ].filter(Boolean)
+      : [
+        ["Bill No.", invoice.invoiceNumber],
+        ["Bill Date", dateValue],
+        invoice.tillLabel ? ["Till", invoice.tillLabel] : null,
+        invoice.cashier ? ["Cashier", invoice.cashier] : null,
+      ].filter(Boolean),
     customerName: invoice.customerName || "Cash customer",
     customerPhone: String(invoice.customerPhone || "").trim(),
     customerGstin: String(invoice.customerGstin || "").trim(),
+    customerAddress: isInvoice ? String(invoice.customerAddress || "").trim() : "",
     items: (invoice.itemLines || []).map(line => ({
       name: line.name || "Item",
-      detail: line.hsnSac && hasGst ? `HSN ${line.hsnSac}` : "",
+      detail: [
+        line.hsnSac && (hasGst || isInvoice) ? `HSN ${line.hsnSac}` : "",
+        isInvoice && hasGst && Number(line.gstRate) > 0 ? `GST ${Number(line.gstRate)}%` : "",
+      ].filter(Boolean).join(" - "),
       quantity: quantityText(line.quantity, line.unit ? String(line.unit).toUpperCase() : ""),
       rate: m(line.rate),
       discount: line.discount > 0 ? m(line.discount) : "",
@@ -185,14 +218,25 @@ function retailBillModel(invoice, { dateValue, hasGst, qtyTotal }) {
         invoice.cgst ? ["CGST", m(invoice.cgst)] : null,
         invoice.sgst ? ["SGST", m(invoice.sgst)] : null,
         invoice.igst ? ["IGST", m(invoice.igst)] : null,
+        roundOff ? ["Round Off", roundOff.value] : null,
       ].filter(Boolean)
-      : [],
+      : (roundOff ? [["Round Off", roundOff.value]] : []),
+    // HSN-wise GST summary, kept on sales invoices (customers claim input tax from it).
+    taxSummary: isInvoice && hasGst && taxSheet.hsn?.length
+      ? { rows: taxSheet.hsn, showCgst: taxSheet.showCgst, showIgst: taxSheet.showIgst }
+      : null,
     total: m(amount),
     received: m(amount - balance),
     balance: m(balance),
     settlement: invoice.settlement || "",
     words: rupeesInWords(amount),
     bankLines: (invoice.bankLines || []).filter(Boolean),
+    notes: isInvoice
+      ? [
+        invoice.narration ? ["Notes", String(invoice.narration)] : null,
+        customTerms(invoice.receiptTerms) ? ["Terms", customTerms(invoice.receiptTerms)] : null,
+      ].filter(Boolean)
+      : [],
   };
 }
 

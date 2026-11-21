@@ -419,6 +419,7 @@ function drawRetailBill(model, surface, logo, qr) {
   surface.paragraph(model.seller.name, textLeft, right - rightBlock - 12 - textLeft, { size: base + 8, bold: true, rgb: INK, lineGap: 1.15 });
   surface.y += 3;
   const infoWidth = right - textLeft;
+  if (r.legalName) surface.paragraph(r.legalName, textLeft, infoWidth, { size: base, rgb: MUTED });
   if (r.phone) surface.paragraph(`Ph: ${r.phone}`, textLeft, infoWidth, { size: base + 0.5, rgb: MUTED });
   if (r.address) surface.paragraph(r.address, textLeft, infoWidth, { size: base, rgb: MUTED });
   const extra = [r.gstin ? `GSTIN: ${r.gstin}` : "", r.email].filter(Boolean).join("   ");
@@ -450,6 +451,7 @@ function drawRetailBill(model, surface, logo, qr) {
     surface.text(r.customerPhone, left + textWidth("Mobile ", base - 0.5, true), surface.y, { size: base - 0.5, rgb: MUTED });
     surface.y += base * 1.4;
   }
+  if (r.customerAddress) surface.paragraph(r.customerAddress, left, width * 0.6, { size: base - 0.5, rgb: MUTED });
   if (r.customerGstin) surface.paragraph(`GSTIN: ${r.customerGstin}`, left, width * 0.6, { size: base - 0.5, rgb: MUTED });
   surface.y += 12;
 
@@ -495,6 +497,34 @@ function drawRetailBill(model, surface, logo, qr) {
   surface.text(r.subtotal, retailCellX(amtCol), subTop, { size: base, bold: true, align: "right", rgb: INK });
   surface.y += subH + (small ? 12 : 18);
 
+  // HSN-wise GST summary (sales invoices), in the same cream-and-gold style as the items.
+  if (r.taxSummary) {
+    const sum = r.taxSummary;
+    const cols = [{ key: "hsn", label: "HSN/SAC", weight: 1.3 }, { key: "taxable", label: "Taxable Value", weight: 1.3, align: "right" }];
+    if (sum.showCgst) {
+      cols.push({ key: "cgstRate", label: "CGST %", weight: 0.7, align: "right" }, { key: "cgst", label: "CGST", weight: 1, align: "right" });
+      cols.push({ key: "sgstRate", label: "SGST %", weight: 0.7, align: "right" }, { key: "sgst", label: "SGST", weight: 1, align: "right" });
+    }
+    if (sum.showIgst) cols.push({ key: "igstRate", label: "IGST %", weight: 0.7, align: "right" }, { key: "igst", label: "IGST", weight: 1, align: "right" });
+    cols.push({ key: "tax", label: "Total Tax", weight: 1.1, align: "right" });
+    const totalWeight = cols.reduce((sum2, col) => sum2 + col.weight, 0);
+    let cx = surface.left;
+    for (const col of cols) { col.width = surface.width * col.weight / totalWeight; col.x = cx; cx += col.width; }
+    const size = base - 1;
+    const h = base * 2.3;
+    roomFor(h * (sum.rows.length + 1) + 12);
+    surface.fill(surface.left, surface.y, surface.width, h, 0, CREAM);
+    for (const col of cols) surface.text(col.label, retailCellX(col), surface.y + (h - size) / 2, { size: size - 0.5, align: col.align || "left", rgb: MUTED });
+    surface.y += h;
+    for (const row of sum.rows) {
+      const rowTop = surface.y + (h - size) / 2;
+      for (const col of cols) surface.text(String(row[col.key] ?? ""), retailCellX(col), rowTop, { size, align: col.align || "left", rgb: INK });
+      surface.y += h;
+      surface.rule(surface.y, { x1: surface.left, x2: surface.right, weight: 0.4, rgb: GOLD });
+    }
+    surface.y += small ? 12 : 18;
+  }
+
   // Totals (right) and bank details (left).
   const split = left + width * 0.52;
   const qrSize = qr ? Math.min(spec.qr, small ? 70 : 84) : 0;
@@ -520,6 +550,15 @@ function drawRetailBill(model, surface, logo, qr) {
     leftY += base * 1.6;
     surface.text(r.settlement, left, leftY, { size: base - 0.5, rgb: MUTED });
     leftY += base * 1.6;
+  }
+  for (const [heading, text] of r.notes || []) {
+    leftY += 6;
+    surface.text(heading, left, leftY, { size: base, bold: true, rgb: INK });
+    leftY += base * 1.6;
+    for (const wrapped of wrapText(text, base - 0.5, split - left - 16)) {
+      surface.text(wrapped, left, leftY, { size: base - 0.5, rgb: MUTED });
+      leftY += (base - 0.5) * 1.45;
+    }
   }
 
   let y = blockTop;
@@ -980,7 +1019,7 @@ export function renderDocumentPdf(model, { template = "a4" } = {}) {
   };
   const surface = createSurface(spec);
   if (spec.id === "thermal") drawThermal(normalized, surface, logo, qr);
-  else if (normalized.posSlip && normalized.retail) drawRetailBill(normalized, surface, logo, qr);
+  else if ((normalized.posSlip || model.retailLayout) && normalized.retail) drawRetailBill(normalized, surface, logo, qr);
   else if (model.layout === "tax" && model.taxSheet) drawTaxInvoice(model.taxSheet, surface, logo, qr);
   else drawSheet(normalized, surface, logo, qr);
   return serialize(surface.pages, { width: spec.width, logo });
