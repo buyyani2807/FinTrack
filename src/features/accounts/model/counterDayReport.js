@@ -49,6 +49,39 @@ export function isCounterTillVoucher(voucher, { date, tillLabel = "" } = {}) {
   return true;
 }
 
+export function tillReturnNeedle(tillLabel = "") {
+  return `counter return · ${String(tillLabel || "").toLowerCase()}`;
+}
+
+/** A Counter return (credit note) posted from this till on this date. */
+export function isCounterTillReturn(voucher, { date, tillLabel = "" } = {}) {
+  if (!voucher || voucher.sourceType !== "pos_counter") return false;
+  if (isReversed(voucher) || isCancelled(voucher)) return false;
+  if (date && String(voucher.date || "").slice(0, 10) !== date) return false;
+  const narration = String(voucher.narration || "").toLowerCase();
+  const isReturn = voucher.voucherType === "credit_note" || narration.startsWith("counter return");
+  if (!isReturn) return false;
+  if (tillLabel && !narration.includes(tillReturnNeedle(tillLabel))) return false;
+  return true;
+}
+
+/** Credits out of money accounts on a Counter return — what left the drawer, UPI or card. */
+export function counterRefundFromVoucher(accounts = [], voucher = {}) {
+  const byId = Object.fromEntries((accounts || []).map(account => [account.id, account]));
+  let cash = 0;
+  let upi = 0;
+  let card = 0;
+  for (const line of voucher.lines || []) {
+    const credit = roundMoney(Number(line.credit || 0));
+    if (!(credit > 0)) continue;
+    const type = byId[line.coaId]?.accountType || byId[line.code]?.accountType || "";
+    if (type === "cash") cash = roundMoney(cash + credit);
+    else if (type === "upi") upi = roundMoney(upi + credit);
+    else if (type === "bank") card = roundMoney(card + credit);
+  }
+  return { cash, upi, card, total: roundMoney(cash + upi + card) };
+}
+
 /** Debits into money accounts on a paid Counter sale. Bank = Card for POS. */
 export function counterTenderFromVoucher(accounts = [], voucher = {}) {
   const byId = Object.fromEntries((accounts || []).map(account => [account.id, account]));
@@ -122,15 +155,55 @@ export function counterDayReport(accounts = [], vouchers = [], { date, tillLabel
     };
   });
 
+  // Returns paid out of the till the same day. Without them the drawer expectation is overstated
+  // by every cash refund (RC3 P2-1).
+  const refunds = { cash: 0, upi: 0, card: 0, total: 0 };
+  const returnRows = (vouchers || [])
+    .filter(voucher => isCounterTillReturn(voucher, { date: day, tillLabel }))
+    .map(voucher => {
+      const refund = counterRefundFromVoucher(accounts, voucher);
+      const amount = roundMoney(voucherTotals(voucher.lines || []).credit);
+      refunds.cash = roundMoney(refunds.cash + refund.cash);
+      refunds.upi = roundMoney(refunds.upi + refund.upi);
+      refunds.card = roundMoney(refunds.card + refund.card);
+      refunds.total = roundMoney(refunds.total + refund.total);
+      const mode = counterModeFromTender(refund, voucher.narration);
+      return {
+        id: voucher.id,
+        reference: voucher.voucherNumber || "",
+        invoiceDate: voucher.date || day,
+        soldAt: voucher.postedAt || voucher.createdAt || "",
+        amount: -amount,
+        modeId: mode.id,
+        modeLabel: `Refund · ${mode.label}`,
+        cash: -refund.cash,
+        upi: -refund.upi,
+        card: -refund.card,
+        isReturn: true,
+        tillLabel: tillLabel || String(voucher.narration || "").match(/counter return\s*·\s*([^·]+)/i)?.[1]?.trim() || "",
+        narration: voucher.narration || "",
+      };
+    });
+  const allRows = [...rows, ...returnRows]
+    .sort((a, b) => String(b.soldAt || b.invoiceDate || "").localeCompare(String(a.soldAt || a.invoiceDate || "")));
+
   return {
     date: day,
     tillLabel: tillLabel || "",
     scope: tillLabel ? "till" : "all",
     billCount: rows.length,
+    returnCount: returnRows.length,
     sales,
-    netSales: sales,
+    refunds,
+    netSales: roundMoney(sales - refunds.total),
     tender: { cash, upi, card, total: roundMoney(cash + upi + card) },
-    bills: rows,
+    netTender: {
+      cash: roundMoney(cash - refunds.cash),
+      upi: roundMoney(upi - refunds.upi),
+      card: roundMoney(card - refunds.card),
+      total: roundMoney(cash + upi + card - refunds.total),
+    },
+    bills: allRows,
     byTill: [],
   };
 }

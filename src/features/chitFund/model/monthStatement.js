@@ -144,11 +144,18 @@ export function buildChitMonthStatement({ scheme, details = {}, monthNumber, gen
     };
   } else if (cycle?.winning_enrollment_id) {
     const winner = enrollments.find(item => item.id === cycle.winning_enrollment_id);
+    // The recorded lift is what the winner was paid: chit value minus the winning discount.
+    // The commission and the dividends both come out of that discount, not out of the lift.
+    const lifted = asNumber(cycle.winning_bid_amount) > 0
+      ? asNumber(cycle.winning_bid_amount)
+      : asNumber(scheme.chit_value) - asNumber(cycle.discount_amount);
     prize = {
       winner: memberName(winner),
-      prize: roundMoney(scheme.chit_value),
+      prize: roundMoney(lifted),
       commission: roundMoney(cycle.commission_amount),
-      netPayout: roundMoney(asNumber(scheme.chit_value) - asNumber(cycle.commission_amount)),
+      netPayout: roundMoney(lifted),
+      discount: roundMoney(asNumber(scheme.chit_value) - lifted),
+      dividendPerMember: roundMoney(cycle.dividend_per_member),
       status: "Complete",
     };
   }

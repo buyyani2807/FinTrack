@@ -281,13 +281,14 @@ export function counterDayCloseCoach({
   const tips = [];
   const float = roundMoney(n(openingFloat));
   const cashTender = roundMoney(report?.tender?.cash || 0);
+  const cashRefund = roundMoney(report?.refunds?.cash || 0);
   const upi = roundMoney(report?.tender?.upi || 0);
   const card = roundMoney(report?.tender?.card || 0);
   const sales = roundMoney(report?.sales || 0);
   const inflow = roundMoney(n(cashIn));
   const outflow = roundMoney(n(cashOut));
   const expected = expectedCash == null
-    ? roundMoney(float + cashTender + inflow - outflow)
+    ? roundMoney(float + cashTender - cashRefund + inflow - outflow)
     : roundMoney(expectedCash);
   const counted = roundMoney(n(countedCash));
   const gap = variance == null ? roundMoney(counted - expected) : roundMoney(variance);
@@ -297,6 +298,7 @@ export function counterDayCloseCoach({
     severity: "info",
     title: "How expected cash is built",
     detail: `Opening float ${roundMoney(float)} + cash tenders ${roundMoney(cashTender)}`
+      + (cashRefund ? ` \u2212 cash refunds ${cashRefund}` : "")
       + (inflow ? ` + cash in ${inflow}` : "")
       + (outflow ? ` \u2212 cash out ${outflow}` : "")
       + ` = expected ${roundMoney(expected)}. UPI ${roundMoney(upi)} and Card ${roundMoney(card)} stay out of the drawer.`,
@@ -447,6 +449,7 @@ export function counterDayCloseBrief({
     `Bills: ${report?.billCount || 0}`,
     `Sales: ${formatInr(report?.sales || 0)}`,
     `Cash: ${formatInr(tender.cash || 0)} · UPI: ${formatInr(tender.upi || 0)} · Card: ${formatInr(tender.card || 0)}`,
+    ...(report?.returnCount ? [`Returns: ${report.returnCount} · Refunded ${formatInr(report?.refunds?.total || 0)} (cash ${formatInr(report?.refunds?.cash || 0)})`] : []),
     "",
     `Opening float: ${formatInr(openingFloat)}`,
     `Expected cash: ${formatInr(expectedCash)}`,

@@ -100,6 +100,7 @@ import { accountsCompanyBranding } from "../model/salesInvoiceModel.js";
 import { isValidUpiId, upiPayLink } from "../model/upiPay.js";
 import { QrSvg } from "../PayPage.jsx";
 import { AccShortcutsPanel } from "./AccShortcutsPanel.jsx";
+import { counterReturnError, counterReturnLimits } from "../model/counterReturns.js";
 
 const PAY_MODES = COUNTER_PAY_MODES;
 const lineNet = counterLineNet;
@@ -689,7 +690,8 @@ export function CounterWorkspace({
   const expectedCash = useMemo(() => {
     // Drawer cash = opening float + cash portion of Counter tenders (not full Cash+UPI bills)
     // + cash put into the till − cash taken out of it.
-    const cashSales = todayCloseReport.tender.cash;
+    // Cash refunds from Counter returns leave the drawer, so they come off the expectation.
+    const cashSales = roundMoney(todayCloseReport.tender.cash - (todayCloseReport.refunds?.cash || 0));
     return expectedDrawerCash({
       openingFloat: Number(openingFloat || closed?.openingFloat || 0),
       cashSales,
@@ -1255,6 +1257,13 @@ export function CounterWorkspace({
         return;
       }
     }
+    if (isReturn) {
+      const returnProblem = counterReturnError(chargeLines, counterReturnLimits({ vouchers, voucherItemLines }));
+      if (returnProblem) {
+        setError(returnProblem);
+        return;
+      }
+    }
     if (isReturn && needsSupervisor) {
       try {
         const approved = await approveWithSupervisor({
@@ -1816,9 +1825,15 @@ export function CounterWorkspace({
               <span>Total sales</span>
               <strong>{money(dayReport.sales)}</strong>
             </article>
+            {dayReport.returnCount ? (
+              <article className="counter-dayreport-kpi">
+                <span>Refunds · {dayReport.returnCount}</span>
+                <strong>{money(-(dayReport.refunds?.total || 0))}</strong>
+              </article>
+            ) : null}
             <article className="counter-dayreport-kpi">
-              <span>Cash</span>
-              <strong>{money(dayReport.tender.cash)}</strong>
+              <span>{dayReport.refunds?.cash ? "Cash (after refunds)" : "Cash"}</span>
+              <strong>{money(dayReport.netTender?.cash ?? dayReport.tender.cash)}</strong>
             </article>
             <article className="counter-dayreport-kpi">
               <span>UPI</span>
@@ -1888,7 +1903,7 @@ export function CounterWorkspace({
                         {onReprint ? (
                           <button type="button" className="btn" onClick={() => onReprint(bill.id)}>Print</button>
                         ) : null}
-                        {onWhatsAppShare ? (
+                        {onWhatsAppShare && !bill.isReturn ? (
                           <button type="button" className="btn whatsapp" onClick={() => onWhatsAppShare(bill.id)} title="Share this bill on WhatsApp">WhatsApp</button>
                         ) : null}
                       </td>

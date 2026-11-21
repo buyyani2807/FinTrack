@@ -18,7 +18,10 @@ const sampleAuction = () => {
     member("e9", "Manish", 9),
     member("e10", "Nishant", 10),
   ];
-  const cycle = { id: "c1", cycle_number: 1, winning_enrollment_id: "e2", commission_amount: 40000 };
+  const cycle = {
+    id: "c1", cycle_number: 1, winning_enrollment_id: "e2", winning_bid_amount: 900000,
+    discount_amount: 100000, commission_amount: 40000, dividend_per_member: 6000,
+  };
   return {
     scheme: {
       name: "₹10L · 10M",
@@ -55,9 +58,11 @@ test("builds an auction month statement matching the sample totals", () => {
   assert.equal(statement.progress, 20);
   assert.deepEqual(statement.prize, {
     winner: "Satish",
-    prize: 1000000,
+    prize: 900000,
     commission: 40000,
-    netPayout: 960000,
+    netPayout: 900000,
+    discount: 100000,
+    dividendPerMember: 6000,
     status: "Complete",
   });
   assert.equal(statement.collections.length, 10);
@@ -180,4 +185,27 @@ test("renders a downloadable PDF with the sample statement sections", () => {
   assert.match(pdf, /Kishore/);
   assert.match(pdf, /Collection Progress  20% received/);
   assert.equal(statement.progress, 20);
+});
+
+// RC3 P1-3: a ₹40,000 scheme lifted at ₹34,000 printed "Lift ₹40,000 · Net ₹38,000".
+test("auction statement prints the lift actually paid, not the chit value", () => {
+  const enrollments = [member("a", "One", 1), member("b", "Two", 2), member("c", "Three", 3), member("d", "Four", 4)];
+  const input = {
+    scheme: { name: "RC3", chit_type: "auction", start_date: "2026-11-21", duration_months: 4, chit_value: 40000, installment_amount: 10000 },
+    details: {
+      enrollments,
+      cycles: [{ id: "c1", cycle_number: 1, winning_enrollment_id: "a", winning_bid_amount: 34000, discount_amount: 6000, commission_amount: 2000, dividend_per_member: 1000 }],
+      installments: enrollments.map(item => ({ enrollment_id: item.id, cycle_id: "c1", net_amount_due: 9000, amount_paid: 0 })),
+    },
+    monthNumber: 1,
+    generatedAt: new Date("2026-11-21T11:00:00+05:30"),
+  };
+  const statement = buildChitMonthStatement(input);
+  assert.equal(statement.prize.prize, 34000);
+  assert.equal(statement.prize.netPayout, 34000);
+  assert.equal(statement.prize.discount, 6000);
+  assert.equal(statement.prize.dividendPerMember, 1000);
+  const { pdf } = renderChitMonthStatementPdf(input);
+  assert.match(pdf, /Rs\. 34,000/);
+  assert.doesNotMatch(pdf, /Rs\. 38,000/);
 });

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { deleteChitScheme, deleteEnrolledChitMember } from "../../../lib/financeRepository";
+import { deleteChitScheme, deleteEnrolledChitMember, reverseChitLift } from "../../../lib/financeRepository";
 import { chitTypeLabel } from "../model/memberPortal";
 import { memberRemovalCopy, schemeRemovalCopy } from "../model/schemeAdmin";
 import { schemeStatusLabel, enrollmentName } from "../model/chitFormat.js";
@@ -108,4 +108,30 @@ export function ChitSchemeHeaderActions({ token, scheme, memberCount, onSchemeDe
     {extra}
     {canWrite && onSchemeDeleted ? <ChitDeleteSchemeControl token={token} scheme={scheme} memberCount={memberCount} onDeleted={onSchemeDeleted} /> : null}
   </div>;
+}
+
+/**
+ * Reverse a recorded lift so a wrong member or amount can be re-entered.
+ * The server removes the month's payout from the cashbook and keeps the record in the audit log.
+ */
+export function ChitReverseLiftButton({ token, scheme, month, memberName = "", amount = "", onDone }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [reason, setReason] = useState("");
+  const confirm = async () => {
+    if (!reason.trim()) { setError("Add a reason for reversing this lift."); return; }
+    setBusy(true); setError("");
+    try { await reverseChitLift(token, scheme.id, month, reason); setOpen(false); setReason(""); await onDone?.(); }
+    catch (err) { setError(err?.message || "Could not reverse this lift."); }
+    finally { setBusy(false); }
+  };
+  return <>
+    <Button className="danger" onClick={() => { setError(""); setOpen(true); }}>Reverse lift</Button>
+    {open && <ConfirmDangerModal title={`Reverse the Month ${month} lift?`} confirmLabel="Reverse lift" busy={busy} error={error} onCancel={() => !busy && setOpen(false)} onConfirm={confirm}>
+      <p className="notice">{[memberName && `Lift member: ${memberName}`, amount && `Amount: ${amount}`].filter(Boolean).join(" · ") || `${scheme.name} · Month ${month}`}</p>
+      <p className="copy">The payout is removed from the cashbook and the month goes back to pending so you can record it again. Members must not have paid this month yet. The reversal stays in the scheme's audit log.</p>
+      <Field label="Reason"><input value={reason} onChange={event => setReason(event.target.value)} placeholder="Why this lift is being reversed" /></Field>
+    </ConfirmDangerModal>}
+  </>;
 }

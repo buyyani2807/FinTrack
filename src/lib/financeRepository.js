@@ -623,6 +623,10 @@ export const deleteEnrolledChitMember = (token, enrollmentId) => supabase.rpc("c
 export const deleteChitScheme = (token, schemeId) => supabase.rpc("chit_delete_scheme", {
   input_scheme_id: schemeId,
 }, token);
+/** Undo a recorded lift (auction month, Fixed lift or Predefined month). Server refuses if the month is already collected or synced to Accounts. */
+export const reverseChitLift = (token, schemeId, monthNumber, reason) => supabase.rpc("chit_reverse_lift", {
+  input_scheme_id: schemeId, input_month_number: Number(monthNumber), input_reason: String(reason || "").trim(),
+}, token);
 export const activateChitScheme = (token, schemeId) => supabase.rpc("chit_activate_scheme", { input_scheme_id: schemeId }, token);
 export const recordChitMonthlyBid = (token, bid) => supabase.rpc("chit_record_monthly_bid", {
   input_scheme_id: bid.schemeId, input_cycle_number: Number(bid.cycleNumber), input_cycle_date: bid.cycleDate,

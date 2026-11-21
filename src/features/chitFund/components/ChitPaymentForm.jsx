@@ -1,7 +1,7 @@
 import { Select } from "../../../components/Select.jsx";
 import { Button, Field } from "../../../components/ui.jsx";
 import { CHIT_PAYMENT_MODES } from "../model/chitLabels.js";
-import { money, formatChitDate } from "../model/chitFormat.js";
+import { money, formatChitDate, today } from "../model/chitFormat.js";
 
 /**
  * Shared Record / Edit payment fields for every Chit type. Callers keep their own save APIs and validation.
@@ -54,7 +54,7 @@ export function ChitPaymentForm({
           <input type="number" min="0.01" step="0.01" required value={amount} onChange={event => onAmount(event.target.value)} />
         </Field>
         <Field label="Payment date">
-          <input type="date" required value={date} onChange={event => onDate(event.target.value)} />
+          <input type="date" required max={today()} value={date} onChange={event => onDate(event.target.value)} />
         </Field>
         <Field label="Payment mode">
           <Select value={mode} onChange={event => onMode(event.target.value)}>
