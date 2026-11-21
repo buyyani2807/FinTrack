@@ -4,6 +4,7 @@ import { canWhatsAppShare, openManualWhatsAppShare } from "../../receipts/io/rec
 import { buildArReminderMessage, buildOutstandingSummaryMessage, buildPartyStatementMessage, buildPaymentAdviceMessage, buildPurchaseDocumentMessage, salesInvoicePresentation } from "../model/salesInvoiceModel.js";
 import { downloadSalesInvoicePdf, invoicePdfShareOnThisDevice, printSalesInvoicePdf, salesInvoicePdfFile, salesInvoiceWhatsAppText } from "../io/salesInvoicePdf.js";
 import { downloadPartyStatementPdf } from "../io/partyStatementPdf.js";
+import { uploadReceiptPdfLink, withReceiptLink } from "../io/receiptLink.js";
 import { CloseButton, ModalScroll } from "../../../components/ui.jsx";
 import { useDialogDismiss } from "../../../components/useDialogDismiss.js";
 
@@ -38,9 +39,25 @@ function sendInvoiceMessage(invoice) {
   openManualWhatsAppShare({ phone: invoice.customerPhone, message });
 }
 
-/** Also used for the Counter "Today" bills list, so a bill that's dropped off-screen can still be shared. */
-export function sendSalesInvoiceOnWhatsApp(invoice) {
+/**
+ * Also used for the Counter "Today" bills list, so a bill that's dropped off-screen can still be shared.
+ * Pass `link` ({ token, companyId, billKey }) to send a bill with a customer number straight to that
+ * number with a PDF download link (see io/receiptLink.js) instead of the share sheet, which can't be
+ * told the recipient.
+ */
+export function sendSalesInvoiceOnWhatsApp(invoice, link = null) {
   const file = salesInvoicePdfFile(invoice);
+  if (link?.token && link?.companyId && link?.billKey && canWhatsAppShare(invoice.customerPhone)) {
+    const upload = file
+      ? uploadReceiptPdfLink({ token: link.token, companyId: link.companyId, billKey: link.billKey, file }).catch(() => "")
+      : Promise.resolve("");
+    upload.then(pdfLink => openManualWhatsAppShare({
+      phone: invoice.customerPhone,
+      message: withReceiptLink(salesInvoiceWhatsAppText(invoice), pdfLink),
+      note: pdfLink ? "" : "Sent as text only: the PDF link needs an internet connection.",
+    }));
+    return;
+  }
   const canGivePdfToWhatsApp = Boolean(
     file
     && invoicePdfShareOnThisDevice(navigator.userAgent, navigator.maxTouchPoints)

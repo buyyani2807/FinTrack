@@ -635,8 +635,12 @@ export function AccountsModule({ token, close, onOpenCashbook, logout, workspace
     });
     setPendingCounterWhatsAppId(null);
     if (!built) { setNotice("Could not build this bill for WhatsApp."); return; }
-    sendSalesInvoiceOnWhatsApp(withCounterReceiptPrint(built, counterSettings.printFormat));
-  }, [pendingCounterWhatsAppId, vouchers, parties, accounts, companies, activeCompanyId, workspace, voucherItemLines, documentSettings, counterSettings.printFormat]);
+    sendSalesInvoiceOnWhatsApp(withCounterReceiptPrint(built, counterSettings.printFormat), {
+      token,
+      companyId: company?.id || activeCompanyId,
+      billKey: voucher.id,
+    });
+  }, [pendingCounterWhatsAppId, vouchers, parties, accounts, companies, activeCompanyId, workspace, voucherItemLines, documentSettings, counterSettings.printFormat, token]);
 
   useEffect(() => {
     if (!token || !expandedVoucherId || migrationRequired) {

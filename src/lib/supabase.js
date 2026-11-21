@@ -207,6 +207,24 @@ export const supabase = {
   },
   rpc: (name, args, token, extraHeaders = {}) => request(`/rest/v1/rpc/${name}`, { method: "POST", body: JSON.stringify(args), headers: extraHeaders }, token),
   query: (path, token, options = {}) => request(path, options, token),
+  storage: {
+    upload: (bucket, path, body, contentType, token) => request(
+      `/storage/v1/object/${bucket}/${path}`,
+      { method: "POST", body, headers: { "Content-Type": contentType, "x-upsert": "true" } },
+      token,
+    ),
+    /** Returns a full, time-limited download URL for a private object. */
+    createSignedUrl: async (bucket, path, expiresIn, token) => {
+      const result = await request(
+        `/storage/v1/object/sign/${bucket}/${path}`,
+        { method: "POST", body: JSON.stringify({ expiresIn }) },
+        token,
+      );
+      const signed = String(result?.signedURL || result?.signedUrl || "");
+      if (!signed) return "";
+      return `${url}/storage/v1${signed.startsWith("/") ? "" : "/"}${signed}`;
+    },
+  },
   from: (table, token) => ({
     select: (query = "*") => request(`/rest/v1/${table}?select=${encodeURIComponent(query)}`, {}, token),
     insert: values => request(`/rest/v1/${table}`, { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(values) }, token),

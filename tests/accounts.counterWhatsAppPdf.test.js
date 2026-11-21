@@ -18,8 +18,12 @@ test("Counter sale WhatsApp share tries the PDF-attach (navigator.share) path be
   assert.match(body, /invoicePdfShareOnThisDevice\(navigator\.userAgent, navigator\.maxTouchPoints\)/);
   assert.match(body, /navigator\.canShare\(\{ files: \[file\] \}\)/);
   assert.match(body, /navigator\.share\(\{ files: \[file\], title: file\.name \}\)/);
-  // The PDF-attach attempt must come before the existing text-message branches.
+  // A bill with a customer number goes straight to that number (wa.me + PDF link) first;
+  // the share sheet (which can't take a recipient) is only for bills without one.
+  const numberIndex = body.indexOf("if (canWhatsAppShare(partyPhone))");
   const pdfIndex = body.indexOf("navigator.share({ files:");
-  const textIndex = body.indexOf("openManualWhatsAppShare({ phone: partyPhone, message: text })");
-  assert.ok(pdfIndex > -1 && textIndex > -1 && pdfIndex < textIndex);
+  const noPhoneIndex = body.indexOf("No customer phone on this bill");
+  assert.ok(numberIndex > -1 && pdfIndex > -1 && noPhoneIndex > -1);
+  assert.ok(numberIndex < pdfIndex && pdfIndex < noPhoneIndex);
+  assert.match(body, /openManualWhatsAppShare\(\{\s*phone: partyPhone,\s*message: withReceiptLink\(text, link\)/);
 });

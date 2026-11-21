@@ -23,7 +23,7 @@ test("AccountingProduct wires onWhatsAppShare into both CounterWorkspace mounts 
   );
   const wiredCount = (source.match(/onWhatsAppShare=\{voucherId => setPendingCounterWhatsAppId\(voucherId\)\}/g) || []).length;
   assert.equal(wiredCount, 2);
-  assert.match(source, /sendSalesInvoiceOnWhatsApp\(withCounterReceiptPrint\(built, counterSettings\.printFormat\)\)/);
+  assert.match(source, /sendSalesInvoiceOnWhatsApp\(withCounterReceiptPrint\(built, counterSettings\.printFormat\), \{[\s\S]*?billKey: voucher\.id,/);
 });
 
 test("sendSalesInvoiceOnWhatsApp is exported for reuse outside SalesInvoiceActions", () => {
@@ -31,5 +31,5 @@ test("sendSalesInvoiceOnWhatsApp is exported for reuse outside SalesInvoiceActio
     new URL("../src/features/accounts/components/SalesInvoiceActions.jsx", import.meta.url),
     "utf8",
   );
-  assert.match(source, /export function sendSalesInvoiceOnWhatsApp\(invoice\)/);
+  assert.match(source, /export function sendSalesInvoiceOnWhatsApp\(invoice, link = null\)/);
 });

@@ -94,7 +94,8 @@ import {
 import { syncOfflineCounterBills } from "../model/counterOfflineSync.js";
 import { invoicePdfShareOnThisDevice, printSalesInvoicePdf, salesInvoicePdfFile } from "../io/salesInvoicePdf.js";
 import { formatReceiptDateTime } from "../../receipts/model/receiptModel.js";
-import { openManualWhatsAppShare } from "../../receipts/io/receiptWhatsApp.js";
+import { canWhatsAppShare, openManualWhatsAppShare } from "../../receipts/io/receiptWhatsApp.js";
+import { uploadReceiptPdfLink, withReceiptLink } from "../io/receiptLink.js";
 import { accountsCompanyBranding } from "../model/salesInvoiceModel.js";
 import { isValidUpiId, upiPayLink } from "../model/upiPay.js";
 import { QrSvg } from "../PayPage.jsx";
@@ -1029,6 +1030,31 @@ export function CounterWorkspace({
     });
   };
 
+  const billPhone = bill => bill?.customerPhone
+    || selectedParty?.phone
+    || (bill?.customerName ? (customers.find(party => party.name === bill.customerName)?.phone || "") : "");
+
+  // Receipt PDF link for sending straight to the customer's number (see io/receiptLink.js).
+  // Started as soon as a bill with a phone number is charged, so the link is usually
+  // ready by the time the cashier taps Share and WhatsApp opens from that tap.
+  const receiptLinkRef = useRef({ key: "", promise: null });
+  const receiptLinkFor = bill => {
+    const key = bill?.voucherId || bill?.offlineId || "";
+    if (!key || !bill?.printBill || !token || !companyId || !isBrowserOnline()) return null;
+    if (receiptLinkRef.current.key === key && receiptLinkRef.current.promise) return receiptLinkRef.current.promise;
+    const invoice = billToInvoice(bill.printBill);
+    const file = invoice ? salesInvoicePdfFile(invoice) : null;
+    if (!file) return null;
+    const promise = uploadReceiptPdfLink({ token, companyId, billKey: key, file }).catch(() => "");
+    receiptLinkRef.current = { key, promise };
+    return promise;
+  };
+
+  const rememberLastBill = bill => {
+    setLastBill(bill);
+    if (canWhatsAppShare(billPhone(bill))) receiptLinkFor(bill);
+  };
+
   const printOfflineBill = bill => {
     const printFormat = counterSettings?.printFormat || "thermal80";
     const invoice = billToInvoice(bill);
@@ -1110,7 +1136,7 @@ export function CounterWorkspace({
     };
     await putOfflineBill(bill);
     await refreshOfflineBills();
-    setLastBill({
+    rememberLastBill({
       voucherId: null,
       offlineId: bill.id,
       offlineRef,
@@ -1290,7 +1316,7 @@ export function CounterWorkspace({
         const total = voucherTotals(draft.lines).debit;
         const customer = receiptCustomer();
         const printBill = buildTillBill({ draft, moneyParts, payMode, voucherId, total, isReturn, customer });
-        setLastBill({
+        rememberLastBill({
           voucherId,
           total,
           at: new Date().toISOString(),
@@ -1335,11 +1361,7 @@ export function CounterWorkspace({
       return;
     }
     const receiptTotals = lastBill.receiptTotals || { taxable: lastBill.total, tax: 0, taxLabel: "", total: lastBill.total };
-    const partyPhone = lastBill.customerPhone
-      || selectedParty?.phone
-      || (lastBill.customerName
-        ? (customers.find(party => party.name === lastBill.customerName)?.phone || "")
-        : "");
+    const partyPhone = billPhone(lastBill);
     const text = buildCounterWhatsAppReceipt({
       companyName: branding?.companyName || activeCompany?.name || "Store",
       companyPhone: branding?.companyPhone || "",
@@ -1364,8 +1386,25 @@ export function CounterWorkspace({
       date: lastBill.printBill?.date || today,
     });
 
-    // Same as the "+ New sale" Sales Invoice WhatsApp button: on a phone/tablet, hand
-    // WhatsApp the actual receipt PDF via the native share sheet instead of text only.
+    // Customer number entered: go straight to that customer's chat (wa.me) with the bill
+    // text plus a link to the PDF. The share sheet below can attach a PDF but can't be
+    // told the recipient, so it's kept only for bills without a number.
+    if (canWhatsAppShare(partyPhone)) {
+      if (!window.confirm(`Send this receipt to ${partyPhone} on WhatsApp? Nothing is sent until you tap send in WhatsApp.`)) {
+        return;
+      }
+      const pending = receiptLinkFor(lastBill);
+      const link = pending ? await pending : "";
+      openManualWhatsAppShare({
+        phone: partyPhone,
+        message: withReceiptLink(text, link),
+        note: link ? "" : "Sent as text only: the PDF link needs an internet connection.",
+      });
+      return;
+    }
+
+    // No number on the bill: on a phone/tablet, hand WhatsApp the actual receipt PDF via
+    // the native share sheet (same as "+ New sale"), and pick the chat there.
     if (lastBill.printBill && invoicePdfShareOnThisDevice(navigator.userAgent, navigator.maxTouchPoints)) {
       const invoice = billToInvoice(lastBill.printBill);
       const file = invoice ? salesInvoicePdfFile(invoice) : null;
@@ -1388,13 +1427,6 @@ export function CounterWorkspace({
       }
     }
 
-    if (partyPhone) {
-      if (!window.confirm("Open WhatsApp with this receipt for the customer? Nothing is sent until you tap send in WhatsApp.")) {
-        return;
-      }
-      openManualWhatsAppShare({ phone: partyPhone, message: text });
-      return;
-    }
     if (!window.confirm("No customer phone on this bill. Open WhatsApp with the receipt text to pick a chat?")) {
       return;
     }
