@@ -9,7 +9,7 @@ import { chitSchemePath, collectionsPath, financeSectionPath, workspacePaths } f
 // (section: overview, collections, customers, users, reports). Every one of these routes renders this same component,
 // so moving between them keeps the dashboard's state.
 export function FinanceRoute({ module, section = "overview" }) {
-  const { access, session, chitSchemes, moduleState } = useOutletContext();
+  const { access, session, chitSchemes, chitSchemesLoaded = true, moduleState } = useOutletContext();
   const navigate = useNavigate();
   if (module !== "all" && !access[module]) {
     if (access?.locked?.[module]) {
@@ -67,6 +67,7 @@ export function FinanceRoute({ module, section = "overview" }) {
       workspace={workspace || {}}
       onLogReceipt={logReceipt}
       activeChitSchemes={chitSchemes}
+      activeChitSchemesLoaded={chitSchemesLoaded}
       module={module}
       section={module === "all" ? null : section}
     />

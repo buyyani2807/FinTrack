@@ -1,56 +1,7 @@
-// Public website paths. Authenticated workspace paths stay in features/workspace/paths.js.
-export const marketingPaths = {
-  home: "/",
-  solutions: "/solutions",
-  how: "/how-it-works",
-  security: "/security",
-  pricing: "/pricing",
-  about: "/about",
-  founder: "/founder",
-  contact: "/contact",
-  privacy: "/privacy",
-  terms: "/terms",
-  login: "/login",
-  signup: "/login?signup=1",
-};
-
-const MARKETING_ROOTS = [
-  "/features",
-  "/finance",
-  "/auction-chit",
-  "/accounts-overview",
-  "/accounts",
-  "/counter-pos",
-  "/pos",
-  "/ai",
-  "/solutions",
-  "/how-it-works",
-  "/security",
-  "/pricing",
-  "/about",
-  "/founder",
-  "/contact",
-  "/privacy",
-  "/terms",
-];
-
-export function normalizePath(pathname = "/") {
-  const path = String(pathname || "/").replace(/\/+$/, "");
-  return path || "/";
-}
-
-export function isMarketingPath(pathname) {
-  const path = normalizePath(pathname);
-  if (path === "/" || path === "/chit-fund") return true;
-  // Signed-in chit pages live at /chit-fund/schemes and below. Only the exact public page is marketing.
-  return MARKETING_ROOTS.some(root => path === root || path.startsWith(`${root}/`));
-}
-
-// Pages shown before sign-in. public/theme-init.js uses the same paths so the first paint stays light.
-export function isGuestThemePath(pathname) {
-  const path = normalizePath(pathname);
-  return path === "/login" || path === "/pay" || isMarketingPath(path);
-}
+// Public website paths and module feature URLs. The plain path helpers live in routePaths.js so
+// the signed-in app can use them without loading the marketing catalog.
+export { isGuestThemePath, isMarketingPath, marketingPaths, normalizePath } from "./routePaths.js";
+import { normalizePath } from "./routePaths.js";
 
 // Nav modules live at /finance, /chit-fund, /accounts, /pos, and so on.
 // A feature inside a module lives at /finance/features/credit-score.

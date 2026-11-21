@@ -4,9 +4,9 @@ import { LoadingScreen } from "./AppShell.jsx";
 import { SessionLayout } from "./SessionLayout.jsx";
 import { Spinner } from "../components/ui.jsx";
 import { PayPage } from "../features/accounts/PayPage.jsx";
-import { MarketingLayout } from "../features/marketing/MarketingLayout.jsx";
 import { AccountsRoute } from "../features/workspace/routes/AccountsRoute.jsx";
 import { RequireModule } from "../features/workspace/routes/RequireModule.jsx";
+import { isMarketingPath, normalizePath } from "../features/marketing/routePaths.js";
 
 const named = (importer, exportName) => lazy(() => importer().then(mod => ({ default: mod[exportName] })));
 
@@ -30,6 +30,15 @@ function MarketingPageFallback() {
 const marketingFallback = <MarketingPageFallback />;
 const workspaceFallback = <LoadingScreen />;
 const pageFallback = <div className="shell"><Spinner label="Loading" /></div>;
+
+// The marketing layout pulls in the feature catalog and the marketing stylesheet. Signed-in users
+// never render it, so it loads with the first marketing page instead of with the app shell.
+const MarketingLayout = withLazy(() => import("../features/marketing/MarketingLayout.jsx"), "MarketingLayout", pageFallback);
+// On a public URL, start the layout (and the home page on "/") with the app instead of one after the other.
+if (typeof window !== "undefined" && isMarketingPath(window.location.pathname)) {
+  import("../features/marketing/MarketingLayout.jsx").catch(() => {});
+  if (normalizePath(window.location.pathname) === "/") import("../features/marketing/HomePage.jsx").catch(() => {});
+}
 
 const HomePage = withLazy(() => import("../features/marketing/HomePage.jsx"), "HomePage", marketingFallback);
 const FeatureDetailPage = withLazy(() => import("../features/marketing/FeatureDetailPage.jsx"), "FeatureDetailPage", marketingFallback);

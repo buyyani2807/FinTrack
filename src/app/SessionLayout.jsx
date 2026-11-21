@@ -2,7 +2,7 @@ import { lazy, Suspense, useLayoutEffect } from "react";
 import { Navigate, Outlet, useLocation } from "react-router";
 import { PageReveal } from "../components/ui/PageReveal.jsx";
 import { RevealProvider } from "../components/ui/Reveal.jsx";
-import { isMarketingPath, normalizePath } from "../features/marketing/paths.js";
+import { isMarketingPath, normalizePath } from "../features/marketing/routePaths.js";
 import { applyDocumentTheme, storedTheme } from "../lib/theme.js";
 import { LoadingScreen } from "./AppShell.jsx";
 import { useFinTrackSession } from "./useFinTrackSession.js";

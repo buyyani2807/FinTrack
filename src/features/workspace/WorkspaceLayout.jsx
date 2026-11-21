@@ -81,6 +81,9 @@ export function WorkspaceLayout() {
         };
   const showFinanceChrome = showOwnerChrome || showFinancePartnerChrome;
   const [chitSchemes, setChitSchemes] = useState([]);
+  // True once the active-scheme list has answered (or chit is not available), so pages that depend on
+  // it can wait for the real list instead of loading once with [] and again a moment later.
+  const [chitSchemesLoaded, setChitSchemesLoaded] = useState(false);
   const [askOpen, setAskOpen] = useState(false);
   const [accountsCompanyName, setAccountsCompanyName] = useState("");
   const askEnabled = isModuleEnabled(orgSettings, "ai");
@@ -113,11 +116,14 @@ export function WorkspaceLayout() {
 
   useEffect(() => {
     const canLoadChit = showOwnerChrome || (moduleAccess.isFinancePartner && moduleAccess.chit);
-    if (subscriptionLocked || !canLoadChit || !token) return undefined;
+    if (subscriptionLocked || !canLoadChit || !token) {
+      setChitSchemesLoaded(true);
+      return undefined;
+    }
     let cancelled = false;
     loadActiveChitSchemes(token)
-      .then(schemes => { if (!cancelled) setChitSchemes(schemes || []); })
-      .catch(() => { if (!cancelled) setChitSchemes([]); });
+      .then(schemes => { if (!cancelled) { setChitSchemes(schemes || []); setChitSchemesLoaded(true); } })
+      .catch(() => { if (!cancelled) { setChitSchemes([]); setChitSchemesLoaded(true); } });
     return () => { cancelled = true; };
   }, [subscriptionLocked, showOwnerChrome, moduleAccess.isFinancePartner, moduleAccess.chit, token]);
 
@@ -215,7 +221,7 @@ export function WorkspaceLayout() {
     access, token, loans, workspace: workspace || {}, orgSettings, moduleState, refreshModuleEntitlements, logout,
     onLogReceipt: logReceipt, onSettingsSaved: () => refreshWorkspace(),
     onLoadAgents: getManagedAgents, onCreateAgent: addCollectionAgent, onAssignAgent: updateAgentAssignment, onUpdateAgent: saveCollectionStaff,
-    chitSchemes, setChitSchemes, session,
+    chitSchemes, chitSchemesLoaded, setChitSchemes, session,
   };
 
   if (subscriptionLocked && !subscriptionPathAllowed(location.pathname, subscription)) {

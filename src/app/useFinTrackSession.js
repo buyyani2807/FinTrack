@@ -63,6 +63,9 @@ export function useFinTrackSession() {
           await supabase.auth.signOut();
           return;
         }
+        // The workspace was just loaded with this token; skip the refresh the token change would trigger.
+        // Without this every reload fetched the profile and subscription twice (pre-pilot perf audit).
+        skipNextWorkspaceRefresh.current = true;
         flushSync(() => {
           setWorkspace(next);
           setUser({

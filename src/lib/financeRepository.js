@@ -100,6 +100,10 @@ async function loadProfileOrganization(token, profileSelect) {
 }
 
 export async function loadWorkspace(token) {
+  // The subscription depends only on the signed-in user, so fetch it alongside the profile instead of
+  // after it. This takes one round trip off every sign-in and reload. A profile failure still throws below.
+  const subscriptionPromise = loadSubscription(token);
+  subscriptionPromise.catch(() => {});
   const rows = await loadProfileOrganization(token, "id,full_name,role,is_active");
   const profile = rows[0];
   const organization = Array.isArray(profile?.organizations) ? profile.organizations[0] : profile?.organizations;
@@ -109,8 +113,6 @@ export async function loadWorkspace(token) {
   let businessName = organization?.name || "My Finance Business";
   let collectionScope = "";
   let accountsCompanyId = "";
-  // Start subscription while staff extras load so login is not profile → subscription waterfall.
-  const subscriptionPromise = loadSubscription(token);
   if (profile.role === "staff") {
     try {
       const [self] = await supabase.query(`/rest/v1/profiles?id=eq.${profile.id}&select=collection_scope,accounts_company_id&limit=1`, token);
@@ -261,18 +263,15 @@ async function loadUpcomingChitPaymentsFromSchemes(token) {
   if (!schemes.length) return [];
 
   const schemeIds = schemes.map(scheme => scheme.id);
-  const enrollments = await supabase.query(
-    `/rest/v1/chit_enrollments?scheme_id=${schemeInFilter(schemeIds)}&select=id,scheme_id,status,chit_members(full_name,phone)&status=eq.active&order=scheme_id.asc,ticket_number.asc`,
-    token,
-  ).catch(() => []);
-
-  const rows = [];
-  const enrollmentsFor = schemeId => (enrollments || []).filter(item => item.scheme_id === schemeId);
-
   const auctionSchemes = schemes.filter(scheme => (scheme.chit_type || CHIT_TYPES.AUCTION) === CHIT_TYPES.AUCTION);
-  if (auctionSchemes.length) {
-    const auctionSchemeIds = auctionSchemes.map(scheme => scheme.id);
-    const cycles = await querySchemeRows(token, "chit_cycles", auctionSchemeIds, "cycle_number.asc");
+  const fixedSchemes = schemes.filter(scheme => scheme.chit_type === CHIT_TYPES.FIXED);
+  const predefinedSchemes = schemes.filter(scheme => scheme.chit_type === CHIT_TYPES.FIXED_PREDEFINED_BID);
+
+  // Members, auction months and the Fixed / Predefined schedules are independent of each other, so they
+  // load together instead of one after another (was five sequential round trips on the dashboard).
+  const loadAuction = async () => {
+    if (!auctionSchemes.length) return { cycles: [], installments: [] };
+    const cycles = await querySchemeRows(token, "chit_cycles", auctionSchemes.map(scheme => scheme.id), "cycle_number.asc");
     const cycleIds = cycles.map(cycle => cycle.id);
     let installments = [];
     if (cycleIds.length) {
@@ -285,54 +284,69 @@ async function loadUpcomingChitPaymentsFromSchemes(token) {
         if (!isMissingSchemaError(error)) throw error;
       }
     }
-    auctionSchemes.forEach(scheme => {
-      const schemeCycles = cycles.filter(cycle => cycle.scheme_id === scheme.id);
-      const cycleIdSet = new Set(schemeCycles.map(cycle => cycle.id));
-      rows.push(...flattenSchemePaymentsForReminders(scheme, {
-        enrollments: enrollmentsFor(scheme.id),
-        cycles: schemeCycles,
-        installments: installments.filter(item => cycleIdSet.has(item.cycle_id)),
-      }));
-    });
-  }
+    return { cycles, installments };
+  };
+  const fixedIds = fixedSchemes.map(scheme => scheme.id);
+  const predefinedIds = predefinedSchemes.map(scheme => scheme.id);
+  const [enrollments, auction, fixedPayments, fixedLifts, predefinedPayments, predefinedSchedule] = await Promise.all([
+    supabase.query(
+      `/rest/v1/chit_enrollments?scheme_id=${schemeInFilter(schemeIds)}&select=id,scheme_id,status,chit_members(full_name,phone)&status=eq.active&order=scheme_id.asc,ticket_number.asc`,
+      token,
+    ).catch(() => []),
+    loadAuction(),
+    fixedIds.length ? querySchemeRows(token, "fixed_chit_payments", fixedIds, "payment_month.asc") : [],
+    fixedIds.length ? querySchemeRows(token, "fixed_chit_lifts", fixedIds, "month_number.asc") : [],
+    predefinedIds.length ? querySchemeRows(token, "predefined_chit_payments", predefinedIds, "payment_month.asc") : [],
+    predefinedIds.length ? querySchemeRows(token, "predefined_chit_schedule", predefinedIds, "month_number.asc") : [],
+  ]);
 
-  const fixedSchemes = schemes.filter(scheme => scheme.chit_type === CHIT_TYPES.FIXED);
-  if (fixedSchemes.length) {
-    const fixedSchemeIds = fixedSchemes.map(scheme => scheme.id);
-    const [fixedPayments, fixedLifts] = await Promise.all([
-      querySchemeRows(token, "fixed_chit_payments", fixedSchemeIds, "payment_month.asc"),
-      querySchemeRows(token, "fixed_chit_lifts", fixedSchemeIds, "month_number.asc"),
-    ]);
-    fixedSchemes.forEach(scheme => {
-      rows.push(...flattenSchemePaymentsForReminders(scheme, {
-        enrollments: enrollmentsFor(scheme.id),
-        fixedPayments: fixedPayments.filter(item => item.scheme_id === scheme.id),
-        fixedLifts: fixedLifts.filter(item => item.scheme_id === scheme.id),
-      }));
-    });
-  }
+  const rows = [];
+  const enrollmentsFor = schemeId => (enrollments || []).filter(item => item.scheme_id === schemeId);
 
-  const predefinedSchemes = schemes.filter(scheme => scheme.chit_type === CHIT_TYPES.FIXED_PREDEFINED_BID);
-  if (predefinedSchemes.length) {
-    const predefinedSchemeIds = predefinedSchemes.map(scheme => scheme.id);
-    const [predefinedPayments, predefinedSchedule] = await Promise.all([
-      querySchemeRows(token, "predefined_chit_payments", predefinedSchemeIds, "payment_month.asc"),
-      querySchemeRows(token, "predefined_chit_schedule", predefinedSchemeIds, "month_number.asc"),
-    ]);
-    predefinedSchemes.forEach(scheme => {
-      rows.push(...flattenSchemePaymentsForReminders(scheme, {
-        enrollments: enrollmentsFor(scheme.id),
-        predefinedPayments: predefinedPayments.filter(item => item.scheme_id === scheme.id),
-        predefinedSchedule: predefinedSchedule.filter(item => item.scheme_id === scheme.id),
-      }));
-    });
-  }
+  auctionSchemes.forEach(scheme => {
+    const schemeCycles = auction.cycles.filter(cycle => cycle.scheme_id === scheme.id);
+    const cycleIdSet = new Set(schemeCycles.map(cycle => cycle.id));
+    rows.push(...flattenSchemePaymentsForReminders(scheme, {
+      enrollments: enrollmentsFor(scheme.id),
+      cycles: schemeCycles,
+      installments: auction.installments.filter(item => cycleIdSet.has(item.cycle_id)),
+    }));
+  });
+  fixedSchemes.forEach(scheme => {
+    rows.push(...flattenSchemePaymentsForReminders(scheme, {
+      enrollments: enrollmentsFor(scheme.id),
+      fixedPayments: fixedPayments.filter(item => item.scheme_id === scheme.id),
+      fixedLifts: fixedLifts.filter(item => item.scheme_id === scheme.id),
+    }));
+  });
+  predefinedSchemes.forEach(scheme => {
+    rows.push(...flattenSchemePaymentsForReminders(scheme, {
+      enrollments: enrollmentsFor(scheme.id),
+      predefinedPayments: predefinedPayments.filter(item => item.scheme_id === scheme.id),
+      predefinedSchedule: predefinedSchedule.filter(item => item.scheme_id === scheme.id),
+    }));
+  });
 
   return rows;
 }
 
-export async function loadUpcomingChitPayments(token) {
-  return loadUpcomingChitPaymentsFromSchemes(token);
+// Components that mount together (Chit Fund's insights card and reminder list) ask within a few
+// milliseconds of each other; they share that one request. The window is short and measured from
+// when the request started, so a refresh after a payment or lift always reads the rows again.
+const UPCOMING_SHARE_MS = 250;
+let upcomingChitInFlight = null;
+export function loadUpcomingChitPayments(token) {
+  const now = Date.now();
+  if (upcomingChitInFlight && upcomingChitInFlight.token === token && now - upcomingChitInFlight.at <= UPCOMING_SHARE_MS) {
+    return upcomingChitInFlight.promise;
+  }
+  const promise = loadUpcomingChitPaymentsFromSchemes(token);
+  const entry = { token, at: now, promise };
+  upcomingChitInFlight = entry;
+  promise.then(() => {}, () => {}).finally(() => {
+    if (upcomingChitInFlight === entry) upcomingChitInFlight = null;
+  });
+  return promise;
 }
 
 export const fetchChitInstallmentById = (token, id) => supabase.query(`/rest/v1/chit_installments?id=eq.${id}&select=*`, token).then(rows => rows[0]);

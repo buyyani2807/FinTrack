@@ -4,7 +4,7 @@ import { useLayoutEffect } from "react";
 import { BrowserRouter, useLocation } from "react-router";
 import { AppRoutes } from "./app/AppRoutes.jsx";
 import { AppShell } from "./app/AppShell.jsx";
-import { isMarketingPath, normalizePath } from "./features/marketing/paths.js";
+import { isMarketingPath, normalizePath } from "./features/marketing/routePaths.js";
 import { applyDocumentTheme } from "./lib/theme.js";
 
 // Links with a hash (e.g. /features#accounts) scroll to their section instead.

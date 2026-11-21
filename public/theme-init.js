@@ -1,5 +1,5 @@
 // Applies the saved theme before first paint on signed-in app URLs, and light on the public site.
-// Keep the path list in sync with isGuestThemePath in src/features/marketing/paths.js.
+// Keep the path list in sync with isGuestThemePath in src/features/marketing/routePaths.js.
 // Loaded as a file because the Content-Security-Policy does not allow inline scripts.
 (function () {
   var path = (location.pathname || "/").replace(/\/+$/, "") || "/";

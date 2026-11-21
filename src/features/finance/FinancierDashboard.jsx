@@ -49,7 +49,7 @@ export function Financier({
   onDeleteLoan,
   onSaveCustomerPortal,
   onLoadKyc,
-  onSaveKyc, activeChitSchemes = NO_CHIT_SCHEMES
+  onSaveKyc, activeChitSchemes = NO_CHIT_SCHEMES, activeChitSchemesLoaded = true
   , role = "staff", onStatusChange, onPaymentNoteChange, onPaymentCorrect, onPaymentDelete, onCollectionOrderChange,
   authToken, orgSettings = {}, workspace = {}, onLogReceipt, module = "all", section = null,
 }) {
@@ -113,6 +113,9 @@ export function Financier({
       setChitAttention(current => (current.length ? [] : current));
       return undefined;
     }
+    // Wait for the workspace's active-scheme list; it re-runs this effect when it lands, and loading
+    // before it only repeated every chit query on the dashboard.
+    if (!activeChitSchemesLoaded) return undefined;
     let cancelled = false;
     loadUpcomingChitPayments(authToken)
       .then(rows => {
@@ -122,7 +125,7 @@ export function Financier({
         if (!cancelled) setChitAttention([]);
       });
     return () => { cancelled = true; };
-  }, [canWrite, authToken, activeChitSchemes, dashboardExtrasReady]);
+  }, [canWrite, authToken, activeChitSchemes, activeChitSchemesLoaded, dashboardExtrasReady]);
   const runFinanceConfirmation = async (loanLike, { resend = false } = {}) => {
     const eventType = eventTypeForFinanceLoan(loanLike);
     const variables = eventType === CONFIRMATION_EVENTS.monthly
