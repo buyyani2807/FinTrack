@@ -5,6 +5,7 @@ import { buildArReminderMessage, buildOutstandingSummaryMessage, buildPartyState
 import { downloadSalesInvoicePdf, invoicePdfShareOnThisDevice, printSalesInvoicePdf, salesInvoicePdfFile, salesInvoiceWhatsAppText } from "../io/salesInvoicePdf.js";
 import { downloadPartyStatementPdf } from "../io/partyStatementPdf.js";
 import { uploadReceiptPdfLink, withReceiptLink } from "../io/receiptLink.js";
+import { customerBillMessage } from "../model/billMessage.js";
 import { CloseButton, ModalScroll } from "../../../components/ui.jsx";
 import { useDialogDismiss } from "../../../components/useDialogDismiss.js";
 
@@ -48,12 +49,29 @@ function sendInvoiceMessage(invoice) {
 export function sendSalesInvoiceOnWhatsApp(invoice, link = null) {
   const file = salesInvoicePdfFile(invoice);
   if (link?.token && link?.companyId && link?.billKey && canWhatsAppShare(invoice.customerPhone)) {
+    const onCredit = /credit|khata/i.test(String(invoice.settlement || ""));
+    const balance = onCredit ? Number(invoice.amount || 0) : Math.max(0, Number(invoice.outstanding || 0));
+    const details = {
+      businessName: invoice.companyName || "",
+      customerName: invoice.customerName || "",
+      billNo: invoice.invoiceNumber || "",
+      billDate: invoice.invoiceDate || "",
+      amount: Number(invoice.amount || 0),
+      balance,
+    };
     const upload = file
-      ? uploadReceiptPdfLink({ token: link.token, companyId: link.companyId, billKey: link.billKey, file }).catch(() => "")
+      ? uploadReceiptPdfLink({ token: link.token, companyId: link.companyId, billKey: link.billKey, file, details }).catch(() => "")
       : Promise.resolve("");
     upload.then(pdfLink => openManualWhatsAppShare({
       phone: invoice.customerPhone,
-      message: withReceiptLink(salesInvoiceWhatsAppText(invoice), pdfLink),
+      message: pdfLink
+        ? customerBillMessage({
+          ...details,
+          businessPhone: invoice.companyPhone || "",
+          paidBy: onCredit ? "" : invoice.settlement || "",
+          link: pdfLink,
+        })
+        : withReceiptLink(salesInvoiceWhatsAppText(invoice), ""),
       note: pdfLink ? "" : "Sent as text only: the PDF link needs an internet connection.",
     }));
     return;

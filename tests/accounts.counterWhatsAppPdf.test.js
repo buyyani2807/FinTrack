@@ -12,7 +12,7 @@ test("Counter sale WhatsApp share tries the PDF-attach (navigator.share) path be
     new URL("../src/features/accounts/components/CounterWorkspace.jsx", import.meta.url),
     "utf8",
   );
-  const shareFnMatch = source.match(/const shareLastReceipt = async \(\) => \{[\s\S]*?\n  \};/);
+  const shareFnMatch = source.match(/const shareLastReceipt = async \(\) => \{[\s\S]*?\n {2}\};/);
   assert.ok(shareFnMatch, "shareLastReceipt function not found");
   const body = shareFnMatch[0];
   assert.match(body, /invoicePdfShareOnThisDevice\(navigator\.userAgent, navigator\.maxTouchPoints\)/);
@@ -25,5 +25,7 @@ test("Counter sale WhatsApp share tries the PDF-attach (navigator.share) path be
   const noPhoneIndex = body.indexOf("No customer phone on this bill");
   assert.ok(numberIndex > -1 && pdfIndex > -1 && noPhoneIndex > -1);
   assert.ok(numberIndex < pdfIndex && pdfIndex < noPhoneIndex);
-  assert.match(body, /openManualWhatsAppShare\(\{\s*phone: partyPhone,\s*message: withReceiptLink\(text, link\)/);
+  // With a link: the short customer note; without one (offline): the itemised text.
+  assert.match(body, /const message = link\s*\? customerBillMessage\(\{[\s\S]*?link,[\s\S]*?\}\)\s*: withReceiptLink\(text, ""\);/);
+  assert.match(body, /openManualWhatsAppShare\(\{\s*phone: partyPhone,\s*message,/);
 });

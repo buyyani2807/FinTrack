@@ -138,19 +138,25 @@ function createSurface(spec) {
       if (!spec.height) return;
       if (surface.y + height > spec.height - spec.margin - 14) surface.newPage();
     },
-    text(value, x, top, { size = spec.base, bold = false, align = "left", gray = 0 } = {}) {
+    text(value, x, top, { size = spec.base, bold = false, align = "left", gray = 0, rgb = null } = {}) {
       const safe = escapePdf(value);
       if (!safe) return;
       const w = textWidth(value, size, bold);
       const startX = align === "right" ? x - w : align === "center" ? x - w / 2 : x;
-      const color = gray ? `${gray} g ` : "";
-      surface.page.ops.push(h => `${color}BT /${bold ? "F2" : "F1"} ${fmt(size)} Tf ${fmt(startX)} ${fmt(h - top - size * 0.8)} Td (${safe}) Tj ET${gray ? " 0 g" : ""}`);
+      const colored = Boolean(rgb || gray);
+      const color = rgb ? `${rgb.map(fmt).join(" ")} rg ` : gray ? `${gray} g ` : "";
+      surface.page.ops.push(h => `${color}BT /${bold ? "F2" : "F1"} ${fmt(size)} Tf ${fmt(startX)} ${fmt(h - top - size * 0.8)} Td (${safe}) Tj ET${colored ? " 0 g" : ""}`);
     },
-    rule(top, { x1 = surface.left, x2 = surface.right, weight = 0.5, gray = 0.6 } = {}) {
-      surface.page.ops.push(h => `${gray} G ${weight} w ${fmt(x1)} ${fmt(h - top)} m ${fmt(x2)} ${fmt(h - top)} l S 0 G`);
+    rule(top, { x1 = surface.left, x2 = surface.right, weight = 0.5, gray = 0.6, rgb = null } = {}) {
+      const color = rgb ? `${rgb.map(fmt).join(" ")} RG` : `${gray} G`;
+      surface.page.ops.push(h => `${color} ${weight} w ${fmt(x1)} ${fmt(h - top)} m ${fmt(x2)} ${fmt(h - top)} l S 0 G`);
     },
-    fill(x, top, w, height, gray = 0.94) {
-      surface.page.ops.push(h => `${gray} g ${fmt(x)} ${fmt(h - top - height)} ${fmt(w)} ${fmt(height)} re f 0 g`);
+    fill(x, top, w, height, gray = 0.94, rgb = null) {
+      const color = rgb ? `${rgb.map(fmt).join(" ")} rg` : `${gray} g`;
+      surface.page.ops.push(h => `${color} ${fmt(x)} ${fmt(h - top - height)} ${fmt(w)} ${fmt(height)} re f 0 g`);
+    },
+    box(x, top, w, height, { weight = 0.6, rgb = [0.6, 0.6, 0.6] } = {}) {
+      surface.page.ops.push(h => `${rgb.map(fmt).join(" ")} RG ${weight} w ${fmt(x)} ${fmt(h - top - height)} ${fmt(w)} ${fmt(height)} re S 0 G`);
     },
     image(x, top, w, height) {
       surface.page.usesLogo = true;
@@ -172,10 +178,10 @@ function createSurface(spec) {
         return `0 g ${rects.join(" ")} f`;
       });
     },
-    paragraph(value, x, maxWidth, { size = spec.base, bold = false, gray = 0, lineGap = 1.35 } = {}) {
+    paragraph(value, x, maxWidth, { size = spec.base, bold = false, gray = 0, rgb = null, lineGap = 1.35 } = {}) {
       for (const line of wrapText(value, size, maxWidth, bold)) {
         surface.room(size * lineGap);
-        surface.text(line, x, surface.y, { size, bold, gray });
+        surface.text(line, x, surface.y, { size, bold, gray, rgb });
         surface.y += size * lineGap;
       }
     },
@@ -332,6 +338,240 @@ function drawSheet(model, surface, logo, qr) {
     surface.page = page;
     surface.text("Powered by MyFinTracker", surface.left, spec.height - spec.margin + 4, { size: base - 2, gray: 0.5 });
     if (surface.pages.length > 1) surface.text(`Page ${index + 1} of ${surface.pages.length}`, surface.right, spec.height - spec.margin + 4, { size: base - 2, gray: 0.5, align: "right" });
+  });
+}
+
+// Counter bill on regular paper and every Counter PDF sent to a customer. Modelled on a
+// typical Indian retail bill: bordered page, shop header with phone and address, bill
+// number and date, Bill To, items with units, a subtotal row, then totals with received
+// and balance, amount in words, bank details and a signature box (UPI QR when payable).
+const INK = [0.18, 0.22, 0.36];
+const MUTED = [0.36, 0.39, 0.48];
+const GOLD = [0.79, 0.66, 0.38];
+const CREAM = [0.98, 0.955, 0.905];
+
+function retailColumns(spec, left, width) {
+  const small = spec.id === "a5";
+  const no = small ? 22 : 34;
+  const qty = small ? 58 : 76;
+  const rate = small ? 52 : 70;
+  const total = small ? 62 : 84;
+  const cols = [
+    { key: "index", label: "No", width: no, align: "center" },
+    { key: "name", label: "Items", width: width - no - qty - rate - total },
+    { key: "quantity", label: "Qty.", width: qty, align: "right" },
+    { key: "rate", label: "Rate", width: rate, align: "right" },
+    { key: "amount", label: "Total", width: total, align: "right" },
+  ];
+  let x = left;
+  for (const col of cols) { col.x = x; x += col.width; }
+  return cols;
+}
+
+function retailCellX(col, pad = 6) {
+  if (col.align === "right") return col.x + col.width - pad;
+  if (col.align === "center") return col.x + col.width / 2;
+  return col.x + pad;
+}
+
+function drawRetailBill(model, surface, logo, qr) {
+  const { spec } = surface;
+  const base = spec.base;
+  const r = model.retail;
+  const pad = spec.id === "a5" ? 10 : 16;
+  const left = surface.left + pad;
+  const right = surface.right - pad;
+  const width = right - left;
+  const top = surface.y + pad;
+  const small = spec.id === "a5";
+  // Page break that keeps the content inside the border.
+  const roomFor = height => {
+    if (spec.height && surface.y + height > spec.height - spec.margin - 18) {
+      surface.newPage();
+      surface.y += pad + 4;
+      return true;
+    }
+    return false;
+  };
+
+  // Header: logo, shop name / phone / address on the left; title and tag on the right.
+  const titleSize = base + 4;
+  const tag = "ORIGINAL FOR RECIPIENT";
+  const tagSize = base - 2.5;
+  const tagWidth = textWidth(tag, tagSize) + 14;
+  const rightBlock = Math.max(textWidth(model.title, titleSize, true), tagWidth);
+  surface.text(model.title, right, top, { size: titleSize, bold: true, align: "right", rgb: INK });
+  const tagTop = top + titleSize * 1.5;
+  surface.box(right - tagWidth, tagTop, tagWidth, tagSize * 2.2, { weight: 0.6, rgb: MUTED });
+  surface.text(tag, right - tagWidth / 2, tagTop + tagSize * 0.65, { size: tagSize, align: "center", rgb: MUTED });
+  const rightBottom = tagTop + tagSize * 2.2;
+
+  let textLeft = left;
+  let logoBottom = top;
+  if (logo) {
+    const boxSize = spec.logo * 1.25;
+    const scale = Math.min(boxSize / logo.width, boxSize / logo.height);
+    surface.image(left, top, logo.width * scale, logo.height * scale);
+    textLeft += logo.width * scale + 14;
+    logoBottom = top + logo.height * scale;
+  }
+  surface.y = top;
+  surface.paragraph(model.seller.name, textLeft, right - rightBlock - 12 - textLeft, { size: base + 8, bold: true, rgb: INK, lineGap: 1.15 });
+  surface.y += 3;
+  const infoWidth = right - textLeft;
+  if (r.phone) surface.paragraph(`Ph: ${r.phone}`, textLeft, infoWidth, { size: base + 0.5, rgb: MUTED });
+  if (r.address) surface.paragraph(r.address, textLeft, infoWidth, { size: base, rgb: MUTED });
+  const extra = [r.gstin ? `GSTIN: ${r.gstin}` : "", r.email].filter(Boolean).join("   ");
+  if (extra) surface.paragraph(extra, textLeft, infoWidth, { size: base, rgb: MUTED });
+  surface.y = Math.max(surface.y, logoBottom, rightBottom) + pad;
+  surface.rule(surface.y, { x1: surface.left, x2: surface.right, weight: 0.8, rgb: GOLD });
+
+  // Bill number, date, till, cashier.
+  surface.y += 12;
+  // Columns sized to their content so a long date never runs into the next column.
+  const metaWidths = r.meta.map(([label, value]) => Math.max(textWidth(label, base - 0.5, true), textWidth(value || "-", base)) + (small ? 16 : 28));
+  let metaX = left;
+  r.meta.forEach(([label, value], index) => {
+    if (index && metaX + metaWidths[index] - (small ? 16 : 28) > right) return;
+    surface.text(label, metaX, surface.y, { size: base - 0.5, bold: true, rgb: INK });
+    surface.text(value || "-", metaX, surface.y + base * 1.6, { size: base, rgb: MUTED });
+    metaX += metaWidths[index];
+  });
+  surface.y += base * 3.4 + 6;
+  surface.rule(surface.y, { x1: surface.left, x2: surface.right, weight: 0.8, rgb: GOLD });
+
+  // Bill To.
+  surface.y += 14;
+  surface.text("Bill To", left, surface.y, { size: base + 0.5, bold: true, rgb: INK });
+  surface.y += base * 1.6;
+  surface.paragraph(r.customerName, left, width * 0.6, { size: base + 0.5, rgb: INK });
+  if (r.customerPhone) {
+    surface.text("Mobile", left, surface.y, { size: base - 0.5, bold: true, rgb: INK });
+    surface.text(r.customerPhone, left + textWidth("Mobile ", base - 0.5, true), surface.y, { size: base - 0.5, rgb: MUTED });
+    surface.y += base * 1.4;
+  }
+  if (r.customerGstin) surface.paragraph(`GSTIN: ${r.customerGstin}`, left, width * 0.6, { size: base - 0.5, rgb: MUTED });
+  surface.y += 12;
+
+  // Items.
+  const cols = retailColumns(spec, surface.left, surface.width);
+  const rowPad = base * (small ? 0.55 : 0.9);
+  const header = () => {
+    const h = base * 2.6;
+    surface.fill(surface.left, surface.y, surface.width, h, 0, CREAM);
+    for (const col of cols) surface.text(col.label, retailCellX(col), surface.y + (h - base) / 2, { size: base - 0.5, align: col.align || "left", rgb: MUTED });
+    surface.y += h + 4;
+  };
+  roomFor(base * 8);
+  header();
+  const nameCol = cols.find(col => col.key === "name");
+  r.items.forEach((item, index) => {
+    const nameLines = wrapText(item.name, base, nameCol.width - 12);
+    const detail = [item.detail, item.discount ? `Disc ${item.discount}` : ""].filter(Boolean).join(" - ");
+    const detailLines = detail ? wrapText(detail, base - 1.5, nameCol.width - 12) : [];
+    const height = nameLines.length * base * 1.3 + detailLines.length * (base - 1.5) * 1.3 + rowPad * 2;
+    if (roomFor(height)) header();
+    const rowTop = surface.y + rowPad;
+    for (const col of cols) {
+      if (col.key === "name") {
+        let lineY = rowTop;
+        nameLines.forEach(line => { surface.text(line, retailCellX(col), lineY, { size: base, rgb: INK }); lineY += base * 1.3; });
+        detailLines.forEach(line => { surface.text(line, retailCellX(col), lineY, { size: base - 1.5, rgb: MUTED }); lineY += (base - 1.5) * 1.3; });
+      } else {
+        const value = col.key === "index" ? String(index + 1) : item[col.key] || "";
+        surface.text(value, retailCellX(col), rowTop, { size: base, align: col.align || "left", rgb: INK });
+      }
+    }
+    surface.y += height;
+  });
+  const subH = base * 2.6;
+  roomFor(subH + 4);
+  surface.fill(surface.left, surface.y, surface.width, subH, 0, CREAM);
+  const subTop = surface.y + (subH - base) / 2;
+  surface.text("SUBTOTAL", retailCellX(nameCol), subTop, { size: base, bold: true, rgb: INK });
+  const qtyCol = cols.find(col => col.key === "quantity");
+  const amtCol = cols.find(col => col.key === "amount");
+  if (r.totalQty) surface.text(r.totalQty, retailCellX(qtyCol), subTop, { size: base, bold: true, align: "right", rgb: INK });
+  surface.text(r.subtotal, retailCellX(amtCol), subTop, { size: base, bold: true, align: "right", rgb: INK });
+  surface.y += subH + (small ? 12 : 18);
+
+  // Totals (right) and bank details (left).
+  const split = left + width * 0.52;
+  const qrSize = qr ? Math.min(spec.qr, small ? 70 : 84) : 0;
+  const signBox = (qr ? qrSize + base * 4 : base * (small ? 3 : 5)) + base * 4.5;
+  const estimate = (r.taxLines.length + 3) * base * 1.8 + base * 5 + signBox + base * 3;
+  roomFor(estimate);
+  const blockTop = surface.y;
+
+  let leftY = blockTop;
+  if (r.bankLines.length) {
+    surface.text("Bank Details", left, leftY, { size: base, bold: true, rgb: INK });
+    leftY += base * 1.7;
+    for (const line of r.bankLines) {
+      for (const wrapped of wrapText(line, base - 0.5, split - left - 16)) {
+        surface.text(wrapped, left, leftY, { size: base - 0.5, rgb: MUTED });
+        leftY += (base - 0.5) * 1.45;
+      }
+    }
+    leftY += 8;
+  }
+  if (r.settlement) {
+    surface.text("Payment Mode", left, leftY, { size: base, bold: true, rgb: INK });
+    leftY += base * 1.6;
+    surface.text(r.settlement, left, leftY, { size: base - 0.5, rgb: MUTED });
+    leftY += base * 1.6;
+  }
+
+  let y = blockTop;
+  const row = (label, value, { bold = false, size = base, ink = false } = {}) => {
+    const rgb = bold || ink ? INK : MUTED;
+    surface.text(label, split, y, { size, bold, rgb });
+    surface.text(value, right, y, { size, bold, align: "right", rgb });
+    y += size * 1.75;
+  };
+  for (const [label, value] of r.taxLines) row(label, value);
+  if (r.taxLines.length) { surface.rule(y - 4, { x1: split, x2: right, weight: 0.6, rgb: GOLD }); y += 4; }
+  row("Total Amount", r.total, { bold: true, size: base + 2 });
+  surface.rule(y - 4, { x1: split, x2: right, weight: 0.6, rgb: GOLD });
+  y += 4;
+  row("Received Amount", r.received);
+  row("Balance", r.balance, { bold: true });
+  surface.rule(y - 4, { x1: split, x2: right, weight: 0.6, rgb: GOLD });
+  y += 10;
+  surface.text("Total Amount (in words)", split, y, { size: base, bold: true, rgb: INK });
+  y += base * 1.6;
+  for (const line of wrapText(r.words, base - 0.5, right - split)) {
+    surface.text(line, split, y, { size: base - 0.5, rgb: MUTED });
+    y += (base - 0.5) * 1.45;
+  }
+  y += 10;
+  const boxTop = y;
+  surface.box(split, boxTop, right - split, signBox, { weight: 0.7, rgb: GOLD });
+  let inner = boxTop + 10;
+  const centerX = split + (right - split) / 2;
+  if (qr) {
+    surface.qr(qr.matrix, centerX - qrSize / 2, inner, qrSize);
+    inner += qrSize + 2;
+    for (const line of qr.caption) {
+      surface.text(line, centerX, inner, { size: base - 1.5, align: "center", rgb: MUTED });
+      inner += (base - 1.5) * 1.35;
+    }
+  }
+  const signTop = boxTop + signBox - base * 3.6;
+  surface.text("Signature", centerX, signTop, { size: base, bold: true, align: "center", rgb: INK });
+  surface.text(model.seller.name, centerX, signTop + base * 1.5, { size: base - 0.5, align: "center", rgb: MUTED });
+  y = boxTop + signBox;
+
+  surface.y = Math.max(leftY, y) + 16;
+  roomFor(base * 3);
+  surface.text(model.footer, surface.left + surface.width / 2, surface.y, { size: base, bold: true, align: "center", rgb: INK });
+  surface.y += base * 2;
+
+  surface.pages.forEach((page, index) => {
+    surface.page = page;
+    surface.box(surface.left, spec.margin, surface.width, spec.height - spec.margin * 2, { weight: 1.4, rgb: GOLD });
+    surface.text("Powered by MyFinTracker", surface.left, spec.height - spec.margin + 6, { size: base - 2, gray: 0.5 });
+    if (surface.pages.length > 1) surface.text(`Page ${index + 1} of ${surface.pages.length}`, surface.right, spec.height - spec.margin + 6, { size: base - 2, gray: 0.5, align: "right" });
   });
 }
 
@@ -736,9 +976,11 @@ export function renderDocumentPdf(model, { template = "a4" } = {}) {
     notes: (model.notes || []).filter(block => block?.lines?.some(Boolean)).map(block => ({ heading: block.heading, lines: block.lines.filter(Boolean) })),
     bankLines: (model.bankLines || []).filter(Boolean),
     footer: model.footer || "Thank you for your business.",
+    retail: model.retail || null,
   };
   const surface = createSurface(spec);
   if (spec.id === "thermal") drawThermal(normalized, surface, logo, qr);
+  else if (normalized.posSlip && normalized.retail) drawRetailBill(normalized, surface, logo, qr);
   else if (model.layout === "tax" && model.taxSheet) drawTaxInvoice(model.taxSheet, surface, logo, qr);
   else drawSheet(normalized, surface, logo, qr);
   return serialize(surface.pages, { width: spec.width, logo });

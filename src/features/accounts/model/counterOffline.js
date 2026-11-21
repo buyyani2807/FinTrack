@@ -56,9 +56,15 @@ export function buildOfflineReceiptInvoice({
   companyAddress = "",
   companyGstin = "",
   companyPhone = "",
+  companyEmail = "",
+  companyLogoUrl = "",
+  bankLines = [],
   printFormat = "thermal80",
 } = {}) {
   if (!bill) return null;
+  // Online bills are "posted" and synced offline bills are "synced"; anything else
+  // (pending, error, syncing, or an older queued bill with no status) is still offline.
+  const stillOffline = !["posted", "synced"].includes(bill.syncStatus);
   const rawLines = bill.payload?.itemLines || bill.itemLines || [];
   const itemLines = rawLines.map(line => ({
     name: line.itemName || line.name || "Item",
@@ -114,10 +120,12 @@ export function buildOfflineReceiptInvoice({
     companyAddress,
     companyGstin,
     companyPhone,
-    companyEmail: "",
-    receiptFooter: bill.syncStatus === "synced"
-      ? "Thank You & Visit Again..!"
-      : "Thank You & Visit Again..! Offline — final bill no. after sync.",
+    companyEmail,
+    companyLogoUrl,
+    bankLines,
+    receiptFooter: stillOffline
+      ? "Thank You & Visit Again..! Offline — final bill no. after sync."
+      : "Thank You & Visit Again..!",
     receiptTerms: "",
     documentTemplate: printFormat || "thermal80",
     autoPrint: true,

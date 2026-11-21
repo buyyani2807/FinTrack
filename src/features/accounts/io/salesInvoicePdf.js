@@ -1,5 +1,6 @@
 import { formatReceiptDate, formatReceiptDateTime } from "../../receipts/model/receiptModel.js";
 import { salesInvoicePresentation } from "../model/salesInvoiceModel.js";
+import { rupeesInWords } from "../model/payroll.js";
 import { downloadPdf, pdfBinaryToBytes, renderDocumentPdf } from "./documentPdf.js";
 import { printThermalReceiptHtml } from "./thermalReceiptPrint.js";
 
@@ -139,6 +140,59 @@ export function salesInvoicePdfModel(invoice) {
     bankLines: isPos ? [] : (invoice.bankLines || []),
     upi: showQr ? { link: invoice.upiLink, caption: upiCaption(invoice, invoice.payableAmount, m) } : null,
     footer: invoice.receiptFooter || (isPos ? "Thank You & Visit Again..!" : "Thank you for your business."),
+    retail: isPos ? retailBillModel(invoice, { dateValue, hasGst, qtyTotal }) : null,
+  };
+}
+
+/**
+ * Counter bill on regular paper (A4/A5) and every Counter PDF sent to a customer: shop
+ * header with phone and address, Bill To, items with units, totals with received and
+ * balance, amount in words, bank details and a signature box.
+ */
+function retailBillModel(invoice, { dateValue, hasGst, qtyTotal }) {
+  const m = invoice.money;
+  const amount = Number(invoice.amount || 0);
+  const onCredit = /credit|khata/i.test(String(invoice.settlement || ""));
+  const balance = onCredit ? amount : Math.max(0, Number(invoice.outstanding || 0));
+  const itemTotal = (invoice.itemLines || []).reduce((sum, line) => sum + Number(line.amount || 0), 0);
+  return {
+    phone: String(invoice.companyPhone || "").trim(),
+    address: String(invoice.companyAddress || "").trim(),
+    gstin: String(invoice.companyGstin || "").trim(),
+    email: String(invoice.companyEmail || "").trim(),
+    meta: [
+      ["Bill No.", invoice.invoiceNumber],
+      ["Bill Date", dateValue],
+      invoice.tillLabel ? ["Till", invoice.tillLabel] : null,
+      invoice.cashier ? ["Cashier", invoice.cashier] : null,
+    ].filter(Boolean),
+    customerName: invoice.customerName || "Cash customer",
+    customerPhone: String(invoice.customerPhone || "").trim(),
+    customerGstin: String(invoice.customerGstin || "").trim(),
+    items: (invoice.itemLines || []).map(line => ({
+      name: line.name || "Item",
+      detail: line.hsnSac && hasGst ? `HSN ${line.hsnSac}` : "",
+      quantity: quantityText(line.quantity, line.unit ? String(line.unit).toUpperCase() : ""),
+      rate: m(line.rate),
+      discount: line.discount > 0 ? m(line.discount) : "",
+      amount: m(line.amount),
+    })),
+    totalQty: qtyTotal > 0 ? qtyTotal.toLocaleString("en-IN", { maximumFractionDigits: 3 }) : "",
+    subtotal: m(itemTotal || invoice.taxable || amount),
+    taxLines: hasGst
+      ? [
+        ["Taxable Value", m(invoice.taxable)],
+        invoice.cgst ? ["CGST", m(invoice.cgst)] : null,
+        invoice.sgst ? ["SGST", m(invoice.sgst)] : null,
+        invoice.igst ? ["IGST", m(invoice.igst)] : null,
+      ].filter(Boolean)
+      : [],
+    total: m(amount),
+    received: m(amount - balance),
+    balance: m(balance),
+    settlement: invoice.settlement || "",
+    words: rupeesInWords(amount),
+    bankLines: (invoice.bankLines || []).filter(Boolean),
   };
 }
 
@@ -314,9 +368,15 @@ export function salesInvoiceWhatsAppText(invoice) {
   return lines.filter(line => line != null).join("\n").replace(/\n{3,}/g, "\n\n");
 }
 
+/**
+ * PDF handed to the customer (share sheet or download link). A Counter bill always goes
+ * out as the A4 retail bill, even when the shop prints thermal slips: a narrow slip PDF is
+ * hard to read on a phone and has no room for address, bank details or signature.
+ */
 export function salesInvoicePdfFile(invoice, options = {}) {
   if (typeof File !== "function") return null;
-  const bytes = pdfBinaryToBytes(renderSalesInvoicePdf(invoice, options));
+  const template = options.template || (invoice?.posSlip ? "a4" : undefined);
+  const bytes = pdfBinaryToBytes(renderSalesInvoicePdf(invoice, { ...options, template }));
   const name = `${invoice.invoiceNumber || "sales-invoice"}.pdf`;
   return new File([bytes], name, { type: "application/pdf" });
 }

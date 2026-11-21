@@ -1,6 +1,7 @@
 /* global process */
 import { normalizeBillScan } from "../../src/features/accounts/model/billScan.js";
 import { refuseOverQuota, takeAiQuota } from "../_lib/aiQuota.js";
+import { receiptLinkRequest, serveReceiptLink } from "../_lib/receiptLinkPage.js";
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const anonKey = process.env.VITE_SUPABASE_ANON_KEY;
@@ -69,6 +70,10 @@ function parseModelJson(text) {
 }
 
 export default async function handler(req, res) {
+  // Hobby plan: WhatsApp bill links (/b/:code and /b/:code/card.png) are rewritten here
+  // (vercel.json) so they need no function of their own. See _lib/receiptLinkPage.js.
+  const receiptLink = receiptLinkRequest(req);
+  if (receiptLink) return serveReceiptLink(req, res, receiptLink);
   if (req.method !== "POST") return json(res, 405, { error: "Method not allowed" });
   const token = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "");
   if (!await signedIn(token)) return json(res, 401, { error: "Sign in required" });

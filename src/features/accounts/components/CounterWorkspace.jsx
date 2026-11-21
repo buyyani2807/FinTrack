@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router";
 import { Search, Trash2, Pause, Play, Plus, ShoppingCart, RotateCcw, Landmark, ScrollText, Star, History, Share2, MessageCircleQuestion, Maximize2, Minimize2, ScanBarcode, Banknote } from "lucide-react";
 import { Select } from "../../../components/Select.jsx";
 import { money } from "../accountsFormat.js";
@@ -96,6 +97,7 @@ import { invoicePdfShareOnThisDevice, printSalesInvoicePdf, salesInvoicePdfFile 
 import { formatReceiptDateTime } from "../../receipts/model/receiptModel.js";
 import { canWhatsAppShare, openManualWhatsAppShare } from "../../receipts/io/receiptWhatsApp.js";
 import { uploadReceiptPdfLink, withReceiptLink } from "../io/receiptLink.js";
+import { customerBillMessage } from "../model/billMessage.js";
 import { accountsCompanyBranding } from "../model/salesInvoiceModel.js";
 import { isValidUpiId, upiPayLink } from "../model/upiPay.js";
 import { QrSvg } from "../PayPage.jsx";
@@ -1028,9 +1030,15 @@ export function CounterWorkspace({
       companyAddress: company.documentSettings?.businessAddress || branding?.companyAddress || "",
       companyGstin: company.gstin || branding?.companyGstin || "",
       companyPhone: company.documentSettings?.businessPhone || branding?.companyPhone || "",
+      companyEmail: branding?.companyEmail || "",
+      companyLogoUrl: branding?.companyLogoUrl || "",
+      bankLines: branding?.bankLines || [],
       printFormat,
     });
   };
+
+  const billNumberOf = bill => bill?.printBill?.offlineRef || bill?.offlineRef || bill?.voucherId || "";
+  const billBalanceOf = bill => (bill?.payLabel === "Khata" ? Number(bill.total || 0) : 0);
 
   const billPhone = bill => bill?.customerPhone
     || selectedParty?.phone
@@ -1047,7 +1055,15 @@ export function CounterWorkspace({
     const invoice = billToInvoice(bill.printBill);
     const file = invoice ? salesInvoicePdfFile(invoice) : null;
     if (!file) return null;
-    const promise = uploadReceiptPdfLink({ token, companyId, billKey: key, file }).catch(() => "");
+    const details = {
+      businessName: branding?.companyName || activeCompany?.name || "",
+      customerName: bill.customerName || "",
+      billNo: billNumberOf(bill),
+      billDate: bill.printBill?.date || today,
+      amount: Number(bill.total || 0),
+      balance: billBalanceOf(bill),
+    };
+    const promise = uploadReceiptPdfLink({ token, companyId, billKey: key, file, details }).catch(() => "");
     receiptLinkRef.current = { key, promise };
     return promise;
   };
@@ -1378,7 +1394,7 @@ export function CounterWorkspace({
       companyAddress: branding?.companyAddress || "",
       tillLabel,
       cashierName: cashierName || "",
-      billNo: lastBill.printBill?.offlineRef || lastBill.offlineRef || lastBill.voucherId || "",
+      billNo: billNumberOf(lastBill),
       isReturn: Boolean(lastBill.isReturn),
       isCredit: Boolean(lastBill.payLabel === "Khata"),
       payLabel: lastBill.payLabel || "",
@@ -1404,9 +1420,24 @@ export function CounterWorkspace({
       }
       const pending = receiptLinkFor(lastBill);
       const link = pending ? await pending : "";
+      // With a link: a short note and the link (bill details are in the PDF and the
+      // preview card). Without one (offline): the itemised bill text, as before.
+      const message = link
+        ? customerBillMessage({
+          businessName: branding?.companyName || activeCompany?.name || "",
+          businessPhone: branding?.companyPhone || "",
+          customerName: lastBill.customerName || "",
+          billNo: billNumberOf(lastBill),
+          amount: receiptTotals.total || lastBill.total,
+          balance: billBalanceOf(lastBill),
+          paidBy: lastBill.payLabel === "Khata" ? "" : lastBill.payLabel || "",
+          link,
+          isReturn: Boolean(lastBill.isReturn),
+        })
+        : withReceiptLink(text, "");
       openManualWhatsAppShare({
         phone: partyPhone,
-        message: withReceiptLink(text, link),
+        message,
         note: link ? "" : "Sent as text only: the PDF link needs an internet connection.",
       });
       return;
@@ -1691,6 +1722,13 @@ export function CounterWorkspace({
                 <Share2 size={16} aria-hidden="true" /> Share
               </button>
             </div>
+          ) : null}
+          {canPrintLastBill && (!branding?.companyAddress || !branding?.companyPhone) ? (
+            <p className="small counter-print-hint">
+              Your shop {!branding?.companyAddress && !branding?.companyPhone ? "address and phone are" : !branding?.companyAddress ? "address is" : "phone is"} missing
+              from bills. Add {!branding?.companyAddress && !branding?.companyPhone ? "them" : "it"} in{" "}
+              <Link to="/accounting/documents/settings">Documents → Document settings</Link>.
+            </p>
           ) : null}
         </div>
       ) : null}

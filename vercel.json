@@ -14,10 +14,15 @@
       ]
     }
   ],
+  "functions": {
+    "api/accounts/bill-scan.js": { "includeFiles": "api/_lib/fonts/**" }
+  },
   "rewrites": [
     { "source": "/api/cron/workspace-backups", "destination": "/api/workspace/backups" },
     { "source": "/api/auth/logout", "destination": "/api/auth/session" },
     { "source": "/api/staff/:action", "destination": "/api/auth/agent-login?staff=:action" },
+    { "source": "/b/:code/card.png", "destination": "/api/accounts/bill-scan?receipt=:code&card=1" },
+    { "source": "/b/:code", "destination": "/api/accounts/bill-scan?receipt=:code" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
