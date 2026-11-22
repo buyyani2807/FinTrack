@@ -2,6 +2,7 @@
 import { formatInr } from "../../../lib/formatMoney.js";
 import { roundMoney } from "./accountingModel.js";
 import { counterPayLabel, counterTenderLabel } from "./counterDayReport.js";
+import { isValidUpiId, upiPayLink } from "./upiPay.js";
 
 export const OFFLINE_MAX_MS = 48 * 60 * 60 * 1000;
 export const OFFLINE_MAX_LABEL = "2 days";
@@ -59,6 +60,9 @@ export function buildOfflineReceiptInvoice({
   companyEmail = "",
   companyLogoUrl = "",
   bankLines = [],
+  upiId = "",
+  upiPayeeName = "",
+  showUpiQr = true,
   printFormat = "thermal80",
 } = {}) {
   if (!bill) return null;
@@ -88,15 +92,25 @@ export function buildOfflineReceiptInvoice({
   const amount = roundMoney(Number(bill.amount || bill.payload?.totals?.total || taxable + tax));
   const customerName = bill.customerName || bill.payload?.customerName || "Cash customer";
   const customerPhone = bill.customerPhone || bill.payload?.customerPhone || "";
+  // Khata sale: nothing was collected at the till, so the bill shows the full amount as
+  // balance and (when the shop has UPI set up) a QR to pay it. A paid bill gets no QR —
+  // it was already collected, and a QR would only invite paying twice.
+  const onCredit = bill.payload?.settlement === "credit" && bill.payload?.kind !== "credit_note";
+  const invoiceNumber = bill.offlineRef || bill.id;
+  const upiLink = onCredit && showUpiQr !== false && isValidUpiId(upiId) && amount > 0
+    ? upiPayLink({ upiId, payeeName: upiPayeeName || companyName, amount, note: invoiceNumber })
+    : "";
   return {
     kind: "sales_invoice",
     title: tax > 0 && companyGstin ? "TAX INVOICE" : "BILL",
-    invoiceNumber: bill.offlineRef || bill.id,
+    invoiceNumber,
     invoiceDate: bill.date || "",
     soldAt: bill.createdAt || "",
     showSaleTime: true,
     dueDate: "",
-    settlement: bill.moneyMode === "split" ? counterTenderLabel(bill.moneyParts || {}) || "Split" : counterPayLabel(bill.moneyMode),
+    settlement: onCredit
+      ? "Khata"
+      : bill.moneyMode === "split" ? counterTenderLabel(bill.moneyParts || {}) || "Split" : counterPayLabel(bill.moneyMode),
     customerName,
     customerPhone,
     customerGstin: "",
@@ -113,7 +127,11 @@ export function buildOfflineReceiptInvoice({
     sgst,
     igst,
     tax,
-    outstanding: 0,
+    outstanding: onCredit ? amount : 0,
+    payableAmount: upiLink ? amount : 0,
+    upiLink,
+    upiId: upiLink ? upiId : "",
+    showUpiQr: Boolean(upiLink),
     itemLines,
     companyName,
     companyLegalName: "",

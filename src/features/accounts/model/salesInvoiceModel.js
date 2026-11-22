@@ -52,6 +52,13 @@ export function bankDetailLines(doc = {}) {
 }
 
 /** Pay link details for an amount due to the company, or null when no UPI ID is set. */
+function sameIndiaDate(timestamp, isoDate) {
+  if (!timestamp || !isoDate) return false;
+  const at = new Date(timestamp);
+  if (Number.isNaN(at.getTime())) return false;
+  return at.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }) === String(isoDate).slice(0, 10);
+}
+
 export function companyPayLinks(branding, { amount = 0, note = "", origin = browserOrigin() } = {}) {
   if (!branding?.upiId || !(Number(amount) > 0)) return null;
   const params = { upiId: branding.upiId, payeeName: branding.upiPayeeName, amount, note };
@@ -137,8 +144,11 @@ export function buildSalesInvoice({
   const pay = voucher.status === "cancelled" ? null : companyPayLinks(branding, { amount: payable, note: voucher.voucherNumber || "" });
   const sourceType = voucher.sourceType || null;
   const isPos = sourceType === "pos_counter";
-  const showSaleTime = isPos;
   const soldAt = voucher.postedAt || voucher.createdAt || "";
+  // Counter bills always show the sale time. A sales invoice shows it when it was entered
+  // on its own invoice date; a back-dated invoice shows the date only, since the entry
+  // time would not be the time of the sale.
+  const showSaleTime = isPos || sameIndiaDate(soldAt, voucher.date);
   // Spot / cash sales (including Counter) have no credit terms — never invent a due date.
   const dueDate = voucher.dueDate || "";
   const cashierMatch = String(voucher.narration || "").match(/Cashier\s+([^·]+)/i);

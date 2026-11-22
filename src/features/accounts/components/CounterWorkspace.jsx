@@ -1033,6 +1033,9 @@ export function CounterWorkspace({
       companyEmail: branding?.companyEmail || "",
       companyLogoUrl: branding?.companyLogoUrl || "",
       bankLines: branding?.bankLines || [],
+      upiId: branding?.upiId || "",
+      upiPayeeName: branding?.upiPayeeName || branding?.companyName || "",
+      showUpiQr: branding?.showUpiQr !== false,
       printFormat,
     });
   };

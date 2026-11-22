@@ -173,7 +173,6 @@ export function buildCounterWhatsAppReceipt({
   companyPhone = "",
   companyGstin = "",
   companyAddress = "",
-  tillLabel = "",
   cashierName = "",
   billNo = "",
   isReturn = false,
@@ -220,7 +219,6 @@ export function buildCounterWhatsAppReceipt({
     nameLine,
     dateLabel ? `Date: ${dateLabel}` : "",
     cashierName ? `Cashier: ${cashierName}` : "",
-    tillLabel ? `Till: ${tillLabel}` : "",
     billNo ? `${billNoLabel}: ${billNo}` : "",
     WA_RULE,
   ].filter(Boolean);

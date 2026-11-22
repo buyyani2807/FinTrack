@@ -81,7 +81,6 @@ export function salesInvoicePdfModel(invoice) {
       ? [
         ["Date", dateValue],
         invoice.cashier ? ["Cashier", invoice.cashier] : null,
-        invoice.tillLabel ? ["Till", invoice.tillLabel] : null,
         ["Bill No.", invoice.invoiceNumber],
       ].filter(Boolean)
       : [
@@ -193,7 +192,6 @@ function retailBillModel(invoice, { dateValue, hasGst, qtyTotal, taxSheet = null
       : [
         ["Bill No.", invoice.invoiceNumber],
         ["Bill Date", dateValue],
-        invoice.tillLabel ? ["Till", invoice.tillLabel] : null,
         invoice.cashier ? ["Cashier", invoice.cashier] : null,
       ].filter(Boolean),
     customerName: invoice.customerName || "Cash customer",
@@ -257,9 +255,11 @@ function thermalWidthMm(template) {
   return null;
 }
 
-function isThermalPrint(invoice, options = {}) {
-  const template = options.template || invoice?.documentTemplate || "a4";
-  return thermalWidthMm(template) != null || Boolean(invoice?.posSlip);
+// The Counter printer setting decides: thermal 80/58 mm prints the HTML slip, regular
+// A4/A5 prints the full bill PDF. A Counter bill with no setting falls back to thermal.
+export function isThermalPrint(invoice, options = {}) {
+  const template = options.template || invoice?.documentTemplate || (invoice?.posSlip ? "thermal80" : "a4");
+  return thermalWidthMm(template) != null;
 }
 
 /**
