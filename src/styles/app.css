@@ -9,7 +9,7 @@ body {
   color: var(--ft-text);
   background: var(--ft-surface);
   margin: 0;
-  font-family: DM Sans, system-ui;
+  font-family: var(--ft-font);
 }
 
 button, input, select {
@@ -56,7 +56,7 @@ button {
 
 .brand {
   color: var(--ft-primary);
-  font: 700 var(--ft-type-title) Syne;
+  font: 700 var(--ft-type-title) var(--ft-font);
 }
 
 .sub, .small {
@@ -126,7 +126,7 @@ button {
 
 .metric-value {
   margin-top: 8px;
-  font: 700 var(--ft-type-section) Syne;
+  font: 700 var(--ft-type-section) var(--ft-font);
 }
 
 .gold {
@@ -147,7 +147,7 @@ button {
 
 .title {
   margin: 0 0 4px;
-  font: 700 var(--ft-type-title) Syne;
+  font: 700 var(--ft-type-title) var(--ft-font);
 }
 
 .copy {
@@ -322,7 +322,7 @@ button {
   color: var(--ft-primary);
   letter-spacing: -.3px;
   padding: 7px 10px 17px;
-  font: 700 var(--ft-type-lead) Syne;
+  font: 700 var(--ft-type-lead) var(--ft-font);
 }
 
 .financier-nav button {
@@ -554,7 +554,7 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
 .brand {
   letter-spacing: -.8px;
   color: var(--ft-primary);
-  font-family: Syne, DM Sans, sans-serif;
+  font-family: var(--ft-font);
   font-size: var(--ft-type-section);
 }
 
@@ -567,7 +567,7 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
 
 .title {
   letter-spacing: -.7px;
-  font-family: Syne, DM Sans, sans-serif;
+  font-family: var(--ft-font);
   font-size: var(--ft-type-title);
   color: var(--ft-text) !important;
 }
@@ -711,7 +711,7 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
 .metric-value {
   letter-spacing: -.65px;
   margin-top: 9px;
-  font-family: Syne, DM Sans, sans-serif;
+  font-family: var(--ft-font);
   font-size: var(--ft-type-title);
 }
 
@@ -869,7 +869,7 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
 
 .financier-nav .nav-title {
   color: var(--ft-primary) !important;
-  font-family: Syne, DM Sans, sans-serif !important;
+  font-family: var(--ft-font-brand) !important;
 }
 
 .financier-nav button {
@@ -1043,7 +1043,7 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
 .accounts-panel-title {
   color: var(--ft-text);
   margin: 0;
-  font: 700 var(--ft-type-section) Syne, sans-serif;
+  font: 700 var(--ft-type-section) var(--ft-font);
 }
 
 .accounts-balance-strip {
@@ -1073,7 +1073,7 @@ html[data-ft-role="unknown"] .financier-nav, html[data-ft-role="staff"] .financi
 
 .accounts-balance-item strong {
   overflow-wrap: anywhere;
-  font: 700 clamp(15px, 4.6vw, 20px) / 1.25 Syne, sans-serif;
+  font: 700 clamp(15px, 4.6vw, 20px) / 1.25 var(--ft-font);
   display: block;
 }
 
@@ -1217,7 +1217,7 @@ button.accounts-balance-item:hover {
 }
 
 .accounts-entry-amounts .green, .accounts-entry-amounts .red {
-  font: 700 var(--ft-type-body) Syne, sans-serif;
+  font: 700 var(--ft-type-body) var(--ft-font);
 }
 
 .accounts-entry-balance {
@@ -1240,7 +1240,7 @@ button.accounts-balance-item:hover {
 }
 
 .accounts-expense-amount {
-  font: 700 var(--ft-type-card) Syne, sans-serif;
+  font: 700 var(--ft-type-card) var(--ft-font);
 }
 
 .accounts-empty {
@@ -1281,7 +1281,7 @@ button.accounts-balance-item:hover {
 
 .accounts-ledger-balance {
   color: var(--ft-text);
-  font: 700 var(--ft-type-section) Syne, sans-serif;
+  font: 700 var(--ft-type-section) var(--ft-font);
 }
 
 .accounts-form-card, .accounts-info-card, .accounts-report-card {
@@ -1342,7 +1342,7 @@ button.accounts-balance-item:hover {
 }
 
 .accounts-closing-stats strong {
-  font: 700 var(--ft-type-body) Syne, sans-serif;
+  font: 700 var(--ft-type-body) var(--ft-font);
 }
 
 .accounts-closing-ok strong {
@@ -1378,7 +1378,7 @@ button.accounts-balance-item:hover {
 }
 
 .accounts-summary-heading strong {
-  font: 700 var(--ft-type-section) Syne, sans-serif;
+  font: 700 var(--ft-type-section) var(--ft-font);
 }
 
 @media (width <= 820px) {
@@ -1501,7 +1501,7 @@ button.accounts-balance-item:hover {
 
 .acc-sidebar-brand strong {
   color: var(--ft-text);
-  font: 700 var(--ft-type-ui) Syne, sans-serif;
+  font: 700 var(--ft-type-ui) var(--ft-font);
 }
 
 .acc-nav-group {
@@ -1667,7 +1667,7 @@ button.accounts-balance-item:hover {
 }
 
 .credit-score-number {
-  font: 700 var(--ft-type-page) / 1 Syne, sans-serif;
+  font: 700 var(--ft-type-page) / 1 var(--ft-font);
 }
 
 .credit-score-number.muted {
@@ -1678,7 +1678,7 @@ button.accounts-balance-item:hover {
 .credit-score-rating {
   letter-spacing: .04em;
   text-transform: uppercase;
-  font: 700 var(--ft-type-label) DM Sans, sans-serif;
+  font: 700 var(--ft-type-label) var(--ft-font);
   display: inline-block;
 }
 
@@ -1749,18 +1749,18 @@ button.accounts-balance-item:hover {
 .credit-score-gauge-label {
   fill: var(--ft-muted);
   letter-spacing: .03em;
-  font: 700 var(--ft-type-micro) DM Sans, sans-serif;
+  font: 700 var(--ft-type-micro) var(--ft-font);
 }
 
 .credit-score-gauge-range {
   fill: #fff;
-  font: 700 var(--ft-type-micro) DM Sans, sans-serif;
+  font: 700 var(--ft-type-micro) var(--ft-font);
 }
 
 .credit-score-gauge-title {
   fill: var(--ft-muted);
   letter-spacing: .1em;
-  font: 700 var(--ft-type-caption) DM Sans, sans-serif;
+  font: 700 var(--ft-type-caption) var(--ft-font);
 }
 
 .credit-score-pill {
@@ -2360,7 +2360,7 @@ button.accounts-balance-item:hover {
 
 .collection-summary strong {
   margin-top: 7px;
-  font: 700 var(--ft-type-section) Syne;
+  font: 700 var(--ft-type-section) var(--ft-font);
   display: block;
 }
 
@@ -2379,7 +2379,7 @@ button.accounts-balance-item:hover {
 .collection-section h2 {
   color: var(--ft-text);
   margin: 0 0 6px;
-  font: 700 var(--ft-type-card) Syne;
+  font: 700 var(--ft-type-card) var(--ft-font);
 }
 
 .collection-section h2 span {
@@ -2387,7 +2387,7 @@ button.accounts-balance-item:hover {
   letter-spacing: .04em;
   text-transform: uppercase;
   margin-left: 7px;
-  font: 600 var(--ft-type-micro) DM Sans;
+  font: 600 var(--ft-type-micro) var(--ft-font);
 }
 
 .collection-list {
@@ -2486,7 +2486,7 @@ button.accounts-balance-item:hover {
   align-items: center;
   margin-top: 12px;
   padding: 0;
-  font: 600 var(--ft-type-label) DM Sans, system-ui;
+  font: 600 var(--ft-type-label) var(--ft-font);
   display: inline-flex;
 }
 
@@ -3182,7 +3182,7 @@ button.accounts-balance-item:hover {
 
 .receipt-header strong {
   color: var(--ft-primary);
-  font: 700 var(--ft-type-card) Syne;
+  font: 700 var(--ft-type-card) var(--ft-font);
 }
 
 .receipt-meta {

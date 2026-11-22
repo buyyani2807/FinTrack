@@ -3,6 +3,7 @@ import { AccEmpty, AccPager, AccMoreMenu, DateSortTh } from "../components/AccUi
 import { formatOverviewDate, money } from "../accountsFormat.js";
 import { pageSlice } from "../model/accountsList.js";
 import { useDateSort } from "../model/useDateSort.js";
+import { badgeLabel } from "../../../components/ui.jsx";
 import {
   voucherAmount,
   voucherMoreItems,
@@ -139,7 +140,7 @@ export function VouchersSection({
                         <td>{voucherTypeLabel(voucher)}</td>
                         <td>{partyName(voucher.partyId) || "—"}</td>
                         <td>{voucher.narration || "—"}</td>
-                        <td><span className={`acc-tx-status ${statusClass(voucher.status)}`}>{voucher.status}</span></td>
+                        <td><span className={`acc-tx-status ${statusClass(voucher.status)}`}>{badgeLabel(voucher.status)}</span></td>
                         <td className="acc-num">{money(voucherAmount(voucher))}</td>
                         <td>
                           <div className="acc-tx-table-actions">
@@ -175,7 +176,7 @@ export function VouchersSection({
                         {voucher.voucherNumber}
                       </button>
                     </strong>
-                    <span className={`acc-tx-status ${statusClass(voucher.status)}`}>{voucher.status}</span>
+                    <span className={`acc-tx-status ${statusClass(voucher.status)}`}>{badgeLabel(voucher.status)}</span>
                   </div>
                   <p className="small">
                     {formatOverviewDate(voucher.date)} · {voucherTypeLabel(voucher)}

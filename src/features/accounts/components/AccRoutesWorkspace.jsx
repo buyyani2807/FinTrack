@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ExportButton, Spinner } from "../../../components/ui.jsx";
+import { ExportButton, Spinner, badgeLabel } from "../../../components/ui.jsx";
 import { Select } from "../../../components/Select.jsx";
 import { TabScroller } from "../../../components/TabScroller.jsx";
 import { formatInr } from "../../../lib/formatMoney.js";
@@ -190,7 +190,7 @@ function FieldCollections({ token, today }) {
     </tr></thead><tbody>
       {dateSort.sorted.map(row => <tr key={row.voucherId} className={row.status !== "posted" ? "acc-row-muted" : ""}>
         <td>{formatReceiptDate(row.date)}</td><td>{row.voucherNumber}</td><td>{row.partyName}</td><td>{row.agentName}</td>
-        <td>{collectionModeLabel(row.mode)}</td><td className="acc-num">{money(row.amount)}</td><td>{row.status}</td>
+        <td>{collectionModeLabel(row.mode)}</td><td className="acc-num">{money(row.amount)}</td><td>{badgeLabel(row.status)}</td>
       </tr>)}
       {rows && !rows.length && <tr><td colSpan="7">No receipts.</td></tr>}
     </tbody></table></div>

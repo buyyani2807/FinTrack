@@ -96,7 +96,7 @@
 }
 
 .accounts-dashboard .acc-sidebar-brand strong {
-  font: 700 var(--ft-type-body) Syne, sans-serif;
+  font: 700 var(--ft-type-body) var(--ft-font);
   letter-spacing: -0.02em;
 }
 
@@ -109,7 +109,7 @@
   border-radius: 10px;
   background: color-mix(in srgb, var(--ft-primary) 9%, transparent);
   color: var(--acc-gold);
-  font: 800 var(--ft-type-label) Syne, sans-serif;
+  font: 800 var(--ft-type-label) var(--ft-font);
 }
 
 .accounts-dashboard .acc-sidebar-brand .small {
@@ -2217,7 +2217,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  font: 700 var(--ft-type-lead)/1.25 Syne, sans-serif;
+  font: 700 var(--ft-type-lead)/1.25 var(--ft-font);
   letter-spacing: -0.03em;
   color: var(--acc-text);
 }
@@ -2316,7 +2316,7 @@
 
 .accounts-dashboard .acc-ov-block-head h2 {
   margin: 0;
-  font: 700 var(--ft-type-body)/1.25 Syne, sans-serif;
+  font: 700 var(--ft-type-body)/1.25 var(--ft-font);
   letter-spacing: -0.02em;
   color: var(--acc-text);
 }
@@ -2375,7 +2375,7 @@
 }
 
 .accounts-dashboard .acc-metric-card .metric-value {
-  font: 700 var(--ft-type-section)/1.15 Syne, sans-serif;
+  font: 700 var(--ft-type-section)/1.15 var(--ft-font);
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
   color: var(--acc-text);
@@ -2404,7 +2404,7 @@
 }
 
 .accounts-dashboard .acc-ov-chart-head strong {
-  font: 700 var(--ft-type-ui)/1.2 Syne, sans-serif;
+  font: 700 var(--ft-type-ui)/1.2 var(--ft-font);
   color: var(--acc-text);
 }
 
@@ -2458,7 +2458,7 @@
 
 .accounts-dashboard .acc-ov-arap-total strong {
   color: var(--acc-text);
-  font: 700 var(--ft-type-section)/1.1 Syne, sans-serif;
+  font: 700 var(--ft-type-section)/1.1 var(--ft-font);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2682,7 +2682,7 @@
   border: 0;
   background: transparent;
   color: var(--acc-text);
-  font: 700 var(--ft-type-label)/1 Syne, sans-serif;
+  font: 700 var(--ft-type-label)/1 var(--ft-font);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   cursor: pointer;
@@ -2749,7 +2749,7 @@
 
 .accounts-dashboard .acc-ov-recent-row .amt {
   flex: 0 0 auto;
-  font: 700 var(--ft-type-secondary)/1.2 Syne, sans-serif;
+  font: 700 var(--ft-type-secondary)/1.2 var(--ft-font);
   font-variant-numeric: tabular-nums;
   color: var(--acc-text);
 }
@@ -3026,7 +3026,7 @@
 }
 
 .accounts-dashboard .acc-user-copy strong {
-  font: 600 var(--ft-type-label) DM Sans, system-ui, sans-serif;
+  font: 600 var(--ft-type-label) var(--ft-font);
 }
 
 .accounts-dashboard .acc-user-copy strong,
@@ -3149,7 +3149,7 @@
 
 .accounts-dashboard .acc-report-head h2 {
   margin: 0;
-  font: 700 var(--ft-type-card) Syne, sans-serif;
+  font: 700 var(--ft-type-card) var(--ft-font);
 }
 
 .accounts-dashboard .grid.two {
@@ -3195,13 +3195,13 @@
   border-radius: 10px;
   background: color-mix(in srgb, var(--ft-primary) 9%, transparent);
   color: var(--acc-gold);
-  font: 800 var(--ft-type-caption) Syne, sans-serif;
+  font: 800 var(--ft-type-caption) var(--ft-font);
   letter-spacing: 0.02em;
 }
 
 .accounts-dashboard .acc-setup-copy h2 {
   margin: 0;
-  font: 700 var(--ft-type-body) Syne, sans-serif;
+  font: 700 var(--ft-type-body) var(--ft-font);
 }
 
 .accounts-dashboard .acc-setup-copy .copy {
@@ -3586,7 +3586,7 @@
 
 .accounts-dashboard .acc-party-ledger-identity h2 {
   margin: 0;
-  font: 700 var(--ft-type-section)/1.2 Syne, sans-serif;
+  font: 700 var(--ft-type-section)/1.2 var(--ft-font);
   color: var(--acc-text);
 }
 
@@ -3619,7 +3619,7 @@
 .accounts-dashboard .acc-party-ledger-stats strong {
   display: block;
   margin-top: 6px;
-  font: 700 var(--ft-type-card)/1.2 Syne, sans-serif;
+  font: 700 var(--ft-type-card)/1.2 var(--ft-font);
   font-variant-numeric: tabular-nums;
 }
 
@@ -3821,7 +3821,7 @@
 .accounts-dashboard .acc-bank-statement-head h3 {
   margin: 0;
   color: var(--acc-text);
-  font: 700 var(--ft-type-body) Syne, sans-serif;
+  font: 700 var(--ft-type-body) var(--ft-font);
 }
 
 .accounts-dashboard .acc-bank-statement-head .small {
@@ -3945,7 +3945,7 @@
   display: block;
   margin-top: 8px;
   color: var(--acc-text);
-  font: 700 var(--ft-type-section) Syne, sans-serif;
+  font: 700 var(--ft-type-section) var(--ft-font);
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
 }
@@ -4645,7 +4645,7 @@
 
 .accounts-dashboard .acc-metric-card .metric-value {
   margin-top: 6px;
-  font: 700 var(--ft-type-section)/1.15 Syne, sans-serif;
+  font: 700 var(--ft-type-section)/1.15 var(--ft-font);
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
@@ -4968,7 +4968,7 @@
 }
 
 .accounts-dashboard .acc-item-line-amount {
-  font: 700 var(--ft-type-body)/1.2 Syne, sans-serif;
+  font: 700 var(--ft-type-body)/1.2 var(--ft-font);
   font-variant-numeric: tabular-nums;
 }
 
@@ -5019,7 +5019,7 @@
 }
 
 .accounts-dashboard .accounts-entry-amounts > span {
-  font: 700 var(--ft-type-body)/1 Syne, sans-serif;
+  font: 700 var(--ft-type-body)/1 var(--ft-font);
   font-variant-numeric: tabular-nums;
   min-width: 5.5rem;
   text-align: right;
@@ -5286,7 +5286,7 @@
 }
 
 .accounts-dashboard .acc-landing-card strong {
-  font: 700 var(--ft-type-secondary) Syne, sans-serif;
+  font: 700 var(--ft-type-secondary) var(--ft-font);
 }
 
 @media (max-width: 1050px) {
@@ -5854,7 +5854,7 @@
 }
 
 .accounts-dashboard .accounts-entry-amounts > span {
-  font: 700 var(--ft-type-ui)/1 Syne, sans-serif;
+  font: 700 var(--ft-type-ui)/1 var(--ft-font);
   font-variant-numeric: tabular-nums;
   min-width: 4.75rem;
   text-align: right;
@@ -6123,7 +6123,7 @@
   }
 }
 .accounts-template-features{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}.accounts-template-features span{display:inline-flex;align-items:center;padding:4px 8px;border: 1px solid color-mix(in srgb, var(--ft-primary) 33%, transparent);border-radius:999px;background: color-mix(in srgb, var(--ft-primary) 7%, transparent);color: var(--ft-primary);font-size: var(--ft-type-micro);font-weight:600}.accounts-template-features span::before{content:'✓';margin-right:4px;color: var(--ft-success)}
-.accounts-industry-card{margin:14px 0 18px;padding:16px 18px;background: linear-gradient(135deg,var(--ft-surface-subtle),var(--ft-surface))}.accounts-industry-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.accounts-industry-head h2{margin:3px 0 0;font: 700 var(--ft-type-card) Syne,sans-serif;color: var(--ft-text)}.accounts-industry-badge{padding:4px 8px;border: 1px solid color-mix(in srgb, var(--ft-primary) 33%, transparent);border-radius:999px;color: var(--ft-primary);background: color-mix(in srgb, var(--ft-primary) 7%, transparent);font-size: var(--ft-type-micro);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.accounts-industry-card{margin:14px 0 18px;padding:16px 18px;background: linear-gradient(135deg,var(--ft-surface-subtle),var(--ft-surface))}.accounts-industry-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.accounts-industry-head h2{margin:3px 0 0;font: 700 var(--ft-type-card) var(--ft-font);color: var(--ft-text)}.accounts-industry-badge{padding:4px 8px;border: 1px solid color-mix(in srgb, var(--ft-primary) 33%, transparent);border-radius:999px;color: var(--ft-primary);background: color-mix(in srgb, var(--ft-primary) 7%, transparent);font-size: var(--ft-type-micro);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
 .manufacturing-flow-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.manufacturing-flow-card{padding:17px;text-align:left;color: var(--ft-text);cursor:pointer}.manufacturing-flow-card:hover{border-color: color-mix(in srgb, var(--ft-primary) 53%, transparent);transform:translateY(-1px)}.manufacturing-flow-card strong{display:block;margin-top:10px}.manufacturing-flow-card p{margin:6px 0 0}.manufacturing-flow-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background: color-mix(in srgb, var(--ft-primary) 11%, transparent);color: var(--ft-primary);font-weight:800}.manufacturing-landing-card{border-left: 3px solid var(--ft-primary)}@media(max-width:680px){.manufacturing-flow-grid{grid-template-columns:1fr}}
 .accounts-business-pulse{padding:1.15rem;border:1px solid color-mix(in srgb,var(--line) 78%,transparent);background:linear-gradient(145deg,color-mix(in srgb,var(--card) 94%,var(--accent) 6%),var(--card))}.accounts-business-pulse-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1rem}.accounts-business-pulse-head .acc-section-title{margin:.2rem 0 0}.accounts-business-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:.7rem}.accounts-business-kpis .acc-metric{min-height:84px}.accounts-business-actions{display:flex;align-items:center;flex-wrap:wrap;gap:.55rem;margin-top:1rem}.accounts-business-actions>.small{margin-right:.2rem}.accounts-business-action{display:inline-flex;align-items:center;gap:.5rem;border:1px solid var(--line);border-radius:999px;padding:.55rem .8rem;background:var(--surface);color:var(--text);cursor:pointer;font-weight:650}.accounts-business-action:hover{border-color:var(--accent);transform:translateY(-1px)}.accounts-business-action.green{border-color: color-mix(in srgb,var(--ft-success) 45%,var(--line))}.accounts-business-action.red{border-color: color-mix(in srgb,var(--ft-danger) 45%,var(--line))}.accounts-business-action.blue{border-color: color-mix(in srgb,var(--ft-info) 45%,var(--line))}.accounts-business-action.gold{border-color: color-mix(in srgb,var(--ft-primary) 45%,var(--line))}.accounts-business-action.purple{border-color: color-mix(in srgb,var(--ft-info) 45%,var(--line))}@media(max-width:1050px){.accounts-business-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:620px){.accounts-business-pulse-head{flex-direction:column;gap:.25rem}.accounts-business-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.accounts-business-actions{align-items:stretch}.accounts-business-actions>.small{width:100%}.accounts-business-action{justify-content:space-between;flex:1 1 calc(50% - .55rem)}}
 .accounts-business-alert{display:flex;align-items:center;gap:.7rem;margin-top:1rem;padding:.7rem .8rem;border: 1px solid color-mix(in srgb,var(--ft-primary) 45%,var(--line));border-radius:12px;background: color-mix(in srgb,var(--ft-primary) 8%,var(--card))}.accounts-business-alert>div{flex:1;min-width:0}.accounts-business-alert>div strong{display:block}.accounts-business-alert-icon{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background: var(--ft-primary);color: var(--ft-on-primary);font-weight:800}.accounts-business-alert .btn{white-space:nowrap}@media(max-width:620px){.accounts-business-alert{align-items:flex-start;flex-wrap:wrap}.accounts-business-alert .btn{margin-left:2.2rem}}

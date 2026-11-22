@@ -121,7 +121,7 @@
 
 .accounts-dashboard .acc-bk-title {
   margin: 0;
-  font: 700 var(--ft-type-lead)/1.25 Syne, sans-serif;
+  font: 700 var(--ft-type-lead)/1.25 var(--ft-font);
   color: var(--acc-text);
 }
 
@@ -577,7 +577,7 @@
 
 .accounts-dashboard .acc-mig-tile strong {
   color: var(--acc-text);
-  font: 700 var(--ft-type-section)/1.2 Syne, sans-serif;
+  font: 700 var(--ft-type-section)/1.2 var(--ft-font);
   font-variant-numeric: tabular-nums;
 }
 

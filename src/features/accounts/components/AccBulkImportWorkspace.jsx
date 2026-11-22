@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { FileUp, LoaderCircle, ImagePlus } from "lucide-react";
-import { CloseButton, ModalScroll } from "../../../components/ui.jsx";
+import { CloseButton, ModalScroll, badgeLabel } from "../../../components/ui.jsx";
 import { useDialogDismiss } from "../../../components/useDialogDismiss.js";
 import { downloadAccountsCsv } from "../io/accountingExport.js";
 import { VOUCHER_CSV_TEMPLATE, parseVoucherImportFile, planVoucherImport } from "../io/voucherCsvImport.js";
@@ -307,7 +307,7 @@ export function AccBulkImportWorkspace({
                         <td>{entry.date || "—"}</td>
                         <td>{entry.partyName || "—"}</td>
                         <td className="acc-num">{money(entry.amount)}</td>
-                        <td>{entry.status}</td>
+                        <td>{badgeLabel(entry.status)}</td>
                       </tr>
                     ))}
                   </AccTable>
@@ -420,7 +420,7 @@ export function AccBulkImportWorkspace({
                           <td>{bill?.billNumber || "—"}</td>
                           <td>{bill?.billDate || "—"}</td>
                           <td className="acc-num">{bill?.total != null ? money(bill.total) : "—"}</td>
-                          <td>{source.status}</td>
+                          <td>{badgeLabel(source.status)}</td>
                         </tr>
                       );
                     })}

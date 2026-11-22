@@ -1,4 +1,5 @@
 import { Children, cloneElement, isValidElement, useEffect, useId, useRef, useState } from "react";
+import { badgeLabel } from "../lib/statusLabel.js";
 import { useDialogDismiss } from "./useDialogDismiss.js";
 import { Select } from "./Select.jsx";
 import { Reveal } from "./ui/Reveal.jsx";
@@ -37,10 +38,11 @@ export const LabeledField = ({ label, children, required, className }) => (
   </label>
 );
 // `tone` picks the badge colour class when it differs from the label.
+export { badgeLabel };
 export const Badge = ({
   status,
   tone = status
-}) => <span className={`badge ${tone}`}>{status}</span>;
+}) => <span className={`badge ${tone}`}>{badgeLabel(status)}</span>;
 // Popups close with the ✕ in the top-right corner (shown when `close` is given); there is no Cancel button.
 // `isolateClicks` stops clicks inside the dialog reaching clickable parents (e.g. cards).
 const classTokens = value => String(value || "").split(/\s+/).filter(Boolean);

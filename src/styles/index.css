@@ -14,8 +14,8 @@
   --shadow:
     rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --sans: var(--ft-font);
+  --heading: var(--ft-font);
   --mono: ui-monospace, Consolas, monospace;
 
   font: var(--ft-type-body)/1.5 var(--sans);
@@ -84,7 +84,7 @@ body {
 
 .dashboard-finance-heading strong {
   color: var(--ft-text);
-  font: 700 var(--ft-type-lead) Syne;
+  font: 700 var(--ft-type-lead) var(--ft-font);
 }
 
 .dashboard-finance-heading .small {
@@ -295,7 +295,7 @@ body {
 
 .chit-board-title strong {
   display: block;
-  font: 700 var(--ft-type-lead) Syne, DM Sans, sans-serif;
+  font: 700 var(--ft-type-lead) var(--ft-font);
   color: var(--ft-text);
 }
 
@@ -368,7 +368,7 @@ body {
 
 .chit-scheme-name {
   margin: 12px 0 2px;
-  font: 700 var(--ft-type-lead) Syne, DM Sans, sans-serif;
+  font: 700 var(--ft-type-lead) var(--ft-font);
   color: var(--ft-text);
   letter-spacing: -0.3px;
   overflow-wrap: anywhere;
@@ -376,7 +376,7 @@ body {
 
 .chit-scheme-value {
   margin-top: 10px;
-  font: 700 var(--ft-type-title) Syne, DM Sans, sans-serif;
+  font: 700 var(--ft-type-title) var(--ft-font);
   letter-spacing: -0.6px;
 }
 

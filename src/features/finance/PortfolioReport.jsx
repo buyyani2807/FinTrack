@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Select } from "../../components/Select.jsx";
-import { Button, Field, Metric, Modal, SegmentedControl, Spinner } from "../../components/ui.jsx";
+import { Button, Field, Metric, Modal, SegmentedControl, Spinner, badgeLabel } from "../../components/ui.jsx";
 import { loadChitSchemeDetails, loadChitSchemes } from "../../lib/financeRepository";
 import { formatInr as money } from "../../lib/formatMoney.js";
 import { buildChitMonthStatement, currentSchemeMonth, monthLabel as chitMonthLabel } from "../chitFund/model/monthStatement";
@@ -90,7 +90,7 @@ export function ChitFundMonthReport({ token }) {
         <span className="small">PDF includes auction/prize, member collections with payment mode and collected by, and outstanding dues for {statement.monthLabel}.</span>
         <Button className="primary" onClick={download}>Download PDF</Button>
       </div>
-      <div className="table spacer"><table><thead><tr><th>Member</th><th>Ticket</th><th>Due</th><th>Paid</th><th>Payment mode</th><th>Collected by</th><th>Status</th></tr></thead><tbody>{statement.collections.map(row => <tr key={row.enrollmentId || `${row.ticket}-${row.name}`}><td>{row.name}</td><td>{row.ticket || "—"}</td><td>{money(row.due)}</td><td>{money(row.paid)}</td><td>{row.paymentMode}</td><td>{row.collectedBy}</td><td>{row.status}</td></tr>)}</tbody></table></div>
+      <div className="table spacer"><table><thead><tr><th>Member</th><th>Ticket</th><th>Due</th><th>Paid</th><th>Payment mode</th><th>Collected by</th><th>Status</th></tr></thead><tbody>{statement.collections.map(row => <tr key={row.enrollmentId || `${row.ticket}-${row.name}`}><td>{row.name}</td><td>{row.ticket || "—"}</td><td>{money(row.due)}</td><td>{money(row.paid)}</td><td>{row.paymentMode}</td><td>{row.collectedBy}</td><td>{badgeLabel(row.status)}</td></tr>)}</tbody></table></div>
     </>}
     {!busy && !schemes.length && <p className="small spacer">No Chit Fund schemes yet.</p>}
   </>;

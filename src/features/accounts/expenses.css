@@ -22,7 +22,7 @@
 
 .accounts-dashboard .acc-exp-title {
   margin: 0;
-  font: 700 var(--ft-type-title)/1.15 Syne, sans-serif;
+  font: 700 var(--ft-type-title)/1.15 var(--ft-font);
   color: var(--acc-text);
 }
 
@@ -198,7 +198,7 @@
 .accounts-dashboard .acc-exp-stat-value {
   overflow: hidden;
   color: var(--acc-text);
-  font: 700 var(--ft-type-section)/1.2 Syne, sans-serif;
+  font: 700 var(--ft-type-section)/1.2 var(--ft-font);
   font-variant-numeric: tabular-nums;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -283,7 +283,7 @@
 .accounts-dashboard .acc-exp-card-head h2 {
   margin: 0;
   color: var(--acc-text);
-  font: 700 var(--ft-type-body)/1.25 Syne, sans-serif;
+  font: 700 var(--ft-type-body)/1.25 var(--ft-font);
 }
 
 .accounts-dashboard .acc-exp-card-head .small { margin: 4px 0 0; }

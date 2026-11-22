@@ -18,7 +18,7 @@
   --mkt-type-band: clamp(24px, 2.6vw, 32px);
   --mkt-type-price: clamp(32px, 4vw, 44px);
   --mkt-type-copy: var(--ft-type-ui);
-  font-family: Inter, var(--ft-font, system-ui, sans-serif);
+  font-family: var(--ft-font);
   font-size: var(--ft-type-body);
   line-height: var(--ft-leading-body);
 }
@@ -44,13 +44,10 @@ html[data-theme="dark"] .mkt {
 .app .mkt h3,
 .app .mkt .mkt-price,
 .app .mkt .mkt-brand {
-  font-family: Poppins, sans-serif !important;
+  font-family: var(--ft-font) !important;
   letter-spacing: -0.03em !important;
 }
-.app .mkt h1,
-.app .mkt h2,
-.app .mkt h3,
-.app .mkt .mkt-price { font-family: "Plus Jakarta Sans", Inter, sans-serif !important; }
+.app .mkt .mkt-brand { font-family: var(--ft-font-brand) !important; }
 .mkt h1,
 .mkt h2,
 .mkt h3 {
@@ -177,7 +174,7 @@ html[data-theme="dark"] .mkt {
   gap: 10px;
   margin-right: 12px;
   color: var(--mkt-ink);
-  font-family: Poppins, var(--ft-font-brand, sans-serif);
+  font-family: var(--ft-font-brand);
   font-weight: 700;
   font-size: var(--ft-type-section);
   letter-spacing: -0.04em;
@@ -615,7 +612,7 @@ html[data-theme="dark"] .mkt-ask-prompt-icon { color: var(--mkt-navy); backgroun
   overflow-anchor: none;
   transition: height 0.4s ease, max-height 0.4s ease;
   color: var(--mkt-ink);
-  font-family: var(--ft-font, Inter, system-ui, sans-serif);
+  font-family: var(--ft-font);
   font-size: var(--mkt-type-copy);
   line-height: 1.5;
 }
@@ -1823,7 +1820,7 @@ html[data-theme="dark"] .mkt :is(.fx-segment button[aria-selected="true"], .fx-p
 .app .mkt .pc-card h2, .mkt .pc-card h2 { flex: 1; min-width: 0; margin: 0; color: #131313; font-size: 22px; font-weight: 700; line-height: 1.25; letter-spacing: -0.01em !important; }
 .mkt .pc-desc { margin: 20px 0 0; padding-top: 20px; border-top: 1px solid #9fb5b5; color: #131313; font-size: 16px; line-height: 1.55; }
 .mkt .pc-amount { display: flex; flex: none; align-items: baseline; gap: 6px; margin: 0 0 0 auto; color: #131313; white-space: nowrap; }
-.pc-amount strong { font: 700 30px/1 "Plus Jakarta Sans", var(--ft-font); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.pc-amount strong { font: 700 30px/1 var(--ft-font); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .pc-amount span { font-size: var(--ft-type-secondary); font-weight: 500; }
 .pc-includes { margin-top: 22px; }
 .mkt .pc-label { margin: 0 0 10px; color: #131313; font-size: 14px; font-weight: 600; }

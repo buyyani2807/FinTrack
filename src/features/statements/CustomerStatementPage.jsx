@@ -10,7 +10,7 @@ import {
 import { downloadCustomerStatementPdf } from "./statementPdf.js";
 import { canWhatsAppShare, openManualWhatsAppShare } from "../receipts/io/receiptWhatsApp.js";
 import { formatInr } from "../../lib/formatMoney.js";
-import { BackButton } from "../../components/ui.jsx";
+import { BackButton, badgeLabel } from "../../components/ui.jsx";
 import { AccPager } from "../accounts/components/AccUi.jsx";
 import { usePagedList } from "../accounts/model/usePagedList.js";
 
@@ -100,7 +100,7 @@ function ChitAccountSection({ account }) {
         <td>{formatReceiptDate(payment.dueDate)}</td>
         <td className="green">{money(payment.paid || payment.expected)}{payment.splitPayment ? <div className="small">Cash {money(payment.cashAmount)} · UPI {money(payment.upiAmount)}</div> : null}</td>
         <td>{payment.paymentMode || "—"}</td>
-        <td>{payment.status}</td>
+        <td>{badgeLabel(payment.status)}</td>
         <td>{payment.notes || ""}</td>
       </tr>)}
     </tbody></table><AccPager page={paged.page} pages={paged.pages} total={paged.total} from={paged.from} to={paged.to} onPage={paged.setPage} noun="payments" />{!account.payments.length && <p className="small spacer">No payment rows for this statement date.</p>}</div>
