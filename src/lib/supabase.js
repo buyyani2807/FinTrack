@@ -92,12 +92,23 @@ async function refreshSession() {
   }
 }
 
-async function request(path, options = {}, accessToken, retried = false) {
+const ISSUED_IN_FUTURE_RETRY_MS = 1000;
+export const isIssuedInFuture = body => body?.code === "PGRST303" && /issued at future/i.test(String(body?.message || ""));
+
+async function request(path, options = {}, accessToken, retried = false, waited = false) {
   const response = await fetch(`${url}${path}`, {
     ...options,
     headers: headers(accessToken, options.headers),
   });
   const body = response.status === 204 ? null : await response.json().catch(() => null);
+  // A token used in its first second can be refused as "JWT issued at future" when a Supabase
+  // database server's clock is slightly behind Auth's. The token is fine: wait a moment and send
+  // it again, rather than paying for a full refresh round trip (measured ~1 s on every sign-in).
+  if (response.status === 401 && !retried && !waited && isIssuedInFuture(body)) {
+    await new Promise(resolve => setTimeout(resolve, ISSUED_IN_FUTURE_RETRY_MS));
+    // Still refused after the wait: fall through to the normal refresh below on that attempt.
+    return request(path, options, accessToken, false, true);
+  }
   if (response.status === 401 && !retried && (body?.code === "PGRST303" || /jwt expired/i.test(body?.message || ""))) {
     const refreshedToken = await refreshSession();
     if (refreshedToken) return request(path, options, refreshedToken, true);
