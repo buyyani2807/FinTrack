@@ -46,11 +46,21 @@ function sendInvoiceMessage(invoice) {
  * number with a PDF download link (see io/receiptLink.js) instead of the share sheet, which can't be
  * told the recipient.
  */
-export function sendSalesInvoiceOnWhatsApp(invoice, link = null) {
+export function sendSalesInvoiceOnWhatsApp(invoice, explicitLink = null) {
+  // Sales invoices opened in Accounts carry { token, companyId } as shareLink, so they go out
+  // like a Counter bill: a short note with the PDF link (and its preview card).
+  const link = explicitLink || (invoice?.shareLink && invoice?.voucherId
+    ? { ...invoice.shareLink, billKey: invoice.voucherId }
+    : null);
   const file = salesInvoicePdfFile(invoice);
   if (link?.token && link?.companyId && link?.billKey && canWhatsAppShare(invoice.customerPhone)) {
     const onCredit = /credit|khata/i.test(String(invoice.settlement || ""));
-    const balance = onCredit ? Number(invoice.amount || 0) : Math.max(0, Number(invoice.outstanding || 0));
+    const isPos = Boolean(invoice.posSlip || invoice.autoPrint);
+    const amount = Number(invoice.amount || 0);
+    // Counter khata bills owe the full amount; a sales invoice owes what is still outstanding.
+    const balance = onCredit
+      ? (isPos ? amount : Math.min(amount, Math.max(0, Number(invoice.outstanding ?? amount))))
+      : (isPos ? Math.max(0, Number(invoice.outstanding || 0)) : 0);
     const details = {
       businessName: invoice.companyName || "",
       customerName: invoice.customerName || "",
@@ -70,6 +80,8 @@ export function sendSalesInvoiceOnWhatsApp(invoice, link = null) {
           businessPhone: invoice.companyPhone || "",
           paidBy: onCredit ? "" : invoice.settlement || "",
           link: pdfLink,
+          documentLabel: isPos ? "bill" : "invoice",
+          dueDate: !isPos && invoice.dueDate ? formatReceiptDate(invoice.dueDate) : "",
         })
         : withReceiptLink(salesInvoiceWhatsAppText(invoice), ""),
       note: pdfLink ? "" : "Sent as text only: the PDF link needs an internet connection.",

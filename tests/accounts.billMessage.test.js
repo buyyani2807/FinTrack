@@ -27,3 +27,15 @@ test("greeting uses the first name and skips cash customers and the phone suffix
   assert.equal(greetingName(""), "");
   assert.match(customerBillMessage({ customerName: "Cash customer", amount: 10 }), /^Hi,\n/);
 });
+
+test("a sales invoice goes out in the Counter bill message format, worded as an invoice", () => {
+  const text = customerBillMessage({
+    businessName: "Balaji Traders", businessPhone: "9160710101", customerName: "Sai Traders",
+    billNo: "SALE-000004", amount: 1600, balance: 1600, link: "https://x/b/1", documentLabel: "invoice", dueDate: "29 Nov 2026",
+  });
+  assert.match(text, /^Hi Sai,\n\nThank you for shopping at \*Balaji Traders\*\./);
+  assert.match(text, /Your invoice is ready\.\nInvoice No: SALE-000004\nInvoice Amount: \*₹1,600\*\nBalance Due: \*₹1,600\*\nDue Date: 29 Nov 2026/);
+  assert.match(text, /View your invoice:\nhttps:\/\/x\/b\/1/);
+  // Counter bills are unchanged.
+  assert.match(customerBillMessage({ billNo: "B-1", amount: 10, link: "https://x" }), /Your bill is ready\.\nBill No: B-1\nBill Amount/);
+});

@@ -2244,6 +2244,11 @@ const openVoucher = () => {
       : `${label} saved successfully`;
   });
 
+  // Lets WhatsApp send a sales invoice like a Counter bill: short note plus PDF link.
+  const withInvoiceShareLink = invoice => (invoice && token
+    ? { ...invoice, shareLink: { token, companyId: activeCompany?.id || activeCompanyId } }
+    : invoice);
+
   const openVoucherDocument = row => {
     if (!row) return;
     const voucher = row.lines ? row : vouchers.find(item => item.id === (row.voucherId || row.id));
@@ -3461,14 +3466,14 @@ const openVoucher = () => {
       />}
       {salesInvoiceSuccess && (
         <SalesInvoiceSuccessModal
-          invoice={salesInvoiceSuccess}
+          invoice={withInvoiceShareLink(salesInvoiceSuccess)}
           settings={orgSettings}
           close={() => setSalesInvoiceSuccess(null)}
         />
       )}
       {salesInvoiceView && (
         <SalesInvoiceViewerModal
-          invoice={salesInvoiceView}
+          invoice={withInvoiceShareLink(salesInvoiceView)}
           settings={orgSettings}
           close={() => setSalesInvoiceView(null)}
           onSettle={canWrite ? openSettleInvoice : null}

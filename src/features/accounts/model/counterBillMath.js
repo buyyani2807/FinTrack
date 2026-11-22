@@ -190,11 +190,16 @@ export function buildCounterWhatsAppReceipt({
   taxLabel = "",
   total = 0,
   date = "",
+  // Sales invoices from Accounts reuse this layout: their own title and number label,
+  // and the balance still owed (with due date) instead of the khata note.
+  title: titleOverride = "",
+  billNoLabel = "Bill No.",
+  creditNote = "_Amount added to customer khata_",
 } = {}) {
   const store = String(companyName || "Store").trim();
-  const title = isReturn
+  const title = titleOverride || (isReturn
     ? "RETURN BILL"
-    : (Number(tax) > 0 && companyGstin ? "TAX INVOICE" : "BILL");
+    : (Number(tax) > 0 && companyGstin ? "TAX INVOICE" : "BILL"));
   const dateLabel = formatReceiptDate(date) || String(date || "").trim();
   const phone = String(customerPhone || "").trim();
   const name = String(customerName || "").trim();
@@ -216,7 +221,7 @@ export function buildCounterWhatsAppReceipt({
     dateLabel ? `Date: ${dateLabel}` : "",
     cashierName ? `Cashier: ${cashierName}` : "",
     tillLabel ? `Till: ${tillLabel}` : "",
-    billNo ? `Bill No.: ${billNo}` : "",
+    billNo ? `${billNoLabel}: ${billNo}` : "",
     WA_RULE,
   ].filter(Boolean);
 
@@ -224,7 +229,10 @@ export function buildCounterWhatsAppReceipt({
     const itemName = String(line.itemName || line.name || "Item").trim();
     const qty = Number(line.quantity || 0);
     const rate = Number(line.rate);
-    const amount = formatInr(counterLineNet(line));
+    // netAmount: the posted line amount, when the caller has it (sales invoices).
+    const amount = formatInr(Number.isFinite(Number(line.netAmount)) && line.netAmount !== "" && line.netAmount != null
+      ? Number(line.netAmount)
+      : counterLineNet(line));
     const rateText = Number.isFinite(rate) && rate > 0 ? formatInr(rate) : "";
     return [
       `*${itemName}*`,
@@ -244,7 +252,7 @@ export function buildCounterWhatsAppReceipt({
     `*Grand Total ${formatInr(total)}*`,
     WA_RULE,
     payLabel ? `${dateLabel ? `${dateLabel}  ` : ""}${payLabel}  ${isCredit ? formatInr(0) : formatInr(total)}` : "",
-    isCredit ? "_Amount added to customer khata_" : "",
+    isCredit && creditNote ? creditNote : "",
     WA_RULE,
   ].filter(Boolean);
 

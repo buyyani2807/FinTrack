@@ -97,14 +97,17 @@ export function VoucherExpandPanel({
       {voucher.voucherType === "sales" && (
         <div className="acc-sales-invoice-actions">
           <SalesInvoiceActions
-            invoice={buildSalesInvoice({
-              voucher,
-              party,
-              accounts,
-              company: activeCompany,
-              workspace,
-              itemLines: voucherItemLines.filter(line => line.voucherId === voucher.id),
-            })}
+            invoice={{
+              ...buildSalesInvoice({
+                voucher,
+                party,
+                accounts,
+                company: activeCompany,
+                workspace,
+                itemLines: voucherItemLines.filter(line => line.voucherId === voucher.id),
+              }),
+              shareLink: token && activeCompany?.id ? { token, companyId: activeCompany.id } : null,
+            }}
             settings={orgSettings}
             compact
           />

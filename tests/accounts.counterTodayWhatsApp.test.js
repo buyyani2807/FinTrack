@@ -31,5 +31,5 @@ test("sendSalesInvoiceOnWhatsApp is exported for reuse outside SalesInvoiceActio
     new URL("../src/features/accounts/components/SalesInvoiceActions.jsx", import.meta.url),
     "utf8",
   );
-  assert.match(source, /export function sendSalesInvoiceOnWhatsApp\(invoice, link = null\)/);
+  assert.match(source, /export function sendSalesInvoiceOnWhatsApp\(invoice, explicitLink = null\)/);
 });

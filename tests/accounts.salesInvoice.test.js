@@ -228,12 +228,17 @@ test("WhatsApp sale share uses the invoice content, not the greeting template", 
   assert.doesNotMatch(text, /^Hi /);
   assert.doesNotMatch(text, /Thank you for your purchase/);
 
+  // Same slip layout as the Counter WhatsApp receipt.
   const formatted = salesInvoiceWhatsAppText(invoice);
-  assert.match(formatted, /\*SALES INVOICE\*/);
-  assert.match(formatted, /\*Invoice No\* SALE-000017/);
-  assert.match(formatted, /Mahaveer Traders/);
-  assert.match(formatted, /Cement/);
-  assert.match(formatted, /\*Invoice total\* \*₹1,168\*/);
+  assert.match(formatted, /^\*SALES INVOICE\*\n\*[^*]+\*/);
+  assert.match(formatted, /Invoice No\.: SALE-000017/);
+  assert.match(formatted, /Name: Mahaveer Traders/);
+  assert.match(formatted, /Item {2}Qty {2}Price {2}Amount/);
+  assert.match(formatted, /\*Cement\*/);
+  assert.match(formatted, /\*Grand Total ₹1,168\*/);
+  assert.match(formatted, /\*Thank You & Visit Again\.\.!\*$/);
+  assert.match(formatted, /_Balance due ₹1,168 by 28 Oct 2026_/);
+  assert.doesNotMatch(formatted, /khata/);
   assert.doesNotMatch(formatted, /Please retain this invoice/);
   assert.doesNotMatch(formatted, /^Hi /);
 });

@@ -29,3 +29,14 @@ test("Counter sale WhatsApp share tries the PDF-attach (navigator.share) path be
   assert.match(body, /const message = link\s*\? customerBillMessage\(\{[\s\S]*?link,[\s\S]*?\}\)\s*: withReceiptLink\(text, ""\);/);
   assert.match(body, /openManualWhatsAppShare\(\{\s*phone: partyPhone,\s*message,/);
 });
+
+test("sales invoices opened in Accounts carry the PDF-link context for WhatsApp", () => {
+  const actions = readFileSync(new URL("../src/features/accounts/components/SalesInvoiceActions.jsx", import.meta.url), "utf8");
+  assert.match(actions, /invoice\?\.shareLink && invoice\?\.voucherId\s*\?\s*\{ \.\.\.invoice\.shareLink, billKey: invoice\.voucherId \}/);
+  assert.match(actions, /documentLabel: isPos \? "bill" : "invoice"/);
+  const product = readFileSync(new URL("../src/features/accounts/AccountingProduct.jsx", import.meta.url), "utf8");
+  assert.match(product, /invoice=\{withInvoiceShareLink\(salesInvoiceSuccess\)\}/);
+  assert.match(product, /invoice=\{withInvoiceShareLink\(salesInvoiceView\)\}/);
+  const row = readFileSync(new URL("../src/features/accounts/sections/vouchers/VoucherRow.jsx", import.meta.url), "utf8");
+  assert.match(row, /shareLink: token && activeCompany\?\.id \? \{ token, companyId: activeCompany\.id \} : null/);
+});

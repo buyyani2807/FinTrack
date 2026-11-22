@@ -26,26 +26,32 @@ export function customerBillMessage({
   paidBy = "",
   link = "",
   isReturn = false,
+  // "invoice" for sales invoices from Accounts; Counter bills keep "bill".
+  documentLabel = "bill",
+  dueDate = "",
 } = {}) {
   const shop = clean(businessName) || "our store";
   const name = greetingName(customerName);
   const due = Math.max(0, Number(balance || 0));
+  const noun = documentLabel === "invoice" ? "invoice" : "bill";
+  const Noun = noun === "invoice" ? "Invoice" : "Bill";
   const details = [
-    billNo ? `Bill No: ${clean(billNo)}` : null,
-    `Bill Amount: *${rupees(amount)}*`,
+    billNo ? `${Noun} No: ${clean(billNo)}` : null,
+    `${Noun} Amount: *${rupees(amount)}*`,
     due > 0
       ? `Balance Due: *${rupees(due)}*`
       : `Paid${clean(paidBy) ? ` (${clean(paidBy)})` : ""}: ${rupees(amount)}`,
+    due > 0 && clean(dueDate) ? `Due Date: ${clean(dueDate)}` : null,
   ].filter(Boolean);
   const lines = [
     name ? `Hi ${name},` : "Hi,",
     "",
     `Thank you for shopping at *${shop}*.`,
     "",
-    isReturn ? "Your return bill is ready." : "Your bill is ready.",
+    isReturn ? "Your return bill is ready." : `Your ${noun} is ready.`,
     ...details,
   ];
-  if (link) lines.push("", "View your bill:", link);
+  if (link) lines.push("", `View your ${noun}:`, link);
   lines.push("", "Happy to serve you!", shop);
   if (clean(businessPhone)) lines.push(clean(businessPhone));
   return lines.join("\n");

@@ -3,6 +3,7 @@ import { salesInvoicePresentation } from "../model/salesInvoiceModel.js";
 import { rupeesInWords } from "../model/payroll.js";
 import { downloadPdf, pdfBinaryToBytes, renderDocumentPdf } from "./documentPdf.js";
 import { printThermalReceiptHtml } from "./thermalReceiptPrint.js";
+import { buildCounterWhatsAppReceipt } from "../model/counterBillMath.js";
 
 const quantityText = (quantity, unit) => `${Number(quantity || 0).toLocaleString("en-IN", { maximumFractionDigits: 3 })}${unit ? ` ${unit}` : ""}`;
 
@@ -370,46 +371,55 @@ export function salesInvoiceDocumentText(invoice) {
   return lines.filter(line => line != null).join("\n");
 }
 
-const whatsAppBold = value => {
-  const text = String(value ?? "").replace(/\*/g, "").trim();
-  return text ? `*${text}*` : "";
-};
-
-/** Invoice text WhatsApp can render: bold labels, no legal paragraph. */
+/**
+ * Invoice text for WhatsApp, in the same slip layout as the Counter WhatsApp receipt.
+ * Sent when the PDF link can't be made (offline) or the invoice has no link context.
+ */
 export function salesInvoiceWhatsAppText(invoice) {
-  const model = salesInvoicePdfModel(invoice);
-  const lines = [whatsAppBold(model.title || "SALES INVOICE")];
-  if (model.seller?.name) lines.push(model.seller.name);
-  for (const line of model.seller?.lines || []) if (line) lines.push(line);
-  lines.push("");
-  for (const [label, value] of model.meta || []) {
-    if (value) lines.push(`${whatsAppBold(label)} ${value}`);
-  }
-  lines.push("", whatsAppBold(model.partyHeading || "BILL TO"));
-  if (model.party?.name) lines.push(model.party.name);
-  for (const line of model.party?.lines || []) if (line) lines.push(line);
-  if (model.items?.length) {
-    lines.push("", whatsAppBold("Items"));
-    for (const item of model.items) {
-      const detail = [item.quantity, item.rate ? `× ${item.rate}` : "", item.discount ? `disc ${item.discount}` : "", item.gst ? `GST ${item.gst}` : ""].filter(Boolean).join(" ");
-      lines.push(item.name || "Item");
-      const amount = item.amount ? whatsAppBold(item.amount) : "";
-      if (detail || amount) lines.push([detail, amount].filter(Boolean).join(" · "));
-      if (item.detail) lines.push(item.detail);
-    }
-  }
-  if (model.totals?.length) {
-    lines.push("");
-    for (const total of model.totals) {
-      lines.push(total.bold ? `${whatsAppBold(total.label)} ${whatsAppBold(total.value)}` : `${whatsAppBold(total.label)} ${total.value}`);
-    }
-  }
-  if (model.bankLines?.length) lines.push("", ...model.bankLines);
-  if (invoice?.upiId && Number(invoice.payableAmount || 0) > 0) {
-    lines.push("", ...upiCaption(invoice, invoice.payableAmount, invoice.money));
-  }
-  if (model.footer) lines.push("", model.footer);
-  return lines.filter(line => line != null).join("\n").replace(/\n{3,}/g, "\n\n");
+  const onCredit = /credit|khata/i.test(String(invoice.settlement || ""));
+  const amount = Number(invoice.amount || 0);
+  const isPos = Boolean(invoice.posSlip || invoice.autoPrint);
+  const balance = onCredit
+    ? Math.min(amount, Math.max(0, Number(invoice.outstanding ?? amount)))
+    : 0;
+  const due = invoice.dueDate ? formatReceiptDate(invoice.dueDate) : "";
+  const creditNote = isPos
+    ? undefined
+    : (balance > 0 ? `_Balance due ${invoice.money(balance)}${due ? ` by ${due}` : ""}_` : "");
+  const text = buildCounterWhatsAppReceipt({
+    companyName: invoice.companyName || "",
+    companyPhone: invoice.companyPhone || "",
+    companyGstin: invoice.companyGstin || "",
+    companyAddress: invoice.companyAddress || "",
+    tillLabel: invoice.tillLabel || "",
+    cashierName: invoice.cashier || "",
+    billNo: invoice.invoiceNumber || "",
+    title: isPos ? "" : invoice.title || "SALES INVOICE",
+    billNoLabel: isPos ? "Bill No." : "Invoice No.",
+    isReturn: /return/i.test(String(invoice.title || "")),
+    isCredit: onCredit,
+    payLabel: invoice.settlement || "",
+    customerName: invoice.customerName || "",
+    customerPhone: invoice.customerPhone || "",
+    lines: (invoice.itemLines || []).map(line => ({
+      itemName: line.name || "Item",
+      quantity: Number(line.quantity || 0),
+      rate: Number(line.rate || 0),
+      netAmount: Number(line.amount || 0),
+    })),
+    taxable: Number(invoice.taxable || 0),
+    tax: Number(invoice.tax || 0),
+    cgst: Number(invoice.cgst || 0),
+    sgst: Number(invoice.sgst || 0),
+    igst: Number(invoice.igst || 0),
+    total: amount,
+    date: invoice.invoiceDate || "",
+    ...(creditNote === undefined ? {} : { creditNote }),
+  });
+  const upi = invoice?.upiId && Number(invoice.payableAmount || 0) > 0
+    ? `\n\n${upiCaption(invoice, invoice.payableAmount, invoice.money).join("\n")}`
+    : "";
+  return `${text}${upi}`;
 }
 
 /**
