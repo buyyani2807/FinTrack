@@ -161,6 +161,56 @@ Please review and confirm.
 {company_phone}`,
 };
 
+// Built-in receipt templates before the short-note-with-link format. The Settings page saved
+// copies of these alongside any real edit, so a saved template that matches one exactly is
+// treated as "not customised" and gets the current default.
+const RETIRED_RECEIPT_TEMPLATES = {
+  payment_receipt: `Hi {customer_name},
+We have received your payment of {amount}.
+Receipt No: {receipt_number}
+Account: {account_id}
+Payment Date: {payment_date}
+Payment Mode: {payment_mode}
+Remaining Balance: {remaining_balance}
+Thank you.
+{company_name}`,
+  daily_payment_receipt: `Hi {customer_name},
+
+We have received your payment of {amount}.
+
+Receipt No: {receipt_number}
+Account: {account_id}
+Payment Date: {payment_date}
+Payment Mode: {payment_mode}
+{day_progress}
+Remaining Balance: {remaining_balance}
+
+Thank you for your payment.
+{company_name}
+Bachupally | {company_phone}`,
+  chit_payment_receipt: `Hi {customer_name},
+
+We have received your payment of {amount}.
+
+Receipt No: {receipt_number}
+Account: {account_id}
+Payment Date: {payment_date}
+Payment Mode: {payment_mode}
+Payment Month: {payment_month}
+Remaining Balance: {remaining_balance}
+
+Thank you for your payment.
+{company_name}
+Bachupally | {company_phone}`,
+};
+
+const sameTemplate = (a, b) => String(a || "").replace(/\s+/g, " ").trim() === String(b || "").replace(/\s+/g, " ").trim();
+
+/** True when a saved template is just a copy of an older built-in default for that key. */
+export function isRetiredDefaultTemplate(key, text) {
+  return Boolean(RETIRED_RECEIPT_TEMPLATES[key]) && sameTemplate(text, RETIRED_RECEIPT_TEMPLATES[key]);
+}
+
 export function resolveWhatsAppTemplate(settings = {}, key = "payment_receipt") {
   const custom = settings?.whatsappTemplates?.[key];
   const trimmed = custom?.trim() || "";
@@ -170,5 +220,6 @@ export function resolveWhatsAppTemplate(settings = {}, key = "payment_receipt") 
       return DEFAULT_WHATSAPP_TEMPLATES.chit_reminder;
     }
   }
+  if (trimmed && isRetiredDefaultTemplate(key, trimmed)) return DEFAULT_WHATSAPP_TEMPLATES[key];
   return trimmed || DEFAULT_WHATSAPP_TEMPLATES[key] || "";
 }

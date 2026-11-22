@@ -86,3 +86,15 @@ test("156 files organization documents and records the kind; page reads every co
   const link = readFileSync(new URL("../src/features/accounts/io/receiptLink.js", import.meta.url), "utf8");
   assert.match(link, /details\.kind && details\.kind !== "bill" \? \{ p_kind/);
 });
+
+test("a saved copy of the old built-in receipt template gets the new short one; real edits stay", async () => {
+  const { resolveWhatsAppTemplate } = await import("../src/features/receipts/model/templateEngine.js");
+  const oldDaily = `Hi {customer_name},\n\nWe have received your payment of {amount}.\n\nReceipt No: {receipt_number}\nAccount: {account_id}\nPayment Date: {payment_date}\nPayment Mode: {payment_mode}\n{day_progress}\nRemaining Balance: {remaining_balance}\n\nThank you for your payment.\n{company_name}\nBachupally | {company_phone}`;
+  assert.equal(resolveWhatsAppTemplate({ whatsappTemplates: { daily_payment_receipt: oldDaily } }, "daily_payment_receipt"), DEFAULT_WHATSAPP_TEMPLATES.daily_payment_receipt);
+  const edited = oldDaily.replace("Bachupally", "Kukatpally");
+  assert.equal(resolveWhatsAppTemplate({ whatsappTemplates: { daily_payment_receipt: edited } }, "daily_payment_receipt"), edited);
+  const message = buildWhatsAppMessage({ ...base, dailyFields: { daysCompleted: 76, daysRemaining: 24 }, receiptLink: "https://x/b/1" },
+    { whatsappTemplates: { daily_payment_receipt: oldDaily } });
+  assert.match(message, /Amount Received: \*₹500\*/);
+  assert.doesNotMatch(message, /Bachupally/);
+});

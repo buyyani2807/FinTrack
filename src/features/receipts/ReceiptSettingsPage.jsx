@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { TabScroller } from "../../components/TabScroller.jsx";
 import { Bell, Building2, CalendarDays, CalendarRange, Check, ChevronDown, Coins, Image as ImageIcon, MessageCircle, Plus, ReceiptText, RotateCcw, Upload } from "lucide-react";
-import { DEFAULT_WHATSAPP_TEMPLATES } from "./model/templateEngine.js";
+import { DEFAULT_WHATSAPP_TEMPLATES, isRetiredDefaultTemplate } from "./model/templateEngine.js";
 import { defaultConfirmationSettings } from "./io/transactionConfirmations.js";
 import { loadOrganizationSettings, saveOrganizationSettings } from "../../lib/financeRepository.js";
 import { LabeledField as Field } from "../../components/ui.jsx";
@@ -107,7 +107,8 @@ export function ReceiptSettingsPage({ token, close, onSettingsSaved, tab: routeT
           reminderSettings,
           whatsappTemplates: {
             ...DEFAULT_WHATSAPP_TEMPLATES,
-            ...savedTemplates,
+            // A saved copy of an old built-in default shows (and saves) as the current default.
+            ...Object.fromEntries(Object.entries(savedTemplates).filter(([key, text]) => !isRetiredDefaultTemplate(key, text))),
             chit_reminder: useDefaultChitReminder ? DEFAULT_WHATSAPP_TEMPLATES.chit_reminder : chitReminder,
           },
         };
