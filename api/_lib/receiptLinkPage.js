@@ -30,6 +30,44 @@ export function receiptLinkRequest(req) {
   return { code, card: String(req.query?.card || "") === "1" };
 }
 
+const DOCUMENTS = {
+  bill: { noun: "Bill", amountLabel: "Bill Amount", payable: true },
+  invoice: { noun: "Invoice", amountLabel: "Invoice Amount", payable: true },
+  receipt: { noun: "Receipt", amountLabel: "Payment Received" },
+  quotation: { noun: "Quotation", amountLabel: "Quotation Value" },
+  sales_order: { noun: "Sales Order", amountLabel: "Order Value" },
+  delivery_challan: { noun: "Delivery Challan", amountLabel: "Goods Value" },
+  purchase_order: { noun: "Purchase Order", amountLabel: "Order Value" },
+  goods_receipt: { noun: "Goods Receipt", amountLabel: "Goods Value" },
+};
+
+/** Card and page wording for a link: what the document is, which amount to show, and its status pill. */
+export function documentWording(row) {
+  const doc = DOCUMENTS[String(row?.kind || "bill")] || DOCUMENTS.bill;
+  const balance = Number(row?.balance || 0);
+  if (doc.payable) {
+    return {
+      noun: doc.noun,
+      amountLabel: balance > 0 ? "Balance Due" : doc.amountLabel,
+      amount: balance > 0 ? balance : Number(row?.amount || 0),
+      pill: balance > 0 ? "Unpaid" : "Paid",
+      pillColor: balance > 0 ? "#c9443f" : "#2f8a57",
+      status: balance > 0 ? `Balance due ${rupees(balance)}` : "Paid",
+    };
+  }
+  if (row?.kind === "receipt") {
+    return {
+      noun: doc.noun,
+      amountLabel: doc.amountLabel,
+      amount: Number(row?.amount || 0),
+      pill: "Received",
+      pillColor: "#2f8a57",
+      status: balance > 0 ? `Balance ${rupees(balance)}` : "Fully paid",
+    };
+  }
+  return { noun: doc.noun, amountLabel: doc.amountLabel, amount: Number(row?.amount || 0), pill: doc.noun, pillColor: "#2e3a5c", status: "" };
+}
+
 const rupees = value => {
   const amount = Number(value || 0);
   const paise = Math.round(amount * 100) % 100 !== 0;
@@ -44,8 +82,8 @@ const billDate = value => {
 
 export async function readReceiptLink(code) {
   if (!CODE.test(code) || !supabaseUrl || !serviceKey) return null;
-  const select = "storage_path,business_name,customer_name,bill_no,bill_date,amount,balance,expires_at";
-  const response = await fetch(`${supabaseUrl}/rest/v1/receipt_links?code=eq.${code}&select=${select}`, { headers: serviceHeaders() });
+  // select=* so links keep working whether or not 156 (the kind column) has been run.
+  const response = await fetch(`${supabaseUrl}/rest/v1/receipt_links?code=eq.${code}&select=*`, { headers: serviceHeaders() });
   if (!response.ok) return null;
   const rows = await response.json().catch(() => []);
   return Array.isArray(rows) && rows[0] ? rows[0] : null;
@@ -80,19 +118,20 @@ function messagePage(res, status, title, body) {
 
 async function servePage(req, res, code) {
   const row = await readReceiptLink(code);
-  if (!row) return messagePage(res, 404, "Bill not found", "This bill link is not valid. Ask the shop to send it again.");
+  if (!row) return messagePage(res, 404, "Not found", "This link is not valid. Ask the shop to send it again.");
   const shop = row.business_name || "Your shop";
   if (new Date(row.expires_at).getTime() < Date.now()) {
     return messagePage(res, 410, "This bill link has expired", `Ask ${shop} to send the bill again.`);
   }
   const pdfUrl = await signedPdfUrl(row.storage_path);
-  if (!pdfUrl) return messagePage(res, 404, "Bill not found", `This bill is no longer available. Ask ${shop} to send it again.`);
+  const words = documentWording(row);
+  const noun = words.noun.toLowerCase();
+  if (!pdfUrl) return messagePage(res, 404, `${words.noun} not found`, `This ${noun} is no longer available. Ask ${shop} to send it again.`);
 
   const origin = originOf(req);
-  const balance = Number(row.balance || 0);
-  const status = balance > 0 ? `Balance due ${rupees(balance)}` : "Paid";
-  const title = `${shop} · Bill ${rupees(row.amount)}`;
-  const description = [row.bill_no ? `Bill No ${row.bill_no}` : "", billDate(row.bill_date), status, "Tap to view your bill"].filter(Boolean).join(" · ");
+  const status = words.status;
+  const title = `${shop} · ${words.noun} ${rupees(row.amount)}`;
+  const description = [row.bill_no ? `${words.noun} No ${row.bill_no}` : "", billDate(row.bill_date), status, `Tap to view your ${noun}`].filter(Boolean).join(" · ");
   const card = `${origin}/b/${code}/card.png`;
   res.status(200);
   res.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -110,10 +149,10 @@ async function servePage(req, res, code) {
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta http-equiv="refresh" content="1;url=${escapeHtml(pdfUrl)}">
-<style>body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f6f1e7;color:#2e3a5c;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:24px}main{background:#fff;border-radius:16px;padding:28px;max-width:420px;width:100%;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.08)}h1{font-size:22px;margin:0 0 14px}.amt{font-size:36px;font-weight:700;margin:4px 0}.pill{display:inline-block;padding:4px 14px;border-radius:999px;font-size:13px;font-weight:600;color:#fff;background:${balance > 0 ? "#c9443f" : "#2f8a57"}}.meta{color:#5c6378;font-size:14px;margin:14px 0 20px}a.btn{display:inline-block;background:#2e3a5c;color:#fff;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:600}</style></head>
-<body><main><h1>${escapeHtml(shop)}</h1><div>Bill Amount</div><div class="amt">${escapeHtml(rupees(row.amount))}</div><span class="pill">${escapeHtml(status)}</span>
-<p class="meta">${escapeHtml([row.bill_no ? `Bill No ${row.bill_no}` : "", billDate(row.bill_date)].filter(Boolean).join(" · "))}</p>
-<a class="btn" href="${escapeHtml(pdfUrl)}">View bill (PDF)</a></main></body></html>`);
+<style>body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f6f1e7;color:#2e3a5c;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:24px}main{background:#fff;border-radius:16px;padding:28px;max-width:420px;width:100%;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.08)}h1{font-size:22px;margin:0 0 14px}.amt{font-size:36px;font-weight:700;margin:4px 0}.pill{display:inline-block;padding:4px 14px;border-radius:999px;font-size:13px;font-weight:600;color:#fff;background:${words.pillColor}}.meta{color:#5c6378;font-size:14px;margin:14px 0 20px}a.btn{display:inline-block;background:#2e3a5c;color:#fff;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:600}</style></head>
+<body><main><h1>${escapeHtml(shop)}</h1><div>${escapeHtml(words.amountLabel)}</div><div class="amt">${escapeHtml(rupees(words.amount))}</div><span class="pill">${escapeHtml(status || words.pill)}</span>
+<p class="meta">${escapeHtml([row.bill_no ? `${words.noun} No ${row.bill_no}` : "", billDate(row.bill_date)].filter(Boolean).join(" · "))}</p>
+<a class="btn" href="${escapeHtml(pdfUrl)}">View ${escapeHtml(noun)} (PDF)</a></main></body></html>`);
 }
 
 let fonts = null;
@@ -131,9 +170,12 @@ const el = (type, style, children) => ({ type, props: { style, children } });
 
 /** 1200x630 preview card: shop name, bill amount, Paid / Unpaid pill, bill date. */
 export function receiptCardElement(row) {
-  const balance = Number(row.balance || 0);
   const shop = String(row.business_name || "Your shop");
   const date = billDate(row.bill_date);
+  const words = documentWording(row);
+  const footer = [row.bill_no ? `${words.noun} No ${row.bill_no}` : "", date ? `Date ${date}` : ""].filter(Boolean).join("   ·   ");
+  // Receipts also say what is left to pay on the account ("Balance ₹27,000" / "Fully paid").
+  const extra = row.kind === "receipt" ? words.status : "";
   return el("div", {
     width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center",
     background: "linear-gradient(135deg, #e9c98f 0%, #d9a55a 100%)", fontFamily: "Inter",
@@ -144,13 +186,13 @@ export function receiptCardElement(row) {
     }, [
       el("div", { fontSize: shop.length > 26 ? 52 : 64, fontWeight: 700, color: "#2e3a5c", textAlign: "center", lineHeight: 1.1 }, shop.toUpperCase()),
       el("div", { width: 120, height: 4, background: "#d9a55a", borderRadius: 2, margin: "26px 0 22px" }, ""),
-      el("div", { fontSize: 34, color: "#5c6378" }, balance > 0 ? "Balance Due" : "Bill Amount"),
-      el("div", { fontSize: 104, fontWeight: 700, color: "#2e3a5c", lineHeight: 1.15 }, rupees(balance > 0 ? balance : row.amount)),
+      el("div", { fontSize: 34, color: "#5c6378" }, words.amountLabel),
+      el("div", { fontSize: 104, fontWeight: 700, color: "#2e3a5c", lineHeight: 1.15 }, rupees(words.amount)),
       el("div", {
         marginTop: 14, padding: "8px 30px", borderRadius: 999, fontSize: 30, fontWeight: 700, color: "#ffffff",
-        background: balance > 0 ? "#c9443f" : "#2f8a57",
-      }, balance > 0 ? "Unpaid" : "Paid"),
-      el("div", { marginTop: 30, fontSize: 28, color: "#5c6378" }, [row.bill_no ? `Bill No ${row.bill_no}` : "", date ? `Bill Date ${date}` : ""].filter(Boolean).join("   ·   ") || " "),
+        background: words.pillColor,
+      }, extra ? `${words.pill} · ${extra}` : words.pill),
+      el("div", { marginTop: 30, fontSize: 28, color: "#5c6378" }, footer || " "),
     ]),
     el("div", { position: "absolute", bottom: 18, right: 40, fontSize: 22, color: "#5a3d12" }, "via MyFinTracker"),
   ]);

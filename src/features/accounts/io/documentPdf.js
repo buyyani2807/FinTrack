@@ -350,13 +350,18 @@ const MUTED = [0.36, 0.39, 0.48];
 const GOLD = [0.79, 0.66, 0.38];
 const CREAM = [0.98, 0.955, 0.905];
 
-function retailColumns(spec, left, width) {
+function retailColumns(spec, left, width, particulars = false) {
   const small = spec.id === "a5";
   const no = small ? 22 : 34;
   const qty = small ? 58 : 76;
   const rate = small ? 52 : 70;
   const total = small ? 62 : 84;
-  const cols = [
+  // Payment receipts: what the money was for, and how much — no quantity or rate.
+  const cols = particulars ? [
+    { key: "index", label: "No", width: no, align: "center" },
+    { key: "name", label: "Particulars", width: width - no - total * 1.3 },
+    { key: "amount", label: "Amount", width: total * 1.3, align: "right" },
+  ] : [
     { key: "index", label: "No", width: no, align: "center" },
     { key: "name", label: "Items", width: width - no - qty - rate - total },
     { key: "quantity", label: "Qty.", width: qty, align: "right" },
@@ -396,7 +401,7 @@ function drawRetailBill(model, surface, logo, qr) {
 
   // Header: logo, shop name / phone / address on the left; title and tag on the right.
   const titleSize = base + 4;
-  const tag = "ORIGINAL FOR RECIPIENT";
+  const tag = r.tag || "ORIGINAL FOR RECIPIENT";
   const tagSize = base - 2.5;
   const tagWidth = textWidth(tag, tagSize) + 14;
   const rightBlock = Math.max(textWidth(model.title, titleSize, true), tagWidth);
@@ -443,7 +448,7 @@ function drawRetailBill(model, surface, logo, qr) {
 
   // Bill To.
   surface.y += 14;
-  surface.text("Bill To", left, surface.y, { size: base + 0.5, bold: true, rgb: INK });
+  surface.text(r.partyHeading || "Bill To", left, surface.y, { size: base + 0.5, bold: true, rgb: INK });
   surface.y += base * 1.6;
   surface.paragraph(r.customerName, left, width * 0.6, { size: base + 0.5, rgb: INK });
   if (r.customerPhone) {
@@ -456,7 +461,7 @@ function drawRetailBill(model, surface, logo, qr) {
   surface.y += 12;
 
   // Items.
-  const cols = retailColumns(spec, surface.left, surface.width);
+  const cols = retailColumns(spec, surface.left, surface.width, Boolean(r.particulars));
   const rowPad = base * (small ? 0.55 : 0.9);
   const header = () => {
     const h = base * 2.6;
@@ -490,10 +495,10 @@ function drawRetailBill(model, surface, logo, qr) {
   roomFor(subH + 4);
   surface.fill(surface.left, surface.y, surface.width, subH, 0, CREAM);
   const subTop = surface.y + (subH - base) / 2;
-  surface.text("SUBTOTAL", retailCellX(nameCol), subTop, { size: base, bold: true, rgb: INK });
+  surface.text(r.subtotalLabel || "SUBTOTAL", retailCellX(nameCol), subTop, { size: base, bold: true, rgb: INK });
   const qtyCol = cols.find(col => col.key === "quantity");
   const amtCol = cols.find(col => col.key === "amount");
-  if (r.totalQty) surface.text(r.totalQty, retailCellX(qtyCol), subTop, { size: base, bold: true, align: "right", rgb: INK });
+  if (r.totalQty && qtyCol) surface.text(r.totalQty, retailCellX(qtyCol), subTop, { size: base, bold: true, align: "right", rgb: INK });
   surface.text(r.subtotal, retailCellX(amtCol), subTop, { size: base, bold: true, align: "right", rgb: INK });
   surface.y += subH + (small ? 12 : 18);
 
@@ -570,14 +575,19 @@ function drawRetailBill(model, surface, logo, qr) {
   };
   for (const [label, value] of r.taxLines) row(label, value);
   if (r.taxLines.length) { surface.rule(y - 4, { x1: split, x2: right, weight: 0.6, rgb: GOLD }); y += 4; }
-  row("Total Amount", r.total, { bold: true, size: base + 2 });
-  surface.rule(y - 4, { x1: split, x2: right, weight: 0.6, rgb: GOLD });
-  y += 4;
-  row("Received Amount", r.received);
-  row("Balance", r.balance, { bold: true });
-  surface.rule(y - 4, { x1: split, x2: right, weight: 0.6, rgb: GOLD });
-  y += 10;
-  surface.text("Total Amount (in words)", split, y, { size: base, bold: true, rgb: INK });
+  // Bills and invoices: total, received, balance. Other documents pass their own rows
+  // (a receipt: amount received, previous and remaining balance; a quotation: total only).
+  const summary = r.summary || [
+    { label: "Total Amount", value: r.total, bold: true, big: true, rule: true },
+    { label: "Received Amount", value: r.received },
+    { label: "Balance", value: r.balance, bold: true, rule: true },
+  ];
+  for (const item of summary) {
+    row(item.label, item.value, { bold: Boolean(item.bold), size: item.big ? base + 2 : base });
+    if (item.rule) { surface.rule(y - 4, { x1: split, x2: right, weight: 0.6, rgb: GOLD }); y += 4; }
+  }
+  y += 6;
+  surface.text(r.wordsLabel || "Total Amount (in words)", split, y, { size: base, bold: true, rgb: INK });
   y += base * 1.6;
   for (const line of wrapText(r.words, base - 0.5, right - split)) {
     surface.text(line, split, y, { size: base - 0.5, rgb: MUTED });

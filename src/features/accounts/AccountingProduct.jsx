@@ -2999,6 +2999,7 @@ const openVoucher = () => {
         />}
         {section === "documents" && <div className="acc-panel">
           <AccDocumentsWorkspace
+            token={token}
             documents={tradeDocuments}
             fulfilment={fulfilment}
             parties={parties}

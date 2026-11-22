@@ -330,6 +330,44 @@ export function buildTradeDocumentView({ doc, party = null, company = null, work
   };
 }
 
+const DOCUMENT_INTROS = {
+  quotation: "Thank you for your enquiry. Here is our quotation.",
+  sales_order: "Thank you for your order. Here is your order confirmation.",
+  delivery_challan: "Your goods have been dispatched. Here is the delivery challan.",
+  purchase_order: "Please find our purchase order below.",
+  goods_receipt: "We have received your goods. Here is our goods receipt.",
+};
+
+/**
+ * Short WhatsApp note with a link to the document PDF (and its preview card), like bills,
+ * invoices and receipts. Without a link (offline) the itemised buildTradeDocumentMessage is used.
+ */
+export function buildTradeDocumentLinkMessage(view, link) {
+  if (!view) return "";
+  const m = view.money;
+  const first = String(view.partyName || "").trim().split(/\s+/)[0] || "";
+  const noun = String(view.label || "document").toLowerCase();
+  const shop = String(view.companyName || "").trim();
+  const totalLabel = view.docType === "delivery_challan" || view.docType === "goods_receipt" ? "Total value" : "Total";
+  return [
+    first ? `Hi ${first},` : "Hi,",
+    "",
+    DOCUMENT_INTROS[view.docType] || `Here is our ${noun}.`,
+    "",
+    `${view.label} No: ${view.docNumber}`,
+    `Date: ${formatReceiptDate(view.docDate)}`,
+    view.validUntil && view.untilLabel ? `${view.untilLabel}: ${formatReceiptDate(view.validUntil)}` : null,
+    `${totalLabel}: *${m(view.total)}*`,
+    "",
+    `View the ${noun}:`,
+    link,
+    "",
+    "Thank you!",
+    shop || null,
+    String(view.companyPhone || "").trim() || null,
+  ].filter(line => line !== null).join("\n");
+}
+
 export function buildTradeDocumentMessage(view) {
   if (!view) return "";
   const m = view.money;

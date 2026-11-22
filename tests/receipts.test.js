@@ -250,7 +250,8 @@ test("chit payment WhatsApp and receipt include the installment month", () => {
   assert.match(message, /Hi Ellaiah/);
   assert.match(message, /Payment Month: Sep 26 \(Month 3 of 20\)/);
   assert.match(message, /Receipt No: FT-2026-000120/);
-  assert.match(message, /Bachupally \| 9160710101/);
+  assert.match(message, /Sudheer Finance\n9160710101$/);
+  assert.doesNotMatch(message, /Bachupally|View your receipt/);
 });
 
 test("daily finance WhatsApp includes day progress and days remaining", () => {
@@ -294,7 +295,7 @@ test("manual WhatsApp works without saved settings and keeps the built-in messag
   assert.equal(message, savedMessage);
   assert.match(message, /Hi Ravi/);
   assert.match(message, /Receipt No: FT-2026-000125/);
-  assert.match(message, /Thank you\./);
+  assert.match(message, /Thank you!\nMyFinTracker$/);
   assert.doesNotMatch(message, /\{customer_name\}/);
 
   const url = whatsAppShareUrl(receipt.customerPhone, message);

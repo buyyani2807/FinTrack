@@ -12,7 +12,21 @@ export function buildWhatsAppMessage(receipt, settings = {}, templateKey = "paym
         ? "daily_payment_receipt"
         : templateKey;
   const template = resolveWhatsAppTemplate(settings, key);
-  return applyTemplate(template, receiptWhatsAppVariables(brandedReceipt));
+  return withReceiptLinkLine(applyTemplate(template, receiptWhatsAppVariables(brandedReceipt)), template, receipt?.receiptLink);
+}
+
+/**
+ * The receipt link in a payment message: drop the "View your receipt:" line when there is
+ * no link (offline), and add the link to a saved custom template that has no {receipt_link}.
+ */
+export function withReceiptLinkLine(message, template = "", link = "") {
+  let text = String(message || "");
+  if (!link) {
+    text = text.replace(/^[ \t]*View your receipt:[ \t]*\n?/gim, "");
+  } else if (!/\{receipt_link\}/i.test(String(template || ""))) {
+    text = `${text.trimEnd()}\n\nView your receipt:\n${link}`;
+  }
+  return text.replace(/\n{3,}/g, "\n\n").trim();
 }
 
 export function buildReminderMessage(receipt, settings = {}, templateKey = "monthly_reminder") {

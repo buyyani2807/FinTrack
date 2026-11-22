@@ -63,3 +63,14 @@ test("preview card shows Paid or the balance due", () => {
   assert.match(due, /"Unpaid"/);
   assert.match(due, /₹1,142\.50/);
 });
+
+test("preview wording follows the document kind", async () => {
+  const { documentWording } = await import("../api/_lib/receiptLinkPage.js");
+  const receipt = documentWording({ kind: "receipt", amount: 500, balance: 27000 });
+  assert.equal(receipt.amountLabel, "Payment Received");
+  assert.equal(receipt.pill, "Received");
+  assert.equal(receipt.status, "Balance ₹27,000");
+  assert.equal(documentWording({ kind: "quotation", amount: 18500 }).amountLabel, "Quotation Value");
+  assert.equal(documentWording({ amount: 75, balance: 0 }).pill, "Paid");
+  assert.equal(documentWording({ kind: "invoice", amount: 1575, balance: 1575 }).amountLabel, "Balance Due");
+});

@@ -7,12 +7,15 @@ import {
   COLLECTION_MODES,
   collectionModeLabel,
   collectionReceiptMessage,
+  routeCollectionReceipt,
   routeSheetBrand,
   routeSheetView,
   validateCollection,
   weekdaysLabel,
 } from "../accounts/model/routeCollectionsModel.js";
 import { canWhatsAppShare, openManualWhatsAppShare } from "../receipts/io/receiptWhatsApp.js";
+import { downloadReceiptPdf } from "../receipts/io/receiptPdf.js";
+import { receiptLinkFor, shareReceiptOnWhatsApp } from "../receipts/io/receiptShare.js";
 import { loadAgentRouteSheet, newCollectionRequestId, recordRouteCollection } from "./routeCollectionsApi.js";
 import "./routeCollections.css";
 
@@ -85,9 +88,17 @@ function CollectModal({ stop, company, close, onSaved, token }) {
   </Modal>;
 }
 
-function SuccessModal({ result, close }) {
-  const message = collectionReceiptMessage(result);
+function SuccessModal({ result, company, token, close }) {
   const canShare = canWhatsAppShare(result.partyPhone);
+  // Same PDF receipt and WhatsApp note (with a link to it) as Finance and Chit receipts.
+  const receipt = useMemo(() => routeCollectionReceipt(result, company), [result, company]);
+  const companyId = company?.id || "";
+  useEffect(() => {
+    if (canShare && token && companyId) receiptLinkFor(receipt, token, { companyId });
+  }, [receipt, canShare, token, companyId]);
+  const share = () => (token && companyId
+    ? shareReceiptOnWhatsApp(receipt, {}, token, { companyId })
+    : openManualWhatsAppShare({ phone: result.partyPhone, message: collectionReceiptMessage(result) }));
   return <Modal close={close}>
     <h2 className="title">{result.alreadyRecorded ? "Already recorded" : "Collection saved"}</h2>
     <p className="rc-success-amount green">{formatInr(result.amount)}</p>
@@ -96,7 +107,8 @@ function SuccessModal({ result, close }) {
     {result.alreadyRecorded && <p className="small muted">This collection was saved earlier, so it was not recorded twice.</p>}
     <div className="row spacer">
       <Button onClick={close}>Done</Button>
-      <Button className="primary" disabled={!canShare} onClick={() => openManualWhatsAppShare({ phone: result.partyPhone, message })}>
+      <Button onClick={() => downloadReceiptPdf(receipt)}>PDF</Button>
+      <Button className="primary" disabled={!canShare} onClick={share}>
         {canShare ? "Send WhatsApp receipt" : "No phone for WhatsApp"}
       </Button>
     </div>
@@ -233,9 +245,9 @@ export function RouteCollectionsPage({ token, businessName, back, routeId = "tod
       stop={collectStop}
       company={companyById.get(collectStop.companyId)}
       close={() => setCollectStop(null)}
-      onSaved={result => { setCollectStop(null); setSuccess(result); refresh(); }}
+      onSaved={result => { setSuccess({ ...result, companyId: collectStop.companyId }); setCollectStop(null); refresh(); }}
     />}
-    {success && <SuccessModal result={success} close={() => setSuccess(null)} />}
+    {success && <SuccessModal result={success} company={companyById.get(success.companyId)} token={token} close={() => setSuccess(null)} />}
   </main>;
 }
 

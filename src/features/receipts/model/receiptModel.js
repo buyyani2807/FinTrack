@@ -205,6 +205,7 @@ export function receiptWhatsAppVariables(receipt) {
     month_number: receipt.chitFields?.month ? String(receipt.chitFields.month) : "",
     total_months: receipt.chitFields?.totalMonths ? String(receipt.chitFields.totalMonths) : "",
     payment_month: formatChitPaymentMonth(receipt.chitFields),
+    receipt_link: receipt.receiptLink || "",
   };
 }
 

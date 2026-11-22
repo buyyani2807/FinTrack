@@ -199,6 +199,41 @@ export function collectionReceiptMessage(result = {}) {
   return [`Payment received - ${result.companyName || "MyFinTracker"}`, "", ...body, "", ...footer].join("\n");
 }
 
+/**
+ * A route collection as a payment receipt, in the same shape as Finance receipts, so it gets
+ * the same PDF and WhatsApp message (receipts/io/receiptPdf.js, receiptShare.js).
+ */
+export function routeCollectionReceipt(result = {}, company = {}) {
+  const remaining = Math.max(0, Number(result.outstandingAfter || 0));
+  return {
+    source: "route_collection",
+    paymentId: result.voucherId || "",
+    receiptNumber: result.voucherNumber || "",
+    paymentDate: result.date || "",
+    paymentTime: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" }),
+    companyName: company?.name || result.companyName || "MyFinTracker",
+    companyPhone: company?.phone || "",
+    companyAddress: "",
+    companyEmail: "",
+    companyLogoUrl: "",
+    receiptFooter: "Thank you for your payment.",
+    customerName: result.partyName || "Customer",
+    customerPhone: result.partyPhone || "",
+    accountId: "",
+    financeType: "Payment",
+    particularLabel: "Payment against outstanding",
+    schemeName: result.routeName ? `Route ${result.routeName}` : "",
+    amount: Number(result.amount || 0),
+    paymentMode: collectionModeLabel(result.mode),
+    reference: result.reference || "",
+    previousBalance: remaining + Number(result.amount || 0),
+    remainingBalance: remaining,
+    collectedBy: result.agentName || "",
+    collectedByRole: "Collection Agent",
+    money: formatInr,
+  };
+}
+
 export const mapCollectionResult = row => ({
   voucherId: row?.voucher_id || "",
   voucherNumber: row?.voucher_number || "",

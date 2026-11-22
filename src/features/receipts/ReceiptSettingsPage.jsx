@@ -31,7 +31,7 @@ const TEMPLATE_GROUPS = [
   { title: "Accounts", items: [["sales_invoice", "Accounts sales invoice", 8]] },
 ];
 
-const TEMPLATE_VARIABLES = "{customer_name} {member_name} {amount} {receipt_number} {account_id} {account_number} {financed_amount} {amount_paid} {interest_amount} {interest_rate} {total_repayment} {daily_installment} {monthly_installment} {repayment_days} {start_date} {completion_date} {first_payment_date} {scheme_name} {chit_value} {chit_type} {month_number} {payment_month} {day_progress} {winning_bid} {amount_lifted} {commission} {discount} {dividend} {remaining_months} {lift_date} {company_name} {company_phone}".split(" ");
+const TEMPLATE_VARIABLES = "{customer_name} {member_name} {amount} {receipt_number} {account_id} {account_number} {financed_amount} {amount_paid} {interest_amount} {interest_rate} {total_repayment} {daily_installment} {monthly_installment} {repayment_days} {start_date} {completion_date} {first_payment_date} {scheme_name} {chit_value} {chit_type} {month_number} {payment_month} {day_progress} {winning_bid} {amount_lifted} {commission} {discount} {dividend} {remaining_months} {lift_date} {company_name} {company_phone} {receipt_link}".split(" ");
 
 const REMINDER_DAYS = [7, 3, 1, 0];
 const REMINDER_GROUPS = [{ id: "monthly", label: "Monthly Finance", icon: CalendarRange }, { id: "chit", label: "Chit Fund", icon: Coins }];

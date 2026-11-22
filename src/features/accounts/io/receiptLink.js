@@ -28,7 +28,9 @@ export function receiptObjectPath(companyId, billKey) {
  * Uploads the PDF and returns the link to send. Prefers the short myfintracker.com/b/<code>
  * link (supabase/155_receipt_short_links.sql), which shows a preview card in WhatsApp; falls
  * back to the long signed Storage URL if the short link can't be made (e.g. 155 not run yet).
- * `details` feeds the preview card: { businessName, customerName, billNo, billDate, amount, balance }.
+ * `details` feeds the preview card: { businessName, customerName, billNo, billDate, amount, balance, kind }.
+ * kind: bill (default), invoice, receipt, quotation, sales_order, delivery_challan, purchase_order,
+ * goods_receipt — sets the card wording; anything but "bill" needs 156_receipt_links_all_modules.sql.
  */
 export async function uploadReceiptPdfLink({ token, companyId, billKey, file, details = {}, days = RECEIPT_LINK_DAYS }) {
   const path = receiptObjectPath(companyId, billKey);
@@ -55,6 +57,8 @@ async function createShortReceiptLink({ token, companyId, path, details, days })
     p_amount: Number(details.amount || 0),
     p_balance: Number(details.balance || 0),
     p_days: days,
+    // Sent only when needed, so bill links keep working before 156 is run.
+    ...(details.kind && details.kind !== "bill" ? { p_kind: String(details.kind) } : {}),
   }, token);
   const value = String(code || "").trim();
   return /^[a-f0-9]{12}$/.test(value) ? `${window.location.origin}/b/${value}` : "";
@@ -64,4 +68,24 @@ async function createShortReceiptLink({ token, companyId, path, details, days })
 export function withReceiptLink(text, link) {
   const body = String(text || "");
   return link ? `${body}\n\nDownload bill (PDF): ${link}` : body;
+}
+
+let orgFolder = null;
+/** Storage folder for documents that belong to the organization (Finance, Chit Fund): its id. */
+async function organizationFolder(token) {
+  if (!orgFolder) {
+    orgFolder = supabase.rpc("receipt_storage_folder", {}, token)
+      .then(value => (/^[0-9a-f-]{36}$/i.test(String(value || "")) ? String(value) : ""))
+      .catch(() => "");
+  }
+  const folder = await orgFolder;
+  if (!folder) orgFolder = null;
+  return folder;
+}
+
+/** Same as uploadReceiptPdfLink, filed under the organization instead of an Accounts company. */
+export async function uploadOrganizationPdfLink({ token, billKey, file, details = {}, days = RECEIPT_LINK_DAYS }) {
+  const folder = token ? await organizationFolder(token) : "";
+  if (!folder) throw new Error("Receipt link needs supabase/156_receipt_links_all_modules.sql.");
+  return uploadReceiptPdfLink({ token, companyId: folder, billKey, file, details, days });
 }

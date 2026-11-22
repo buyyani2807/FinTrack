@@ -6,43 +6,56 @@ export function applyTemplate(template = "", variables = {}) {
 }
 
 export const DEFAULT_WHATSAPP_TEMPLATES = {
+  // Payment receipts: a short note with a link to the receipt PDF (and its preview card),
+  // like Counter bills and sales invoices. {receipt_link} is left out when no link could be
+  // made (offline), and the "View your receipt:" line goes with it.
   payment_receipt: `Hi {customer_name},
-We have received your payment of {amount}.
+
+Thank you for your payment to *{company_name}*.
+
 Receipt No: {receipt_number}
-Account: {account_id}
-Payment Date: {payment_date}
+Amount Received: *{amount}*
 Payment Mode: {payment_mode}
 Remaining Balance: {remaining_balance}
-Thank you.
-{company_name}`,
+
+View your receipt:
+{receipt_link}
+
+Thank you!
+{company_name}
+{company_phone}`,
   daily_payment_receipt: `Hi {customer_name},
 
-We have received your payment of {amount}.
+Thank you for your payment to *{company_name}*.
 
 Receipt No: {receipt_number}
-Account: {account_id}
-Payment Date: {payment_date}
+Amount Received: *{amount}*
 Payment Mode: {payment_mode}
 {day_progress}
 Remaining Balance: {remaining_balance}
 
-Thank you for your payment.
+View your receipt:
+{receipt_link}
+
+Thank you!
 {company_name}
-Bachupally | {company_phone}`,
+{company_phone}`,
   chit_payment_receipt: `Hi {customer_name},
 
-We have received your payment of {amount}.
+Thank you for your chit payment to *{company_name}*.
 
 Receipt No: {receipt_number}
-Account: {account_id}
-Payment Date: {payment_date}
-Payment Mode: {payment_mode}
+Amount Received: *{amount}*
 Payment Month: {payment_month}
+Payment Mode: {payment_mode}
 Remaining Balance: {remaining_balance}
 
-Thank you for your payment.
+View your receipt:
+{receipt_link}
+
+Thank you!
 {company_name}
-Bachupally | {company_phone}`,
+{company_phone}`,
   monthly_reminder: `Hi {customer_name},
 This is a reminder that your Monthly Finance payment of {amount} is due on {due_date}.
 Account: {account_id}

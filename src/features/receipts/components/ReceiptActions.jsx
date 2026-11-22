@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { downloadReceiptPdf } from "../io/receiptPdf.js";
-import { buildWhatsAppMessage, canWhatsAppShare, openManualWhatsAppShare } from "../io/receiptWhatsApp.js";
+import { canWhatsAppShare } from "../io/receiptWhatsApp.js";
+import { receiptLinkFor, shareReceiptOnWhatsApp } from "../io/receiptShare.js";
 import { formatReceiptDate, withReceiptBranding } from "../model/receiptModel.js";
 import { ReceiptViewerModal } from "./ReceiptViewerModal.jsx";
 import { CloseButton, ModalScroll } from "../../../components/ui.jsx";
@@ -29,10 +30,7 @@ export function ReceiptActions({ receipt, settings, token, onLogAction, compact 
 
   const shareWhatsApp = () => {
     if (!whatsAppAvailable) return;
-    openManualWhatsAppShare({
-      phone: receipt.customerPhone,
-      message: buildWhatsAppMessage(brandedReceipt, settings),
-    });
+    shareReceiptOnWhatsApp(brandedReceipt, settings, token);
     log("whatsapp_clicked");
   };
 
@@ -66,9 +64,16 @@ export function ReceiptSuccessModal({ receipt, settings, token, onLogAction, clo
   const downloadPdf = async () => { await log("downloaded"); downloadReceiptPdf(brandedReceipt); };
   const shareWhatsApp = () => {
     if (!whatsAppAvailable) return;
-    openManualWhatsAppShare({ phone: receipt.customerPhone, message: buildWhatsAppMessage(brandedReceipt, settings) });
+    shareReceiptOnWhatsApp(brandedReceipt, settings, token);
     log("whatsapp_clicked");
   };
+  // Start the receipt upload as soon as the payment is saved, so the link is ready by
+  // the time "Send via WhatsApp" is tapped and WhatsApp opens straight from that tap.
+  const receiptKey = `${receipt?.source}-${receipt?.paymentId}-${receipt?.amount}`;
+  useEffect(() => {
+    if (whatsAppAvailable) receiptLinkFor(withReceiptBranding(receipt, settings), token);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [receiptKey, whatsAppAvailable, token]);
 
   return <>
     <div className="modal-bg" ref={layerRef}><div className="modal receipt-success has-corner-close" role="dialog" aria-modal="true" aria-label="Payment successful"><span className="modal-corner-close"><CloseButton onClick={close} /></span>
