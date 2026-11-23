@@ -19,9 +19,9 @@ const files = dir => readdirSync(dir).flatMap(name => {
   return statSync(path).isDirectory() ? files(path) : [path];
 });
 
-test("app styles use only the app fonts (Inter, Poppins for the wordmark)", () => {
-  const stray = /\b(Syne|DM Sans|Plus Jakarta Sans)\b/;
+test("app styles use only Inter", () => {
+  const stray = /\b(Syne|DM Sans|Plus Jakarta Sans|Poppins)\b/;
   const offenders = files("src").filter(path => /\.(css|jsx)$/.test(path) && stray.test(readFileSync(path, "utf8")));
   assert.deepEqual(offenders, []);
-  assert.doesNotMatch(readFileSync("index.html", "utf8"), /Plus\+Jakarta/);
+  assert.doesNotMatch(readFileSync("index.html", "utf8"), /Plus\+Jakarta|Poppins/);
 });

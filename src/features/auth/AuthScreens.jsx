@@ -69,7 +69,7 @@ function confirmationLinkNotice(params) {
   return null;
 }
 
-// MyFinTracker mark + wordmark (Poppins), optional product suffix such as "Accounts".
+// MyFinTracker mark + wordmark (Inter), optional product suffix such as "Accounts".
 function Wordmark({ suffix = "" }) {
   return <BrandWordmark suffix={suffix} markSize={36} />;
 }

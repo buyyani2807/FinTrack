@@ -2,7 +2,7 @@
  * MyFinTracker design system, based on the Finebank financial dashboard kit.
  * Loaded after app.css (see AppShell) so it is the final word on colour, type and shape.
  * Everything visual reads from the tokens below; the dark theme only redefines tokens.
- * Fonts (Inter, Poppins for the wordmark) are linked from index.html.
+ * Fonts (Inter) are linked from index.html.
  */
 /* Type lives in fonts.css. Color lives in colors.css. Shape stays here. */
 :root {
@@ -131,7 +131,7 @@ td:has(> .btn + .btn) { line-height: 2.6; }
 /* ------------------------------------------------------------------ login */
 .login { max-width: 440px !important; margin: 8vh auto 48px !important; padding: 0 16px; }
 .login > .brand.ft-login-brand { margin-bottom: 8px; }
-.login > .brand.ft-login-brand .ft-brand { color: var(--ft-primary) !important; font-size: var(--ft-type-page); line-height: 48px; letter-spacing: .08em; }
+.login > .brand.ft-login-brand .ft-brand { color: var(--ft-primary) !important; font-size: var(--ft-type-page); line-height: 48px; letter-spacing: -.02em; }
 .ft-auth-brandrow .ft-brand-lockup .ft-brand { color: var(--ft-text) !important; }
 .financier-nav .nav-title .ft-brand-lockup .ft-brand { color: #fff !important; }
 .financier-nav .nav-title .ft-brand-mark { width: 28px; height: 28px; }
@@ -158,7 +158,7 @@ td:has(> .btn + .btn) { line-height: 2.6; }
 /* desktop: the logo lives in the showcase, so only the product tag (e.g. Accounts) shows here */
 .ft-auth-brandrow:has(.ft-auth-product) { display: flex; margin-bottom: 16px; }
 @media (width > 1100px) { .ft-auth-brandrow > .ft-brand { display: none; } }
-.ft-auth-brandrow .ft-brand { color: var(--ft-text) !important; font-size: var(--ft-type-hero); line-height: 1.15; letter-spacing: .08em; }
+.ft-auth-brandrow .ft-brand { color: var(--ft-text) !important; font-size: var(--ft-type-hero); line-height: 1.15; letter-spacing: -.02em; }
 .ft-auth-product { padding: 4px 10px; border-radius: 999px; background: var(--ft-primary-soft); color: var(--ft-primary); font-weight: 600; font-size: var(--ft-type-label); }
 .ft-auth-title { margin: 0 0 8px; color: var(--ft-text); font-weight: 700; font-size: clamp(28px, 2.3vw, 44px); line-height: var(--ft-leading-tight); letter-spacing: var(--ft-tracking-tight); }
 /* long sign-up heading stays on one line, scaling down to fit */
@@ -233,7 +233,7 @@ td:has(> .btn + .btn) { line-height: 2.6; }
 .ft-auth-showcase { position: sticky; top: 0; align-self: start; display: flex; flex-direction: column; height: 100svh; padding: clamp(28px, 4.5cqw, 64px) clamp(28px, 6cqw, 72px) clamp(20px, 3cqw, 40px); overflow: hidden; background: var(--ft-showcase-bg); color: #fff; container-type: inline-size; isolation: isolate; }
 .ft-auth-showcase::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(55% 40% at 85% 8%, rgba(41, 157, 145, .40), transparent 70%), radial-gradient(60% 45% at 30% 75%, rgba(41, 157, 145, .26), transparent 70%); }
 .ft-auth-showcase::after { content: ""; position: absolute; inset: 0; z-index: -1; background-image: radial-gradient(rgba(255, 255, 255, .07) 1px, transparent 1px); background-size: 28px 28px; mask-image: radial-gradient(ellipse at 50% 65%, #000 25%, transparent 75%); }
-.ft-auth-showcase-brand { color: #fff !important; font-size: var(--ft-type-hero); letter-spacing: .08em; }
+.ft-auth-showcase-brand { color: #fff !important; font-size: var(--ft-type-hero); letter-spacing: -.02em; }
 .ft-auth-showcase-brand.ft-brand-lockup .ft-brand { color: #fff !important; font-size: inherit; letter-spacing: inherit; }
 .ft-auth-showcase-brand .ft-brand-mark { width: 40px; height: 40px; box-shadow: 0 0 0 1px rgba(110, 231, 216, .22), 0 8px 24px rgba(0, 0, 0, .28); }
 .ft-auth-showcase-copy { max-width: min(560px, 78cqw); margin-top: clamp(24px, 5svh, 64px); }
@@ -664,7 +664,7 @@ input[type="month"]::-webkit-calendar-picker-indicator { margin: 0; padding: 0; 
 }
 
 /* sidebar contents */
-.ft-brand { color: #fff !important; font-weight: 500 !important; letter-spacing: .08em !important; }
+.ft-brand { color: #fff !important; font-weight: 500 !important; letter-spacing: -.02em !important; }
 .ft-brand-strong { font-weight: 800; }
 .financier-nav .nav-label { display: flex; align-items: center; gap: 12px; }
 .financier-nav .nav-icon { flex: none; }
@@ -1852,7 +1852,7 @@ button.upcoming-payments-toggle:focus-visible { outline: 2px solid var(--ft-prim
 
 /* ===== Boot screen: FIN flips letter by letter while Track holds still ===== */
 .ft-boot { position: fixed; inset: 0; z-index: 2000; display: grid; place-content: center; justify-items: center; gap: 18px; background: var(--ft-bg); }
-.ft-boot-mark { display: flex; align-items: baseline; color: var(--ft-text); font: 500 var(--ft-type-page)/1 var(--ft-font-brand, var(--ft-font)); letter-spacing: .08em; perspective: 600px; }
+.ft-boot-mark { display: flex; align-items: baseline; color: var(--ft-text); font: 500 var(--ft-type-page)/1 var(--ft-font-brand, var(--ft-font)); letter-spacing: -.02em; perspective: 600px; }
 .ft-boot-fin { display: inline-flex; color: var(--ft-primary); font-weight: 800; }
 .ft-boot-fin > span { display: inline-block; transform-origin: 50% 55%; backface-visibility: visible; animation: ft-boot-flip 2.4s cubic-bezier(.65, 0, .35, 1) infinite; animation-delay: calc(var(--i) * .14s); }
 .ft-boot-track { margin-left: .02em; }

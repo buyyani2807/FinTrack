@@ -4,7 +4,7 @@
  */
 :root {
   --ft-font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --ft-font-brand: "Poppins", var(--ft-font);
+  --ft-font-brand: var(--ft-font);
   --ft-type-hero: clamp(36px, 4.4vw, 52px);
   --ft-type-page: clamp(28px, 3vw, 36px);
   --ft-type-title: clamp(20px, 1.2vw + 16px, 24px);
