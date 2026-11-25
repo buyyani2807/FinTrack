@@ -2365,22 +2365,31 @@ button.accounts-balance-item:hover {
 }
 
 .collection-summary .collection-mode-split {
-  margin: 8px 0 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 14px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--ft-border);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .collection-summary .collection-mode-split span {
   text-transform: none;
   letter-spacing: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.collection-summary .collection-mode-split small {
   font-size: var(--ft-type-caption);
-  display: inline;
 }
 
 .collection-summary .collection-mode-split b {
-  color: var(--ft-text, inherit);
-  font-weight: 600;
+  color: var(--ft-text);
+  font: 600 var(--ft-type-body) var(--ft-font);
+  white-space: nowrap;
 }
 
 .collection-section {
@@ -2536,8 +2545,9 @@ button.accounts-balance-item:hover {
     grid-template-columns: 1fr 1fr;
   }
 
-  .collection-summary > div:last-child {
+  .collection-summary > .collection-received {
     grid-column: 1 / -1;
+    order: 3;
   }
 
   .collection-card {
