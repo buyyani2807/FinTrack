@@ -2364,6 +2364,25 @@ button.accounts-balance-item:hover {
   display: block;
 }
 
+.collection-summary .collection-mode-split {
+  margin: 8px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+.collection-summary .collection-mode-split span {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: var(--ft-type-caption);
+  display: inline;
+}
+
+.collection-summary .collection-mode-split b {
+  color: var(--ft-text, inherit);
+  font-weight: 600;
+}
+
 .collection-section {
   margin-top: 28px;
 }
